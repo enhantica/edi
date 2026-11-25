@@ -38,6 +38,8 @@ QtObject {
     // Sidebar. Writable here, unlike the base's: the app window binds it so the sidebar's edge meets the Experiment
     // button's centre in the top bar (Main.qml; edi ADR-0017 §12).
     property int sideBarWidth: Math.round(fontPixelSize * 41.7)
+    // Whether the sidebar sits under the main view (a narrow window; Main.qml, WorkflowPage).
+    property bool sideBarBelow: false
     property int groupBoxSpacing: fontPixelSize
     property int sideBarPadding: fontPixelSize
     property int sideBarContentWidth: sideBarWidth - groupBoxSpacing - sideBarPadding

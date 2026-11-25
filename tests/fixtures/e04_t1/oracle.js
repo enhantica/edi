@@ -7578,7 +7578,7 @@ var frozen = {
         "spodi"
       ],
       "datasets": [],
-      "loaderWarning": "Warning: structures[Al2O3].atom_sites[Al1].adp_iso = -0.13591 is outside its admissible range [0, 10]; loaded as saved (a fit may leave a value there)",
+      "loaderWarning": "Warning: Al2O3.atom_site.Al1.adp_iso = -0.13591 is outside its admissible range [0, 10]; loaded as saved (a fit may leave a value there)",
       "files": {
         "project.edi": "654e819625fe2f4f8681a3b6e9e96350a9ad2ef1d3d30bd94f43eab38a32b40e",
         "structures/Al2O3.edi": "f5d727bf0362dae6abfb4c2503669e83085bc897cbb09db913b359eb37999472",

@@ -4,11 +4,17 @@
 #include "assistant_view_model.hpp"
 
 #include <algorithm>
+#include <array>
 
 #include <QCoreApplication>
+#include <QDirIterator>
+#include <QElapsedTimer>
+#include <QCryptographicHash>
 #include <QDir>
 #include <QEventLoop>
 #include <QFile>
+#include <QFont>
+#include <QFontMetricsF>
 #include <QGuiApplication>
 #include <QJSValue>
 #include <QRegularExpression>
@@ -18,19 +24,34 @@
 #include <QKeyEvent>
 #include <QKeySequence>
 #include <QMouseEvent>
+#include <QPointer>
 #include <QQmlEngine>
 #include <QQuickItem>
+#include <QQuickItemGrabResult>
 #include <QQuickWindow>
+#include <QGlyphRun>
+#include <QRawFont>
+#include <QTextBlock>
+#include <QTextDocument>
+#include <QVector3D>
+#include <QtGraphs/QXYSeries>
+#include <QtQuick/private/qquickrectangle_p.h>
+#include <QtQuick/private/qquickrectangle_p_p.h>
+#include <QtQuick/private/qquicktext_p_p.h>
 #include <QScopeGuard>
 #include <QThread>
+#include <QTimer>
+#include <QTextStream>
 #include <QUrl>
 #include <atomic>
 #include <cmath>
 #include <cstdio>
 #include <filesystem>
+#include <functional>
 #include <system_error>
 
 #include "analysis_view_model.hpp"
+#include "background.hpp"
 #include "crysta/project_output.hpp"
 #include "edi/categories.hpp"
 #include "edi/palette.hpp"
@@ -39,10 +60,12 @@
 #include "fit_view_model.hpp"
 #include "parameter_item.hpp"
 #include "parameter_table_model.hpp"
+#include "pattern_chart_controller.hpp"
 #include "project_view_model.hpp"
 #include "scan_session.hpp"
 #include "scan_view_model.hpp"
 #include "session.hpp"
+#include "ui_probe.hpp"
 #include "structure_view_model.hpp"
 
 namespace edi_app {
@@ -92,7 +115,7 @@ QString copy_cli_project(const QString& id, const QDir& into) {
 }
 
 DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QString& only, QObject* parent)
-    : QObject(parent), window_(window), output_dir_(output_dir) {
+    : QObject(parent), window_(window), output_dir_(output_dir), only_(only) {
     // A new atom is random (edi::new_atom_site): the demo draws it from one seed, so its images repeat.
     AtomSiteListModel::fixRandomSeed(17);
     const QString experiment = QStringLiteral("appBar.tab.experiment");
@@ -816,6 +839,28 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
         steps_.push_back({"report-sidebar-4-dark", {basic}});
     }
     // A fitted scan's report, its preview at the evolution charts. Run only when asked (`--demo-only report-scan-`).
+    // `e58-report`: the report's first structure and first pattern figures, after the bundled scan's fit, each brought
+    // into view, so a figure drawn empty or without its calculated series shows.
+    if (only.startsWith(QLatin1String("e58-report"))) {
+        // EDI_DEMO_REPORT_CLI names another bundled project (the owner's TOF case, 2026-11-21).
+        const QString cli = qEnvironmentVariable("EDI_DEMO_REPORT_CLI", QStringLiteral("pd-neut-cwl_cosio-d20_scan-3f"));
+        const QStringList open = start + open_cli_project(cli) +
+                                 QStringList{analysis, basic, "statusBar.fit.button", "wait-fit", "choose:OK"};
+        // The report is built after the fit on a worker and its figures load a slice at a time: settled first.
+        steps_.push_back({"e58-report-1-structure", QStringList{"resize:1280x960"} + open +
+                                                        QStringList{"appBar.tab.report", "wait-settled",
+                                                                    "assert-report-figures"}});
+        steps_.push_back({"e58-report-2-pattern", {"reveal:report.pattern.0"}});
+        // Brought into view again once the whole report has laid out (the first reveal can come before it scrolls).
+        steps_.push_back({"e58-report-2b-structure", {"reveal:report.structure.0"}});
+        // Left and shown again: a report built before the fit's last calculation reached the project shows here
+        // whether it is ever built again.
+        steps_.push_back({"e58-report-3-again", {"appBar.tab.analysis", "wait-settled", "appBar.tab.report",
+                                                 "wait-settled", "assert-report-figures", "reveal:report.pattern.0"}});
+        // Saved too, where EDI_DEMO_REPORT_DIR names, so the app's own report data can be read.
+        if (const QString kept = qEnvironmentVariable("EDI_DEMO_REPORT_DIR"); !kept.isEmpty())
+            steps_.push_back({"e58-report-4-saved", {"save-as:" + kept, "report.save"}});
+    }
     if (only.startsWith(QLatin1String("report-scan-"))) {
         // EDI_DEMO_REPORT_PROJECT names a fitted scan to open instead of fitting the bundled one.
         const QString fitted = qEnvironmentVariable("EDI_DEMO_REPORT_PROJECT");
@@ -1032,6 +1077,841 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
         steps_.push_back({"datamenu-1-open", QStringList{"resize:1480x800", "home.start", "expand:group.examples"} +
                                                  open_example("pd-neut-cwl_lbco_simulation") +
                                                  QStringList{"appBar.tab.experiment", basic, "experiments.loadData.0"}});
+    }
+    // The GUI watchdog's scenarios (ADR-0102), run only when asked, each traced with EDI_UI_TRACE=1 for
+    // tools/ci/gui_watchdog.py: `e58-pages` shows every page with the scan EDI_DEMO_SCAN_PROJECT open; `e58-banks` steps
+    // through a copy of the five-bank NCAF set's experiments on Experiment and on Analysis; `e58-pattern` presses the
+    // scan's next and previous dataset ten times each on both pages' Pattern, at the driver's 100 ms pace; `e58-series`
+    // fits the series EDI_DEMO_SCAN_PROJECT to its end. A step's trace name is the measured step's; the steps before
+    // the first named one only set the scenario up and are not measured.
+    const auto named = [this](const QString& trace, int navigation = 0) {
+        steps_.back().trace = trace;
+        steps_.back().navigation = navigation;
+    };
+    if (only.startsWith(QLatin1String("e58-pages"))) {
+        steps_.push_back({"e58-pages-00-opened", {"resize:1480x800", "open-project:" + qEnvironmentVariable("EDI_DEMO_SCAN_PROJECT")}});
+        const QStringList pages{"home", "project", "structure", "experiment", "analysis", "report", "experiment", "report",
+                                "analysis"};
+        for (qsizetype i = 0; i < pages.size(); ++i) {
+            steps_.push_back({QStringLiteral("e58-pages-%1-page-%2").arg(i + 1, 2, 10, QLatin1Char('0')).arg(pages[i]),
+                              {"appBar.tab." + pages[i]}});
+            named("page-" + pages[i]);
+        }
+    }
+    // `e58-fit`: numbers fitted to their typed columns, with the project EDI_DEMO_FIT_PROJECT open (long written tokens),
+    // then a value cell edited across a resize and left.
+    if (only.startsWith(QLatin1String("e58-fit"))) {
+        const QString open = "open-project:" + qEnvironmentVariable("EDI_DEMO_FIT_PROJECT");
+        // At the owner's window of about 1000 px (2026-11-21): the Examples list before a project, the fit's results
+        // dialog, then the Analysis and Structure tables.
+        // The Examples list scrolled to its end, as the owner saw rows 24 and 25 overlap (2026-11-21).
+        steps_.push_back({"e58-fit-0-examples", {"resize:1000x900", "home.start", "expand:group.examples",
+                                                 "wait-settled", "scroll-frames:examples.list",
+                                                 "scroll-frames:examples.list", "scroll-frames:examples.list",
+                                                 "wait-settled"}});
+        steps_.push_back({"e58-fit-1-results", {"resize:1000x620", open, "appBar.tab.analysis", "mainArea.tab.pattern", "statusBar.fit.button",
+                                                "wait-fit"}});
+        steps_.push_back({"e58-fit-2-analysis", {"choose:OK"}});
+        steps_.push_back({"e58-fit-3-structure", {"appBar.tab.structure", "expand:group.atom_site_aniso"}});
+        steps_.push_back({"e58-fit-4-edit-resized", {"appBar.tab.analysis", "parameters.value.0", "resize:1600x900",
+                                                     "resize:1000x620"}});
+        steps_.push_back({"e58-fit-5-left", {"key:Tab"}});
+    }
+    // `e58-scan`: a large scan's Stacked and Map views, each read only as far as it shows (the owner, 2026-11-21).
+    if (only == QLatin1String("e58-scan")) {
+        steps_.push_back({"e58-scan-1-stacked", {"resize:1480x800", "open-project:" + qEnvironmentVariable("EDI_DEMO_SCAN_PROJECT"),
+                                                 "appBar.tab.analysis", "mainArea.tab.stacked", "wait-scan:stacked"}});
+        steps_.push_back({"e58-scan-2-map", {"mainArea.tab.map", "wait-scan:map"}});
+        steps_.push_back({"e58-scan-3-stacked-again", {"mainArea.tab.stacked", "wait-scan:stacked"}});
+    }
+    // `e58-widths`: the sidebar's width rule checked at many window widths: the
+    // fitted joint project's Analysis and a scan's Structure with Atomic displacement, at every width EDI_WIDTHS lists.
+    // `e58-expand`: every sidebar group of Structure, Experiment and Analysis, Main and Extra tabs, opened in turn and
+    // timed frame by frame (the owner, 2026-11-23: lag, flicker and jumps in height on unfold), after a fit.
+    if (only == QLatin1String("e58-expand")) {
+        steps_.push_back({"e58-expand-0", {"preference:loggingLevel=Info", "resize:1496x900",
+                                           "open-cli-project:" + qEnvironmentVariable("EDI_EXPAND_PROJECT", QStringLiteral("pd-neut-cwl_cosio-d20")),
+                                           "wait-settled", "appBar.tab.analysis", "statusBar.fit.button", "wait-fit", "choose:OK", "wait-settled"}});
+        steps_.back().capture = false;
+        for (const QString& page : {QStringLiteral("structure"), QStringLiteral("experiment"), QStringLiteral("analysis")})
+            for (const QString& tab : {QStringLiteral("basic"), QStringLiteral("extras")}) {
+                steps_.push_back({"e58-expand-" + page + "-" + tab, {"appBar.tab." + page, "sideBar.tab." + tab, "wait-settled", "expand-frames-all", "wait-settled"}});
+                steps_.back().capture = false;
+            }
+    }
+    // `e58-icons`: the sidebar's width icon and the groups' pins in light mode, at rest and pointed at (the owner,
+    // 2026-11-23: text colour, a title icon's size, one centre line).
+    if (only == QLatin1String("e58-icons")) {
+        steps_.push_back({"e58-icons-1-structure", {"resize:1480x900", "theme:light", "open-cli-project:pd-neut-cwl_cosio-d20", "wait-settled",
+                                                    "appBar.tab.structure", "wait-settled", "check-layout"}});
+        steps_.push_back({"e58-icons-2-width-hovered", {"hover:sideBar.width", "wait-settled", "check-layout"}});
+        steps_.push_back({"e58-icons-3-analysis", {"hover:appBar.tab.home", "appBar.tab.analysis", "wait-settled", "check-layout"}});
+    }
+    // `e58-case48`: the 2k example fitted, on Analysis at three window widths in Auto, then every page (the owner's case
+    // 48, 2026-11-23: spare before Free with the sidebar wider than its table; legend labels cut).
+    if (only == QLatin1String("e58-case48")) {
+        steps_.push_back({"e58-case48-0", {"preference:loggingLevel=Info", "resize:1496x900", "open-cli-project:pd-neut-cwl_cosio-d20_2k",
+                                           "wait-settled", "appBar.tab.analysis", "statusBar.fit.button", "wait-fit", "choose:OK", "wait-settled",
+                                           "preference:patternLegendShown=true", "mainArea.tab.pattern", "wait-settled"}});
+        steps_.back().capture = false;
+        steps_.push_back({"e58-case48-meascalc", {"mainArea.tab.measCalc", "wait-settled", "check-layout"}});
+        for (const QString& width : {QStringLiteral("1280"), QStringLiteral("1496"), QStringLiteral("1920")})
+            steps_.push_back({"e58-case48-analysis-" + width, {"resize:" + width + "x900", "mainArea.tab.pattern", "wait-settled", "check-layout"}});
+        for (const QString& page : {QStringLiteral("project"), QStringLiteral("structure"), QStringLiteral("experiment"), QStringLiteral("report"),
+                                    QStringLiteral("analysis")})
+            steps_.push_back({"e58-case48-page-" + page, {"resize:1496x900", "appBar.tab." + page, "wait-settled", "check-layout"}});
+    }
+    // `e58-legend`: the 2k example fitted, every legend entry of the Analysis pattern switched off: nothing is drawn.
+    if (only == QLatin1String("e58-legend")) {
+        steps_.push_back({"e58-legend-1-shown", {"resize:1496x900", "open-cli-project:pd-neut-cwl_cosio-d20_2k", "wait-settled", "appBar.tab.analysis",
+                                                 "statusBar.fit.button", "wait-fit", "choose:OK", "preference:patternLegendShown=true",
+                                                 "mainArea.tab.pattern", "wait-settled"}});
+        steps_.push_back({"e58-legend-2-all-off", {"legend-hide-all:chart", "wait-settled", "check-hidden-series:chart"}});
+    }
+    // `e58-report-pdf`: a fitted scan's report saved, PDF included, right after the Report page first shows.
+    if (only == QLatin1String("e58-report-pdf")) {
+        const QString kept = qEnvironmentVariable("EDI_DEMO_REPORT_DIR");
+        steps_.push_back({"e58-report-pdf-1-saved", QStringList{"resize:1280x960", "open-cli-project:pd-neut-cwl_cosio-d20_scan-3f", "wait-settled",
+                                                                  "appBar.tab.analysis", "statusBar.fit.button", "wait-fit", "choose:OK",
+                                                                  "save-as:" + kept, "appBar.tab.report", "report.writesPdf", "report.save", "wait-settled",
+                                                                  "check-report-figures-saved"}});
+    }
+    // `e58-unfold`: each sidebar group opened in turn on the scan project, one named step per unfold, folded again
+    // after (the owner, 2026-11-23: no unfold over 100 ms). EDI_UI_UNFOLD_INVENTORY lists the groups as JSON
+    // [{"page", "tab", "group"}]; without it, the groups the example projects show.
+    if (only.startsWith(QLatin1String("e58-unfold"))) {
+        // `e58-unfold-pr`: the slowest few groups only, for a pull request's bound; `e58-unfold` every group, nightly.
+        const bool representative = only == QLatin1String("e58-unfold-pr");
+        QList<std::array<QString, 3>> inventory;
+        const QJsonDocument declared = QJsonDocument::fromJson(qgetenv("EDI_UI_UNFOLD_INVENTORY"));
+        for (const auto& entry : declared.array())
+            inventory.append({entry[QStringLiteral("page")].toString(), entry[QStringLiteral("tab")].toString(), entry[QStringLiteral("group")].toString()});
+        if (inventory.isEmpty() && representative) {
+            const QList<std::pair<QString, QStringList>> slowest{
+                {QStringLiteral("structure/basic"), {"atom_site"}},
+                {QStringLiteral("structure/extras"), {"space_group_symop", "expanded_atom_site"}},
+                {QStringLiteral("experiment/extras"), {"data", "refln"}},
+                {QStringLiteral("analysis/extras"), {"fit_result_bank"}}};
+            for (const auto& [where, groups] : slowest)
+                for (const QString& group : groups) inventory.append({where.section(QLatin1Char('/'), 0, 0), where.section(QLatin1Char('/'), 1), "group." + group});
+        }
+        if (inventory.isEmpty()) {
+            const QList<std::pair<QString, QStringList>> builtin{
+                {QStringLiteral("structure/basic"), {"structures", "space_group", "cell", "atom_site", "atom_site_aniso"}},
+                {QStringLiteral("structure/extras"), {"scattering_length", "geom", "space_group_symop", "expanded_atom_site", "appearance", "polyhedra"}},
+                {QStringLiteral("experiment/basic"), {"experiments", "background", "instrument", "peak", "excluded_region", "linked_structure"}},
+                {QStringLiteral("experiment/extras"), {"background_estimate", "peak", "absorption", "preferred_orientation", "scattering_source", "data", "refln"}},
+                {QStringLiteral("analysis/extras"), {"minimizer", "fitting_mode", "alias", "constraint", "fit_parameter", "fit_result", "fit_result_bank", "fit_result_phase"}}};
+            for (const auto& [where, groups] : builtin)
+                for (const QString& group : groups) inventory.append({where.section(QLatin1Char('/'), 0, 0), where.section(QLatin1Char('/'), 1), "group." + group});
+        }
+        steps_.push_back({"e58-unfold-00-opened", {"resize:1480x800", "open-project:" + qEnvironmentVariable("EDI_DEMO_SCAN_PROJECT"), "wait-settled"}});
+        steps_.back().capture = false;
+        QString shown;
+        int n = 0;
+        for (const auto& [page, tab, group] : inventory) {
+            if (page + "/" + tab != shown) {
+                shown = page + "/" + tab;
+                steps_.push_back({QStringLiteral("e58-unfold-%1-to-%2-%3").arg(++n, 3, 10, QLatin1Char('0')).arg(page, tab),
+                                  {"appBar.tab." + page, "sideBar.tab." + tab, "wait-settled"}});
+                steps_.back().capture = false;
+            }
+            steps_.push_back({QStringLiteral("e58-unfold-%1-%2-%3").arg(++n, 3, 10, QLatin1Char('0')).arg(page, group), {"unfold:" + group, "wait-settled"}});
+            steps_.back().capture = false;
+            named("unfold-" + page + "-" + group.mid(6));
+            steps_.push_back({QStringLiteral("e58-unfold-%1-fold-%2").arg(++n, 3, 10, QLatin1Char('0')).arg(group), {"fold:" + group, "wait-settled"}});
+            steps_.back().capture = false;
+        }
+    }
+    // `e58-stable`: every frame of each page switch (Analysis first) and of every group's unfold on every page, for the
+    // joint fit and the cosio example: no table changes its columns, cells or height once shown (T6, T7).
+    if (only == QLatin1String("e58-stable")) {
+        const QList<std::pair<QString, QStringList>> groups{
+            {QStringLiteral("structure/basic"), {"structures", "space_group", "cell", "atom_site", "atom_site_aniso"}},
+            {QStringLiteral("structure/extras"), {"scattering_length", "geom", "space_group_symop", "expanded_atom_site"}},
+            {QStringLiteral("experiment/basic"), {"experiments", "background", "instrument", "peak", "excluded_region", "linked_structure"}},
+            {QStringLiteral("experiment/extras"), {"background_estimate", "absorption", "data", "refln"}},
+            {QStringLiteral("analysis/basic"), {"parameters"}},
+            {QStringLiteral("analysis/extras"), {"alias", "constraint", "fit_parameter", "fit_result_bank", "fit_result_phase"}}};
+        int n = 0;
+        for (const QString& project : {QStringLiteral("pd-neut-tof_ncaf-wish"), QStringLiteral("pd-neut-cwl_cosio-d20_2k")}) {
+            steps_.push_back({QStringLiteral("e58-stable-%1-open-%2").arg(++n, 3, 10, QLatin1Char('0')).arg(project),
+                              {"preference:loggingLevel=Info", "resize:1496x900", "open-cli-project:" + project, "appBar.tab.home", "wait-settled"}});
+            steps_.back().capture = false;
+            for (const QString& page : {QStringLiteral("analysis"), QStringLiteral("structure"), QStringLiteral("experiment"), QStringLiteral("project"), QStringLiteral("analysis")}) {
+                steps_.push_back({QStringLiteral("e58-stable-%1-page-%2").arg(++n, 3, 10, QLatin1Char('0')).arg(page), {"frames-stable:page:" + page, "wait-settled"}});
+                steps_.back().capture = false;
+            }
+            for (const auto& [where, names] : groups) {
+                steps_.push_back({QStringLiteral("e58-stable-%1-to-%2").arg(++n, 3, 10, QLatin1Char('0')).arg(QString(where).replace(QLatin1Char('/'), QLatin1Char('-'))),
+                                  {"appBar.tab." + where.section(QLatin1Char('/'), 0, 0), "wait-settled", "wait-settled", "sideBar.tab." + where.section(QLatin1Char('/'), 1), "wait-settled"}});
+                steps_.back().capture = false;
+                for (const QString& name : names) {
+                    steps_.push_back({QStringLiteral("e58-stable-%1-unfold-%2").arg(++n, 3, 10, QLatin1Char('0')).arg(name),
+                                      {"fold:group." + name, "wait-settled", "frames-stable:unfold:group." + name, "wait-settled"}});
+                    steps_.back().capture = false;
+                }
+            }
+        }
+    }
+    // `e58-room`: T7's room on every sidebar tab of every page, each group opened alone and after another, in the three
+    // projects the owner's cases came from (2026-11-24).
+    if (only == QLatin1String("e58-room")) {
+        int n = 0;
+        for (const QString& project : {QStringLiteral("pd-neut-cwl_cosio-d20_scan-213f"), QStringLiteral("pd-neut-tof_ncaf-wish"), QStringLiteral("pd-neut-cwl_cosio-d20_2k")}) {
+            steps_.push_back({QStringLiteral("e58-room-%1-open-%2").arg(++n, 3, 10, QLatin1Char('0')).arg(project),
+                              {"preference:loggingLevel=Info", "preference:autoCollapse=false", "resize:1496x900", "open-cli-project:" + project, "wait-settled"}});
+            steps_.back().capture = false;
+            for (const QString& where : {QStringLiteral("project/basic"), QStringLiteral("structure/basic"), QStringLiteral("structure/extras"), QStringLiteral("experiment/basic"),
+                                         QStringLiteral("experiment/extras"), QStringLiteral("analysis/basic"), QStringLiteral("analysis/extras")}) {
+                steps_.push_back({QStringLiteral("e58-room-%1-%2").arg(++n, 3, 10, QLatin1Char('0')).arg(QString(where).replace(QLatin1Char('/'), QLatin1Char('-'))),
+                                  {"appBar.tab." + where.section(QLatin1Char('/'), 0, 0), "wait-settled", "sideBar.tab." + where.section(QLatin1Char('/'), 1), "wait-settled", "room-tab"}});
+                steps_.back().capture = false;
+            }
+        }
+    }
+    // `e58-rowheights`: T7 for the lists whose rows can be taller than the table's least row: the Examples list, whole
+    // and filtered, the recent projects and an experiment name being edited, at three windows.
+    if (only == QLatin1String("e58-rowheights")) {
+        int n = 0;
+        for (const QString& size : {QStringLiteral("1280x900"), QStringLiteral("1496x900"), QStringLiteral("1920x1080")}) {
+            const auto shot = [this, &n, &size](const char* name, const QStringList& actions) {
+                steps_.push_back({QStringLiteral("e58-rowheights-%1-%2-%3").arg(++n, 2, 10, QLatin1Char('0')).arg(QLatin1String(name), size), actions + QStringList{"wait-settled", "room-check"}});
+            };
+            shot("examples", QStringList{"preference:loggingLevel=Info", "preference:autoCollapse=false", "resize:" + size} + start + QStringList{"appBar.tab.project", basic, "wait-settled"});
+            shot("examples-lbco", {"examples.search", "type:LBCO"});
+            shot("examples-none", {"type:zzz"});
+            shot("examples-again", {"examples.clearFilters"});
+            shot("recent", QStringList{QStringLiteral("open-cli-project:") + (n < 8 ? "pd-neut-tof_ncaf-wish" : n < 16 ? "pd-neut-cwl_cosio-d20_2k" : "pd-neut-cwl_lbco-hrpt"), "appBar.tab.project", basic, "wait-settled", "expand:group.recentProjects"});
+            shot("experiments", QStringList{"appBar.tab.experiment", basic, "wait-settled", "expand:group.experiments"});
+            shot("experiments-rename", {"experiments.name.0"});
+            steps_.push_back({QStringLiteral("e58-rowheights-%1-closed-%2").arg(++n, 2, 10, QLatin1Char('0')).arg(size), {"key:Escape", "close-project", "wait-settled"}});
+            steps_.back().capture = false;
+        }
+    }
+    // `e58-roomshots`: the owner's states of 2026-11-24 as captures, scan-213f's Structure and Experiment tabs, each
+    // group alone and after another, and the Analysis table, the only table of its tab.
+    if (only == QLatin1String("e58-roomshots")) {
+        steps_.push_back({"e58-roomshots-0", {"preference:loggingLevel=Info", "preference:autoCollapse=false", "resize:1496x900", "open-cli-project:pd-neut-cwl_cosio-d20_scan-213f", "wait-settled"}});
+        steps_.back().capture = false;
+        for (const QString& where : {QStringLiteral("structure/basic"), QStringLiteral("structure/extras"), QStringLiteral("experiment/basic"), QStringLiteral("analysis/basic")})
+            steps_.push_back({"e58-roomshots-" + QString(where).replace(QLatin1Char('/'), QLatin1Char('-')),
+                              {"appBar.tab." + where.section(QLatin1Char('/'), 0, 0), "wait-settled", "sideBar.tab." + where.section(QLatin1Char('/'), 1), "wait-settled", where.startsWith(QLatin1String("analysis")) ? QStringLiteral("check-layout") : QStringLiteral("room-tab")}});
+    }
+    // `e58-figures`: the report's figures, each shown: its frame and paddings, and the four border lines of every pane at
+    // several scroll positions; then the Pattern tab's panes.
+    if (only == QLatin1String("e58-figures")) {
+        steps_.push_back({"e58-figures-0-pattern", {"preference:loggingLevel=Info", "resize:1496x900", "open-cli-project:pd-neut-cwl_cosio-d20_2k", "appBar.tab.report", "wait-settled", "reveal:report.pattern.0", "wait-settled", "report-frames", "pane-borders", "report-scrolls"}});
+        steps_.push_back({"e58-figures-1-structure", {"reveal:report.structure.0", "wait-settled"}});
+        steps_.push_back({"e58-figures-2-pattern-tab", {"appBar.tab.experiment", "wait-settled", "pane-borders"}});
+        steps_.push_back({"e58-figures-3-single-crystal", {"open-cli-project:sc-neut-cwl_tb2ti2o7-heidi", "appBar.tab.report", "wait-settled", "reveal:report.singleCrystal", "wait-settled", "report-frames", "pane-borders", "report-scrolls"}});
+        steps_.push_back({"e58-figures-4-single-crystal-tab", {"appBar.tab.experiment", "wait-settled", "pane-borders"}});
+        steps_.push_back({"e58-figures-5-scan", {"open-cli-project:pd-neut-cwl_cosio-d20_scan-3f", "appBar.tab.analysis", "wait-settled", "statusBar.fit.button", "wait-fit", "choose:OK", "wait-settled"}});
+        steps_.back().capture = false;
+        // The report's charts are made a slice at a time.
+        steps_.push_back({"e58-figures-5-evolution", {"appBar.tab.report", "wait-settled", "wait-settled", "wait-settled", "wait-settled", "wait-settled", "wait-settled", "reveal:report.evolution", "wait-settled", "wait-settled", "report-frames", "pane-borders", "report-scrolls"}});
+        steps_.push_back({"e58-figures-6-evolution-tab", {"appBar.tab.analysis", "wait-settled", "mainArea.tab.evolution", "wait-settled", "pane-borders"}});
+    }
+    // `e58-evolution`: the Evolution toolbar's row against the selector row above it, for three parameters.
+    if (only == QLatin1String("e58-evolution")) {
+        steps_.push_back({"e58-evolution-0", {"preference:loggingLevel=Info", "resize:1496x900", "open-cli-project:pd-neut-cwl_cosio-d20_scan-213f", "appBar.tab.analysis", "wait-settled", "mainArea.tab.evolution", "wait-settled", "evolution-row"}});
+        steps_.back().capture = true;
+        // The sidebar at the bottom too.
+        for (const QString& size : {QStringLiteral("900x1000"), QStringLiteral("700x900")})
+            steps_.push_back({"e58-evolution-" + size, {"resize:" + size, "wait-settled", "wait-settled", "evolution-row"}});
+    }
+    // `e58-scroll`: the parameter table scrolled fast in every width mode, its Free boxes held to their column in every
+    // frame (the owner, 2026-11-23).
+    if (only == QLatin1String("e58-scroll")) {
+        steps_.push_back({"e58-scroll-0", {"preference:loggingLevel=Info", "resize:1496x700", "open-cli-project:pd-neut-cwl_cosio-d20_2k", "appBar.tab.analysis", "wait-settled"}});
+        steps_.back().capture = false;
+        for (const QString& width : {QStringLiteral("1280"), QStringLiteral("1496"), QStringLiteral("1920")})
+            for (const QString& mode : {QStringLiteral("auto"), QStringLiteral("full"), QStringLiteral("bounds"), QStringLiteral("values"), QStringLiteral("compact")}) {
+                steps_.push_back({"e58-scroll-" + mode + "-" + width, {"preference:sideBarWidthMode=" + mode, "resize:" + width + "x700", "wait-settled",
+                                                                        "scroll-column-x:parameters.list:parameters.free.", "scroll-column-x:parameters.list:parameters.su."}});
+                steps_.back().capture = false;
+            }
+    }
+    // `e58-bottomchart`: the bottom layout's sidebar from page to page, before and after a fit, with one Bragg row and
+    // with two, at five windows; its height moves with the window and the project alone (W7).
+    if (only == QLatin1String("e58-bottomchart")) {
+        steps_.push_back({"e58-bottomchart-0", {"preference:loggingLevel=Info", "resize:860x1000"}});
+        steps_.back().capture = false;
+        for (const QString& project : {QStringLiteral("pd-neut-cwl_lbco-hrpt"), QStringLiteral("pd-neut-cwl_cosio-d20_2k")}) {
+            const QString tag = project.section(QLatin1Char('-'), 2, 2);
+            steps_.push_back({"e58-bottomchart-" + tag + "-open", {"resize:860x1000", "open-cli-project:" + project, "wait-settled"}});
+            for (const QString& when : {QStringLiteral("before"), QStringLiteral("after")}) {
+                if (when == QLatin1String("after")) {
+                    steps_.push_back({"e58-bottomchart-" + tag + "-fit", {"resize:860x1000", "appBar.tab.analysis", "wait-settled", "statusBar.fit.button", "wait-fit", "choose:OK", "wait-settled"}});
+                    steps_.back().capture = false;
+                }
+                for (const QString& size : {QStringLiteral("860x1000"), QStringLiteral("860x800"), QStringLiteral("700x900"), QStringLiteral("860x760"), QStringLiteral("900x1200")})
+                    for (const QString& page : {QStringLiteral("project"), QStringLiteral("structure"), QStringLiteral("experiment"), QStringLiteral("analysis"), QStringLiteral("report")})
+                        steps_.push_back({"e58-bottomchart-" + tag + "-" + when + "-" + size + "-" + page, {"resize:" + size, "appBar.tab." + page, "wait-settled", "wait-settled", "check-layout"}});
+            }
+        }
+    }
+    // `e58-moments`: the magnetic moments table of the cosio example at three windows, the layout check, and a derived
+    // cell's popup (|M|: value only in the cell, full value and s.u. in the popup, Free disabled; the owner, 2026-11-23).
+    if (only == QLatin1String("e58-moments")) {
+        steps_.push_back({"e58-moments-0", {"preference:loggingLevel=Info", "resize:1496x900", "open-cli-project:pd-neut-cwl_cosio-d20_2k", "appBar.tab.structure",
+                                            "wait-settled", "fold:group.structures", "fold:group.atom_site", "expand:group.atom_site_moment", "wait-settled"}});
+        steps_.back().capture = false;
+        for (const QString& width : {QStringLiteral("1280"), QStringLiteral("1496"), QStringLiteral("1920")})
+            steps_.push_back({"e58-moments-" + width, {"resize:" + width + "x900", "wait-settled", "check-layout"}});
+        steps_.push_back({"e58-moments-popup", {"atomSiteMoment.modulus.0", "wait-settled", "check-layout", "check-popup:atomSiteMoment.modulus.0.popup.value"}});
+        steps_.push_back({"e58-moments-popup-angle", {"key:Escape", "wait-settled", "atomSiteMoment.angle1.0", "wait-settled", "check-popup:atomSiteMoment.angle1.0.popup.value"}});
+        // The spherical form: each value opens the popup, is typed there and committed by Enter.
+        steps_.push_back({"e58-moments-spherical", {"key:Escape", "wait-settled", "atomSiteMoments.form", "choose:spherical", "wait-settled", "check-layout"}});
+        for (const QString& k : {QStringLiteral("0"), QStringLiteral("1"), QStringLiteral("2")})
+            steps_.push_back({"e58-moments-spherical-" + k, {"key:Escape", "wait-settled", "atomSiteMoment.form." + k + ".0", "wait-settled", "check-popup:atomSiteMoment.form." + k + ".0.popup.value"}});
+        steps_.push_back({"e58-moments-spherical-typed", {"key:Escape", "wait-settled", "atomSiteMoment.form.0.0", "wait-settled", "key:Ctrl+A", "type:3.5", "key:Return", "wait-settled"}});
+        steps_.push_back({"e58-moments-spherical-committed", {"key:Escape", "wait-settled"}});
+        steps_.push_back({"e58-moments-fitted", {"appBar.tab.analysis", "wait-settled", "statusBar.fit.button", "wait-fit", "choose:OK", "wait-settled", "appBar.tab.structure", "wait-settled",
+                                                 "atomSiteMoment.form.1.0", "wait-settled", "check-popup:atomSiteMoment.form.1.0.popup.value"}});
+    }
+    // `e58-names`: every bundled example's Analysis page, its widest parameter name logged (the name budget, W5); the
+    // scan and synthetic series, which download their data, are left out.
+    if (only == QLatin1String("e58-names")) {
+        steps_.push_back({"e58-names-0", {"preference:loggingLevel=Info", "preference:sideBarWidthMode=auto", "resize:1920x1080", "wait-settled",
+                                          "open-cli-project:pd-neut-cwl_cosio-d20_2k", "wait-settled"}});
+        steps_.back().capture = false;
+        for (const QString& id : ExampleListModel::bundledIds()) {
+            if (id.contains(QLatin1String("scan")) || id.contains(QLatin1String("synthetic"))) continue;
+            QStringList open = open_example(id);
+            open.insert(2, QStringLiteral("expand:group.examples"));
+            steps_.push_back({"e58-names-" + id, open + QStringList{"wait-settled", "appBar.tab.analysis", "wait-settled"}});
+            steps_.back().capture = false;
+        }
+    }
+    // `e58-contract`: the contract's variant states the layout sweep does not reach: the Auto width series (W3, W4), the
+    // popup from a field and a cell, the unfold heights (T7).
+    if (only == QLatin1String("e58-contract")) {
+        steps_.push_back({"e58-contract-0", {"preference:loggingLevel=Info", "preference:sideBarWidthMode=auto", "resize:1496x900", "open-cli-project:pd-neut-cwl_cosio-d20_2k", "appBar.tab.analysis", "wait-settled"}});
+        steps_.back().capture = false;
+        steps_.push_back({"e58-contract-typing", {"parameters.nameFilter", "wait-settled", "time-keys:length", "wait-settled"}});
+        steps_.back().capture = false;
+        steps_.push_back({"e58-contract-typed", {"parameters.clearFilters", "wait-settled"}});
+        steps_.back().capture = false;
+        for (int width = 900; width <= 2000; width += 40) {
+            steps_.push_back({QStringLiteral("e58-contract-series-%1").arg(width), {QStringLiteral("resize:%1x900").arg(width), "wait-settled", "series-point"}});
+            steps_.back().capture = false;
+        }
+        steps_.push_back({"e58-contract-structure", {"resize:1496x1080", "appBar.tab.structure", "wait-settled", "fold:group.structures", "expand:group.cell", "wait-settled"}});
+        steps_.back().capture = false;
+        steps_.push_back({"e58-contract-popup-field", {"cell.length_a", "popup-time:cell.length_a.menu.popup.value", "time-keys:10.2", "key:Escape", "wait-settled"}});
+        steps_.push_back({"e58-contract-unfold-adp", {"fold:group.cell", "wait-settled", "unfold-heights:group.atom_site_aniso", "wait-settled"}});
+        steps_.push_back({"e58-contract-popup-cell", {"atomSiteAdp.iso.2", "popup-time:atomSiteAdp.iso.2.popup.value", "key:Escape", "wait-settled"}});
+        steps_.push_back({"e58-contract-unfold-sites", {"fold:group.atom_site_aniso", "wait-settled", "unfold-heights:group.atom_site", "wait-settled"}});
+        // The same field's popup after a fit: as wide as before it.
+        steps_.push_back({"e58-contract-fit", {"appBar.tab.analysis", "wait-settled", "statusBar.fit.button", "wait-fit", "choose:OK", "wait-settled",
+                                               "appBar.tab.structure", "wait-settled", "fold:group.atom_site", "expand:group.cell", "wait-settled"}});
+        steps_.back().capture = false;
+        steps_.push_back({"e58-contract-popup-fitted", {"cell.length_a", "popup-time:cell.length_a.menu.popup.value", "key:Escape", "wait-settled"}});
+    }
+    // `e58-popups`: a click on a field row's field and on a table cell opens the parameter popup, its value focused.
+    if (only == QLatin1String("e58-popups")) {
+        steps_.push_back({"e58-popups-0", {"preference:loggingLevel=Info", "resize:1496x1080", "open-cli-project:pd-neut-cwl_cosio-d20_2k", "appBar.tab.structure", "wait-settled",
+                                           "fold:group.structures", "expand:group.cell", "wait-settled"}});
+        steps_.back().capture = false;
+        for (const QString& field : {QStringLiteral("cell.length_a"), QStringLiteral("cell.length_b")})
+            steps_.push_back({"e58-popups-" + field, {field, "wait-settled", "check-popup:" + field + ".menu.popup.value", "key:Escape", "wait-settled"}});
+        steps_.push_back({"e58-popups-adp", {"fold:group.cell", "expand:group.atom_site_aniso", "wait-settled", "atomSiteAdp.iso.2", "wait-settled",
+                                             "check-popup:atomSiteAdp.iso.2.popup.value", "key:Escape", "wait-settled"}});
+        steps_.push_back({"e58-popups-experiment", {"appBar.tab.experiment", "wait-settled", "fold:group.experiments", "expand:group.peak", "expand:group.instrument", "wait-settled"}});
+        steps_.back().capture = false;
+        for (const QString& field : {QStringLiteral("instrument.calib_twotheta_offset")})
+            steps_.push_back({"e58-popups-" + field, {field, "wait-settled", "check-popup:" + field + ".menu.popup.value", "key:Escape", "wait-settled"}});
+    }
+    // `e58-columns`: the displacement table's columns hold their widths while a type changes and a value is typed.
+    if (only == QLatin1String("e58-columns")) {
+        steps_.push_back({"e58-columns-0", {"preference:loggingLevel=Info", "resize:1496x900", "open-cli-project:pd-neut-cwl_cosio-d20_2k", "appBar.tab.structure", "wait-settled",
+                                            "expand:group.atom_site_aniso", "wait-settled", "note-columns:atomSiteAdps.list"}});
+        // The owner's case 80: the same table at a 1380 px window (the sidebar about 690 px), the whole layout check.
+        steps_.push_back({"e58-columns-case80", {"resize:1380x900", "wait-settled", "check-layout", "resize:1496x900", "wait-settled", "note-columns:atomSiteAdps.list"}});
+        steps_.push_back({"e58-columns-type", {"atomSiteAdp.type.0", "choose:Uani", "wait-settled", "check-columns:atomSiteAdps.list"}});
+        steps_.push_back({"e58-columns-value", {"atomSiteAdp.iso.2", "wait-settled", "type:0.123456", "key:Return", "wait-settled", "check-columns:atomSiteAdps.list"}});
+    }
+    // `e58-assistant`: the assistant panel open over the sidebar, at rest, at the contract's windows, in Auto and Compact.
+    if (only == QLatin1String("e58-assistant")) {
+        steps_.push_back({"e58-assistant-00", {"preference:loggingLevel=Info", "resize:1496x900", "open-cli-project:pd-neut-cwl_lbco-hrpt", "wait-settled", "appBar.tab.structure", "wait-settled", "assistant.toggle", "wait-settled"}});
+        int n = 0;
+        for (const QString& mode : {QStringLiteral("auto"), QStringLiteral("compact")})
+            for (const QString& size : {QStringLiteral("1496x900"), QStringLiteral("1280x768"), QStringLiteral("1024x700")})
+                steps_.push_back({QStringLiteral("e58-assistant-%1-%2-%3").arg(++n, 2, 10, QLatin1Char('0')).arg(mode, size),
+                                  {"preference:sideBarWidthMode=" + mode, "resize:" + size, "wait-settled", "check-assistant-panel"}});
+    }
+    // `e58-names`: the Experiments table with an experiment without data beside one with data, for datablock names of 11,
+    // 20 and 24 characters, in Auto and Compact, wide and at the narrowest, the layout check (T10: every name whole, or
+    // cut in the middle by an ellipsis, never elsewhere) at each.
+    if (only == QLatin1String("e58-names")) {
+        steps_.push_back({"e58-names-00-two", {"preference:loggingLevel=Info", "resize:1496x900", "open-cli-project:pd-neut-cwl_lbco-hrpt", "appBar.tab.experiment",
+                                               "wait-settled", "expand:group.experiments", "experiments.create", "wait-settled"}});
+        int n = 0;
+        for (const QString& name : {QStringLiteral("experiment1"), QStringLiteral("experiment_high_temp"), QStringLiteral("experiment_high_temp_new")}) {
+            steps_.push_back({QStringLiteral("e58-names-%1-name-%2").arg(++n, 2, 10, QLatin1Char('0')).arg(name.size()),
+                              {"reveal:experiments.name.1", "wait-settled", "experiments.name.1", "wait-settled", "key:Ctrl+A", "type:" + name, "key:Return", "wait-settled",
+                               "appBar.tab.structure", "wait-settled", "appBar.tab.experiment", "wait-settled", "reveal:experiments.name.1", "wait-settled"}});
+            for (const QString& mode : {QStringLiteral("auto"), QStringLiteral("compact")})
+                for (const QString& size : {QStringLiteral("1496x900"), QStringLiteral("1280x900"), QStringLiteral("1024x700")})
+                    steps_.push_back({QStringLiteral("e58-names-%1-%2-%3-%4").arg(++n, 2, 10, QLatin1Char('0')).arg(name.size()).arg(mode, size),
+                                      {"preference:sideBarWidthMode=" + mode, "resize:" + size, "wait-settled", "check-layout"}});
+        }
+    }
+    // `e58-datablocks`: the Experiments table's name, file and value columns in a row never past the table, for a long
+    // datablock name in an ordinary project beside an empty experiment, and in a scan.
+    if (only == QLatin1String("e58-datablocks")) {
+        int n = 0;
+        QStringList projects{QStringLiteral("open-cli-project:pd-neut-cwl_lbco-hrpt"), QStringLiteral("open-cli-project:pd-neut-cwl_cosio-d20_scan-213f")};
+        // A scan with several extract rules, where one is named.
+        if (const QString many = qEnvironmentVariable("EDI_DEMO_SCAN_PROJECT"); !many.isEmpty()) projects << "open-project:" + many;
+        for (const QString& project : projects) {
+            const bool scan = !project.contains(QLatin1String("lbco"));
+            QStringList open{"preference:loggingLevel=Info", "preference:sideBarWidthMode=auto", "resize:1496x900", project, "appBar.tab.experiment", "wait-settled", "expand:group.experiments"};
+            if (!scan) open << "experiments.create";
+            steps_.push_back({QStringLiteral("e58-datablocks-%1-open").arg(++n, 2, 10, QLatin1Char('0')),
+                              open + QStringList{"wait-settled", "wait-settled"}});
+            steps_.push_back({QStringLiteral("e58-datablocks-%1-named").arg(++n, 2, 10, QLatin1Char('0')),
+                              {"resize:1496x920", "wait-settled", scan ? "experiments.name.0" : "experiments.name.1", "wait-settled", "key:Ctrl+A", "type:experiment_high_temp_new", "key:Return", "wait-settled"}});
+            for (const QString& mode : {QStringLiteral("auto"), QStringLiteral("compact")})
+                for (const QString& size : {QStringLiteral("1496x900"), QStringLiteral("1280x900"), QStringLiteral("1024x700"), QStringLiteral("700x900")})
+                    steps_.push_back({QStringLiteral("e58-datablocks-%1-%2-%3-%4").arg(++n, 2, 10, QLatin1Char('0')).arg(scan ? "scan" : "project", mode, size),
+                                      {"preference:sideBarWidthMode=" + mode, "resize:" + size, "wait-settled", "check-layout"}});
+        }
+    }
+    // `e58-fields`: the cell and peak profile field rows in Compact and Auto at 1280 and 1496 px, no value cropped.
+    if (only == QLatin1String("e58-fields")) {
+        steps_.push_back({"e58-fields-0", {"preference:loggingLevel=Info", "resize:1496x900", "open-cli-project:pd-neut-cwl_cosio-d20_2k", "appBar.tab.analysis", "wait-settled"}});
+        steps_.back().capture = false;
+        for (const QString& mode : {QStringLiteral("compact"), QStringLiteral("auto")})
+            for (const QString& width : {QStringLiteral("1280"), QStringLiteral("1496")}) {
+                steps_.push_back({"e58-fields-structure-" + mode + "-" + width, {"preference:sideBarWidthMode=" + mode, "resize:" + width + "x900", "appBar.tab.structure", "wait-settled", "unfold:group.cell", "wait-settled", "check-fields"}});
+                steps_.push_back({"e58-fields-experiment-" + mode + "-" + width, {"appBar.tab.experiment", "wait-settled", "fold:group.experiments", "expand:group.peak", "wait-settled", "check-fields"}});
+            }
+    }
+    // `e58-case59`: Auto and Full each one width per window size (the owner's case 59, 2026-11-23): at 1280, 1496 and
+    // 1920 px the same on Home and Project with no project, on every page with one, and after a fit, to the pixel.
+    if (only == QLatin1String("e58-case59")) {
+        const QStringList modes{"auto", "full"};
+        const QStringList widths{"1280", "1496", "1920"};
+        steps_.push_back({"e58-case59-0", {"preference:loggingLevel=Info", "resize:1496x900", "appBar.tab.home", "wait-settled"}});
+        steps_.back().capture = false;
+        const auto pass = [&](const QString& when, const QStringList& pages, bool first) {
+            for (const QString& mode : modes)
+                for (const QString& width : widths) {
+                    const QString key = mode + "-" + width;
+                    QStringList actions{"preference:sideBarWidthMode=" + mode, "resize:" + width + "x900"};
+                    for (const QString& page : pages) {
+                        actions << "appBar.tab." + page << "wait-settled";
+                        actions << ((first && page == pages.first()) ? "note-sidebar:" + key : "check-sidebar:" + key);
+                    }
+                    steps_.push_back({"e58-case59-" + when + "-" + key, actions});
+                }
+        };
+        pass("no-project", {"home"}, true);
+        steps_.push_back({"e58-case59-open", {"resize:1496x900", "open-cli-project:pd-neut-cwl_cosio-d20_2k", "wait-settled"}});
+        steps_.back().capture = false;
+        const QStringList pages{"home", "project", "structure", "experiment", "analysis", "report"};
+        pass("opened", pages, false);
+        steps_.push_back({"e58-case59-fit", {"resize:1496x900", "appBar.tab.analysis", "statusBar.fit.button", "wait-fit", "choose:OK", "wait-settled"}});
+        steps_.back().capture = false;
+        pass("fitted", pages, false);
+    }
+    // `e58-case50`: the sidebar's width in Full and in Auto at three window widths, on every page, before and after a
+    // fit (the owner's case 50, 2026-11-23): Full one width on every page and unmoved by the fit; Auto unmoved by it.
+    if (only == QLatin1String("e58-case50")) {
+        const QStringList pages{"project", "structure", "experiment", "analysis", "report"};
+        const QStringList modes{"full", "auto"};
+        const QStringList widths{"1280", "1496", "1920"};
+        steps_.push_back({"e58-case50-0", {"preference:loggingLevel=Info", "resize:1496x900", "open-cli-project:pd-neut-cwl_cosio-d20_2k", "wait-settled"}});
+        steps_.back().capture = false;
+        const auto pass = [&](const QString& when) {
+            for (const QString& mode : modes)
+                for (const QString& width : widths) {
+                    QStringList actions{"preference:sideBarWidthMode=" + mode, "resize:" + width + "x900"};
+                    for (const QString& page : pages) {
+                        const QString key = mode + "-" + width + "-" + page;
+                        actions << "appBar.tab." + page << "wait-settled";
+                        if (when == "before") {
+                            actions << "note-sidebar:" + key;
+                            // Full: every page as Analysis has it before the fit.
+                            if (mode == "full" && page == "analysis") actions << "note-sidebar:full-" + width;
+                        } else {
+                            actions << "check-sidebar:" + key;
+                        }
+                        if (mode == "full") actions << "check-sidebar:full-" + width;
+                    }
+                    steps_.push_back({"e58-case50-" + when + "-" + mode + "-" + width, actions});
+                }
+        };
+        pass("before");
+        steps_.push_back({"e58-case50-fit", {"resize:1496x900", "appBar.tab.analysis", "statusBar.fit.button", "wait-fit", "choose:OK", "wait-settled"}});
+        steps_.back().capture = false;
+        pass("after");
+    }
+    // `e58-resid`: the residual pane's title as the window gets shorter (the owner, 2026-11-23: "resid" when "meas −
+    // calc" does not fit, never smaller or cut).
+    if (only == QLatin1String("e58-resid")) {
+        steps_.push_back({"e58-resid-0", {"resize:1496x900", "open-cli-project:pd-neut-cwl_cosio-d20_2k", "wait-settled", "appBar.tab.analysis",
+                                          "statusBar.fit.button", "wait-fit", "choose:OK", "mainArea.tab.pattern", "wait-settled"}});
+        steps_.back().capture = false;
+        for (const QString& height : {QStringLiteral("900"), QStringLiteral("700"), QStringLiteral("620")})
+            steps_.push_back({"e58-resid-" + height, {"resize:1496x" + height, "wait-settled", "check-layout"}});
+    }
+    // `e58-prefit`: both example projects as opened, before any fit, on the Analysis page at three window widths
+    // (the owner's case 47, 2026-11-23: values cut and columns crushed before a fit).
+    if (only == QLatin1String("e58-prefit")) {
+        steps_.push_back({"e58-prefit-0", {"preference:loggingLevel=Info", "resize:1280x900", "home.start", "wait-settled"}});
+        steps_.back().capture = false;
+        for (const QString& project : {QStringLiteral("pd-neut-cwl_cosio-d20"), QStringLiteral("pd-neut-cwl_cosio-d20_scan")}) {
+            steps_.push_back({"e58-prefit-" + project + "-open", {"open-cli-project:" + project, "wait-settled", "appBar.tab.analysis", "wait-settled"}});
+            steps_.back().capture = false;
+            for (const QString& width : {QStringLiteral("1280"), QStringLiteral("1496"), QStringLiteral("1920")})
+                steps_.push_back({"e58-prefit-" + project + "-" + width, {"resize:" + width + "x900", "wait-settled", "check-layout"}});
+        }
+    }
+    if (only == QLatin1String("e58-widths")) {
+        const QStringList widths = qEnvironmentVariable("EDI_WIDTHS").split(QLatin1Char(','), Qt::SkipEmptyParts);
+        int n = 0;
+        steps_.push_back({"e58-widths-0000-open-ncaf", {"preference:loggingLevel=Info", "resize:1280x900",
+                                                        "open-cli-project:pd-neut-tof_ncaf-wish", "wait-settled",
+                                                        "appBar.tab.analysis", "statusBar.fit.button", "wait-fit", "choose:OK"}});
+        steps_.back().capture = false;
+        for (const QString& width : widths)
+            steps_.push_back({QStringLiteral("e58-widths-%1-ncaf-analysis-%2").arg(++n, 4, 10, QLatin1Char('0')).arg(width),
+                              {"resize:" + width + "x900", "wait-settled", "check-layout"}});
+        // A click on a parameter's number opens its popup (ADR-0103 decision 6).
+        steps_.push_back({"e58-widths-0450-ncaf-parameter-popup", {"resize:1280x900", "wait-settled", "parameters.value.1", "wait-settled", "check-layout"}});
+        steps_.push_back({"e58-widths-0451-ncaf-parameter-popup-closed", {"key:Escape", "wait-settled"}});
+        steps_.back().capture = false;
+        // The structure renamed to a long name first, while its row is on screen (before every group expands): the
+        // charts and the parameter table cut it in its middle at a fixed width (the owner, 2026-11-22).
+        steps_.push_back({"e58-widths-0500-open-cosio", {"open-cli-project:pd-neut-cwl_cosio-d20_scan", "wait-settled",
+                                                         "appBar.tab.structure", "expand:group.structures", "wait-settled",
+                                                         "structures.name.0", "key:Ctrl+A", "type:strujnkjnkjnjcture_with_a_long_name1",
+                                                         "key:Return", "wait-settled", "expand-all", "wait-settled",
+                                                         // An anisotropic site: its tensor values have more digits (the owner, 2026-11-22).
+                                                         "atomSiteAdp.type.0", "choose:Uani", "wait-settled"}});
+        steps_.back().capture = false;
+        for (const QString& width : widths)
+            steps_.push_back({QStringLiteral("e58-widths-%1-cosio-structure-%2").arg(++n, 4, 10, QLatin1Char('0')).arg(width),
+                              {"resize:" + width + "x900", "wait-settled", "check-layout"}});
+        steps_.push_back({"e58-widths-0949-cosio-atom-site-popup", {"resize:1280x900", "wait-settled", "atomSite.fractY.5", "wait-settled", "check-layout"}});
+        steps_.push_back({"e58-widths-0949-cosio-atom-site-popup-closed", {"key:Escape", "wait-settled"}});
+        steps_.back().capture = false;
+        steps_.push_back({"e58-widths-0950-cosio-adp-popup", {"resize:1280x900", "wait-settled", "atomSiteAdp.ani11.0", "wait-settled", "check-layout"}});
+        steps_.push_back({"e58-widths-0951-cosio-adp-popup-closed", {"key:Escape", "wait-settled"}});
+        steps_.back().capture = false;
+        steps_.push_back({"e58-widths-0961-cosio-long-name-pattern", {"appBar.tab.analysis", "mainArea.tab.pattern", "wait-settled", "check-layout"}});
+        steps_.push_back({"e58-widths-0962-cosio-long-name-structure", {"appBar.tab.structure", "mainArea.tab.pattern", "wait-settled", "check-layout"}});
+    }
+    // `e58-scrollbars`: right after a project opens and once settled, on each page: no scroll bar while the content
+    // fits (the owner, 2026-11-22).
+    if (only == QLatin1String("e58-scrollbars")) {
+        steps_.push_back({"e58-scrollbars-0", {"preference:loggingLevel=Info", "resize:1480x900", "home.start", "wait-settled"}});
+        steps_.back().capture = false;
+        steps_.push_back({"e58-scrollbars-1-opening", {"open-cli-project:pd-neut-cwl_cosio-d20_scan", "appBar.tab.project", "check-layout"}});
+        steps_.push_back({"e58-scrollbars-2-opened", {"wait-settled", "check-layout"}});
+        for (const QString& page : {QStringLiteral("structure"), QStringLiteral("experiment"), QStringLiteral("analysis"), QStringLiteral("report")}) {
+            steps_.push_back({"e58-scrollbars-3-" + page, {"appBar.tab." + page, "check-layout"}});
+            steps_.push_back({"e58-scrollbars-4-" + page + "-settled", {"wait-settled", "check-layout"}});
+        }
+    }
+    // `e58-feedback`: typing in the Help and feedback form with a long session's run log (the owner, 2026-11-22: the
+    // window froze for about a minute per letter); each keystroke timed.
+    // `e58-feedback-hover`: the form with a long session's run log and its preview shown, the pointer resting on each
+    // of its controls: which tooltip holds the log (the owner, 2026-11-23: a 1434 x 16692 px shadow layer).
+    if (only == QLatin1String("e58-feedback-hover")) {
+        steps_.push_back({"e58-feedback-hover-1", {"preference:loggingLevel=Info", "preference:toolTipLevel=All", "resize:1280x800",
+                                                   "log-fill:20000", "appBar.tab.home", "wait-settled", "home.feedback", "wait-settled",
+                                                   "feedback.text", "type:the form froze", "feedback.preview", "wait-settled", "hover-all:feedback."}});
+    }
+    // `e58-feedback-sent`: the form's thanks once a message is sent, at two window widths (the owner, 2026-11-23: too
+    // wide for one sentence).
+    if (only == QLatin1String("e58-feedback-sent")) {
+        for (const QString& width : {QStringLiteral("1280"), QStringLiteral("1920")}) {
+            steps_.push_back({"e58-feedback-sent-" + width, {"resize:" + width + "x900", "appBar.tab.home", "wait-settled", "home.feedback",
+                                                             "wait-settled", "set:feedback.form:lastStatus=201", "wait-settled", "check-layout"}});
+            steps_.push_back({"e58-feedback-sent-" + width + "-closed", {"key:Escape", "wait-settled"}});
+            steps_.back().capture = false;
+        }
+    }
+    if (only == QLatin1String("e58-feedback")) {
+        steps_.push_back({"e58-feedback-1-open", {"preference:loggingLevel=Info", "resize:1280x800", "log-fill:20000", "appBar.tab.home",
+                                                  "wait-settled", "home.feedback", "wait-settled", "feedback.text"}});
+        steps_.push_back({"e58-feedback-2-typed", {"time-keys:abcdefghijklmnopqrst", "wait-settled"}});
+    }
+    // `e58-examples`: the Examples list scrolled from its top to its end and back three times, each pass's frame gaps
+    // logged (the owner, 2026-11-21: "not smooth when scrolling"; rows kept once made).
+    if (only == QLatin1String("e58-examples")) {
+        QStringList actions{"resize:1000x900", "home.start", "expand:group.examples", "wait-settled"};
+        for (int pass = 0; pass < 6; ++pass) actions << "scroll-frames:examples.list";
+        steps_.push_back({"e58-examples-1-scrolled", actions + QStringList{"wait-settled"}});
+    }
+    // `e58-reads`: the scan files each step reads (edi ADR-0102 rule 6): none with every scan view hidden, then Map's
+    // pixel rows, then on a zoom only the rows newly shown, none again once hidden, and none on a return.
+    if (only == QLatin1String("e58-reads")) {
+        const QString box = QStringLiteral(":0.3,0.3,0.6,0.7");
+        steps_.push_back({"e58-reads-1-hidden", {"resize:1480x800", "open-project:" + qEnvironmentVariable("EDI_DEMO_SCAN_PROJECT"),
+                                                "appBar.tab.analysis", "mainArea.tab.pattern", "wait-settled", "wait-settled",
+                                                "wait-settled", "count-scan-reads:open-with-every-scan-view-hidden"}});
+        steps_.push_back({"e58-reads-2-map", {"count-scan-reads:before-map", "mainArea.tab.map", "wait-scan:map",
+                                             "count-scan-reads:map-shown"}});
+        steps_.push_back({"e58-reads-3-zoom", {"drag:scanView.map.pointer" + box, "wait-scan:map", "count-scan-reads:map-zoomed"}});
+        steps_.push_back({"e58-reads-4-hidden", {"mainArea.tab.pattern", "wait-settled", "wait-settled", "wait-settled",
+                                                "count-scan-reads:map-hidden"}});
+        steps_.push_back({"e58-reads-5-back", {"mainArea.tab.map", "wait-scan:map", "count-scan-reads:map-again"}});
+    }
+    // `e58-side`: the sidebar on Home, Project, Structure and Analysis at windows of 1000 and 930 px (the owner,
+    // 2026-11-21: narrow on macOS), the cosio structure's Atom sites shown (its header hid the first row there).
+    if (only == QLatin1String("e58-side")) {
+        const QString project = qEnvironmentVariable("EDI_DEMO_ATOMS_CLI", QStringLiteral("pd-neut-cwl_cosio-d20_scan-3f"));
+        steps_.push_back({"e58-side-0-open", {"preference:loggingLevel=Info", "resize:1000x620", "open-cli-project:" + project}});
+        for (const QString& width : {QStringLiteral("1000"), QStringLiteral("930")}) {
+            const QString size = "resize:" + width + "x620";
+            steps_.push_back({"e58-side-" + width + "-1-home", {size, "appBar.tab.home", "wait-settled"}});
+            steps_.push_back({"e58-side-" + width + "-2-project", {"appBar.tab.project", "wait-settled"}});
+            steps_.push_back({"e58-side-" + width + "-3-structure", {"appBar.tab.structure", "expand:group.atom_site",
+                                                                       "wait-settled", "reveal:group.atom_site"}});
+            steps_.push_back({"e58-side-" + width + "-4-analysis", {"appBar.tab.analysis", "wait-settled"}});
+        }
+    }
+    // `e58-bottom`: the Experiment page's tabs in the bottom-sidebar layout, where Stacked showed the Pattern chart.
+    if (only == QLatin1String("e58-bottom")) {
+        steps_.push_back({"e58-bottom-1", {"resize:700x900", "open-cli-project:pd-neut-cwl_cosio-d20_scan-3f", "appBar.tab.experiment", "wait-settled", "check-layout"}});
+        // The Analysis sidebar below at two portrait sizes (the owner, 2026-11-23: no name filter, the reset in the
+        // pickers' row, about half the height).
+        steps_.push_back({"e58-bottom-1b-analysis-700", {"appBar.tab.analysis", "wait-settled", "check-layout"}});
+        steps_.push_back({"e58-bottom-1c-analysis-600", {"resize:600x1000", "wait-settled", "check-layout"}});
+        steps_.push_back({"e58-bottom-1d-back", {"resize:700x900", "appBar.tab.experiment", "wait-settled"}});
+        steps_.back().capture = false;
+        steps_.push_back({"e58-bottom-2-stacked", {"mainArea.tab.stacked", "wait-settled"}});
+        steps_.push_back({"e58-bottom-3-meascalc", {"mainArea.tab.measCalc", "wait-settled"}});
+        steps_.push_back({"e58-bottom-4-map", {"mainArea.tab.map", "wait-settled"}});
+    }
+    // `e58-zoom`: a box zoom on Meas vs calc, Stacked and Map, each taken partway (120 ms of the 250 ms move) and
+    // settled: every chart moves to a zoom as the Pattern chart does (the owner, 2026-11-21).
+    if (only == QLatin1String("e58-zoom")) {
+        const QString box = QStringLiteral(":0.3,0.3,0.6,0.7");
+        steps_.push_back({"e58-zoom-0-meascalc", {"resize:1480x800", "open-project:" + qEnvironmentVariable("EDI_DEMO_FIT_PROJECT"),
+                                                  "appBar.tab.analysis", "mainArea.tab.measCalc", "wait-settled"}});
+        steps_.push_back({"e58-zoom-1-meascalc-mid", {"drag:measCalc.pointer" + box, "capture-at:120"}});
+        steps_.push_back({"e58-zoom-2-meascalc-end", {"wait-settled"}});
+        steps_.push_back({"e58-zoom-3-stacked", {"open-project:" + qEnvironmentVariable("EDI_DEMO_SCAN_PROJECT"),
+                                                 "appBar.tab.analysis", "mainArea.tab.stacked", "wait-scan:stacked"}});
+        steps_.push_back({"e58-zoom-4-stacked-mid", {"drag:scanView.stacked.pointer" + box, "capture-at:120"}});
+        steps_.push_back({"e58-zoom-5-stacked-end", {"wait-scan:stacked"}});
+        steps_.push_back({"e58-zoom-6-map", {"mainArea.tab.map", "wait-scan:map"}});
+        steps_.push_back({"e58-zoom-7-map-mid", {"drag:scanView.map.pointer" + box, "capture-at:120"}});
+        steps_.push_back({"e58-zoom-8-map-end", {"wait-scan:map"}});
+    }
+    // `e58-sweep`: every page, main-view tab and sidebar tab (its groups open) of each CLI project EDI_SWEEP_PROJECTS
+    // names, at each window size EDI_SWEEP_SIZES names, every frame checked by check-layout (the owner, 2026-11-21: a
+    // sweep inspected before the owner sees it). A check, not a test gate and not the documentation capture.
+    if (only == QLatin1String("e58-sweep")) {
+        const QJsonObject pages = QJsonDocument::fromJson(qgetenv("EDI_UI_TAB_INVENTORY")).object();
+        const QStringList projects = qEnvironmentVariable("EDI_SWEEP_PROJECTS").split(QLatin1Char(','), Qt::SkipEmptyParts);
+        const QStringList sizes = qEnvironmentVariable("EDI_SWEEP_SIZES").split(QLatin1Char(','), Qt::SkipEmptyParts);
+        int n = 0;
+        // Before any project: the Project page's Get started and Examples, the list at its top and at its end, at every
+        // size (the owner, 2026-11-22: rows whose tags wrap overlapped, and no frame showed the list).
+        for (const QString& size : sizes) {
+            // Not skip_unavailable: that test looks for the first action as a control, which a resize is not.
+            const auto shot = [&](const QString& name, const QStringList& actions) {
+                steps_.push_back({QStringLiteral("e58-sweep-%1-noproject-%2-%3").arg(++n, 4, 10, QLatin1Char('0')).arg(size, name),
+                                  actions + QStringList{"wait-settled", "check-layout"}});
+            };
+            // Home's Start once; later sizes are already on the Project page, the list taken back to its top.
+            QStringList top = n == 0 ? QStringList{"home.start"} : QStringList{};
+            top << "resize:" + size << "wait-settled" << "expand:group.examples" << "wait-settled"
+                << "list-top:examples.list" << "wait-settled";
+            shot("examples-top", top);
+            shot("examples-end", {"list-end:examples.list", "wait-settled"});
+            shot("get-started", {"expand:group.getStarted", "wait-settled"});
+        }
+        for (const QString& project : projects) {
+            // Opened once: a CLI project's copy is made once per run.
+            steps_.push_back({QStringLiteral("e58-sweep-%1-%2-open").arg(++n, 4, 10, QLatin1Char('0')).arg(project),
+                              // Every group stays open as the next opens, so expand-all shows every table of a tab.
+                              {"preference:loggingLevel=Info", "preference:autoCollapse=false", "open-cli-project:" + project, "wait-settled",
+                               "check-messages"}});
+            steps_.back().capture = false;
+            // Every width the sidebar's button offers (the owner, 2026-11-22), Manual at a dragged width.
+            const QStringList modes = qEnvironmentVariable("EDI_SWEEP_MODES", QStringLiteral("auto,full,bounds,values,compact,manual"))
+                                          .split(QLatin1Char(','), Qt::SkipEmptyParts);
+            for (const QString& mode : modes) {
+            steps_.push_back({QStringLiteral("e58-sweep-%1-%2-mode-%3").arg(++n, 4, 10, QLatin1Char('0')).arg(project, mode),
+                              {"preference:sideBarManualWidth=600", "preference:sideBarWidthMode=" + mode, "wait-settled"}});
+            steps_.back().capture = false;
+            for (const QString& size : sizes) {
+                const QString key = project.section(QLatin1Char('_'), 1) + "-" + mode + "-" + size;
+                steps_.push_back({QStringLiteral("e58-sweep-%1-%2-resize").arg(++n, 4, 10, QLatin1Char('0')).arg(key),
+                                  {"resize:" + size, "wait-settled"}});
+                steps_.back().capture = false;
+                for (const QString& page : {QStringLiteral("home"), QStringLiteral("project"), QStringLiteral("structure"),
+                                            QStringLiteral("experiment"), QStringLiteral("analysis"), QStringLiteral("report")}) {
+                    const QJsonObject tabs = pages.value(page).toObject();
+                    const QJsonArray main = tabs.value("main").toArray(), side = tabs.value("sidebar").toArray();
+                    const auto frame = [&](const QString& name, const QStringList& actions) {
+                        const QString image = QStringLiteral("e58-sweep-%1-%2-%3").arg(++n, 4, 10, QLatin1Char('0')).arg(key, name);
+                        steps_.push_back({image, actions + QStringList{"expand-all", "wait-settled", "check-layout"}});
+                        steps_.back().skip_unavailable = true;
+                    };
+                    frame(page, main.isEmpty() ? QStringList{"appBar.tab." + page}
+                                               : QStringList{"appBar.tab." + page, "wait-settled", "wait-settled",
+                                                             "main-tab-index:" + page + ":0", "wait-settled", "main-tab-index:" + page + ":0"});
+                    // The width button's menu open, once per size (it is the same menu in every mode).
+                    if (page == QLatin1String("analysis") && mode == modes.first()) {
+                        const QString image = QStringLiteral("e58-sweep-%1-%2-width-menu").arg(++n, 4, 10, QLatin1Char('0')).arg(key);
+                        steps_.push_back({image, {"sideBar.width", "wait-settled", "check-layout"}});
+                        steps_.back().skip_unavailable = true;
+                        steps_.push_back({image + "-closed", {"key:Escape", "wait-settled"}});
+                        steps_.back().capture = false;
+                    }
+                    // EDI_SWEEP_SHORT: each page on its first main and sidebar tab only, for a quick look.
+                    const bool brief = qEnvironmentVariableIsSet("EDI_SWEEP_SHORT");
+                    // EDI_SWEEP_TABLES: the sidebar's tabs only, where every table is; the main view's tabs hold charts.
+                    const bool tablesOnly = qEnvironmentVariableIsSet("EDI_SWEEP_TABLES");
+                    for (qsizetype m = 1; !brief && !tablesOnly && m < main.size(); ++m)
+                        frame(page + "-main-" + main[m].toObject().value("key").toString(), {main[m].toObject().value("object").toString()});
+                    // Back to the first tab, unless the tab bar has scrolled it out of view (a finding the frames show).
+                    if (main.size() > 1) {
+                        steps_.push_back({QStringLiteral("e58-sweep-%1-%2-%3-back").arg(++n, 4, 10, QLatin1Char('0')).arg(key, page),
+                                          {main[0].toObject().value("object").toString()}, {}, {}, {}, {}, false});
+                        steps_.back().skip_unavailable = true;
+                    }
+                    for (qsizetype t = 1; !brief && t < side.size(); ++t)
+                        frame(page + "-side-" + side[t].toObject().value("key").toString(), {side[t].toObject().value("object").toString()});
+                    if (side.size() > 1) {
+                        steps_.push_back({QStringLiteral("e58-sweep-%1-%2-%3-side-back").arg(++n, 4, 10, QLatin1Char('0')).arg(key, page),
+                                          {side[0].toObject().value("object").toString()}, {}, {}, {}, {}, false});
+                        steps_.back().skip_unavailable = true;
+                    }
+                }
+            }
+            }
+            steps_.push_back({QStringLiteral("e58-sweep-%1-%2-mode-auto").arg(++n, 4, 10, QLatin1Char('0')).arg(project),
+                              {"preference:sideBarWidthMode=auto", "wait-settled"}});
+            steps_.back().capture = false;
+            // A joint fit's Analysis page after the fit, where Start, s.u. and Change show, at the widths where the
+            // sidebar takes its full width (the owner, 2026-11-22). Not the scan: its
+            // sequential fit is too long for a sweep.
+            if (project.contains(QLatin1String("ncaf"))) {
+                steps_.push_back({QStringLiteral("e58-sweep-%1-%2-fit").arg(++n, 4, 10, QLatin1Char('0')).arg(project),
+                                  {"appBar.tab.analysis", "statusBar.fit.button", "wait-fit", "choose:OK"}});
+                steps_.back().capture = false;
+                steps_.back().skip_unavailable = true;
+                for (const QString& mode : modes) {
+                    for (const QString& size : sizes) {
+                        if (size.section(QLatin1Char('x'), 0, 0).toInt() < 1020) continue;
+                        const QString key = project.section(QLatin1Char('_'), 1) + "-" + mode + "-" + size;
+                        steps_.push_back({QStringLiteral("e58-sweep-%1-%2-analysis-fitted").arg(++n, 4, 10, QLatin1Char('0')).arg(key),
+                                          {"preference:sideBarWidthMode=" + mode, "appBar.tab.analysis", "resize:" + size, "wait-settled",
+                                           "check-layout"}});
+                        // The Extra tab after the fit: its start values and results exist only then.
+                        steps_.push_back({QStringLiteral("e58-sweep-%1-%2-analysis-fitted-extras").arg(++n, 4, 10, QLatin1Char('0')).arg(key),
+                                          {"sideBar.tab.extras", "wait-settled", "expand-all", "wait-settled", "check-layout"}});
+                        steps_.back().skip_unavailable = true;
+                        steps_.push_back({QStringLiteral("e58-sweep-%1-%2-analysis-fitted-main").arg(++n, 4, 10, QLatin1Char('0')).arg(key),
+                                          {"sideBar.tab.basic"}, {}, {}, {}, {}, false});
+                        steps_.back().skip_unavailable = true;
+                    }
+                }
+                // The rows with the longest numbers (the time-of-flight calibration), filtered into view at 1280: how
+                // a value too long for its column is written (the owner, 2026-11-22). Last, so the filter stays.
+                steps_.push_back({QStringLiteral("e58-sweep-%1-%2-1280x800-analysis-fitted-calibration").arg(++n, 4, 10, QLatin1Char('0')).arg(project),
+                                  {"preference:sideBarWidthMode=auto", "appBar.tab.analysis", "resize:1280x800", "wait-settled",
+                                   "parameters.nameFilter", "type:calib_d_to_tof", "wait-settled", "check-layout"}});
+            }
+        }
+    }
+    // The sweep's end: the project closed, and the Project page before any project in each width mode, which keeps the
+    // width it gives with a project (the owner, 2026-11-22).
+    if (only == QLatin1String("e58-sweep")) {
+        const QStringList modes = qEnvironmentVariable("EDI_SWEEP_MODES", QStringLiteral("auto,full,bounds,values,compact,manual"))
+                                      .split(QLatin1Char(','), Qt::SkipEmptyParts);
+        int m = 9000;
+        steps_.push_back({"e58-sweep-8999-close-project", {"close-project", "wait-settled", "resize:1280x800", "wait-settled"}});
+        steps_.back().capture = false;
+        for (const QString& mode : modes)
+            steps_.push_back({QStringLiteral("e58-sweep-%1-noproject-%2-1280x800").arg(++m).arg(mode),
+                              {"preference:sideBarWidthMode=" + mode, "appBar.tab.home", "wait-settled", "home.start", "wait-settled", "check-layout"}});
+        steps_.push_back({"e58-sweep-9099-mode-auto", {"preference:sideBarWidthMode=auto", "wait-settled"}});
+        steps_.back().capture = false;
+    }
+    // `e58-tabs`: every page, then each of its main and sidebar tabs, as EDI_UI_TAB_INVENTORY declares them (the pages in
+    // the app bar's order, each page's tabs in declaration order), with the scan EDI_DEMO_SCAN_PROJECT open.
+    if (only.startsWith(QLatin1String("e58-tabs"))) {
+        steps_.push_back({"e58-tabs-000-opened", {"resize:1480x800", "open-project:" + qEnvironmentVariable("EDI_DEMO_SCAN_PROJECT")}});
+        const QJsonObject pages = QJsonDocument::fromJson(qgetenv("EDI_UI_TAB_INVENTORY")).object();
+        int n = 0;
+        const auto add = [&](const QString& name, const QString& object) {
+            // Captured a set time after the click: a view that keeps drawing while it loads (Map on a long scan) never
+            // settles, and the trace, not the image, is what this scenario measures.
+            steps_.push_back({QStringLiteral("e58-tabs-%1-%2").arg(++n, 3, 10, QLatin1Char('0')).arg(name), {object, "capture-now"}});
+            named(name);
+            steps_.back().skip_unavailable = true;
+        };
+        for (const QString& page : {QStringLiteral("home"), QStringLiteral("project"), QStringLiteral("structure"),
+                                    QStringLiteral("experiment"), QStringLiteral("analysis"), QStringLiteral("report")}) {
+            if (!pages.contains(page)) continue;
+            add("page-" + page, "appBar.tab." + page);
+            for (const char* area : {"main", "sidebar"}) {
+                for (const auto& tab : pages.value(page).toObject().value(QString::fromLatin1(area)).toArray()) {
+                    add(QStringLiteral("tab-%1-%2-%3").arg(QString::fromLatin1(area), page, tab.toObject().value("key").toString()),
+                        tab.toObject().value("object").toString());
+                }
+            }
+        }
+    }
+    if (only.startsWith(QLatin1String("e58-banks"))) {
+        const QString banks = copy_cli_project(QStringLiteral("pd-neut-tof_ncaf-wish-5bank_start-5"), QDir(loaded_files_.path()));
+        steps_.push_back({"e58-banks-00-opened", {"resize:1480x800", "open-project:" + banks, "appBar.tab.experiment"}});
+        int n = 0;
+        for (const QString& page : {QStringLiteral("experiment"), QStringLiteral("analysis")}) {
+            for (const QString& direction : {QStringLiteral("next"), QStringLiteral("previous")}) {
+                if (page == QLatin1String("analysis") && direction == QLatin1String("next"))
+                    steps_.push_back({QStringLiteral("e58-banks-%1-to-analysis").arg(++n, 2, 10, QLatin1Char('0')), {"appBar.tab.analysis"}});
+                for (int i = 0; i < 4; ++i) {
+                    steps_.push_back({QStringLiteral("e58-banks-%1-%2-%3-%4").arg(++n, 2, 10, QLatin1Char('0')).arg(page, direction).arg(i),
+                                      {direction == QLatin1String("next") ? "mainArea.blocks.down" : "mainArea.blocks.up"}});
+                    named(QStringLiteral("%1-%2-%3").arg(page, direction).arg(i));
+                }
+            }
+        }
+    }
+    if (only.startsWith(QLatin1String("e58-pattern"))) {
+        steps_.push_back({"e58-pattern-00-opened", {"resize:1480x800", "open-project:" + qEnvironmentVariable("EDI_DEMO_SCAN_PROJECT"),
+                                                    "appBar.tab.experiment", "mainArea.tab.pattern"}});
+        int n = 0;
+        for (const QString& page : {QStringLiteral("experiment"), QStringLiteral("analysis")}) {
+            for (const QString& direction : {QStringLiteral("next"), QStringLiteral("previous")}) {
+                const bool next = direction == QLatin1String("next");
+                if (page == QLatin1String("analysis") && next)
+                    steps_.push_back({QStringLiteral("e58-pattern-%1-to-analysis").arg(++n, 2, 10, QLatin1Char('0')),
+                                      {"appBar.tab.analysis", "mainArea.tab.pattern"}});
+                // Ten presses on a 100 ms schedule (run_step), each without a capture or a wait.
+                for (int i = 0; i < 10; ++i) {
+                    steps_.push_back({QStringLiteral("e58-pattern-%1-%2-%3-%4").arg(++n, 2, 10, QLatin1Char('0')).arg(page, direction).arg(i),
+                                      {next ? "mainArea.blocks.down" : "mainArea.blocks.up"}});
+                    steps_.back().capture = false;
+                    named(QStringLiteral("%1-%2-%3").arg(page, direction).arg(i), next ? 1 : -1);
+                }
+                steps_.push_back({QStringLiteral("e58-pattern-%1-%2-%3-settled").arg(++n, 2, 10, QLatin1Char('0')).arg(page, direction), {"wait-settled"}});
+            }
+        }
+    }
+    if (only.startsWith(QLatin1String("e58-series"))) {
+        steps_.push_back({"e58-series-0-opened", {"resize:1480x800", "open-project:" + qEnvironmentVariable("EDI_DEMO_SCAN_PROJECT"),
+                                                  analysis, basic, "mainArea.tab.pattern"}});
+        steps_.push_back({"e58-series-1-fit-start", {"statusBar.fit.button", "capture-now"}});
+        named(QStringLiteral("fit-start"));
+        steps_.push_back({"e58-series-2-fit-running", {"wait-files:50", "capture-now"}});
+        named(QStringLiteral("fit-running"));
+        steps_.push_back({"e58-series-3-fit-ended", {"wait-fit"}});
+        named(QStringLiteral("fit-ended"));
+        steps_.push_back({"e58-series-4-end-settled", {"wait-settled"}});
+        named(QStringLiteral("end-settled"));
     }
     if (only.startsWith(QLatin1String("stall-"))) {
         steps_.push_back({"stall-1-opened",
@@ -1722,7 +2602,9 @@ void DemoDriver::start() {
 
 void DemoDriver::run_step() {
     if (current_ == steps_.size()) {
-        QCoreApplication::exit(!documentation_ || saveDocumentationManifest("complete") ? 0 : 1);
+        const int code = !documentation_ || saveDocumentationManifest("complete") ? 0 : 1;
+        if (trace_complete(code)) return;
+        QCoreApplication::exit(code);
         return;
     }
     documentation_skip_ = false;
@@ -1730,11 +2612,808 @@ void DemoDriver::run_step() {
         std::fprintf(stdout, "docs-capture: %s\n", qPrintable(steps_[current_].image));
         std::fflush(stdout);
     }
+    const Step& step = steps_[current_];
+    if (!step.trace.isEmpty()) trace_step_begin(step);
     action_ = 0;
+    // Next and previous presses go out on a 100 ms schedule from the first of a run of them, as a held key would.
+    if (step.navigation != 0) {
+        if (!nav_clock_.isValid()) nav_clock_.start();
+        const qint64 now = nav_clock_.elapsed();
+        if (current_ == 0 || steps_[current_ - 1].navigation == 0) {
+            nav_base_ = now;
+            nav_index_ = 0;
+        }
+        const qint64 due = nav_base_ + qint64{100} * nav_index_++;
+        QTimer::singleShot(static_cast<int>(std::max<qint64>(0, due - now)), Qt::PreciseTimer, this, [this] { next_action(); });
+        return;
+    }
     next_action();
 }
 
+QImage DemoDriver::grab() {
+    // The window grab renders a frame on the GUI thread for the driver, not for the user: the GUI watchdog leaves it
+    // out (ui_probe.hpp).
+#if EDI_UI_INSTRUMENTATION
+    const int id = ++tool_id_;
+    trace_measurement(true, id, QStringLiteral("QQuickWindow::grabWindow"));
+    QImage frame = window_.grabWindow();
+    trace_measurement(false, id, QStringLiteral("QQuickWindow::grabWindow"));
+    return frame;
+#else
+    return window_.grabWindow();
+#endif
+}
+
+namespace {
+ProjectViewModel* open_project(QQuickWindow& window);  // below
+}  // namespace
+
+#if EDI_UI_INSTRUMENTATION
+void DemoDriver::trace_collect_tabs(QQuickItem* root) {
+    std::function<void(QQuickItem*)> walk = [&](QQuickItem* item) {
+        for (QQuickItem* child : item->childItems()) {
+            const QString name = child->objectName();
+            if (name.startsWith(QLatin1String("mainArea.")) && name.contains(QLatin1String(".tab.")) &&
+                !view_tabs_.contains(child))
+                view_tabs_.append(child);
+            if (name.startsWith(QLatin1String("sideBar.tab.")) && !side_tabs_.contains(child)) side_tabs_.append(child);
+            walk(child);
+        }
+    };
+    walk(root);
+}
+
+void DemoDriver::trace_tab_inventory() {
+    if (tab_inventory_sent_) return;
+    QJsonObject pages;
+    for (const QPointer<QQuickItem>& tab : page_tabs_) {
+        if (!tab) continue;
+        const QString page = tab->objectName().mid(11);
+        QJsonArray main, sidebar;
+        if (auto* loader = qvariant_cast<QQuickItem*>(tab->property("page")); loader != nullptr) {
+            if (loader->property("status").toInt() != 1) return;  // a page still being built: not yet
+            // A main view declares every tab button and shows the page's own set (its tabKeys, spelled as its allKeys):
+            // only those are the page's tabs.
+            std::function<void(QQuickItem*, const QStringList*)> walk = [&](QQuickItem* item, const QStringList* keys) {
+                QStringList own;
+                if (item->metaObject()->indexOfProperty("allKeys") >= 0) {
+                    own = item->property("tabKeys").toStringList();
+                    keys = &own;
+                }
+                for (QQuickItem* child : item->childItems()) {
+                    const QString name = child->objectName();
+                    const QString key = name.section(QLatin1Char('.'), -1);
+                    if (name.startsWith(QLatin1String("mainArea.")) && name.contains(QLatin1String(".tab."))) {
+                        const QString spelled = key.toLower();
+                        if (keys == nullptr || keys->contains(spelled))
+                            main.append(QJsonObject{{"key", keys != nullptr ? spelled : key}, {"object", name}});
+                    }
+                    if (name.startsWith(QLatin1String("sideBar.tab."))) sidebar.append(QJsonObject{{"key", key}, {"object", name}});
+                    walk(child, keys);
+                }
+            };
+            walk(loader, nullptr);
+        }
+        pages.insert(page, QJsonObject{{"main", main}, {"sidebar", sidebar}});
+    }
+    tab_inventory_sent_ = true;
+    EDI_UI_TRACE("tab-inventory", {{"witness", "qml-tab-bars"}, {"pages", pages}});
+}
+
+void DemoDriver::trace_measurement(bool enter, int id, const QString& callback) {
+    // The span marker and the callback witness of the driver's own work, at one instant (tools/ci/gui_watchdog.py).
+    if (!ui_trace_on()) return;
+    if (enter) {
+        ui_trace_group({{"tool-begin", {{"id", id}, {"callback", callback}}},
+                        {"measurement-enter", {{"id", id}, {"callback", callback}}}});
+    } else {
+        ui_trace_group({{"measurement-leave", {{"id", id}, {"callback", callback}}},
+                        {"tool-end", {{"id", id}, {"callback", callback}}}});
+    }
+}
+
+void DemoDriver::trace_step_begin(const Step& step) {
+    if (!ui_trace_on()) return;
+    if (!trace_begun_) {
+        trace_begun_ = true;
+        trace_scenario_ = only_.section(QLatin1Char('-'), 0, 1);
+        trace_watch();  // the observers are in place before the first input
+        EDI_UI_TRACE("begin", {{"scenario", trace_scenario_}});
+    }
+    // A step that only waits (a fit's progress) issues its wait as its action.
+    if (step.navigation == 0 && !step.actions.isEmpty() && step.actions.first().startsWith(QLatin1String("wait-"))) {
+        trace_issue(step.actions.first());
+    }
+    // The watchdog's control: EDI_UI_BLOCK_MS blocks the GUI thread once inside the measured steps, outside the
+    // driver's own work, so a check that cannot see a blocked GUI thread is caught. Production never sets it.
+    if (const int block = qEnvironmentVariableIntValue("EDI_UI_BLOCK_MS"); block > 0 && !blocked_) {
+        blocked_ = true;
+        EDI_UI_TRACE("block-begin", {{"ms", block}});
+        QThread::msleep(static_cast<unsigned long>(block));
+        EDI_UI_TRACE("block-end", {{"ms", block}});
+    }
+}
+
+void DemoDriver::trace_issue(const QString& action) {
+    if (!ui_trace_on()) return;
+    const Step& step = steps_[current_];
+    const QJsonObject now = trace_state();
+    Pending pending;
+    pending.request = ++request_id_;
+    pending.name = step.trace;
+    if (action.startsWith(QLatin1String("appBar.tab."))) {
+        pending.page = action.mid(11);
+    } else if ((action.startsWith(QLatin1String("mainArea.")) && action.contains(QLatin1String(".tab."))) ||
+               action.startsWith(QLatin1String("sideBar.tab."))) {
+        pending.object = action;
+        // The button on screen now, the one the press reaches: Structure's and Analysis' tab bars both have a
+        // mainArea.tab.structure, and a later lookup by name found the hidden page's, which never became checked.
+        pending.button = find(action, true);
+    } else if (action.startsWith(QLatin1String("mainArea.blocks."))) {
+        pending.before = now.value(QStringLiteral("selection")).toInt();
+        if (step.navigation != 0) {
+            pending.direction = step.navigation > 0 ? QStringLiteral("next") : QStringLiteral("previous");
+            FrameWatch watch;
+            watch.request = pending.request;
+            watch.chart = find_held(QStringLiteral("chart"), false);
+            if (watch.chart) watch.controller = watch.chart->findChild<PatternChartController*>();
+            if (watch.controller) watch.base = watch.controller->traceGeneration();
+            frame_watches_.append(watch);
+        }
+    } else if (action == QLatin1String("statusBar.fit.button")) {
+        pending.fit = QStringLiteral("start");
+        fit_runs_at_start_ = fit_runs_;
+        pending.runs = fit_runs_;
+    } else if (action.startsWith(QLatin1String("wait-files"))) {
+        pending.fit = QStringLiteral("running");
+        pending.runs = fit_runs_at_start_;
+    } else if (action == QLatin1String("wait-fit")) {
+        pending.fit = QStringLiteral("ended");
+    } else {
+        pending.fit = QStringLiteral("settled");
+    }
+    pending_.push_back(pending);
+    EDI_UI_TRACE("action", {{"request", pending.request}, {"name", step.trace}, {"command", action},
+                            {"before_selection", now.value(QStringLiteral("selection"))}});
+}
+
+void DemoDriver::trace_issued(const Step&) {
+    if (!ui_trace_on() || pending_.empty()) return;
+    // The press's target is the selection it made, read from the model at once.
+    const int dataset = trace_state().value(QStringLiteral("selection")).toInt();
+    pending_.back().dataset = dataset;
+    if (!frame_watches_.isEmpty() && frame_watches_.last().request == pending_.back().request)
+        frame_watches_.last().dataset = dataset;
+}
+
+bool DemoDriver::trace_complete(int code) {
+    if (!trace_begun_) return false;
+    // The last steps' observations are written on a frame: a step that changes nothing on screen (the end of a run,
+    // settled) draws none by itself, so frames are asked for until they are written, for at most 3 s.
+    if (!pending_.empty() && complete_waits_ < 60) {
+        ++complete_waits_;
+        window_.requestUpdate();
+        QTimer::singleShot(50, this, [this, code] {
+            if (!trace_complete(code)) QCoreApplication::exit(code);
+        });
+        return true;
+    }
+    // The trace's last tick follows its end, so the measured interval is closed by a tick.
+    EDI_UI_TRACE("complete", {{"scenario", trace_scenario_}});
+    QTimer::singleShot(50, this, [code] { QCoreApplication::exit(code); });
+    return true;
+}
+
+void DemoDriver::trace_watch() {
+    if (watching_) {
+        return;
+    }
+    watching_ = true;
+    // The tab buttons are found once: reading their state is all a frame costs.
+    std::function<void(QQuickItem*)> walk = [&](QQuickItem* item) {
+        for (QQuickItem* child : item->childItems()) {
+            if (child->objectName().startsWith(QLatin1String("appBar.tab."))) page_tabs_.append(child);
+            walk(child);
+        }
+    };
+    walk(window_.contentItem());
+    trace_collect_tabs(window_.contentItem());
+    input_identity_ = trace_input();
+    if (ProjectViewModel* project = open_project(window_); project != nullptr) {
+        // What was loaded, counted from the model: the patterns (a scan's datasets or the experiments), structures,
+        // experiments and the current pattern's points.
+        const edi::Project& core = project->project();
+        int data_points = 0;
+        if (const ExperimentViewModel* experiment = project->currentExperiment(); experiment != nullptr) {
+            const auto& held = *core.experiments[experiment->tracePlace()];
+            if (held.data) data_points = static_cast<int>(held.data->intensity_meas.size());
+        }
+        // A series' fitted points, a scan's datasets, or none; each holds one measured pattern per bank with data.
+        const int banks = static_cast<int>(core.experiments.size());
+        const int with_data = static_cast<int>(std::count_if(core.experiments.begin(), core.experiments.end(),
+                                                             [](const auto& bank) { return bank->data.has_value(); }));
+        const int series_points = project->property("seriesPointCount").toInt();
+        const bool scan = project->scanTemplate() != nullptr;
+        const int points = series_points > 0 ? series_points
+                           : scan && project->experiments() != nullptr ? project->experiments()->rowCount() : 0;
+        EDI_UI_TRACE("input", {{"identity", input_identity_}, {"input", input_identity_}, {"banks", banks},
+                               {"measured", with_data > 0}, {"measured_banks", with_data},
+                               {"points", points}, {"data_points", data_points},
+                               {"structures", static_cast<int>(core.structures.size())}});
+        if (FitViewModel* fit = project->fit(); fit != nullptr) {
+            fit_running_ = fit->running();
+            connect(fit, &FitViewModel::runningChanged, this, [this, fit] {
+                fit_running_ = fit->running();
+                if (fit_running_) ++fit_runs_;
+            });
+        }
+    }
+    connect(&window_, &QQuickWindow::afterAnimating, this, &DemoDriver::trace_frame);
+    // At synchronisation the GUI thread waits, so the native state and the chart's geometry are read there and are
+    // what the frame shows; the frame's swap then writes them, with the transitions published for it, at one instant.
+    // Both run on the render thread: they are dropped before quitting, so none can run while the driver goes away.
+    trace_sync_ = connect(&window_, &QQuickWindow::afterSynchronizing, this, [this] {
+        const QJsonObject displayed = trace_state();
+        QJsonArray frames, presented;
+        // One observation a swap, so the swap's render names one request: a press's first frame comes first (it must
+        // be the first swap after the press); a settled frame waits for the next swap, which checks it again.
+        FrameWatch* chosen = nullptr;
+        bool settling = false;
+        for (FrameWatch& watch : frame_watches_) {
+            if (watch.chart && !watch.first) {
+                chosen = &watch;
+                break;
+            }
+        }
+        QString buffers;
+        if (chosen == nullptr) {
+            for (FrameWatch& watch : frame_watches_) {
+                if (!watch.chart || !watch.presented || watch.settled || !watch.controller) continue;
+                // Settled: the chart's current upload was made from the selected dataset's data, the series objects
+                // hold that upload now (read back from them), and every measured point they draw is a point of the
+                // selected data as the project holds it. The generation named is the one drawn.
+                const PatternChartController* controller = watch.controller;
+                if (controller->traceIdentity() != watch.native) continue;
+                const QString held = controller->traceBufferIdentity();
+                if (held.isEmpty() || held != controller->traceUploadIdentity()) continue;
+                if (!trace_matches_expected(watch)) continue;
+                chosen = &watch;
+                settling = true;
+                buffers = held;
+                break;
+            }
+        }
+        if (chosen != nullptr) {
+            FrameWatch& watch = *chosen;
+            QJsonObject frame = trace_geometry(watch.chart);
+            frame.insert(QStringLiteral("request"), watch.request);
+            if (!settling) {
+                watch.first = true;
+                frame.insert(QStringLiteral("phase"), QStringLiteral("first"));
+                frames.append(frame);
+            } else {
+                watch.settled = true;
+                watch.presentation.insert(QStringLiteral("generation"), static_cast<double>(watch.controller->traceGeneration()));
+                watch.presentation.insert(QStringLiteral("upload_identity"), watch.controller->traceUploadIdentity());
+                watch.presentation.insert(QStringLiteral("buffer_identity"), buffers);
+                for (auto it = watch.presentation.begin(); it != watch.presentation.end(); ++it) frame.insert(it.key(), it.value());
+                frame.insert(QStringLiteral("phase"), QStringLiteral("settled"));
+                frames.append(frame);
+                presented.append(watch.presentation);
+            }
+        }
+        const std::lock_guard lock(trace_mutex_);
+        synced_frame_ = ui_trace_frame_synced();
+        synced_displayed_ = displayed;
+        synced_transitions_ = std::exchange(published_transitions_, {});
+        synced_frames_ = frames;
+        synced_presented_ = presented;
+    }, Qt::DirectConnection);
+    trace_swap_ = connect(&window_, &QQuickWindow::frameSwapped, this, [this] {
+        std::vector<std::pair<const char*, QJsonObject>> events;
+        QJsonArray requests;
+        {
+            const std::lock_guard lock(trace_mutex_);
+            for (const auto& value : std::exchange(synced_frames_, {})) {
+                QJsonObject frame = value.toObject();
+                requests.append(frame.value(QStringLiteral("request")));
+                frame.insert(QStringLiteral("frame"), synced_frame_);
+                frame.insert(QStringLiteral("witness"), QStringLiteral("afterSynchronizing/frameSwapped"));
+                events.emplace_back("frame", frame);
+            }
+            QJsonObject render{{"frame", synced_frame_},
+                               {"transitions", std::exchange(synced_transitions_, {})},
+                               {"displayed", synced_displayed_}};
+            // The request whose first or settled frame this is, and for a settled one its presentation (request,
+            // input, dataset, generation, data and buffer identities), on the render itself.
+            const QJsonArray presented = std::exchange(synced_presented_, {});
+            // At most one observation a swap (above): its request, and a settled one's presentation.
+            if (!requests.isEmpty()) render.insert(QStringLiteral("request"), requests.first());
+            if (!presented.isEmpty()) {
+                const QJsonObject shown = presented.first().toObject();
+                for (auto it = shown.begin(); it != shown.end(); ++it) render.insert(it.key(), it.value());
+            }
+            events.emplace_back("render", render);
+        }
+        ui_trace_group(events);
+    }, Qt::DirectConnection);
+    connect(QCoreApplication::instance(), &QCoreApplication::aboutToQuit, this, [this] {
+        disconnect(trace_sync_);
+        disconnect(trace_swap_);
+    });
+}
+
+QJsonObject DemoDriver::trace_geometry(QQuickItem* chart) const {
+    // The pattern chart's three panes and its three axes (their titles), each a scene rectangle and whether it shows.
+    static const std::pair<const char*, const char*> kEntries[] = {
+        {"pattern", "chart.view.main"},  {"bragg", "chart.view.bragg"},      {"residual", "chart.view.residual"},
+        {"x", "chart.title.x"},          {"intensity", "chart.title.y"},     {"residual-axis", "chart.title.residual"}};
+    QJsonObject rects, shown;
+    for (const auto& [name, object] : kEntries) {
+        auto* item = chart->findChild<QQuickItem*>(QString::fromLatin1(object));
+        const QRectF r = item != nullptr ? item->mapRectToScene(QRectF(0, 0, item->width(), item->height())) : QRectF();
+        rects.insert(QString::fromLatin1(name), QJsonArray{r.x(), r.y(), r.width(), r.height()});
+        shown.insert(QString::fromLatin1(name),
+                     item != nullptr && item->isVisible() && item->opacity() > 0 && r.width() > 0 && r.height() > 0);
+    }
+    return {{"panes", QJsonArray{"pattern", "bragg", "residual"}}, {"axes", QJsonArray{"x", "intensity", "residual"}},
+            {"geometry", rects}, {"visible", shown}};
+}
+
+QString DemoDriver::trace_input() {
+    // The project's content, not its folder: an ordinary run and its control open copies in different places.
+    const ProjectViewModel* project = open_project(window_);
+    if (project == nullptr) return {};
+    QCryptographicHash hash(QCryptographicHash::Sha256);
+    QStringList files;
+    QDirIterator it(QString::fromStdString(project->project().path), {QStringLiteral("*.edi")}, QDir::Files,
+                    QDirIterator::Subdirectories);
+    while (it.hasNext()) files.append(it.next());
+    files.sort();
+    const QDir root(QString::fromStdString(project->project().path));
+    for (const QString& path : files) {
+        QFile file(path);
+        if (file.open(QIODevice::ReadOnly)) {
+            hash.addData(root.relativeFilePath(path).toUtf8());
+            hash.addData(file.readAll());
+        }
+    }
+    return QString::fromLatin1(hash.result().toHex().left(16));
+}
+
+QJsonObject DemoDriver::trace_state() {
+    QString page;
+    for (const QPointer<QQuickItem>& tab : page_tabs_) {
+        if (tab && tab->property("checked").toBool()) page = tab->objectName().mid(11);
+    }
+    // The shown page's selected main and sidebar tabs: checked, visible and on screen (another page's are off screen).
+    const auto selected = [this](const QList<QPointer<QQuickItem>>& tabs) -> QJsonValue {
+        for (const QPointer<QQuickItem>& tab : tabs) {
+            if (tab && tab->property("checked").toBool() && tab->isVisible() && on_screen(tab))
+                return tab->objectName().section(QLatin1Char('.'), -1);
+        }
+        return QJsonValue::Null;
+    };
+    const ProjectViewModel* project = open_project(window_);
+    return {{"input", input_identity_}, {"page", page}, {"tab", selected(view_tabs_)}, {"sidebar_tab", selected(side_tabs_)},
+            {"selection", project != nullptr ? project->property("currentExperimentIndex").toInt() : -1}};
+}
+
+QString DemoDriver::trace_native_identity() {
+    // The selected pattern's measured data as the project holds them, read from the model, not from a chart: empty
+    // while a scan's selected dataset is still being read.
+    ProjectViewModel* project = open_project(window_);
+    if (project == nullptr) return {};
+    const ExperimentViewModel* experiment = project->currentExperiment();
+    if (experiment == nullptr) return {};
+    const int selection = project->property("currentExperimentIndex").toInt();
+    if (project->scanTemplate() != nullptr && (project->traceAppliedDataset() != selection || !project->viewSettled()))
+        return {};
+    const std::uint64_t key = project->traceViewApplied() * 1000003u + static_cast<std::uint64_t>(selection + 1);
+    if (native_cache_.first != key || native_cache_.second.isEmpty()) {
+        const auto& held = *project->project().experiments[experiment->tracePlace()];
+        native_cache_ = std::make_pair(key, held.data ? ui_trace_identity(&held.data->intensity_meas.get()) : QString());
+    }
+    return native_cache_.second;
+}
+
+void DemoDriver::trace_expect(FrameWatch& watch) {
+    const PatternChartController* controller = watch.controller;
+    if (controller == nullptr || watch.expected_generation == controller->traceGeneration()) return;
+    ProjectViewModel* project = open_project(window_);
+    const int place = controller->traceExperimentPlace();
+    if (project == nullptr || place < 0) return;
+    watch.expected.clear();
+    watch.expected_presentation.reset();
+    watch.expected_generation = controller->traceGeneration();
+    // The selected data, captured from the project and presented with the chart's own view: what the chart should
+    // draw for this upload.
+    const edi::PatternSource source = edi::capture_pattern(project->project(), static_cast<std::size_t>(place), controller->traceAxis());
+    edi::PatternPresentation presentation = edi::present_pattern(source, controller->traceView());
+    for (const edi::PatternSeries& series : presentation.series) {
+        if (series.kind != edi::SeriesKind::Measured) continue;
+        for (const edi::PresentedPoint& point : series.points)
+            if (std::isfinite(point.x) && std::isfinite(point.y)) watch.expected.append(QPointF(point.x, point.y));
+    }
+    watch.expected_presentation = std::move(presentation);
+}
+
+bool DemoDriver::trace_matches_expected(const FrameWatch& watch) const {
+    // Every buffer the chart draws (lines, band edges and fills, bars, component areas and outlines, the measured marks
+    // and their bars, in the representation shown) is the one the selected data give, and none is left from before.
+    const PatternChartController* controller = watch.controller;
+    return controller != nullptr && watch.expected_generation == controller->traceGeneration() && !watch.expected.isEmpty() &&
+           watch.expected_presentation.has_value() && controller->traceMatches(*watch.expected_presentation);
+}
+
+void DemoDriver::trace_frame() {
+    QJsonObject state = trace_state();
+    const int selection = state.value(QStringLiteral("selection")).toInt();
+    const QString native = trace_native_identity();
+    // A press's dataset is presented once the chart has uploaded data whose content is that dataset's, as the project
+    // holds it: an upload of anything else, or one made before the press, is not.
+    for (FrameWatch& watch : frame_watches_) {
+        if (watch.presented || !watch.controller || watch.dataset < 0) continue;
+        if (watch.native.isEmpty() && selection == watch.dataset) watch.native = native;
+        if (!watch.native.isEmpty() && watch.controller->traceGeneration() > watch.base &&
+            watch.controller->traceIdentity() == watch.native && !watch.controller->traceUploadIdentity().isEmpty()) {
+            watch.presented = true;
+            watch.generation = watch.controller->traceGeneration();
+            watch.upload = watch.controller->traceUploadIdentity();
+            watch.presentation = {{"request", watch.request}, {"dataset", watch.dataset},
+                                  {"generation", static_cast<double>(watch.controller->traceGeneration())},
+                                  {"data_identity", watch.native}, {"input", input_identity_},
+                                  {"upload_identity", watch.upload}};
+            EDI_UI_TRACE("presented", watch.presentation);
+        }
+        if (watch.presented && !watch.settled && watch.controller) trace_expect(watch);
+    }
+    // The steps' actions, in order: each writes its state, its publication and then the step, once the native state
+    // shows what it asked for.
+    while (!pending_.empty()) {
+        const Pending& pending = pending_.front();
+        bool reached = false;
+        // A press another press replaced before its dataset was read is written as it is now, superseded and with no
+        // data identity: its dataset was never shown.
+        bool superseded = false;
+        if (!pending.page.isEmpty()) {
+            reached = state.value(QStringLiteral("page")).toString() == pending.page;
+        } else if (!pending.object.isEmpty()) {
+            const QQuickItem* button = pending.button ? pending.button.data() : find_held(pending.object, false);
+            reached = button != nullptr && button->property("checked").toBool();
+        } else if (pending.dataset >= 0) {
+            superseded = selection != pending.dataset;
+            reached = superseded || !native.isEmpty();
+        } else if (pending.before >= 0) {
+            reached = selection != pending.before;
+        } else if (pending.fit == QLatin1String("start") || pending.fit == QLatin1String("running")) {
+            // A fit started since the press counts, even one already over: a blocked GUI thread (the watchdog's
+            // control) can miss every frame of a short fit.
+            reached = fit_running_ || fit_runs_ > pending.runs;
+        } else if (!pending.fit.isEmpty()) {
+            reached = !fit_running_;
+        }
+        if (!reached) break;
+        const QString transition = QStringLiteral("t%1").arg(pending.request);
+        QJsonObject reached_state = state;
+        reached_state.insert(QStringLiteral("request"), pending.request);
+        reached_state.insert(QStringLiteral("selected_object"), pending.object);
+        if (!pending.page.isEmpty()) {
+            // A page visit: its tab buttons are collected once it is built, and the inventory once every page is.
+            for (const QPointer<QQuickItem>& tab : page_tabs_) {
+                if (tab && tab->objectName() == QLatin1String("appBar.tab.") + pending.page) {
+                    if (auto* loader = qvariant_cast<QQuickItem*>(tab->property("page")); loader != nullptr) trace_collect_tabs(loader);
+                }
+            }
+            trace_tab_inventory();
+        }
+        reached_state.insert(QStringLiteral("transition"), transition);
+        QJsonObject publication{{"transition", transition}, {"input", input_identity_}};
+        if (superseded) {
+            reached_state.insert(QStringLiteral("superseded"), true);
+            publication.insert(QStringLiteral("superseded"), true);
+        } else if (pending.dataset >= 0) {
+            reached_state.insert(QStringLiteral("data_identity"), native);
+            publication.insert(QStringLiteral("data_identity"), native);
+        }
+        if (!pending.fit.isEmpty()) {
+            const ProjectViewModel* project = open_project(window_);
+            const FitViewModel* fit = project != nullptr ? project->fit() : nullptr;
+            reached_state.insert(QStringLiteral("fitting"), fit_running_);
+            reached_state.insert(QStringLiteral("completed"), fit != nullptr ? fit->scanProcessed() : 0);
+            reached_state.insert(QStringLiteral("run"), fit_runs_);
+            publication.insert(QStringLiteral("run"), fit_runs_);
+        }
+        EDI_UI_TRACE("state", reached_state);
+        {
+            const std::lock_guard lock(trace_mutex_);
+            published_transitions_.append(transition);
+        }
+        publication.insert(QStringLiteral("frame"), ui_trace_next_frame());
+        EDI_UI_TRACE("transition-publication", publication);
+        QJsonObject step{{"name", pending.name}, {"request", pending.request}};
+        if (!pending.direction.isEmpty()) {
+            step.insert(QStringLiteral("direction"), pending.direction);
+            step.insert(QStringLiteral("dataset"), pending.dataset);
+        }
+        EDI_UI_TRACE("step", step);
+        pending_.pop_front();
+    }
+}
+#else
+void DemoDriver::trace_step_begin(const Step&) {}
+void DemoDriver::trace_issue(const QString&) {}
+void DemoDriver::trace_issued(const Step&) {}
+bool DemoDriver::trace_complete(int) { return false; }
+#endif
+
+namespace {
+QString item_path(const QQuickItem* item);
+// Every item under `root` by the visual tree: a Loader's or a SwipeView's items need not be QObject children of it.
+QList<QQuickItem*> visual_items(QQuickItem* root) {
+    QList<QQuickItem*> out;
+    QList<QQuickItem*> todo{root};
+    while (!todo.isEmpty()) {
+        QQuickItem* at = todo.takeLast();
+        for (QQuickItem* child : at->childItems()) {
+            out << child;
+            todo << child;
+        }
+    }
+    return out;
+}
+// Whether the item is in the shown page of every swipe view around it: a view keeps its other pages beside the shown one.
+bool in_shown_tab(QQuickItem* item) {
+    QList<const QQuickItem*> chain;
+    for (QQuickItem* at = item; at != nullptr; at = at->parentItem()) {
+        if (at->inherits("QQuickSwipeView") && !chain.contains(at->property("currentItem").value<QQuickItem*>())) return false;
+        chain << at;
+    }
+    return true;
+}
+}  // namespace
+
+// The assistant panel open and at rest: inside the window, and nothing it draws past its own edge.
+void DemoDriver::check_assistant_panel() {
+    QFile summary(qEnvironmentVariable("EDI_SWEEP_SUMMARY"));
+    if (!summary.open(QIODevice::Append | QIODevice::Text)) return;
+    QTextStream line(&summary);
+    QQuickItem* panel = nullptr;
+    for (QQuickItem* item : visual_items(window_.contentItem()))
+        if (item->objectName() == QLatin1String("assistant.panel") && item->isVisible() && item->width() > 0) panel = item;
+    if (panel == nullptr) {
+        line << steps_[current_].image << "\tW11:panel\tno open panel\n";
+        return;
+    }
+    const QRectF box = panel->mapRectToScene(QRectF(0, 0, panel->width(), panel->height()));
+    line << steps_[current_].image << "\tW11:checked\t" << qRound(box.left()) << ".." << qRound(box.right()) << " of " << window_.width() << '\n';
+    if (box.left() < -1 || box.right() > window_.width() + 1 || box.bottom() > window_.height() + 1)
+        line << steps_[current_].image << "\tW11:panel\tthe panel reaches " << qRound(box.right()) << " x " << qRound(box.bottom()) << " of " << window_.width() << " x "
+             << window_.height() << '\n';
+    for (QQuickItem* item : visual_items(panel)) {
+        if (!item->isVisible() || !item->property("text").isValid() || item->property("text").toString().isEmpty()) continue;
+        const QRectF at = item->mapRectToScene(QRectF(0, 0, item->width(), item->height()));
+        if (at.right() > box.right() + 1 || at.left() < box.left() - 1)
+            line << steps_[current_].image << "\tW11:item\t" << item->objectName() << " '" << item->property("text").toString().left(24) << "' at " << qRound(at.left())
+                 << ".." << qRound(at.right()) << ", panel " << qRound(box.left()) << ".." << qRound(box.right()) << '\n';
+    }
+}
+
+void DemoDriver::check_pane_borders() {
+    QFile summary(qEnvironmentVariable("EDI_SWEEP_SUMMARY"));
+    if (!summary.open(QIODevice::Append | QIODevice::Text)) return;
+    QTextStream line(&summary);
+    const QImage image = window_.grabWindow();
+    const double scale = window_.devicePixelRatio();
+    if (image.isNull()) return;
+    int checked = 0;
+    for (QQuickItem* item : visual_items(window_.contentItem())) {
+        // Every chart view (Qt Graphs' have a plot area), the small panes too.
+        if (!item->property("plotArea").isValid() || !item->isVisible() || !on_screen(item) || !in_shown_tab(item)) continue;
+        const QRectF plot = item->property("plotArea").toRectF();
+        if (plot.width() < 4 || plot.height() < 4) continue;
+        QQuickItem* chart = nullptr;
+        for (QQuickItem* up = item; up != nullptr && chart == nullptr; up = up->parentItem())
+            if (up->property("colors").isValid()) chart = up;
+        QObject* colors = chart != nullptr ? chart->property("colors").value<QObject*>() : nullptr;
+        const QColor axis = colors != nullptr ? colors->property("chartAxis").value<QColor>() : QColor();
+        if (!axis.isValid()) continue;
+        const QRectF at = item->mapRectToScene(plot);
+        // A single crystal's own plot, under the pattern chart drawn over it.
+        if (chart->property("onAxis").toBool()) continue;
+        // What of it shows: a pane scrolled partly out is checked where it is seen.
+        QRectF seen(QPointF(0, 0), QSizeF(window_.width(), window_.height()));
+        for (QQuickItem* up = item; up != nullptr; up = up->parentItem())
+            if (up->clip()) seen = seen.intersected(up->mapRectToScene(up->clipRect()));
+        // The colours its chart draws traces in.
+        QList<QColor> traces;
+        const auto add = [&traces](const QObject* drawn) {
+            if (const QColor c = drawn->property("color").value<QColor>(); c.isValid() && !traces.contains(c)) traces << c;
+        };
+        for (QObject* drawn : chart->findChildren<QObject*>())
+            if (drawn->inherits("QAbstractSeries")) add(drawn);
+        for (QQuickItem* drawn : visual_items(chart))
+            if (QByteArray(drawn->metaObject()->className()).contains("Layer")) add(drawn);
+        const auto near = [&](double x, double y) {
+            const int px = qBound(0, qRound(x * scale), image.width() - 1), py = qBound(0, qRound(y * scale), image.height() - 1);
+            const QColor c = image.pixelColor(px, py);
+            return std::abs(c.red() - axis.red()) + std::abs(c.green() - axis.green()) + std::abs(c.blue() - axis.blue()) < 90;
+        };
+        // A trace proven at the pixel: one or two of those colours drawn, at least a fifth opaque, over the line or the
+        // background.
+        const QColor ground = colors->property("chartBackground").value<QColor>();
+        const auto traced = [&](double x, double y) {
+            const int px = qRound(x * scale), py = qRound(y * scale);
+            if (!image.valid(px, py)) return false;
+            const auto parts = [](const QColor& c, const QColor& from) {
+                return QVector3D(static_cast<float>(c.red() - from.red()), static_cast<float>(c.green() - from.green()), static_cast<float>(c.blue() - from.blue()));
+            };
+            const QColor c = image.pixelColor(px, py);
+            for (const QColor& under : {axis, ground})
+                for (const QColor& first : traces)
+                    for (const QColor& second : traces) {
+                        const QVector3D d = parts(c, under), l = parts(first, under), m = parts(second, under);
+                        const float ll = QVector3D::dotProduct(l, l), lm = QVector3D::dotProduct(l, m), mm = QVector3D::dotProduct(m, m);
+                        const float dl = QVector3D::dotProduct(d, l), dm = QVector3D::dotProduct(d, m), det = ll * mm - lm * lm;
+                        if (ll < 900 || mm < 900) continue;
+                        const float p = det < 1000 ? dl / ll : (dl * mm - dm * lm) / det, q = det < 1000 ? 0.0F : (dm * ll - dl * lm) / det;
+                        if (p > -0.02F && q > -0.02F && p + q > 0.2F && p + q < 1.1F && (d - p * l - q * m).length() < 12) return true;
+                    }
+            return false;
+        };
+        // The share of a line's shown length drawn in the axis colour, within a pixel of it, leaving out where a trace
+        // lies over it; -1: not in view.
+        const auto share = [&](bool horizontal, double where) {
+            int hit = 0, all = 0;
+            const double from = std::max(horizontal ? at.left() : at.top(), horizontal ? seen.left() : seen.top()) + 1;
+            const double to = std::min(horizontal ? at.right() : at.bottom(), horizontal ? seen.right() : seen.bottom()) - 1;
+            if (where < (horizontal ? seen.top() : seen.left()) + 1 || where > (horizontal ? seen.bottom() : seen.right()) - 1) return -1.0;
+            const int steps = static_cast<int>(std::ceil((to - from) * scale));
+            for (int step = 0; step < steps; ++step) {
+                const double t = from + step / scale;
+                bool found = false;
+                for (int half = -2; half <= 2 && !found; ++half) found = horizontal ? near(t, where + 0.5 * half) : near(where + 0.5 * half, t);
+                if (!found && (horizontal ? traced(t, where) : traced(where, t))) continue;
+                ++all;
+                if (found) ++hit;
+            }
+            return all > 0 ? double(hit) / all : -1.0;
+        };
+        const QStringList sides{QStringLiteral("top"), QStringLiteral("bottom"), QStringLiteral("left"), QStringLiteral("right")};
+        const QList<double> shares{share(true, at.top()), share(true, at.bottom() - 1.0 / scale), share(false, at.left()), share(false, at.right() - 1.0 / scale)};
+        QString text;
+        for (int i = 0; i < 4; ++i) text += shares[i] < 0 ? sides[i] + QStringLiteral(" not in view ") : QStringLiteral("%1 %2% ").arg(sides[i]).arg(qRound(shares[i] * 100));
+        ++checked;
+        const QString name = item->objectName().isEmpty() ? item_path(item) : item->objectName();
+        line << steps_[current_].image << "\tW9:checked\t" << name << '\t' << text << '\n';
+        for (int i = 0; i < 4; ++i)
+            if (shares[i] >= 0 && shares[i] < 1.0) line << steps_[current_].image << "\tW9:pane-border\t" << name << '\t' << sides[i] << " line drawn " << qRound(shares[i] * 100) << "%, of " << text << '\n';
+    }
+    if (checked == 0) line << steps_[current_].image << "\tW9:pane-border\tno pane on screen to check\n";
+}
+
+void DemoDriver::check_report_figure(QQuickItem* figure, const QImage& drawn) {
+    QFile summary(qEnvironmentVariable("EDI_SWEEP_SUMMARY"));
+    if (!summary.open(QIODevice::Append | QIODevice::Text) || drawn.isNull() || figure->width() < 1) return;
+    QTextStream line(&summary);
+    const QString name = figure->objectName(), frame = steps_[current_].image;
+    // The border is the figure's sibling of its own size.
+    QQuickItem* border = nullptr;
+    for (QQuickItem* at = figure; at != nullptr && border == nullptr; at = at->parentItem()) {
+        if (at->parentItem() == nullptr) break;
+        for (QQuickItem* sibling : at->parentItem()->childItems())
+            if (sibling != at && sibling->inherits("QQuickRectangle") && sibling->isVisible() && std::abs(sibling->width() - figure->width()) < 1 && std::abs(sibling->height() - figure->height()) < 1) border = sibling;
+    }
+    const QQuickPen* pen = border != nullptr ? static_cast<QQuickRectanglePrivate*>(QObjectPrivate::get(qobject_cast<QQuickRectangle*>(border)))->pen : nullptr;
+    const bool edged = pen != nullptr && pen->isValid() && pen->width() > 0;
+    const double scale = drawn.width() / figure->width();
+    const QRgb back = drawn.pixel(drawn.width() / 2, static_cast<int>(2 * scale));
+    const auto differs = [&](int x, int y) {
+        const QRgb at = drawn.pixel(x, y);
+        return std::abs(qRed(at) - qRed(back)) + std::abs(qGreen(at) - qGreen(back)) + std::abs(qBlue(at) - qBlue(back)) > 24;
+    };
+    int minX = drawn.width(), minY = drawn.height(), maxY = -1;
+    for (int y = 0; y < drawn.height(); ++y)
+        for (int x = 0; x < drawn.width(); ++x)
+            if (differs(x, y)) {
+                minX = std::min(minX, x);
+                minY = std::min(minY, y);
+                maxY = std::max(maxY, y);
+            }
+    // The right side at the plot's frame, half way down: an x tick's number may hang over the plot's end.
+    int frameX = -1;
+    for (int x = drawn.width() - 1; x >= 0 && frameX < 0; --x)
+        if (differs(x, drawn.height() * 2 / 5)) frameX = x;
+    const double top = minY / scale, leftSide = minX / scale, right = (drawn.width() - 1 - frameX) / scale, bottom = (drawn.height() - 1 - maxY) / scale;
+    const QString padding = QStringLiteral("left %1 top %2 right %3 bottom %4").arg(leftSide, 0, 'f', 1).arg(top, 0, 'f', 1).arg(right, 0, 'f', 1).arg(bottom, 0, 'f', 1);
+    line << frame << "\tW9:checked\t" << name << '\t' << padding << (edged ? ", border " : ", no border") << '\n';
+    if (!edged) line << frame << "\tW9:border\t" << name << "\tno border around the figure\n";
+    // One padding for every figure, the main area's margin; a structure's scene is drawn by the camera, so there its
+    // buttons' distance from the top counts.
+    QQmlEngine* engine = qmlEngine(figure);
+    QObject* sizes = engine != nullptr ? engine->singletonInstance<QObject*>("edi.app", "AppSizes") : nullptr;
+    const double wanted = sizes != nullptr ? sizes->property("mainAreaMargin").toDouble() : -1;
+    const QList<double> counted = name.startsWith(QLatin1String("report.structure.")) ? QList<double>{top} : QList<double>{leftSide, top, right, bottom};
+    for (const double side : counted)
+        if (std::abs(side - wanted) > 1.0) {
+            line << frame << "\tW9:padding\t" << name << '\t' << padding << ", each " << wanted << " wanted\n";
+            break;
+        }
+}
+
+// T7 (ADR-0103; the owner, 2026-11-24): every open sidebar table is drawn and shows all its rows, or whole rows and half
+// the next (at least 2.5) when they do not fit; such a table leaves its column no room for another row; and a column
+// scrolls only when one of its open tables is down to 2.5 rows.
+void DemoDriver::check_table_room(QTextStream& line, const QString& frame, const QString& action) {
+    QHash<QQuickItem*, QList<QQuickItem*>> byColumn;
+    for (QQuickItem* table : visual_items(window_.contentItem())) {
+        if (!table->property("roomRows").isValid() || !table->isVisible()) continue;
+        if (table->property("onScreen").isValid() && !table->property("onScreen").toBool()) continue;
+        QQuickItem* column = nullptr;
+        bool open = true;
+        for (QQuickItem* up = table->parentItem(); up != nullptr; up = up->parentItem()) {
+            if (up->property("restingHeight").isValid() && up->property("collapsed").toBool()) open = false;
+            if (up->inherits("QQuickFlickable") && up->property("childrenCount").isValid()) {
+                column = up;
+                break;
+            }
+        }
+        if (open && column != nullptr) byColumn[column] << table;
+    }
+    for (auto it = byColumn.cbegin(); it != byColumn.cend(); ++it) {
+        QQuickItem* column = it.key();
+        const double spare = column->height() - column->property("contentHeight").toDouble();
+        bool atFloor = false;
+        for (QQuickItem* table : it.value()) {
+            const QString name = item_path(table);
+            auto* header = table->property("headerItem").value<QQuickItem*>();
+            const double rowHeight = table->property("tableRowHeight").toDouble();
+            const int count = table->property("count").toInt();
+            // Counted in the rows' own heights (a row of wrapped lines is taller); a row not made has the table's height.
+            QHash<int, double> made;
+            for (const QQuickItem* row : table->property("contentItem").value<QQuickItem*>()->childItems())
+                if (row->property("index").isValid() && row->isVisible() && row->property("listView").value<QQuickItem*>() == table)
+                    made.insert(row->property("index").toInt(), row->height());
+            const auto heightOf = [&](int row) { return made.value(row, rowHeight); };
+            const double room = table->height() - (header != nullptr ? header->height() : 0.0);
+            double rows = 0.0, filled = 0.0;
+            if (rowHeight > 0) {
+                int at = 0;
+                for (; at < count && filled + heightOf(at) <= room + 0.01; ++at) filled += heightOf(at);
+                rows = at + (room - filled) / heightOf(at);
+            }
+            const auto extent = std::minmax_element(made.cbegin(), made.cend());
+            line << frame << "\tT7:checked\t" << name << '\t' << QString::number(rows, 'f', 2) << " of " << count << " rows shown, column spare "
+                 << qRound(spare) << " px, " << room << " px for rows of "
+                 << (made.isEmpty() ? QString::number(rowHeight) : QStringLiteral("%1 to %2 px").arg(*extent.first).arg(*extent.second)) << " (" << action << ")\n";
+            if (table->opacity() < 0.99 || table->height() < 1) {
+                line << frame << "\tT7:empty\t" << name << "\tnot drawn (opacity " << table->opacity() << ", height " << table->height() << ", measuring "
+                     << table->property("measureRunning").toBool() << ", widths " << table->property("columnWidths").toStringList().join(QLatin1Char(',')) << ", room "
+                     << table->property("roomShown").toDouble() << ")\n";
+                continue;
+            }
+            const bool all = std::abs(rows - std::max(1, count)) < 0.05;
+            const double half = rows - std::floor(rows);
+            if (!all && (std::abs(half - 0.5) > 0.05 || rows < 2.45)) {
+                line << frame << "\tT7:rows\t" << name << '\t' << QString::number(rows, 'f', 2) << " of " << count << " rows: neither all nor whole rows and a half\n";
+                continue;
+            }
+            if (!all && std::abs(rows - 2.5) < 0.05) atFloor = true;
+            // The next row whole: the half it shows and half the row after it, or its own rest when it is the last.
+            const int next = int(rows);
+            const double step = next + 1 < count ? (heightOf(next) + heightOf(next + 1)) / 2 : heightOf(next);
+            if (!all && spare >= step - 0.5)
+                line << frame << "\tT7:room\t" << name << '\t' << QString::number(rows, 'f', 2) << " of " << count << " rows with " << qRound(spare)
+                     << " px of the column left\n";
+        }
+        if (spare < -0.5 && !atFloor)
+            line << frame << "\tT7:scroll\t" << item_path(column) << "\tthe column scrolls (" << qRound(-spare) << " px over) with no table at 2.5 rows\n";
+    }
+}
+
 void DemoDriver::next_action() {
+    // A late callback of a step that ended already, after the last one.
+    if (current_ >= steps_.size()) return;
     const Step& step = steps_[current_];
     if (documentation_skip_) {
         documentation_scenes_.append(QJsonObject{{"id", step.image}, {"page", step.page},
@@ -1742,6 +3421,29 @@ void DemoDriver::next_action() {
         ++current_;
         run_step();
         return;
+    }
+    // A tab the app does not offer in this state (Correlations before a fit) cannot be shown: the step is skipped and
+    // the trace says so, rather than the run stopping there.
+    // A page still loading can offer a tab a moment later (Pattern once the experiments are listed), so the frame
+    // settles once before a tab is taken as not offered.
+    if (step.skip_unavailable && action_ == 0 && !step.actions.isEmpty()) {
+        QQuickItem* item = find(step.actions.first(), false);
+        const bool offered = item != nullptr && item->isVisible() && item->isEnabled() && on_screen(item);
+        if (!offered && !availability_settled_) {
+            availability_settled_ = true;
+            settle_then([this] { next_action(); });
+            return;
+        }
+        availability_settled_ = false;
+        if (!offered) {
+#if EDI_UI_INSTRUMENTATION
+            ui_trace("step-skipped", QJsonObject{{"name", step.trace}, {"control", step.actions.first()},
+                                                 {"reason", item == nullptr ? "missing" : !item->isVisible() ? "hidden" : !item->isEnabled() ? "disabled" : "off screen"}});
+#endif
+            ++current_;
+            run_step();
+            return;
+        }
     }
     // capture-now captures a set time after the actions; capture-at:<ms> after that many milliseconds, to show an
     // animation partway.
@@ -1756,6 +3458,639 @@ void DemoDriver::next_action() {
         if (documentation_) documentation_actions_.append(QJsonObject{{"scene", step.image}, {"action", action}});
         if (action == QLatin1String("capture-now") || action.startsWith(QLatin1String("capture-at:"))) {
             next_action();
+            return;
+        }
+        // `popup-time:<editor>`: after `mark` and a click, waits frame by frame for the parameter popup's value editor to
+        // show with the focus, at most a second; F2 its time from the mark (at most 100 ms), F3 its row's vertical
+        // centres (the editor's and the docs link's equal +- 1 px).
+        if (action.startsWith(QLatin1String("popup-time:"))) {
+            const QString name = action.mid(11);
+            const QString docsName = QString(name).replace(QLatin1String(".popup.value"), QLatin1String(".popup.docs"));
+            auto link = std::make_shared<QMetaObject::Connection>();
+            auto done = std::make_shared<bool>(false);
+            *link = connect(&window_, &QQuickWindow::frameSwapped, this, [this, name, docsName, link, done] {
+                if (*done) return;
+                QQuickItem* editor = nullptr;
+                QQuickItem* docs = nullptr;
+                std::function<void(QQuickItem*)> look = [&](QQuickItem* item) {
+                    for (QQuickItem* child : item->childItems()) {
+                        if (child->objectName() == name) editor = child;
+                        else if (child->objectName() == docsName) docs = child;
+                        look(child);
+                    }
+                };
+                look(window_.contentItem());
+                const qint64 elapsed = popup_shown_ms_ >= 0 ? popup_shown_ms_ : mark_.isValid() ? mark_.elapsed() : -1;
+                // Open: its first drawn frame; the focus is reported beside it.
+                const bool shown = editor != nullptr && editor->isVisible();
+                if (!shown && elapsed < 1000) {
+                    window_.update();
+                    return;
+                }
+                *done = true;
+                disconnect(*link);
+                QFile summary(qEnvironmentVariable("EDI_SWEEP_SUMMARY"));
+                if (summary.open(QIODevice::Append | QIODevice::Text)) {
+                    QTextStream line(&summary);
+                    const QString frame = steps_[current_].image;
+                    line << frame << "\tF2:checked\t" << name << '\t' << (shown ? QStringLiteral("open in %1 ms%2").arg(elapsed).arg(editor->hasActiveFocus() ? ", value focused" : ", value not focused") : QStringLiteral("not open")) << '\n';
+                    if (!shown || elapsed > 100) line << frame << "\tF2:slow\t" << name << '\t' << (shown ? QStringLiteral("%1 ms, at most 100").arg(elapsed) : QStringLiteral("no popup in a second")) << '\n';
+                    // The popup's row as wide before as after a fit: its grid, the editor's loader's parent.
+                    if (shown && editor->parentItem() != nullptr && editor->parentItem()->parentItem() != nullptr)
+                        line << frame << "\tF3:width\t" << name << '\t' << editor->parentItem()->parentItem()->width() << '\n';
+                    if (shown && docs != nullptr) {
+                        const double a = editor->mapToScene(QPointF(0, editor->height() / 2)).y();
+                        const double b = docs->mapToScene(QPointF(0, docs->height() / 2)).y();
+                        line << frame << "\tF3:checked\t" << name << "\tcentres " << a << ' ' << b << '\n';
+                        if (std::abs(a - b) > 1.0) line << frame << "\tF3:centres\t" << name << "\teditor centre " << a << ", link " << b << '\n';
+                    }
+                }
+                next_action();
+            });
+            window_.update();
+            return;
+        }
+        // `frames-stable:unfold:<group>` or `frames-stable:page:<page>`: unfolds the group or switches to the page, then
+        // every frame for 1.2 s reads each shown table: its height (T7), its column widths and its first row's cell
+        // positions (T6). From a table's first shown frame none of them changes (the owner, 2026-11-23: a table drawn
+        // in one layout then another while it opens, the parameter columns flicking once on a page switch).
+        // `room-tab`: every collapsible group of the shown sidebar tab opened alone, then with the one before it, the T7
+        // room check after each has settled (the owner, 2026-11-24: tables opening empty or with half their rows).
+        if (action == QLatin1String("room-tab")) {
+            QList<QPointer<QQuickItem>> groups;
+            int offered = 0;
+            for (QQuickItem* item : visual_items(window_.contentItem())) {
+                if (!item->property("restingHeight").isValid() || !item->property("collapsible").toBool() || !item->isVisible()) continue;
+                // Every page and sidebar tab is kept beside the shown one: only a group in the shown one counts.
+                if (!in_shown_tab(item)) continue;
+                ++offered;
+                if (item->property("onScreen").isValid() && !item->property("onScreen").toBool()) continue;
+                groups << item;
+            }
+            QString tab;
+            for (QQuickItem* item : visual_items(window_.contentItem()))
+                if (item->objectName().startsWith(QLatin1String("sideBar.tab.")) && item->property("checked").toBool() && item->isVisible() && on_screen(item))
+                    tab = item->objectName();
+            auto opened = std::make_shared<QStringList>();
+            qWarning("room-tab: %lld groups", static_cast<long long>(groups.size()));
+            auto steps = std::make_shared<QList<std::pair<int, bool>>>();
+            for (int i = 0; i < groups.size(); ++i) {
+                steps->append({i, true});
+                if (i > 0) steps->append({i, false});
+            }
+            auto run = std::make_shared<std::function<void()>>();
+            *run = [this, groups, steps, run, opened, offered, tab] {
+                if (steps->isEmpty()) {
+                    // The groups the step really opened, so a step that shows another tab's is seen.
+                    if (QFile summary(qEnvironmentVariable("EDI_SWEEP_SUMMARY")); summary.open(QIODevice::Append | QIODevice::Text)) {
+                        QTextStream line(&summary);
+                        line << steps_[current_].image << "\tT7:checked\t" << tab << "\tgroups opened: " << opened->join(QLatin1Char(' ')) << '\n';
+                        if (opened->isEmpty() && offered > 0)
+                            line << steps_[current_].image << "\tT7:noopen\t" << tab << '\t' << offered << " collapsible groups, none opened\n";
+                    }
+                    // Released after this call returns: resetting the function while it runs would destroy it mid-call.
+                    QTimer::singleShot(0, this, [run] { *run = nullptr; });
+                    next_action();
+                    return;
+                }
+                const auto [index, alone] = steps->takeFirst();
+                for (int i = 0; i < groups.size(); ++i)
+                    if (groups[i]) groups[i]->setProperty("collapsed", !(i == index || (!alone && i == index - 1)));
+                QTimer::singleShot(1500, this, [this, groups, index, alone, run, opened] {
+                    QFile summary(qEnvironmentVariable("EDI_SWEEP_SUMMARY"));
+                    if (summary.open(QIODevice::Append | QIODevice::Text) && groups[index]) {
+                        QTextStream line(&summary);
+                        // The group really opened: a state that shows the page as it was is not a state.
+                        if (groups[index]->property("collapsed").toBool() || groups[index]->height() < groups[index]->property("restingHeight").toDouble() - 1)
+                            line << steps_[current_].image << "\tT7:noopen\t" << groups[index]->objectName() << '\t' << (alone ? "alone" : "after") << " the group did not open\n";
+                        else if (!opened->contains(groups[index]->objectName()))
+                            opened->append(groups[index]->objectName());
+                        check_table_room(line, steps_[current_].image, QStringLiteral("%1 %2").arg(groups[index]->objectName(), alone ? QStringLiteral("alone") : QStringLiteral("after another")));
+                    }
+                    if (groups[index]) check_layout(QStringLiteral("%1-%2-%3").arg(steps_[current_].image, groups[index]->objectName(), alone ? QStringLiteral("alone") : QStringLiteral("after")));
+                    if (groups[index] && steps_[current_].capture)
+                        grab().save(output_dir_.filePath(QStringLiteral("%1-%2-%3.png").arg(steps_[current_].image, groups[index]->objectName(), alone ? QStringLiteral("alone") : QStringLiteral("after"))));
+                    if (*run) (*run)();
+                });
+            };
+            (*run)();
+            return;
+        }
+        // `room-check`: the T7 room check of every open sidebar table as it is shown now.
+        if (action == QLatin1String("room-check")) {
+            if (QFile summary(qEnvironmentVariable("EDI_SWEEP_SUMMARY")); summary.open(QIODevice::Append | QIODevice::Text)) {
+                QTextStream line(&summary);
+                check_table_room(line, steps_[current_].image, action);
+            }
+            next_action();
+            return;
+        }
+        // `pane-borders`: every chart pane that is shown has its four border lines in the window as drawn, at the place
+        // the pane stands (W9). At each scroll position of the report page, as a page is read at any of them.
+        if (action == QLatin1String("pane-borders")) {
+            check_pane_borders();
+            next_action();
+            return;
+        }
+        if (action == QLatin1String("report-scrolls")) {
+            QQuickItem* flick = nullptr;
+            for (QQuickItem* item : visual_items(window_.contentItem()))
+                if (item->inherits("QQuickFlickable") && item->isVisible() && item->property("contentHeight").toDouble() > 2000 && item->property("contentY").toDouble() > 0) flick = item;
+            if (flick == nullptr) {
+                fail(QStringLiteral("step %1: no report view").arg(steps_[current_].image));
+                return;
+            }
+            auto tries = std::make_shared<QList<double>>(QList<double>{0.0, 0.25, 0.5, 0.75, 3.4, 11.6});
+            const double from = flick->property("contentY").toDouble();
+            auto run = std::make_shared<std::function<void()>>();
+            *run = [this, flick, tries, run, from] {
+                if (tries->isEmpty()) {
+                    QTimer::singleShot(0, this, [run] { *run = nullptr; });
+                    next_action();
+                    return;
+                }
+                flick->setProperty("contentY", from + tries->takeFirst());
+                QTimer::singleShot(350, this, [this, run] {
+                    check_pane_borders();
+                    if (*run) (*run)();
+                });
+            };
+            (*run)();
+            return;
+        }
+        // `report-frames`: every report figure is in a border of one width with the same padding on its four sides (the
+        // owner, 2026-11-24): W9. The figure is grabbed as drawn; the padding is from the frame's inner edge to the
+        // nearest pixel that is not the figure's background. A structure's scene is drawn by the camera, so only its
+        // control buttons' distance from the top counts there, the same as the charts' padding.
+        if (action == QLatin1String("report-frames")) {
+            QList<QPointer<QQuickItem>> figures;
+            for (QQuickItem* item : visual_items(window_.contentItem()))
+                if (item->isVisible() && (item->objectName().startsWith(QLatin1String("report.pattern.")) || item->objectName().startsWith(QLatin1String("report.structure.")) ||
+                                          item->objectName() == QLatin1String("report.singleCrystal") || item->objectName() == QLatin1String("report.evolution")))
+                    figures << item;
+            auto left = std::make_shared<int>(static_cast<int>(figures.size()));
+            if (figures.isEmpty()) {
+                fail(QStringLiteral("step %1: no report figure").arg(steps_[current_].image));
+                return;
+            }
+            for (const QPointer<QQuickItem>& figure : figures) {
+                const QSharedPointer<QQuickItemGrabResult> grab = figure->grabToImage();
+                if (grab.isNull()) {
+                    if (--*left == 0) next_action();
+                    continue;
+                }
+                connect(grab.data(), &QQuickItemGrabResult::ready, this, [this, grab, figure, left] {
+                    if (figure) check_report_figure(figure, grab->image());
+                    if (--*left == 0) next_action();
+                });
+            }
+            return;
+        }
+        // `evolution-row`: the Evolution chart's control row spans the selector row above it, whatever parameter is
+        // chosen (the owner, 2026-11-24): W8, its left and right edges and its width the same for three selections.
+        if (action == QLatin1String("evolution-row")) {
+            QQuickItem* toolbar = find(QStringLiteral("evolution.toolbar"), true);
+            QQuickItem* top = find(QStringLiteral("mainArea.blocks"), true);
+            QQuickItem* picker = find(QStringLiteral("evolution.parameters"), true);
+            if (toolbar == nullptr || top == nullptr || picker == nullptr) {
+                fail(QStringLiteral("step %1: no evolution row, selector row or picker").arg(steps_[current_].image));
+                return;
+            }
+            auto index = std::make_shared<int>(0);
+            auto spans = std::make_shared<QStringList>();
+            auto edges = std::make_shared<QList<QPair<double, double>>>();
+            auto again = std::make_shared<std::function<void()>>();
+            *again = [this, toolbar, top, picker, index, spans, edges, again, action] {
+                // The selection moves with the picker's own signal; the row settles in the next frames.
+                QMetaObject::invokeMethod(picker, "blockActivated", Q_ARG(int, *index * 6));
+                QTimer::singleShot(700, this, [this, toolbar, top, index, spans, edges, again, action] {
+                    double left = 1e9, right = -1e9;
+                    for (QQuickItem* unit : visual_items(toolbar)) {
+                        if (!unit->isVisible() || unit->parentItem() != toolbar || unit->width() < 1) continue;
+                        const double x = unit->mapToScene(QPointF(0, 0)).x();
+                        left = std::min(left, x);
+                        right = std::max(right, x + unit->width());
+                    }
+                    const double topLeft = top->mapToScene(QPointF(0, 0)).x();
+                    const double topRight = top->mapToScene(QPointF(top->width(), 0)).x();
+                    edges->append({left, right});
+                    QFile summary(qEnvironmentVariable("EDI_SWEEP_SUMMARY"));
+                    if (summary.open(QIODevice::Append | QIODevice::Text)) {
+                        QTextStream line(&summary);
+                        const QString where = QStringLiteral("selection %1 row %2..%3, selector row %4..%5").arg(*index).arg(qRound(left)).arg(qRound(right)).arg(qRound(topLeft)).arg(qRound(topRight));
+                        line << steps_[current_].image << "\tW8:checked\tevolution\t" << where << '\n';
+                        if (std::abs(left - topLeft) > 1.0 || std::abs(right - topRight) > 1.0) line << steps_[current_].image << "\tW8:row\tevolution\t" << where << '\n';
+                        if (edges->size() > 1 && (std::abs(edges->last().first - edges->first().first) > 1.0 || std::abs(edges->last().second - edges->first().second) > 1.0))
+                            line << steps_[current_].image << "\tW8:moved\tevolution\t" << where << " against selection 0 " << qRound(edges->first().first) << ".." << qRound(edges->first().second) << '\n';
+                    }
+                    if (++*index >= 3) {
+                        next_action();
+                        return;
+                    }
+                    if (*again) (*again)();
+                });
+            };
+            (*again)();
+            return;
+        }
+        if (action.startsWith(QLatin1String("frames-stable:"))) {
+            const QString how = action.section(QLatin1Char(':'), 1, 1), target = action.section(QLatin1Char(':'), 2);
+            QQuickItem* scope = window_.contentItem();
+            if (how == QLatin1String("unfold")) {
+                QQuickItem* group = find(target, true);
+                if (group == nullptr) {
+                    // A group this project has not (preferred orientation of a time-of-flight experiment).
+                    qWarning("frames-stable: no shown %s", qPrintable(target));
+                    next_action();
+                    return;
+                }
+                scope = group;
+            }
+            struct Seen {
+                double height = 0.0;
+                QString widths;
+                QString cells;
+            };
+            auto clock = std::make_shared<QElapsedTimer>();
+            auto first = std::make_shared<QHash<QQuickItem*, Seen>>();
+            auto moved = std::make_shared<QStringList>();
+            auto link = std::make_shared<QMetaObject::Connection>();
+            QPointer<QQuickItem> guarded(scope);
+            *link = connect(&window_, &QQuickWindow::afterSynchronizing, this, [guarded, first, moved] {
+                if (!guarded) return;
+                for (QQuickItem* table : guarded->findChildren<QQuickItem*>()) {
+                    if (!table->inherits("QQuickListView") || !table->isVisible() || table->height() < 1 || !table->property("columnWidths").isValid()) continue;
+                    bool shown = true;
+                    for (const QQuickItem* at = table; at != nullptr && shown; at = at->parentItem()) shown = at->isVisible() && at->opacity() > 0.01;
+                    if (!shown) continue;
+                    const QString widths = table->property("columnWidths").toStringList().join(QLatin1Char(','));
+                    QStringList cells;
+                    if (QQuickItem* content = table->property("contentItem").value<QQuickItem*>(); content != nullptr) {
+                        QQuickItem* row = nullptr;
+                        for (QQuickItem* child : content->childItems())
+                            if (child->isVisible() && child->height() > 1 && child != table->property("headerItem").value<QQuickItem*>() && (row == nullptr || child->y() < row->y())) row = child;
+                        std::function<void(QQuickItem*)> walk = [&](QQuickItem* at) {
+                            for (QQuickItem* child : at->childItems()) {
+                                if (child->inherits("QQuickRow")) {
+                                    for (QQuickItem* cell : child->childItems())
+                                        if (cell->isVisible()) cells << QStringLiteral("%1+%2").arg(qRound(cell->x())).arg(qRound(cell->width()));
+                                    return;
+                                }
+                                walk(child);
+                            }
+                        };
+                        if (row != nullptr) walk(row);
+                    }
+                    const Seen now{table->height(), widths, cells.join(QLatin1Char(' '))};
+                    if (!first->contains(table)) {
+                        first->insert(table, now);
+                        continue;
+                    }
+                    const Seen& was = first->value(table);
+                    if (moved->size() >= 12) continue;
+                    if (std::abs(was.height - now.height) > 0.5)
+                        *moved << QStringLiteral("T7\t%1 height %2 -> %3").arg(table->objectName()).arg(was.height).arg(now.height);
+                    if (was.widths != now.widths)
+                        *moved << QStringLiteral("T6\t%1 widths %2 -> %3").arg(table->objectName(), was.widths, now.widths);
+                    else if (!was.cells.isEmpty() && !now.cells.isEmpty() && was.cells != now.cells)
+                        *moved << QStringLiteral("T6\t%1 cells %2 -> %3").arg(table->objectName(), was.cells.left(120), now.cells.left(120));
+                    if (moved->size() > 0 && moved->last().contains(table->objectName())) first->insert(table, now);
+                }
+            }, Qt::DirectConnection);
+            auto swapped = std::make_shared<QMetaObject::Connection>();
+            auto lastFrame = std::make_shared<qint64>(0);
+            auto longest = std::make_shared<qint64>(0);
+            auto done = std::make_shared<bool>(false);
+            *swapped = connect(&window_, &QQuickWindow::frameSwapped, this, [this, clock, first, moved, link, swapped, action, lastFrame, longest, how, done] {
+                // A frame queued before the disconnect still arrives: it must not go to the next action again.
+                if (*done) return;
+                // R2: the gap between two drawn frames while it opens (the first 600 ms), at most 33 ms.
+                const qint64 now = clock->elapsed();
+                if (how == QLatin1String("unfold") && now <= 600) *longest = std::max(*longest, now - *lastFrame);
+                *lastFrame = now;
+                if (clock->elapsed() < 1200) {
+                    window_.update();
+                    return;
+                }
+                *done = true;
+                disconnect(*link);
+                disconnect(*swapped);
+                QFile summary(qEnvironmentVariable("EDI_SWEEP_SUMMARY"));
+                if (summary.open(QIODevice::Append | QIODevice::Text)) {
+                    QTextStream line(&summary);
+                    const QString frame = steps_[current_].image;
+                    line << frame << "\tT6:checked\t" << action << '\t' << first->size() << " tables, every frame for 1.2 s\n";
+                    line << frame << "\tT7:checked\t" << action << '\t' << first->size() << " tables, every frame for 1.2 s\n";
+                    if (how == QLatin1String("unfold")) {
+                        line << frame << "\tR2:checked\t" << action << "\tlongest frame " << *longest << " ms\n";
+                        if (*longest > 33) line << frame << "\tR2:frame\t" << action << '\t' << *longest << " ms between frames, at most 33\n";
+                    }
+                    for (const QString& what : *moved) line << frame << '\t' << what.section(QLatin1Char('\t'), 0, 0) << ":moved\t" << action << '\t' << what.section(QLatin1Char('\t'), 1) << '\n';
+                    check_table_room(line, frame, action);
+                }
+                next_action();
+            });
+            clock->start();
+            if (how == QLatin1String("unfold")) scope->setProperty("collapsed", false);
+            else click(QStringLiteral("appBar.tab.") + target);
+            window_.update();
+            return;
+        }
+        // `unfold-heights:<group>`: unfolds the group and, every frame for 1.2 s, reads the height of each table shown in
+        // it: T7, a table's height from its first visible frame on never changes (no table growing row by row).
+        if (action.startsWith(QLatin1String("unfold-heights:"))) {
+            QQuickItem* group = find(action.mid(15), true);
+            qWarning("unfold-heights: %s %s", qPrintable(action.mid(15)), group == nullptr ? "not found" : "found");
+            if (group == nullptr) {
+                fail(QStringLiteral("step %1: no group for '%2'").arg(step.image, action));
+                return;
+            }
+            auto clock = std::make_shared<QElapsedTimer>();
+            auto first = std::make_shared<QHash<QQuickItem*, double>>();
+            auto moved = std::make_shared<QStringList>();
+            auto link = std::make_shared<QMetaObject::Connection>();
+            QPointer<QQuickItem> guarded(group);
+            clock->start();
+            group->setProperty("collapsed", false);
+            *link = connect(&window_, &QQuickWindow::afterSynchronizing, this, [guarded, first, moved] {
+                if (!guarded) return;
+                for (QQuickItem* table : guarded->findChildren<QQuickItem*>()) {
+                    if (!table->inherits("QQuickListView") || !table->isVisible() || table->height() < 1) continue;
+                    if (!first->contains(table)) first->insert(table, table->height());
+                    else if (std::abs(first->value(table) - table->height()) > 0.5 && moved->size() < 5)
+                        *moved << QStringLiteral("%1 %2 -> %3").arg(table->objectName()).arg(first->value(table)).arg(table->height());
+                }
+            }, Qt::DirectConnection);
+            auto swapped = std::make_shared<QMetaObject::Connection>();
+            auto done = std::make_shared<bool>(false);
+            *swapped = connect(&window_, &QQuickWindow::frameSwapped, this, [this, clock, first, moved, link, swapped, action, done] {
+                // A frame queued before the disconnect still arrives: it must not go to the next action again.
+                if (*done) return;
+                if (clock->elapsed() < 1200) {
+                    window_.update();
+                    return;
+                }
+                *done = true;
+                disconnect(*link);
+                disconnect(*swapped);
+                qWarning("unfold-heights: done, %lld tables", static_cast<long long>(first->size()));
+                QFile summary(qEnvironmentVariable("EDI_SWEEP_SUMMARY"));
+                if (summary.open(QIODevice::Append | QIODevice::Text)) {
+                    QTextStream line(&summary);
+                    line << steps_[current_].image << "\tT7:checked\t" << action << '\t' << first->size() << " tables\n";
+                    for (const QString& what : *moved) line << steps_[current_].image << "\tT7:grew\t" << action << '\t' << what << '\n';
+                }
+                next_action();
+            });
+            window_.update();
+            return;
+        }
+        // `scroll-column-x:<list>:<cell prefix>`: the list scrolled fast (120 px a frame) to its end and back, and at every
+        // frame's sync, while the scene thread holds the items still, the x of every shown cell named `<prefix><row>`:
+        // a column's cells share one x, so any other x is a row drawn off its column for a frame (the owner, 2026-11-23:
+        // Free check boxes flickering left while scrolling).
+        if (action.startsWith(QLatin1String("scroll-column-x:"))) {
+            const QStringList parts = action.mid(QStringLiteral("scroll-column-x:").size()).split(QLatin1Char(':'));
+            auto* list = parts.size() == 2 ? find(parts[0], false) : nullptr;
+            if (list == nullptr || list->metaObject()->indexOfProperty("contentY") < 0) {
+                fail(QStringLiteral("step %1: nothing to scroll for '%2'").arg(step.image, action));
+                return;
+            }
+            const QString& prefix = parts[1];
+            struct Samples {
+                double first = -1.0;
+                double worst = 0.0;
+                long long cells = 0;
+                long long frames = 0;
+                long long off = 0;
+                QString where;
+                QString firstWidths;
+            };
+            auto samples = std::make_shared<Samples>();
+            auto synced = std::make_shared<QMetaObject::Connection>();
+            auto swapped = std::make_shared<QMetaObject::Connection>();
+            auto turns = std::make_shared<int>(0);
+            QPointer<QQuickItem> guarded(list);
+            *synced = connect(&window_, &QQuickWindow::afterSynchronizing, this, [guarded, prefix, samples] {
+                if (!guarded)
+                    return;
+                ++samples->frames;
+                bool offThisFrame = false;
+                std::function<void(QQuickItem*)> walk = [&](QQuickItem* item) {
+                    for (QQuickItem* child : item->childItems()) {
+                        if (child->objectName().startsWith(prefix) && child->isVisible()) {
+                            const double x = child->mapToScene(QPointF(0, 0)).x();
+                            ++samples->cells;
+                            if (samples->first < 0)
+                                samples->first = x;
+                            else if (std::abs(x - samples->first) > 0.5) {
+                                offThisFrame = true;
+                                if (std::abs(x - samples->first) > samples->worst) {
+                                    samples->worst = std::abs(x - samples->first);
+                                    samples->where = QStringLiteral("%1 at %2, column %3").arg(child->objectName()).arg(x, 0, 'f', 1).arg(samples->first, 0, 'f', 1);
+                                }
+                            }
+                            continue;
+                        }
+                        walk(child);
+                    }
+                };
+                walk(guarded);
+                // The first frame off its column: the table's columns then and as first seen, so the log names the moving one.
+                const QString widths = guarded->property("columnWidths").toStringList().join(QLatin1Char(','));
+                if (samples->firstWidths.isEmpty())
+                    samples->firstWidths = widths;
+                if (offThisFrame && samples->off == 0)
+                    qWarning("scroll-column-x: first off frame %lld, columns %s, first %s, spare %.1f", samples->frames, qPrintable(widths),
+                             qPrintable(samples->firstWidths), guarded->property("spareWidth").toDouble());
+                if (offThisFrame)
+                    ++samples->off;
+            }, Qt::DirectConnection);
+            const auto end_of = [list] {
+                return list->property("contentHeight").toDouble() - list->height() + list->property("originY").toDouble();
+            };
+            *swapped = connect(&window_, &QQuickWindow::frameSwapped, this, [this, list, end_of, samples, synced, swapped, turns, action] {
+                // A frame queued before the last turn's disconnect still arrives: it must not go to the next action again.
+                if (*turns >= 2)
+                    return;
+                const bool down = *turns == 0;
+                const double end = down ? end_of() : list->property("originY").toDouble();
+                const double at = list->property("contentY").toDouble();
+                if (down ? at >= end - 0.5 : at <= end + 0.5) {
+                    if (++*turns < 2) {
+                        window_.update();
+                        return;
+                    }
+                    disconnect(*synced);
+                    disconnect(*swapped);
+                    qWarning("scroll-column-x: %s: %lld frames, %lld cells, %lld frames with a cell off its column, worst %.1f px%s%s",
+                             qPrintable(action), samples->frames, samples->cells, samples->off, samples->worst,
+                             samples->where.isEmpty() ? "" : ": ", qPrintable(samples->where));
+                    if (samples->cells == 0 || samples->off > 0) {
+                        QFile summary(qEnvironmentVariable("EDI_SWEEP_SUMMARY"));
+                        if (summary.open(QIODevice::Append | QIODevice::Text))
+                            QTextStream(&summary) << steps_[current_].image << "\tT6:scroll-column-x\t" << action << '\t'
+                                                  << (samples->cells == 0 ? QStringLiteral("no cell sampled")
+                                                                          : QStringLiteral("%1 of %2 frames drew a cell off its column, worst %3 px (%4)")
+                                                                                .arg(samples->off).arg(samples->frames).arg(samples->worst, 0, 'f', 1).arg(samples->where))
+                                                  << '\n';
+                    }
+                    next_action();
+                    return;
+                }
+                list->setProperty("contentY", down ? std::min(end, at + 120.0) : std::max(end, at - 120.0));
+                window_.update();
+            });
+            window_.update();
+            return;
+        }
+        // `scroll-frames:<list>`: the list scrolled to its end (or, at its end, back to its top) a fixed step per drawn
+        // frame, as a steady wheel scrolls it, then the frames' intervals logged: how smoothly it scrolls.
+        if (action.startsWith(QLatin1String("scroll-frames:"))) {
+            auto* list = find(action.mid(QStringLiteral("scroll-frames:").size()), false);
+            if (list == nullptr || list->metaObject()->indexOfProperty("contentY") < 0) {
+                fail(QStringLiteral("step %1: nothing to scroll for '%2'").arg(step.image, action));
+                return;
+            }
+            auto clock = std::make_shared<QElapsedTimer>();
+            auto intervals = std::make_shared<QList<qint64>>();
+            auto link = std::make_shared<QMetaObject::Connection>();
+            const auto end_of = [list] {
+                return list->property("contentHeight").toDouble() - list->height() + list->property("originY").toDouble();
+            };
+            const double from = list->property("contentY").toDouble();
+            const bool down = from < end_of() - 0.5;
+            clock->start();
+            auto done = std::make_shared<bool>(false);
+            *link = connect(&window_, &QQuickWindow::frameSwapped, this, [this, list, clock, intervals, link, end_of, down, from, done] {
+                // A frame queued before the disconnect still arrives: it must not go to the next action again.
+                if (*done) return;
+                intervals->append(clock->restart());
+                const double end = down ? end_of() : list->property("originY").toDouble();
+                const double at = list->property("contentY").toDouble();
+                if (down ? at >= end - 0.5 : at <= end + 0.5) {
+                    *done = true;
+                    disconnect(*link);
+                    QList<qint64> sorted = *intervals;
+                    std::sort(sorted.begin(), sorted.end());
+                    const auto over = [&sorted](qint64 limit) {
+                        return static_cast<long long>(std::count_if(sorted.begin(), sorted.end(), [limit](qint64 ms) { return ms > limit; }));
+                    };
+                    // Both ends and the travel: a list with no range reaches its end at once and is no pass.
+                    qWarning("scroll-frames: %s from %.0f to %.0f (travel %.0f px), %lld frames, over 16 ms %lld, over 33 ms %lld, "
+                             "over 100 ms %lld, median %lld ms, longest %lld ms",
+                          down ? "down" : "up", from, at, std::abs(at - from), static_cast<long long>(sorted.size()), over(16),
+                          over(33), over(100),
+                          sorted.isEmpty() ? 0LL : static_cast<long long>(sorted[sorted.size() / 2]),
+                          sorted.isEmpty() ? 0LL : static_cast<long long>(sorted.last()));
+                    next_action();
+                    return;
+                }
+                list->setProperty("contentY", down ? std::min(end, at + 24.0) : std::max(end, at - 24.0));
+                window_.update();
+            });
+            window_.update();
+            return;
+        }
+        // `hover-all:<prefix>`: the pointer rests on each shown control whose name starts with the prefix, long enough
+        // for its tooltip to open; every tooltip opened that holds a long text logs its control (ToolTip.qml).
+        if (action.startsWith(QLatin1String("hover-all:"))) {
+            const QString prefix = action.mid(10);
+            auto targets = std::make_shared<QList<QPointer<QQuickItem>>>();
+            for (QQuickItem* item : window_.contentItem()->findChildren<QQuickItem*>())
+                if (item->objectName().startsWith(prefix) && item->isVisible() && item->width() > 1) targets->append(item);
+            const auto overlay = window_.contentItem()->parentItem();
+            if (overlay != nullptr)
+                for (QQuickItem* item : overlay->findChildren<QQuickItem*>())
+                    if (item->objectName().startsWith(prefix) && item->isVisible() && item->width() > 1 && !targets->contains(item)) targets->append(item);
+            qWarning("hover-all: %lld controls named %s*", static_cast<long long>(targets->size()), qPrintable(prefix));
+            // One slot per control, scheduled at once, then the next action.
+            for (qsizetype n = 0; n < targets->size(); ++n) {
+                QPointer<QQuickItem> item = targets->at(n);
+                QTimer::singleShot(static_cast<int>(n) * 1300, this, [this, item] {
+                    if (item.isNull() || !item->isVisible()) return;
+                    const QPointF at = item->mapToScene(QPointF(item->width() / 2, item->height() / 2));
+                    QMouseEvent move(QEvent::MouseMove, at, window_.mapToGlobal(at), Qt::NoButton, Qt::NoButton, Qt::NoModifier);
+                    QCoreApplication::sendEvent(&window_, &move);
+                });
+            }
+            QTimer::singleShot(static_cast<int>(targets->size()) * 1300 + 300, this, [this] { next_action(); });
+            return;
+        }
+        // `expand-frames-all`: every group of the shown sidebar tab folded, then each opened in turn as a click opens
+        // it, each frame's interval and the group's height logged for 1.5 s, and folded again: an unfold is one smooth
+        // animation, no frame over 33 ms and no jump in height (the owner, 2026-11-23).
+        if (action == QLatin1String("expand-frames-all")) {
+            auto groups = std::make_shared<QList<QPointer<QQuickItem>>>();
+            // By the item tree: a page's groups are made by loaders, outside the window's object tree.
+            QList<QQuickItem*> all;
+            std::function<void(QQuickItem*)> gather = [&all, &gather](QQuickItem* at) {
+                for (QQuickItem* child : at->childItems()) {
+                    all << child;
+                    gather(child);
+                }
+            };
+            gather(window_.contentItem());
+            for (QQuickItem* group : all) {
+                if (!group->objectName().startsWith(QLatin1String("group."))) continue;
+                if (!group->property("folding").isValid() || !group->property("collapsible").toBool() || !group->isVisible())
+                    continue;
+                // On the shown page (the others lie beside the window) and tab (the others are transparent).
+                bool shown = true;
+                for (QQuickItem* at = group; at != nullptr; at = at->parentItem()) shown = shown && at->opacity() > 0.01;
+                const QRectF at = group->mapRectToScene(QRectF(0, 0, group->width(), 1));
+                if (shown && at.left() >= 0 && at.right() <= window_.width() + 1) groups->append(group);
+            }
+            qWarning("expand-frames: %lld groups", static_cast<long long>(groups->size()));
+            for (const auto& group : *groups) group->setProperty("collapsed", true);
+            // One 2.4 s slot per group, scheduled at once: opened at its start, logged and folded 1.5 s later.
+            constexpr int slot = 2400;
+            for (qsizetype n = 0; n < groups->size(); ++n) {
+                QPointer<QQuickItem> group = groups->at(n);
+                QTimer::singleShot(800 + static_cast<int>(n) * slot, this, [this, group] {
+                    if (group.isNull()) return;
+                    auto clock = std::make_shared<QElapsedTimer>(), total = std::make_shared<QElapsedTimer>();
+                    auto intervals = std::make_shared<QList<qint64>>();
+                    auto heights = std::make_shared<QList<double>>();
+                    auto link = std::make_shared<QMetaObject::Connection>();
+                    auto done = std::make_shared<bool>(false);
+                    clock->start();
+                    total->start();
+                    group->setProperty("collapsed", false);
+                    window_.update();
+                    *link = connect(&window_, &QQuickWindow::frameSwapped, this, [this, group, clock, total, intervals, heights, link, done] {
+                        // A frame already queued when the connection is dropped still arrives once.
+                        if (*done) return;
+                        intervals->append(clock->restart());
+                        heights->append(group.isNull() ? 0.0 : group->height());
+                        if (total->elapsed() < 1500 && !group.isNull()) { window_.update(); return; }
+                        *done = true;
+                        disconnect(*link);
+                        QList<qint64> sorted = *intervals;
+                        std::sort(sorted.begin(), sorted.end());
+                        const auto over = [&sorted](qint64 limit) {
+                            return static_cast<long long>(std::count_if(sorted.begin(), sorted.end(), [limit](qint64 ms) { return ms > limit; }));
+                        };
+                        // A smooth unfold only grows: a frame lower than the one before is a step back; the largest
+                        // single step shows a jump.
+                        int backs = 0;
+                        double biggest = 0;
+                        for (qsizetype i = 1; i < heights->size(); ++i) {
+                            const double change = heights->at(i) - heights->at(i - 1);
+                            if (change < -0.5) ++backs;
+                            biggest = std::max(biggest, std::abs(change));
+                        }
+                        qWarning("expand-frames: %s, %lld frames, first %lld ms, over 33 ms %lld, longest %lld ms, height %.0f to %.0f, "
+                                 "largest step %.0f px, steps back %d",
+                                 qPrintable(group.isNull() ? QStringLiteral("?") : group->objectName()), static_cast<long long>(intervals->size()),
+                                 intervals->isEmpty() ? 0LL : static_cast<long long>(intervals->first()), over(33),
+                                 sorted.isEmpty() ? 0LL : static_cast<long long>(sorted.last()), heights->isEmpty() ? 0.0 : heights->first(),
+                                 heights->isEmpty() ? 0.0 : heights->last(), biggest, backs);
+                        if (!group.isNull()) group->setProperty("collapsed", true);
+                    });
+                });
+            }
+            QTimer::singleShot(800 + static_cast<int>(groups->size()) * slot + 300, this, [this] { next_action(); });
             return;
         }
         // The frame settles before the next action: a capture-now after it then shows an animation that starts there.
@@ -1788,6 +4123,24 @@ void DemoDriver::next_action() {
             timed_fit_then([this] { next_action(); }, parts.value(1).toInt(), parts.size() > 2 ? parts.at(2).toInt() : -1);
             return;
         }
+        // The scan files read so far, for the desk check of edi ADR-0102 rule 6: the total, the reads since the last
+        // count, and the views' demand with how much of it is unread.
+        if (action.startsWith(QLatin1String("count-scan-reads:"))) {
+            static long long last = 0, last_list = 0;
+            const long long now = scanFileReads().load(), list = listFileReads().load();
+            ScanViewModel* model = nullptr;
+            for (const QString& mode : {QStringLiteral("map"), QStringLiteral("stacked")}) {
+                QQuickItem* layer = find(QStringLiteral("scanView.%1.layer").arg(mode), false);
+                if (layer != nullptr && model == nullptr) model = layer->property("model").value<ScanViewModel*>();
+            }
+            qWarning("scan reads %s: views %lld total, %lld since the last count; demand %d, unread %d; lists %lld since the "
+                     "last count", qPrintable(action.mid(17)), now, now - last, model ? model->demandSize() : -1,
+                     model ? model->unreadDemanded() : -1, list - last_list);
+            last = now;
+            last_list = list;
+            next_action();
+            return;
+        }
         if (action.startsWith(QLatin1String("wait-scan:"))) {
             wait_scan_then([this] { next_action(); }, action.mid(10));
             return;
@@ -1818,8 +4171,22 @@ void DemoDriver::next_action() {
             }
             return;
         }
+        const bool tab_button = (action.startsWith(QLatin1String("mainArea.")) && action.contains(QLatin1String(".tab."))) ||
+                                action.startsWith(QLatin1String("sideBar.tab."));
+        const bool issues = !step.trace.isEmpty() && (action.startsWith(QLatin1String("appBar.tab.")) ||
+                                                      action.startsWith(QLatin1String("mainArea.blocks.")) ||
+                                                      action == QLatin1String("statusBar.fit.button") || tab_button ||
+                                                      action.startsWith(QLatin1String("unfold:")));
+        if (issues) trace_issue(action);
         if (!perform(action)) {
             return;  // fail() has ended the run
+        }
+        if (issues && step.navigation != 0) {
+            trace_issued(step);
+            // The press is the step: the next one follows on its schedule, with no capture or wait in between.
+            ++current_;
+            run_step();
+            return;
         }
         // A hover is what the step shows, so its pointer stays.
         if (!action.startsWith(QLatin1String("hover:"))) {
@@ -1838,7 +4205,8 @@ void DemoDriver::next_action() {
         return;
     }
     const auto save = [this] {
-        if (!steps_[current_].capture) {
+        // EDI_DEMO_NO_IMAGES: the checks alone, no frame saved (a long width series).
+        if (!steps_[current_].capture || qEnvironmentVariableIsSet("EDI_DEMO_NO_IMAGES")) {
             ++current_;
             run_step();
             return;
@@ -1846,7 +4214,19 @@ void DemoDriver::next_action() {
         // Every documentation screenshot is WebP at quality 85 (owner record 2026-11-10); other captures stay PNG.
         const bool webp = documentation_;
         const QString path = output_dir_.filePath(steps_[current_].image + (webp ? QStringLiteral(".webp") : QStringLiteral(".png")));
-        if (!(webp ? previous_frame_.save(path, "WEBP", 85) : previous_frame_.save(path))) {
+        // While traced, the image is written on a worker, so writing it is not the GUI thread's work.
+        bool saved = true;
+#if EDI_UI_INSTRUMENTATION
+        if (ui_trace_on() && !webp) {
+            // A copy of its own: the worker never shares image data with the GUI thread, which frees and replaces
+            // previous_frame_ while the image is written.
+            run_in_background([image = previous_frame_.copy(), path] { image.save(path); });
+        } else
+#endif
+        {
+            saved = webp ? previous_frame_.save(path, "WEBP", 85) : previous_frame_.save(path);
+        }
+        if (!saved) {
             fail(QStringLiteral("cannot write %1").arg(path));
             return;
         }
@@ -1862,7 +4242,7 @@ void DemoDriver::next_action() {
     };
     if (unsettled) {
         QTimer::singleShot(unsettled_ms, this, [this, save] {
-            previous_frame_ = window_.grabWindow();
+            previous_frame_ = grab();
             save();
         });
         return;
@@ -2096,7 +4476,7 @@ void DemoDriver::tutorial_next_then(const std::function<void()>& next, int step,
         QDir folder(shots);
         folder.mkpath(id);
         folder.cd(id);
-        window_.grabWindow().save(folder.filePath(QStringLiteral("%1.png").arg(now + 1, 3, 10, QLatin1Char('0'))));
+        grab().save(folder.filePath(QStringLiteral("%1.png").arg(now + 1, 3, 10, QLatin1Char('0'))));
         if (QFile list(folder.filePath(QStringLiteral("steps.txt"))); list.open(QIODevice::Append | QIODevice::Text))
             list.write(QStringLiteral("%1\t%2\t%3\n").arg(now + 1, 3, 10, QLatin1Char('0')).arg(shown.title, shown.text).toUtf8());
         shot_step_ = now;
@@ -2132,7 +4512,7 @@ void DemoDriver::tutorial_next_then(const std::function<void()>& next, int step,
     }
     if (waited_ms > kStuckMs) {
         // The window as it stands, beside the run's captures, to show where the tutorial stopped.
-        window_.grabWindow().save(output_dir_.filePath(steps_[current_].image + QStringLiteral("-stuck.png")));
+        grab().save(output_dir_.filePath(steps_[current_].image + QStringLiteral("-stuck.png")));
         fail(QStringLiteral("step %1: tutorial %2 stays at step %3 of %4: Next %5")
                  .arg(steps_[current_].image, id).arg(now + 1).arg(count)
                  .arg(clickable ? QStringLiteral("does not advance it") : QStringLiteral("is off")));
@@ -2254,6 +4634,113 @@ bool DemoDriver::perform(const QString& action) {
         }
         return click_item(candidates.last());
     }
+    // `set:<name>:<property>=<value>`: an item's property set as a state to capture (a form's answer from a service
+    // the demo does not reach).
+    if (action.startsWith(QLatin1String("set:"))) {
+        const QString rest = action.mid(4);
+        // A dialog is a popup, not an item: looked for among every object.
+        QObject* item = window_.contentItem()->findChild<QObject*>(rest.section(QLatin1Char(':'), 0, 0));
+        if (item == nullptr && window_.contentItem()->parentItem() != nullptr)
+            item = window_.contentItem()->parentItem()->findChild<QObject*>(rest.section(QLatin1Char(':'), 0, 0));
+        const QString assignment = rest.section(QLatin1Char(':'), 1);
+        if (item == nullptr || !assignment.contains(QLatin1Char('=')) ||
+            !item->setProperty(qPrintable(assignment.section(QLatin1Char('='), 0, 0)), assignment.section(QLatin1Char('='), 1))) {
+            fail(QStringLiteral("step %1: cannot %2").arg(steps_[current_].image, action));
+            return false;
+        }
+        return true;
+    }
+    // `legend-hide-all:<chart>`: every entry of the chart's legend switched off, as clicks on each would; then
+    // `check-hidden-series:<chart>` notes every series of that chart still drawing points (the owner, 2026-11-23: the
+    // magnetic contribution stayed drawn with its entry off).
+    if (action.startsWith(QLatin1String("legend-hide-all:")) || action.startsWith(QLatin1String("check-hidden-series:"))) {
+        const QString name = action.section(QLatin1Char(':'), 1);
+        QQuickItem* chart = find(name, true);
+        QObject* controller = nullptr;
+        if (chart != nullptr)
+            for (QObject* child : chart->findChildren<QObject*>())
+                if (QString::fromLatin1(child->metaObject()->className()).contains(QLatin1String("PatternChartController"))) { controller = child; break; }
+        if (controller == nullptr) {
+            fail(QStringLiteral("step %1: no chart controller for %2").arg(steps_[current_].image, action));
+            return false;
+        }
+        if (action.startsWith(QLatin1String("legend-hide-all:"))) {
+            QMetaObject::invokeMethod(controller, "hideAllButMeasured");
+            QMetaObject::invokeMethod(controller, "toggleSeries", Q_ARG(QString, QStringLiteral("meas")));
+            return true;
+        }
+        QFile file(qEnvironmentVariable("EDI_SWEEP_SUMMARY"));
+        if (file.open(QIODevice::Append | QIODevice::Text)) {
+            QTextStream out(&file);
+            out << steps_[current_].image << "\tC2:checked\tchart\tevery series with its legend entry off\n";
+            int drawn = 0;
+            for (QXYSeries* series : chart->findChildren<QXYSeries*>()) {
+                int finite = 0;
+                for (const QPointF& point : series->points())
+                    finite += std::isfinite(point.x()) && std::isfinite(point.y()) ? 1 : 0;
+                if (series->isVisible() && finite > 1) {
+                    out << steps_[current_].image << "\tC2:legend-hidden-drawn\t" << series->objectName() << ' ' << series->name() << '\t' << finite << " points\n";
+                    ++drawn;
+                }
+            }
+            qWarning("check-hidden-series: %d series still drawn", drawn);
+        }
+        return true;
+    }
+    // `check-report-figures-saved`: the last report save was given a figure for every evolution chart, structure and
+    // pattern of the preview's model (the owner, 2026-11-23: a PDF saved right after the first show must hold them).
+    if (action == QLatin1String("check-report-figures-saved") || action.startsWith(QLatin1String("check-report-figures-saved:"))) {
+        QObject* report = nullptr;
+        for (QObject* object : window_.contentItem()->findChildren<QObject*>())
+            if (QString::fromLatin1(object->metaObject()->className()).contains(QLatin1String("ReportViewModel"))) { report = object; break; }
+        if (report == nullptr)
+            if (QQuickItem* preview = find(QStringLiteral("report.preview"), false); preview != nullptr)
+                report = preview->property("report").value<QObject*>();
+        if (report == nullptr) {
+            fail(QStringLiteral("step %1: no report view model").arg(steps_[current_].image));
+            return false;
+        }
+        const QStringList saved = report->property("lastSavedFigures").toStringList();
+        // A save asked for while the report was still building is made once it is built: waited for, up to 20 s.
+        const int waited = action.section(QLatin1Char(':'), 1).toInt();
+        if (saved.isEmpty() && waited < 20000) {
+            --action_;
+            steps_[current_].actions[action_] = QStringLiteral("check-report-figures-saved:%1").arg(waited + 250);
+            QTimer::singleShot(250, this, [this] { next_action(); });
+            return false;
+        }
+        const QVariantMap model = report->property("model").toMap();
+        const qsizetype evolution = model.value(QStringLiteral("evolution")).toList().size();
+        qsizetype savedEvolution = 0;
+        for (const QString& name : saved) savedEvolution += name.startsWith(QLatin1String("evolution-")) ? 1 : 0;
+        qWarning("check-report-figures-saved: %lld figures saved (%lld evolution of %lld): %s", static_cast<long long>(saved.size()),
+                 static_cast<long long>(savedEvolution), static_cast<long long>(evolution), qPrintable(saved.join(QLatin1Char(' '))));
+        QFile summary(qEnvironmentVariable("EDI_SWEEP_SUMMARY"));
+        if (savedEvolution < evolution && summary.open(QIODevice::Append | QIODevice::Text))
+            QTextStream(&summary) << steps_[current_].image << "\treport-figures-missing\t" << savedEvolution << " of " << evolution << " evolution charts\n";
+        return true;
+    }
+    // `note-sidebar:<key>` keeps the sidebar's width under a key; `check-sidebar:<key>` notes "sidebar-moved" when the
+    // width now differs from it by more than a pixel (the owner, 2026-11-23: Full one width on every page, and no
+    // width moved by a fit).
+    if (action.startsWith(QLatin1String("note-sidebar:")) || action.startsWith(QLatin1String("check-sidebar:"))) {
+        QQmlEngine* engine = qmlEngine(window_.contentItem());
+        QObject* sizes = engine != nullptr ? engine->singletonInstance<QObject*>("EasyApplication.Gui.Style", "Sizes") : nullptr;
+        const double width = sizes != nullptr ? sizes->property("sideBarWidth").toDouble() : -1.0;
+        const QString key = action.section(QLatin1Char(':'), 1);
+        qWarning("%s %s %.0f", action.startsWith(QLatin1String("note-sidebar:")) ? "note-sidebar" : "check-sidebar", qPrintable(key), width);
+        if (action.startsWith(QLatin1String("note-sidebar:"))) {
+            sidebar_widths_[key] = width;
+            return true;
+        }
+        // Widths are whole pixels: any difference is a move (the owner's case 59: 0 px).
+        if (sidebar_widths_.contains(key) && std::abs(sidebar_widths_.value(key) - width) > 0.5) {
+            QFile summary(qEnvironmentVariable("EDI_SWEEP_SUMMARY"));
+            if (summary.open(QIODevice::Append | QIODevice::Text))
+                QTextStream(&summary) << steps_[current_].image << (key.startsWith(QLatin1String("full")) ? "\tW2:sidebar-moved\t" : "\tW1:sidebar-moved\t") << key << '\t' << sidebar_widths_.value(key) << " -> " << width << '\n';
+        }
+        return true;
+    }
     if (action.startsWith(QLatin1String("preference:"))) {
         // One of edi's Preferences, as its dialog sets it: preference:<name>=<value>, a string value.
         const QString setting = action.mid(11);
@@ -2281,6 +4768,25 @@ bool DemoDriver::perform(const QString& action) {
         if (code < 0 || target == nullptr ||
             !target->setProperty(theme ? "theme" : "platformColorScheme", code)) {
             fail(QStringLiteral("step %1: cannot apply '%2'").arg(steps_[current_].image, action));
+            return false;
+        }
+        return true;
+    }
+    // `list-end:<list>`: a list scrolled to its last row (the sweep's Examples frame, the owner, 2026-11-22).
+    if (action.startsWith(QLatin1String("list-top:"))) {
+        // At its top, checked: a frame named the top is one whose list is there.
+        QQuickItem* view = find(action.mid(9), false);
+        if (view == nullptr || !QMetaObject::invokeMethod(view, "positionViewAtBeginning") ||
+            std::abs(view->property("contentY").toDouble() - view->property("originY").toDouble()) > 0.5) {
+            fail(QStringLiteral("step %1: cannot scroll '%2' to its top").arg(steps_[current_].image, action.mid(9)));
+            return false;
+        }
+        return true;
+    }
+    if (action.startsWith(QLatin1String("list-end:"))) {
+        QQuickItem* view = find(action.mid(9), false);
+        if (view == nullptr || !QMetaObject::invokeMethod(view, "positionViewAtEnd")) {
+            fail(QStringLiteral("step %1: cannot scroll '%2' to its end").arg(steps_[current_].image, action.mid(9)));
             return false;
         }
         return true;
@@ -2360,6 +4866,21 @@ bool DemoDriver::perform(const QString& action) {
                      .arg(steps_[current_].image, name)
                      .arg(rows)
                      .arg(sized));
+            return false;
+        }
+        return true;
+    }
+    // `assert-report-figures`: every figure of the report preview holds what the project does (figureGaps()).
+    if (action == QLatin1String("assert-report-figures")) {
+        QQuickItem* preview = find(QStringLiteral("report.preview"), false);
+        QObject* report = preview != nullptr ? preview->property("report").value<QObject*>() : nullptr;
+        QStringList gaps;
+        if (report == nullptr || !QMetaObject::invokeMethod(report, "figureGaps", Q_RETURN_ARG(QStringList, gaps))) {
+            fail(QStringLiteral("step %1: no report preview to check").arg(steps_[current_].image));
+            return false;
+        }
+        if (!gaps.isEmpty()) {
+            fail(QStringLiteral("step %1: report figures miss series: %2").arg(steps_[current_].image, gaps.join("; ")));
             return false;
         }
         return true;
@@ -2460,6 +4981,306 @@ bool DemoDriver::perform(const QString& action) {
                              Qt::NoModifier);
             QCoreApplication::sendEvent(&window_, &move);
         }
+        return true;
+    }
+    // `main-tab-index:<page>:<n>`: the page's main view on its tab n, set on the tab bar itself, so a tab the bar has
+    // scrolled out of view is reached too (the sweep's frames each start from the first tab).
+    if (action.startsWith(QLatin1String("main-tab-index:"))) {
+        const QString page = action.section(QLatin1Char(':'), 1, 1);
+        const int index = action.section(QLatin1Char(':'), 2).toInt();
+        QQuickItem* host = find(QStringLiteral("workflow.%1.mainContent").arg(page), false);
+        std::function<QQuickItem*(QQuickItem*)> bar = [&bar](QQuickItem* item) -> QQuickItem* {
+            if (item->inherits("QQuickTabBar")) return item;
+            for (QQuickItem* child : item->childItems()) {
+                if (QQuickItem* found = bar(child)) return found;
+            }
+            return nullptr;
+        };
+        QQuickItem* tabs = host != nullptr ? bar(host) : nullptr;
+        if (tabs == nullptr || !tabs->setProperty("currentIndex", index)) {
+            fail(QStringLiteral("step %1: no main tab bar on '%2'").arg(steps_[current_].image, page));
+            return false;
+        }
+        return true;
+    }
+    // `expand-all`: every collapsed group shown on the page opened.
+    if (action == QLatin1String("expand-all")) {
+        std::function<void(QQuickItem*)> open = [&open](QQuickItem* item) {
+            if (!item->isVisible()) return;
+            if (item->metaObject()->indexOfProperty("collapsed") >= 0 && item->property("collapsed").toBool() &&
+                item->objectName().startsWith(QLatin1String("group.")))
+                item->setProperty("collapsed", false);
+            for (QQuickItem* child : item->childItems()) open(child);
+        };
+        open(window_.contentItem());
+        return true;
+    }
+    // `check-layout`: the frame's text that is elided, runs out of its box, is cut by a clipping parent or lies over other
+    // text, and list rows partly under their header, one line each to EDI_SWEEP_SUMMARY (frame, kind, item, text).
+    if (action.startsWith(QLatin1String("time-keys:"))) {
+        // Each character as its own key press, timed from the press to the end of its handling (the bindings it
+        // starts included): a keystroke's cost on the GUI thread.
+        for (const QChar character : action.mid(10)) {
+            QElapsedTimer clock;
+            clock.start();
+            QKeyEvent press(QEvent::KeyPress, 0, Qt::NoModifier, QString(character));
+            QCoreApplication::sendEvent(&window_, &press);
+            QKeyEvent release(QEvent::KeyRelease, 0, Qt::NoModifier, QString(character));
+            QCoreApplication::sendEvent(&window_, &release);
+            QCoreApplication::processEvents(QEventLoop::ExcludeUserInputEvents);
+            qWarning("time-keys: '%s' took %lld ms", qPrintable(QString(character)), static_cast<long long>(clock.elapsed()));
+            // R3: at most 16 ms a key.
+            if (QFile summary(qEnvironmentVariable("EDI_SWEEP_SUMMARY")); summary.open(QIODevice::Append | QIODevice::Text)) {
+                QTextStream line(&summary);
+                line << steps_[current_].image << "\tR3:checked\tkey\t'" << character << "' " << clock.elapsed() << " ms\n";
+                if (clock.elapsed() > 16) line << steps_[current_].image << "\tR3:slow\tkey\t'" << character << "' " << clock.elapsed() << " ms, at most 16\n";
+            }
+        }
+        return true;
+    }
+    if (action.startsWith(QLatin1String("log-fill:"))) {
+        // A long session's run log, line by line: what a feedback report attaches.
+        const int lines = action.mid(9).toInt();
+        for (int line = 0; line < lines; ++line)
+            qInfo("log-fill: line %d of a long session's run log, padded to about a hundred characters ..........", line);
+        return true;
+    }
+    if (action == QLatin1String("close-project")) {
+        QQmlEngine* engine = qmlEngine(window_.contentItem());
+        auto* session = engine != nullptr ? engine->singletonInstance<Session*>("edi.app", "Session") : nullptr;
+        if (session == nullptr) {
+            fail(QStringLiteral("step %1: no session to close a project in").arg(steps_[current_].image));
+            return false;
+        }
+        session->closeProject();
+        return true;
+    }
+    if (action == QLatin1String("check-messages")) {
+        // A clean start shows no message: any counted is a finding the sweep fails on (the owner, 2026-11-22).
+        const QQuickItem* item = find(QStringLiteral("statusBar.warnings"), false);
+        const QString count = item != nullptr ? item->property("valueText").toString() : QString();
+        if (count.toInt() > 0) {
+            qWarning("check-messages: %s messages after a clean start", qPrintable(count));
+            // Each message, so a finding names what was raised.
+            QQmlEngine* engine = qmlEngine(window_.contentItem());
+            auto* session = engine != nullptr ? engine->singletonInstance<Session*>("edi.app", "Session") : nullptr;
+            QAbstractItemModel* warnings = session != nullptr ? session->loadWarnings() : nullptr;
+            if (warnings != nullptr) {
+                const int role = warnings->roleNames().key("message");
+                for (int row = 0; row < warnings->rowCount(); ++row)
+                    qWarning("check-messages: %s", qPrintable(warnings->data(warnings->index(row, 0), role).toString()));
+            }
+            if (!qEnvironmentVariable("EDI_SWEEP_SUMMARY").isEmpty()) {
+                QFile file(qEnvironmentVariable("EDI_SWEEP_SUMMARY"));
+                if (file.open(QIODevice::Append | QIODevice::Text))
+                    QTextStream(&file) << steps_[current_].image << "\tmessages\tstatusBar.warnings\t" << count << '\n';
+            }
+        }
+        return true;
+    }
+    if (action == QLatin1String("check-layout")) {
+        check_layout(steps_[current_].image);
+        return true;
+    }
+    if (action == QLatin1String("check-assistant-panel")) {
+        check_assistant_panel();
+        return true;
+    }
+    // `unfold:<group>` and `fold:<group>`: a group opened or closed as its title's click does; a group the open project
+    // does not have is passed over (an unfold inventory lists every group a scenario may meet).
+    if (action == QLatin1String("mark")) {
+        mark_.start();
+        return true;
+    }
+    // `series-point`: the Auto width series (W3, W4): the window, the sidebar's width and the parameter table's shown
+    // columns at this window width.
+    if (action == QLatin1String("series-point")) {
+        QQmlEngine* engine = qmlEngine(window_.contentItem());
+        QObject* sizes = engine != nullptr ? engine->singletonInstance<QObject*>("EasyApplication.Gui.Style", "Sizes") : nullptr;
+        QQuickItem* parameters = find(QStringLiteral("parameters.list"), false);
+        QStringList shown;
+        if (parameters != nullptr)
+            for (int column = 0; column < 9; ++column) {
+                bool on = false;
+                QMetaObject::invokeMethod(parameters, "shows", Q_RETURN_ARG(bool, on), Q_ARG(int, column));
+                if (on) shown << QString::number(column);
+            }
+        QFile summary(qEnvironmentVariable("EDI_SWEEP_SUMMARY"));
+        if (summary.open(QIODevice::Append | QIODevice::Text) && sizes != nullptr)
+            QTextStream(&summary) << steps_[current_].image << "\tW:series\t" << window_.width() << '\t'
+                                  << (sizes->property("sideBarBelow").toBool() ? "below " : "side ") << sizes->property("sideBarWidth").toDouble()
+                                  << " columns " << shown.join(QLatin1Char(',')) << " spare " << (parameters != nullptr ? parameters->property("spareWidth").toDouble() : -1)
+                                  << " gap " << (sizes->property("fontPixelSize").toDouble()) << '\n';
+        return true;
+    }
+    // `check-popup:<editor>`: the parameter popup a click just opened shows its value editor, with the keyboard focus
+    // (the owner, 2026-11-23: every field row and table cell opens the same popup).
+    if (action.startsWith(QLatin1String("check-popup:"))) {
+        const QString name = action.mid(12);
+        // A popup's items are drawn in the window's overlay, a child of the content item.
+        QQuickItem* editor = nullptr;
+        std::function<void(QQuickItem*)> look = [&](QQuickItem* item) {
+            for (QQuickItem* child : item->childItems()) {
+                if (editor != nullptr)
+                    return;
+                if (child->objectName() == name)
+                    editor = child;
+                else
+                    look(child);
+            }
+        };
+        look(window_.contentItem());
+        const bool ok = editor != nullptr && editor->isVisible() && editor->hasActiveFocus();
+        qWarning("check-popup %s: %s", qPrintable(name), editor == nullptr ? "no popup" : ok ? "open, focused" : "open, not focused");
+        if (!ok) {
+            QFile summary(qEnvironmentVariable("EDI_SWEEP_SUMMARY"));
+            if (summary.open(QIODevice::Append | QIODevice::Text))
+                QTextStream(&summary) << steps_[current_].image << "\tF2:popup\t" << name << '\t' << (editor == nullptr ? "no popup" : "not focused") << '\n';
+        }
+        // F3: the popup's inputs (the editor, s.u., Min, Max) one gap apart, and none wider than its text's room.
+        if (editor != nullptr) {
+            QQuickItem* grid = editor->parentItem();
+            while (grid != nullptr && !grid->inherits("QQuickGrid")) grid = grid->parentItem();
+            QList<QQuickItem*> inputs;
+            if (grid != nullptr) {
+                for (QQuickItem* child : visual_items(grid)) {
+                    if (child->inherits("QQuickTextField") && child->isVisible() && child->parentItem() == grid) inputs << child;
+                    if (child->inherits("QQuickLoader") && child->isVisible() && child->parentItem() == grid && child->property("active").toBool()) inputs << child;
+                }
+            }
+            std::sort(inputs.begin(), inputs.end(), [](QQuickItem* l, QQuickItem* r) { return l->x() < r->x(); });
+            QFile summary(qEnvironmentVariable("EDI_SWEEP_SUMMARY"));
+            if (summary.open(QIODevice::Append | QIODevice::Text)) {
+                QTextStream line(&summary);
+                QStringList gaps;
+                for (qsizetype i = 1; i < inputs.size(); ++i) gaps << QString::number(inputs[i]->x() - inputs[i - 1]->x() - inputs[i - 1]->width(), 'f', 1);
+                line << steps_[current_].image << "\tF3:checked\t" << name << "\tgaps " << gaps.join(QLatin1Char(',')) << '\n';
+                for (qsizetype i = 1; i < gaps.size(); ++i)
+                    if (std::abs(gaps[i].toDouble() - gaps[0].toDouble()) > 1.0)
+                        line << steps_[current_].image << "\tF3:gap\t" << name << '\t' << gaps.join(QLatin1Char(',')) << " between inputs, not equal\n";
+                for (QQuickItem* input : inputs) {
+                    if (input->inherits("QQuickLoader")) input = input->property("item").value<QQuickItem*>();
+                    // The value being typed scrolls in its input.
+                    if (input == nullptr || !input->inherits("QQuickTextField") || input->property("cursorVisible").toBool()) continue;
+                    const double room = input->width() - input->property("leftPadding").toDouble() - input->property("rightPadding").toDouble();
+                    if (input->property("contentWidth").toDouble() > room + 0.5)
+                        line << steps_[current_].image << "\tF3:crop\t" << name << '\t' << input->objectName() << " text " << input->property("contentWidth").toDouble() << " in " << room << '\n';
+                }
+            }
+        }
+        return true;
+    }
+    // `note-columns:<list>` keeps a table's column widths; `check-columns:<list>` reports any that moved since (the
+    // owner, 2026-11-23: a value typed, a type changed or a fit never changes a column's width).
+    if (action.startsWith(QLatin1String("note-columns:")) || action.startsWith(QLatin1String("check-columns:"))) {
+        const QString name = action.section(QLatin1Char(':'), 1);
+        QQuickItem* list = find(name, false);
+        const QString widths = list == nullptr ? QString() : list->property("columnWidths").toStringList().join(QLatin1Char(','));
+        qWarning("%s %s", qPrintable(action), qPrintable(widths));
+        if (action.startsWith(QLatin1String("note-columns:"))) {
+            column_widths_[name] = widths;
+        } else if (column_widths_.value(name) != widths) {
+            QFile summary(qEnvironmentVariable("EDI_SWEEP_SUMMARY"));
+            if (summary.open(QIODevice::Append | QIODevice::Text))
+                QTextStream(&summary) << steps_[current_].image << "\tT6:columns-moved\t" << name << '\t' << column_widths_.value(name) << " -> " << widths << '\n';
+        }
+        return true;
+    }
+    // `check-fields`: no shown parameter field draws its value wider than its room, the space left of its unit (the
+    // owner, 2026-11-23: a field row drops digits, then wraps; it never crops a number).
+    if (action == QLatin1String("check-fields")) {
+        int fields = 0, cropped = 0;
+        std::function<void(QQuickItem*)> walk = [&](QQuickItem* item) {
+            for (QQuickItem* child : item->childItems()) {
+                if (!child->isVisible())
+                    continue;
+                if (child->metaObject()->indexOfProperty("shownValue") >= 0 && child->metaObject()->indexOfProperty("room") >= 0 && on_screen(child)) {
+                    ++fields;
+                    const double room = child->property("room").toDouble();
+                    const double drawn = child->property("contentWidth").toDouble();
+                    if (room > 0 && drawn > room + 0.5) {
+                        ++cropped;
+                        QFile summary(qEnvironmentVariable("EDI_SWEEP_SUMMARY"));
+                        if (summary.open(QIODevice::Append | QIODevice::Text))
+                            QTextStream(&summary) << steps_[current_].image << "\tF1:field-cropped\t" << child->objectName() << '\t'
+                                                  << QStringLiteral("'%1' %2 px in %3 px").arg(child->property("text").toString()).arg(drawn, 0, 'f', 1).arg(room, 0, 'f', 1) << '\n';
+                    }
+                }
+                walk(child);
+            }
+        };
+        walk(window_.contentItem());
+        // F1, one grid per group: every shown field of a group (a parameter or value field) has the same width and, like
+        // its selectors, stands on the group's columns.
+        QHash<QQuickItem*, QList<QQuickItem*>> byGroup;
+        std::function<void(QQuickItem*)> gather = [&](QQuickItem* at) {
+            for (QQuickItem* child : at->childItems()) {
+                if (!child->isVisible()) continue;
+                const QString type = QString::fromLatin1(child->metaObject()->className());
+                if ((type.startsWith(QLatin1String("ParameterField")) || type.startsWith(QLatin1String("SelectorField")) || type.startsWith(QLatin1String("ValueField"))) &&
+                    on_screen(child) && !child->objectName().contains(QLatin1String(".popup"))) {
+                    QQuickItem* group = child->parentItem();
+                    while (group != nullptr && !group->objectName().startsWith(QLatin1String("group."))) group = group->parentItem();
+                    if (group != nullptr) byGroup[group] << child;
+                    continue;
+                }
+                gather(child);
+            }
+        };
+        gather(window_.contentItem());
+        int grids = 0;
+        QQmlEngine* engine = qmlEngine(window_.contentItem());
+        QObject* sizes = engine != nullptr ? engine->singletonInstance<QObject*>("EasyApplication.Gui.Style", "Sizes") : nullptr;
+        const double groupWidth = sizes != nullptr ? sizes->property("sideBarContentWidth").toDouble() : 0;
+        for (auto it = byGroup.cbegin(); it != byGroup.cend(); ++it) {
+            // The grid: the widest row of fields, or of selectors in a group without fields. Every field stands on one of
+            // its columns; a selector starts and ends on them, spanning whole columns. Only a selector alone on its row
+            // and as wide as the group stands outside, so its whole name shows; it starts on the grid.
+            const auto isSelector = [](QQuickItem* field) { return QString::fromLatin1(field->metaObject()->className()).startsWith(QLatin1String("SelectorField")); };
+            QMap<int, QList<QQuickItem*>> rows;
+            bool fieldsHere = false;
+            for (QQuickItem* field : it.value()) {
+                rows[qRound(field->mapToScene(QPointF(0, 0)).y())] << field;
+                fieldsHere = fieldsHere || !isSelector(field);
+            }
+            const auto full = [&](const QList<QQuickItem*>& row) { return row.size() == 1 && isSelector(row.first()) && groupWidth > 0 && row.first()->width() >= groupWidth - 0.5; };
+            QList<QPair<double, double>> columns;
+            for (const QList<QQuickItem*>& row : rows) {
+                if (full(row) && rows.size() > 1) continue;
+                QList<QPair<double, double>> spans;
+                for (QQuickItem* field : row)
+                    if (!fieldsHere || !isSelector(field)) {
+                        const double left = field->mapToScene(QPointF(0, 0)).x();
+                        spans << qMakePair(left, left + field->width());
+                    }
+                if (spans.size() > columns.size()) columns = spans;
+            }
+            QSet<int> widths;
+            QStringList off;
+            for (const QList<QQuickItem*>& row : rows)
+                for (QQuickItem* field : row) {
+                    const double left = field->mapToScene(QPointF(0, 0)).x(), right = left + field->width();
+                    const bool starts = std::any_of(columns.cbegin(), columns.cend(), [&](const auto& c) { return std::abs(c.first - left) <= 0.5; });
+                    const bool ends = std::any_of(columns.cbegin(), columns.cend(), [&](const auto& c) { return std::abs(c.second - right) <= 0.5; });
+                    if (!isSelector(field)) widths.insert(qRound(field->width()));
+                    if (!columns.isEmpty() && (!starts || (!ends && !full(row)))) off << QStringLiteral("%1 %2+%3").arg(field->objectName()).arg(qRound(left)).arg(qRound(field->width()));
+                }
+            ++grids;
+            if (widths.size() > 1 || !off.isEmpty())
+                if (QFile summary(qEnvironmentVariable("EDI_SWEEP_SUMMARY")); summary.open(QIODevice::Append | QIODevice::Text))
+                    QTextStream(&summary) << steps_[current_].image << "\tF1:grid\t" << it.key()->objectName() << '\t' << widths.size() << " field widths, off the grid: "
+                                          << off.join(QLatin1String(", ")) << '\n';
+        }
+        qWarning("check-fields: %d fields, %d cropped, %d groups' grids", fields, cropped, grids);
+        if (QFile summary(qEnvironmentVariable("EDI_SWEEP_SUMMARY")); summary.open(QIODevice::Append | QIODevice::Text))
+            QTextStream(&summary) << steps_[current_].image << "\tF1:checked\tfields\t" << fields << " fields, " << cropped << " cropped\n";
+        return true;
+    }
+    if (action.startsWith(QLatin1String("unfold:")) || action.startsWith(QLatin1String("fold:"))) {
+        const bool open = action.startsWith(QLatin1String("unfold:"));
+        // The shown one: a hidden tab may hold a group of the same name (a category's Extras part).
+        if (QQuickItem* group = find(action.section(QLatin1Char(':'), 1), true); group != nullptr && group->isVisible())
+            group->setProperty("collapsed", !open);
         return true;
     }
     if (action.startsWith(QLatin1String("expand:"))) {
@@ -2578,6 +5399,20 @@ bool DemoDriver::perform(const QString& action) {
 }
 
 QQuickItem* DemoDriver::find(const QString& object_name, bool must_be_usable) {
+    // Looking a control up walks every item of the window for the driver, not for the user: like the grab, the GUI
+    // watchdog leaves it out (ui_probe.hpp). The click that follows is the user's and stays measured.
+#if EDI_UI_INSTRUMENTATION
+    const int id = ++tool_id_;
+    trace_measurement(true, id, QStringLiteral("DemoDriver::find"));
+    QQuickItem* found = locate(object_name, must_be_usable);
+    trace_measurement(false, id, QStringLiteral("DemoDriver::find"));
+    return found;
+#else
+    return locate(object_name, must_be_usable);
+#endif
+}
+
+QQuickItem* DemoDriver::locate(const QString& object_name, bool must_be_usable) {
     // Every page stays loaded, side by side in the content area's SwipeView, so a name can match on a
     // page not shown, and such an item still counts as visible: the visible, enabled one on screen
     // counts, before any other. Declared items are the window's QObject children; view delegates only
@@ -2592,6 +5427,25 @@ QQuickItem* DemoDriver::find(const QString& object_name, bool must_be_usable) {
         }
     };
     walk(window_.contentItem());
+    // A page's tab names repeat on other pages (Structure's and Analysis' mainArea.tab.structure), and while pages
+    // slide the new one is not yet on screen: a tab is looked for on the page its app-bar tab has checked.
+    if ((object_name.startsWith(QLatin1String("mainArea.")) && object_name.contains(QLatin1String(".tab."))) ||
+        object_name.startsWith(QLatin1String("sideBar.tab."))) {
+        QQuickItem* page = nullptr;
+        for (QQuickItem* tab : window_.findChildren<QQuickItem*>()) {
+            if (tab->objectName().startsWith(QLatin1String("appBar.tab.")) && tab->property("checked").toBool()) {
+                page = qvariant_cast<QQuickItem*>(tab->property("page"));
+                break;
+            }
+        }
+        if (page != nullptr) {
+            QList<QQuickItem*> on_page;
+            for (QQuickItem* match : matches) {
+                if (page->isAncestorOf(match)) on_page.append(match);
+            }
+            if (!on_page.isEmpty()) matches = on_page;
+        }
+    }
     QQuickItem* off_screen = nullptr;
     for (QQuickItem* match : matches) {
         if (match->isVisible() && (!must_be_usable || match->isEnabled())) {
@@ -2622,8 +5476,18 @@ bool DemoDriver::on_screen(QQuickItem* item) const {
     return !shown.isEmpty();
 }
 
+QQuickItem* DemoDriver::find_held(const QString& object_name, bool must_be_usable) {
+    // A press of a held key repeats on one control: the one found last, while it can still take the press, rather than
+    // a walk of every item in the window at each press, which made the presses themselves the slowest part.
+    QPointer<QQuickItem>& held = held_items_[object_name];
+    if (held && held->isVisible() && (!must_be_usable || held->isEnabled()) && on_screen(held)) return held;
+    held = find(object_name, must_be_usable);
+    return held;
+}
+
 bool DemoDriver::click(const QString& object_name) {
-    QQuickItem* item = find(object_name, true);
+    QQuickItem* item = current_ < steps_.size() && steps_[current_].navigation != 0 ? find_held(object_name, true)
+                                                                                   : find(object_name, true);
     // A click at an item off screen reaches nothing, so the run stops rather than capture an unchanged page.
     if (item == nullptr || !item->isVisible() || !item->isEnabled() || !on_screen(item)) {
         fail(QStringLiteral("step %1: control '%2' is %3")
@@ -2638,6 +5502,30 @@ bool DemoDriver::click(const QString& object_name) {
 }
 
 bool DemoDriver::click_item(QQuickItem* item) {
+    // F2 times a popup from the click itself: every frame for a second after it, the first that draws a parameter
+    // popup's value editor (popup-time reports it; the driver's own wait before its next action is not counted).
+    mark_.start();
+    popup_shown_ms_ = -1;
+    // Only for a step that times a popup: the watch walks the window's items every frame, and on every click it held
+    // the GUI thread through the responsiveness gates' scenarios.
+    const bool timesPopup = current_ < steps_.size() &&
+                            std::any_of(steps_[current_].actions.cbegin(), steps_[current_].actions.cend(),
+                                        [](const QString& a) { return a.startsWith(QLatin1String("popup-time:")); });
+    if (timesPopup) {
+    auto watch = std::make_shared<QMetaObject::Connection>();
+    *watch = connect(&window_, &QQuickWindow::frameSwapped, this, [this, watch] {
+        std::function<bool(QQuickItem*)> shows = [&](QQuickItem* at) {
+            for (QQuickItem* child : at->childItems()) {
+                if (child->objectName().endsWith(QLatin1String(".popup.value")) && child->isVisible()) return true;
+                if (shows(child)) return true;
+            }
+            return false;
+        };
+        if (shows(window_.contentItem())) popup_shown_ms_ = mark_.elapsed();
+        if (popup_shown_ms_ >= 0 || mark_.elapsed() > 1000) disconnect(*watch);
+        else window_.update();
+    });
+    }
     // A group box is clicked on its title bar (its centre may be its content when expanded).
     const QVariant title_area = item->property("titleArea");
     auto* target = title_area.isValid() ? qvariant_cast<QQuickItem*>(title_area) : nullptr;
@@ -2680,13 +5568,24 @@ void DemoDriver::settle_then(const std::function<void()>& next) {
         const bool opening = session != nullptr && session->openingExample();
         // A page still being made after a project opened keeps its tab disabled, which no frame shows.
         bool preparing = false;
-        for (const QString& tab : {QStringLiteral("appBar.tab.structure"), QStringLiteral("appBar.tab.experiment"),
-                                   QStringLiteral("appBar.tab.analysis"), QStringLiteral("appBar.tab.report")}) {
-            const QQuickItem* item = find(tab, false);
-            preparing = preparing || (item != nullptr && item->property("preparing").toBool());
+        // The app bar's tabs live as long as the window: found once, not by a walk of every item at each poll.
+        static const QString kTabs[] = {QStringLiteral("appBar.tab.structure"), QStringLiteral("appBar.tab.experiment"),
+                                        QStringLiteral("appBar.tab.analysis"), QStringLiteral("appBar.tab.report")};
+        for (const QString& tab : kTabs) {
+            QPointer<QQuickItem>& item = app_bar_tabs_[tab];
+            if (!item) item = find(tab, false);
+            preparing = preparing || (item && item->property("preparing").toBool());
         }
-        const QImage frame = window_.grabWindow();
-        if (!calculating && !opening && !preparing && !previous_frame_.isNull() && frame == previous_frame_) {
+        const QImage frame = grab();
+#if EDI_UI_INSTRUMENTATION
+        const int compare = ++tool_id_;
+        trace_measurement(true, compare, QStringLiteral("compare-images"));
+#endif
+        const bool same = !previous_frame_.isNull() && frame == previous_frame_;
+#if EDI_UI_INSTRUMENTATION
+        trace_measurement(false, compare, QStringLiteral("compare-images"));
+#endif
+        if (!calculating && !opening && !preparing && same) {
             next();
             return;
         }
@@ -2938,10 +5837,1171 @@ void DemoDriver::record_samples(const QString& label, std::vector<double> sample
     }
 }
 
+namespace {
+
+QString item_path(const QQuickItem* item) {
+    QStringList parts;
+    for (const QQuickItem* at = item; at != nullptr && parts.size() < 3; at = at->parentItem()) {
+        if (!at->objectName().isEmpty()) parts.prepend(at->objectName());
+    }
+    const QString type = QString::fromLatin1(item->metaObject()->className()).section(QLatin1Char('_'), 0, 0);
+    return (parts.isEmpty() ? QStringLiteral("?") : parts.join(QLatin1Char('/'))) + QLatin1Char(':') + type;
+}
+
+// A line's glyphs where they are drawn: their ink, or their advance box.
+QRectF line_rect(const QTextLine& line, bool ink) {
+    if (!ink) return line.naturalTextRect();
+    QRectF all;
+    for (const QGlyphRun& run : line.glyphRuns()) {
+        const QRawFont font = run.rawFont();
+        const QList<quint32> glyphs = run.glyphIndexes();
+        const QList<QPointF> positions = run.positions();
+        for (qsizetype i = 0; i < std::min(glyphs.size(), positions.size()); ++i)
+            if (const QRectF glyph = font.boundingRect(glyphs[i]); !glyph.isEmpty()) all |= glyph.translated(positions[i]);
+    }
+    return all;
+}
+
+// What a text item draws, in its own coordinates, from the layout it draws: an elided text's shown part, a rich text's
+// subscripts. Null when nothing is drawn.
+QRectF text_rect(QQuickItem* item, bool ink) {
+    QRectF all;
+    if (auto* text = qobject_cast<QQuickText*>(item); text != nullptr) {
+        QQuickTextPrivate* d = QQuickTextPrivate::get(text);
+        const auto aligned = [](double room, double size, int alignment, int centre, int end) {
+            return alignment == centre ? (room - size) / 2 : alignment == end ? room - size : 0.0;
+        };
+        const double height = d->layedOutTextRect.height() + d->lineHeightOffset();
+        const double top = text->topPadding() + aligned(d->availableHeight(), height, text->vAlign(), QQuickText::AlignVCenter, QQuickText::AlignBottom);
+        const double width = d->richText ? d->layedOutTextRect.width() : d->lineWidth;
+        const QPointF at(text->leftPadding() + aligned(d->availableWidth(), width, text->effectiveHAlign(), QQuickText::AlignHCenter, QQuickText::AlignRight), top);
+        if (d->richText) {
+            const QTextDocument* document = d->extra.isAllocated() ? d->extra->doc : nullptr;
+            if (document == nullptr) return {};
+            for (QTextBlock block = document->begin(); block.isValid(); block = block.next())
+                for (int i = 0; i < block.layout()->lineCount(); ++i)
+                    all |= line_rect(block.layout()->lineAt(i), ink).translated(document->documentLayout()->blockBoundingRect(block).topLeft());
+        } else {
+            const int whole = std::min(d->layout.lineCount(), d->lineCount - (d->elideLayout ? 1 : 0));
+            for (int i = 0; i < whole; ++i) all |= line_rect(d->layout.lineAt(i), ink);
+            if (d->elideLayout)
+                for (int i = 0; i < d->elideLayout->lineCount(); ++i) all |= line_rect(d->elideLayout->lineAt(i), ink);
+        }
+        return all.isEmpty() ? QRectF() : all.translated(at);
+    }
+    if (item->inherits("QQuickTextInput")) {
+        const QString shown = item->property("displayText").toString();
+        if (shown.trimmed().isEmpty()) return {};
+        const QFontMetricsF metrics(item->property("font").value<QFont>());
+        const double left = item->property("leftPadding").toDouble();
+        const double room = item->width() - left - item->property("rightPadding").toDouble();
+        const double width = metrics.horizontalAdvance(shown);
+        const int alignment = item->property("effectiveHorizontalAlignment").toInt();
+        const double x = width >= room ? left
+                         : (alignment & int(Qt::AlignRight)) != 0   ? left + room - width
+                         : (alignment & int(Qt::AlignHCenter)) != 0 ? left + (room - width) / 2
+                                                                    : left;
+        const QRectF drawn = ink ? metrics.tightBoundingRect(shown) : QRectF(0, -metrics.ascent(), width, metrics.height());
+        // A wider text scrolls inside its field.
+        return drawn.translated(x, item->baselineOffset()).intersected(QRectF(left - 1, -item->height(), room + 2, item->height() * 3));
+    }
+    return {};
+}
+
+// What an item and its children draw, in the scene: texts, painted rectangles and borders, pictures. Null when nothing.
+QRectF drawn_rect(QQuickItem* item, bool ink) {
+    if (!item->isVisible() || item->opacity() < 0.01) return {};
+    QRectF all;
+    if (item->inherits("QQuickText") || item->inherits("QQuickTextInput")) {
+        // A transparent text (a cut input under its shortened label) draws nothing.
+        if (const QRectF text = item->property("color").value<QColor>().alpha() > 0 ? text_rect(item, ink) : QRectF(); !text.isEmpty()) all = item->mapRectToScene(text);
+    } else if (auto* rectangle = qobject_cast<QQuickRectangle*>(item); rectangle != nullptr) {
+        // Read, never made: border() gives a rectangle a pen it had not, which then painted a label's transparent
+        // background black in the next frame.
+        const QQuickPen* pen = static_cast<QQuickRectanglePrivate*>(QObjectPrivate::get(rectangle))->pen;
+        const bool edged = pen != nullptr && pen->isValid() && pen->width() > 0 && pen->color().alpha() > 0;
+        if (rectangle->color().alpha() > 0 || edged) all = item->mapRectToScene(QRectF(0, 0, item->width(), item->height()));
+    } else if ((item->flags() & QQuickItem::ItemHasContents) != 0) {
+        all = item->mapRectToScene(QRectF(0, 0, item->width(), item->height()));
+    }
+    for (QQuickItem* child : item->childItems())
+        if (const QRectF part = drawn_rect(child, ink); !part.isEmpty()) all |= part;
+    if (item->clip()) all = all.intersected(item->mapRectToScene(item->clipRect()));
+    return all.isEmpty() ? QRectF() : all;
+}
+
+}  // namespace
+
+namespace {
+// The characters a text shows besides its ellipsis, as drawn.
+int kept_characters(QQuickItem* item) {
+    auto* text = qobject_cast<QQuickText*>(item);
+    if (text == nullptr) return 0;
+    QQuickTextPrivate* d = QQuickTextPrivate::get(text);
+    QString drawn;
+    const int whole = std::min(d->layout.lineCount(), d->lineCount - (d->elideLayout ? 1 : 0));
+    for (int i = 0; i < whole; ++i) drawn += d->layout.text().mid(d->layout.lineAt(i).textStart(), d->layout.lineAt(i).textLength());
+    if (d->elideLayout) drawn += d->elideLayout->text();
+    return static_cast<int>(drawn.size() - drawn.count(QChar(0x2026)));
+}
+
+QString without_tags(QString text) { return text.remove(QRegularExpression(QStringLiteral("<[^>]*>"))).trimmed(); }
+
+// The texts the user gave the open project: datablock, row and alias names, expressions, file names, its title; and the
+// folders of the recent projects.
+QSet<QString> user_texts(QQmlEngine* engine, const ProjectViewModel* project) {
+    QSet<QString> texts;
+    const auto add = [&texts](const QString& text) {
+        if (!text.trimmed().isEmpty()) texts.insert(text.trimmed());
+    };
+    if (project != nullptr) {
+        const edi::Project& core = project->project();
+        add(QString::fromStdString(core.metadata.name));
+        add(QString::fromStdString(core.metadata.title));
+        add(QString::fromStdString(core.path));
+        for (const auto& structure : core.structures) {
+            add(QString::fromStdString(structure->name.value()));
+            for (const auto& site : structure->atom_sites) add(QString::fromStdString(site->id.value()));
+        }
+        for (const auto& experiment : core.experiments) {
+            add(QString::fromStdString(experiment->name.value()));
+            add(QFileInfo(QString::fromStdString(experiment->data_file)).fileName());
+        }
+        for (const auto& alias : core.aliases) add(QString::fromStdString(alias->id.value()));
+        for (const auto& constraint : core.constraints) {
+            add(QString::fromStdString(constraint->id.value()));
+            add(QString::fromStdString(constraint->expression.value()));
+        }
+        // A scan's files, and the rows parameters belong to (a background point's ID).
+        for (int row = 0; row < project->experiments()->count(); ++row) {
+            add(project->experiments()->text(row, QStringLiteral("name")));
+            add(project->experiments()->text(row, QStringLiteral("file")));
+        }
+        for (int row = 0; row < project->parameters()->count(); ++row) add(project->parameters()->text(row, QStringLiteral("rowLabel")));
+    }
+    if (QObject* recent = engine != nullptr ? engine->singletonInstance<QObject*>("edi.app", "RecentProjects") : nullptr; recent != nullptr)
+        if (auto* rows = recent->property("rows").value<QAbstractItemModel*>(); rows != nullptr) {
+            const QHash<int, QByteArray> roles = rows->roleNames();
+            for (auto role = roles.cbegin(); role != roles.cend(); ++role)
+                if (role.value() == "path" || role.value() == "label")
+                    for (int row = 0; row < rows->rowCount(); ++row) add(rows->data(rows->index(row, 0), role.key()).toString());
+        }
+    return texts;
+}
+
+// The owner's GUI contract (ADR-0103 decisions 3, 4, 6 and 7): each finding of the layout check is reported under the
+// rule it breaks. N1-N10 are the contract's "never" list in its order: N1 a fixed label cut, N2 text under a control,
+// N3 sibling controls overlapping, N4 a sideways scroll bar, N5 a scroll bar with nothing to scroll, N6 a width change
+// after a project is shown, N7 a table growing row by row, N8 a cell at another column's x, N9 a unit in bold, N10 a
+// header repeating its group's title.
+QString contract_rule(const QString& kind, const QString& path, const QString& text) {
+    const bool header = path.contains(QLatin1String("HeaderLabel")) || path.contains(QLatin1String("Header"));
+    const bool number = path.contains(QLatin1String("ParameterCell")) || path.contains(QLatin1String("NumberLabel")) ||
+                        path.contains(QLatin1String("CellLabel")) || path.contains(QLatin1String("ParameterField"));
+    if (kind == QLatin1String("clipped") || kind == QLatin1String("only-dots") || kind == QLatin1String("overflow"))
+        return header ? QStringLiteral("T9") : number ? QStringLiteral("T8") : QStringLiteral("N1");
+    if (kind == QLatin1String("elided")) return QStringLiteral("T10");
+    if (kind == QLatin1String("header-cut")) return QStringLiteral("T9");
+    if (kind == QLatin1String("number-cut")) return QStringLiteral("T8");
+    if (kind == QLatin1String("label-cut")) return header ? QStringLiteral("T9") : QStringLiteral("N1");
+    if (kind == QLatin1String("value-short") || kind == QLatin1String("column-cut")) return QStringLiteral("T8");
+    if (kind == QLatin1String("combo-gap")) return QStringLiteral("F4");
+    if (kind == QLatin1String("overlap")) return QStringLiteral("N3");
+    if (kind == QLatin1String("under-header")) return QStringLiteral("N2");
+    if (kind == QLatin1String("scrollbar-fits")) return QStringLiteral("T12");
+    if (kind == QLatin1String("tooltip-tall")) return QStringLiteral("D1");
+    if (kind == QLatin1String("icon-colour") || kind == QLatin1String("icon-size") || kind == QLatin1String("width-icon")) return QStringLiteral("I1");
+    if (kind == QLatin1String("legend-cut")) return QStringLiteral("C1");
+    if (kind == QLatin1String("resid-title")) return QStringLiteral("C3");
+    if (kind == QLatin1String("below-border") || kind == QLatin1String("side-border") || kind == QLatin1String("below-filters")) return QStringLiteral("W7");
+    if (kind == QLatin1String("table-rule")) {
+        if (text.contains(QLatin1String(" px after '"))) return QStringLiteral("T1");
+        if (text.startsWith(QLatin1String("unit font"))) return text.contains(QLatin1String("bold")) ? QStringLiteral("N9") : QStringLiteral("T2");
+        if (text.startsWith(QLatin1String("unit "))) return QStringLiteral("T2");
+        if (text.startsWith(QLatin1String("trailing control"))) return QStringLiteral("T3");
+        if (text.startsWith(QLatin1String("column ")) && text.contains(QLatin1String("over its content"))) return QStringLiteral("T4");
+        if (text.startsWith(QLatin1String("scrolls sideways"))) return QStringLiteral("N4");
+        return QStringLiteral("T9");
+    }
+    return QString();
+}
+}  // namespace
+
+void DemoDriver::check_layout(const QString& frame) {
+    // No summary asked for: an ordinary demo run. One asked for but not writable fails the run, so a check that wrote
+    // nothing never reads as one that found nothing.
+    if (qEnvironmentVariableIsEmpty("EDI_SWEEP_SUMMARY")) return;
+    QFile file(qEnvironmentVariable("EDI_SWEEP_SUMMARY"));
+    if (!file.open(QIODevice::Append | QIODevice::Text)) {
+        fail(QStringLiteral("layout check at %1: cannot write %2").arg(frame, file.fileName()));
+        return;
+    }
+    QTextStream out(&file);
+    int hits = 0;
+    const auto note = [&](const QString& kind, const QQuickItem* item, const QString& text) {
+        const QString path = item_path(item);
+        const QString rule = contract_rule(kind, path, text);
+        out << frame << '\t' << (rule.isEmpty() ? kind : rule + QLatin1Char(':') + kind) << '\t' << path << '\t'
+            << QString(text).replace(QLatin1Char('\n'), QLatin1Char(' ')).left(400) << '\n';
+        ++hits;
+    };
+    struct Shown {
+        QQuickItem* item = nullptr;
+        QRectF rect;  // painted text, in the window
+        QRectF clip;  // what the clipping parents leave of the window
+    };
+    std::vector<Shown> texts;
+    std::vector<std::pair<const QQuickItem*, double>> sideTables;  // a shown sidebar table and its spare
+    // By the item tree: pages are made by loaders, outside the window's object tree.
+    const std::function<QQuickItem*(QQuickItem*, const QString&)> itemNamed = [&itemNamed](QQuickItem* at, const QString& name) -> QQuickItem* {
+        for (QQuickItem* child : at->childItems()) {
+            if (child->objectName() == name) return child;
+            if (QQuickItem* deeper = itemNamed(child, name)) return deeper;
+        }
+        return nullptr;
+    };
+    const QRectF window(0, 0, window_.width(), window_.height());
+    // Read once a text is found elided: a scan's rows are many.
+    std::optional<QSet<QString>> given;
+    const auto userText = [&](const QString& text) {
+        if (!given) given = user_texts(qmlEngine(window_.contentItem()), open_project(window_));
+        const QString plain = without_tags(text);
+        // A line of several parts is the user's when each part is.
+        const QStringList parts = plain.split(QStringLiteral(" · "), Qt::SkipEmptyParts);
+        return given->contains(plain) || (!parts.isEmpty() && std::all_of(parts.cbegin(), parts.cend(), [&](const QString& part) { return given->contains(part.trimmed()); }));
+    };
+    // The item whose clip cuts a drawn text, or null. Text cut by a scrolling view's own edge, in a direction the view
+    // scrolls, is half scrolled out and shows whole when scrolled to: what that view leaves is then held by the clips
+    // around the view.
+    const auto cutBy = [&window](QQuickItem* text, QRectF seen) -> QQuickItem* {
+        for (QQuickItem* at = text; at != nullptr; at = at->parentItem()) {
+            if (!at->clip()) continue;
+            const QRectF room = at->mapRectToScene(at->clipRect());
+            // A swipe view's list turns pages, it does not scroll one.
+            if (at->inherits("QQuickFlickable") && (at->parentItem() == nullptr || !at->parentItem()->inherits("QQuickSwipeView"))) {
+                if (at->property("contentHeight").toDouble() > at->height() + 0.5) {
+                    seen.setTop(std::max(seen.top(), room.top()));
+                    seen.setBottom(std::min(seen.bottom(), room.bottom()));
+                }
+                if (at->property("contentWidth").toDouble() > at->width() + 0.5) {
+                    seen.setLeft(std::max(seen.left(), room.left()));
+                    seen.setRight(std::min(seen.right(), room.right()));
+                }
+                if (seen.width() <= 0 || seen.height() <= 0) return nullptr;
+            }
+            if (!room.adjusted(-0.5, -0.5, 0.5, 0.5).contains(seen)) return at;
+        }
+        return window.adjusted(-0.5, -0.5, 0.5, 0.5).contains(seen) ? nullptr : text;
+    };
+    // `clip` is what every clipping parent leaves.
+    std::function<void(QQuickItem*, const QRectF&, double)> walk = [&](QQuickItem* item, const QRectF& clip, double opacity) {
+        opacity *= item->opacity();
+        if (!item->isVisible() || opacity < 0.01) return;
+        const QRectF box = item->mapRectToScene(QRectF(0, 0, item->width(), item->height()));
+        const QRectF inner = item->clip() ? clip.intersected(box) : clip;
+        const bool text = item->inherits("QQuickText"), input = item->inherits("QQuickTextInput");
+        // An icon is a glyph named by its text in the icon font: never a label to read.
+        const bool icon = (text || input) && item->property("font").value<QFont>().family().contains(QLatin1String("Awesome"), Qt::CaseInsensitive);
+        if ((text || input) && !icon && !item->property("text").toString().trimmed().isEmpty() && item->width() > 0) {
+            const QString value = item->property("text").toString();
+            const double content = item->property("contentWidth").toDouble();
+            const double height = item->property("contentHeight").toDouble();
+            const QRectF painted = item->mapRectToScene(QRectF(0, std::max(0.0, (item->height() - height) / 2),
+                                                               std::min(content, item->width()), std::min(height, item->height())));
+            // Only what shows: a page or tab off screen (its view clips it) is not in the frame. A table's text counts
+            // below the sidebar's fold too: its cut is the same when scrolled to.
+            if (inner.intersects(painted) ||
+                (text && box.width() > 0 && item->property("truncated").toBool() && item_path(item).contains(QLatin1String(".list/")))) {
+                // Cut down to its ellipsis alone: nothing of the text is left to read (the owner, 2026-11-22).
+                if (text && item->property("truncated").toBool() && content < item->property("font").value<QFont>().pixelSize() * 1.5)
+                    note("only-dots", item, value);
+                else if (text && item->property("truncated").toBool()) {
+                    // A title shows whole, a structure's name as one too (T9); a number is never cut (T8, ADR-0103 decision
+                    // 4); text the user gave elides in its middle, keeping ten characters, and only while its table has no
+                    // spare (T10); any other text is a fixed label, in a table too (N1).
+                    static const QRegularExpression numeric(QStringLiteral(R"(^[-−+]?[0-9.,]+([eE×][-−+0-9⁻⁰¹²³⁴⁵⁶⁷⁸⁹]+)?( ?\S{0,4})?$)"));
+                    bool title = false;
+                    double spare = 0;
+                    for (const QQuickItem* at = item->parentItem(); at != nullptr; at = at->parentItem()) {
+                        title = title || QString::fromLatin1(at->metaObject()->className()).startsWith(QLatin1String("ListViewHeader"));
+                        if (!at->inherits("QQuickListView") || !at->property("fillerWidth").isValid()) continue;
+                        spare = std::max(at->property("fillerWidth").toDouble(), at->property("spareWidth").toDouble());
+                        break;
+                    }
+                    if (title) {
+                        note(QStringLiteral("header-cut"), item, value);
+                    } else if (userText(value)) {
+                        const int kept = kept_characters(item);
+                        const bool middle = item->property("elide").toInt() == Qt::ElideMiddle;
+                        if (!middle || kept < 10 || spare > 1.0)
+                            note(QStringLiteral("elided"), item, QStringLiteral("%1 (%2, %3 characters kept, its table's spare %4 px)").arg(value, middle ? QStringLiteral("middle") : QStringLiteral("not in its middle")).arg(kept).arg(qRound(spare)));
+                    } else if (numeric.match(value.trimmed()).hasMatch()) {
+                        note(QStringLiteral("number-cut"), item, value);
+                    } else {
+                        note(QStringLiteral("label-cut"), item, value);
+                    }
+                }
+                else if (content > item->width() + 1.0 && (input || item->property("wrapMode").toInt() == 0) && item->property("color").value<QColor>().alpha() > 0) note("overflow", item, value);
+                if (inner.intersects(painted)) {
+                    // Only the glyphs' ink counts: an empty descent or line gap cut off takes nothing seen.
+                    const QRectF ink = text_rect(item, true);
+                    const QRectF seen = ink.isEmpty() ? QRectF() : item->mapRectToScene(ink).adjusted(1, 1, -1, -1);
+                    if (QQuickItem* cutter = seen.width() > 0 && seen.height() > 0 ? cutBy(item, seen) : nullptr; cutter != nullptr)
+                        note("clipped", item, QStringLiteral("%1 (ink %2,%3 %4x%5 cut by %6)").arg(value).arg(seen.x(), 0, 'f', 1).arg(seen.y(), 0, 'f', 1)
+                                                  .arg(seen.width(), 0, 'f', 1).arg(seen.height(), 0, 'f', 1).arg(item_path(cutter)));
+                    texts.push_back({item, painted, inner});
+                }
+            }
+        }
+        // F4: in every combo box, and on a tab with an arrow, the last glyph drawn ends at least 0.25 em before the arrow,
+        // a shortened or custom line too. A button's label fits between its paddings, beside its icon; a tab without an
+        // arrow has none to keep clear of, its text is checked as any text is.
+        const bool combo = item->inherits("QQuickComboBox"), tab = item->inherits("QQuickTabButton");
+        if ((combo || item->inherits("QQuickAbstractButton")) && inner.intersects(box) && item->width() > 1) {
+            const double em = item->property("font").value<QFont>().pixelSize();
+            QString shown = without_tags(combo ? item->property("displayText").toString() : item->property("text").toString());
+            auto* arrow = item->property("indicator").value<QQuickItem*>();
+            auto* label = item->property("contentItem").value<QQuickItem*>();
+            if (combo || tab) {
+                const QRectF drawn = label != nullptr ? drawn_rect(label, true) : QRectF();
+                const QRectF mark = arrow != nullptr ? drawn_rect(arrow, true) : QRectF();
+                if (!drawn.isEmpty() && !mark.isEmpty() && mark.left() - drawn.right() < em * 0.25 - 0.5)
+                    note("combo-gap", item, QStringLiteral("'%1' ends %2 px before its arrow, at least %3").arg(shown).arg(mark.left() - drawn.right(), 0, 'f', 1).arg(em * 0.25, 0, 'f', 1));
+            } else if (!shown.isEmpty()) {
+                const QFontMetricsF metrics(item->property("font").value<QFont>());
+                double room = item->width() - item->property("leftPadding").toDouble() - item->property("rightPadding").toDouble();
+                // A label under its icon has the button's whole width.
+                if (item->property("display").toInt() != 3 && !item->property("fontIcon").toString().isEmpty()) room -= em * 1.5;
+                if (metrics.horizontalAdvance(shown) > room + 0.5)
+                    note("combo-gap", item, QStringLiteral("'%1' %2 px in %3 px").arg(shown).arg(qRound(metrics.horizontalAdvance(shown))).arg(qRound(room)));
+            }
+        }
+        // A scroll bar drawn while its view's content fits: it shows only while the content overflows (the owner,
+        // 2026-11-22: the Project page's bar showed for seconds after opening).
+        if (item->inherits("QQuickScrollBar") && item->property("size").toDouble() >= 0.999 && inner.intersects(box)) {
+            auto* handle = item->property("contentItem").value<QQuickItem*>();
+            if (opacity * (handle != nullptr ? handle->opacity() : 1.0) > 0.05 && handle != nullptr && handle->isVisible())
+                note("scrollbar-fits", item, QString());
+        }
+        // A parameter's value shown with fewer digits than written while its table shows every column (the owner,
+        // 2026-11-23: digits drop only when the column cannot hold them).
+        if (item->property("valueText").isValid() && item->property("shownValue").isValid() &&
+            item->property("shownValue").toString() != item->property("valueText").toString()) {
+            for (const QQuickItem* at = item->parentItem(); at != nullptr; at = at->parentItem())
+                if (at->property("droppedColumns").isValid()) {
+                    if (at->property("droppedColumns").toList().isEmpty())
+                        note("value-short", item, item->property("shownValue").toString() + " for " + item->property("valueText").toString());
+                    break;
+                }
+        }
+        // A chart legend reads whole (the owner, 2026-11-23): a series' own label is never cut, and a datablock's name
+        // only when it is longer than the legend's budget.
+        if (item->objectName() == QLatin1String("chart.legend.entry") && item->property("fullWidth").toDouble() > item->width() + 0.5) {
+            const QString named = item->property("named").toString();
+            QQuickItem* legendItem = item->parentItem() != nullptr ? item->parentItem()->parentItem() : nullptr;
+            const int budget = legendItem != nullptr && legendItem->property("nameBudget").isValid() ? legendItem->property("nameBudget").toInt() : 20;
+            if (named.isEmpty() || named.size() <= budget)
+                note("legend-cut", item, QStringLiteral("%1 cut to %2 of %3 px").arg(item->property("label").toString()).arg(qRound(item->width()))
+                                             .arg(qRound(item->property("fullWidth").toDouble())));
+        }
+        // The residual pane's title: the standard size, "meas − calc" or "resid", whole (the owner, 2026-11-23).
+        if (item->objectName() == QLatin1String("chart.title.residual") && item->isVisible() && inner.intersects(box)) {
+            QQmlEngine* titleEngine = qmlEngine(item);
+            QObject* titleSizes = titleEngine != nullptr ? titleEngine->singletonInstance<QObject*>("EasyApplication.Gui.Style", "Sizes") : nullptr;
+            const int standard = titleSizes != nullptr ? qRound(titleSizes->property("fontPixelSize").toDouble()) : 0;
+            QString plain = item->property("text").toString();
+            plain.remove(QRegularExpression(QStringLiteral("<[^>]*>")));
+            const bool known = plain.contains(QLatin1String("calc")) || plain == QLatin1String("resid");
+            if (item->property("font").value<QFont>().pixelSize() != standard || !known || item->property("truncated").toBool())
+                note("resid-title", item, QStringLiteral("'%1' at %2 px (standard %3)%4").arg(plain).arg(item->property("font").value<QFont>().pixelSize())
+                                               .arg(standard).arg(item->property("truncated").toBool() ? ", cut" : ""));
+        }
+        // The sidebar below the main view is parted from it by a border along its top, full width (the owner,
+        // 2026-11-23).
+        if (item->objectName().endsWith(QLatin1String(".manualSidebar")) && inner.intersects(box)) {
+            QQmlEngine* borderEngine = qmlEngine(item);
+            QObject* borderSizes = borderEngine != nullptr ? borderEngine->singletonInstance<QObject*>("EasyApplication.Gui.Style", "Sizes") : nullptr;
+            if (borderSizes != nullptr && borderSizes->property("sideBarBelow").toBool()) {
+                const QString page = item->objectName().section(QLatin1Char('.'), 1, 1);
+                QQuickItem* border = itemNamed(window_.contentItem(), QStringLiteral("workflow.%1.belowBorder").arg(page));
+                const QRectF line = border != nullptr ? border->mapRectToScene(QRectF(0, 0, border->width(), border->height())) : QRectF();
+                const QRectF host = item->parentItem() != nullptr ? item->parentItem()->mapRectToScene(QRectF(0, 0, item->parentItem()->width(), 1)) : box;
+                if (border == nullptr || !border->isVisible() || line.height() < 0.5 || line.height() > 1.5 || line.width() < host.width() - 1.0 || std::abs(line.top() - host.top()) > 1.0)
+                    note("below-border", item, QStringLiteral("border %1").arg(border == nullptr ? QStringLiteral("missing") : QStringLiteral("%1x%2 at %3").arg(line.width()).arg(line.height()).arg(line.top())));
+            } else if (borderSizes != nullptr && item->parentItem() != nullptr) {
+                // At the side, the base's border beside the sidebar shows.
+                const double thickness = borderSizes->property("borderThickness").toDouble();
+                bool shown = false;
+                for (QQuickItem* child : item->parentItem()->childItems())
+                    shown = shown || (child != item && child->isVisible() && std::abs(child->width() - thickness) < 0.5 && child->height() > 1);
+                if (!shown) note("side-border", item, QStringLiteral("no border beside the sidebar"));
+            }
+        }
+        // The bottom layout's Analysis sidebar: no name filter, the reset at the end of the pickers' row, and at most
+        // about half the window's height (the owner, 2026-11-23; less where the chart needs it, W7).
+        if (item->objectName() == QLatin1String("workflow.analysis.manualSidebar") && inner.intersects(box)) {
+            QQmlEngine* belowEngine = qmlEngine(item);
+            QObject* belowSizes = belowEngine != nullptr ? belowEngine->singletonInstance<QObject*>("EasyApplication.Gui.Style", "Sizes") : nullptr;
+            if (belowSizes != nullptr && belowSizes->property("sideBarBelow").toBool()) {
+                QQuickItem* nameFilter = itemNamed(window_.contentItem(), QStringLiteral("parameters.nameFilter"));
+                QQuickItem* reset = itemNamed(window_.contentItem(), QStringLiteral("parameters.clearFiltersBelow"));
+                QQuickItem* picker = itemNamed(window_.contentItem(), QStringLiteral("parameters.datablock"));
+                if (nameFilter != nullptr && nameFilter->isVisible()) note("below-filters", nameFilter, QStringLiteral("name filter shown"));
+                if (reset == nullptr || !reset->isVisible() ||
+                    (picker != nullptr && std::abs(reset->mapRectToScene(QRectF(0, 0, 1, 1)).top() - picker->mapRectToScene(QRectF(0, 0, 1, 1)).top()) > 1.0))
+                    note("below-filters", item, QStringLiteral("reset not in the pickers' row"));
+                const double share = (item->parentItem() != nullptr ? item->parentItem()->height() : box.height()) / window_.height();
+                if (share > 0.6) note("below-filters", item, QStringLiteral("sidebar %1 % of the window's height").arg(qRound(share * 100)));
+            }
+        }
+        // D1: a tooltip has at most 12 lines and stays inside the window (the owner, 2026-11-23: one held a whole log).
+        if (item->inherits("QQuickPopupItem") && item->isVisible() &&
+            QString::fromLatin1(item->parent() != nullptr ? item->parent()->metaObject()->className() : "").contains(QLatin1String("ToolTip"))) {
+            const QRectF tip = item->mapRectToScene(QRectF(0, 0, item->width(), item->height()));
+            const double lineHeight = QFontMetricsF(item->parent()->property("font").value<QFont>()).lineSpacing();
+            const int lines = lineHeight > 0 ? int(std::round((item->height() - item->property("topPadding").toDouble() - item->property("bottomPadding").toDouble()) / lineHeight)) : 0;
+            if (lines > 12 || !QRectF(0, 0, window_.width(), window_.height()).adjusted(-0.5, -0.5, 0.5, 0.5).contains(tip))
+                note("tooltip-tall", item, QStringLiteral("%1 lines, %2x%3 at %4,%5 in a %6x%7 window").arg(lines).arg(qRound(tip.width())).arg(qRound(tip.height()))
+                                              .arg(qRound(tip.x())).arg(qRound(tip.y())).arg(window_.width()).arg(window_.height()));
+        }
+        // The sidebar's width icon centred on the groups' pins' vertical line (the owner, 2026-11-23).
+        if (item->objectName().endsWith(QLatin1String(".pin")) && item->width() > 0) {
+            if (auto* widthIcon = window_.contentItem()->findChild<QQuickItem*>(QStringLiteral("sideBar.width")); widthIcon != nullptr && widthIcon->isVisible()) {
+                const double pinCentre = item->mapRectToScene(QRectF(0, 0, item->width(), 1)).center().x();
+                const double iconCentre = widthIcon->mapRectToScene(QRectF(0, 0, widthIcon->width(), 1)).center().x();
+                if (std::abs(pinCentre - iconCentre) > 1.0 && std::abs(pinCentre - iconCentre) < 200.0)
+                    note("width-icon", item, QStringLiteral("pin centre %1, width icon centre %2").arg(pinCentre, 0, 'f', 1).arg(iconCentre, 0, 'f', 1));
+            }
+            // Both in the text colour at a title icon's size, unless pinned or pointed at (the owner, 2026-11-23).
+            QQmlEngine* iconEngine = qmlEngine(item);
+            QObject* colors = iconEngine != nullptr ? iconEngine->singletonInstance<QObject*>("EasyApplication.Gui.Style", "Colors") : nullptr;
+            QObject* sizes = iconEngine != nullptr ? iconEngine->singletonInstance<QObject*>("EasyApplication.Gui.Style", "Sizes") : nullptr;
+            if (colors != nullptr && sizes != nullptr) {
+                const QColor textColour = colors->property("themeForeground").value<QColor>();
+                const QColor accent = colors->property("themeAccent").value<QColor>();
+                const QColor hovered = colors->property("themeForegroundHovered").value<QColor>();
+                const int size = qRound(sizes->property("fontPixelSize").toDouble());
+                QList<QQuickItem*> icons{item};
+                if (auto* widthIcon = window_.contentItem()->findChild<QQuickItem*>(QStringLiteral("sideBar.width")); widthIcon != nullptr && widthIcon->isVisible())
+                    icons << widthIcon;
+                for (QQuickItem* iconItem : icons) {
+                    const QColor colour = iconItem->property("color").value<QColor>();
+                    if (colour != textColour && colour != accent && colour != hovered)
+                        note("icon-colour", iconItem, QStringLiteral("%1, text colour %2").arg(colour.name(), textColour.name()));
+                    if (iconItem->property("font").value<QFont>().pixelSize() != size)
+                        note("icon-size", iconItem, QStringLiteral("%1 px, title icons %2").arg(iconItem->property("font").value<QFont>().pixelSize()).arg(size));
+                }
+            }
+        }
+        // A control shrinks, never vanishes: one shown under an em wide has collapsed (the owner, 2026-11-22).
+        if ((item->inherits("QQuickComboBox") || item->inherits("QQuickAbstractButton")) && inner.intersects(box) &&
+            item->width() < QFontMetricsF(item->property("font").value<QFont>()).height() && item->height() > 1)
+            note("collapsed", item, item->property("displayText").toString() + item->property("text").toString());
+        // A table's cell past its list's right edge is cut there (the owner, 2026-11-22: no column cut in any width).
+        // Every shown table, on screen or scrolled out of the sidebar's view: its rows exist either way, and a rule broken
+        // below the fold is still broken (the owner, 2026-11-22: tables the check did not cover).
+        // A table on a page not shown lies outside the window sideways (or under a page in front); one scrolled below
+        // the sidebar's fold overlaps the window's columns and its page is the one shown.
+        if (item->inherits("QQuickListView") && item->width() > 1 && item->objectName().endsWith(QLatin1String(".list")) &&
+            box.right() > window.left() && box.left() < window.right() && clip.intersects(QRectF(box.left(), clip.top(), box.width(), clip.height())) &&
+            item->window() != nullptr) {
+            auto* content = item->property("contentItem").value<QQuickItem*>();
+            double right = box.left();
+            int cells = 0;
+            QStringList firstRow;  // the first visible row's cells, left edge and width, beside the header's
+            for (QQuickItem* row : content != nullptr ? content->childItems() : QList<QQuickItem*>{}) {
+                if (!row->isVisible() || row->height() <= 1 || !inner.intersects(row->mapRectToScene(QRectF(0, 0, row->width(), row->height()))))
+                    continue;
+                int shown = 0;
+                for (QQuickItem* cell : row->childItems()) {
+                    // A row's background and its mouse area span the row, not a column.
+                    if (!cell->isVisible() || cell->width() <= 1 || cell->inherits("QQuickRectangle") || cell->inherits("QQuickMouseArea"))
+                        continue;
+                    ++shown;
+                    const QRectF at = cell->mapRectToScene(QRectF(0, 0, cell->width(), cell->height()));
+                    if (cells == 0 && firstRow.isEmpty() && cell->inherits("QQuickRow")) {
+                        for (QQuickItem* piece : cell->childItems()) {
+                            if (!piece->isVisible()) continue;
+                            const QRectF part = piece->mapRectToScene(QRectF(0, 0, piece->width(), piece->height()));
+                            firstRow << QStringLiteral("%1+%2").arg(qRound(part.left() - box.left())).arg(qRound(part.width()));
+                        }
+                    }
+                    right = std::max(right, at.right());
+                    if (at.right() > box.right() + 1.0) {
+                        note("column-cut", cell, QStringLiteral("cell to %1, list to %2").arg(at.right()).arg(box.right()));
+                        break;
+                    }
+                }
+                cells = std::max(cells, shown);
+            }
+            // Each table's width, its rows' widest reach and how many cells a row shows: the widths a row states.
+            // The header's cells, left to right: each column's width as drawn.
+            QStringList heads;
+            if (auto* header = item->property("headerItem").value<QQuickItem*>(); header != nullptr) {
+                std::function<void(QQuickItem*)> cellsOf = [&](QQuickItem* parent) {
+                    QList<QQuickItem*> children = parent->childItems();
+                    std::sort(children.begin(), children.end(), [](QQuickItem* a, QQuickItem* b) { return a->x() < b->x(); });
+                    for (QQuickItem* child : children) {
+                        if (!child->isVisible() || child->width() < 1) continue;
+                        if (child->metaObject()->indexOfProperty("text") >= 0 || child->childItems().isEmpty())
+                            heads << QStringLiteral("%1=%2@%3").arg(child->property("text").toString().left(8)).arg(qRound(child->width()))
+                                         .arg(qRound(child->mapRectToScene(QRectF(0, 0, 1, 1)).left() - box.left()));
+                        else if (heads.size() < 20)
+                            cellsOf(child);
+                    }
+                };
+                cellsOf(header);
+            }
+            // A sidebar table's spare: its width less its content's (Parameters' own full width, else the column model's).
+            for (const QQuickItem* at = item; at != nullptr; at = at->parentItem())
+                if (at->objectName().endsWith(QLatin1String(".manualSidebar"))) {
+                    const double natural = item->property("allColumnsWidth").isValid() ? item->property("allColumnsWidth").toDouble()
+                                                                                      : item->property("naturalWidth").toDouble();
+                    if (natural > 0) sideTables.push_back({item, item->width() - natural});
+                    break;
+                }
+            note("table", item, QStringLiteral("width %1, rows reach %2, %3 cells, window %4, header %5, row %6")
+                                    .arg(box.width()).arg(right - box.left()).arg(cells).arg(window_.width()).arg(heads.join(QLatin1Char(' ')), firstRow.join(QLatin1Char(' '))));
+            // The shared column model's rules, per table (ADR-0103 decision 4; the owner, 2026-11-22): every finding
+            // is a "table-rule" line naming the table, the window width and the column.
+            const auto rule = [&](const QString& what, int column) {
+                note("table-rule", item, QStringLiteral("%1 at column %2, window %3").arg(what).arg(column).arg(window_.width()));
+            };
+            // T5: columns of one parameter kind are equally wide, to the pixel; T11: the row number shows. Each writes a
+            // "checked" line, so a table that passes is seen to have been checked.
+            {
+                const QVariantList kinds = item->property("columnKinds").toList();
+                const QVariantList widths = item->property("columnWidths").toList();
+                if (!kinds.isEmpty() && kinds.size() == widths.size()) {
+                    QHash<QString, double> first;
+                    QStringList unequal;
+                    bool index = false;
+                    const int filler = item->property("fillerIndex").isValid() ? item->property("fillerIndex").toInt() : -1;
+                    for (qsizetype c = 0; c < kinds.size(); ++c) {
+                        const QString kind = kinds[c].toString();
+                        if (kind == QLatin1String("index")) index = widths[c].toDouble() > 0.5;
+                        // The filler holds the table's spare after its content (T4): its reserved width is the rest.
+                        if (c == filler) continue;
+                        if (kind != QLatin1String("value") && kind != QLatin1String("uncertainty") && kind != QLatin1String("change") &&
+                            kind != QLatin1String("displacement") && kind != QLatin1String("number"))
+                            continue;
+                        if (widths[c].toDouble() < 0.5 || (item->property("kindFloors").isValid() && !item->property("kindFloors").toBool()))
+                            continue;
+                        if (!first.contains(kind))
+                            first.insert(kind, widths[c].toDouble());
+                        else if (std::abs(first.value(kind) - widths[c].toDouble()) > 0.5)
+                            unequal << QStringLiteral("%1 column %2 is %3, the first %4").arg(kind).arg(c).arg(widths[c].toDouble()).arg(first.value(kind));
+                    }
+                    out << frame << "\tT5:checked\t" << item_path(item) << '\t' << first.size() << " kinds\n";
+                    // T12: a table whose rows are taller than it shows its scroll bar.
+                    if (item->property("contentHeight").toDouble() > item->height() + 0.5 && item->property("scrollBarPolicy").toInt() != int(Qt::ScrollBarAlwaysOn))
+                        out << frame << "\tT12:no-bar\t" << item_path(item) << "\tcontent " << item->property("contentHeight").toDouble() << " px in " << item->height() << " px, no scroll bar\n";
+                    // N10: no header repeats its group's title ("ADP type" under "Atomic displacement" says "Type").
+                    QString title;
+                    for (const QQuickItem* at = item; at != nullptr && title.isEmpty(); at = at->parentItem())
+                        if (at->objectName().startsWith(QLatin1String("group.")) && at->property("title").isValid()) title = at->property("title").toString();
+                    const QString titleWord = title.section(QLatin1Char(' '), 0, 0).toLower();
+                    out << frame << "\tN10:checked\t" << item_path(item) << "\tgroup '" << title << "'\n";
+                    if (auto* header = item->property("headerItem").value<QQuickItem*>(); header != nullptr && titleWord.size() > 2)
+                        for (QQuickItem* cell : header->findChildren<QQuickItem*>())
+                            if (cell->isVisible() && cell->property("text").toString().section(QLatin1Char(' '), 0, 0).toLower() == titleWord)
+                                out << frame << "\tN10:repeats\t" << item_path(item) << "\theader '" << cell->property("text").toString() << "' under '" << title << "'\n";
+                    for (const char* ruleId : {"T1", "T2", "T3", "T4", "T9"}) out << frame << '\t' << ruleId << ":checked\t" << item_path(item) << "\ttable rules\n";
+                    for (const QString& line : unequal) out << frame << "\tT5:unequal\t" << item_path(item) << '\t' << line << '\n';
+                    if (kinds.contains(QStringLiteral("index"))) {
+                        out << frame << "\tT11:checked\t" << item_path(item) << "\trow number " << (index ? "shown" : "missing") << '\n';
+                        if (!index) out << frame << "\tT11:missing\t" << item_path(item) << "\tthe row-number column has no width\n";
+                    }
+                }
+            }
+            const auto rowOf = [](QQuickItem* root) -> QQuickItem* {
+                std::function<QQuickItem*(QQuickItem*)> find = [&](QQuickItem* at) -> QQuickItem* {
+                    for (QQuickItem* child : at->childItems()) {
+                        if (child->inherits("QQuickRow") && child->isVisible()) return child;
+                        if (QQuickItem* deeper = find(child)) return deeper;
+                    }
+                    return nullptr;
+                };
+                return root != nullptr ? find(root) : nullptr;
+            };
+            const auto shownCells = [](QQuickItem* row) {
+                QList<QQuickItem*> list;
+                if (row == nullptr) return list;
+                for (QQuickItem* child : row->childItems())
+                    if (child->isVisible() && child->width() > 0.5) list << child;
+                std::sort(list.begin(), list.end(), [](QQuickItem* a, QQuickItem* b) { return a->x() < b->x(); });
+                // A table's columns never overlap: an item laid over them (a row's highlight, spanning from its left) is
+                // not a column, and of two that overlap the wider is dropped.
+                for (qsizetype i = 0; i + 1 < list.size();) {
+                    if (list[i + 1]->x() < list[i]->x() + list[i]->width() - 1.0)
+                        list.removeAt(list[i]->width() >= list[i + 1]->width() ? i : i + 1);
+                    else
+                        ++i;
+                }
+                return list;
+            };
+            QQuickItem* headerRow = rowOf(item->property("headerItem").value<QQuickItem*>());
+            QQuickItem* firstContent = nullptr;
+            for (QQuickItem* row : content != nullptr ? content->childItems() : QList<QQuickItem*>{}) {
+                if (row == item->property("headerItem").value<QQuickItem*>() || !row->isVisible() || row->height() <= 1) continue;
+                firstContent = rowOf(row);
+                if (firstContent != nullptr) break;
+            }
+            const QList<QQuickItem*> heads2 = shownCells(headerRow), cells2 = shownCells(firstContent);
+            if (item->property("scrollsSideways").toBool()) rule(QStringLiteral("scrolls sideways"), -1);
+            // T9: a title starts with a capital letter, but a symbol written as science writes it and a structure's own
+            // name, read from the project.
+            for (QQuickItem* head : heads2) {
+                static const QSet<QString> symbols{
+                    QStringLiteral("b"), QStringLiteral("d"), QStringLiteral("h"), QStringLiteral("k"), QStringLiteral("l"), QStringLiteral("x"),
+                    QStringLiteral("y"), QStringLiteral("z"), QStringLiteral("h k l"), QStringLiteral("s.u."), QStringLiteral("θ"), QStringLiteral("φ"),
+                    QStringLiteral("ϕ"), QStringLiteral("λ"), QStringLiteral("χ²"), QStringLiteral("sin θ/λ"), QStringLiteral("cRp"), QStringLiteral("cRwp")};
+                const QString title = without_tags(head->property("text").toString());
+                if (title.isEmpty() || !title.at(0).isLower()) continue;
+                // Its unit aside: "b (fm)".
+                if (symbols.contains(QString(title).remove(QRegularExpression(QStringLiteral(R"(\s*\([^()]*\)$)"))))) continue;
+                if (const ProjectViewModel* project = open_project(window_); project != nullptr && head->property("uid").toString().isEmpty()) {
+                    const auto& structures = project->project().structures;
+                    if (std::any_of(structures.begin(), structures.end(), [&](const auto& structure) { return QString::fromStdString(structure->name.value()) == title; })) continue;
+                }
+                out << frame << "\tT9:capital\t" << item_path(item) << "\theader '" << title << "' starts with a small letter\n";
+            }
+            // T4: the spare (a column wider than its kind's reserve, fittedWidths) is one block, in the column just before
+            // the trailing controls, or the last one where there are none. The parameter table places its own (W5).
+            if (!(item->property("kindFloors").isValid() && !item->property("kindFloors").toBool())) {
+                const QVariantList ruled = item->property("columnWidths").toList(), reserved = item->property("fittedWidths").toList();
+                const QVariantList columnsNow = item->property("columns").toList();
+                const QVariantList kinds = item->property("columnKinds").toList();
+                if (!ruled.isEmpty() && ruled.size() == reserved.size()) {
+                    // The last content column: an absent column (no width) and a trailing control come after it. A mark is
+                    // content. A table without kinds (Experiments) is read from its first row: a button is a control.
+                    QList<qsizetype> wide;
+                    for (qsizetype i = 0; i < ruled.size(); ++i)
+                        if (ruled[i].toDouble() >= 0.5) wide << i;
+                    const bool mapped = !cells2.isEmpty() && cells2.size() == wide.size();
+                    const auto control = [&](qsizetype at) {
+                        if (kinds.size() == ruled.size()) return kinds[wide[at]].toString().startsWith(QLatin1String("control"));
+                        return mapped && cells2[at]->property("fontIcon").isValid();
+                    };
+                    qsizetype last = wide.size() - 1;
+                    while (last > 0 && control(last)) --last;
+                    const qsizetype lastData = wide.isEmpty() ? -1 : wide[last];
+                    QStringList spare;
+                    for (qsizetype i = 0; i < ruled.size(); ++i)
+                        if (columnsNow.value(i).toDouble() == -1 && ruled[i].toDouble() > 0.5 && reserved[i].toDouble() > 0.5 && ruled[i].toDouble() - reserved[i].toDouble() > 1.0 && i != lastData)
+                            spare << QStringLiteral("column %1 %2 px over its reserve").arg(i).arg(qRound(ruled[i].toDouble() - reserved[i].toDouble()));
+                    out << frame << "\tT4:checked\t" << item_path(item) << "\tspare in column " << lastData << " only"
+                        << (kinds.size() == ruled.size() || mapped ? "" : " (no row to read)") << '\n';
+                    for (const QString& line : spare) out << frame << "\tT4:spare\t" << item_path(item) << '\t' << line << '\n';
+                }
+            }
+            // T1: the content of two neighbouring columns is 1 em +- 1 px apart, the row number, a mark and a control
+            // included, each at its own content's edge: what the header and the rows draw, and for a number its kind's
+            // typical value (T5), in every column of that kind alike. Only an identified empty spare block (T4) is left out
+            // of a gap, and a unit's gap is T2's.
+            if (!cells2.isEmpty()) {
+                QQmlEngine* gapEngine = qmlEngine(item);
+                QObject* gapSizes = gapEngine != nullptr ? gapEngine->singletonInstance<QObject*>("EasyApplication.Gui.Style", "Sizes") : nullptr;
+                const double oneEm = gapSizes != nullptr ? gapSizes->property("fontPixelSize").toDouble() : 14.0;
+                const QVariantList widthsNow = item->property("columnWidths").toList(), fittedNow = item->property("fittedWidths").toList();
+                const QVariantList declared = item->property("columns").toList(), kindsNow = item->property("columnKinds").toList();
+                const QVariantList typesNow = item->property("columnTypes").toList();
+                const auto modelOf = [&](qsizetype shownIndex) {
+                    for (qsizetype i = 0, shown = 0; i < widthsNow.size(); ++i)
+                        if (widthsNow[i].toDouble() > 0.5 && shown++ == shownIndex) return int(i);
+                    return -1;
+                };
+                const auto kindAt = [&](int m) {
+                    const QVariantList& list = kindsNow.isEmpty() ? typesNow : kindsNow;
+                    const QString kind = m >= 0 && m < list.size() && list[m].typeId() == QMetaType::QString ? list[m].toString() : QString();
+                    return kind.isEmpty() && kindsNow.isEmpty() && m > 0 ? item->property("defaultColumnType").toString() : kind;
+                };
+                // The typical value each kind of number reserves; the parameter table has its own.
+                const bool parameterTable = item->property("typicalValue").isValid();
+                const auto typical = [&](const QString& kind) {
+                    if (kind == QLatin1String("value")) return parameterTable ? QStringLiteral("-0.00000") : QStringLiteral("-0.0000");
+                    if (kind == QLatin1String("uncertainty")) return parameterTable ? QStringLiteral("0.00000") : QStringLiteral("0.0000");
+                    if (kind == QLatin1String("change")) return parameterTable ? QStringLiteral("100.0% \u2191") : QStringLiteral("999.9%\u2191");
+                    if (kind == QLatin1String("displacement")) return QStringLiteral("0.0000");
+                    if (kind == QLatin1String("number")) return parameterTable ? QStringLiteral("-inf") : kindsNow.isEmpty() ? QStringLiteral("-0.0000000") : QStringLiteral("-00000.00");
+                    return QString();
+                };
+                // The item whose padding is the cell's margin: the cell, or the text in it.
+                const auto padded = [](QQuickItem* cell) -> QQuickItem* {
+                    if (cell->property("rightPadding").isValid()) return cell;
+                    for (QQuickItem* inside : visual_items(cell))
+                        if (inside->isVisible() && (inside->inherits("QQuickText") || inside->inherits("QQuickTextInput"))) return inside;
+                    return cell;
+                };
+                struct Column {
+                    int model = -1;
+                    QString kind;
+                    double left = 0, right = 0;  // the content drawn, or its kind's typical value
+                    double farthest = 0;         // where its content may end on rows out of view
+                    double boxRight = 0;
+                    double spare = 0;            // an identified empty block after its content
+                    bool drawn = false;
+                };
+                const qsizetype shownCount = cells2.size();
+                std::vector<Column> columns(static_cast<std::size_t>(shownCount));
+                const auto take = [&](const QList<QQuickItem*>& drawn) {
+                    if (drawn.size() != shownCount) return;
+                    for (qsizetype c = 0; c < shownCount; ++c) {
+                        const QRectF part = drawn_rect(drawn[c], false);
+                        if (part.isEmpty()) continue;
+                        Column& column = columns[static_cast<std::size_t>(c)];
+                        column.left = column.drawn ? std::min(column.left, part.left()) : part.left();
+                        column.right = column.drawn ? std::max(column.right, part.right()) : part.right();
+                        column.drawn = true;
+                    }
+                };
+                take(heads2);
+                std::vector<Column> heading = columns;
+                int rowsTaken = 0;
+                for (QQuickItem* row : content->childItems()) {
+                    if (row == item->property("headerItem").value<QQuickItem*>() || !row->isVisible() || row->height() <= 1) continue;
+                    if (QQuickItem* cellsRow = rowOf(row); cellsRow != nullptr) {
+                        take(shownCells(cellsRow));
+                        ++rowsTaken;
+                    }
+                }
+                const bool everyRow = rowsTaken >= item->property("count").toInt();
+                // The widest title of each kind's columns: they are equally wide (T5).
+                QHash<QString, double> widestTitle;
+                for (qsizetype c = 0; c < shownCount; ++c) {
+                    const Column& title = heading[static_cast<std::size_t>(c)];
+                    const QString kind = kindAt(modelOf(c));
+                    if (title.drawn) widestTitle[kind] = std::max(widestTitle.value(kind), title.right - title.left);
+                }
+                const int filler = item->property("fillerIndex").isValid() ? item->property("fillerIndex").toInt() : -1;
+                const double ownSpare = item->property("spareWidth").toDouble();
+                const bool ordered = fittedNow.size() == widthsNow.size();
+                for (qsizetype c = 0; c < shownCount; ++c) {
+                    Column& column = columns[static_cast<std::size_t>(c)];
+                    QQuickItem* cell = cells2[c];
+                    QQuickItem* margin = padded(cell);
+                    const int m = column.model = modelOf(c);
+                    column.kind = kindAt(m);
+                    const double boxLeft = cell->mapToScene(QPointF(0, 0)).x();
+                    column.boxRight = cell->mapToScene(QPointF(cell->width(), 0)).x();
+                    const double innerLeft = boxLeft + margin->property("leftPadding").toDouble(), innerRight = column.boxRight - margin->property("rightPadding").toDouble();
+                    // A column with nothing drawn in it is measured at its cell's margins.
+                    if (!column.drawn) {
+                        column.left = innerLeft;
+                        column.right = innerRight;
+                    }
+                    // A change's first text is its arrow, in the icon font.
+                    const QFont font = column.kind == QLatin1String("change") && heads2[c]->property("font").isValid() ? heads2[c]->property("font").value<QFont>() : margin->property("font").isValid() ? margin->property("font").value<QFont>() : item->property("font").value<QFont>();
+                    if (const QString sample = typical(column.kind); !sample.isEmpty()) {
+                        QFont plain = font;
+                        plain.setBold(parameterTable && column.kind == QLatin1String("value"));
+                        const double reserve = std::min(std::max(QFontMetricsF(plain).horizontalAdvance(sample), kindsNow.isEmpty() ? 0.0 : widestTitle.value(column.kind)), innerRight - innerLeft);
+                        // Its end is the column's margin: a letter's overhang ("inf") reaches past it.
+                        column.left = std::min(column.left, std::min(column.right, innerRight) - reserve);
+                    } else if (column.kind == QLatin1String("index") || (c == 0 && cell->property("marksCurrentRow").toBool())) {
+                        // The widest row number, bold as the current row's is, on rows out of view too.
+                        QFont bold = font;
+                        bold.setBold(true);
+                        const double widest = QFontMetricsF(bold).horizontalAdvance(QString::number(std::max(1, item->property("count").toInt())));
+                        const int alignment = cell->property("horizontalAlignment").toInt();
+                        column.left = (alignment & int(Qt::AlignRight)) != 0 ? innerRight - widest : (alignment & int(Qt::AlignHCenter)) != 0 ? (innerLeft + innerRight - widest) / 2 : innerLeft;
+                        column.right = column.left + widest;
+                    }
+                    // An input keeps room for the bold its text takes while it is edited and for the caret (T6): that room is
+                    // its content. So is a selector's own column, sized from its options.
+                    const bool selector = m >= 0 && m < kindsNow.size() && kindsNow[m].typeId() != QMetaType::QString;
+                    if (typical(column.kind).isEmpty() && (selector || cell->inherits("QQuickTextInput"))) {
+                        // A text being edited scrolls inside its margins.
+                        if (cell->inherits("QQuickTextInput")) column.right = std::min(column.right, innerRight);
+                        for (QQuickItem* row : content->childItems()) {
+                            if (row == item->property("headerItem").value<QQuickItem*>() || !row->isVisible() || row->height() <= 1) continue;
+                            QQuickItem* cellsRow = rowOf(row);
+                            const QList<QQuickItem*> rowCells = cellsRow != nullptr ? shownCells(cellsRow) : QList<QQuickItem*>{};
+                            if (rowCells.size() != shownCount) continue;
+                            QQuickItem* editor = rowCells[c];
+                            if (selector) {
+                                for (QQuickItem* inside : visual_items(editor))
+                                    if (inside->inherits("QQuickComboBox") && inside->isVisible()) column.right = std::max(column.right, innerRight);
+                            } else if (!editor->property("readOnly").toBool()) {
+                                QFont bold = editor->property("font").value<QFont>();
+                                bold.setBold(true);
+                                const QFontMetricsF metrics(bold);
+                                column.right = std::max(column.right, std::min(innerRight, innerLeft + metrics.horizontalAdvance(editor->property("text").toString()) + metrics.averageCharWidth()));
+                            }
+                        }
+                    }
+                    // A column of numbers of its own making declares what it reserves (a scan's values), as T5 does by kind.
+                    if (m >= 0 && kindsNow.isEmpty() && heads2[c]->property("reservedWidth").isValid())
+                        for (QQuickItem* inside : visual_items(cell))
+                            if (inside->property("number").isValid()) column.left = std::min(column.left, boxLeft + inside->parentItem()->parentItem()->x());
+                    // A unit keeps its widest's room, where it is drawn, whatever the rows show (T5).
+                    if (column.kind == QLatin1String("unit") && parameterTable) {
+                        if (!column.drawn) column.left = boxLeft - item->property("unitPull").toDouble();
+                        column.right = std::max(column.drawn ? column.right : column.left, column.left + QFontMetricsF(font).horizontalAdvance(QStringLiteral("deg\u00b2")));
+                    }
+                    column.farthest = column.right;
+                    const bool control = column.kind == QLatin1String("control") || column.kind == QLatin1String("mark") || column.kind == QLatin1String("index");
+                    if (!everyRow && !control && typical(column.kind).isEmpty() && ordered && m >= 0)
+                        column.farthest = std::max(column.right, std::min(innerRight, innerLeft + fittedNow[m].toDouble() - margin->property("leftPadding").toDouble() - margin->property("rightPadding").toDouble()));
+                    // The parameter table's name keeps the name budget, whatever the names shown (W5).
+                    if (column.kind == QLatin1String("name") && item->property("nameContent").isValid())
+                    {
+                        const double cellMargin = cell->property("cellMargin").toDouble(), nameEnd = column.boxRight - cellMargin;
+                        column.right = std::max(column.right, boxLeft + std::min(cell->width(), item->property("nameContent").toDouble()) - cellMargin);
+                        // It may hold up to one column spacing more (the owner, 2026-11-23), which is spare.
+                        if (nameEnd - column.right < item->property("columnSpacing").toDouble() + 1.5) column.right = std::max(column.right, nameEnd);
+                        column.farthest = column.right;
+                    }
+                    // The spare the spare column holds past its reserve, less any content that reaches into it.
+                    if (m >= 0 && m == filler && ordered && m < declared.size() && declared[m].toDouble() == -1) {
+                        const double held = widthsNow[m].toDouble() - fittedNow[m].toDouble() - item->property("autoColumnPadding").toDouble();
+                        if (held > 0.5) column.spare = std::max(0.0, held - std::max(0.0, column.farthest - (column.boxRight - held)));
+                    }
+                }
+                const double spacing = cells2.first()->parentItem() != nullptr ? cells2.first()->parentItem()->property("spacing").toDouble() : 0.0;
+                const Column* previous = nullptr;
+                double between = 0;  // an empty spare column passed since `previous`
+                for (const Column& column : columns) {
+                    // The parameter table's spare is a column of its own, empty.
+                    if (!column.drawn && column.model >= 0 && ownSpare > 0.5 && std::abs(widthsNow[column.model].toDouble() - ownSpare) < 1.0) {
+                        between += widthsNow[column.model].toDouble() + spacing;
+                        continue;
+                    }
+                    if (previous != nullptr && column.kind != QLatin1String("unit")) {
+                        const double widest = column.left - previous->right - previous->spare - between, least = column.left - previous->farthest - previous->spare - between;
+                        if (least > oneEm + 1.0 || widest < oneEm - 1.0)
+                            out << frame << "\tT1:gap\t" << item_path(item) << '\t' << QStringLiteral("%1 px between columns %2 and %3 (%4, %5), 1 em is %6")
+                                                                                            .arg(least > oneEm + 1.0 ? least : widest, 0, 'f', 1).arg(previous->model).arg(column.model)
+                                                                                            .arg(previous->kind.isEmpty() ? QStringLiteral("fixed") : previous->kind, column.kind.isEmpty() ? QStringLiteral("fixed") : column.kind).arg(oneEm) << '\n';
+                    }
+                    previous = &column;
+                    between = 0;
+                }
+            }
+            if (!heads2.isEmpty() && !cells2.isEmpty()) {
+                if (heads2.size() != cells2.size()) {
+                    const auto geometry = [&](const QList<QQuickItem*>& measured) {
+                        QStringList parts;
+                        for (QQuickItem* cell : measured)
+                            parts << QStringLiteral("%1+%2").arg(qRound(cell->mapRectToScene(QRectF(0, 0, 1, 1)).left() - box.left())).arg(qRound(cell->width()));
+                        return parts.join(QLatin1Char(' '));
+                    };
+                    rule(QStringLiteral("header has %1 cells (%2), row %3 (%4)").arg(heads2.size()).arg(geometry(heads2)).arg(cells2.size()).arg(geometry(cells2)), -1);
+                }
+                const auto alignmentOf = [](QQuickItem* cell) {
+                    const int value = cell->property("horizontalAlignment").isValid() ? cell->property("horizontalAlignment").toInt() : -1;
+                    constexpr int horizontal = static_cast<int>(Qt::AlignLeft) | static_cast<int>(Qt::AlignRight) | static_cast<int>(Qt::AlignHCenter);
+                    return value < 0 ? -1 : (value & horizontal);
+                };
+                for (qsizetype c = 0; c < std::min(heads2.size(), cells2.size()); ++c) {
+                    const QRectF h = heads2[c]->mapRectToScene(QRectF(0, 0, heads2[c]->width(), 1));
+                    const QRectF r = cells2[c]->mapRectToScene(QRectF(0, 0, cells2[c]->width(), 1));
+                    if (std::abs(h.left() - r.left()) > 1.0 || std::abs(h.width() - r.width()) > 1.0)
+                        rule(QStringLiteral("header %1+%2 vs cell %3+%4").arg(qRound(h.left() - box.left())).arg(qRound(h.width()))
+                                 .arg(qRound(r.left() - box.left())).arg(qRound(r.width())), int(c));
+                    const int ha = alignmentOf(heads2[c]), ra = alignmentOf(cells2[c]);
+                    // Text against text: a container cell (a name's icon line, a check box's holder) lays itself out.
+                    if (ha >= 0 && ra >= 0 && ha != ra && !heads2[c]->property("text").toString().isEmpty() && cells2[c]->property("text").isValid())
+                        rule(QStringLiteral("header '%1' aligned %2, cell %3 aligned %4").arg(heads2[c]->property("text").toString(), QString::number(ha),
+                                                                                            cells2[c]->objectName().isEmpty() ? QString::fromLatin1(cells2[c]->metaObject()->className()) : cells2[c]->objectName(),
+                                                                                            QString::number(ra)), int(c));
+                    // A title ends (or starts) where its column's values do, whatever the texts: their margins are equal.
+                    if (ha >= 0 && ha == ra && !heads2[c]->property("text").toString().isEmpty() && cells2[c]->property("text").isValid() &&
+                        heads2[c]->property("rightPadding").isValid() && cells2[c]->property("rightPadding").isValid()) {
+                        const char* side = (ha & static_cast<int>(Qt::AlignRight)) != 0 ? "rightPadding" : (ha & static_cast<int>(Qt::AlignLeft)) != 0 ? "leftPadding" : nullptr;
+                        if (side != nullptr && std::abs(heads2[c]->property(side).toDouble() - cells2[c]->property(side).toDouble()) > 1.0)
+                            rule(QStringLiteral("header '%1' margin %2, cell margin %3").arg(heads2[c]->property("text").toString())
+                                     .arg(heads2[c]->property(side).toDouble()).arg(cells2[c]->property(side).toDouble()), int(c));
+                    }
+                }
+                // A trailing control (a check box or a button) sits at the table's right edge.
+                QQuickItem* last = cells2.last();
+                const bool control = last->inherits("QQuickAbstractButton") || last->property("checked").isValid() ||
+                                     last->property("fontIcon").isValid();
+                // The row's own right edge, less its padding and a shown vertical scroll bar.
+                QQuickItem* rowItem = firstContent->parentItem() != nullptr ? firstContent->parentItem() : item;
+                const double barWidth = 0.0;
+                const double edge = std::min(box.right() - item->property("borderThickness").toDouble(),
+                                             rowItem->mapRectToScene(QRectF(0, 0, rowItem->width(), 1)).right()) -
+                                    item->property("rowPadding").toDouble() - barWidth;
+                if (!control && last->mapRectToScene(QRectF(0, 0, last->width(), 1)).right() > edge + 1.0)
+                    rule(QStringLiteral("row ends at %1, past the table edge %2")
+                             .arg(qRound(last->mapRectToScene(QRectF(0, 0, last->width(), 1)).right() - box.left())).arg(qRound(edge - box.left())), int(cells2.size() - 1));
+                // Its box, which its insets draw smaller than its cell.
+                const double controlRight = last->mapRectToScene(QRectF(0, 0, last->width(), 1)).right() - last->property("rightInset").toDouble();
+                if (control && std::abs(controlRight - edge) > 1.0)
+                    rule(QStringLiteral("trailing control ends at %1, table edge %2")
+                             .arg(qRound(controlRight - box.left())).arg(qRound(edge - box.left())), int(cells2.size() - 1));
+                // Where a cell's text or parts start and end.
+                const auto contentOf = [](QQuickItem* cell) -> std::pair<double, double> {
+                    const QRectF at = cell->mapRectToScene(QRectF(0, 0, cell->width(), 1));
+                    if (cell->property("contentWidth").isValid() && cell->property("horizontalAlignment").isValid() &&
+                        cell->property("text").isValid()) {
+                        if (cell->property("text").toString().trimmed().isEmpty()) return {0.0, -1.0};
+                        const double textWidth = std::min(cell->property("contentWidth").toDouble(), cell->width());
+                        const double leftPad = cell->property("leftPadding").toDouble(), rightPad = cell->property("rightPadding").toDouble();
+                        const int alignment = cell->property("horizontalAlignment").toInt();
+                        const double start = (alignment & static_cast<int>(Qt::AlignRight)) != 0 ? at.right() - rightPad - textWidth
+                                             : (alignment & static_cast<int>(Qt::AlignHCenter)) != 0 ? at.left() + (at.width() - textWidth) / 2
+                                                                                                      : at.left() + leftPad;
+                        return {start, start + textWidth};
+                    }
+                    double start = at.right(), end = at.left();
+                    for (QQuickItem* child : cell->childItems()) {
+                        if (!child->isVisible() || child->width() < 1) continue;
+                        const QRectF part = child->mapRectToScene(QRectF(0, 0, child->width(), 1));
+                        start = std::min(start, part.left());
+                        end = std::max(end, part.right());
+                    }
+                    return end > start ? std::pair<double, double>{start, end} : std::pair<double, double>{at.left(), at.right()};
+                };
+                // Two neighbouring header titles read apart: at least half an em between their texts (the owner,
+                // 2026-11-23: "Change Min Max" touching).
+                {
+                    const double least = heads2.first()->property("font").value<QFont>().pixelSize() * 0.5;
+                    double previousEnd = -1e9;
+                    QString previousText;
+                    for (qsizetype c = 0; c < heads2.size(); ++c) {
+                        if (!heads2[c]->property("text").isValid() || heads2[c]->property("text").toString().trimmed().isEmpty()) continue;
+                        const auto [start, end] = contentOf(heads2[c]);
+                        if (end < start) continue;
+                        if (start - previousEnd < least - 0.5)
+                            rule(QStringLiteral("header '%1' %2 px after '%3', at least %4").arg(heads2[c]->property("text").toString())
+                                     .arg(start - previousEnd, 0, 'f', 1).arg(previousText).arg(least, 0, 'f', 1), int(c));
+                        previousEnd = end;
+                        previousText = heads2[c]->property("text").toString();
+                    }
+                }
+                // A unit one space after its value, in the value's font (the owner, 2026-11-23).
+                for (QQuickItem* row : content != nullptr ? content->childItems() : QList<QQuickItem*>{}) {
+                    QQuickItem* cellsRow = rowOf(row);
+                    if (cellsRow == nullptr || row == item->property("headerItem").value<QQuickItem*>()) continue;
+                    const QList<QQuickItem*> rowCells = shownCells(cellsRow);
+                    for (qsizetype c = 1; c < rowCells.size(); ++c) {
+                        if (!rowCells[c]->objectName().contains(QLatin1String(".units."))) continue;
+                        const auto valueAt = contentOf(rowCells[c - 1]), unitAt = contentOf(rowCells[c]);
+                        if (valueAt.second < valueAt.first || unitAt.second < unitAt.first) continue;
+                        const QFont unitFont = rowCells[c]->property("font").value<QFont>(), valueFont = rowCells[c - 1]->property("font").value<QFont>();
+                        const double space = QFontMetricsF(unitFont).horizontalAdvance(QLatin1Char(' '));
+                        if (std::abs(unitAt.first - valueAt.second - space) > 1.0)
+                            rule(QStringLiteral("unit %1 px after its value, one space is %2 (value '%3' %4+%5 content %6 pad %7, unit at %8)")
+                                     .arg(unitAt.first - valueAt.second, 0, 'f', 1).arg(space, 0, 'f', 1)
+                                     .arg(rowCells[c - 1]->property("text").toString())
+                                     .arg(rowCells[c - 1]->mapRectToScene(QRectF(0, 0, 1, 1)).left(), 0, 'f', 1).arg(rowCells[c - 1]->width(), 0, 'f', 1)
+                                     .arg(rowCells[c - 1]->property("contentWidth").toDouble(), 0, 'f', 1).arg(rowCells[c - 1]->property("rightPadding").toDouble(), 0, 'f', 1)
+                                     .arg(unitAt.first, 0, 'f', 1), int(c));
+                        // The value's size, never bold (the owner, 2026-11-23).
+                        if (unitFont.pixelSize() != valueFont.pixelSize() || unitFont.bold())
+                            rule(QStringLiteral("unit font %1 px%2, value %3 px%4").arg(unitFont.pixelSize()).arg(unitFont.bold() ? " bold" : "")
+                                     .arg(valueFont.pixelSize()).arg(valueFont.bold() ? " bold" : ""), int(c));
+                        break;
+                    }
+                }
+                // The kind model: every column at its content width (its header or widest value), the spare only in the
+                // last data column, before the controls (the owner, 2026-11-23).
+                const QVariantList kinds = item->property("columnKinds").toList();
+                const QVariantList widths = item->property("columnWidths").toList();
+                const QVariantList fitted = item->property("fittedWidths").toList();
+                if (!kinds.isEmpty() && widths.size() == kinds.size()) {
+                    const int filler = item->property("fillerIndex").toInt();
+                    for (qsizetype index = 0, shown = 0; index < widths.size(); ++index) {
+                        if (widths[index].toDouble() <= 0.5) continue;
+                        const qsizetype c = shown++;
+                        const QString kind = kinds[index].typeId() == QMetaType::QString ? kinds[index].toString() : QString();
+                        // A unit's column is narrower than the unit by the pull that draws it one space after its value.
+                        if (kind.isEmpty() || kind == QLatin1String("index") || kind == QLatin1String("control") || kind == QLatin1String("mark") ||
+                            kind == QLatin1String("unit") ||
+                            index == filler || index >= fitted.size())
+                            continue;
+                        // A name may hold up to one column spacing of spare (the owner, 2026-11-23).
+                        const double allowance = kind == QLatin1String("name") ? 3.0 + item->property("columnSpacing").toDouble() : 3.0;
+                        // A table that sizes its empty columns as a fitted value reads (Parameters) holds them at that.
+                        double floorWidth = fitted[index].toDouble();
+                        if ((kind == QLatin1String("value") || kind == QLatin1String("uncertainty")) && item->property("typicalValue").isValid())
+                            floorWidth = std::max(floorWidth, std::ceil(item->property("typicalValue").toDouble()));
+                        // Its name keeps the name budget (W5), and its bounds, one kind, are equally wide (T5).
+                        if (kind == QLatin1String("name") && item->property("nameContent").isValid())
+                            floorWidth = std::max(floorWidth, std::ceil(item->property("nameContent").toDouble()));
+                        if (kind == QLatin1String("number") && item->property("typicalValue").isValid())
+                            for (qsizetype other = 0; other < kinds.size() && other < fitted.size(); ++other)
+                                if (kinds[other].toString() == kind) floorWidth = std::max(floorWidth, fitted[other].toDouble());
+                        if (kind == QLatin1String("change") && item->property("typicalChange").isValid())
+                            floorWidth = std::max(floorWidth, std::ceil(item->property("typicalChange").toDouble()));
+                        if (widths[index].toDouble() > floorWidth + allowance)
+                            rule(QStringLiteral("column %1 px over its content %2").arg(qRound(widths[index].toDouble())).arg(qRound(floorWidth)), int(c));
+                    }
+                }
+            }
+        }
+        // A list's rows that start above the bottom of its header and end below it are partly hidden under it.
+        if (item->inherits("QQuickListView") && inner.intersects(box)) {
+            auto* header = item->property("headerItem").value<QQuickItem*>();
+            auto* content = item->property("contentItem").value<QQuickItem*>();
+            if (header != nullptr && content != nullptr && header->isVisible() && header->height() > 1) {
+                const double bottom = header->mapRectToScene(QRectF(0, 0, header->width(), header->height())).bottom();
+                for (QQuickItem* row : content->childItems()) {
+                    if (row == header || !row->isVisible() || row->height() <= 1) continue;
+                    const QRectF at = row->mapRectToScene(QRectF(0, 0, row->width(), row->height()));
+                    if (at.top() < bottom - 1.0 && at.bottom() > bottom + 1.0 && at.top() >= box.top() - at.height())
+                        note("under-header", row, QStringLiteral("row at %1, header to %2").arg(at.top()).arg(bottom));
+                }
+            }
+        }
+        for (QQuickItem* child : item->childItems()) walk(child, inner, opacity);
+    };
+    walk(window_.contentItem(), window, 1.0);
+    // The sidebar no longer stops at a page's tables: Auto is one width per window size (the owner, 2026-11-23), so a
+    // narrower page shows spare; case 59 checks the width itself (note-sidebar, check-sidebar).
+    (void)sideTables;
+    // The text and control rules run over every shown item of every frame.
+    for (const char* rule : {"T8", "T9", "T10", "T12", "N1", "N2", "N3", "N4", "F4", "I1", "C1", "C3", "D1"})
+        out << frame << '\t' << rule << ":checked\tframe\tevery shown item\n";
+    // The sidebar rules measured once per frame (ADR-0103 decision 3): its width for W1/W2 (the report compares the
+    // pages of one state), W5 the spare before Free at the Auto stop, W6 Compact's columns and filter combos, W7 the
+    // bottom layout's height. Each writes its measurement, so a pass shows its number.
+    if (QQmlEngine* sizesEngine = qmlEngine(window_.contentItem()); sizesEngine != nullptr) {
+        QObject* sizes = sizesEngine->singletonInstance<QObject*>("EasyApplication.Gui.Style", "Sizes");
+        QObject* preferences = sizesEngine->singletonInstance<QObject*>("edi.app", "Preferences");
+        QObject* appSizes = sizesEngine->singletonInstance<QObject*>("edi.app", "AppSizes");
+        if (sizes != nullptr && preferences != nullptr && appSizes != nullptr) {
+            const QString mode = preferences->property("sideBarWidthMode").toString();
+            const bool below = sizes->property("sideBarBelow").toBool();
+            const double width = sizes->property("sideBarWidth").toDouble();
+            // One column gap is 1 em (T1).
+            const double gap = sizes->property("fontPixelSize").toDouble();
+            out << frame << "\tW:width\t" << mode << '\t' << (below ? "below " : "side ") << width << " window " << window_.width() << 'x' << window_.height() << '\n';
+            // W2: Full is edi main's distance, from the window's right edge to the Experiment button's centre, now.
+            if (mode == QLatin1String("full") && !below) {
+                const double main = appSizes->property("sideBarMainWidth").toDouble();
+                out << frame << "\tW2:checked\tfull\t" << width << " px, edi main's rule " << main << " px\n";
+                if (main > 0 && std::abs(main - width) > 0.5) out << frame << "\tW2:rule\tfull\t" << width << " px, edi main's rule " << main << " px\n";
+            }
+            if (below) {
+                // The page shown: a workflow page that is current, else Home, the one page without a sidebar.
+                QQuickItem* page = nullptr;
+                for (QQuickItem* at : visual_items(window_.contentItem()))
+                    if (!at->property("pageName").toString().isEmpty() && at->property("sideBarBelow").isValid() && at->property("current").toBool() && at->isVisible()) page = at;
+                QQuickItem* home = itemNamed(window_.contentItem(), QStringLiteral("workflow.home.mainContent"));
+                if (page == nullptr) {
+                    if (home == nullptr || !on_screen(home)) out << frame << "\tW7:no-page\tsidebar\tno page is shown\n";
+                } else {
+                    const QString name = QStringLiteral("workflow.%1.sidebarHost").arg(page->property("pageName").toString());
+                    QQuickItem* side = itemNamed(page, name);
+                    const bool there = side != nullptr && side->isVisible() && side->height() > 1 && on_screen(side);
+                    const double height = there ? side->height() : 0;
+                    const double share = window_.height() > 0 ? height / window_.height() : 0;
+                    out << frame << "\tW7:checked\t" << name << '\t' << QString::number(share * 100, 'f', 1) << " % of the window\n";
+                    if (!there) {
+                        out << frame << "\tW7:no-sidebar\t" << name << "\tthe page shows no sidebar\n";
+                    } else {
+                        // At most 70 % of its page.
+                        if (const double pageHeight = side->parentItem()->height(); pageHeight > 0 && height > pageHeight * 0.7 + 0.5)
+                            out << frame << "\tW7:page\t" << name << '\t' << QString::number(100 * height / pageHeight, 'f', 1) << " % of its page, at most 70 %\n";
+                        if (share > 0.52)
+                            out << frame << "\tW7:height\t" << name << '\t' << QString::number(share * 100, 'f', 1) << " % of the window, at most 50 % +- 2 %\n";
+                        // Below half it gives way to the chart: the main pane's 120 px and the residual's 40 px, with the
+                        // project's most Bragg rows (1.5 em each and half an em, a gap on both sides), and no more.
+                        const ProjectViewModel* project = open_project(window_);
+                        const int rows = project != nullptr ? project->patternBraggRows() : 0;
+                        const double em = sizes->property("fontPixelSize").toDouble();
+                        const double panes = 160 + em * (rows > 0 ? 0.5 + 1.5 * rows + 2 : 1);
+                        // Around the panes: the tab bar 3 em, the selector 3.5, the toolbar and its gaps 5.5, the axis and its title 5.
+                        const double need = panes + em * 17;
+                        const double pageHeight = side->parentItem()->height(), left = pageHeight - need;
+                        const double wanted = left >= em * 14 ? std::min({pageHeight * 0.7, window_.height() * 0.5, left}) : std::min(pageHeight * 0.7, window_.height() * 0.5);
+                        if (std::abs(height - wanted) > 2.0)
+                            out << frame << "\tW7:chart\t" << name << '\t' << height << " px, " << wanted << " px with " << rows << " Bragg rows\n";
+                        // The panes themselves, on a page that shows the pattern.
+                        for (QQuickItem* pane : visual_items(window_.contentItem())) {
+                            const bool main = pane->objectName() == QLatin1String("chart.view.main"), residual = pane->objectName() == QLatin1String("chart.view.residual");
+                            if ((!main && !residual) || !pane->isVisible() || !on_screen(pane) || left < em * 14) continue;
+                            const double plot = pane->property("plotArea").toRectF().height();
+                            out << frame << "\tW7:checked\t" << pane->objectName() << '\t' << plot << " px\n";
+                            if (plot < (main ? 119 : 39)) out << frame << "\tW7:pane\t" << pane->objectName() << '\t' << plot << " px, at least " << (main ? 120 : 40) << '\n';
+                        }
+                        // It moves with the window and the project's Bragg rows alone, never with the page or a fit (W1).
+                        static QHash<QString, double> held;
+                        const QString key = QStringLiteral("%1x%2 %3 %4").arg(window_.width()).arg(window_.height()).arg(project != nullptr ? project->name() : QString()).arg(rows);
+                        if (held.contains(key) && std::abs(held.value(key) - height) > 0.5)
+                            out << frame << "\tW7:moved\t" << name << '\t' << held.value(key) << " -> " << height << " px\n";
+                        held.insert(key, height);
+                    }
+                }
+            }
+            QQuickItem* parameters = itemNamed(window_.contentItem(), QStringLiteral("parameters.list"));
+            if (parameters != nullptr && parameters->isVisible() && on_screen(parameters) && !below) {
+                const auto shows = [&](int column) {
+                    bool shown = false;
+                    QMetaObject::invokeMethod(parameters, "shows", Q_RETURN_ARG(bool, shown), Q_ARG(int, column));
+                    return shown;
+                };
+                if (mode == QLatin1String("auto")) {
+                    const double spare = parameters->property("spareWidth").toDouble();
+                    const bool stopped = shows(2) && shows(6) && shows(7) && shows(8);
+                    out << frame << "\tW5:checked\tparameters\tspare " << spare << " px, all columns " << (stopped ? "shown" : "not all shown") << '\n';
+                    if (stopped && spare > gap + 0.5)
+                        out << frame << "\tW5:spare\tparameters\t" << spare << " px before Free, at most " << gap << '\n';
+                }
+                if (mode == QLatin1String("compact")) {
+                    QObject* group = parameters;
+                    while (group != nullptr && !group->property("pickerRowNeed").isValid()) group = group->parent();
+                    const double need = group != nullptr ? group->property("pickerRowNeed").toDouble() : -1;
+                    const double room = sizes->property("sideBarContentWidth").toDouble();
+                    const bool columns = shows(1) && shows(3) && shows(5) && !shows(4);
+                    out << frame << "\tW6:checked\tparameters\tcolumns " << (columns ? "Name Value s.u. Free" : "other") << ", pickers need " << need << " in " << room << '\n';
+                    if (!columns || need < 0 || need > room + 0.5)
+                        out << frame << "\tW6:compact\tparameters\tcolumns " << (columns ? "right" : "wrong") << ", pickers need " << need << " px in " << room << '\n';
+                }
+            }
+        }
+    }
+    // The Home wordmark's two words are one logo, set tight, not two controls (N3).
+    const auto oneLogo = [](const QQuickItem* a, const QQuickItem* b) {
+        const QQuickItem* logo = a->parentItem();
+        if (logo == nullptr || logo != b->parentItem()) return false;
+        const auto* first = logo->property("prefixItem").value<QQuickItem*>();
+        const auto* second = logo->property("suffixItem").value<QQuickItem*>();
+        return first != nullptr && second != nullptr && ((a == first && b == second) || (a == second && b == first));
+    };
+    // A popup (a menu, a tooltip) lies over the page by design: only texts on the same layer can overlap.
+    const auto inPopup = [](const QQuickItem* item) {
+        for (const QQuickItem* at = item; at != nullptr; at = at->parentItem())
+            if (at->inherits("QQuickOverlay") || at->inherits("QQuickPopupItem")) return true;
+        return false;
+    };
+    for (std::size_t i = 0; i < texts.size(); ++i) {
+        for (std::size_t j = i + 1; j < texts.size(); ++j) {
+            const QRectF both = texts[i].rect.intersected(texts[j].rect).intersected(texts[i].clip).intersected(texts[j].clip);
+            if (both.width() > 2 && both.height() > 2 && !texts[i].item->isAncestorOf(texts[j].item) &&
+                !texts[j].item->isAncestorOf(texts[i].item) && !oneLogo(texts[i].item, texts[j].item) &&
+                inPopup(texts[i].item) == inPopup(texts[j].item))
+                note("overlap", texts[i].item, texts[i].item->property("text").toString() + " | " + texts[j].item->property("text").toString());
+        }
+    }
+    // The sidebar's width at this window width (the style's Sizes.sideBarWidth), for the width rule's table.
+    QQmlEngine* engine = qmlEngine(window_.contentItem());
+    QObject* sizes = engine != nullptr ? engine->singletonInstance<QObject*>("EasyApplication.Gui.Style", "Sizes") : nullptr;
+    out << frame << "\tframe\t" << hits << " hits\twindow " << window_.width() << ", sidebar "
+        << (sizes != nullptr ? sizes->property("sideBarWidth").toDouble() : -1.0) << '\n';
+}
+
 void DemoDriver::wait_scan_then(const std::function<void()>& next, const QString& mode, int waited_ms) {
     QQuickItem* layer = find(QStringLiteral("scanView.%1.layer").arg(mode), false);
     auto* model = layer != nullptr ? layer->property("model").value<ScanViewModel*>() : nullptr;
-    if (model != nullptr && model->count() > 0 && model->loaded() == model->count()) {
+    // Read once nothing the view shows is waiting (the views read only what they show), and still so a moment later:
+    // a view laid out again asks for other rows.
+    const bool read = model != nullptr && model->count() > 0 && model->loaded() > 0 && model->pending() == 0;
+    if (read && !scan_read_once_) {
+        scan_read_once_ = true;
+        QTimer::singleShot(kSettleIntervalMs * 3, this,
+                           [this, next, mode, waited_ms] { wait_scan_then(next, mode, waited_ms + kSettleIntervalMs * 3); });
+        return;
+    }
+    scan_read_once_ = read;
+    if (read) {
+        scan_read_once_ = false;
+        qWarning("wait-scan %s: %d of %d patterns read after %d ms", qPrintable(mode), model->loaded(), model->count(),
+                 waited_ms);
         next();
         return;
     }
@@ -3148,7 +7208,7 @@ bool DemoDriver::timed_slider(int count) {
 
 void DemoDriver::fail(const QString& message) {
     if (documentation_) {
-        window_.grabWindow().save(output_dir_.filePath("failure.png"));
+        grab().save(output_dir_.filePath("failure.png"));
         saveDocumentationManifest("failed", message);
     }
     std::fprintf(stderr, "edi_app --demo: %s\n", qPrintable(message));

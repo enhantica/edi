@@ -3,6 +3,8 @@
 #include <QScopeGuard>
 
 #include <QByteArray>
+#include <QCoreApplication>
+#include <QPointer>
 #include <QDateTime>
 #include <QDir>
 #include <QLocale>
@@ -13,10 +15,12 @@
 #include <QJsonDocument>
 #include <algorithm>
 #include <exception>
+#include <functional>
 #include <memory>
 #include <string>
 #include <utility>
 
+#include "background.hpp"
 #include "correlation_view_model.hpp"
 #include "edi/io.hpp"
 #include "edi/report_html.hpp"
@@ -24,12 +28,15 @@
 #include "fit_view_model.hpp"
 #include "project_view_model.hpp"
 #include "report_pdf.hpp"
+#include "ui_probe.hpp"
 #include "web_files.hpp"
 
 namespace edi_app {
 
 ReportViewModel::ReportViewModel(ProjectViewModel& project, QObject* parent)
     : QObject(parent), project_(project), colour_scheme_(project.colourScheme()) {
+    connect(this, &ReportViewModel::modelChanged, this, &ReportViewModel::modelRevisionChanged);
+    connect(this, &ReportViewModel::savedReportsChanged, this, &ReportViewModel::lastSavedFiguresChanged);
     // The project marks the report stale before it announces the end of a calculation, so a save waiting for that
     // end rebuilds from the outcome. A fit's end is announced by the project once the fit has published.
     connect(&project_, &ProjectViewModel::calculatingChanged, this, &ReportViewModel::calculatingChanged);
@@ -61,13 +68,25 @@ void ReportViewModel::setActive(bool active) {
     if (active != active_) {
         active_ = active;
         emit activeChanged();
-        if (active_ && dirty_) {
+        if (!active_) {
+            supersede();  // a hidden page takes no model; it catches up when shown
+        } else if (!current()) {
             refresh();
         }
     }
 }
 
+void ReportViewModel::supersede() const {
+    if (!building_ || adopted_generation_ == build_generation_) return;
+    const std::uint64_t old = build_generation_;
+    wanted_->store(++build_generation_);
+    dirty_ = true;
+    rebuild_owed_ = false;
+    EDI_UI_TRACE("cancel", {{"builder", "report"}, {"view", "V12/report"}, {"generation", static_cast<double>(old)}});
+}
+
 void ReportViewModel::refresh() {
+    project_.invalidateSnapshots();  // whatever asked for the refresh changed what the report reads
     // The settings the project now states, announced when they changed (an edit, or its undo).
     if (const QStringList keys = hidden(); keys != published_hidden_) {
         published_hidden_ = keys;
@@ -88,20 +107,22 @@ void ReportViewModel::refresh() {
     publish(published_writes_cif_, writesCif(), &ReportViewModel::writesCifChanged);
     dirty_ = true;
     // A hidden page waits: its saved reports' states need the model, and building it for every change of a running
-    // scan made each fitted dataset rebuild the whole report. The page builds once when shown (setActive).
+    // scan made each fitted dataset rebuild the whole report. The page builds once when shown (setActive); a build
+    // running when the change came is superseded.
     if (!active_) {
+        supersede();
         return;
     }
-    if (build()) {
-        publishModel();
-    }
-    emit savedReportsChanged();
+    requestBuild();
 }
 
 void ReportViewModel::ensureBuilt() const {
-    if (dirty_ && build()) {
-        auto* self = const_cast<ReportViewModel*>(this);  // NOLINT(cppcoreguidelines-pro-type-const-cast)
-        QMetaObject::invokeMethod(self, [self] { self->publishModel(); }, Qt::QueuedConnection);
+    // A read asks a worker for the model and reads the last one until the new one lands (ADR-0102 rule 3): the
+    // preview reads the model as its page is shown, before the page's active binding has turned. Only a save builds
+    // here (saveReport).
+    // A hidden page's read takes the last model: only a shown page asks for a build (rule 1).
+    if (active_ && dirty_ && !building_) {
+        const_cast<ReportViewModel*>(this)->requestBuild();  // NOLINT(cppcoreguidelines-pro-type-const-cast)
     }
 }
 
@@ -114,13 +135,13 @@ void ReportViewModel::publishModel() {
     }
 }
 
-bool ReportViewModel::build() const {
-    dirty_ = false;
+ReportViewModel::Inputs ReportViewModel::prepare() const {
     // The project's report settings (ADR-0036 §7) and the app's choices, given as the CLI and Python give them: the
     // Preferences' palette and, of a fit of several experiments, the experiment the Analysis page shows; then the
     // blocks' positions in the palette and the structure view's element colours.
     const edi::Project& project = project_.project();
-    edi::ReportOverrides choices;
+    Inputs inputs;
+    edi::ReportOverrides& choices = inputs.choices;
     if (edi::colour_scheme_from_name(colour_scheme_.toStdString())) {
         choices.colour_scheme = colour_scheme_.toStdString();
     }
@@ -130,28 +151,82 @@ bool ReportViewModel::build() const {
     if (!project_.scan() && shown > 0 && static_cast<std::size_t>(shown) < project.experiments.size()) {
         choices.correlation_experiment = project.experiments[static_cast<std::size_t>(shown)]->name.value();
     }
-    judged_.reset();
-    cif_digest_.reset();
-    edi::ReportModel next;
+    const StructureViewOptions* view = project_.structureViewOptions();
+    inputs.vesta = view != nullptr && view->colorScheme() == QLatin1String("vesta");
+    inputs.colour_positions = project_.colourPositions();
+    // Shared, not copied here: a scan's template copy is made again only when the template changes (ADR-0102 rule 3).
+    inputs.input = project_.reportSnapshot();
+    const QDir reports(reportsDirectory());
+    for (const auto& file : project.report_files) {
+        if (reports.exists(QString::fromStdString(file->name.value()))) {
+            inputs.formats.push_back(file->format.value());
+        }
+    }
+    inputs.embed = embedLibraries();
+    if (inputs.embed) {
+        if (const edi::ReportLibraries* read = libraries()) {
+            inputs.libraries = std::make_shared<const edi::ReportLibraries>(*read);
+        }
+    }
+    return inputs;
+}
+
+namespace {
+
+QStringList figure_gaps(const edi::Project& project, const edi::ReportModel& report) {
+    QStringList gaps;
+    for (const auto& experiment : project.experiments) {
+        if (experiment->linked_structures.size() == 0) continue;
+        for (const edi::ReportExperiment& shown : report.experiments) {
+            if (shown.id != experiment->name.value()) continue;
+            const auto& series = shown.pattern.presentation.series;
+            const bool calc = std::any_of(series.begin(), series.end(),
+                                          [](const edi::PatternSeries& one) { return one.id == "calc"; });
+            if (!calc) gaps << QStringLiteral("experiment %1: no calculated pattern").arg(QString::fromStdString(shown.id));
+        }
+    }
+    for (const auto& structure : project.structures) {
+        if (structure->atom_sites.size() == 0) continue;
+        for (const edi::ReportStructure& shown : report.structures) {
+            if (shown.id == structure->name.value() && shown.scene.atoms.empty()) {
+                gaps << QStringLiteral("structure %1: no atoms in its view").arg(QString::fromStdString(shown.id));
+            }
+        }
+    }
+    return gaps;
+}
+
+}  // namespace
+
+ReportViewModel::Built ReportViewModel::make(const Inputs& inputs) {
+    Built built;
+    // A project's computed state (its calculated patterns, its structures' computed categories) does not survive a
+    // copy, and the input is the project's shared copy: one that is not a scan is calculated here first, as the report
+    // builder calculates a scan's template itself. Built from the copy alone, a joint TOF project's report drew only
+    // its measured data and empty structure views (the owner, 2026-11-21).
+    std::optional<edi::Project> calculated;
+    if (!edi::fits_a_scan(*inputs.input)) {
+        calculated.emplace(*inputs.input);
+        try {
+            edi::apply_relations(*calculated);
+            calculated->calculate();
+        } catch (const std::exception&) {  // NOLINT(bugprone-empty-catch) — a refused calculation reports what it has
+        }
+    }
+    const edi::Project& source = calculated ? *calculated : *inputs.input;
     try {
-        options_ = edi::effective_report_options(project, choices);
-        const StructureViewOptions* view = project_.structureViewOptions();
-        const bool vesta = view != nullptr && view->colorScheme() == QLatin1String("vesta");
-        options_.element_colours = vesta ? edi::ColorScheme::Vesta : edi::ColorScheme::Jmol;
-        options_.colour_positions = project_.colourPositions();
-        next = edi::build_report(reportInput(), options_);
+        built.options = edi::effective_report_options(source, inputs.choices);
+        built.options.element_colours = inputs.vesta ? edi::ColorScheme::Vesta : edi::ColorScheme::Jmol;
+        built.options.colour_positions = inputs.colour_positions;
+        built.report = edi::build_report(source, built.options);
+        built.figure_gaps = figure_gaps(source, built.report);
     } catch (const std::exception&) {  // NOLINT(bugprone-empty-catch) — a project the builder refuses shows no report
-        options_ = {};
-        next = {};
+        built.options = {};
+        built.report = {};
     }
-    std::string json = edi::report_to_json(next);
-    if (json == json_) {
-        return false;
-    }
-    json_ = std::move(json);
-    report_ = std::move(next);
+    built.json = edi::report_to_json(built.report);
     // The text sections' values for QML; the charts read report_ through their controllers.
-    edi::ReportModel text = report_;
+    edi::ReportModel text = built.report;
     for (edi::ReportStructure& structure : text.structures) {
         structure.scene = {};
         structure.view = {};
@@ -160,8 +235,192 @@ bool ReportViewModel::build() const {
     for (edi::ReportExperiment& experiment : text.experiments) {
         experiment.pattern = {};
     }
-    model_ = QJsonDocument::fromJson(QByteArray::fromStdString(edi::report_to_json(text))).toVariant().toMap();
+    built.model = QJsonDocument::fromJson(QByteArray::fromStdString(edi::report_to_json(text))).toVariant().toMap();
+    // A long table's rows leave the QML model: converting thousands of rows to QML values was most of a shown
+    // Report's cost (ADR-0102 rule 2). The table keeps its key and count, and its rows are read from rowsModel.
+    std::function<void(QVariant&, const QString&)> strip = [&](QVariant& value, const QString& path) {
+        if (value.typeId() == QMetaType::QVariantMap) {
+            QVariantMap map = value.toMap();
+            if (auto table = map.find(QStringLiteral("table")); table != map.end() && table->typeId() == QMetaType::QVariantMap) {
+                QVariantMap fields = table->toMap();
+                const QVariantList rows = fields.value(QStringLiteral("rows")).toList();
+                if (rows.size() > 100) {
+                    QStringList joined;
+                    joined.reserve(rows.size());
+                    for (const QVariant& row : rows) joined.append(row.toStringList().join(QChar(0x1f)));
+                    built.rows.insert(path, joined);
+                    fields.insert(QStringLiteral("rows"), QVariantList());
+                    fields.insert(QStringLiteral("rows_key"), path);
+                    fields.insert(QStringLiteral("row_count"), rows.size());
+                    *table = fields;
+                }
+            }
+            for (auto it = map.begin(); it != map.end(); ++it) strip(it.value(), path + QLatin1Char('/') + it.key());
+            value = map;
+        } else if (value.typeId() == QMetaType::QVariantList) {
+            QVariantList list = value.toList();
+            for (qsizetype i = 0; i < list.size(); ++i) strip(list[i], path + QLatin1Char('/') + QString::number(i));
+            value = list;
+        }
+    };
+    QVariant root = built.model;
+    strip(root, QString());
+    built.model = root.toMap();
+    // The pattern style table holds a style per dataset (tens of thousands for a long scan, most of the model); the
+    // QML preview reads only the measured style, the charts read the table from reportModel().
+    QVariantList measured;
+    for (const QVariant& style : built.model.value(QStringLiteral("pattern_styles")).toList()) {
+        if (style.toMap().value(QStringLiteral("key")).toString() == QLatin1String("meas.0")) measured.append(style);
+    }
+    built.model.insert(QStringLiteral("pattern_styles"), measured);
+    // The saved reports are judged against what each format's writer would write now (savedReports).
+    const edi::ReportModel* judged = &built.report;
+    if (edi::chooses_presentation(built.options)) {
+        try {
+            built.judged = edi::build_report(source, edi::report_file_options(built.options));
+        } catch (const std::exception&) {  // NOLINT(bugprone-empty-catch) — as above: no report
+            built.judged = edi::ReportModel{};
+        }
+        judged = &*built.judged;
+    }
+    static const edi::ReportLibraries kOnline;
+    for (const std::string& format : inputs.formats) {
+        const QString key = QString::fromStdString(format);
+        if (built.digests.contains(key)) continue;
+        if (format == "cif") {
+            try {
+                built.cif_digest = edi::fnv1a64(edi::cif_report_text(source));
+            } catch (const std::exception&) {  // NOLINT(bugprone-empty-catch) — no CIF report: judged out of date
+                built.cif_digest = std::string();
+            }
+            built.digests.insert(key, QString::fromStdString(*built.cif_digest));
+        } else {
+            const edi::ReportLibraries& used = format == "html" && inputs.libraries ? *inputs.libraries : kOnline;
+            built.digests.insert(key, QString::fromStdString(edi::report_digest(*judged, format, used)));
+        }
+    }
+    return built;
+}
+
+bool ReportViewModel::adopt(Built&& built) const {
+    options_ = std::move(built.options);
+    judged_ = std::move(built.judged);
+    cif_digest_ = std::move(built.cif_digest);
+    digests_ = std::move(built.digests);
+    figure_gaps_ = std::move(built.figure_gaps);
+    if (built.json == json_) {
+        return false;
+    }
+    rows_ = std::move(built.rows);
+    for (auto it = rows_models_.begin(); it != rows_models_.end(); ++it) it.value()->setRows(rows_.value(it.key()));
+    json_ = std::move(built.json);
+    report_ = std::move(built.report);
+    model_ = std::move(built.model);
+    ++model_revision_;
     return true;
+}
+
+bool ReportViewModel::build() const {
+    // A running build is superseded: this one is newer. Its result is dropped when it returns.
+    dirty_ = false;
+    rebuild_owed_ = false;
+    const std::uint64_t generation = ++build_generation_;
+    wanted_->store(generation);
+    judged_.reset();
+    cif_digest_.reset();
+    digests_.clear();
+    const bool changed = adopt(make(prepare()));
+    adopted_generation_ = generation;
+    return changed;
+}
+
+void ReportViewModel::requestBuild() {
+    dirty_ = false;
+    if (building_) {
+        // One build at a time: the running one is superseded and one more is owed, started when it returns.
+        const std::uint64_t old = build_generation_;
+        wanted_->store(++build_generation_);
+        rebuild_owed_ = true;
+        EDI_UI_TRACE("supersede", {{"builder", "report"}, {"view", "V12/report"}, {"old", static_cast<double>(old)},
+                                   {"replacement", static_cast<double>(build_generation_)}});
+        return;
+    }
+    const std::uint64_t generation = ++build_generation_;
+    wanted_->store(generation);
+    building_ = true;
+    EDI_UI_TRACE("request", {{"builder", "report"}, {"view", "V12/report"}, {"generation", static_cast<double>(generation)}});
+    const QPointer<ReportViewModel> self(this);
+    run_in_background([self, generation, wanted = wanted_, inputs = prepare()]() {
+        // A build superseded while it waited for a worker is not made.
+        std::shared_ptr<Built> built;
+        if (wanted->load() == generation) {
+            EDI_UI_TRACE("build", {{"builder", "report"}, {"view", "V12/report"}, {"thread", ui_trace_thread()},
+                                   {"scales", true}, {"generation", static_cast<double>(generation)}});
+            built = std::make_shared<Built>(make(inputs));
+        }
+        QMetaObject::invokeMethod(
+            QCoreApplication::instance(),
+            [self, generation, built]() {
+                if (!self) return;  // the page is gone
+                self->building_ = false;
+                EDI_UI_TRACE("result-arrival", {{"builder", "report"}, {"view", "V12/report"},
+                                                {"generation", static_cast<double>(generation)}});
+                // Only the newest wanted build, on a shown page, becomes the model.
+                if (built && generation == self->build_generation_ && self->active_) {
+                    EDI_UI_TRACE("deliver", {{"builder", "report"}, {"view", "V12/report"},
+                                             {"generation", static_cast<double>(generation)}});
+                    const bool changed = self->adopt(std::move(*built));
+                    self->adopted_generation_ = generation;
+                    if (changed) {
+                        self->publishModel();
+                        if (!self) return;
+                    }
+                    emit self->savedReportsChanged();
+                    return;
+                }
+                EDI_UI_TRACE("discard", {{"builder", "report"}, {"view", "V12/report"},
+                                         {"generation", static_cast<double>(generation)}});
+                if (std::exchange(self->rebuild_owed_, false)) {
+                    if (self->active_) self->requestBuild();
+                    else self->dirty_ = true;
+                }
+            },
+            Qt::QueuedConnection);
+    });
+}
+
+void ReportRowsModel::setRows(const QStringList& rows) {
+    if (rows == rows_) return;
+    beginResetModel();  // the table's row set is replaced by a new build
+    rows_ = rows;
+    endResetModel();
+}
+
+QVariant ReportRowsModel::data(const QModelIndex& index, int role) const {
+    if (role != Qt::UserRole + 1 || !index.isValid() || index.row() >= rows_.size()) return {};
+    return rows_.at(index.row());
+}
+
+QObject* ReportViewModel::rowsModel(const QString& key) {
+    ReportRowsModel*& model = rows_models_[key];
+    if (model == nullptr) {
+        model = new ReportRowsModel(this);
+        model->setRows(rows_.value(key));
+    }
+    return model;
+}
+
+QStringList ReportViewModel::sampleRows(const QString& key) const {
+    // Each row's cells joined by U+001F, as stored; the table splits the few it measures.
+    const QStringList rows = rows_.value(key);
+    constexpr qsizetype kSample = 200;
+    QStringList sample;
+    const qsizetype count = std::min(rows.size(), kSample);
+    for (qsizetype k = 0; k < count; ++k) {
+        const qsizetype index = rows.size() > kSample ? k * rows.size() / kSample : k;
+        sample.append(rows.at(index));
+    }
+    return sample;
 }
 
 const edi::ReportPattern* ReportViewModel::pattern(const QString& experiment) const {
@@ -329,12 +588,16 @@ QList<SavedReport> ReportViewModel::savedReports() const {
         if (!reports.exists(name)) {
             state = QStringLiteral("missing");
         } else {
-            // The digest of what the format's writer would write now, the HTML with the libraries the project embeds.
-            const edi::ReportLibraries* embedded = format == "html" && embedLibraries() ? libraries() : nullptr;
-            static const edi::ReportLibraries kOnline;
-            const std::string digest = format == "cif" ? cifDigest()
-                                                       : edi::report_digest(judged(), format,
-                                                                            embedded != nullptr ? *embedded : kOnline);
+            // The digest of what the format's writer would write now, made with the last build when it judged this
+            // format, else here (a read before any build).
+            const QString known = digests_.value(QString::fromStdString(format));
+            std::string digest = known.toStdString();
+            if (!digests_.contains(QString::fromStdString(format))) {
+                const edi::ReportLibraries* embedded = format == "html" && embedLibraries() ? libraries() : nullptr;
+                static const edi::ReportLibraries kOnline;
+                digest = format == "cif" ? cifDigest()
+                                         : edi::report_digest(judged(), format, embedded != nullptr ? *embedded : kOnline);
+            }
             if (digest != file->digest.value()) {
                 state = QStringLiteral("out of date");
             }
@@ -348,6 +611,14 @@ QList<SavedReport> ReportViewModel::savedReports() const {
                      state});
     }
     return rows;
+}
+
+void ReportViewModel::prepareSave() {
+    if (!current() && build()) {
+        publishModel();  // at once: the preview draws this model before its figures are taken
+    }
+    figures_generation_ = adopted_generation_;
+    figures_.clear();
 }
 
 void ReportViewModel::setFigure(const QString& name, const QImage& image) {
@@ -366,7 +637,20 @@ void ReportViewModel::saveReport(const QString& fontFamily) {
     if (project_.retired_) return;
     // The figures belong to this save only, whatever it ends in.
     const QHash<QString, QImage> images = std::exchange(figures_, {});
-    ensureBuilt();
+    last_saved_figures_.clear();
+    for (auto it = images.cbegin(); it != images.cend(); ++it)
+        if (!it.value().isNull()) last_saved_figures_.append(it.key());
+    last_saved_figures_.sort();
+    // The PDF's figures were taken from the model prepareSave brought up to date; a change since would write them with
+    // another build's text and digest, so the save is refused and is made again.
+    if (!images.isEmpty() && (!current() || adopted_generation_ != figures_generation_)) {
+        emit saveFailed(tr("The report changed while its figures were taken; save it again"));
+        return;
+    }
+    // A save writes what the project is now: it builds here when the model is not the newest.
+    if (!current() && build()) {
+        QMetaObject::invokeMethod(this, [this] { publishModel(); }, Qt::QueuedConnection);
+    }
     const edi::Project& project = project_.project();
     const QString base = fileStem();
     const QDir reports(reportsDirectory());

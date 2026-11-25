@@ -115,6 +115,7 @@ class ScanLayer : public QQuickPaintedItem {
 
    public:
     explicit ScanLayer(QQuickItem* parent = nullptr);
+    ~ScanLayer() override;
 
     /// Datasets drawn by the current Stacked view, bounded by its screen height.
     const std::vector<std::size_t>& drawnDatasets() const { return drawn_datasets_; }
@@ -281,6 +282,10 @@ class ScanLayer : public QQuickPaintedItem {
     // (ScanLines::setActive).
     void showLines();
     void measure();
+    // The datasets the Map draws, each pixel row's own (the pixel rows brought up to date first): what it reads, and
+    // all its colours and excluded bands come from, so nothing loaded for another view changes them.
+    const std::vector<bool>& mapDemand();
+    bool drawsDataset(int dataset) const;  // in this view's demand: Stacked's drawn curves, Map's pixel rows
     void place();
     // A stacked dataset's value on the vertical axis, as its line is drawn.
     double stackedY(std::size_t dataset, double value) const;
@@ -355,6 +360,8 @@ class ScanLayer : public QQuickPaintedItem {
     std::vector<double> map_rows_;
     double map_low_ = 0, map_high_ = 0;
     bool map_smooth_ = false;
+    std::vector<bool> map_demand_;
+    std::vector<bool> measured_demand_;  // the demand the colour range was last taken over
     std::vector<std::size_t> drawingRows() const;
     ReductionKey reduced_for_;
     QString reduced_mode_;

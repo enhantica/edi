@@ -46,6 +46,10 @@ std::string item_dtype(std::string_view uid);
 /// The short label every surface shows for item `uid`. Each of these throws std::invalid_argument
 /// for a uid the dictionary does not hold.
 std::string label(std::string_view uid, std::string_view variant = {});
+/// The label and the description the screens and the report show: the dictionary's, except where an item's meaning in
+/// edi differs from its entry (an experiment's χ²).
+std::string shown_label(std::string_view uid, std::string_view variant = {});
+std::string shown_description(std::string_view uid);
 /// The item's units as shown ("Å", "deg"), empty when it has none.
 std::string units_label(std::string_view uid, std::string_view variant = {});
 /// The item's one-line description.

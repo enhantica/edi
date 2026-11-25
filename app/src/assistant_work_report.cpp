@@ -5,6 +5,7 @@
 #include "assistant_result.hpp"
 #include "background.hpp"
 #include "codex_agent.hpp"
+#include "project_folder_lock.hpp"
 #include "test_observer.hpp"
 #include "edi/assistant_limits.hpp"
 #include <QCoreApplication>
@@ -601,6 +602,7 @@ QVariantMap AssistantWorkReports::capture(bool automaticTrigger,const AssistantW
                         if(result.artifact.isEmpty())copyMirror["disposition"]="primary_unverified";
                         else if(!input->mirror.lease)copyMirror["disposition"]="destination_unavailable";
                         else {
+                            const std::lock_guard writing(project_folder_mutex()); // Not while a save reads or replaces the folder.
                             const auto copied=publishFile(input->mirror.root,encoded,hash,input->serializationRoot,&input->mirror);
                             copyMirror["disposition"]=QLatin1StringView(copied.disposition);copyMirror["recovery_required"]=copied.recovery;
                             if(!copied.artifact.isEmpty())copyMirror["artifact"]=observed(copied.artifact);

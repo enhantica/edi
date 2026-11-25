@@ -13,6 +13,10 @@ import edi.app
 Item {
     id: toolbar
 
+    // One accessible part in the browser, where Qt reads a flat page again for each of its items.
+    Accessible.role: Accessible.Grouping
+    Accessible.ignored: Qt.platform.os !== "wasm"
+
     // ToolbarLines takes these buttons into its row, the spacer starting the pointer group.
     readonly property bool toolbarUnits: true
 

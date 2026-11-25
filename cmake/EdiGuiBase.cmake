@@ -78,7 +78,9 @@ set(EDI_GUI_BASE_DIR ${gui_components_SOURCE_DIR}/src/EasyApplication)
 # One base module: its QML types, singletons and JavaScript files, all read from the pinned tree, except
 # the names in REPLACED, which edi builds from app/qml/Base/<subdir>/ in their place (Style/Fonts for edi's font set,
 # Style/Sizes for a sidebar width the app window sets, Elements/TextInput for its focused colour, Elements/ToolTip for
-# its wrapped text, Elements/Slider for its value as a data tooltip; ADR-0015 §10, ADR-0029).
+# its wrapped text, Elements/Slider for its value as a data tooltip, Elements/CheckIndicator for a toggle animated only
+# when pressed, Elements/Button, CheckBox and ComboBox for a tooltip made only while hovered; ADR-0015 §10, ADR-0029,
+# ADR-0102 R1).
 function(edi_gui_base_module target uri subdir)
     cmake_parse_arguments(ARG "" "" "TYPES;SINGLETONS;SCRIPTS;REPLACED" ${ARGN})
     set(files)
@@ -133,7 +135,7 @@ edi_gui_base_module(edi_gui_elements EasyApplication.Gui.Elements Gui/Elements
           MenuItem ParamComboBox Parameter ParamTextField RadioButton RemotePointer RunningLabel
           ScrollBar ScrollIndicator SideBarButton Slider SliderHandle SpinBox StatusBar
           StatusBarItem TabBar TabButton TextArea TextField TextInput ToolButton ToolTip ToolTipShadow
-    REPLACED ParamTextField Slider TextInput ToolTip)
+    REPLACED Button CheckBox CheckIndicator ComboBox ParamTextField Slider TextInput ToolTip)
 # Left out of Components: BasicReport (QtWebEngine), GuideWindow and GuideWindowContainer (they need a
 # host `Gui.Globals` module), JsonListModel (the dict/JSON model edi does not use).
 edi_gui_base_module(edi_gui_components EasyApplication.Gui.Components Gui/Components

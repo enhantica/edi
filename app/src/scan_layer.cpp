@@ -268,14 +268,25 @@ QList<bool> ScanLayer::shownLabels() const {
     return shown_labels_;
 }
 
+// A view gone asks for nothing more.
+ScanLayer::~ScanLayer() {
+    if (model_) {
+        model_->request(this, {});
+        model_->setShown(this, false);
+    }
+}
+
 void ScanLayer::setModel(ScanViewModel* model) {
     if (model == model_) {
         return;
     }
     if (model_) {
         disconnect(model_, nullptr, this, nullptr);
+        model_->request(this, {});
+        model_->setShown(this, false);
     }
     model_ = model;
+    if (model_) model_->setShown(this, active_);
     reductions_.clear();
     lines_fed_generations_.clear();
     map_rows_.clear();
@@ -431,6 +442,16 @@ void ScanLayer::setActive(bool active) {
         emit activeChanged();
         lines_->setActive(active_);
         top_->setActive(active_);
+        // A hidden view asks for nothing: its rows are read only while it shows (the owner, 2026-11-21). Shown again,
+        // its next polish asks for what it then draws.
+        if (model_) {
+            model_->setShown(this, active_);
+            if (!active_) {
+                model_->request(this, {});
+            } else {
+                polish();
+            }
+        }
         if (active_ && stale_) {
             measure();
             place();
@@ -502,11 +523,32 @@ void ScanLayer::redraw() {
     }
 }
 
+const std::vector<bool>& ScanLayer::mapDemand() {
+    const std::size_t count = model_ ? model_->patterns().size() : 0;
+    map_demand_.assign(count, false);
+    if (!model_) return map_demand_;
+    const int pixels = std::max(1, static_cast<int>(std::ceil(height())));
+    if (map_rows_ != model_->rows() || map_low_ != y_min_ || map_high_ != y_max_ ||
+        map_pixels_.size() != static_cast<std::size_t>(pixels) || map_smooth_ != smooth_rows_) {
+        map_rows_ = model_->rows();
+        map_low_ = y_min_;
+        map_high_ = y_max_;
+        map_smooth_ = smooth_rows_;
+        map_pixels_ = map_pixel_rows(map_rows_, model_->spans(), y_min_, y_max_, pixels, smooth_rows_);
+    }
+    for (const auto& pixel : map_pixels_) {
+        if (pixel.band != MapPixelRow::none && pixel.band < count) map_demand_[pixel.band] = true;
+    }
+    return map_demand_;
+}
+
 // Every read dataset's lowest and highest value on the y scale: the ends of the intensity the views spread, over its
 // included points only while only the included range is shown (the owner, 2026-10-27). At Separate each stacked
 // pattern spans its lowest to highest value in the x range shown, so its band stays filled as the zoom leaves its
 // large peaks out (the owner, 2026-10-26); one with no point in the range spans all its points.
 void ScanLayer::measure() {
+    // A hidden view measures nothing: it is measured once when shown again (stale_).
+    if (deferred()) return;
     constexpr double kInfinity = std::numeric_limits<double>::infinity();
     double low = kInfinity, high = -low;
     lows_.clear();
@@ -523,9 +565,25 @@ void ScanLayer::measure() {
         }
         const auto& patterns = model_->patterns();
         measured_ranges_.resize(patterns.size());
+        // Over what this view draws only (ADR-0102 rule 6): the Map's pixel rows' datasets, Stacked's drawn curves. A
+        // row loaded for another view or an earlier zoom is neither scanned nor counted: it would otherwise darken
+        // every colour of the Map, and scanning it costs what the view does not show.
+        const bool map = mode_ == QLatin1String("map");
+        if (map) {
+            measured_demand_ = mapDemand();
+        } else {
+            measured_demand_.assign(patterns.size(), false);
+            for (const auto set : drawn_datasets_)
+                if (set < measured_demand_.size()) measured_demand_[set] = true;
+        }
         for (std::size_t dataset = 0; dataset < patterns.size(); ++dataset) {
             const auto& pattern = patterns[dataset];
             auto& range = measured_ranges_[dataset];
+            if (!(dataset < measured_demand_.size() && measured_demand_[dataset])) {
+                lows_.push_back(kInfinity);
+                highs_.push_back(-kInfinity);
+                continue;
+            }
             if (range.generation != pattern.generation) {
                 range = Range{};
                 range.generation = pattern.generation;
@@ -694,6 +752,11 @@ void ScanLayer::reduce() {
         reductions_.clear();
         return;
     }
+    // No size yet (a first show before the plot is laid out): nothing is drawn, so nothing is asked for.
+    if (width() <= 0.0 || height() <= 0.0) {
+        model_->request(this, {});
+        return;
+    }
     const std::vector<ScanViewModel::Pattern>& patterns = model_->patterns();
     const ReductionKey key = reductionKey();
     std::vector<bool> needed(patterns.size(), false);
@@ -706,21 +769,32 @@ void ScanLayer::reduce() {
             if (count_changed) emit drawnDatasetCountChanged();
         }
         for (const auto set : drawn_datasets_) needed[set] = true;
+        // The ranges follow the curves drawn, whoever installed them (a scroll's syncDrawnRows included): measured
+        // again whenever the drawn set is not the one last measured.
+        if (needed != measured_demand_) measure();
     } else {
-        const int pixels = std::max(1, static_cast<int>(std::ceil(height())));
-        if (map_rows_ != model_->rows() || map_low_ != y_min_ || map_high_ != y_max_ ||
-            map_pixels_.size() != static_cast<std::size_t>(pixels) || map_smooth_ != smooth_rows_) {
-            map_rows_ = model_->rows();
-            map_low_ = y_min_;
-            map_high_ = y_max_;
-            map_smooth_ = smooth_rows_;
-            map_pixels_ = map_pixel_rows(map_rows_, model_->spans(), y_min_, y_max_, pixels, smooth_rows_);
-        }
+        // Each pixel row's own dataset; a smooth edge's neighbour only when it is some pixel row's own dataset too.
+        // Any other neighbour is left out whatever is loaded, so the colours depend on the view alone, never on rows
+        // an earlier zoom or the Stacked view happened to read. The colour range follows the same demand.
+        needed = mapDemand();
+        if (needed != measured_demand_) measure();
+    }
+    // Only what is shown is read (the owner, 2026-11-21): Stacked's curves top down; Map's one dataset per pixel row,
+    // top down. A smooth edge's neighbour that is no pixel row's own dataset is never read and never used (above):
+    // that row keeps its own colour.
+    std::vector<std::size_t> shown;
+    if (mode_ == QLatin1String("stacked")) {
+        shown = drawn_datasets_;
+    } else {
+        std::vector<bool> taken(patterns.size(), false);
         for (const auto& pixel : map_pixels_) {
-            if (pixel.band == MapPixelRow::none) continue;
-            for (const auto set : {pixel.band, pixel.lower, pixel.upper}) needed[set] = true;
+            if (pixel.band < taken.size() && !taken[pixel.band]) {
+                taken[pixel.band] = true;
+                shown.push_back(pixel.band);
+            }
         }
     }
+    model_->request(this, std::move(shown));
     if (!(key == reduced_for_) || reduced_mode_ != mode_) {
         reductions_.clear();
         lines_fed_generations_.clear();
@@ -856,14 +930,15 @@ void ScanLayer::recolour() {
         used = std::max(used, static_cast<std::size_t>(std::max(position, 0)) + 1);
     }
     const bool own = positions_.size() == count && used <= edi::kPaletteColourCount;
+    // The set's colours worked out once, not per dataset (44 000 datasets each worked out the same two ends again).
+    const std::vector<std::uint32_t> setColours = !map && !own ? edi::pattern_set_rgb(scheme, size, taken, dark_) : std::vector<std::uint32_t>{};
     for (std::size_t dataset = 0; dataset < size; ++dataset) {
         // Reversed, the last dataset takes the first colour.
         const std::size_t place = stacked_reversed_ ? size - 1 - dataset : dataset;
         if (!map) {
-            colours_[dataset] = QColor(QString::fromStdString(
-                own ? edi::figure_colour(scheme, static_cast<std::size_t>(std::max(positions_[static_cast<qsizetype>(place)], 0)),
-                                         used, dark_)
-                    : edi::pattern_set_colour(scheme, place, size, taken, dark_)));
+            colours_[dataset] = own ? QColor(QString::fromStdString(edi::figure_colour(
+                                          scheme, static_cast<std::size_t>(std::max(positions_[static_cast<qsizetype>(place)], 0)), used, dark_)))
+                                    : QColor::fromRgb(static_cast<QRgb>(setColours[place]));
             continue;
         }
         const double at = size > 1 ? static_cast<double>(place) / static_cast<double>(size - 1) : 1.0;
@@ -903,11 +978,19 @@ QColor ScanLayer::colourOf(int dataset) const {
     return colours_[static_cast<std::size_t>(dataset)];
 }
 
+bool ScanLayer::drawsDataset(int dataset) const {
+    return dataset >= 0 && static_cast<std::size_t>(dataset) < measured_demand_.size() &&
+           measured_demand_[static_cast<std::size_t>(dataset)];
+}
+
 double ScanLayer::valueAt(int dataset, double x) const {
     constexpr double kNaN = std::numeric_limits<double>::quiet_NaN();
     if (!model_ || dataset < 0 || static_cast<std::size_t>(dataset) >= model_->patterns().size() || !std::isfinite(x)) {
         return kNaN;
     }
+    // The readout is what this view draws (ADR-0102 rule 6): a dataset it does not draw has no value here, whatever is
+    // loaded (a click still selects it by its place).
+    if (!drawsDataset(dataset)) return kNaN;
     const ScanViewModel::Pattern& pattern = model_->patterns()[static_cast<std::size_t>(dataset)];
     const std::size_t points = std::min(pattern.shown.size(), pattern.intensity.size());
     for (std::size_t i = 0; i + 1 < points; ++i) {
@@ -944,6 +1027,7 @@ double ScanLayer::peakOf(int dataset) const {
         static_cast<std::size_t>(dataset) >= model_->rows().size()) {
         return kNaN;
     }
+    if (!drawsDataset(dataset)) return kNaN;  // only what this view draws (ADR-0102 rule 6)
     const ScanViewModel::Pattern& pattern = model_->patterns()[static_cast<std::size_t>(dataset)];
     const edi::YScale scale = scale_of(scale_);
     // The line's highest point in the range shown: a point inside, or where the line joining two neighbouring points
@@ -1010,7 +1094,8 @@ QColor excluded_tint(bool dark) {
 // The excluded ranges (edi ADR-0021 §4), each over its own dataset's row only (the owner, 2026-10-27), `spans` the Map's
 // rows, on whole pixels so that two rows' bands meet without a line between them.
 std::vector<QRect> excluded_bands(const ScanViewModel& model, const std::vector<edi::ScanRowSpan>& spans, double x_min,
-                                  double x_max, double y_min, double y_max, int columns, int pixel_rows) {
+                                  double x_max, double y_min, double y_max, int columns, int pixel_rows,
+                                  const std::vector<bool>* demand) {
     const std::vector<ScanViewModel::Pattern>& patterns = model.patterns();
     const std::size_t count = std::min({patterns.size(), model.rows().size(), spans.size()});
     const auto px = [&](double x) { return (x - x_min) / (x_max - x_min) * columns; };
@@ -1026,6 +1111,9 @@ std::vector<QRect> excluded_bands(const ScanViewModel& model, const std::vector<
     for (std::size_t set = 0; set < count; ++set) {
         if (!std::isfinite(spans[set].low) || !std::isfinite(spans[set].high)) {
             continue;  // a dataset with no place
+        }
+        if (demand && !(set < demand->size() && (*demand)[set])) {
+            continue;  // not drawn by this Map: its excluded ranges are not its to show
         }
         const int top = std::clamp(static_cast<int>(std::lround(py(spans[set].high))), 0, pixel_rows);
         const int bottom = std::clamp(static_cast<int>(std::lround(py(spans[set].low))), 0, pixel_rows);
@@ -1153,8 +1241,8 @@ void ScanLayer::paint(QPainter* painter) {
     const int pixel_columns = std::max(1, static_cast<int>(std::ceil(width())));
     const int pixel_rows = std::max(1, static_cast<int>(std::ceil(height())));
     const auto excluded = [&](const QColor& colour) {
-        for (const QRect& band : excluded_bands(*model_, spans, x_min_, x_max_, y_min_, y_max_,
-                                                 pixel_columns, pixel_rows)) {
+        for (const QRect& band : excluded_bands(*model_, spans, x_min_, x_max_, y_min_, y_max_, pixel_columns, pixel_rows,
+                                                 mode_ == QLatin1String("map") ? &map_demand_ : nullptr)) {
             painter->fillRect(band, colour);
         }
     };

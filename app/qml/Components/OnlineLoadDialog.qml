@@ -443,6 +443,8 @@ AppDialog {
             // give it to Description. Never wider than the popup: a row too narrow narrows its texts.
             columns: structures ? [numberColumnWidth, -1, -1, 0.001, -1, -1, -1, -1] : [numberColumnWidth, -1, -1, -1, -1, -1, -1, -1]
             spreadColumns: structures ? [7] : [3]
+            // Widths from column types, not rows (ADR-0103 rule 4): an id, then texts.
+            columnTypes: ["", "short", "text", "text", "text", "text", "text", "text"]
             clip: true
             // A long COD answer loads 100 at a time: the next chunk is asked for one chunk ahead of the end.
             onContentYChanged: {

@@ -319,6 +319,7 @@ TestCase {
         compare(Session.project.currentStructure.cell.lengthA.value, 7.125, "Quit's Save preserves the nontrivial untitled scientific edit");
     }
     function test_e_dialog_labels() {
+        Ui.expandGroup(test, Probe, app, "group.getStarted");
         Ui.click(test, Probe, app, "project.create");
         const dialog = creation();
         const labels = Render.descendants(dialog.contentItem).filter(item => typeof item.text === "string").map(item => item.text);
@@ -351,6 +352,7 @@ TestCase {
         ].sort((a, b) => a.tag < b.tag ? -1 : 1);
     }
     function test_f_dialog_hints(data) {
+        Ui.expandGroup(test, Probe, app, "group.getStarted");
         Ui.click(test, Probe, app, "project.create");
         const dialog = creation(), field = findChild(dialog, "createProject." + data.tag);
         verify(field !== null, "The create form exposes its " + data.tag + " field");

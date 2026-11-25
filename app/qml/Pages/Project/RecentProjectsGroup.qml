@@ -47,7 +47,6 @@ SideBarGroup {
             }
 
             objectName: "recentProjects.list"
-            maxRowCountShow: spareHeight > 0 ? Math.max(3, Math.floor((spareHeight - (headerItem ? headerItem.height : 0)) / tableRowHeight - 0.5)) : EaStyle.Sizes.tableMaxRowCountShow
             Component.onCompleted: Qt.callLater(place)
             Connections {
                 target: group.column
@@ -67,10 +66,11 @@ SideBarGroup {
             defaultInfoText: qsTr("No recent projects")
             sourceModel: RecentProjects.rows
             // The status is icons only, so it sits by the remove buttons (the owner, 2026-10-27).
-            columns: [numberColumnWidth, -1, AppSizes.iconOnlyColumnWidth, AppSizes.iconColumnWidth]
+            // Its columns by kind (the shared column model, DataTable.columnKinds; ADR-0103 decision 4).
+            columnKinds: ["index", "name", "mark", "control"]
             // The path takes all the width between the number and the status, so it is cut only when it does not fit
             // the row, whatever its first measure (the owner, 2026-11-02).
-            spreadColumns: [1]
+            // Widths from column types, not rows (ADR-0103 rule 4): the path, which the spread widens.
             header: EaComponents.ListViewHeader {
                 EaComponents.ListViewLabel {
                     elide: Text.ElideRight

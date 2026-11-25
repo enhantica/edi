@@ -4,6 +4,10 @@
 
 #include <QFont>
 #include <QObject>
+#include <QTimer>
+#include <deque>
+#include <map>
+#include <set>
 #include <QList>
 #include <QString>
 #include <QStringList>
@@ -23,6 +27,12 @@
 
 namespace edi_app {
 
+// Every scan file opened for the Stacked and Map views (their patterns and scan values), and separately for a list's
+// or the template's extract values, counted for the desk check of edi ADR-0102 rule 6 (the demo driver's
+// count-scan-reads); never read by the app itself.
+std::atomic<long long>& scanFileReads();
+std::atomic<long long>& listFileReads();
+
 class ScanSession;
 
 // The stacked patterns and the 2D map (edi ADR-0041) of a scan, or of a joint fit's experiments: every dataset's
@@ -38,6 +48,8 @@ class ScanViewModel : public QObject {
     Q_PROPERTY(int count READ count NOTIFY countChanged)
     // How many datasets are processed so far (read or refused); `failed` of them could not be read, and draw nothing.
     Q_PROPERTY(int loaded READ loaded NOTIFY loadedChanged)
+    // The patterns asked for and not read yet: the views read only what they show (the owner, 2026-11-21).
+    Q_PROPERTY(int pending READ pending NOTIFY pendingChanged)
     Q_PROPERTY(int failed READ failed NOTIFY failedChanged)
     // Bumped whenever the columns or the rows change, for the views to draw again.
     Q_PROPERTY(int revision READ revision NOTIFY revisionChanged)
@@ -118,6 +130,17 @@ class ScanViewModel : public QObject {
     void setWanted(bool wanted);
     int count() const { return static_cast<int>(patterns_.size()); }
     int loaded() const { return loaded_; }
+    int pending() const { return pending_; }
+    // The datasets a view shows, `who` naming the view: only those are read (Stacked's drawn curves, Map's pixel rows),
+    // the views' requests together, in their order. Before any request, an even sample of the scan is read so that a
+    // view has rows to show and ask from. An empty list withdraws the view's request.
+    void request(const void* who, std::vector<std::size_t> datasets);
+    // A view showing the scan, or no longer showing it. While none shows it nothing more is read (a batch under way
+    // finishes): not the rows asked for, not the scan values, not the first rows; showing one again resumes.
+    void setShown(const void* who, bool shown);
+    // The demand's size and how much of it is still unread, for the desk check's log.
+    int demandSize() const;
+    int unreadDemanded() const;
     int failed() const { return failed_; }
     int revision() const { return revision_; }
     QString xTitle() const { return x_title_; }
@@ -204,6 +227,7 @@ class ScanViewModel : public QObject {
     void wantedChanged();
     void countChanged();
     void loadedChanged();
+    void pendingChanged();
     void failedChanged();
     void revisionChanged();
     void xTitleChanged();
@@ -247,11 +271,37 @@ class ScanViewModel : public QObject {
         double value = std::numeric_limits<double>::quiet_NaN();
         QString value_text;  // the value as the file writes it
         QString error, value_problem;
+        bool value_tried = false;  // its extract rules were run (a pattern that failed first never gets that far)
         int bank = -1;  // a series row of one bank, and its scale
         double scale = 1.0;
     };
     void readNext();
-    void deliver(std::size_t first, std::vector<Read>& done);
+    // A batch's units in the order read, each with whether only its scan value is read (a dataset no view shows,
+    // whose value still places the rows).
+    struct Unit {
+        std::size_t index = 0;
+        bool value_only = false;
+        bool with_value = false;  // its scan value is read too: the rows are placed by value and it has none yet
+    };
+    void deliver(const std::vector<Unit>& units, std::vector<Read>& done);
+    // What is read next: the views' requests, or before any the even sample; then, for an extract rule, the other
+    // datasets' values alone.
+    void planReads();
+    bool takeKnownValue(std::size_t unit, bool setState = true);
+    void resetReads();
+    enum class State : std::uint8_t { Unread, Reading, Read, ValueOnly };
+    std::vector<State> state_;
+    std::map<const void*, std::vector<std::size_t>> requests_;
+    std::set<const void*> shown_;  // the views that show the scan now: nothing is read while there are none  // a view has asked since the reads were last reset: no request then means all are hidden
+    std::deque<std::size_t> queue_;  // patterns to read, in order
+    bool reading_ = false;           // a batch is out
+    int pending_ = 0;
+    int reading_patterns_ = 0;  // patterns in the batch out
+    int values_known_ = 0;  // datasets whose scan value was looked for (read whole or for the value alone)
+    std::vector<bool> value_seen_;
+    std::deque<std::size_t> value_queue_;  // the files whose scan value the rows' placement still needs
+    std::vector<bool> value_reading_;  // a value-only read under way: a coordinate is tracked apart from its pattern
+    QTimer plan_;           // requests made while a view draws are planned after it
     void placeRows();
     void placeAxis();
     // One dataset's x and excluded ranges on the axis shown.
@@ -288,10 +338,12 @@ class ScanViewModel : public QObject {
     int row_texts_revision_ = 0;
     std::vector<double> rows_;
     std::vector<edi::ScanRowSpan> spans_;
-    std::size_t next_ = 0;  // the next dataset to read
     int loaded_ = 0;
     int failed_ = 0;
     int revision_ = 0;
+    // The batches delivered since the views were last told (publishDelivery), told at most every 50 ms.
+    QTimer delivery_;
+    void publishDelivery();
     std::uint64_t pattern_generation_ = 0;  // the last Pattern::generation given
     bool has_values_ = false;  // the scan has an extract rule
     QString x_title_, row_title_, extracted_title_, error_, row_note_;
@@ -310,6 +362,10 @@ class ScanViewModel : public QObject {
     std::size_t units() const { return rows_by_bank_ && series_ ? static_cast<std::size_t>(series_experiments_.size()) : files_.size(); }
     QStringList series_experiments_;
     std::shared_ptr<const edi::ScanDatasets> datasets_;  // a series' points and their files
+    // The extract rules were edited since this scan was opened: the results rows hold values of the earlier rules, so
+    // only reads under the current rules are taken until the scan is opened again.
+    bool rules_edited_ = false;
+    const ScanSession* listing_ = nullptr;  // the scan's session, whose extracted values the rows' placement takes first
     const ScanSession* session_ = nullptr;              // a series' session, whose index each batch of rows reads
     edi::SeriesBankRule rule_;                          // a series' rule for its per-experiment rows
     void restartReads();

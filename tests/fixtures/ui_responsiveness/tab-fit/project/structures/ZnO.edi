@@ -1,0 +1,88 @@
+data_ZnO
+
+_space_group.name_h_m "P 63 m c"
+_space_group.coord_system_code h
+_space_group.it_number 186
+
+_cell.length_a 3.246122(52)
+_cell.length_b 3.24612
+_cell.length_c 5.20013(14)
+_cell.angle_alpha 90
+_cell.angle_beta 90
+_cell.angle_gamma 120
+
+loop_
+_atom_site.id
+_atom_site.type_symbol
+_atom_site.fract_x
+_atom_site.fract_y
+_atom_site.fract_z
+_atom_site.wyckoff_letter
+_atom_site.multiplicity
+_atom_site.occupancy
+_atom_site.adp_iso
+_atom_site.adp_type
+Zn1 Zn 0.3333333333333333 0.6666666666666666 0 b 2 1 0.63 Biso
+O1 O 0.3333333333333333 0.6666666666666666 0.3825 b 2 1 0.68 Biso
+
+_edi.schema_version 4
+
+loop_
+_space_group_symop.id
+_space_group_symop.operation_xyz
+1 x,y,z
+2 -x+y,-x,z
+3 -x+y,y,z
+4 -x,-x+y,z+1/2
+5 -x,-y,z+1/2
+6 -y,-x,z
+7 -y,x-y,z
+8 x,x-y,z
+9 x-y,-y,z+1/2
+10 x-y,x,z+1/2
+11 y,-x+y,z+1/2
+12 y,x,z+1/2
+
+loop_
+_expanded_atom_site.id
+_expanded_atom_site.atom_site_id
+_expanded_atom_site.site_symmetry
+_expanded_atom_site.fract_x
+_expanded_atom_site.fract_y
+_expanded_atom_site.fract_z
+_expanded_atom_site.cartn_x
+_expanded_atom_site.cartn_y
+_expanded_atom_site.cartn_z
+_expanded_atom_site.occupancy
+_expanded_atom_site.u_iso
+_expanded_atom_site.cluster_id
+1 Zn1 1_555 0.333333 0.666667 0 0.000000000000000444089 1.87415 0 1 0.00797904 1
+2 Zn1 1_556 0.333333 0.666667 1 0.000000000000000762505 1.87415 5.20013 1 0.00797904 2
+3 Zn1 4_655 0.666667 0.333333 0.5 1.62306 0.937075 2.60006 1 0.00797904 3
+4 O1 1_555 0.333333 0.666667 0.3825 0.000000000000000565883 1.87415 1.98905 1 0.0086123 4
+5 O1 4_655 0.666667 0.333333 0.8825 1.62306 0.937075 4.58911 1 0.0086123 5
+
+loop_
+_geom_bond.id
+_geom_bond.expanded_atom_site_id_1
+_geom_bond.expanded_atom_site_id_2
+_geom_bond.atom_site_label_1
+_geom_bond.atom_site_label_2
+_geom_bond.site_symmetry_1
+_geom_bond.site_symmetry_2
+_geom_bond.distance
+1 1 4 Zn1 O1 1_555 1_555 1.98905
+2 2 5 Zn1 O1 1_556 4_655 1.97124
+3 3 4 Zn1 O1 4_655 1_555 1.97124
+4 3 5 Zn1 O1 4_655 4_655 1.98905
+
+_atom_sites_cartn_transform.mat_11 3.24612
+_atom_sites_cartn_transform.mat_12 -1.62306
+_atom_sites_cartn_transform.mat_13 0.000000000000000318416
+_atom_sites_cartn_transform.mat_21 0
+_atom_sites_cartn_transform.mat_22 2.81122
+_atom_sites_cartn_transform.mat_23 0.000000000000000551513
+_atom_sites_cartn_transform.mat_31 0
+_atom_sites_cartn_transform.mat_32 0
+_atom_sites_cartn_transform.mat_33 5.20013
+_atom_sites_cartn_transform.axes "a along x; b in the xy plane"

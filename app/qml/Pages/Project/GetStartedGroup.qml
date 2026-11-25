@@ -33,6 +33,14 @@ SideBarGroup {
         id: buttons
 
         readonly property real buttonWidth: (EaStyle.Sizes.sideBarContentWidth - 2 * spacing) / 3
+        // Whole labels where the longest fits beside its icon, else the short ones, the same on every button.
+        readonly property bool wholeLabels: labelMetrics.advanceWidth + EaStyle.Sizes.fontPixelSize * 4 <= buttonWidth
+        TextMetrics {
+            id: labelMetrics
+            font.family: EaStyle.Fonts.fontFamily
+            font.pixelSize: EaStyle.Sizes.fontPixelSize
+            text: qsTr("Create a new project")
+        }
 
         spacing: EaStyle.Sizes.fontPixelSize
 
@@ -40,7 +48,7 @@ SideBarGroup {
             objectName: "project.create"
             width: buttons.buttonWidth
             fontIcon: "plus-circle"
-            text: qsTr("Create a new project")
+            text: buttons.wholeLabels ? qsTr("Create a new project") : qsTr("Create")
             ToolTip.text: qsTr("Start a new, empty project")
             onClicked: ApplicationInfo.createProjectClicked()
         }
@@ -50,7 +58,7 @@ SideBarGroup {
             objectName: "project.load"
             width: buttons.buttonWidth
             fontIcon: "upload"
-            text: qsTr("Load project")
+            text: buttons.wholeLabels ? qsTr("Load project") : qsTr("Load")
 
             // The menu's caret, from the icon font: the text fonts have no such character.
             EaElements.Label {

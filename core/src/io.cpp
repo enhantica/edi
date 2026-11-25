@@ -5064,7 +5064,7 @@ static Project load_project_folder(const std::string& directory, const WarningSi
         if (value < spec->range.min || value > spec->range.max) {
             std::ostringstream message;
             message.imbue(std::locale::classic());
-            message << entry.path << " = " << value << " is outside its admissible range [" << spec->range.min
+            message << edi_name_of(entry) << " = " << value << " is outside its admissible range [" << spec->range.min
                     << ", " << spec->range.max << "]; loaded as saved (a fit may leave a value there)";
             warn(message.str());
         }

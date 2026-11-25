@@ -289,7 +289,7 @@
         },
         {
           "title": "From web",
-          "text": "Choose **From web…**.",
+          "text": "Choose **From the web…**.",
           "page": "experiment",
           "target": "experiments.load.dataWeb",
           "check": "web-dialog:data"
@@ -342,15 +342,7 @@
         },
         {
           "title": "Background and excluded regions",
-          "text": "Click **+** under **Background** to add a point.",
-          "page": "experiment",
-          "target": "background.append",
-          "check": "rows:background.append=1",
-          "tab": "basic"
-        },
-        {
-          "title": "Background and excluded regions",
-          "text": "Enter **10** as the position of background point 1.",
+          "text": "Check that the position of background point 1 is **10**.",
           "page": "experiment",
           "target": "background.position.0",
           "check": "field:background.position.0=10",
@@ -518,7 +510,7 @@
         },
         {
           "title": "Scale, 2θ zero and cell",
-          "text": "Tick **Free** for **lbco scale**.",
+          "text": "Tick **Free** for **lbco Scale**.",
           "page": "analysis",
           "target": "parameters.free@experiment.linked_structures.lbco.scale",
           "check": "tick:experiment.linked_structures.lbco.scale",
@@ -1273,7 +1265,7 @@
         },
         {
           "title": "Cell, scale and 2θ zero",
-          "text": "Tick **Free** for **hs scale**.",
+          "text": "Tick **Free** for **hs Scale**.",
           "page": "analysis",
           "target": "parameters.free@experiment.linked_structures.hs.scale",
           "check": "tick:experiment.linked_structures.hs.scale",
@@ -1854,7 +1846,7 @@
         },
         {
           "title": "Scale, 2θ zero and cell",
-          "text": "Tick **Free** for **cosio scale**.",
+          "text": "Tick **Free** for **cosio Scale**.",
           "page": "analysis",
           "target": "parameters.free@experiment.linked_structures.cosio.scale",
           "check": "tick:experiment.linked_structures.cosio.scale",
@@ -2222,10 +2214,10 @@
         },
         {
           "title": "Constrain the two Co sites",
-          "text": "Enter **structure.atom_sites[Co1].adp_iso** as the name filter above the **Parameters** table.",
+          "text": "Enter **cosio.atom_site.Co1.adp_iso** as the name filter above the **Parameters** table.",
           "page": "analysis",
           "target": "parameters.nameFilter",
-          "check": "field:parameters.nameFilter=structure.atom_sites[Co1].adp_iso",
+          "check": "field:parameters.nameFilter=cosio.atom_site.Co1.adp_iso",
           "tab": "basic"
         },
         {
@@ -2411,7 +2403,7 @@
         },
         {
           "title": "Oxygen occupancies",
-          "text": "Tick **Free** for **O1 occ**.",
+          "text": "Tick **Free** for **O1 Occ**.",
           "page": "analysis",
           "target": "parameters.free@structure.atom_sites.O1.occupancy",
           "check": "tick:structure.atom_sites.O1.occupancy",
@@ -2419,7 +2411,7 @@
         },
         {
           "title": "Oxygen occupancies",
-          "text": "Tick **Free** for **O2 occ**.",
+          "text": "Tick **Free** for **O2 Occ**.",
           "page": "analysis",
           "target": "parameters.free@structure.atom_sites.O2.occupancy",
           "check": "tick:structure.atom_sites.O2.occupancy",
@@ -2427,7 +2419,7 @@
         },
         {
           "title": "Oxygen occupancies",
-          "text": "Tick **Free** for **O3 occ**.",
+          "text": "Tick **Free** for **O3 Occ**.",
           "page": "analysis",
           "target": "parameters.free@structure.atom_sites.O3.occupancy",
           "check": "tick:structure.atom_sites.O3.occupancy",
@@ -2822,7 +2814,7 @@
         },
         {
           "title": "Stage 1",
-          "text": "Tick **Free** for **cosio scale**.",
+          "text": "Tick **Free** for **cosio Scale**.",
           "page": "analysis",
           "target": "parameters.free@experiment.linked_structures.cosio.scale",
           "check": "tick:experiment.linked_structures.cosio.scale",
@@ -3808,7 +3800,7 @@
         },
         {
           "title": "Scale, 2θ zero and cell",
-          "text": "Tick **Free** for **lmo scale**.",
+          "text": "Tick **Free** for **lmo Scale**.",
           "page": "analysis",
           "target": "parameters.free@experiment.linked_structures.lmo.scale",
           "check": "tick:experiment.linked_structures.lmo.scale",
@@ -4185,7 +4177,7 @@
         },
         {
           "title": "Li/Ni mixing",
-          "text": "Tick **Free** for **Li1 occ**.",
+          "text": "Tick **Free** for **Li1 Occ**.",
           "page": "analysis",
           "target": "parameters.free@structure.atom_sites.Li1.occupancy",
           "check": "tick:structure.atom_sites.Li1.occupancy",
@@ -4416,7 +4408,7 @@
         },
         {
           "title": "Scale, 2θ zero and cell",
-          "text": "Tick **Free** for **y2o3 scale**.",
+          "text": "Tick **Free** for **y2o3 Scale**.",
           "page": "analysis",
           "target": "parameters.free@experiment.linked_structures.y2o3.scale",
           "check": "tick:experiment.linked_structures.y2o3.scale",
@@ -5690,7 +5682,7 @@
         },
         {
           "title": "Stage 1",
-          "text": "Tick **Free** for **si scale**.",
+          "text": "Tick **Free** for **si Scale**.",
           "page": "analysis",
           "target": "parameters.free@experiment.linked_structures.si.scale",
           "check": "tick:experiment.linked_structures.si.scale",
@@ -6215,7 +6207,7 @@
         },
         {
           "title": "Stage 1",
-          "text": "Tick **Free** for **cecoal scale**.",
+          "text": "Tick **Free** for **cecoal Scale**.",
           "page": "analysis",
           "target": "parameters.free@experiment.linked_structures.cecoal.scale",
           "check": "tick:experiment.linked_structures.cecoal.scale",
@@ -6280,7 +6272,7 @@
         },
         {
           "title": "Background",
-          "text": "Tick **Free** for **1 coefficient**.",
+          "text": "Tick **Free** for **1 Coefficient**.",
           "page": "analysis",
           "target": "parameters.free@experiment.background.1.coef",
           "check": "tick:experiment.background.1.coef",
@@ -6288,7 +6280,7 @@
         },
         {
           "title": "Background",
-          "text": "Tick **Free** for **2 coefficient**.",
+          "text": "Tick **Free** for **2 Coefficient**.",
           "page": "analysis",
           "target": "parameters.free@experiment.background.2.coef",
           "check": "tick:experiment.background.2.coef",
@@ -6296,7 +6288,7 @@
         },
         {
           "title": "Background",
-          "text": "Tick **Free** for **3 coefficient**.",
+          "text": "Tick **Free** for **3 Coefficient**.",
           "page": "analysis",
           "target": "parameters.free@experiment.background.3.coef",
           "check": "tick:experiment.background.3.coef",
@@ -6304,7 +6296,7 @@
         },
         {
           "title": "Background",
-          "text": "Tick **Free** for **4 coefficient**.",
+          "text": "Tick **Free** for **4 Coefficient**.",
           "page": "analysis",
           "target": "parameters.free@experiment.background.4.coef",
           "check": "tick:experiment.background.4.coef",
@@ -6312,7 +6304,7 @@
         },
         {
           "title": "Background",
-          "text": "Tick **Free** for **5 coefficient**.",
+          "text": "Tick **Free** for **5 Coefficient**.",
           "page": "analysis",
           "target": "parameters.free@experiment.background.5.coef",
           "check": "tick:experiment.background.5.coef",
@@ -6320,7 +6312,7 @@
         },
         {
           "title": "Background",
-          "text": "Tick **Free** for **6 coefficient**.",
+          "text": "Tick **Free** for **6 Coefficient**.",
           "page": "analysis",
           "target": "parameters.free@experiment.background.6.coef",
           "check": "tick:experiment.background.6.coef",
@@ -6328,7 +6320,7 @@
         },
         {
           "title": "Background",
-          "text": "Tick **Free** for **7 coefficient**.",
+          "text": "Tick **Free** for **7 Coefficient**.",
           "page": "analysis",
           "target": "parameters.free@experiment.background.7.coef",
           "check": "tick:experiment.background.7.coef",
@@ -6336,7 +6328,7 @@
         },
         {
           "title": "Background",
-          "text": "Tick **Free** for **8 coefficient**.",
+          "text": "Tick **Free** for **8 Coefficient**.",
           "page": "analysis",
           "target": "parameters.free@experiment.background.8.coef",
           "check": "tick:experiment.background.8.coef",
@@ -6344,7 +6336,7 @@
         },
         {
           "title": "Background",
-          "text": "Tick **Free** for **9 coefficient**.",
+          "text": "Tick **Free** for **9 Coefficient**.",
           "page": "analysis",
           "target": "parameters.free@experiment.background.9.coef",
           "check": "tick:experiment.background.9.coef",
@@ -6352,7 +6344,7 @@
         },
         {
           "title": "Background",
-          "text": "Tick **Free** for **10 coefficient**.",
+          "text": "Tick **Free** for **10 Coefficient**.",
           "page": "analysis",
           "target": "parameters.free@experiment.background.10.coef",
           "check": "tick:experiment.background.10.coef",
@@ -6360,7 +6352,7 @@
         },
         {
           "title": "Background",
-          "text": "Tick **Free** for **11 coefficient**.",
+          "text": "Tick **Free** for **11 Coefficient**.",
           "page": "analysis",
           "target": "parameters.free@experiment.background.11.coef",
           "check": "tick:experiment.background.11.coef",
@@ -6368,7 +6360,7 @@
         },
         {
           "title": "Background",
-          "text": "Tick **Free** for **12 coefficient**.",
+          "text": "Tick **Free** for **12 Coefficient**.",
           "page": "analysis",
           "target": "parameters.free@experiment.background.12.coef",
           "check": "tick:experiment.background.12.coef",
@@ -6691,7 +6683,7 @@
         },
         {
           "title": "Al3 occupancy",
-          "text": "Tick **Free** for **Al3 occ**.",
+          "text": "Tick **Free** for **Al3 Occ**.",
           "page": "analysis",
           "target": "parameters.free@structure.atom_sites.Al3.occupancy",
           "check": "tick:structure.atom_sites.Al3.occupancy",
@@ -6928,7 +6920,7 @@
         },
         {
           "title": "Stage 1",
-          "text": "Tick **Free** for **ceo2 scale**.",
+          "text": "Tick **Free** for **ceo2 Scale**.",
           "page": "analysis",
           "target": "parameters.free@experiment.linked_structures.ceo2.scale",
           "check": "tick:experiment.linked_structures.ceo2.scale",
@@ -8554,7 +8546,7 @@
         },
         {
           "title": "Background",
-          "text": "Clear **Free** for **1 intensity**.",
+          "text": "Clear **Free** for **1 Intensity**.",
           "page": "analysis",
           "target": "parameters.free@experiments.wish_1_10.background.1.intensity",
           "check": "untick:experiments.wish_1_10.background.1.intensity",
@@ -8562,7 +8554,7 @@
         },
         {
           "title": "Background",
-          "text": "Clear **Free** for **36 intensity**.",
+          "text": "Clear **Free** for **36 Intensity**.",
           "page": "analysis",
           "target": "parameters.free@experiments.wish_1_10.background.36.intensity",
           "check": "untick:experiments.wish_1_10.background.36.intensity",
@@ -8734,7 +8726,6 @@
             "experiments[wish_5_6].linked_structures[ncaf].scale"
           ],
           "expectWholeBackground": [
-            "experiments[wish_1_10].background[",
             "experiments[wish_2_9].background[",
             "experiments[wish_3_8].background[",
             "experiments[wish_4_7].background[",
@@ -9084,7 +9075,6 @@
             "experiments[wish_5_6].peak.rise_alpha_1"
           ],
           "expectWholeBackground": [
-            "experiments[wish_1_10].background[",
             "experiments[wish_2_9].background[",
             "experiments[wish_3_8].background[",
             "experiments[wish_4_7].background[",
@@ -9433,7 +9423,6 @@
             "experiments[wish_5_6].peak.rise_alpha_1"
           ],
           "expectWholeBackground": [
-            "experiments[wish_1_10].background[",
             "experiments[wish_2_9].background[",
             "experiments[wish_3_8].background[",
             "experiments[wish_4_7].background[",
@@ -9663,7 +9652,6 @@
             "experiments[wish_5_6].peak.rise_alpha_1"
           ],
           "expectWholeBackground": [
-            "experiments[wish_1_10].background[",
             "experiments[wish_2_9].background[",
             "experiments[wish_3_8].background[",
             "experiments[wish_4_7].background[",
@@ -9993,7 +9981,6 @@
             "experiments[wish_5_6].peak.rise_alpha_1"
           ],
           "expectWholeBackground": [
-            "experiments[wish_1_10].background[",
             "experiments[wish_2_9].background[",
             "experiments[wish_3_8].background[",
             "experiments[wish_4_7].background[",
@@ -10229,7 +10216,6 @@
             "structure.atom_sites[Na1].fract_x"
           ],
           "expectWholeBackground": [
-            "experiments[wish_1_10].background[",
             "experiments[wish_2_9].background[",
             "experiments[wish_3_8].background[",
             "experiments[wish_4_7].background[",
@@ -10471,7 +10457,6 @@
             "structure.atom_sites[Na1].fract_x"
           ],
           "expectWholeBackground": [
-            "experiments[wish_1_10].background[",
             "experiments[wish_2_9].background[",
             "experiments[wish_3_8].background[",
             "experiments[wish_4_7].background[",
@@ -11166,7 +11151,7 @@
         },
         {
           "title": "Background",
-          "text": "Clear **Free** for **31 intensity**.",
+          "text": "Clear **Free** for **31 Intensity**.",
           "page": "analysis",
           "target": "parameters.free@experiments.expt_n2.background.31.intensity",
           "check": "untick:experiments.expt_n2.background.31.intensity",
@@ -11198,7 +11183,7 @@
         },
         {
           "title": "Background",
-          "text": "Clear **Free** for **31 intensity**.",
+          "text": "Clear **Free** for **31 Intensity**.",
           "page": "analysis",
           "target": "parameters.free@experiments.expt_s2.background.31.intensity",
           "check": "untick:experiments.expt_s2.background.31.intensity",
@@ -11284,10 +11269,7 @@
             "experiments[expt_s2].linked_structures[austenite].scale",
             "experiments[expt_s2].linked_structures[ferrite].scale"
           ],
-          "expectWholeBackground": [
-            "experiments[expt_n2].background[",
-            "experiments[expt_s2].background["
-          ],
+          "expectWholeBackground": [],
           "expectChi2": 44.1,
           "expectChi2Tolerance": 0.01
         },
@@ -11490,10 +11472,7 @@
             "experiments[expt_s2].peak.broad_gauss_sigma_2",
             "experiments[expt_s2].peak.broad_lorentz_gamma_0"
           ],
-          "expectWholeBackground": [
-            "experiments[expt_n2].background[",
-            "experiments[expt_s2].background["
-          ],
+          "expectWholeBackground": [],
           "expectChi2": 36.36,
           "expectChi2Tolerance": 0.01
         },
@@ -11617,10 +11596,7 @@
             "experiments[expt_s2].peak.broad_lorentz_gamma_0",
             "structures[ferrite].atom_sites[Fe].adp_iso"
           ],
-          "expectWholeBackground": [
-            "experiments[expt_n2].background[",
-            "experiments[expt_s2].background["
-          ],
+          "expectWholeBackground": [],
           "expectChi2": 6.89,
           "expectChi2Tolerance": 0.01
         },
@@ -11794,7 +11770,7 @@
         },
         {
           "title": "Scale and 2θ zero",
-          "text": "Tick **Free** for **pbso4 scale**.",
+          "text": "Tick **Free** for **pbso4 Scale**.",
           "page": "analysis",
           "target": "parameters.free@experiment.linked_structures.pbso4.scale",
           "check": "tick:experiment.linked_structures.pbso4.scale",
@@ -12880,7 +12856,7 @@
         },
         {
           "title": "Scale, 2θ zero and cell",
-          "text": "Tick **Free** for **lam7o3 scale**.",
+          "text": "Tick **Free** for **lam7o3 Scale**.",
           "page": "analysis",
           "target": "parameters.free@experiment.linked_structures.lam7o3.scale",
           "check": "tick:experiment.linked_structures.lam7o3.scale",
@@ -14437,7 +14413,7 @@
         },
         {
           "title": "Scale, 2θ zero and cell",
-          "text": "Tick **Free** for **cosio scale**.",
+          "text": "Tick **Free** for **cosio Scale**.",
           "page": "analysis",
           "target": "parameters.free@experiment.linked_structures.cosio.scale",
           "check": "tick:experiment.linked_structures.cosio.scale",
@@ -15901,7 +15877,7 @@
         },
         {
           "title": "Scale",
-          "text": "Tick **Free** for **tb2ti2o7 scale**.",
+          "text": "Tick **Free** for **tb2ti2o7 Scale**.",
           "page": "analysis",
           "target": "parameters.free@experiment.linked_structures.tb2ti2o7.scale",
           "check": "tick:experiment.linked_structures.tb2ti2o7.scale",
@@ -16219,7 +16195,7 @@
         },
         {
           "title": "Scale",
-          "text": "Tick **Free** for **pr2nio4 scale**.",
+          "text": "Tick **Free** for **pr2nio4 Scale**.",
           "page": "analysis",
           "target": "parameters.free@experiment.linked_structures.pr2nio4.scale",
           "check": "tick:experiment.linked_structures.pr2nio4.scale",
@@ -18560,7 +18536,7 @@
         },
         {
           "title": "300 K: scale",
-          "text": "Tick **Free** for **cosio_300k scale**.",
+          "text": "Tick **Free** for **cosio_300k Scale**.",
           "page": "analysis",
           "target": "parameters.free@experiments.heidi_300k.linked_structures.cosio_300k.scale",
           "check": "tick:experiments.heidi_300k.linked_structures.cosio_300k.scale",
@@ -18887,7 +18863,7 @@
         },
         {
           "title": "55 K: scale",
-          "text": "Tick **Free** for **cosio_55k scale**.",
+          "text": "Tick **Free** for **cosio_55k Scale**.",
           "page": "analysis",
           "target": "parameters.free@experiments.heidi_55k.linked_structures.cosio_55k.scale",
           "check": "tick:experiments.heidi_55k.linked_structures.cosio_55k.scale",
@@ -19376,7 +19352,7 @@
         },
         {
           "title": "2.5 K: scale",
-          "text": "Tick **Free** for **cosio_2k5 scale**.",
+          "text": "Tick **Free** for **cosio_2k5 Scale**.",
           "page": "analysis",
           "target": "parameters.free@experiments.heidi_2k5.linked_structures.cosio_2k5.scale",
           "check": "tick:experiments.heidi_2k5.linked_structures.cosio_2k5.scale",

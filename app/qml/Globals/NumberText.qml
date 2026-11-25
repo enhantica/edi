@@ -57,6 +57,13 @@ QtObject {
     }
 
     // An uncertainty as the error column shows it, beside its `parameterValue`, by the rule above.
+    // How many significant digits a written number has (0.00450485: 6; 12.30: 4; 1.5e-3: 2).
+    function significantDigitsOf(text) {
+        const mantissa = String(text).trim().replace(/^[-+−]/, "").split(/[eE×(]/)[0].replace(".", "");
+        const digits = mantissa.replace(/^0+/, "");
+        return digits.length;
+    }
+
     function error(value, width, parameterValue) {
         return ApplicationInfo.numberPresentation(ApplicationInfo.NumberError, value, width, parameterValue, undefined);
     }

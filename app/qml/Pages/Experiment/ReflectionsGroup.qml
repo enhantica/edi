@@ -35,8 +35,14 @@ DataTable {
 
     readonly property bool magnetic: experiment !== null && experiment.reflections !== null && experiment.reflections.magnetic
 
-    columns: magnetic ? [numberColumnWidth, -1, -1, -1, -1, -1, -1] : [numberColumnWidth, -1, -1, -1, -1]
+    // Its columns by kind (the shared column model, DataTable.columnKinds; ADR-0103 decision 4).
+    columnKinds: magnetic ? ["index", "short", "number", "number", "number", "number", "number"] : ["index", "short", "number", "number", "number"]
+    // Widths from column types, not rows (ADR-0103 rule 4): the Miller indices a short column (three small integers),
+    // then values; a text column made them half the table (the owner, 2026-11-21).
+    // The values share the spare width, so the table spans its panel evenly rather than one last column taking it all.
 
+    // Aligned as the column model aligns them: the Miller indices at the left, the numbers at the right (the
+    // owner's sweep, 2026-11-23: centred cells under right-aligned titles).
     header: EaComponents.ListViewHeader {
         EaComponents.ListViewLabel {
             elide: Text.ElideRight
@@ -44,28 +50,30 @@ DataTable {
         }
         EaComponents.ListViewLabel {
             elide: Text.ElideRight
-            horizontalAlignment: Text.AlignHCenter
+            horizontalAlignment: Text.AlignLeft
             text: qsTr("h k l")
         }
         HeaderLabel {
+            horizontalAlignment: Text.AlignRight
             uid: "refln.d_spacing"
             withUnits: true
         }
         HeaderLabel {
+            horizontalAlignment: Text.AlignRight
             uid: table.positionItem
             withUnits: true
         }
         HeaderLabel {
-            horizontalAlignment: Text.AlignHCenter
+            horizontalAlignment: Text.AlignRight
             uid: "refln.f_squared_calc"
         }
         HeaderLabel {
-            horizontalAlignment: Text.AlignHCenter
+            horizontalAlignment: Text.AlignRight
             visible: table.magnetic
             uid: "refln.f_m_perp_squared_calc"
         }
         HeaderLabel {
-            horizontalAlignment: Text.AlignHCenter
+            horizontalAlignment: Text.AlignRight
             visible: table.magnetic
             uid: "refln.f_squared_total_calc"
             toolTipText: qsTr("F² + |F_M⊥|²: nuclear plus magnetic, unpolarised neutrons")
@@ -85,34 +93,34 @@ DataTable {
         }
         CellLabel {
             elide: Text.ElideRight
-            horizontalAlignment: Text.AlignHCenter
+            horizontalAlignment: Text.AlignLeft
             text: row.model.hkl
         }
         NumberLabel {
-            horizontalAlignment: Text.AlignHCenter
+            horizontalAlignment: Text.AlignRight
             number: table.shown("refln.d_spacing", row.model.dSpacing)
             full: NumberText.plainFull(row.model.dSpacing)
         }
         NumberLabel {
-            horizontalAlignment: Text.AlignHCenter
+            horizontalAlignment: Text.AlignRight
             number: table.shown(table.positionItem, row.model.position)
             full: NumberText.plainFull(row.model.position)
         }
         NumberLabel {
-            horizontalAlignment: Text.AlignHCenter
+            horizontalAlignment: Text.AlignRight
             number: table.shown("refln.f_squared_calc", row.model.fSquaredCalc)
             full: NumberText.plainFull(row.model.fSquaredCalc)
         }
         NumberLabel {
             objectName: `reflection.fMPerpSquared.${row.index}`
-            horizontalAlignment: Text.AlignHCenter
+            horizontalAlignment: Text.AlignRight
             visible: table.magnetic
             number: table.shown("refln.f_m_perp_squared_calc", row.model.fMPerpSquaredCalc)
             full: NumberText.plainFull(row.model.fMPerpSquaredCalc)
         }
         NumberLabel {
             objectName: `reflection.fSquaredTotal.${row.index}`
-            horizontalAlignment: Text.AlignHCenter
+            horizontalAlignment: Text.AlignRight
             visible: table.magnetic
             number: table.shown("refln.f_squared_total_calc", row.model.fSquaredTotalCalc)
             full: NumberText.plainFull(row.model.fSquaredTotalCalc)

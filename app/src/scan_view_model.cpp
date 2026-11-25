@@ -25,6 +25,8 @@ namespace {
 
 // Files read per background turn: few enough that the views fill in steadily, many enough to keep the turns cheap.
 constexpr std::size_t kBatch = 8;
+// The datasets read before any view has asked for its own: an even sample, enough for Stacked's most curves and a first
+// Map, after which each view asks for what it shows.
 constexpr double kNaN = std::numeric_limits<double>::quiet_NaN();
 
 // What every series row together may hold, in bytes (edi ADR-0089 point 5): a row keeps a summary of its pattern, never
@@ -154,7 +156,17 @@ std::vector<std::pair<double, double>> excluded_of(const edi::ExperimentBase& ex
 
 }  // namespace
 
-ScanViewModel::ScanViewModel(QObject* parent) : QObject(parent) {}
+ScanViewModel::ScanViewModel(QObject* parent) : QObject(parent) {
+    delivery_.setSingleShot(true);
+    delivery_.setInterval(50);
+    connect(&delivery_, &QTimer::timeout, this, &ScanViewModel::publishDelivery);
+    plan_.setSingleShot(true);
+    plan_.setInterval(0);
+    connect(&plan_, &QTimer::timeout, this, [this] {
+        planReads();
+        readNext();
+    });
+}
 
 ScanViewModel::~ScanViewModel() { stop(); }
 
@@ -162,7 +174,6 @@ void ScanViewModel::clear() {
     stop();
     ++generation_;
     started_ = false;
-    next_ = 0;
     loaded_ = 0;
     publish(failed_, 0, &ScanViewModel::failedChanged);
     publish(error_, QString(), &ScanViewModel::errorChanged);
@@ -172,17 +183,40 @@ void ScanViewModel::clear() {
     source_.reset();
     datasets_.reset();
     session_ = nullptr;
+    listing_ = nullptr;
     rule_ = {};
     patterns_.clear();
     values_.clear();
     value_texts_.clear();
+    resetReads();
 }
+
+namespace {
+// Whether two projects extract the same scan values: the same rules, target and pattern in order.
+bool same_extract(const edi::Project* a, const edi::Project* b) {
+    if (a == nullptr || b == nullptr) return a == b;
+    const auto& x = a->sequential_fit.extract;
+    const auto& y = b->sequential_fit.extract;
+    if (x.size() != y.size()) return false;
+    auto i = x.begin();
+    for (auto j = y.begin(); j != y.end(); ++i, ++j) {
+        if ((*i)->target.value() != (*j)->target.value() || (*i)->pattern.value() != (*j)->pattern.value() ||
+            (*i)->required.get() != (*j)->required.get()) {
+            return false;
+        }
+    }
+    return true;
+}
+}  // namespace
 
 void ScanViewModel::setScan(const ScanSession* session, const edi::Project* project, const QString& extracted_title) {
     const bool conversion_changed = readConversion(project);
     // Results read again over the same files (after a run or an undo) leave what was read: the patterns are the same.
     if (!joint_ && session != nullptr && project != nullptr && session->datasets().files == files_ &&
-        session->datasets().directory == directory_ && extracted_title == extracted_title_ && !files_.empty()) {
+        session->datasets().directory == directory_ && extracted_title == extracted_title_ && !files_.empty() &&
+        same_extract(source_.get(), project)) {
+        // The values come from this session from now on (a reload is a new one).
+        listing_ = session;
         if (session_ != nullptr) {
             rule_ = session->bankRule(*project);  // the project's rule as it is now
         }
@@ -193,7 +227,11 @@ void ScanViewModel::setScan(const ScanSession* session, const edi::Project* proj
         }
         return;
     }
+    // A rule edit over the same scan: its saved results were extracted under the earlier rules.
+    const bool same_scan = session != nullptr && session->datasets().directory == directory_ && !directory_.empty();
+    const bool edited = same_scan && (rules_edited_ || (source_ != nullptr && project != nullptr && !same_extract(source_.get(), project)));
     clear();
+    rules_edited_ = edited;
     publish(joint_, false, &ScanViewModel::jointChanged);
     publish(native_shared_, true, &ScanViewModel::nativeSharedChanged);
     publish(row_labels_, QStringList(), &ScanViewModel::rowLabelsChanged);
@@ -213,6 +251,7 @@ void ScanViewModel::setScan(const ScanSession* session, const edi::Project* proj
         // What a series row's per-experiment rows are read against: the session's rule, and its index as each batch
         // is asked for (a fit adds rows meanwhile).
         session_ = series ? session : nullptr;
+        listing_ = session;
         rule_ = series ? session->bankRule(*project) : edi::SeriesBankRule{};
         QStringList names;
         if (series) {
@@ -240,6 +279,7 @@ void ScanViewModel::setScan(const ScanSession* session, const edi::Project* proj
     patterns_.assign(units(), {});
     values_.assign(units(), kNaN);
     value_texts_.assign(units(), QString());
+    resetReads();
     placeAxis();
     placeRows();
     emit countChanged();
@@ -338,6 +378,8 @@ void ScanViewModel::setJoint(const edi::Project* project) {
     values_.assign(patterns_.size(), kNaN);
     value_texts_.assign(patterns_.size(), QString());
     loaded_ = static_cast<int>(patterns_.size());
+    resetReads();
+    state_.assign(patterns_.size(), State::Read);  // a joint fit's experiments come whole from the project
     publish(failed_, empty, &ScanViewModel::failedChanged);
     publish(d_available_, every_d, &ScanViewModel::dAvailableChanged);
     publish(native_shared_, shared, &ScanViewModel::nativeSharedChanged);
@@ -369,7 +411,6 @@ void ScanViewModel::restartReads() {
     stop();
     ++generation_;
     started_ = false;
-    next_ = 0;
     loaded_ = 0;
     publish(failed_, 0, &ScanViewModel::failedChanged);
     publish(error_, QString(), &ScanViewModel::errorChanged);
@@ -378,6 +419,7 @@ void ScanViewModel::restartReads() {
     patterns_.assign(units(), {});
     values_.assign(units(), kNaN);
     value_texts_.assign(units(), QString());
+    resetReads();
     placeAxis();
     placeRows();
     emit countChanged();
@@ -397,6 +439,11 @@ void ScanViewModel::setWanted(bool wanted) {
     emit wantedChanged();
     if (wanted_) {
         start();
+        plan_.start();
+    } else {
+        // A batch under way finishes; nothing more is read while no view wants the scan.
+        queue_.clear();
+        publish(pending_, reading_patterns_, &ScanViewModel::pendingChanged);
     }
 }
 
@@ -433,7 +480,136 @@ void ScanViewModel::start() {
     }
     started_ = true;
     stop_ = std::make_shared<std::atomic<bool>>(false);
+    reading_ = false;
+    reading_patterns_ = 0;
+    planReads();
     readNext();
+}
+
+void ScanViewModel::resetReads() {
+    state_.assign(units(), State::Unread);
+    value_seen_.assign(units(), false);
+    value_reading_.assign(units(), false);
+    requests_.clear();
+    queue_.clear();
+    reading_ = false;
+    reading_patterns_ = 0;
+    values_known_ = 0;
+    value_queue_.clear();
+    plan_.stop();
+    publish(pending_, 0, &ScanViewModel::pendingChanged);
+}
+
+void ScanViewModel::request(const void* who, std::vector<std::size_t> datasets) {
+    const auto at = requests_.find(who);
+    if (datasets.empty() ? at == requests_.end() : at != requests_.end() && at->second == datasets) {
+        return;
+    }
+    if (datasets.empty()) {
+        requests_.erase(at);
+    } else {
+        requests_[who] = std::move(datasets);
+    }
+    placeRange();
+    plan_.start();
+}
+
+std::atomic<long long>& scanFileReads() {
+    static std::atomic<long long> reads{0};
+    return reads;
+}
+
+std::atomic<long long>& listFileReads() {
+    static std::atomic<long long> reads{0};
+    return reads;
+}
+
+int ScanViewModel::demandSize() const {
+    std::set<std::size_t> all;
+    for (const auto& [who, datasets] : requests_) all.insert(datasets.begin(), datasets.end());
+    return static_cast<int>(all.size());
+}
+
+int ScanViewModel::unreadDemanded() const {
+    std::set<std::size_t> all;
+    for (const auto& [who, datasets] : requests_)
+        for (const std::size_t unit : datasets)
+            if (unit < state_.size() && state_[unit] != State::Read) all.insert(unit);
+    return static_cast<int>(all.size());
+}
+
+void ScanViewModel::setShown(const void* who, bool shown) {
+    const bool before = !shown_.empty();
+    if (shown) {
+        shown_.insert(who);
+    } else {
+        shown_.erase(who);
+    }
+    if (!before && !shown_.empty()) plan_.start();
+}
+
+void ScanViewModel::planReads() {
+    // The one demand (edi ADR-0102 rule 6): the patterns the shown views ask for and, while their rows are placed by
+    // scan value, the values of the files not yet placed. Nothing else is read: no sample before a view asks, nothing
+    // ahead while idle, nothing while no view shows the scan or wants it.
+    queue_.clear();
+    value_queue_.clear();
+    std::vector<bool> queued(state_.size(), false);
+    if (wanted_ && !shown_.empty()) {
+        for (const auto& [who, datasets] : requests_) {
+            for (const std::size_t unit : datasets) {
+                if (unit < state_.size() && !queued[unit] && (state_[unit] == State::Unread || state_[unit] == State::ValueOnly)) {
+                    queued[unit] = true;
+                    queue_.push_back(unit);
+                }
+            }
+        }
+        if (has_values_ && !rows_by_index_) {
+            bool took = false;
+            for (std::size_t unit = 0; unit < state_.size(); ++unit) {
+                // A coordinate is tracked apart from its pattern: a pattern read in File order still needs its value
+                // once the rows are placed by value again.
+                if (value_seen_[unit] || value_reading_[unit] || state_[unit] == State::Reading || queued[unit]) continue;
+                // A value the scan already holds (its results or the experiments list's reads) is taken, not read again.
+                if (takeKnownValue(unit, state_[unit] == State::Unread)) {
+                    took = true;
+                } else {
+                    value_queue_.push_back(unit);
+                }
+            }
+            if (took && values_known_ == count()) {
+                placeRows();
+                ++revision_;
+                emit revisionChanged();
+            }
+        }
+    }
+    publish(pending_, static_cast<int>(queue_.size() + value_queue_.size()) + reading_patterns_, &ScanViewModel::pendingChanged);
+}
+
+bool ScanViewModel::takeKnownValue(std::size_t unit, bool setState) {
+    // A series point's value is its first experiment's file's, which the session holds under the point's key (crysta
+    // writes one results row per point); by bank, a row is one bank at one point and has no coordinate of its own.
+    if (listing_ == nullptr || (series_ && rows_by_bank_)) return false;
+    // After a rule edit only the session's own reads under the current rules count; results rows are the earlier rules'.
+    const std::vector<std::string>* extracted =
+        !rules_edited_ ? listing_->extracted(static_cast<int>(unit))
+        : same_extract(listing_->source(), source_.get()) ? listing_->listExtracted(static_cast<int>(unit))
+                                                         : nullptr;
+    if (extracted == nullptr) return false;
+    double value = 0.0;
+    if (!extracted->empty() && edi::parse_scan_number(extracted->front(), value)) {
+        values_[unit] = value;
+        value_texts_[unit] = QString::fromStdString(extracted->front()).trimmed();
+    } else if (value_problem_.isEmpty()) {
+        value_problem_ = QString::fromStdString(files_.at(unit)) +
+                         (extracted->empty() ? QStringLiteral(": nothing is extracted")
+                                             : QStringLiteral(": '%1' is not a number").arg(QString::fromStdString(extracted->front())));
+    }
+    value_seen_[unit] = true;
+    ++values_known_;
+    if (setState) state_[unit] = State::ValueOnly;
+    return true;
 }
 
 void ScanViewModel::stop() {
@@ -443,26 +619,63 @@ void ScanViewModel::stop() {
 }
 
 void ScanViewModel::readNext() {
-    const std::size_t units = this->units();
-    if (next_ >= units) {
+    if (reading_ || !started_ || (stop_ && stop_->load()) || shown_.empty()) {
         return;
     }
-    const std::size_t first = next_;
-    const std::size_t last = std::min(units, first + kBatch);
-    next_ = last;
+    std::vector<Unit> chosen_units;
+    bool took_at_admission = false;
+    while (chosen_units.size() < kBatch && !queue_.empty()) {
+        const std::size_t unit = queue_.front();
+        queue_.pop_front();
+        if (unit < state_.size() && (state_[unit] == State::Unread || state_[unit] == State::ValueOnly)) {
+            // Its scan value too only while the rows are placed by value and it has none, held or read (rule 6).
+            bool with_value = has_values_ && !rows_by_index_ && !value_seen_[unit] && !value_reading_[unit];
+            if (with_value && takeKnownValue(unit, false)) {
+                with_value = false;
+                took_at_admission = true;
+            }
+            state_[unit] = State::Reading;
+            chosen_units.push_back({unit, false, with_value});
+        }
+    }
+    reading_patterns_ = static_cast<int>(chosen_units.size());
+    // The last missing coordinate taken from the session here places the rows now: no delivery will see it arrive.
+    if (took_at_admission && values_known_ == count()) {
+        placeRows();
+        ++revision_;
+        emit revisionChanged();
+    }
+    // Then the scan values the rows' placement still needs (planReads), each file read for its value alone.
+    while (chosen_units.empty() && !value_queue_.empty()) {
+        while (chosen_units.size() < kBatch && !value_queue_.empty()) {
+            const std::size_t unit = value_queue_.front();
+            value_queue_.pop_front();
+            if (unit < state_.size() && state_[unit] != State::Reading && !value_seen_[unit] && !value_reading_[unit]) {
+                if (state_[unit] == State::Unread) state_[unit] = State::Reading;
+                value_reading_[unit] = true;
+                chosen_units.push_back({unit, true, true});
+            }
+        }
+    }
+    if (chosen_units.empty()) {
+        return;
+    }
+    reading_ = true;
     const QPointer<ScanViewModel> self(this);
     const std::uint64_t generation = generation_;
     const std::shared_ptr<std::atomic<bool>> stop = stop_;
-    const auto index = session_ != nullptr ? std::make_shared<const edi::ScanResultIndex>(session_->index())
-                                           : std::make_shared<const edi::ScanResultIndex>();
+    // The session's shared copy of its index, which only a series' rows read: never a copy per batch.
+    static const auto kNoIndex = std::make_shared<const edi::ScanResultIndex>();
+    const std::shared_ptr<const edi::ScanResultIndex> index = session_ != nullptr && datasets_ ? session_->indexSnapshot() : kNoIndex;
     // By bank the units are the banks at one point; otherwise the points (or a scan's files).
     const bool by_bank = rows_by_bank_ && series_;
     const std::size_t at_point = by_bank ? std::min<std::size_t>(static_cast<std::size_t>(bank_point_), files_.empty() ? 0 : files_.size() - 1) : 0;
     std::vector<std::string> batch;
-    for (std::size_t unit = first; unit < last; ++unit) {
-        batch.push_back(by_bank ? files_.at(at_point) : files_.at(unit));
+    batch.reserve(chosen_units.size());
+    for (const Unit& unit : chosen_units) {
+        batch.push_back(by_bank ? files_.at(at_point) : files_.at(unit.index));
     }
-    run_in_background([self, generation, stop, first, batch = std::move(batch), source = source_, directory = directory_,
+    run_in_background([self, generation, stop, chosen_units, batch = std::move(batch), source = source_, directory = directory_,
                        mode = mode_, values = has_values_, datasets = datasets_, index, rule = rule_,
                        chosen = rows_experiment_, by_bank,
                        at_point] {
@@ -473,14 +686,16 @@ void ScanViewModel::readNext() {
                 break;
             }
             Read read;
+            ++scanFileReads();
             // A series' row is its point on d; its place along the series comes from the first experiment's file.
-            const std::size_t point = by_bank ? at_point : first + k;
+            const std::size_t point = by_bank ? at_point : chosen_units[k].index;
+            const bool value_only = chosen_units[k].value_only;
             const std::string file = datasets ? datasets->point_files.at(point).front() : key;
-            if (datasets) {
+            if (datasets && !value_only) {
                 try {
                     std::vector<std::size_t> experiments;
                     for (std::size_t e = 0; e < datasets->experiments.size(); ++e) {
-                        if (by_bank ? e == first + k : chosen < 0 || static_cast<std::size_t>(chosen) == e)
+                        if (by_bank ? e == chosen_units[k].index : chosen < 0 || static_cast<std::size_t>(chosen) == e)
                             experiments.push_back(e);
                     }
                     const edi::SeriesPointCheck check = edi::series_point_check(rule, *datasets, *index, point);
@@ -508,7 +723,7 @@ void ScanViewModel::readNext() {
                 }
             }
             // The pattern: unreadable, it is not drawn and is counted as such.
-            if (!datasets) {
+            if (!datasets && !value_only) {
                 try {
                     const edi::PdDataBase data = edi::read_scan_dataset(directory, file, mode);
                     const std::vector<double>& x = data.axis();
@@ -527,7 +742,8 @@ void ScanViewModel::readNext() {
             }
             // Its place along the scan: without one the pattern is still drawn, and the rows stay by file index with
             // the reason.
-            if (values) {
+            if (values && chosen_units[k].with_value) {
+                read.value_tried = true;
                 try {
                     const std::vector<std::string> extracted = edi::scan_extract_values(*source, directory, file);
                     double value = 0.0;
@@ -548,11 +764,11 @@ void ScanViewModel::readNext() {
         }
         QMetaObject::invokeMethod(
             QCoreApplication::instance(),
-            [self, generation, stop, first, done = std::move(done)]() mutable {
+            [self, generation, stop, chosen_units, done = std::move(done)]() mutable {
                 if (self.isNull() || generation != self->generation_ || stop->load()) {
                     return;  // a read of an earlier listing, or a stopped one
                 }
-                self->deliver(first, done);
+                self->deliver(chosen_units, done);
             },
             Qt::QueuedConnection);
     });
@@ -560,10 +776,28 @@ void ScanViewModel::readNext() {
 
 // A batch's reads, in scan order from `first`: each dataset keeps its points, placed on the axis shown, and the x range
 // grows to hold them.
-void ScanViewModel::deliver(std::size_t first, std::vector<Read>& done) {
-    for (std::size_t i = 0; i < done.size(); ++i) {
+void ScanViewModel::deliver(const std::vector<Unit>& units, std::vector<Read>& done) {
+    reading_ = false;
+    reading_patterns_ = 0;
+    const bool values_were_known = values_known_ == count();
+    for (std::size_t i = 0; i < done.size() && i < units.size(); ++i) {
         Read& read = done[i];
-        const std::size_t dataset = first + i;
+        const std::size_t dataset = units[i].index;
+        // A value is seen only where this unit read one: a pattern read without its value leaves it to be found.
+        if (units[i].value_only) value_reading_[dataset] = false;
+        if (read.value_tried && !value_seen_[dataset]) {
+            value_seen_[dataset] = true;
+            ++values_known_;
+        }
+        if (units[i].value_only) {
+            // A pattern already read stays read; one not read is now known by its value alone.
+            if (state_[dataset] == State::Reading) state_[dataset] = State::ValueOnly;
+            if (!read.value_problem.isEmpty() && value_problem_.isEmpty()) value_problem_ = read.value_problem;
+            values_[dataset] = read.value;
+            value_texts_[dataset] = read.value_text;
+            continue;
+        }
+        state_[dataset] = State::Read;
         ++loaded_;
         if (!read.error.isEmpty()) {
             if (error_.isEmpty()) {
@@ -589,22 +823,43 @@ void ScanViewModel::deliver(std::size_t first, std::vector<Read>& done) {
             pattern.excluded = template_excluded_;
         }
         placePattern(pattern);
-        values_[dataset] = read.value;
-        value_texts_[dataset] = read.value_text;
+        if (read.value_tried) {
+            values_[dataset] = read.value;
+            value_texts_[dataset] = read.value_text;
+        }
+    }
+    // A batch cut short by a stop leaves its other units to be read again.
+    for (std::size_t i = done.size(); i < units.size(); ++i) {
+        if (state_[units[i].index] == State::Reading) state_[units[i].index] = State::Unread;
+        if (units[i].value_only) value_reading_[units[i].index] = false;
     }
     placeRange();
     if (series_) publishBackground();
-    // File-index rows and labels stay fixed while batches arrive; extracted values reorder them once at the end.
-    if (loaded_ == count()) placeRows();
+    planReads();
+    // File-index rows and labels stay fixed while batches arrive; extracted values reorder them once every dataset's
+    // value is known.
+    if (has_values_ && !values_were_known && values_known_ == count()) placeRows();
+    const bool complete = pending_ == 0;
+    // The batches' patterns reach the views at most every 50 ms (ADR-0102 rule 4): a scan of tens of thousands of
+    // files arrives in thousands of batches, and each drew the Stacked and Map views again. The last one at once.
+    if (complete) {
+        delivery_.stop();
+        publishDelivery();
+    } else if (!delivery_.isActive()) {
+        delivery_.start();
+    }
+    readNext();
+}
+
+void ScanViewModel::publishDelivery() {
     emit loadedChanged();
     ++revision_;
     emit revisionChanged();
-    readNext();
 }
 
 void ScanViewModel::placeRows() {
     // By value once every dataset has one; until then, and without an extract rule (a joint fit has none), by place.
-    const bool by_value = has_values_ && !rows_by_index_ && loaded_ == count() &&
+    const bool by_value = has_values_ && !rows_by_index_ && values_known_ == count() &&
                           std::all_of(values_.begin(), values_.end(), [](double value) { return std::isfinite(value); });
     rows_ = by_value ? edi::scan_row_positions(values_)
                      : edi::scan_row_positions(std::vector<double>(patterns_.size(), kNaN));
@@ -612,10 +867,12 @@ void ScanViewModel::placeRows() {
     // Datasets at one scan value (a temperature held, or reached again) each keep a band and a row of their own.
     edi::separate_shared_rows(rows_, spans_);
     publish(rows_by_value_, by_value, &ScanViewModel::rowsByValueChanged);
-    const QString title = by_value ? extracted_title_ : orderName();
+    // An axis title starts with a capital, as every label (the owner's label rule): "File", "Datablock".
+    QString title = by_value ? extracted_title_ : orderName();
+    if (!title.isEmpty()) title[0] = title[0].toUpper();
     // Every dataset read and still placed by file although the scan extracts a value: say why.
     publish(row_note_,
-            has_values_ && !rows_by_index_ && !by_value && loaded_ == count() && !value_problem_.isEmpty()
+            has_values_ && !rows_by_index_ && !by_value && values_known_ == count() && !value_problem_.isEmpty()
                 ? tr("Rows by file: %1").arg(value_problem_)
                 : QString(),
             &ScanViewModel::rowNoteChanged);
@@ -625,11 +882,25 @@ void ScanViewModel::placeRows() {
     const QString unit = bracket >= 0 && extracted_title_.endsWith(QLatin1Char(')'))
                              ? extracted_title_.mid(bracket + 1, extracted_title_.size() - bracket - 2).trimmed()
                              : QString();
+    // Values share one number of decimals: one digit past the smallest gap between neighbouring values, so neighbours
+    // read apart and no label carries the file's trailing zeros ("93.4840" beside "497.379").
+    int decimals = 0;
+    if (by_value) {
+        std::vector<double> sorted;
+        for (const double value : values_)
+            if (std::isfinite(value)) sorted.push_back(value);
+        std::sort(sorted.begin(), sorted.end());
+        double gap = 0;
+        for (std::size_t i = 1; i < sorted.size(); ++i)
+            if (const double step = sorted[i] - sorted[i - 1]; step > 0 && (gap == 0 || step < gap)) gap = step;
+        if (gap > 0) decimals = std::clamp(1 - static_cast<int>(std::floor(std::log10(gap))), 0, 4);
+    }
     QStringList texts;
     for (std::size_t i = 0; i < patterns_.size(); ++i) {
         if (by_value) {
-            const QString value = i < value_texts_.size() && !value_texts_[i].isEmpty() ? value_texts_[i]
-                                                                                        : QString::number(values_[i], 'g', 6);
+            const QString value = std::isfinite(values_[i]) ? QString::number(values_[i], 'f', decimals)
+                                  : i < value_texts_.size()  ? value_texts_[i]
+                                                             : QString();
             texts.append(unit.isEmpty() ? value : value + QLatin1Char(' ') + unit);
         } else if (joint_) {
             texts.append(static_cast<qsizetype>(i) < row_labels_.size() ? row_labels_[static_cast<qsizetype>(i)] : QString());
@@ -823,6 +1094,8 @@ void ScanViewModel::setRowsByIndex(bool on) {
     if (on != rows_by_index_) {
         rows_by_index_ = on;
         emit rowsByIndexChanged();
+        // By file the rows need no scan value; by value again they do (planReads).
+        plan_.start();
         placeRows();
         ++revision_;
         emit revisionChanged();
@@ -911,7 +1184,17 @@ void ScanViewModel::placePattern(Pattern& pattern) {
 
 void ScanViewModel::placeRange() {
     double low = std::numeric_limits<double>::infinity(), high = -low;
-    for (Pattern& pattern : patterns_) {
+    // Over what the shown views ask for only (ADR-0102 rule 6): the x range follows the views, never the rows an
+    // earlier view happened to load. With no view asking it stays as it was, for the next view to ask.
+    if (requests_.empty()) return;
+    std::vector<bool> asked(patterns_.size(), false);
+    for (const auto& [who, datasets] : requests_) {
+        for (const std::size_t set : datasets)
+            if (set < asked.size()) asked[set] = true;
+    }
+    for (std::size_t set = 0; set < patterns_.size(); ++set) {
+        Pattern& pattern = patterns_[set];
+        if (!asked[set]) continue;
         if (pattern.range_generation != pattern.generation || pattern.range_included != included_only_) {
             pattern.range_low = std::numeric_limits<double>::infinity();
             pattern.range_high = -pattern.range_low;

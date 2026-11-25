@@ -33,9 +33,12 @@ EaElements.ComboBox {
     function positionPopup(opening) {
         ApplicationInfo.searchPositionPopup(opening);
     }
-    // In a table, as wide as its widest option (or what it shows), a small gap and the arrow, the arrow right after
-    // the text (the owner, 2026-10-27); a wider column keeps the space after it.
-    readonly property real fittedWidth: Math.ceil(Math.max(widthMetrics.optionTextWidth, widthMetrics.displayTextWidth) + Math.max(contentItemLabel ? contentItemLabel.leftPadding + contentItemLabel.rightPadding : 0, contentItem ? contentItem.implicitWidth - widthMetrics.displayTextWidth : 0) + font.pixelSize * 0.5) + leftPadding + rightPadding
+    // In a table, as wide as what it shows (its value and any icons), a small gap and the arrow, the arrow right after
+    // the value (the owner, 2026-10-27 and 2026-11-22); a longer option opens in the popup, which has its own width, and
+    // a wider column keeps the space after the box. Plain text where the shown text has no markup: rich text cannot
+    // elide, and a long name ran under the arrow; a name with markup (a coloured part) stays rich.
+    textFormat: displayText.indexOf("<") >= 0 ? Text.RichText : Text.PlainText
+    readonly property real fittedWidth: Math.ceil(Math.max(inTable ? 0 : widthMetrics.optionTextWidth, widthMetrics.displayTextWidth) + Math.max(contentItemLabel ? contentItemLabel.leftPadding + contentItemLabel.rightPadding : 0, contentItem ? contentItem.implicitWidth - widthMetrics.displayTextWidth : 0) + font.pixelSize * (inTable ? 0.45 : 0.5)) + leftPadding + rightPadding
     readonly property real optionWidth: Math.ceil(Math.max(widthMetrics.optionTextWidth, widthMetrics.displayTextWidth)) + font.pixelSize * 3
     ComboBoxMetrics {
         id: widthMetrics
@@ -151,6 +154,8 @@ EaElements.ComboBox {
     Component.onCompleted: ApplicationInfo.searchCompleted(() => {
         control.contentItemLabel.horizontalAlignment = Qt.binding(() => control.inTable ? control.horizontalAlignment : Text.AlignLeft);
     }, () => {
+        // A short list has no search field, and its header is not made: every box in a table row made one before.
+        control.popup.contentItem.header = Qt.binding(() => control.searchable ? searchHeader : null);
         control.popup.contentItem.model = Qt.binding(() => control.popup.visible ? control.delegateModel : null);
     }, () => {
         control.popup.focus = Qt.binding(() => control.searchable);

@@ -70,9 +70,12 @@ TestCase {
         verify(terms.setOrder(count, 5), "A unique supported order must be editable");
         const coefficient = control("background.coef.0");
         verify(coefficient !== null, "The coefficient value must have a visible editing control");
-        coefficient.forceActiveFocus();
-        verify(SettingsProof.type(coefficient, "6.25"), "The keyboard observer sends real text to the coefficient's own app window and active input, rather than the Quick Test runner window; actual text=" + coefficient.text);
-        verify(SettingsProof.key(coefficient, Qt.Key_Return), "Return reaches the actual coefficient editor's own app window to commit its typed value");
+        const popup = Ui.parameterPopup(test, coefficient);
+        const editor = Ui.parameterValue(test, coefficient, popup);
+        Ui.focusParameter(test, editor);
+        verify(SettingsProof.type(editor, "6.25"), "Real keyboard text reaches the coefficient popup's focused input");
+        verify(SettingsProof.key(editor, Qt.Key_Return), "The coefficient popup commits through its actual window");
+        popup.close();
         compare(Probe.rows(terms)[0].coef.value, 6.25, "Actual keyboard input plus Return commits the independently entered background coefficient; actual first term=" + JSON.stringify(Probe.rows(terms)[0]));
         click("background.removeTerm." + count);
         compare(terms.count, count, "Remove must erase exactly the selected coefficient");

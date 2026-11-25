@@ -114,19 +114,10 @@ TestCase {
                "Auto must disable every instantiated row delete, including both free and fixed rows");
         if (contextRow >= 0) {
             const cell = contextRow === 0 ? cells[2] : fixed;
-            Ui.scrollIntoView(cell);
-            const target = Ui.clickPoint(cell);
-            verify(target !== null, "A read-only value cell must remain a real context-menu target");
-            // Before: opening the menu alone counted. After: real free/fixed clicks work in Auto.
-            let inputDelay = 0;
-            for (let parent = cell.parent; parent; parent = parent.parent)
-                if (typeof parent.pressDelay === "number") inputDelay = Math.max(inputDelay, parent.pressDelay + 1);
-            mouseClick(cell, target.x, target.y, Qt.RightButton, Qt.NoModifier, inputDelay);
-            tryVerify(() => cell.contextMenu !== null && cell.contextMenu.opened, 500,
-                      "A real right click must open the Auto value cell contextMenu");
-            const flag = cell.fitCheckBox;
+            const popup = Ui.parameterPopup(test, cell, Qt.RightButton);
+            const flag = findChild(popup.contentItem, cell.objectName + ".popup.free");
             verify(flag !== null && flag !== undefined && flag.visible && flag.enabled,
-                   "Auto value-cell context menu must expose an enabled free/fixed checkbox through fitCheckBox");
+                   "The Auto value popup exposes its enabled Free checkbox");
             const hit = Ui.clickPoint(flag);
             verify(hit !== null, "The Auto free/fixed context checkbox must receive actual pointer input");
             mouseClick(flag, hit.x, hit.y);
@@ -138,22 +129,31 @@ TestCase {
                     "A working free/fixed context action must retain Auto estimation mode");
             compare(cell.font.bold, expected[contextRow][3],
                     "The Auto cell must update its free/fixed appearance after each actual context toggle");
-            cell.contextMenu.close();
+            popup.close();
             console.log("BACKGROUND_AUTO_FLAGS " + kind + " row=" + contextRow + " context=toggle mode=auto");
             return;
         }
         // Read-only is observable edit refusal, not Qt's readOnly flag (which hides fit controls).
-        cells.forEach((cell, index) => {
-            Ui.scrollIntoView(cell);cell.forceActiveFocus();
-            // Text acceptance is not event delivery: a read-only field may reject
-            // the key immediately or its commit guard may reject it on Return.
-            verify(cell.activeFocus, "Each Auto cell must have focus before the actual edit attempt");
-            verify(typeof cell.selectAll === "function", "Each Auto cell must expose its actual text-selection entry");
-            cell.selectAll();
-            verify(SettingsProof.key(cell, Qt.Key_9), "Every Auto cell must receive an actual attempted value or id key");
-            verify(SettingsProof.key(cell, Qt.Key_Return), "Return must exercise the actual Auto commit guard");
+        cells.forEach(cell => {
+            let popup = null;
+            let editor = cell;
+            if (cell.item) {
+                popup = Ui.parameterPopup(test, cell);
+                editor = Ui.parameterValue(test, cell, popup);
+                Ui.focusParameter(test, editor);
+            } else {
+                Ui.scrollIntoView(cell);
+                cell.forceActiveFocus();
+            }
+            verify(editor.activeFocus, "Each Auto input must have focus before the attempted edit");
+            verify(typeof editor.selectAll === "function", "Each Auto input retains its real text-selection entry");
+            editor.selectAll();
+            verify(SettingsProof.key(editor, Qt.Key_9), "Every Auto input receives an actual attempted value or ID key");
+            verify(SettingsProof.key(editor, Qt.Key_Return), "Return exercises the actual Auto commit guard");
             compare(state(model, pointType), before,
-                    "Auto keyboard edits of ids, positions/orders and values must leave every row unchanged");
+                    "Auto keyboard edits of IDs, positions/orders and values must leave every row unchanged");
+            if (popup)
+                popup.close();
         });
         Ui.scrollIntoView(table);
         verify(table.enabled && table.interactive && table.contentHeight > table.height,
@@ -209,9 +209,12 @@ TestCase {
         verify(waitForPolish(table), "The scrolled Manual table must recreate its first row editor");
         const editor = control(identities[2]);
         verify(!editor.readOnly && editor.enabled, "Manual must restore a writable intensity or coefficient cell");
-        Ui.scrollIntoView(editor);editor.forceActiveFocus();
-        verify(SettingsProof.type(editor, "8.125"), "The permitted Manual cell must receive real keyboard input");
-        verify(SettingsProof.key(editor, Qt.Key_Return), "Return must commit the permitted Manual value");
+        const popup = Ui.parameterPopup(test, editor);
+        const field = Ui.parameterValue(test, editor, popup);
+        Ui.focusParameter(test, field);
+        verify(SettingsProof.type(field, "8.125"), "The permitted Manual popup must receive real keyboard input");
+        verify(SettingsProof.key(field, Qt.Key_Return), "Return must commit the permitted Manual value");
+        popup.close();
         const changed = Probe.rows(model)[0];
         compare(pointType ? changed.intensity.value : changed.coef.value, 8.125,
                 "The actual Manual editor must update the underlying public parameter exactly");

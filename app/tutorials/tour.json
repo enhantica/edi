@@ -182,7 +182,7 @@
         {
           "title": "Bonds",
           "text": "The bond lengths between neighbouring atoms.",
-          "target": "group.geom_bond"
+          "target": "geom.bonds"
         },
         {
           "title": "Appearance",
@@ -354,7 +354,8 @@
         {
           "title": "Stacked and Map",
           "text": "Stacked and Map draw the fits of several patterns together, one above another and as a colour map. They become available with a scan or a joint fit of several experiments.",
-          "target": "mainArea.tab.stacked"
+          "target": "mainArea.tab.stacked",
+          "via": "mainArea.tab.correlations"
         },
         {
           "title": "Extra tab",
@@ -396,7 +397,8 @@
         {
           "title": "Pattern updates",
           "text": "How often a scan redraws the pattern.",
-          "target": "group.patternUpdates"
+          "target": "group.patternUpdates",
+          "via": "sideBar.tab.settings"
         }
       ]
     },

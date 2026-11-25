@@ -71,7 +71,19 @@
       "slow_paths": [
         "tests/system/slow/seeded_series.py"
       ],
-      "slow_task": "slow-seeded-series"
+      "slow_task": "slow-seeded-series",
+      "report_only": {
+        "r1_gui_pauses": {
+          "task": "app-watchdog",
+          "platform": "Linux",
+          "schedule": "nightly",
+          "full_scan_check": "tests/system/slow/ui_responsiveness.py"
+        },
+        "opening_frame_intervals": {
+          "source": "tests/system/py/test_project_page_readiness.py",
+          "artifact": "build/project-opening/*.json"
+        }
+      }
     },
     "weekly-only": {
       "tiers": [

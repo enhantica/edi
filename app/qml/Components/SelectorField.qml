@@ -46,7 +46,23 @@ EaElements.ParamComboBox {
         })
     model: options
     textRole: "label"
-    displayText: resolved !== "" && token === "auto" ? `${currentText} <font color="${EaStyle.Colors.themeForegroundDisabled}">· ${resolved}</font>` : currentText
+    // A short form per token (beam mode: CWL, TOF), shown when the whole name does not fit the box; the list shows the
+    // whole names (the owner, 2026-11-23: interim short forms until labels have their own registry).
+    property var shortForms: ({})
+    readonly property bool showsResolved: resolved !== "" && token === "auto"
+    readonly property real textRoom: width - leftPadding - rightPadding - contentItemLabel.leftPadding - contentItemLabel.rightPadding
+    TextMetrics {
+        id: choiceMetrics
+        font: selector.font
+        text: selector.currentText
+    }
+    // Without a short form of its own, a name with abbreviations in brackets ("... (TCH) + ... (FCJ)") shortens to them.
+    readonly property string bracketForm: (currentText.match(/\(([^()]+)\)/g) ?? []).map(part => part.slice(1, -1)).join(" + ")
+    readonly property string shortForm: (shortForms[token] ?? "") !== "" ? shortForms[token] : bracketForm
+    displayText: showsResolved ? `${currentText} <font color="${EaStyle.Colors.themeForegroundDisabled}">· ${resolved}</font>` : choiceMetrics.advanceWidth > textRoom && shortForm !== "" ? shortForm : currentText
+    // Plain text elides at the box's end; rich text (the resolved choice in grey) cannot, and ran into the next box.
+    textFormat: showsResolved ? Text.RichText : Text.PlainText
+    elide: Text.ElideRight
     valueRole: "token"
     enabled: writable && options !== null && options.count > 0
     currentIndex: options && options.revision >= 0 ? options.indexOf(token) : -1

@@ -85,8 +85,16 @@ TestCase {
             compare(table.markerRow, 1, "An editable-cell click moves the actual page's line immediately without Tab");
             tryVerify(() => second.font.bold && String(second.color) === String(Style.Colors.themeAccent) && !first.font.bold && String(first.color) !== String(Style.Colors.themeAccent), 1500, "Only the actual current row number is bold in the accent colour");
         } else if (data.mode === "cursor") {
-            click(editor);
-            tryVerify(() => Render.descendants(editor).some(item => item.activeFocus && item.readOnly === false && item.cursorVisible === true && item.cursorRectangle && item.cursorRectangle.height > 0), 500, "The actual application grants the clicked editor an active text cursor without Tab");
+            let input = editor;
+            if (atoms) {
+                click(editor);
+            } else {
+                const popup = Ui.parameterPopup(test, editor);
+                verify(!editor.activeFocus, "The number click opens the actual popup without focusing the table editor");
+                input = Ui.parameterValue(test, editor, popup);
+                Ui.focusParameter(test, input);
+            }
+            tryVerify(() => [input, ...Render.descendants(input)].some(item => item.activeFocus && item.readOnly === false && item.cursorVisible === true && item.cursorRectangle && item.cursorRectangle.height > 0), 500, "The actual editing route grants an active text cursor without Tab");
         } else {
             click(editor);
             mouseMove(appWindow.contentItem, appWindow.contentItem.width - 2, appWindow.contentItem.height - 2);

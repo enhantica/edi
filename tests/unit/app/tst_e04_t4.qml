@@ -183,6 +183,7 @@ TestCase {
             verify(item.text.length > 0 && item.width > 0, "ideas 13/17: disabled actions have visible labels and occupied layout space");
         });
         pane("project", "basic");
+        Ui.expandGroup(test, Probe, appWindow, "group.getStarted");
         Ui.click(test, Probe, appWindow, "project.load");
         const url = named(Ui.windowRoot(appWindow), "project.load.url");
         compare(url.enabled, false, "idea 27: URL loading placeholder is disabled");

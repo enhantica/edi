@@ -1,0 +1,29 @@
+_minimizer.descent fast_descent
+_minimizer.chi_square_tolerance 0.0001
+
+_fitting_mode.type independent
+
+_sequential_fit.data_dir ../44k_data
+_sequential_fit.file_pattern *.xy
+_sequential_fit.reverse false
+_sequential_fit.template_file scan-0514_pilatus_integrated_0000.xy
+
+_edi.schema_version 3
+
+loop_
+_fit_parameter.id
+_fit_parameter.start_value
+_fit_parameter.start_uncertainty
+_fit_parameter.start_tied
+structure.CaCO3.cell.length_a 4.98769 0.00013 .
+structure.CaCO3.cell.length_c 17.05071 0.00065 .
+structure.ZnO.cell.length_a 3.249642 0.000053 .
+structure.ZnO.cell.length_c 5.2057 0.00014 .
+scan-0514_pilatus_integrated_avg.broad_gauss_w 0.001437 0.000015 .
+scan-0514_pilatus_integrated_avg.ZnO.scale 0.000005626 0.000000043 .
+scan-0514_pilatus_integrated_avg.CaCO3.scale 0.0000003826 0.0000000035 .
+scan-0514_pilatus_integrated_avg.background.1 10.57 0.07 .
+scan-0514_pilatus_integrated_avg.background.2 -9.5 0.12 .
+scan-0514_pilatus_integrated_avg.background.3 3.67 0.12 .
+scan-0514_pilatus_integrated_avg.background.4 -0.598 0.075 .
+scan-0514_pilatus_integrated_avg.background.5 -0.414 0.062 .

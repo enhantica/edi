@@ -43,8 +43,10 @@ QtObject {
         ApplicationInfo.sidebarSetOpen(key, open, group);
     }
 
+    // Read through the column's cached map (ApplicationInfo.sidebarEdgeCached); reading sidebarRevision makes the
+    // calling binding follow every change of the column.
     function defaultOpen(group) {
-        return ApplicationInfo.sidebarEdge(group, false);
+        return ApplicationInfo.sidebarRevision >= 0 && ApplicationInfo.sidebarEdgeCached(group, false);
     }
 
     // The column's children in the order it lays them out. A Repeater's delegates are added at the end of the
@@ -59,6 +61,6 @@ QtObject {
     }
 
     function isLast(group) {
-        return ApplicationInfo.sidebarEdge(group, true);
+        return ApplicationInfo.sidebarRevision >= 0 && ApplicationInfo.sidebarEdgeCached(group, true);
     }
 }

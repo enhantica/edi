@@ -21,6 +21,10 @@ import edi.app
 Item {
     id: chart
 
+    // One accessible part in the browser, where Qt reads a flat page again for each of its items.
+    Accessible.role: Accessible.Grouping
+    Accessible.ignored: Qt.platform.os !== "wasm"
+
     // What the main view's Save image takes when this is the shown tab: the item, its toolbar (hidden while the image
     // is taken), the file name, and whether the toolbar's band is cut off.
     readonly property Item imageItem: chart.onAxis ? axisChart : chart
@@ -65,8 +69,11 @@ Item {
     readonly property real em: EaStyle.Sizes.fontPixelSize
     // The pattern chart's layout: the toolbar line a gap below the page's block selector row, centred over the plot,
     // and the plot the main area's margin below it.
+    // A report figure has that margin on all four sides, to the letters of its titles, whose lines reach past them (the
+    // owner, 2026-11-24).
     readonly property real sideMargin: AppSizes.mainAreaMargin
-    readonly property real topMargin: em
+    readonly property real topMargin: reportMode ? AppSizes.mainAreaMargin - Math.round(em * 0.3) : em
+    readonly property real bottomMargin: reportMode ? AppSizes.mainAreaMargin - Math.round(em * 0.3) : em
     readonly property real belowToolbar: AppSizes.mainAreaMargin
     readonly property real toolbarLeft: AppSizes.mainAreaMargin
     readonly property real toolbarRightInset: width - (view.x + view.plotArea.x + view.plotArea.width)
@@ -126,10 +133,19 @@ Item {
     ListedLegendModel {
         id: legendRows
     }
-    readonly property real xLow: zoom.length === 4 ? zoom[0] : simulated ? 0 : fullLow
-    readonly property real xHigh: zoom.length === 4 ? zoom[1] : simulated ? reflections.positionHigh : fullHigh
-    readonly property real yLow: zoom.length === 4 ? zoom[2] : fullLow
-    readonly property real yHigh: zoom.length === 4 ? zoom[3] : fullHigh
+    // The ranges shown move to a zoom or a reset as the Pattern chart's do (the owner, 2026-11-21): one shared animation.
+    readonly property real xLow: viewRanges.ranges[0]
+    readonly property real xHigh: viewRanges.ranges[1]
+    readonly property real yLow: viewRanges.ranges[2]
+    readonly property real yHigh: viewRanges.ranges[3]
+    RangeAnimation {
+        id: viewRanges
+        zoom: chart.zoom
+        fitted: [chart.simulated ? 0 : chart.fullLow, chart.simulated ? chart.reflections.positionHigh : chart.fullHigh, chart.fullLow, chart.fullHigh]
+        duration: chart.reportMode ? 0 : EaStyle.Times.chartAnimation
+        active: chart.shown
+        immediate: pointer.pressed && Preferences.patternPointerMode !== "zoom"
+    }
 
     // An axis' ticks, every whole step from 0 within its range, and how its labels write them: each tick on its own by
     // the rule for numbers (NumberText.axisFormat). The step leaves room for the widest label as written in the labels'
@@ -150,6 +166,7 @@ Item {
     }
     // A tick label in the app's label font, written by that format from the tick Qt Graphs printed with all its
     // decimals.
+    // The axes take it as a literal, as the pattern chart's axes do (PatternChart.AxisLabel).
     component TickLabel: Item {
         id: tick
         property string text: ""
@@ -164,19 +181,6 @@ Item {
             verticalAlignment: Text.AlignVCenter
             color: chart.colors.chartLabels
             text: tick.format !== null && isFinite(parseFloat(tick.text)) ? NumberText.axisTick(parseFloat(tick.text), tick.format) : tick.text
-        }
-    }
-    Component {
-        id: xTickLabel
-        TickLabel {
-            format: chart.xFormat
-        }
-    }
-    Component {
-        id: yTickLabel
-        TickLabel {
-            format: chart.yFormat
-            horizontalAlignment: Text.AlignRight
         }
     }
 
@@ -244,10 +248,12 @@ Item {
     // A report figure's reliability (edi::reliability_text) and its reflections' admission line, above its plot at
     // the left, as the pattern chart's.
     EaElements.Label {
+        id: reliabilityLabel
         objectName: "singleCrystal.reliability"
         visible: chart.reportMode && text !== ""
-        x: view.x + view.plotArea.x
-        y: Math.max(0, view.y + view.plotArea.y - height - Math.round(chart.em * 0.25))
+        // At the plot's left, or as far right as the figure's margin leaves it whole.
+        x: Math.max(chart.sideMargin, Math.min(view.x + view.plotArea.x, chart.width - chart.sideMargin - width))
+        y: chart.topMargin
         color: chart.colors.chartLabels
         text: chart.reportMode ? [chart.reportData.title, chart.reportData.statistics || ""].filter(line => line !== "").join("\n") : ""
     }
@@ -313,10 +319,11 @@ Item {
     ChartView {
         id: view
 
-        y: chart.reportMode ? chart.topMargin + Math.round(chart.em * 1.5) : chart.topMargin + toolbar.height + chart.belowToolbar
+        y: chart.reportMode ? chart.topMargin + Math.ceil(reliabilityLabel.height) + Math.round(chart.em * 0.25) : chart.topMargin + toolbar.height + chart.belowToolbar
         width: parent.width
-        height: parent.height - y - chart.xTitleHeight - chart.em
-        marginLeft: chart.sideMargin + chart.titleGutter
+        height: parent.height - y - chart.xTitleHeight - chart.bottomMargin - (chart.reportMode ? Math.round(chart.em * 0.4) : 0)
+        // A report figure's numbers reach into the view's margin, up to its title's letters.
+        marginLeft: chart.sideMargin + chart.titleGutter + (chart.reportMode ? chart.em : 0)
         marginRight: chart.sideMargin
         marginTop: 0
         marginBottom: 0
@@ -326,7 +333,9 @@ Item {
         axisX: ValueAxis {
             id: axisX
             labelDecimals: 6
-            labelDelegate: xTickLabel
+            labelDelegate: TickLabel {
+                format: chart.xFormat
+            }
             min: chart.xLow
             max: chart.xHigh
             tickInterval: NumberText.axisStep(min, max, chart.xTicks, view.plotArea.width, labelProbe.font, true)
@@ -338,7 +347,10 @@ Item {
         axisY: ValueAxis {
             id: axisY
             labelDecimals: 6
-            labelDelegate: yTickLabel
+            labelDelegate: TickLabel {
+                format: chart.yFormat
+                horizontalAlignment: Text.AlignRight
+            }
             min: chart.yLow
             max: chart.yHigh
             tickInterval: NumberText.axisStep(min, max, chart.yTicks, view.plotArea.height, labelProbe.font, false)
@@ -407,15 +419,22 @@ Item {
 
     // The axis titles, the dictionary's names of the plotted items, found by name as the pattern chart's are.
     EaElements.Label {
+        id: xTitle
         objectName: "singleCrystal.title.x"
         x: view.x + view.plotArea.x + (view.plotArea.width - width) / 2
-        y: view.y + view.height + chart.em * 0.6
+        y: chart.reportMode ? chart.height - AppSizes.mainAreaMargin - baselineOffset - xInk.tightBoundingRect.y - xInk.tightBoundingRect.height : view.y + view.height + chart.em * 0.6
         color: chart.colors.chartLabels
         text: Session.label(chart.xItem)
+        TextMetrics {
+            id: xInk
+            font: xTitle.font
+            text: xTitle.text
+        }
     }
     EaElements.Label {
+        id: yTitle
         objectName: "singleCrystal.title.y"
-        x: chart.sideMargin - chart.em * 0.5
+        x: chart.sideMargin - Math.round(chart.em * (chart.reportMode ? 0.15 : 0.5))
         y: view.y + view.plotArea.y + (view.plotArea.height + width) / 2
         rotation: -90
         transformOrigin: Item.TopLeft
