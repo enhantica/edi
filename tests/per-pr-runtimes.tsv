@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-24T15:03:48Z
+# measured_utc = 2026-11-25T08:56:22Z
 #
-# Recorded from: banked rows of this branch and of the merged branch, joined at a merge (no node measured)
-# Collected tests: 267494 (both sides' rows; not collected again at the merge)
+# Recorded from: measured test run (41 node(s) measured once, 187532 banked, 45 stale row(s) dropped)
+# Collected tests: 267490; with a reported duration: 86241
 # Module-scoped fixture costs recorded: 219
 #
 # Breaches are decided PER TIER against the table
@@ -29,12 +29,12 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 267494
+# inventory_python = 267490
 # inventory_cpp = 0
-# inventory_measured = 187532
-# inventory_unmeasured = 79962
+# inventory_measured = 187544
+# inventory_unmeasured = 79946
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
-# inventory_pr_python = 92583
+# inventory_pr_python = 92579
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -3408,6 +3408,35 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_catalogue_fullprof.py::t
 0.030	tests/integration/py/test_cell_length_admission.py::test_cell_length_limits_match_at_python_factory_and_file_boundaries
 0.000	tests/integration/py/test_chart_axis_labels.py::test_data_table_declares_named_component_columns
 UNMEASURED:failed-in-this-run	tests/integration/py/test_chart_axis_labels.py::test_tooltip_and_legend_names_follow_the_axis_vocabulary
+UNMEASURED:failed-in-this-run	tests/integration/py/test_ci_source_boundary.py::test_cold_and_warm_sdk_handoffs_never_implicitly_save_the_archive_directory
+UNMEASURED:failed-in-this-run	tests/integration/py/test_ci_source_boundary.py::test_compiler_cache_can_never_restore_entries_from_before_output_checks[actions/wasm-cache/action.yml-ccache-wasm-]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_ci_source_boundary.py::test_compiler_cache_can_never_restore_entries_from_before_output_checks[workflows/ci.yml-ccache-app-]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_ci_source_boundary.py::test_compiler_cache_can_never_restore_entries_from_before_output_checks[workflows/ci.yml-ccache-app-windows-]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_ci_source_boundary.py::test_compiler_cache_can_never_restore_entries_from_before_output_checks[workflows/ci.yml-ccache-core-]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_ci_source_boundary.py::test_compiler_cache_can_never_restore_entries_from_before_output_checks[workflows/crysta-sdk.yml-crysta-objects-v1-]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_ci_source_boundary.py::test_compiler_cache_can_never_restore_entries_from_before_output_checks[workflows/installers.yml-ccache-installer-]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_ci_source_boundary.py::test_policy_refuses_a_source_job_with_an_unchecked_output_path[combined-cache]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_ci_source_boundary.py::test_policy_refuses_a_source_job_with_an_unchecked_output_path[implicit-pixi-cache]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_ci_source_boundary.py::test_policy_refuses_a_source_job_with_an_unchecked_output_path[publisher]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_ci_source_boundary.py::test_policy_refuses_a_source_job_with_an_unchecked_output_path[shell-override]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_ci_source_boundary.py::test_sdk_archive_handoff_carries_no_source_archive[ci]
+0.000	tests/integration/py/test_ci_source_boundary.py::test_sdk_archive_handoff_carries_no_source_archive[coverage]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_ci_source_boundary.py::test_sdk_archive_handoff_carries_no_source_archive[crysta-sdk]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_ci_source_boundary.py::test_sdk_archive_handoff_carries_no_source_archive[installers]
+0.010	tests/integration/py/test_ci_source_boundary.py::test_sdk_archive_handoff_carries_no_source_archive[pages]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_ci_source_boundary.py::test_unavailable_source_list_prevents_the_runner_shell_executing_a_step
+UNMEASURED:failed-in-this-run	tests/integration/py/test_ci_source_runtime.py::test_filtered_shell_preserves_public_output_and_child_exit
+UNMEASURED:failed-in-this-run	tests/integration/py/test_ci_source_runtime.py::test_full_cache_save_omits_source_diagnostics_in_new_and_untouched_restored_entries[app-windows]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_ci_source_runtime.py::test_full_cache_save_omits_source_diagnostics_in_new_and_untouched_restored_entries[app]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_ci_source_runtime.py::test_full_cache_save_omits_source_diagnostics_in_new_and_untouched_restored_entries[core]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_ci_source_runtime.py::test_full_cache_save_omits_source_diagnostics_in_new_and_untouched_restored_entries[crysta-sdk]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_ci_source_runtime.py::test_full_cache_save_omits_source_diagnostics_in_new_and_untouched_restored_entries[installer]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_ci_source_runtime.py::test_full_cache_save_omits_source_diagnostics_in_new_and_untouched_restored_entries[new]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_ci_source_runtime.py::test_full_cache_save_omits_source_diagnostics_in_new_and_untouched_restored_entries[wasm]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_ci_source_runtime.py::test_storage_check_reads_members_of_the_bytes_it_will_publish[.tar.gz]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_ci_source_runtime.py::test_storage_check_reads_members_of_the_bytes_it_will_publish[.tar]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_ci_source_runtime.py::test_storage_check_reads_members_of_the_bytes_it_will_publish[.whl]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_ci_source_runtime.py::test_storage_check_reads_members_of_the_bytes_it_will_publish[.zip]
 0.000	tests/integration/py/test_cif_import_contract.py::test_chosen_parser_failure_refuses_without_partial_import[cif2-list-experiment-collection-edi-path]
 0.000	tests/integration/py/test_cif_import_contract.py::test_chosen_parser_failure_refuses_without_partial_import[cif2-list-experiment-collection-path]
 0.000	tests/integration/py/test_cif_import_contract.py::test_chosen_parser_failure_refuses_without_partial_import[cif2-list-experiment-collection-str]
@@ -185780,7 +185809,6 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_table_and_about_contract
 0.000	tests/integration/py/test_table_byte_adaptations.py::test_stored_key_projection_retains_identity_values_order_and_inventory[missing]
 0.000	tests/integration/py/test_table_byte_adaptations.py::test_stored_key_projection_retains_identity_values_order_and_inventory[order]
 0.000	tests/integration/py/test_table_byte_adaptations.py::test_stored_key_projection_retains_identity_values_order_and_inventory[value]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_table_display.py::test_display_precision_is_independent_of_cell_clip_width
 0.140	tests/integration/py/test_table_display.py::test_displayed_sequential_counts_consume_state_colours[0-0-completed-summary]
 0.160	tests/integration/py/test_table_display.py::test_displayed_sequential_counts_consume_state_colours[0-0-running]
 0.140	tests/integration/py/test_table_display.py::test_displayed_sequential_counts_consume_state_colours[0-3-completed-summary]
@@ -185798,6 +185826,12 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_table_display.py::test_d
 0.280	tests/integration/py/test_table_display.py::test_scan_consumer_gate_rejects_disconnected_or_coloured_zero_display[unused-formatter]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_table_display.py::test_scientific_thresholds_and_signed_three_digit_values
 0.600	tests/integration/py/test_table_display.py::test_sequential_count_colours_follow_zero_and_nonzero_state
+0.420	tests/integration/py/test_tsan_source_contract.py::test_sdk_tree_mismatch_refuses_even_with_an_intact_export[candidate]
+0.410	tests/integration/py/test_tsan_source_contract.py::test_sdk_tree_mismatch_refuses_even_with_an_intact_export[pinned]
+0.560	tests/integration/py/test_tsan_source_contract.py::test_worker_compiles_the_sdk_export_and_retains_only_safe_diagnostics[candidate-behind-configure]
+0.590	tests/integration/py/test_tsan_source_contract.py::test_worker_compiles_the_sdk_export_and_retains_only_safe_diagnostics[candidate-exact-compile]
+0.570	tests/integration/py/test_tsan_source_contract.py::test_worker_compiles_the_sdk_export_and_retains_only_safe_diagnostics[candidate-exact-configure]
+0.890	tests/integration/py/test_tsan_source_contract.py::test_worker_compiles_the_sdk_export_and_retains_only_safe_diagnostics[pinned-configure]
 0.000	tests/integration/py/test_tutorial_assistant_targets.py::test_assistant_target_observer_refuses_missing_and_renamed_gui_names[`ui:onlineLoad.`]
 0.000	tests/integration/py/test_tutorial_assistant_targets.py::test_assistant_target_observer_refuses_missing_and_renamed_gui_names[ui:missing.button]
 0.000	tests/integration/py/test_tutorial_assistant_targets.py::test_assistant_target_observer_refuses_missing_and_renamed_gui_names[ui:onlineLoad.renamed]
@@ -252783,8 +252817,6 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_feedback_privacy_representati
 3.010	tests/system/py/test_feedback_redesign.py::test_crash_report_keeps_the_actual_crashed_log
 UNMEASURED:failed-in-this-run	tests/system/py/test_feedback_redesign.py::test_optional_contact_is_remembered_between_application_runs
 2.830	tests/system/py/test_feedback_redesign.py::test_redesigned_feedback_in_the_real_application[checkbox_indicator_aligns_with_form]
-UNMEASURED:failed-in-this-run	tests/system/py/test_feedback_redesign.py::test_redesigned_feedback_in_the_real_application[checkbox_indicator_aligns_with_kind]
-UNMEASURED:failed-in-this-run	tests/system/py/test_feedback_redesign.py::test_redesigned_feedback_in_the_real_application[contact_fields_follow_the_kind_before_the_message]
 2.560	tests/system/py/test_feedback_redesign.py::test_redesigned_feedback_in_the_real_application[contact_fields_precede_the_message]
 UNMEASURED:failed-in-this-run	tests/system/py/test_feedback_redesign.py::test_redesigned_feedback_in_the_real_application[contact_payload_has_only_filled_trimmed_keys:0]
 UNMEASURED:failed-in-this-run	tests/system/py/test_feedback_redesign.py::test_redesigned_feedback_in_the_real_application[contact_payload_has_only_filled_trimmed_keys:1]
@@ -252799,19 +252831,9 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_feedback_redesign.py::test_re
 1.840	tests/system/py/test_feedback_redesign.py::test_redesigned_feedback_in_the_real_application[empty_message_disables_send:whitespace]
 UNMEASURED:failed-in-this-run	tests/system/py/test_feedback_redesign.py::test_redesigned_feedback_in_the_real_application[failed_submission_preserves_optional_contact:limited]
 UNMEASURED:failed-in-this-run	tests/system/py/test_feedback_redesign.py::test_redesigned_feedback_in_the_real_application[failed_submission_preserves_optional_contact:offline]
-UNMEASURED:failed-in-this-run	tests/system/py/test_feedback_redesign.py::test_redesigned_feedback_in_the_real_application[general_feedback_is_first_and_default]
-UNMEASURED:failed-in-this-run	tests/system/py/test_feedback_redesign.py::test_redesigned_feedback_in_the_real_application[kind_has_no_redundant_question_label]
 2.700	tests/system/py/test_feedback_redesign.py::test_redesigned_feedback_in_the_real_application[opening_line_is_between_the_title_and_contacts]
-UNMEASURED:failed-in-this-run	tests/system/py/test_feedback_redesign.py::test_redesigned_feedback_in_the_real_application[opening_line_is_between_the_title_and_kind]
-UNMEASURED:failed-in-this-run	tests/system/py/test_feedback_redesign.py::test_redesigned_feedback_in_the_real_application[optional_subject_is_trimmed_and_shown_in_the_payload:empty]
-UNMEASURED:failed-in-this-run	tests/system/py/test_feedback_redesign.py::test_redesigned_feedback_in_the_real_application[optional_subject_is_trimmed_and_shown_in_the_payload:filled]
-UNMEASURED:failed-in-this-run	tests/system/py/test_feedback_redesign.py::test_redesigned_feedback_in_the_real_application[optional_subject_is_trimmed_and_shown_in_the_payload:whitespace]
 1.660	tests/system/py/test_feedback_redesign.py::test_redesigned_feedback_in_the_real_application[preview_and_message_share_the_field_border:dark]
 1.320	tests/system/py/test_feedback_redesign.py::test_redesigned_feedback_in_the_real_application[preview_and_message_share_the_field_border:light]
-UNMEASURED:failed-in-this-run	tests/system/py/test_feedback_redesign.py::test_redesigned_feedback_in_the_real_application[subject_and_message_placeholders_follow_the_kind:feedback]
-UNMEASURED:failed-in-this-run	tests/system/py/test_feedback_redesign.py::test_redesigned_feedback_in_the_real_application[subject_and_message_placeholders_follow_the_kind:idea]
-UNMEASURED:failed-in-this-run	tests/system/py/test_feedback_redesign.py::test_redesigned_feedback_in_the_real_application[subject_and_message_placeholders_follow_the_kind:problem]
-UNMEASURED:failed-in-this-run	tests/system/py/test_feedback_redesign.py::test_redesigned_feedback_in_the_real_application[subject_and_message_placeholders_follow_the_kind:question]
 UNMEASURED:failed-in-this-run	tests/system/py/test_feedback_redesign.py::test_redesigned_feedback_in_the_real_application[submission_keeps_text_on_failure_and_thanks_on_success:created-auto]
 UNMEASURED:failed-in-this-run	tests/system/py/test_feedback_redesign.py::test_redesigned_feedback_in_the_real_application[submission_keeps_text_on_failure_and_thanks_on_success:created]
 1.290	tests/system/py/test_feedback_redesign.py::test_redesigned_feedback_in_the_real_application[submission_keeps_text_on_failure_and_thanks_on_success:limited]
@@ -254431,6 +254453,12 @@ UNMEASURED:not-completed-in-this-run	tests/system/py/test_native_download_transp
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_native_download_transport_reference.py::test_native_tutorial_overwrite_requires_the_explicit_flag[True]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_native_download_transport_reference.py::test_native_wrong_digest_refuses_without_a_destination_file
 UNMEASURED:failed-in-this-run	tests/system/py/test_newest_project_census.py::test_every_committed_project_file_has_no_retired_positional_reference
+0.070	tests/system/py/test_nightly_app_handoff.py::test_failed_observer_does_not_starve_the_nightly_system_shards[app-Linux]
+0.070	tests/system/py/test_nightly_app_handoff.py::test_failed_observer_does_not_starve_the_nightly_system_shards[app-macos-macOS]
+UNMEASURED:failed-in-this-run	tests/system/py/test_nightly_app_handoff.py::test_optional_tutorial_observer_has_a_separate_handoff_from_the_required_app[app-macos]
+UNMEASURED:failed-in-this-run	tests/system/py/test_nightly_app_handoff.py::test_optional_tutorial_observer_has_a_separate_handoff_from_the_required_app[app]
+0.030	tests/system/py/test_nightly_app_handoff.py::test_qt_diagnostic_capture_preserves_the_child_status_and_valid_receipt[project-inventory]
+0.030	tests/system/py/test_nightly_app_handoff.py::test_qt_diagnostic_capture_preserves_the_child_status_and_valid_receipt[single-crystal-views]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_onboarding_artifacts.py::test_capture_launcher_forwards_native_contract_without_a_display
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_onboarding_artifacts.py::test_capture_launcher_refuses_missing_app_and_missing_destination
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_onboarding_artifacts.py::test_citation_placeholder_has_one_machine_readable_source
@@ -254443,7 +254471,6 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_onboarding_changes_and_choice
 UNMEASURED:failed-in-this-run	tests/system/py/test_onboarding_changes_and_choices.py::test_changes_and_choices_in_the_real_host[tst_onboarding_changes.qml-OnboardingChanges-show_all_changes_stays_in_footer:default]
 UNMEASURED:failed-in-this-run	tests/system/py/test_onboarding_changes_and_choices.py::test_changes_and_choices_in_the_real_host[tst_onboarding_changes.qml-OnboardingChanges-show_all_changes_stays_in_footer:small]
 UNMEASURED:failed-in-this-run	tests/system/py/test_onboarding_changes_and_choices.py::test_changes_and_choices_in_the_real_host[tst_onboarding_changes.qml-OnboardingChanges-update_opens_once_then_restart_remembers_seen_date]
-UNMEASURED:failed-in-this-run	tests/system/py/test_onboarding_changes_and_choices.py::test_changes_and_choices_in_the_real_host[tst_onboarding_choices.qml-OnboardingChoices-opened_choices_are_visible_and_selectable:feedback-kind]
 3.510	tests/system/py/test_onboarding_changes_and_choices.py::test_changes_and_choices_in_the_real_host[tst_onboarding_choices.qml-OnboardingChoices-opened_choices_are_visible_and_selectable:logging-level]
 UNMEASURED:failed-in-this-run	tests/system/py/test_onboarding_changes_and_choices.py::test_each_shipped_changes_entry_has_unique_feature_titles
 UNMEASURED:failed-in-this-run	tests/system/py/test_onboarding_extra_tables.py::test_extra_table_in_the_real_application[every_extra_table_sizes_columns_from_content:analysis]
@@ -260548,7 +260575,6 @@ UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[each_step_fades_out_before_context_and_in_after_settling:30-group.space_group_symop]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[each_step_fades_out_before_context_and_in_after_settling:31-group.expanded_atom_site]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[each_step_fades_out_before_context_and_in_after_settling:32-geom.bonds]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[each_step_fades_out_before_context_and_in_after_settling:32-group.geom_bond]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[each_step_fades_out_before_context_and_in_after_settling:33-group.appearance]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[each_step_fades_out_before_context_and_in_after_settling:34-appBar.tab.experiment]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[each_step_fades_out_before_context_and_in_after_settling:35-mainArea.tab.pattern]
@@ -260629,7 +260655,6 @@ UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[elapsed_time_never_advances_the_tour:30-group.space_group_symop]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[elapsed_time_never_advances_the_tour:31-group.expanded_atom_site]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[elapsed_time_never_advances_the_tour:32-geom.bonds]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[elapsed_time_never_advances_the_tour:32-group.geom_bond]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[elapsed_time_never_advances_the_tour:33-group.appearance]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[elapsed_time_never_advances_the_tour:34-appBar.tab.experiment]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[elapsed_time_never_advances_the_tour:35-mainArea.tab.pattern]
@@ -260938,7 +260963,6 @@ UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_has_an_explicit_group_and_tab_predecessor:pd-neut-cwl_lbco-hrpt-52]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_has_an_explicit_group_and_tab_predecessor:pd-neut-cwl_lbco-hrpt-53]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_has_an_explicit_group_and_tab_predecessor:pd-neut-cwl_lbco-hrpt-54]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_has_an_explicit_group_and_tab_predecessor:pd-neut-cwl_lbco-hrpt-55]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_has_an_explicit_group_and_tab_predecessor:pd-neut-cwl_lbco-hrpt-56]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_has_an_explicit_group_and_tab_predecessor:pd-neut-cwl_lbco-hrpt-57]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_has_an_explicit_group_and_tab_predecessor:pd-neut-cwl_lbco-hrpt-58]
@@ -260947,12 +260971,9 @@ UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_has_an_explicit_group_and_tab_predecessor:pd-neut-cwl_lbco-hrpt-60]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_has_an_explicit_group_and_tab_predecessor:pd-neut-cwl_lbco-hrpt-61]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_has_an_explicit_group_and_tab_predecessor:pd-neut-cwl_lbco-hrpt-62]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_has_an_explicit_group_and_tab_predecessor:pd-neut-cwl_lbco-hrpt-63]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_has_an_explicit_group_and_tab_predecessor:pd-neut-cwl_lbco-hrpt-64]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_has_an_explicit_group_and_tab_predecessor:pd-neut-cwl_lbco-hrpt-65]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_has_an_explicit_group_and_tab_predecessor:pd-neut-cwl_lbco-hrpt-66]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_has_an_explicit_group_and_tab_predecessor:pd-neut-cwl_lbco-hrpt-67]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_has_an_explicit_group_and_tab_predecessor:pd-neut-cwl_lbco-hrpt-68]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_has_an_explicit_group_and_tab_predecessor:pd-neut-cwl_lbco-hrpt-69]
 UNMEASURED:failed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_has_an_explicit_group_and_tab_predecessor:pd-neut-cwl_lbco-hrpt-6]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_has_an_explicit_group_and_tab_predecessor:pd-neut-cwl_lbco-hrpt-70]
@@ -260960,13 +260981,10 @@ UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_has_an_explicit_group_and_tab_predecessor:pd-neut-cwl_lbco-hrpt-72]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_has_an_explicit_group_and_tab_predecessor:pd-neut-cwl_lbco-hrpt-73]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_has_an_explicit_group_and_tab_predecessor:pd-neut-cwl_lbco-hrpt-74]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_has_an_explicit_group_and_tab_predecessor:pd-neut-cwl_lbco-hrpt-75]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_has_an_explicit_group_and_tab_predecessor:pd-neut-cwl_lbco-hrpt-76]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_has_an_explicit_group_and_tab_predecessor:pd-neut-cwl_lbco-hrpt-77]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_has_an_explicit_group_and_tab_predecessor:pd-neut-cwl_lbco-hrpt-78]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_has_an_explicit_group_and_tab_predecessor:pd-neut-cwl_lbco-hrpt-79]
 UNMEASURED:failed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_has_an_explicit_group_and_tab_predecessor:pd-neut-cwl_lbco-hrpt-7]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_has_an_explicit_group_and_tab_predecessor:pd-neut-cwl_lbco-hrpt-80]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_has_an_explicit_group_and_tab_predecessor:pd-neut-cwl_lbco-hrpt-81]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_has_an_explicit_group_and_tab_predecessor:pd-neut-cwl_lbco-hrpt-82]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_has_an_explicit_group_and_tab_predecessor:pd-neut-cwl_lbco-hrpt-83]
@@ -260979,9 +260997,7 @@ UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py
 UNMEASURED:failed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_has_an_explicit_group_and_tab_predecessor:pd-neut-cwl_lbco-hrpt-8]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_has_an_explicit_group_and_tab_predecessor:pd-neut-cwl_lbco-hrpt-90]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_has_an_explicit_group_and_tab_predecessor:pd-neut-cwl_lbco-hrpt-91]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_has_an_explicit_group_and_tab_predecessor:pd-neut-cwl_lbco-hrpt-92]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_has_an_explicit_group_and_tab_predecessor:pd-neut-cwl_lbco-hrpt-93]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_has_an_explicit_group_and_tab_predecessor:pd-neut-cwl_lbco-hrpt-94]
 UNMEASURED:failed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_has_an_explicit_group_and_tab_predecessor:pd-neut-cwl_lbco-hrpt-9]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_has_an_explicit_group_and_tab_predecessor:pd-neut-cwl_lbco_simulation-10]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_has_an_explicit_group_and_tab_predecessor:pd-neut-cwl_lbco_simulation-11]
@@ -262167,22 +262183,15 @@ UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_pointer_aims_at_the_input_center:pd-neut-cwl_lbco-hrpt-39]
 UNMEASURED:failed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_pointer_aims_at_the_input_center:pd-neut-cwl_lbco-hrpt-3]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_pointer_aims_at_the_input_center:pd-neut-cwl_lbco-hrpt-40]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_pointer_aims_at_the_input_center:pd-neut-cwl_lbco-hrpt-41]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_pointer_aims_at_the_input_center:pd-neut-cwl_lbco-hrpt-42]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_pointer_aims_at_the_input_center:pd-neut-cwl_lbco-hrpt-43]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_pointer_aims_at_the_input_center:pd-neut-cwl_lbco-hrpt-44]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_pointer_aims_at_the_input_center:pd-neut-cwl_lbco-hrpt-45]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_pointer_aims_at_the_input_center:pd-neut-cwl_lbco-hrpt-46]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_pointer_aims_at_the_input_center:pd-neut-cwl_lbco-hrpt-47]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_pointer_aims_at_the_input_center:pd-neut-cwl_lbco-hrpt-48]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_pointer_aims_at_the_input_center:pd-neut-cwl_lbco-hrpt-49]
 UNMEASURED:failed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_pointer_aims_at_the_input_center:pd-neut-cwl_lbco-hrpt-4]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_pointer_aims_at_the_input_center:pd-neut-cwl_lbco-hrpt-50]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_pointer_aims_at_the_input_center:pd-neut-cwl_lbco-hrpt-51]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_pointer_aims_at_the_input_center:pd-neut-cwl_lbco-hrpt-52]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_pointer_aims_at_the_input_center:pd-neut-cwl_lbco-hrpt-53]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_pointer_aims_at_the_input_center:pd-neut-cwl_lbco-hrpt-54]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_pointer_aims_at_the_input_center:pd-neut-cwl_lbco-hrpt-55]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_pointer_aims_at_the_input_center:pd-neut-cwl_lbco-hrpt-56]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_pointer_aims_at_the_input_center:pd-neut-cwl_lbco-hrpt-57]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_pointer_aims_at_the_input_center:pd-neut-cwl_lbco-hrpt-58]
@@ -262190,12 +262199,9 @@ UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_pointer_aims_at_the_input_center:pd-neut-cwl_lbco-hrpt-60]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_pointer_aims_at_the_input_center:pd-neut-cwl_lbco-hrpt-61]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_pointer_aims_at_the_input_center:pd-neut-cwl_lbco-hrpt-62]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_pointer_aims_at_the_input_center:pd-neut-cwl_lbco-hrpt-63]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_pointer_aims_at_the_input_center:pd-neut-cwl_lbco-hrpt-64]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_pointer_aims_at_the_input_center:pd-neut-cwl_lbco-hrpt-65]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_pointer_aims_at_the_input_center:pd-neut-cwl_lbco-hrpt-66]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_pointer_aims_at_the_input_center:pd-neut-cwl_lbco-hrpt-67]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_pointer_aims_at_the_input_center:pd-neut-cwl_lbco-hrpt-68]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_pointer_aims_at_the_input_center:pd-neut-cwl_lbco-hrpt-69]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_pointer_aims_at_the_input_center:pd-neut-cwl_lbco-hrpt-6]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_pointer_aims_at_the_input_center:pd-neut-cwl_lbco-hrpt-70]
@@ -262203,28 +262209,20 @@ UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_pointer_aims_at_the_input_center:pd-neut-cwl_lbco-hrpt-72]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_pointer_aims_at_the_input_center:pd-neut-cwl_lbco-hrpt-73]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_pointer_aims_at_the_input_center:pd-neut-cwl_lbco-hrpt-74]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_pointer_aims_at_the_input_center:pd-neut-cwl_lbco-hrpt-75]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_pointer_aims_at_the_input_center:pd-neut-cwl_lbco-hrpt-76]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_pointer_aims_at_the_input_center:pd-neut-cwl_lbco-hrpt-77]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_pointer_aims_at_the_input_center:pd-neut-cwl_lbco-hrpt-78]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_pointer_aims_at_the_input_center:pd-neut-cwl_lbco-hrpt-79]
 UNMEASURED:failed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_pointer_aims_at_the_input_center:pd-neut-cwl_lbco-hrpt-7]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_pointer_aims_at_the_input_center:pd-neut-cwl_lbco-hrpt-80]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_pointer_aims_at_the_input_center:pd-neut-cwl_lbco-hrpt-81]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_pointer_aims_at_the_input_center:pd-neut-cwl_lbco-hrpt-82]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_pointer_aims_at_the_input_center:pd-neut-cwl_lbco-hrpt-83]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_pointer_aims_at_the_input_center:pd-neut-cwl_lbco-hrpt-84]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_pointer_aims_at_the_input_center:pd-neut-cwl_lbco-hrpt-85]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_pointer_aims_at_the_input_center:pd-neut-cwl_lbco-hrpt-86]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_pointer_aims_at_the_input_center:pd-neut-cwl_lbco-hrpt-87]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_pointer_aims_at_the_input_center:pd-neut-cwl_lbco-hrpt-88]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_pointer_aims_at_the_input_center:pd-neut-cwl_lbco-hrpt-89]
 UNMEASURED:failed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_pointer_aims_at_the_input_center:pd-neut-cwl_lbco-hrpt-8]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_pointer_aims_at_the_input_center:pd-neut-cwl_lbco-hrpt-90]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_pointer_aims_at_the_input_center:pd-neut-cwl_lbco-hrpt-91]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_pointer_aims_at_the_input_center:pd-neut-cwl_lbco-hrpt-92]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_pointer_aims_at_the_input_center:pd-neut-cwl_lbco-hrpt-93]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_pointer_aims_at_the_input_center:pd-neut-cwl_lbco-hrpt-94]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_pointer_aims_at_the_input_center:pd-neut-cwl_lbco-hrpt-9]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_pointer_aims_at_the_input_center:pd-neut-cwl_lbco_simulation-10]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_pointer_aims_at_the_input_center:pd-neut-cwl_lbco_simulation-11]
@@ -263167,7 +263165,6 @@ UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[pointer_faces_and_reaches_the_named_control:30-group.space_group_symop]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[pointer_faces_and_reaches_the_named_control:31-group.expanded_atom_site]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[pointer_faces_and_reaches_the_named_control:32-geom.bonds]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[pointer_faces_and_reaches_the_named_control:32-group.geom_bond]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[pointer_faces_and_reaches_the_named_control:33-group.appearance]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[pointer_faces_and_reaches_the_named_control:34-appBar.tab.experiment]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[pointer_faces_and_reaches_the_named_control:35-mainArea.tab.pattern]
@@ -263269,7 +263266,6 @@ UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[tour_omits_expected_state_lines:30-group.space_group_symop]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[tour_omits_expected_state_lines:31-group.expanded_atom_site]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[tour_omits_expected_state_lines:32-geom.bonds]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[tour_omits_expected_state_lines:32-group.geom_bond]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[tour_omits_expected_state_lines:33-group.appearance]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[tour_omits_expected_state_lines:34-appBar.tab.experiment]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[tour_omits_expected_state_lines:35-mainArea.tab.pattern]

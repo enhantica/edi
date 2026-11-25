@@ -120,7 +120,8 @@ def _projects_result(_session, binary, reference, cases):
                 ],
                 env=environment,
                 capture_output=True,
-                text=True,
+                encoding='utf-8',
+                errors='backslashreplace',
                 timeout=300,
                 check=False,
             )

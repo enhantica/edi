@@ -80,6 +80,10 @@ def tsan_checkout(tmp_path):
     (source / 'run.sh').write_text('#!/bin/sh\n', encoding='utf-8')
     (source / 'run.sh').chmod(0o755)
     (source / 'link.cpp').symlink_to('code.cpp')
+    for mode, constant in [('parallel', 'SOURCE_PATHS'), ('simd', 'PATHS')]:
+        builder = source / 'tests/fixtures' / f'web_{mode}' / 'build.py'
+        builder.parent.mkdir(parents=True)
+        builder.write_text(f'{constant} = ("code.cpp",)\n', encoding='utf-8')
     sha = commit(source)
     sdk = tmp_path / 'sdk'
     (sdk / 'share/crysta-sdk').mkdir(parents=True)
@@ -101,7 +105,7 @@ def tsan_checkout(tmp_path):
         '    source = Path(sys.argv[2])\n'
         '    paths = {str(file.relative_to(source)): [str(file.readlink()) if file.is_symlink() '
         'else file.read_text(), bool(file.stat().st_mode & 0o100)] '
-        'for file in source.iterdir() if file.is_file()}\n'
+        "for file in source.rglob('*') if file.is_file() and '.git' not in file.parts}\n"
         '    trace.write_text(json.dumps({"paths": paths, "argv": sys.argv[1:]}))\n'
         '    if os.environ["TEST_FAILURE"] == "configure":\n'
         f'        print({LOCATION!r}, file=sys.stderr)\n'
@@ -193,6 +197,8 @@ def test_worker_compiles_the_sdk_export_and_retains_only_safe_diagnostics(
         'code.cpp',
         'run.sh',
         'link.cpp',
+        'tests/fixtures/web_parallel/build.py',
+        'tests/fixtures/web_simd/build.py',
     }, 'Only the entries in the SDK tree reach configure'
     output = result.stdout + result.stderr
     location = LOCATION if failure == 'configure' else COMPILE_LOCATION
