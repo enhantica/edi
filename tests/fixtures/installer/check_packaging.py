@@ -5,6 +5,7 @@ import importlib.util
 import io
 import json
 import os
+import plistlib
 import shutil
 import subprocess
 import sys
@@ -159,6 +160,11 @@ def copy_bundles(command, **_):
     # Stands in for the subprocess so the macOS tool component gets its copied bundle.
     if command[0] == 'ditto':
         shutil.copytree(command[1], command[2], symlinks=True)
+    # binarycreator's macOS bundle has the property list that the packaging renames.
+    if Path(command[0]).name.startswith('binarycreator') and str(command[-1]).endswith('.app'):
+        info = Path(command[-1]) / 'Contents/Info.plist'
+        info.parent.mkdir(parents=True)
+        info.write_bytes(plistlib.dumps({}))
     # lrelease writes the compiled text, which the packaging compares with the committed file.
     if '-qm' in command:
         shutil.copy2(PACKAGE.ROOT / 'tools/installer/ifw_en.qm', command[command.index('-qm') + 1])
