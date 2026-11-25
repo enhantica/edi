@@ -26,39 +26,55 @@ if [ ! -f "$PROBE" ]; then
     exit 1
 fi
 
-# The selected SDK's exact source: the pin normally, or the explicit consumer tree.
-bash tools/ci/build-crysta.sh
+# The selected SDK's exact source, always from an export: the pin's, or the candidate commit's out of
+# CRYSTA_CONSUMER_SRC, whose checkout and untracked files are not read.
+TREE="$ROOT/build/tsan"
 if [ -n "${CRYSTA_SDK_DIR:-}" ]; then
-    SRC="${CRYSTA_CONSUMER_SRC:-}"
-    if [ -z "$SRC" ] || [ ! -f "$SRC/CMakeLists.txt" ]; then
-        echo "tsan-worker: the candidate SDK requires its CRYSTA_CONSUMER_SRC tree" >&2
+    env -u CRYSTA_CONSUMER_SRC bash tools/ci/build-crysta.sh
+    MANIFEST="$CRYSTA_SDK_DIR/share/crysta-sdk/manifest.json"
+    SHA="$(python -c 'import json,sys; print(json.load(open(sys.argv[1]))["source_sha"])' "$MANIFEST")"
+    if ! git -C "${CRYSTA_CONSUMER_SRC:-}" cat-file -e "${SHA}^{commit}" 2>/dev/null; then
+        echo "tsan-worker: the candidate SDK requires CRYSTA_CONSUMER_SRC, a crysta repository holding $SHA" >&2
         exit 1
     fi
-    SHA="$(python -c 'import json,sys; print(json.load(open(sys.argv[1]))["source_sha"])' \
-        "$CRYSTA_SDK_DIR/share/crysta-sdk/manifest.json")"
+    SRC="$TREE/source"
+    rm -rf "$SRC"
+    mkdir -p "$SRC"
+    git -C "$CRYSTA_CONSUMER_SRC" archive "$SHA" | tar -x -C "$SRC"
 else
+    bash tools/ci/build-crysta.sh
     bash tools/ci/crysta-src.sh
     SRC="$ROOT/build/crysta-src"
-    SHA="$(cat "$SRC/CRYSTA_SOURCE_SHA")"
+    MANIFEST="$ROOT/build/crysta-prefix/share/crysta-sdk/manifest.json"
+    SHA="$(python -c 'import json,sys; print(json.load(open(sys.argv[1]))["source_sha"])' "$MANIFEST")"
 fi
-live="$(git -C "$SRC" rev-parse HEAD)"
-if [ "$live" != "$SHA" ] || ! git -C "$SRC" diff --quiet "$SHA" --; then
-    echo "tsan-worker: the source must be the selected SDK's unchanged commit $SHA (found $live)" >&2
+if ! python tools/ci/crysta_source_tree.py check "$SRC" "$MANIFEST"; then
+    echo "tsan-worker: the source is not the tree the selected SDK ($SHA) was built from" >&2
     exit 1
 fi
-TREE="$ROOT/build/tsan"
 FLAGS="-fsanitize=thread -fno-omit-frame-pointer -g"
 
-# crysta under the sanitizer: rebuilt only when the selected source moves.
-if [ "$(cat "$TREE/prefix/.crysta-sha" 2>/dev/null)" != "$SHA" ]; then
+# A configure failure shows where it failed, not the message, which may quote crysta's source.
+configure_failed() {
+    echo "tsan-worker: crysta's configure failed (exit $1); its log has $(wc -l <"$TREE.configure.log") lines" >&2
+    grep -aoE '^CMake Error at [^ ]+:[0-9]+ \([A-Za-z0-9_]+\):' "$TREE.configure.log" >&2 || true
+    exit 1
+}
+
+# crysta under the sanitizer: rebuilt only when the selected source tree moves.
+KEY="$(python tools/ci/crysta_source_tree.py id "$SRC") $SRC"
+if [ "$(cat "$TREE/prefix/.crysta-tree" 2>/dev/null)" != "$KEY" ]; then
     rm -rf "$TREE/crysta" "$TREE/prefix"
+    status=0
+    # A compile error names its file, line and message without quoting the line.
     cmake -S "$SRC" -B "$TREE/crysta" -G Ninja --no-warn-unused-cli -DCMAKE_BUILD_TYPE=RelWithDebInfo \
         -DCRYSTA_CXX_PACKAGE=ON -DCMAKE_INSTALL_PREFIX="$TREE/prefix" \
-        -DCMAKE_CXX_FLAGS="$FLAGS" -DCMAKE_EXE_LINKER_FLAGS=-fsanitize=thread >"$TREE.configure.log" 2>&1 \
-        || { cat "$TREE.configure.log" >&2; exit 1; }
+        -DCMAKE_CXX_FLAGS="$FLAGS -fno-diagnostics-show-caret" -DCMAKE_EXE_LINKER_FLAGS=-fsanitize=thread \
+        >"$TREE.configure.log" 2>&1 || status=$?
+    [ "$status" -eq 0 ] || configure_failed "$status"
     cmake --build "$TREE/crysta" -j ${CMAKE_BUILD_PARALLEL_LEVEL:-}
     cmake --install "$TREE/crysta" >/dev/null
-    printf '%s\n' "$SHA" >"$TREE/prefix/.crysta-sha"
+    printf '%s\n' "$KEY" >"$TREE/prefix/.crysta-tree"
 fi
 
 # edi's core, the probe and the negative control, in the same instrumented tree.

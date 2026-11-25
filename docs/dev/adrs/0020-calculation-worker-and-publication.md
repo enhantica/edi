@@ -224,11 +224,14 @@ above 1, each fit of a scan's group runs on one thread instead.
 ## Selected native source for the ThreadSanitizer witness
 
 The FIRST `tools/ci/tsan-worker.sh` instruments the same native source selected by
-`build-crysta.sh`. The ordinary route retains `build/crysta-src`; an explicit
-`CRYSTA_SDK_DIR` uses its manifest's commit and the caller's `CRYSTA_CONSUMER_SRC`.
-A missing, mismatched or tracked-modified source refuses before configuring or
+`build-crysta.sh`, always from an export: `build/crysta-src` on the ordinary route, and on an explicit
+`CRYSTA_SDK_DIR` the manifest's commit exported out of the repository `CRYSTA_CONSUMER_SRC`, whose checkout
+and untracked files are not read. `tools/ci/crysta_source_tree.py` computes the Git tree id of the exported
+files themselves and compares it with the SDK manifest's `source_tree`. A missing, changed or added file, or
+the source of another commit, refuses before configuring. A configure failure prints where it failed and a
+compile error its file, line and message, so the log does not quote crysta's source. The check comes before
 replacing the sanitizer tree. The SDK remains read-only. The original instrumented
-build, negative control, probe, report checks and native commit cache remain the
+build, negative control, probe, report checks and native cache, keyed by the tree, remain the
 witness; a successful uninstrumented consumer build cannot substitute for it.
 This source selection change requires independent execution on both routes; it
 does not establish that either witness or the full candidate suite passed.
