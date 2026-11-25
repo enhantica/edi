@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: BSD-3-Clause
-// The pattern chart's filled areas through changes of its axes. Every area Qt Graphs lays out, and every area attached
-// to an axis that changes, must be empty or hold the points of the pattern the axis is for. The expected points come
-// from the fixture files' rows and Bragg's law.
+// The pattern chart's filled areas through changes of its axes. Every area Qt Graphs lays out must be empty or hold the
+// points of the pattern the chart shows at that moment, and every area attached to an axis that changes must be empty or
+// hold those of the pattern the axis changes to. The expected points come from the fixture files' rows and Bragg's law,
+// the calculated intensities from the project's calculated columns.
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
@@ -37,7 +38,6 @@ namespace {
 const QString kFixtures = QStringLiteral(EDI_SOURCE_DIR "/tests/fixtures/excluded_display/");
 const QString kMeasured = QStringLiteral("chart.series.meas.band");
 const QString kResidual = QStringLiteral("chart.series.resid.band");
-const QString kCalculatedBars = QStringLiteral("chart.series.calc.bars");
 QString structureArea(int place) { return QStringLiteral("chart.series.structure.%1").arg(place); }
 
 struct Row {
@@ -87,23 +87,42 @@ struct Shown {
     std::vector<double> x, measured, su, background, calculated;
     std::vector<std::vector<double>> structures;  // each above the background
     bool residual = false;
+    bool measuredBand = true;
     bool squareRoot = false;
 
     double display(double value) const { return squareRoot ? std::copysign(std::sqrt(std::fabs(value)), value) : value; }
     double least() const { return *std::min_element(x.begin(), x.end()); }
     double greatest() const { return *std::max_element(x.begin(), x.end()); }
-    double top() const {
-        double out = 0.0;
-        for (std::size_t k = 0; k < measured.size(); ++k) out = std::max(out, display(measured[k] + su[k]));
-        for (const double value : calculated) out = std::max(out, display(value));
-        return out;
-    }
     bool shows(const QString& area) const {
-        if (area == kMeasured) return !measured.empty();
+        if (area == kMeasured) return measuredBand && !measured.empty();
         if (area == kResidual) return residual;
         for (std::size_t k = 0; k < structures.size(); ++k)
             if (area == structureArea(int(k))) return true;
         return false;
+    }
+    QStringList areas() const {
+        QStringList out;
+        if (shows(kMeasured)) out.append(kMeasured);
+        if (residual) out.append(kResidual);
+        for (std::size_t k = 0; k < structures.size(); ++k) out.append(structureArea(int(k)));
+        return out;
+    }
+    // Whether the calculated line drawn is this pattern's.
+    bool hasLine(const QList<QPointF>& line) const {
+        std::map<double, std::size_t> rows;
+        for (std::size_t k = 0; k < x.size(); ++k) rows.emplace(x[k], k);
+        int usable = 0;
+        for (const QPointF& point : line) {
+            if (!std::isfinite(point.x()) || !std::isfinite(point.y())) continue;
+            auto found = rows.lower_bound(point.x() - 1e-6 * std::max(1.0, std::fabs(point.x())));
+            if (found == rows.end() || !close(found->first, point.x())) return false;
+            if (!close(display(calculated[found->second]), point.y(), 1e-5)) return false;
+            ++usable;
+        }
+        return usable > 1;
+    }
+    bool sameLine(const Shown& other) const {
+        return x == other.x && calculated == other.calculated && squareRoot == other.squareRoot;
     }
     // Whether an x range lies in this pattern's.
     bool spans(const AxisRange& axis) const {
@@ -112,7 +131,7 @@ struct Shown {
     }
 
     // What is wrong with an area's points on an axis; nothing when they are this pattern's.
-    QString problem(const QString& area, const Edges& edges, const AxisRange& axis, bool withCalculated) const {
+    QString problem(const QString& area, const Edges& edges, const AxisRange& axis) const {
         if (edges.empty()) return {};
         if (!shows(area)) return QStringLiteral("holds %1 points and should be empty").arg(edges.upper.size());
         if (edges.upper.size() != edges.lower.size()) return QStringLiteral("has edges of different lengths");
@@ -142,15 +161,13 @@ struct Shown {
             } else if (area == kResidual) {
                 if (!close(up.y() - low.y(), 2.0 * su[row], 1e-4)) return wrong("upper", up.y(), low.y() + 2.0 * su[row]);
                 const double centre = measured[row] - calculated[row];
-                if (withCalculated && !close(0.5 * (up.y() + low.y()), centre, 1e-5)) return wrong("lower", low.y(), centre - su[row]);
+                if (!close(0.5 * (up.y() + low.y()), centre, 1e-5)) return wrong("lower", low.y(), centre - su[row]);
             } else {
                 const double base = display(background[row]);
                 if (!close(low.y(), base, 1e-5)) return wrong("lower", low.y(), base);
                 const std::size_t place = area.mid(structureArea(0).size() - 1).toULongLong();
                 const double top = display(background[row] + structures[place][row]);
-                if (withCalculated && !close(up.y(), top, 1e-5) && (up.y() < top || up.y() > base + thin))
-                    return wrong("upper", up.y(), top);
-                if (up.y() < low.y()) return wrong("upper", up.y(), top);
+                if (!close(up.y(), top, 1e-5) && (up.y() < top || up.y() > base + thin)) return wrong("upper", up.y(), top);
             }
         }
         // Every row in view, and one beyond each end at the most. A pattern with more rows than the plot has columns
@@ -174,6 +191,7 @@ struct Shown {
 // What the project's experiment shows. The measured columns and the background are the fixture's when there is one.
 Shown shownOf(const edi::ExperimentBase& experiment, const std::vector<Row>& rows = {}) {
     Shown out;
+    if (!experiment.data) return out;
     const auto& data = *experiment.data;
     if (rows.empty()) {
         out.x = data.axis();
@@ -195,6 +213,7 @@ Shown shownOf(const edi::ExperimentBase& experiment, const std::vector<Row>& row
     const auto& net = data.component_intensities_net.values();
     for (std::size_t place = 0; place < count; ++place) {
         std::vector<double> curve;
+        curve.reserve(out.x.size());
         for (std::size_t row = 0; row < out.x.size(); ++row) curve.push_back(net.at(row * count + place));
         out.structures.push_back(std::move(curve));
     }
@@ -212,8 +231,11 @@ Shown held(Shown shown) {
     return shown;
 }
 
+}  // namespace
+
 // A chart in a window, and what Qt Graphs is given and lays out while something changes.
-class Chart : public QObject {
+class WatchedChart : public QObject {
+    Q_OBJECT
    public:
     struct Area {
         QString name;
@@ -226,9 +248,11 @@ class Chart : public QObject {
         Edges edges;
         AxisRange axis;
         double beyond = 0;  // how far outside the plot it was laid out, in pixels
+        bool mainMoved = false;  // one of the main pane's ranges had changed by then
+        QList<QPointF> line;     // the calculated line then
     };
 
-    explicit Chart(edi_app::ProjectViewModel& project) {
+    explicit WatchedChart(edi_app::ProjectViewModel& project) {
         edi_app::configure_engine(engine_);
         QQmlComponent component(&engine_);
         component.setData(R"(
@@ -268,6 +292,11 @@ class Chart : public QObject {
             return;
         }
         controller_->setAnimationDuration(0);
+        line_ = root_->findChild<QLineSeries*>(QStringLiteral("chart.series.calc"));
+        if (!line_) {
+            error_ = QStringLiteral("the chart has no calculated line");
+            return;
+        }
         for (QQuickItem* view : {main_, residual_}) {
             for (const char* name : {"axisX", "axisY"}) {
                 auto* axis = qobject_cast<QValueAxis*>(view->property(name).value<QAbstractAxis*>());
@@ -283,13 +312,13 @@ class Chart : public QObject {
         if (!QTest::qWaitForWindowExposed(&window_)) error_ = QStringLiteral("the window was not shown");
         else if (!settle()) error_ = QStringLiteral("the chart did not settle");
     }
-    ~Chart() override { root_.reset(); }
+    ~WatchedChart() override { root_.reset(); }
 
     const QString& error() const { return error_; }
     edi_app::PatternChartController* controller() const { return controller_; }
     QQuickItem* mainView() const { return main_; }
     QQuickItem* residualView() const { return residual_; }
-    const QLineSeries* lineSeries(const QString& name) const { return root_->findChild<QLineSeries*>(name); }
+    const QLineSeries* calculatedLine() const { return line_; }
     void setYScale(const char* scale) { root_->setProperty("yScale", QString::fromLatin1(scale)); }
     void resize(int width, int height) {
         window_.resize(width, height);
@@ -311,7 +340,7 @@ class Chart : public QObject {
             same = !project_->calculating() && now == last ? same + 1 : 0;
             last = now;
         }
-        watch();
+        watchPaths();
         return same >= 4;
     }
 
@@ -331,8 +360,16 @@ class Chart : public QObject {
                 view->property("plotArea").toRectF().height()};
     }
 
+    bool hasArea(const QString& name) const {
+        const QList<Area> all = areas();
+        return std::any_of(all.begin(), all.end(), [&name](const Area& area) { return area.name == name; });
+    }
+
     void start() {
+        watchPaths();
         records_.clear();
+        main_moved_ = false;
+        taken_early_ = taken_late_ = 0;
         recording_ = true;
     }
     void stop() { recording_ = false; }
@@ -340,35 +377,35 @@ class Chart : public QObject {
         return std::count_if(records_.begin(), records_.end(), [layout](const Record& record) { return record.layout == layout; });
     }
 
-    // The recorded areas that were neither empty nor of the pattern the axes were for. A layout may show either
-    // state, as its axes say; an area on an axis that is changing must already be the later one's.
+    // The recorded areas that were neither empty nor of the pattern they belonged to. What the chart shows goes over from
+    // one state to the other when the main pane's ranges move or the calculated line does, whichever is first: a layout
+    // after that has the later state's areas, one before it the earlier's. Two states with the same line (a fill left
+    // out or put back) have no such moment. An area on an axis that is changing must already be the later state's.
     QStringList problems(const Shown& before, const Shown& after) const {
         QStringList out;
-        // Two y scales show the same rows, and their fitted y ranges tell them apart.
-        const bool scales = before.squareRoot != after.squareRoot;
         std::map<QString, int> layouts, changes;
         std::map<QString, double> distances;
         for (const Record& record : records_) {
             if (record.edges.empty()) continue;
             QString problem;
             if (record.layout) {
-                problem = QStringLiteral("is on axes that no pattern is on");
-                for (const Shown* shown : {&before, &after}) {
-                    if (!shown->spans(record.axis)) continue;
-                    const bool residual = record.area == kResidual;
-                    if (scales && !residual && (record.axis.yMax < 0.5 * shown->top() || record.axis.yMax > 2.0 * shown->top())) continue;
-                    problem = shown->problem(record.area, record.edges, record.axis, false);
+                QList<const Shown*> states{&after};
+                if (before.sameLine(after)) states.append(&before);
+                else if (!record.mainMoved && before.hasLine(record.line)) states = {&before};
+                for (const Shown* shown : states) {
+                    problem = shown->spans(record.axis) ? shown->problem(record.area, record.edges, record.axis)
+                                                        : QStringLiteral("is on axes its pattern is not on");
                     if (problem.isEmpty()) break;
                 }
             } else {
-                problem = after.problem(record.area, record.edges, record.axis, true);
+                problem = after.problem(record.area, record.edges, record.axis);
                 // An axis published end by end holds neither range in between: the points are judged on their own.
                 if (problem.contains(QLatin1String("in view")) || problem.contains(QLatin1String("the view"))) {
                     AxisRange whole = record.axis;
                     const AxisRange now = rangeOf(record.area == kResidual ? residual_ : main_);
                     whole.xMin = now.xMin;
                     whole.xMax = now.xMax;
-                    problem = after.problem(record.area, record.edges, whole, true);
+                    problem = after.problem(record.area, record.edges, whole);
                 }
             }
             if (problem.isEmpty()) continue;
@@ -382,13 +419,54 @@ class Chart : public QObject {
         return out;
     }
 
+    // New paths watched from before their first layout on.
+    int newPaths() const { return taken_late_ == 0 ? taken_early_ : 0; }
+
+    // What should have been observed and was not: a filled layout of every area shown afterwards, an empty one of every
+    // area no longer shown, and each area on every axis named ("main axisX, residual axisY") as the axis changed.
+    QStringList unseen(const Shown& before, const Shown& after, const QString& axes) const {
+        QStringList out;
+        const auto seenLayout = [this](const QString& area, bool empty) {
+            return std::any_of(records_.begin(), records_.end(), [&](const Record& record) {
+                return record.layout && record.area == area && record.edges.empty() == empty;
+            });
+        };
+        if (taken_late_ > 0) out.append(QStringLiteral("%1 paths were laid out before they were watched").arg(taken_late_));
+        const QStringList later = after.areas();
+        for (const QString& area : later)
+            if (!seenLayout(area, false)) out.append(QStringLiteral("no filled layout of %1 was seen").arg(area));
+        for (const QString& area : before.areas()) {
+            const bool visible = (area == kResidual ? residual_ : main_)->isVisible();
+            if (visible && !later.contains(area) && !seenLayout(area, true)) out.append(QStringLiteral("no empty layout of %1 was seen").arg(area));
+            for (const QString& axis : axes.split(QStringLiteral(", "), Qt::SkipEmptyParts)) {
+                const QStringList words = axis.split(u' ');
+                if ((words.first() == QLatin1String("residual")) != (area == kResidual)) continue;
+                if (std::none_of(records_.begin(), records_.end(), [&](const Record& record) {
+                        return !record.layout && record.area == area && record.event == words.last();
+                    }))
+                    out.append(QStringLiteral("%1 was not seen on the changing %2").arg(area, axis));
+            }
+        }
+        return out;
+    }
+
+    // The residual's own range moves with the panes' heights: its band has to be empty each time (ADR-0044).
+    QStringList residualLimitProblems() const {
+        int ends = 0, filled = 0;
+        for (const Record& record : records_) {
+            if (record.layout || record.area != kResidual || record.event != QLatin1String("axisY")) continue;
+            ++ends;
+            filled += record.edges.empty() ? 0 : 1;
+        }
+        if (ends < 2) return {QStringLiteral("the residual's range was not seen to change")};
+        if (filled > 0) return {QStringLiteral("the residual's band was filled at %1 of %2 changes of its limits").arg(filled).arg(ends)};
+        return {};
+    }
+
     // Each named area drawn, and no other: its points and the shape Qt laid out from them.
     QStringList settledProblems(const Shown& shown) const {
         QStringList out;
-        QStringList wanted;
-        if (!shown.measured.empty()) wanted.append(kMeasured);
-        if (shown.residual) wanted.append(kResidual);
-        for (std::size_t k = 0; k < shown.structures.size(); ++k) wanted.append(structureArea(int(k)));
+        QStringList wanted = shown.areas();
         for (const Area& area : areas()) {
             const bool want = wanted.removeAll(area.name) > 0;
             const Edges edges = edgesOf(area);
@@ -405,11 +483,11 @@ class Chart : public QObject {
                 out.append(area.name + QStringLiteral(" has nothing to draw"));
                 continue;
             }
-            const QString held = shown.problem(area.name, edges, axis, true);
+            const QString held = shown.problem(area.name, edges, axis);
             if (!held.isEmpty()) out.append(area.name + u' ' + held);
             const Edges shape = drawn(area);
             if (!area.view->isVisible() || shape.empty()) out.append(area.name + QStringLiteral(" is not drawn"));
-            else if (const QString bad = shown.problem(area.name, shape, axis, true); !bad.isEmpty())
+            else if (const QString bad = shown.problem(area.name, shape, axis); !bad.isEmpty())
                 out.append(area.name + QStringLiteral(" is drawn and ") + bad);
             int inside = 0;
             for (const QPointF& point : shape.upper) inside += point.x() >= axis.xMin && point.x() <= axis.xMax ? 1 : 0;
@@ -419,16 +497,34 @@ class Chart : public QObject {
         return out;
     }
 
+   private slots:
+    // The shape reports a new path as it takes it, before the path's first layout.
+    void watchPaths() {
+        for (QQuickItem* view : {main_.data(), residual_.data()}) {
+            const QQuickItem* shape = shapeOf(view);
+            if (!shape) continue;
+            connect(shape, SIGNAL(boundingRectChanged()), this, SLOT(watchPaths()), Qt::UniqueConnection);
+            for (QQuickPath* path : pathsOf(view)) {
+                if (watched_.contains(path)) continue;
+                watched_.insert(path);
+                if (recording_) (path->path().isEmpty() ? taken_early_ : taken_late_) += 1;
+                connect(path, &QQuickPath::changed, this, [this, view, path] { laidOut(view, path); });
+            }
+        }
+    }
+
    private:
-    static QList<QQuickPath*> pathsOf(const QQuickItem* view) {
+    static QQuickItem* shapeOf(const QQuickItem* view) {
         for (QQuickItem* child : view->childItems()) {
             if (QByteArrayView(child->metaObject()->className()) != "AreaRenderer") continue;
-            for (QObject* shape : child->children())
-                if (shape->inherits("QQuickShape")) return shape->findChildren<QQuickPath*>(Qt::FindDirectChildrenOnly);
             for (QQuickItem* shape : child->childItems())
-                if (shape->inherits("QQuickShape")) return shape->findChildren<QQuickPath*>(Qt::FindDirectChildrenOnly);
+                if (shape->inherits("QQuickShape")) return shape;
         }
-        return {};
+        return nullptr;
+    }
+    static QList<QQuickPath*> pathsOf(const QQuickItem* view) {
+        const QQuickItem* shape = shapeOf(view);
+        return shape ? shape->findChildren<QQuickPath*>(Qt::FindDirectChildrenOnly) : QList<QQuickPath*>{};
     }
     // The points of a laid out area, back from pixels on the axes it was laid out on.
     static Edges edgesOf(const QQuickPath* path, const AxisRange& axis) {
@@ -463,15 +559,6 @@ class Chart : public QObject {
         }
         return {};
     }
-    void watch() {
-        for (QQuickItem* view : {main_, residual_}) {
-            for (QQuickPath* path : pathsOf(view)) {
-                if (watched_.contains(path)) continue;
-                watched_.insert(path);
-                connect(path, &QQuickPath::changed, this, [this, view, path] { laidOut(view, path); });
-            }
-        }
-    }
     void laidOut(QQuickItem* view, QQuickPath* path) {
         if (!recording_) return;
         const qsizetype place = pathsOf(view).indexOf(path);
@@ -482,13 +569,14 @@ class Chart : public QObject {
             const QRectF bounds = path->path().boundingRect();
             const double beyond = std::max({0.0, -bounds.left(), -bounds.top(), bounds.right() - shape->parentItem()->width(),
                                             bounds.bottom() - shape->parentItem()->height()});
-            records_.append({true, area.name, QStringLiteral("layout"), edgesOf(path, rangeOf(view)), rangeOf(view), beyond});
+            records_.append({true, area.name, QStringLiteral("layout"), edgesOf(path, rangeOf(view)), rangeOf(view), beyond, main_moved_, line_->points()});
         }
     }
     void attached(QQuickItem* view, const char* axis) {
         if (!recording_) return;
+        main_moved_ = main_moved_ || view == main_;
         for (const Area& area : areas())
-            if (area.view == view) records_.append({false, area.name, QLatin1String(axis) + QStringLiteral(" changed"), edgesOf(area), rangeOf(view)});
+            if (area.view == view) records_.append({false, area.name, QLatin1String(axis), edgesOf(area), rangeOf(view), 0, main_moved_, line_->points()});
     }
 
     QQmlEngine engine_;
@@ -498,10 +586,14 @@ class Chart : public QObject {
     QPointer<QQuickItem> main_, residual_;
     edi_app::ProjectViewModel* project_ = nullptr;
     QString error_;
-    bool recording_ = false;
+    QPointer<QLineSeries> line_;
+    bool recording_ = false, main_moved_ = false;
+    int taken_early_ = 0, taken_late_ = 0;  // paths watched before their first layout, and after it
     QList<Record> records_;
     QSet<QQuickPath*> watched_;
 };
+
+namespace {
 
 edi_app::ParameterItem* parameterEnding(edi_app::ProjectViewModel& model, const char* ending) {
     edi::Project names = model.project();
@@ -512,15 +604,18 @@ edi_app::ParameterItem* parameterEnding(edi_app::ProjectViewModel& model, const 
 
 }  // namespace
 
-// Judges what was recorded since start(), then the settled chart, and keeps what is wrong for the test's end.
-#define CHECK_CHANGE(step, chart, before, after)                                                                       \
+// Judges what was recorded since start(), then the settled chart, and keeps what is wrong for the test's end. `axes` are
+// those the step has to move.
+#define CHECK_CHANGE(step, chart, before, after, axes)                                                                  \
     do {                                                                                                               \
         QVERIFY((chart).settle());                                                                                     \
         (chart).stop();                                                                                                \
         qInfo("%s: %lld layouts and %lld areas on changing axes seen", step, static_cast<long long>((chart).seen(true)), \
               static_cast<long long>((chart).seen(false)));                                                            \
-        for (const QString& found : (chart).problems((before), (after)) + (chart).settledProblems(after))            \
-            wrong.append(QLatin1String(step) + QStringLiteral(": ") + found);                                           \
+        for (const QString& found : (chart).problems((before), (after)) +                                              \
+                                        (chart).unseen((before), (after), QStringLiteral(axes)) +                      \
+                                        (chart).settledProblems(after))                                                \
+            wrong.append(QLatin1String(step) + QStringLiteral(": ") + found);                                          \
     } while (false)
 #define VERIFY_NOTHING_WRONG() QVERIFY2(wrong.isEmpty(), qPrintable(QLatin1Char('\n') + wrong.join(QLatin1Char('\n'))))
 
@@ -543,7 +638,7 @@ class ChartAreaTests : public QObject {
         type.scattering_type = "bragg";
         project.experiments.push_back(edi::simulation_experiment("pattern", type, "phase"));
         edi_app::ProjectViewModel model(std::move(project), nullptr);
-        Chart chart(model);
+        WatchedChart chart(model);
         QVERIFY2(chart.error().isEmpty(), qPrintable(chart.error()));
         const Shown angle = shownOf(model.project().experiment());
         QVERIFY(angle.greatest() < 180.0);
@@ -557,11 +652,11 @@ class ChartAreaTests : public QObject {
         const Shown flight = shownOf(model.project().experiment());
         QVERIFY(flight.least() > 100.0);
         QCOMPARE(flight.structures.size(), std::size_t(1));
-        CHECK_CHANGE("to time of flight", chart, angle, flight);
+        CHECK_CHANGE("to time of flight", chart, angle, flight, "main axisX, main axisY");
 
         chart.start();
         QVERIFY2(model.setExperimentType(0, QStringLiteral("beamMode"), QStringLiteral("constant wavelength")), qPrintable(model.lastError()));
-        CHECK_CHANGE("to constant wavelength", chart, flight, angle);
+        CHECK_CHANGE("to constant wavelength", chart, flight, angle, "main axisX, main axisY");
         VERIFY_NOTHING_WRONG();
     }
 
@@ -579,23 +674,26 @@ class ChartAreaTests : public QObject {
         flightExperiment.linked_structures.push_back(link);
         project.experiments.push_back(flightExperiment);
         edi_app::ProjectViewModel model(std::move(project), nullptr);
-        Chart chart(model);
+        WatchedChart chart(model);
         QVERIFY2(chart.error().isEmpty(), qPrintable(chart.error()));
         const Shown angle = shownOf(*model.project().experiments[0], measuredRows(QStringLiteral("cw")));
         QCOMPARE(chart.settledProblems(angle), QStringList());
-        // Seen once, so the second structure's area exists.
-        model.setCurrentExperimentIndex(1);
-        QVERIFY(chart.settle());
-        const Shown flight = shownOf(*model.project().experiments[1], measuredRows(QStringLiteral("tof")));
-        QCOMPARE(flight.structures.size(), std::size_t(2));
-        QCOMPARE(chart.settledProblems(flight), QStringList());
         QStringList wrong;
-        chart.start();
-        model.setCurrentExperimentIndex(0);
-        CHECK_CHANGE("to 2 theta", chart, flight, angle);
-        chart.start();
-        model.setCurrentExperimentIndex(1);
-        CHECK_CHANGE("to time of flight", chart, angle, flight);
+        Shown flight;
+        // The second structure's area is made and laid out for the first time in the first round.
+        QVERIFY(!chart.hasArea(structureArea(1)));
+        for (int round = 0; round < 2; ++round) {
+            chart.start();
+            model.setCurrentExperimentIndex(1);
+            QVERIFY(chart.settle());
+            flight = shownOf(*model.project().experiments[1], measuredRows(QStringLiteral("tof")));
+            QCOMPARE(flight.structures.size(), std::size_t(2));
+            QVERIFY(round > 0 || chart.newPaths() > 0);
+            CHECK_CHANGE("to time of flight", chart, angle, flight, "main axisX, main axisY, residual axisX, residual axisY");
+            chart.start();
+            model.setCurrentExperimentIndex(0);
+            CHECK_CHANGE("to 2 theta", chart, flight, angle, "main axisX, main axisY, residual axisX, residual axisY");
+        }
         VERIFY_NOTHING_WRONG();
     }
 
@@ -608,7 +706,7 @@ class ChartAreaTests : public QObject {
         link.structure_id = "phase2";
         project.experiment().linked_structures.push_back(link);
         edi_app::ProjectViewModel model(std::move(project), nullptr);
-        Chart chart(model);
+        WatchedChart chart(model);
         QVERIFY2(chart.error().isEmpty(), qPrintable(chart.error()));
         const auto rows = measuredRows(QStringLiteral("cw"));
         const Shown both = shownOf(model.project().experiment(), rows);
@@ -620,92 +718,94 @@ class ChartAreaTests : public QObject {
         QVERIFY(chart.settle());
         const Shown one = shownOf(model.project().experiment(), rows);
         QCOMPARE(one.structures.size(), std::size_t(1));
-        CHECK_CHANGE("unlinked", chart, both, one);
+        CHECK_CHANGE("unlinked", chart, both, one, "main axisY, residual axisY");
         VERIFY_NOTHING_WRONG();
     }
 
     void zoomPanReset() {
         edi_app::ProjectViewModel model(fixtureProject(QStringLiteral("cw")), nullptr);
-        Chart chart(model);
+        WatchedChart chart(model);
         QVERIFY2(chart.error().isEmpty(), qPrintable(chart.error()));
         const Shown shown = shownOf(model.project().experiment(), measuredRows(QStringLiteral("cw")));
         const QSizeF plot = chart.mainView()->property("plotArea").toRectF().size();
-        const AxisRange full = Chart::rangeOf(chart.mainView());
+        const AxisRange full = WatchedChart::rangeOf(chart.mainView());
         QStringList wrong;
 
         chart.start();
         chart.controller()->zoomTo(0.4 * plot.width(), 0.45 * plot.width(), 0, plot.height());
-        CHECK_CHANGE("zoom", chart, shown, shown);
-        const AxisRange zoomed = Chart::rangeOf(chart.mainView());
+        CHECK_CHANGE("zoom", chart, shown, shown, "main axisX, residual axisX");
+        const AxisRange zoomed = WatchedChart::rangeOf(chart.mainView());
         QVERIFY(close(zoomed.xMax - zoomed.xMin, 0.05 * (full.xMax - full.xMin), 1e-3));
 
         chart.start();
         chart.controller()->panBy(0.75 * plot.width());
-        CHECK_CHANGE("pan", chart, shown, shown);
-        QVERIFY(Chart::rangeOf(chart.mainView()).xMin < zoomed.xMin);
+        CHECK_CHANGE("pan", chart, shown, shown, "main axisX, residual axisX");
+        QVERIFY(WatchedChart::rangeOf(chart.mainView()).xMin < zoomed.xMin);
 
         chart.start();
         chart.controller()->reset();
-        CHECK_CHANGE("reset", chart, shown, shown);
-        QVERIFY(close(Chart::rangeOf(chart.mainView()).xMin, shown.least()) && close(Chart::rangeOf(chart.mainView()).xMax, shown.greatest()));
+        CHECK_CHANGE("reset", chart, shown, shown, "main axisX, residual axisX");
+        QVERIFY(close(WatchedChart::rangeOf(chart.mainView()).xMin, shown.least()) && close(WatchedChart::rangeOf(chart.mainView()).xMax, shown.greatest()));
         VERIFY_NOTHING_WRONG();
     }
 
     void xAxisQuantity() {
         edi_app::ProjectViewModel model(fixtureProject(QStringLiteral("cw")), nullptr);
-        Chart chart(model);
+        WatchedChart chart(model);
         QVERIFY2(chart.error().isEmpty(), qPrintable(chart.error()));
         const Shown angle = shownOf(model.project().experiment(), measuredRows(QStringLiteral("cw")));
         const Shown spacing = onDSpacing(angle, 1.54);
         QStringList wrong;
         chart.start();
         model.setPatternXAxis(QStringLiteral("d_spacing"));
-        CHECK_CHANGE("to d", chart, angle, spacing);
+        CHECK_CHANGE("to d", chart, angle, spacing, "main axisX, residual axisX");
         chart.start();
         model.setPatternXAxis(QStringLiteral("native"));
-        CHECK_CHANGE("to 2 theta", chart, spacing, angle);
+        CHECK_CHANGE("to 2 theta", chart, spacing, angle, "main axisX, residual axisX");
         VERIFY_NOTHING_WRONG();
     }
 
     void yScale() {
         edi_app::ProjectViewModel model(fixtureProject(QStringLiteral("cw")), nullptr);
-        Chart chart(model);
+        WatchedChart chart(model);
         QVERIFY2(chart.error().isEmpty(), qPrintable(chart.error()));
         const Shown linear = shownOf(model.project().experiment(), measuredRows(QStringLiteral("cw")));
         Shown root = linear;
         root.squareRoot = true;
-        const double reach = Chart::rangeOf(chart.residualView()).yMax;
+        const double reach = WatchedChart::rangeOf(chart.residualView()).yMax;
         QStringList wrong;
         chart.start();
         chart.setYScale("sqrt");
-        CHECK_CHANGE("to square root", chart, linear, root);
-        QVERIFY(!close(Chart::rangeOf(chart.residualView()).yMax, reach));
+        CHECK_CHANGE("to square root", chart, linear, root, "main axisY, residual axisY");
+        QVERIFY(!close(WatchedChart::rangeOf(chart.residualView()).yMax, reach));
         chart.start();
         chart.setYScale("linear");
-        CHECK_CHANGE("to linear", chart, root, linear);
-        QVERIFY(close(Chart::rangeOf(chart.residualView()).yMax, reach));
+        CHECK_CHANGE("to linear", chart, root, linear, "main axisY, residual axisY");
+        QVERIFY(close(WatchedChart::rangeOf(chart.residualView()).yMax, reach));
         VERIFY_NOTHING_WRONG();
     }
 
     // The residual has the main pane's scale on a linear axis, so its range follows the panes' heights.
-    static bool residualFollowsMain(const Chart& chart) {
-        const AxisRange main = Chart::rangeOf(chart.mainView()), residual = Chart::rangeOf(chart.residualView());
+    static bool residualFollowsMain(const WatchedChart& chart) {
+        const AxisRange main = WatchedChart::rangeOf(chart.mainView()), residual = WatchedChart::rangeOf(chart.residualView());
         return close((main.yMax - main.yMin) / main.height, (residual.yMax - residual.yMin) / residual.height, 1e-3);
     }
 
     void residualResized() {
         edi_app::ProjectViewModel model(fixtureProject(QStringLiteral("cw")), nullptr);
-        Chart chart(model);
+        WatchedChart chart(model);
         QVERIFY2(chart.error().isEmpty(), qPrintable(chart.error()));
         const Shown shown = shownOf(model.project().experiment(), measuredRows(QStringLiteral("cw")));
         QVERIFY(residualFollowsMain(chart));
+        QCOMPARE(chart.settledProblems(shown), QStringList());
         QStringList wrong;
         for (const QSize& size : {QSize(1000, 480), QSize(1100, 660)}) {
-            const double reach = Chart::rangeOf(chart.residualView()).yMax;
+            const double reach = WatchedChart::rangeOf(chart.residualView()).yMax;
             chart.start();
             chart.resize(size.width(), size.height());
-            CHECK_CHANGE("resize", chart, shown, shown);
-            QVERIFY(Chart::rangeOf(chart.residualView()).yMax != reach);
+            CHECK_CHANGE("resize", chart, shown, shown, "residual axisY");
+            wrong += chart.residualLimitProblems();
+            QVERIFY(WatchedChart::rangeOf(chart.residualView()).yMax != reach);
             QVERIFY(residualFollowsMain(chart));
         }
         VERIFY_NOTHING_WRONG();
@@ -713,48 +813,51 @@ class ChartAreaTests : public QObject {
 
     void residualHiddenAndShown() {
         edi_app::ProjectViewModel model(fixtureProject(QStringLiteral("cw")), nullptr);
-        Chart chart(model);
+        WatchedChart chart(model);
         QVERIFY2(chart.error().isEmpty(), qPrintable(chart.error()));
         const Shown shown = shownOf(model.project().experiment(), measuredRows(QStringLiteral("cw")));
         Shown hidden = shown;
         hidden.residual = false;
         QStringList wrong;
-        // Until it is hidden the residual is its own pattern's on any of its ranges.
+        QCOMPARE(chart.settledProblems(shown), QStringList());
         chart.start();
         chart.controller()->toggleSeries(QStringLiteral("resid"));
-        QVERIFY(chart.settle());
-        chart.stop();
-        wrong += chart.problems(shown, shown);
-        wrong += chart.settledProblems(hidden);
+        CHECK_CHANGE("hidden", chart, shown, hidden, "residual axisY");
+        wrong += chart.residualLimitProblems();
         QVERIFY(!chart.residualView()->isVisible());
         // Resized while hidden, so the axis it comes back on is another one.
         chart.resize(1000, 480);
         QVERIFY(chart.settle());
         chart.start();
         chart.controller()->toggleSeries(QStringLiteral("resid"));
-        CHECK_CHANGE("shown", chart, hidden, shown);
+        CHECK_CHANGE("shown", chart, hidden, shown, "");
+        wrong += chart.residualLimitProblems();
         QVERIFY(residualFollowsMain(chart));
         VERIFY_NOTHING_WRONG();
     }
 
     void measuredHidden() {
         edi_app::ProjectViewModel model(fixtureProject(QStringLiteral("cw")), nullptr);
-        Chart chart(model);
+        WatchedChart chart(model);
         QVERIFY2(chart.error().isEmpty(), qPrintable(chart.error()));
         const Shown shown = shownOf(model.project().experiment(), measuredRows(QStringLiteral("cw")));
-        chart.controller()->toggleSeries(QStringLiteral("meas"));
-        QVERIFY(chart.settle());
-        for (const Chart::Area& area : chart.areas())
-            if (area.name == kMeasured) QVERIFY(Chart::edgesOf(area).empty());
-        chart.controller()->toggleSeries(QStringLiteral("meas"));
-        QVERIFY(chart.settle());
         QCOMPARE(chart.settledProblems(shown), QStringList());
+        Shown hidden = shown;
+        hidden.measuredBand = false;
+        QStringList wrong;
+        chart.start();
+        chart.controller()->toggleSeries(QStringLiteral("meas"));
+        CHECK_CHANGE("hidden", chart, shown, hidden, "");
+        chart.start();
+        chart.controller()->toggleSeries(QStringLiteral("meas"));
+        CHECK_CHANGE("shown", chart, hidden, shown, "");
+        VERIFY_NOTHING_WRONG();
     }
 
     // A wavelength moves the measured rows along a d axis, so a held slider has to move the band with them.
     void heldWavelength() {
         edi_app::ProjectViewModel model(fixtureProject(QStringLiteral("cw")), nullptr);
-        Chart chart(model);
+        WatchedChart chart(model);
         QVERIFY2(chart.error().isEmpty(), qPrintable(chart.error()));
         const auto rows = measuredRows(QStringLiteral("cw"));
         model.setPatternXAxis(QStringLiteral("d_spacing"));
@@ -764,11 +867,9 @@ class ChartAreaTests : public QObject {
         QVERIFY(chart.settle());
         Shown before = onDSpacing(shownOf(model.project().experiment(), rows), 1.54);
         QCOMPARE(chart.settledProblems(before), QStringList());
-        const AxisRange zoomed = Chart::rangeOf(chart.mainView());
+        const AxisRange zoomed = WatchedChart::rangeOf(chart.mainView());
         auto* wavelength = parameterEnding(model, "setup_wavelength");
         QVERIFY(wavelength);
-        const QLineSeries* calculated = chart.lineSeries(QStringLiteral("chart.series.calc"));
-        QVERIFY(calculated);
 
         QStringList wrong;
         model.setAdjusting(true);
@@ -776,34 +877,52 @@ class ChartAreaTests : public QObject {
             chart.start();
             wavelength->setValue(value);
             QVERIFY(chart.settle());
-            const AxisRange now = Chart::rangeOf(chart.mainView());
+            const AxisRange now = WatchedChart::rangeOf(chart.mainView());
             QVERIFY(now.xMin == zoomed.xMin && now.xMax == zoomed.xMax && now.yMin == zoomed.yMin && now.yMax == zoomed.yMax);
             const Shown full = onDSpacing(shownOf(model.project().experiment(), rows), value);
             // The step was drawn: the calculated line is already at the new wavelength.
-            const QList<QPointF> line = calculated->points();
-            QVERIFY(line.size() > 2);
-            for (const QPointF& point : line)
-                QVERIFY(std::any_of(full.x.begin(), full.x.end(), [&point](double x) { return close(x, point.x()); }));
+            QVERIFY(full.hasLine(chart.calculatedLine()->points()) && !before.hasLine(chart.calculatedLine()->points()));
             const Shown during = held(full);
-            CHECK_CHANGE("held", chart, before, during);
+            CHECK_CHANGE("held", chart, before, during, "");
             before = during;
         }
         const Shown after = onDSpacing(shownOf(model.project().experiment(), rows), 1.61);
         chart.start();
         model.setAdjusting(false);
         QVERIFY(chart.settle());
-        CHECK_CHANGE("released", chart, before, after);
+        CHECK_CHANGE("released", chart, before, after, "");
+        VERIFY_NOTHING_WRONG();
+    }
+
+    // The same rows and background with other calculated intensities.
+    void scaleEdited() {
+        edi_app::ProjectViewModel model(fixtureProject(QStringLiteral("cw")), nullptr);
+        WatchedChart chart(model);
+        QVERIFY2(chart.error().isEmpty(), qPrintable(chart.error()));
+        const auto rows = measuredRows(QStringLiteral("cw"));
+        auto* scale = parameterEnding(model, ".scale");
+        QVERIFY(scale);
+        QStringList wrong;
+        for (const double value : {4.0 * scale->value(), scale->value()}) {
+            const Shown from = shownOf(model.project().experiment(), rows);
+            chart.start();
+            scale->setValue(value);
+            QVERIFY(chart.settle());
+            const Shown to = shownOf(model.project().experiment(), rows);
+            QVERIFY(!from.sameLine(to));
+            CHECK_CHANGE("edited", chart, from, to, "main axisY, residual axisY");
+        }
         VERIFY_NOTHING_WRONG();
     }
 
     // A held slider's first step that raises the fitted y range.
     void heldScale() {
         edi_app::ProjectViewModel model(fixtureProject(QStringLiteral("cw")), nullptr);
-        Chart chart(model);
+        WatchedChart chart(model);
         QVERIFY2(chart.error().isEmpty(), qPrintable(chart.error()));
         const auto rows = measuredRows(QStringLiteral("cw"));
         const Shown before = shownOf(model.project().experiment(), rows);
-        const double top = Chart::rangeOf(chart.mainView()).yMax;
+        const double top = WatchedChart::rangeOf(chart.mainView()).yMax;
         auto* scale = parameterEnding(model, ".scale");
         QVERIFY(scale);
         QStringList wrong;
@@ -812,12 +931,12 @@ class ChartAreaTests : public QObject {
         scale->setValue(4.0 * scale->value());
         QVERIFY(chart.settle());
         const Shown full = shownOf(model.project().experiment(), rows);
-        QVERIFY(Chart::rangeOf(chart.mainView()).yMax > 1.2 * top);
-        CHECK_CHANGE("held", chart, before, held(full));
+        QVERIFY(WatchedChart::rangeOf(chart.mainView()).yMax > 1.2 * top);
+        CHECK_CHANGE("held", chart, before, held(full), "main axisY, residual axisY");
         chart.start();
         model.setAdjusting(false);
         QVERIFY(chart.settle());
-        CHECK_CHANGE("released", chart, held(full), shownOf(model.project().experiment(), rows));
+        CHECK_CHANGE("released", chart, held(full), shownOf(model.project().experiment(), rows), "");
         VERIFY_NOTHING_WRONG();
     }
 };
