@@ -1,94 +1,94 @@
-# The members the SDK archive may have (edi ADR-0083), one a line: how it is made, its name, and what
-# it is made from. `copy`: that source file as it is. `template`: filled in from those, every source
-# line in it one of theirs. `built`: anything else, checked like any file.
+# The members the SDK archive may have (edi ADR-0083), one a line: what it is and its name. `header`: a
+# public header, the listed commit's own file of that name, the one part of the source the SDK may
+# carry. `built`: anything else, checked like any file.
 built bin/crysta
 built bin/crysta.exe
 built bin/*.dll
 built lib/libcrysta_core.a
 built lib/crysta_core.lib
 built lib/crysta-runtime/*
-template lib/cmake/crysta/crystaConfig.cmake cmake/crystaConfig.cmake.in CMakeLists.txt
+built lib/cmake/crysta/crystaConfig.cmake
 built lib/cmake/crysta/crystaConfigVersion.cmake
 built lib/cmake/crysta/crystaTargets.cmake
 built lib/cmake/crysta/crystaTargets-release.cmake
 built share/crysta-sdk/manifest.json
-copy share/crysta/python-surface.json data/python-surface.json
-copy include/crysta/absorption.hpp include/crysta/absorption.hpp
-copy include/crysta/absorptions.hpp include/crysta/absorptions.hpp
-copy include/crysta/absorptions/cylinder_hewat.hpp include/crysta/absorptions/cylinder_hewat.hpp
-copy include/crysta/absorptions/cylinder_lobanov.hpp include/crysta/absorptions/cylinder_lobanov.hpp
-copy include/crysta/absorptions/none.hpp include/crysta/absorptions/none.hpp
-copy include/crysta/adp.hpp include/crysta/adp.hpp
-copy include/crysta/analysis.hpp include/crysta/analysis.hpp
-copy include/crysta/anchors.hpp include/crysta/anchors.hpp
-copy include/crysta/background_estimate.hpp include/crysta/background_estimate.hpp
-copy include/crysta/cell_metric.hpp include/crysta/cell_metric.hpp
-copy include/crysta/cell_symmetry.hpp include/crysta/cell_symmetry.hpp
-copy include/crysta/cif_import.hpp include/crysta/cif_import.hpp
-copy include/crysta/cif_report.hpp include/crysta/cif_report.hpp
-copy include/crysta/clock.hpp include/crysta/clock.hpp
-copy include/crysta/column.hpp include/crysta/column.hpp
-copy include/crysta/computed.hpp include/crysta/computed.hpp
-copy include/crysta/constants.hpp include/crysta/constants.hpp
-copy include/crysta/constraints.hpp include/crysta/constraints.hpp
-copy include/crysta/derived_values.hpp include/crysta/derived_values.hpp
-copy include/crysta/descent.hpp include/crysta/descent.hpp
-copy include/crysta/dictionary_items.hpp include/crysta/dictionary_items.hpp
-copy include/crysta/enumeration.hpp include/crysta/enumeration.hpp
-copy include/crysta/experiment_builder.hpp include/crysta/experiment_builder.hpp
-copy include/crysta/expression.hpp include/crysta/expression.hpp
-copy include/crysta/fit.hpp include/crysta/fit.hpp
-copy include/crysta/fit_quality.hpp include/crysta/fit_quality.hpp
-copy include/crysta/fit_report.hpp include/crysta/fit_report.hpp
-copy include/crysta/fittability.hpp include/crysta/fittability.hpp
-copy include/crysta/handles.hpp include/crysta/handles.hpp
-copy include/crysta/identity.hpp include/crysta/identity.hpp
-copy include/crysta/instrument.hpp include/crysta/instrument.hpp
-copy include/crysta/instruments.hpp include/crysta/instruments.hpp
-copy include/crysta/instruments/cwl_pd_neutron.hpp include/crysta/instruments/cwl_pd_neutron.hpp
-copy include/crysta/instruments/cwl_pd_xray.hpp include/crysta/instruments/cwl_pd_xray.hpp
-copy include/crysta/instruments/cwl_sc.hpp include/crysta/instruments/cwl_sc.hpp
-copy include/crysta/instruments/tof_pd.hpp include/crysta/instruments/tof_pd.hpp
-copy include/crysta/instruments/tof_sc.hpp include/crysta/instruments/tof_sc.hpp
-copy include/crysta/keyed.hpp include/crysta/keyed.hpp
-copy include/crysta/legacy_metadata.hpp include/crysta/legacy_metadata.hpp
-copy include/crysta/magnetic.hpp include/crysta/magnetic.hpp
-copy include/crysta/magnetic_types.hpp include/crysta/magnetic_types.hpp
-copy include/crysta/model.hpp include/crysta/model.hpp
-copy include/crysta/owner.hpp include/crysta/owner.hpp
-copy include/crysta/parameter.hpp include/crysta/parameter.hpp
-copy include/crysta/partype.hpp include/crysta/partype.hpp
-copy include/crysta/pattern.hpp include/crysta/pattern.hpp
-copy include/crysta/peak.hpp include/crysta/peak.hpp
-copy include/crysta/peaks.hpp include/crysta/peaks.hpp
-copy include/crysta/peaks/cwl_gaussian.hpp include/crysta/peaks/cwl_gaussian.hpp
-copy include/crysta/peaks/cwl_lorentzian.hpp include/crysta/peaks/cwl_lorentzian.hpp
-copy include/crysta/peaks/cwl_pseudo_voigt.hpp include/crysta/peaks/cwl_pseudo_voigt.hpp
-copy include/crysta/peaks/cwl_pseudo_voigt_berar_baldinozzi.hpp include/crysta/peaks/cwl_pseudo_voigt_berar_baldinozzi.hpp
-copy include/crysta/peaks/cwl_tch_pseudo_voigt.hpp include/crysta/peaks/cwl_tch_pseudo_voigt.hpp
-copy include/crysta/peaks/cwl_tch_pseudo_voigt_fcj.hpp include/crysta/peaks/cwl_tch_pseudo_voigt_fcj.hpp
-copy include/crysta/peaks/tof_jorgensen.hpp include/crysta/peaks/tof_jorgensen.hpp
-copy include/crysta/peaks/tof_jorgensen_von_dreele.hpp include/crysta/peaks/tof_jorgensen_von_dreele.hpp
-copy include/crysta/peaks/tof_pseudo_voigt.hpp include/crysta/peaks/tof_pseudo_voigt.hpp
-copy include/crysta/project_output.hpp include/crysta/project_output.hpp
-copy include/crysta/project_record.hpp include/crysta/project_record.hpp
-copy include/crysta/publication.hpp include/crysta/publication.hpp
-copy include/crysta/recompute.hpp include/crysta/recompute.hpp
-copy include/crysta/reflection_admission.hpp include/crysta/reflection_admission.hpp
-copy include/crysta/report_settings.hpp include/crysta/report_settings.hpp
-copy include/crysta/residual.hpp include/crysta/residual.hpp
-copy include/crysta/rows.hpp include/crysta/rows.hpp
-copy include/crysta/scale_estimate.hpp include/crysta/scale_estimate.hpp
-copy include/crysta/scattering.hpp include/crysta/scattering.hpp
-copy include/crysta/schema.hpp include/crysta/schema.hpp
-copy include/crysta/single_crystal.hpp include/crysta/single_crystal.hpp
-copy include/crysta/solver_rung.hpp include/crysta/solver_rung.hpp
-copy include/crysta/stamped.hpp include/crysta/stamped.hpp
-copy include/crysta/stop_rule.hpp include/crysta/stop_rule.hpp
-copy include/crysta/structure_geometry.hpp include/crysta/structure_geometry.hpp
-copy include/crysta/su_format.hpp include/crysta/su_format.hpp
-copy include/crysta/symmetry.hpp include/crysta/symmetry.hpp
-copy include/crysta/threading.hpp include/crysta/threading.hpp
-copy include/crysta/tokens.hpp include/crysta/tokens.hpp
-copy include/crysta/weight_fraction.hpp include/crysta/weight_fraction.hpp
-copy include/crysta/work.hpp include/crysta/work.hpp
+built share/crysta/python-surface.json
+header include/crysta/absorption.hpp
+header include/crysta/absorptions.hpp
+header include/crysta/absorptions/cylinder_hewat.hpp
+header include/crysta/absorptions/cylinder_lobanov.hpp
+header include/crysta/absorptions/none.hpp
+header include/crysta/adp.hpp
+header include/crysta/analysis.hpp
+header include/crysta/anchors.hpp
+header include/crysta/background_estimate.hpp
+header include/crysta/cell_metric.hpp
+header include/crysta/cell_symmetry.hpp
+header include/crysta/cif_import.hpp
+header include/crysta/cif_report.hpp
+header include/crysta/clock.hpp
+header include/crysta/column.hpp
+header include/crysta/computed.hpp
+header include/crysta/constants.hpp
+header include/crysta/constraints.hpp
+header include/crysta/derived_values.hpp
+header include/crysta/descent.hpp
+header include/crysta/dictionary_items.hpp
+header include/crysta/enumeration.hpp
+header include/crysta/experiment_builder.hpp
+header include/crysta/expression.hpp
+header include/crysta/fit.hpp
+header include/crysta/fit_quality.hpp
+header include/crysta/fit_report.hpp
+header include/crysta/fittability.hpp
+header include/crysta/handles.hpp
+header include/crysta/identity.hpp
+header include/crysta/instrument.hpp
+header include/crysta/instruments.hpp
+header include/crysta/instruments/cwl_pd_neutron.hpp
+header include/crysta/instruments/cwl_pd_xray.hpp
+header include/crysta/instruments/cwl_sc.hpp
+header include/crysta/instruments/tof_pd.hpp
+header include/crysta/instruments/tof_sc.hpp
+header include/crysta/keyed.hpp
+header include/crysta/legacy_metadata.hpp
+header include/crysta/magnetic.hpp
+header include/crysta/magnetic_types.hpp
+header include/crysta/model.hpp
+header include/crysta/owner.hpp
+header include/crysta/parameter.hpp
+header include/crysta/partype.hpp
+header include/crysta/pattern.hpp
+header include/crysta/peak.hpp
+header include/crysta/peaks.hpp
+header include/crysta/peaks/cwl_gaussian.hpp
+header include/crysta/peaks/cwl_lorentzian.hpp
+header include/crysta/peaks/cwl_pseudo_voigt.hpp
+header include/crysta/peaks/cwl_pseudo_voigt_berar_baldinozzi.hpp
+header include/crysta/peaks/cwl_tch_pseudo_voigt.hpp
+header include/crysta/peaks/cwl_tch_pseudo_voigt_fcj.hpp
+header include/crysta/peaks/tof_jorgensen.hpp
+header include/crysta/peaks/tof_jorgensen_von_dreele.hpp
+header include/crysta/peaks/tof_pseudo_voigt.hpp
+header include/crysta/project_output.hpp
+header include/crysta/project_record.hpp
+header include/crysta/publication.hpp
+header include/crysta/recompute.hpp
+header include/crysta/reflection_admission.hpp
+header include/crysta/report_settings.hpp
+header include/crysta/residual.hpp
+header include/crysta/rows.hpp
+header include/crysta/scale_estimate.hpp
+header include/crysta/scattering.hpp
+header include/crysta/schema.hpp
+header include/crysta/single_crystal.hpp
+header include/crysta/solver_rung.hpp
+header include/crysta/stamped.hpp
+header include/crysta/stop_rule.hpp
+header include/crysta/structure_geometry.hpp
+header include/crysta/su_format.hpp
+header include/crysta/symmetry.hpp
+header include/crysta/threading.hpp
+header include/crysta/tokens.hpp
+header include/crysta/weight_fraction.hpp
+header include/crysta/work.hpp

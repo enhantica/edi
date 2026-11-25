@@ -22,7 +22,7 @@ BLOBS = 'CRYSTA_SOURCE_BLOB_LIST'
 LINES = 'CRYSTA_SOURCE_LINE_LIST'
 MARKS = 'CRYSTA_SOURCE_MARK_LIST'
 PUBLIC = 'CRYSTA_SOURCE_PUBLIC_LIST'
-# What the SDK of one commit carries of the source on purpose, and the commits the lists are of.
+# The public headers the SDK of each listed commit carries.
 MEMBERS = 'CRYSTA_SOURCE_MEMBER_LIST'
 # A shorter line, or one without a letter, says nothing about where it came from.
 SHORTEST = 12
@@ -134,7 +134,7 @@ def spans(text: bytes, marks: dict[int, list[int]] | None) -> Iterator[bytes]:
 
 
 def sdk_members() -> list[list[str]]:
-    """The SDK's members: how each is made, its name and what from; without the list, none."""
+    """The SDK's members, what each is and its name; without the list, none."""
     listed = Path(__file__).with_name('sdk-members.txt')
     text = listed.read_text(encoding='utf-8') if listed.is_file() else ''
     return [line.split() for line in text.splitlines() if line and not line.startswith('#')]
@@ -184,13 +184,13 @@ class Source:
         return any(self.quoted_in_line(line) for line in re.split(rb'[\r\n]+', text))
 
     @functools.cached_property
-    def members(self) -> dict[str, dict[str, set[str]]]:
-        """What each commit's SDK carries: an installed file's name, and its blob or line ids."""
-        found: dict[str, dict[str, set[str]]] = {}
+    def members(self) -> dict[str, dict[str, str]]:
+        """The public headers each listed commit's SDK carries, by name, with their blob ids."""
+        found: dict[str, dict[str, str]] = {}
         if MEMBERS in os.environ:
             for entry in Path(os.environ[MEMBERS]).read_text(encoding='utf-8').splitlines():
-                commit, known, name = entry.split(' ', 2)
-                found.setdefault(commit, {}).setdefault(name, set()).add(known)
+                commit, blob, name = entry.split(' ', 2)
+                found.setdefault(commit, {})[name] = blob
         return found
 
     def is_public(self, data: bytes) -> bool:

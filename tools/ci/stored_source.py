@@ -224,34 +224,21 @@ class Check:
         if made != [(commit, platform)] or commit not in self.source.members:
             self.found.append(f'{name} is not the SDK its name says, or not of a listed commit')
             return
-        kinds = {pattern: kind for kind, pattern, *_ in source_lists.sdk_members()}
-        carried = self.source.members[commit]
+        kinds = {pattern: kind for kind, pattern in source_lists.sdk_members()}
+        headers = self.source.members[commit]
         seen = set()
         for member, content in held:
-            self.sdk_member(
-                f'{name}:{member}',
-                kinds.get(sdk_pattern(member, kinds)),
-                carried.get(member, set()),
-                content,
-            )
-            if member in seen:
-                self.found.append(f'{name}:{member} is there twice')
+            kind = kinds.get(sdk_pattern(member, kinds))
+            if kind is None or member in seen:
+                self.found.append(f'{name}:{member} is not a member the SDK may have')
+            elif kind == 'header':
+                unix = content.replace(b'\r\n', b'\n')
+                made = {source_lists.blob_id(content), source_lists.blob_id(unix)}
+                if headers.get(member) not in made:
+                    self.found.append(f'{name}:{member} is not the public header it is named')
+            else:
+                self.file(f'{name}:{member}', content)
             seen.add(member)
-
-    def sdk_member(self, name: str, kind: str | None, known: set[str], data: bytes) -> None:
-        """One member: a copy is its own source file, a template quotes its own sources only."""
-        if kind is None:
-            self.found.append(f'{name} is not a member the SDK may have')
-        elif kind == 'copy':
-            unix = data.replace(b'\r\n', b'\n')
-            if not {source_lists.blob_id(data), source_lists.blob_id(unix)} & known:
-                self.found.append(f'{name} is not the file it is a copy of')
-        elif kind == 'template':
-            quoted = {hit for line in data.splitlines() for hit in self.source.hits(line)}
-            if self.source.is_file(data) or quoted - known:
-                self.found.append(f'{name} quotes more than it is made from')
-        else:
-            self.file(name, data)
 
     def path(self, path: Path) -> None:
         """Judge a file on disk, withholding its lines where that is asked."""

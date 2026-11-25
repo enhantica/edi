@@ -26,6 +26,7 @@ import zipfile
 from collections.abc import Iterable, Iterator
 from pathlib import Path
 
+import portable_paths
 import source_lists
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -68,6 +69,7 @@ def fetch(home: Path, sha: str, also: set[str], token: str) -> None:
         GIT_CONFIG_VALUE_0=f'AUTHORIZATION: basic {credential}',
         GIT_TERMINAL_PROMPT='0',
     )
+    portable_paths.folders_of(list(tree(home, sha)))
     git(home, 'checkout', '-q', '--detach', sha)
     if git(home, 'rev-parse', 'HEAD').decode().strip() != sha:
         raise RefusedError('the checkout is another commit')
@@ -146,20 +148,12 @@ class Lists:
     members: set[str]
 
 
-def members(home: Path, sha: str, files: dict[str, str]) -> set[str]:
-    """What this commit's SDK carries of the source: the commit, a blob or line id, its name."""
-    found = set()
-    for kind, name, *sources in source_lists.sdk_members():
-        for source in sources:
-            if source not in files:
-                continue
-            if kind == 'copy':
-                found.add(f'{sha} {files[source]} {name}')
-            else:
-                held = set().union(*map(bare, contents(home, {files[source]})))
-                known = {source_lists.line_id(line) for line in held} - {None}
-                found |= {f'{sha} {entry} {name}' for entry in known}
-    return found
+def headers(sha: str, files: dict[str, str]) -> set[str]:
+    """The public headers this commit's SDK carries: the commit, a blob id and its name."""
+    public = {name for kind, name in source_lists.sdk_members() if kind == 'header'}
+    held = {name for name in public & set(files) if re.fullmatch(r'include/.+\.hpp', name)}
+    # A commit without one is listed all the same.
+    return {f'{sha} {files[name]} {name}' for name in held} or {f'{sha} {sha} .'}
 
 
 def lists(home: Path, pins: set[str], public: list[tuple[Path, str]]) -> Lists:
@@ -169,7 +163,7 @@ def lists(home: Path, pins: set[str], public: list[tuple[Path, str]]) -> Lists:
         files = tree(home, sha)
         blobs |= set(files.values())
         written |= {blob for path, blob in files.items() if source_lists.written(path)}
-        carried |= members(home, sha, files)
+        carried |= headers(sha, files)
     lines = set().union(*map(bare, contents(home, written)))
     known: set[str] = set()
     for where, commit in public:
@@ -269,6 +263,13 @@ def prepare(temp: Path, args: argparse.Namespace) -> int:
     return len(made.blobs)
 
 
+def refused(temp: Path, reason: str) -> int:
+    """Remove the source and say why, without a word of it."""
+    shutil.rmtree(temp / 'crysta', ignore_errors=True)
+    print(f'crysta-fetch: REFUSED: {reason}', file=sys.stderr)
+    return 1
+
+
 def main() -> int:
     """Prepare the runner; on any failure the source is removed again."""
     parser = argparse.ArgumentParser(description=__doc__)
@@ -279,11 +280,10 @@ def main() -> int:
     temp = Path(os.environ['RUNNER_TEMP'])
     try:
         count = prepare(temp, args)
-    except (RefusedError, OSError, KeyError, ValueError) as error:
-        shutil.rmtree(temp / 'crysta', ignore_errors=True)
-        reason = str(error) if isinstance(error, RefusedError) else type(error).__name__
-        print(f'crysta-fetch: REFUSED: {reason}', file=sys.stderr)
-        return 1
+    except (RefusedError, portable_paths.RefusedError) as error:
+        return refused(temp, str(error))
+    except (OSError, KeyError, ValueError) as error:
+        return refused(temp, type(error).__name__)
     print(f'crysta-fetch: {args.sha}, {count} files listed, the output filter is in place')
     return 0
 

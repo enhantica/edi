@@ -12,7 +12,6 @@ Each file is checked after it is written; a failure removes what was written.
 from __future__ import annotations
 
 import os
-import re
 import shutil
 import subprocess
 import sys
@@ -21,10 +20,7 @@ from pathlib import Path, PurePosixPath
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import source_lists
-
-
-class RefusedError(Exception):
-    """The commit cannot be exported as it is."""
+from portable_paths import RefusedError, folders_of, parts_of
 
 
 def git(checkout: str, *args: str, stdin: bytes | None = None) -> bytes:
@@ -37,45 +33,9 @@ def git(checkout: str, *args: str, stdin: bytes | None = None) -> bytes:
     return run.stdout
 
 
-# What Windows reads as a device, whatever follows the first dot, and the characters it has no name
-# for; a colon starts a drive or a stream.
-DEVICE = re.compile(
-    r'(?:con|prn|aux|nul|conin\$|conout\$|(?:com|lpt)[0-9\u00b9\u00b2\u00b3])\s*(?:\.|$)'
-)
-UNNAMEABLE = re.compile(r'[\x00-\x1f<>:"|?*\\]|[. ]$')
-
-
-def parts_of(name: str) -> tuple[str, ...]:
-    """The components of a name that every platform reads alike."""
-    parts = tuple(name.split('/'))
-    for part in parts:
-        if not part or part in {'.', '..'} or UNNAMEABLE.search(part):
-            raise RefusedError('a name is another one on some platform')
-        if DEVICE.match(part.casefold()):
-            raise RefusedError('a name is a device on Windows')
-    return parts
-
-
-def folders_of(names: list[str]) -> set[tuple[str, ...]]:
-    """The commit's folders; two spellings of one component refuse, and a file that is a folder."""
-    spelled: dict[tuple[str, ...], tuple[str, ...]] = {}
-    files = {parts_of(name) for name in names}
-    folders = {parts[:depth] for parts in files for depth in range(len(parts))}
-    for path in files | folders:
-        if spelled.setdefault(tuple(part.casefold() for part in path), path) != path:
-            raise RefusedError('two names differ only by case')
-    if files & folders:
-        raise RefusedError('a name is a file and a folder')
-    return folders
-
-
 def target_of(name: str, target: str, folders: set[tuple[str, ...]]) -> str:
     """The name a link leads to, through folders of the commit only, never another link."""
-    if (
-        not target
-        or target.startswith('/')
-        or UNNAMEABLE.search(target.replace('/', '').rstrip('.'))
-    ):
+    if not target or target.startswith('/') or set(target) & set('\\:'):
         raise RefusedError('a link leaves the destination')
     here = parts_of(name)[:-1]
     for part in PurePosixPath(target).parts:
