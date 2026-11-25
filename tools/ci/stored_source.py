@@ -26,6 +26,7 @@ import re
 import subprocess
 import sys
 import tarfile
+import tempfile
 import zipfile
 from collections.abc import Iterator
 from pathlib import Path
@@ -73,9 +74,20 @@ def tar_members(data: bytes) -> list[tuple[str, bytes]]:
 
 
 def seven_members(data: bytes) -> list[tuple[str, bytes]]:
-    """A 7z archive's files, where py7zr is installed."""
-    import py7zr  # noqa: PLC0415 - the packaging environment has it, others meet no 7z
-
+    """A 7z archive's files, by py7zr (the packaging environment has it) or the 7z program."""
+    try:
+        import py7zr  # noqa: PLC0415 - not in every runner's Python
+    except ImportError:
+        with tempfile.TemporaryDirectory() as folder:
+            packed, held = Path(folder) / 'packed.7z', Path(folder) / 'held'
+            packed.write_bytes(data)
+            command = ['7z', 'x', '-y', '-bd', f'-o{held}', str(packed)]
+            subprocess.run(command, capture_output=True, check=True)
+            return [
+                (path.relative_to(held).as_posix(), path.read_bytes())
+                for path in sorted(held.rglob('*'))
+                if path.is_file() and not path.is_symlink()
+            ]
     factory = py7zr.io.BytesIOFactory(1 << 31)
     with py7zr.SevenZipFile(io.BytesIO(data)) as archive:
         archive.extractall(factory=factory)  # noqa: S202 - into memory
