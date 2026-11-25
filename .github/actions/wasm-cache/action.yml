@@ -23,7 +23,7 @@ runs:
     - id: keys
       shell: bash
       run: |
-        echo "objects=ccache-wasm-${{ steps.compiler.outputs.key-prefix }}${{ hashFiles('tools/ci/wasm-env.sh') }}-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.job }}" >> "$GITHUB_OUTPUT"
+        echo "objects=ccache2-wasm-${{ steps.compiler.outputs.key-prefix }}${{ hashFiles('tools/ci/wasm-env.sh') }}-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.job }}" >> "$GITHUB_OUTPUT"
         echo "toolchain=edi-wasm-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('tools/ci/wasm-env.sh', 'tests/fixtures/web_parallel/package-lock.json') }}" >> "$GITHUB_OUTPUT"
     - uses: actions/cache/restore@v4
       if: inputs.operation == 'restore'
@@ -31,21 +31,23 @@ runs:
         path: ~/.cache/edi-ccache
         key: ${{ steps.keys.outputs.objects }}
         restore-keys: |
-          ccache-wasm-${{ steps.compiler.outputs.key-prefix }}${{ hashFiles('tools/ci/wasm-env.sh') }}-
-          ccache-wasm-${{ steps.compiler.outputs.key-prefix }}
-          ccache-wasm-${{ runner.os }}-${{ runner.arch }}-
+          ccache2-wasm-${{ steps.compiler.outputs.key-prefix }}${{ hashFiles('tools/ci/wasm-env.sh') }}-
+          ccache2-wasm-${{ steps.compiler.outputs.key-prefix }}
+          ccache2-wasm-${{ runner.os }}-${{ runner.arch }}-
     - uses: actions/cache/restore@v4
       if: inputs.operation == 'restore'
       with:
         path: ~/.cache/edi-wasm
         key: ${{ steps.keys.outputs.toolchain }}
-    - uses: actions/cache/save@v4
+    - uses: ./.github/actions/store
       if: inputs.operation == 'save'
       with:
+        ccache: pixi run --skip-deps python
         path: ~/.cache/edi-ccache
         key: ${{ steps.keys.outputs.objects }}
-    - uses: actions/cache/save@v4
+    - uses: ./.github/actions/store
       if: inputs.operation == 'save'
       with:
+        opaque: 'true'
         path: ~/.cache/edi-wasm
         key: ${{ steps.keys.outputs.toolchain }}

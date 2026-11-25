@@ -23,14 +23,14 @@ build logs may be public.
    `pixi run crysta-sdk-pin <sha>` moves it; `--check` proves exactly one well-formed pin.
 2. **Built once per commit.** `.github/workflows/crysta-sdk.yml`, a reusable workflow, checks crysta out at the
    pinned commit with the app's read-only token, runs crysta's own `sdk-pack` (build, tests, headers, static
-   library, CLI and the fingerprint manifest) for Linux x86-64, macOS arm64 and Windows x64, archives crysta's source
-   at the same commit, and caches both under the exact platform, source and producer-recipe identity described
-   below. A complete qualified archive cache hit skips compilation.
-   It is the only place edi reads crysta.
+   library, CLI and the fingerprint manifest) for Linux x86-64, macOS arm64 and Windows x64, and caches the SDK under
+   the exact platform, source and producer-recipe identity described below. A complete qualified archive cache hit
+   skips compilation.
 3. **Every job uses it.** Each workflow runs the crysta-sdk job first; a consuming job restores the archives with
-   `.github/actions/crysta-sdk` and needs no token. `tools/ci/crysta_sdk.py fetch` unpacks the SDK and checks it
-   against the environment as before (I25); `tools/ci/crysta-src.sh` unpacks the source for the corpus and reference
-   readers, the ThreadSanitizer tree and the web build. Desktop installers, native CLI and Python wheel consume
+   `.github/actions/crysta-sdk`. `tools/ci/crysta_sdk.py fetch` unpacks the SDK and checks it against the
+   environment as before (I25). A job that needs the source, for the corpus and reference readers, the
+   ThreadSanitizer tree, the web build or an installer, fetches it itself with the app's read-only token
+   (`.github/actions/crysta-source`); `tools/ci/crysta-src.sh` exports it from that checkout. Desktop installers, native CLI and Python wheel consume
    that qualified native SDK. The web target compiles the same source with its own Emscripten toolchain and
    compiler cache; native machine code cannot serve that target.
 4. **Attached to the release.** The publish job attaches `crysta-sdk-<sha>-<platform>.tar.gz` for each platform to
@@ -55,20 +55,42 @@ build logs may be public.
   process in crysta; rejected for the public repository.
 - **Compile crysta inside every job.** No reuse between jobs, and each job would pay crysta's build; rejected.
 
+## The source is neither stored nor printed
+
+crysta is private and edi's CI is public: anyone can download an artifact or a release and read a log, and a fork's run
+can restore a cache of main. CI therefore keeps built crysta only.
+
+1. **One way in.** `.github/actions/crysta-source` fetches one commit into the runner's temporary folder with a token that
+   reads crysta's contents and nothing else, refuses another commit, passes on nothing a child process prints, and
+   writes two lists beside the checkout: the Git blob id of each source file and the SHA-256 of each source line.
+   What edi itself publishes, and what the SDK installs (its headers and interface record), is not in the lists.
+2. **Two phases.** Before the fetch each script of the job names `shell: bash`; no crysta file exists yet. After it every
+   script runs under `tools/ci/public_log.py`, which withholds a source line from standard output, standard error and
+   the step summary, with a compiler's gutter, pytest's markers or a timestamp before it, and runs nothing when the
+   list cannot be read. The fetch proves the filter before any later step.
+3. **One way out.** A job with the source stores only through `.github/actions/store`. `tools/ci/stored_source.py`
+   compares every file, and every member of a tar, tar.gz, zip or wheel, with the lists and refuses a source file, a
+   text file that quotes a source line and anything it cannot read. The check is of exact bytes and lines; an
+   installer is checked on its unpacked staging folder.
+4. **Compiler caches** keep the diagnostics a compile printed. `tools/ci/ccache_entries.py` reads every result in the
+   directory as it will be saved, restored or new, and deletes one that quotes a source line or cannot be read. The
+   six families start under new key prefixes, so nothing from before the check is restored.
+5. **The policy.** `tools/ci/source_publishers.py`, part of the lint job, reads the workflows: the two phases, the store
+   action, the table of every publisher, the retired cache prefixes. A new publisher is a change of that table.
 
 ## Shared production and exact artifact transfer
 
 The producer also has a standalone dispatch entry. Its resolving job records the immutable engine pin and
-SDK/source-receipt/setup-action recipe hash before platform jobs queue by that identity. Identical requests serialize
+SDK/setup-action recipe hash before platform jobs queue by that identity. Identical requests serialize
 with a non-cancelling multi-entry concurrency queue, then inspect the cache after admission. The archive
-cache is versioned and includes platform, engine pin and recipe; changes to the producer or source receipt
-cannot reuse an older packing policy. The pin identifies Crysta's compiler lock and packer source.
+cache is versioned and includes platform, engine pin and recipe; changes to the producer cannot
+reuse an older packing policy. The pin identifies Crysta's compiler lock and packer source.
 
 Every consumer within a workflow downloads that run's uploaded SDK artifact through the existing
 crysta-sdk action. A cache eviction after production therefore cannot break inter-job transfer. Release
 publication downloads SDK artifacts from the exact qualified installer run already admitted by promote,
 rather than asking for whichever matching cache remains. Both cold and warm producers require nonempty
-SDK/source/checksum files and verify the archive checksum before an error-on-missing upload. The SDK reader continues its manifest,
+SDK and checksum files and verify the archive checksum before an error-on-missing upload. The SDK reader continues its manifest,
 qualification, binary hash and ABI checks; archive transfer does not substitute for them. This extends the
 original producer/action/publish paths together. Consumer workflows call the shared producer before their
 builds. The standalone entry produces SDK artifacts; it does not itself publish or dispatch products.

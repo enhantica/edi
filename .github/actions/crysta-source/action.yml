@@ -1,0 +1,32 @@
+name: crysta source
+description: >-
+  Put crysta's source at one commit on the runner with the lists its output checks read (edi ADR-0083). Every step
+  after it runs under tools/ci/public_log.py.
+inputs:
+  sha:
+    description: The full crysta commit
+    required: true
+  app-id:
+    description: The GitHub App that reads crysta
+    required: true
+  private-key:
+    description: That app's key
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Mint a crysta read token
+      id: token
+      uses: actions/create-github-app-token@v2
+      with:
+        app-id: ${{ inputs.app-id }}
+        private-key: ${{ inputs.private-key }}
+        owner: enhantica
+        repositories: crysta
+        permission-contents: read
+    - name: Fetch, list and prove the output filter
+      shell: bash
+      env:
+        TOKEN: ${{ steps.token.outputs.token }}
+        SHA: ${{ inputs.sha }}
+      run: python3 tools/ci/crysta_fetch.py "$SHA"

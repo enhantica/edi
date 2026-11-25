@@ -14,7 +14,7 @@ and Xcode; portable build/runtime libraries come from Pixi. Native compilation u
 ## Local Linux build
 
 Obtain the `crysta-sdk-linux-64` artifact from a successful `crysta-sdk.yml` producer run for the
-commit pinned in `pixi.toml`. Keep its SDK, source archive and checksums together in
+commit pinned in `pixi.toml`. Keep its SDK and checksum together in
 `build/crysta-sdk-archives`, or set `CRYSTA_SDK_ARCHIVES` to that directory. The packager verifies
 the qualification, source identity, binary hashes and compatibility with the installer lock.
 The source checkout below must name that same commit; it is not compiled. A missing or incompatible

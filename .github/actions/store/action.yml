@@ -1,0 +1,72 @@
+name: Store
+description: >-
+  Upload an artifact or save a cache from a job that has crysta's source, after checking every file it would hold
+  (tools/ci/stored_source.py; a compiler cache's entries, tools/ci/ccache_entries.py).
+inputs:
+  artifact:
+    description: The artifact's name, for an upload
+    default: ''
+  key:
+    description: The cache's key, for a save
+    default: ''
+  path:
+    description: The files, one path or pattern a line
+    required: true
+  check:
+    description: What to check when it is not `path` itself
+    default: ''
+  opaque:
+    description: Accept archives of other kinds (third-party tools, installers whose content is checked unpacked)
+    default: 'false'
+  ccache:
+    description: The command that runs Python beside ccache, for a compiler cache
+    default: ''
+  retention-days:
+    default: '0'
+    description: How long an artifact is kept; 0 is the repository's default
+  if-no-files-found:
+    default: warn
+    description: What an upload does without files
+  include-hidden-files:
+    default: 'false'
+    description: Whether an upload takes hidden files
+  compression-level:
+    default: '6'
+    description: An upload's compression
+runs:
+  using: composite
+  steps:
+    - name: Check what would be stored
+      if: inputs.ccache == ''
+      shell: python3 tools/ci/public_log.py {0}
+      env:
+        PATHS: ${{ inputs.check || inputs.path }}
+        OPAQUE: ${{ inputs.opaque == 'true' && '--opaque' || '' }}
+      run: |
+        paths=()
+        while IFS= read -r line; do
+          line="${line#"${line%%[![:space:]]*}"}"
+          case "$line" in '' | '!'*) ;; *) paths+=("$line") ;; esac
+        done <<<"$PATHS"
+        python3 tools/ci/stored_source.py $OPAQUE "${paths[@]}"
+    - name: Check the compiler cache
+      if: inputs.ccache != ''
+      shell: python3 tools/ci/public_log.py {0}
+      env:
+        DIRECTORY: ${{ inputs.path }}
+        SCRIPT: ${{ github.workspace }}/tools/ci/ccache_entries.py
+      run: ${{ inputs.ccache }} "$SCRIPT" "$DIRECTORY"
+    - if: inputs.artifact != ''
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ inputs.artifact }}
+        path: ${{ inputs.path }}
+        retention-days: ${{ inputs.retention-days }}
+        if-no-files-found: ${{ inputs.if-no-files-found }}
+        include-hidden-files: ${{ inputs.include-hidden-files }}
+        compression-level: ${{ inputs.compression-level }}
+    - if: inputs.key != ''
+      uses: actions/cache/save@v4
+      with:
+        path: ${{ inputs.path }}
+        key: ${{ inputs.key }}

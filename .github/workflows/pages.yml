@@ -61,16 +61,25 @@ jobs:
     if: github.event.pull_request.head.repo.fork == false && github.repository == 'enhantica/edi' && github.event_name != 'release' && (github.event_name != 'workflow_dispatch' || inputs.component != 'wasm')
     environment: crysta-sdk
     runs-on: &linux ubuntu-24.04
+    defaults:
+      run:
+        shell: python3 tools/ci/public_log.py {0}
     steps:
       - uses: actions/checkout@v5
       - uses: ./.github/actions/setup-pixi
+      - uses: ./.github/actions/crysta-sdk
+        with:
+          platform: ${{ runner.os == 'macOS' && 'osx-arm64' || 'linux-64' }}
+      - name: crysta's source, whose lines no later step prints or stores
+        uses: ./.github/actions/crysta-source
+        with:
+          sha: ${{ needs.crysta-sdk.outputs.sha }}
+          app-id: ${{ vars.ENHANTICA_APP_ID }}
+          private-key: ${{ secrets.ENHANTICA_APP_KEY }}
       - name: Check independent publication
         run: pixi run pages-check
       - name: Prepare notebooks
         run: pixi run notebook-prepare
-      - uses: ./.github/actions/crysta-sdk
-        with:
-          platform: ${{ runner.os == 'macOS' && 'osx-arm64' || 'linux-64' }}
       - name: Find a native build of this commit
         id: native
         env:
@@ -101,9 +110,9 @@ jobs:
           mkdir -p site
           cp -R website/_build/. site/
       - name: Upload documentation
-        uses: actions/upload-artifact@v4
+        uses: ./.github/actions/store
         with:
-          name: pages-docs
+          artifact: pages-docs
           path: site
           include-hidden-files: true
           if-no-files-found: error
@@ -115,6 +124,9 @@ jobs:
     if: github.event.pull_request.head.repo.fork == false && github.repository == 'enhantica/edi' && (github.event_name != 'release' || !github.event.release.prerelease) && (github.event_name != 'workflow_dispatch' || inputs.component != 'docs')
     environment: crysta-sdk
     runs-on: *linux
+    defaults:
+      run:
+        shell: python3 tools/ci/public_log.py {0}
     steps:
       # With the tags, so the app names the release it is or follows (cmake/build_version.cmake).
       - uses: actions/checkout@v5
@@ -127,6 +139,12 @@ jobs:
       - uses: ./.github/actions/crysta-sdk
         with:
           platform: ${{ runner.os == 'macOS' && 'osx-arm64' || 'linux-64' }}
+      - name: crysta's source, whose lines no later step prints or stores
+        uses: ./.github/actions/crysta-source
+        with:
+          sha: ${{ needs.crysta-sdk.outputs.sha }}
+          app-id: ${{ vars.ENHANTICA_APP_ID }}
+          private-key: ${{ secrets.ENHANTICA_APP_KEY }}
       - name: Fetch the pinned crysta source
         run: pixi run crysta-sdk
       - name: Install the WebAssembly toolchain  # Emscripten, Qt's wasm kits, Eigen, Chrome
@@ -144,9 +162,9 @@ jobs:
         with:
           operation: save
       - name: Upload WebAssembly
-        uses: actions/upload-artifact@v4
+        uses: ./.github/actions/store
         with:
-          name: pages-webapp
+          artifact: pages-webapp
           path: build/wasm/site
           include-hidden-files: true
           if-no-files-found: error

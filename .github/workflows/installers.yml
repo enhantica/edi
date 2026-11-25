@@ -135,6 +135,9 @@ jobs:
         && github.event_name == 'workflow_dispatch'
         && (inputs.release_plan_run != '' || inputs.prepare_preview_release)
         && '1' || '' }}
+    defaults:
+      run:
+        shell: python3 tools/ci/public_log.py {0}
     steps:
       - name: Apply the prerelease version
         if: inputs.prepare_preview_release
@@ -158,6 +161,7 @@ jobs:
           exit 1
       - name: Enable long source paths on Windows
         if: runner.os == 'Windows'
+        shell: bash
         run: |
           git config --global core.longpaths true
           git config --global core.protectNTFS false
@@ -211,10 +215,10 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: ${{ runner.temp }}/edi-ccache
-          key: ccache-installer-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('tools/installer/pixi.lock') }}-${{ github.run_id }}-${{ github.run_attempt }}
+          key: ccache2-installer-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('tools/installer/pixi.lock') }}-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: |
-            ccache-installer-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('tools/installer/pixi.lock') }}-
-            ccache-installer-${{ runner.os }}-${{ runner.arch }}-
+            ccache2-installer-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('tools/installer/pixi.lock') }}-
+            ccache2-installer-${{ runner.os }}-${{ runner.arch }}-
       - name: Acquire source-bound release inputs
         if: inputs.release_plan_run != ''
         run: pixi run --manifest-path tools/installer/pixi.toml python "${{ github.workspace }}/tools/release/download_plan.py" --repo "$GITHUB_REPOSITORY" --run "$PREPARE_RUN" --output "$EDI_RELEASE_PLAN"
@@ -223,12 +227,16 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           PREPARE_RUN: ${{ inputs.release_plan_run }}
       - name: Validate calendar release policy offline
+        shell: bash
         run: pixi run --manifest-path tools/installer/pixi.toml python -m pytest "${{ github.workspace }}/tests/fixtures/releases" --noconftest -o addopts= -o python_files="check_*.py" --ignore="${{ github.workspace }}/tests/fixtures/releases/check_notebook_package_origin.py" -q
       - name: Check installer boundaries and native UTC conversion offline
+        shell: bash
         run: pixi run --manifest-path tools/installer/pixi.toml python -m pytest "${{ github.workspace }}/tests/fixtures/installer" --noconftest -o addopts= -o python_files="check_*.py" -q
       - name: Acquire the pinned Qt Installer Framework
+        shell: bash
         run: pixi run --manifest-path tools/installer/pixi.toml python "${{ github.workspace }}/tools/installer/package.py" tools --output "${{ github.workspace }}/build/installer/ifw"
       - name: Check installer transport before building the application
+        shell: bash
         run: pixi run --manifest-path tools/installer/pixi.toml python "${{ github.workspace }}/tools/installer/protocol_check.py" --tools "${{ github.workspace }}/build/installer/ifw/tools" --output "${{ github.workspace }}/build/installer/protocol"
       - name: The pinned crysta commit
         shell: bash
@@ -244,11 +252,15 @@ jobs:
       - uses: ./.github/actions/crysta-sdk
         with:
           platform: ${{ runner.os == 'Windows' && 'win-64' || runner.os == 'macOS' && 'osx-arm64' || 'linux-64' }}
+      - name: crysta's source, whose lines no later step prints or stores
+        uses: ./.github/actions/crysta-source
+        with:
+          sha: ${{ env.CRYSTA_SOURCE_COMMIT }}
+          app-id: ${{ vars.ENHANTICA_APP_ID }}
+          private-key: ${{ secrets.ENHANTICA_APP_KEY }}
       - name: Unpack the pinned crysta source
-        shell: bash
         run: |
-          mkdir -p .crysta
-          pixi run --manifest-path tools/installer/pixi.toml python tools/ci/crysta_source_archive.py extract "$CRYSTA_SDK_ARCHIVES/crysta-src-$CRYSTA_SOURCE_COMMIT.tar.gz" .crysta
+          pixi run --manifest-path tools/installer/pixi.toml python tools/ci/crysta_source_export.py "$CRYSTA_SRC" "$CRYSTA_SOURCE_COMMIT" .crysta
           printf '%s\n' "$CRYSTA_SOURCE_COMMIT" >.crysta/CRYSTA_SOURCE_SHA
       - name: Check engine compiler portability before the full build
         run: pixi run --manifest-path tools/installer/pixi.toml python "${{ github.workspace }}/tools/installer/build.py" --check-compiler --crysta-source "${{ github.workspace }}/.crysta" --work "${{ github.workspace }}/build/installer"
@@ -262,7 +274,6 @@ jobs:
           p12-password: ${{ secrets.CODESIGN_MAC_CERT_P12_PASSWORD }}
       - name: Decode the KeyLocker client certificate
         if: github.event.pull_request.head.repo.fork == false && env.EDI_CODESIGN == '1' && runner.os == 'Windows'
-        shell: bash
         env:
           P12_BASE64: ${{ secrets.CODESIGN_WIN_CERT_P12_BASE64 }}
         run: |
@@ -292,15 +303,15 @@ jobs:
           EDI_CODESIGN_WIN_KEYPAIR_ALIAS: ${{ runner.os == 'Windows' && vars.CODESIGN_WIN_KEYLOCKER_KEYPAIR_ALIAS || '' }}
       - name: Save installer compiler objects
         if: ${{ !cancelled() && steps.compiler-cache.outcome == 'success' }}
-        uses: actions/cache/save@v4
+        uses: ./.github/actions/store
         with:
+          ccache: pixi run --manifest-path tools/installer/pixi.toml python
           path: ${{ runner.temp }}/edi-ccache
-          key: ccache-installer-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('tools/installer/pixi.lock') }}-${{ github.run_id }}-${{ github.run_attempt }}
+          key: ccache2-installer-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('tools/installer/pixi.lock') }}-${{ github.run_id }}-${{ github.run_attempt }}
       - name: Compiler cache hits
         if: always()
         run: pixi run --manifest-path tools/installer/pixi.toml ccache --show-stats
       - name: Check assistant process-family shutdown on this platform
-        shell: bash
         run: |
           pixi run --manifest-path tools/installer/pixi.toml cmake --build build/installer/app --target edi_assistant_lifetime_host --parallel 4
           export EDI_LIFETIME_BIN_DIR="$(cat build/installer/app/edi-assistant-lifetime-directory.txt)"
@@ -309,7 +320,6 @@ jobs:
           QT_QPA_PLATFORM: offscreen
           QT_QUICK_BACKEND: software
       - name: Check retired project ownership before packaging
-        shell: bash
         run: |
           pixi run --manifest-path tools/installer/pixi.toml cmake --build build/installer/app --target edi_trial_lock_tests --parallel 4
           pixi run --manifest-path tools/installer/pixi.toml python - <<'PYTHON'
@@ -351,7 +361,6 @@ jobs:
           SM_CLIENT_CERT_PASSWORD: ${{ env.EDI_CODESIGN == '1' && runner.os == 'Windows' && secrets.CODESIGN_WIN_CERT_P12_PASSWORD || '' }}
           EDI_CODESIGN_WIN_KEYPAIR_ALIAS: ${{ runner.os == 'Windows' && vars.CODESIGN_WIN_KEYLOCKER_KEYPAIR_ALIAS || '' }}
       - name: Install, launch, calculate, render and uninstall
-        shell: bash
         run: |
           installer=$(cat build/installer/package/installer.json | sed -n 's/.*"download": "\([^"]*\)".*/\1/p')
           pixi run --manifest-path tools/installer/pixi.toml python "${{ github.workspace }}/tools/installer/package.py" test --installer "${{ github.workspace }}/build/installer/package/$installer" --output "${{ github.workspace }}/build/installer/test"
@@ -370,7 +379,6 @@ jobs:
           SM_CLIENT_CERT_PASSWORD: ${{ env.EDI_CODESIGN == '1' && runner.os == 'Windows' && secrets.CODESIGN_WIN_CERT_P12_PASSWORD || '' }}
           EDI_CODESIGN_WIN_KEYPAIR_ALIAS: ${{ runner.os == 'Windows' && vars.CODESIGN_WIN_KEYLOCKER_KEYPAIR_ALIAS || '' }}
       - name: Qualify the online installer with local component transport
-        shell: bash
         run: |
           pixi run --manifest-path tools/installer/pixi.toml python - <<'PYTHON'
           import json, subprocess
@@ -393,7 +401,6 @@ jobs:
           ], check=True)
           PYTHON
       - name: Prepare the tested platform repository
-        shell: bash
         run: |
           pixi run --manifest-path tools/installer/pixi.toml python - <<'PYTHON'
           import json, shutil
@@ -436,30 +443,38 @@ jobs:
               shutil.copy2(preview_history, delivery / 'preview-history.json')
           PYTHON
       - name: Upload qualified release files
-        uses: actions/upload-artifact@v4
+        uses: ./.github/actions/store
         with:
-          name: installer-${{ runner.os }}-${{ github.run_attempt }}
+          artifact: installer-${{ runner.os }}-${{ github.run_attempt }}
           path: build/installer/delivery
+          # The installers' own content is their staging folder, checked unpacked.
+          check: |
+            build/installer/stage
+            build/installer/delivery
+          opaque: 'true'
           if-no-files-found: error
           compression-level: 0
           retention-days: 30  # the release publication takes the qualified files
       - name: Upload tested components
-        uses: actions/upload-artifact@v4
+        uses: ./.github/actions/store
         with:
-          name: installer-components-${{ runner.os }}-${{ github.run_attempt }}
+          artifact: installer-components-${{ runner.os }}-${{ github.run_attempt }}
           path: build/installer/components
+          check: |
+            build/installer/stage
+            build/installer/components
+          opaque: 'true'
           if-no-files-found: error
           compression-level: 0
           retention-days: 30  # the release publication takes the tested components
       - name: Remove the KeyLocker client certificate
         if: always() && runner.os == 'Windows'
-        shell: bash
         run: rm -f "$RUNNER_TEMP/client.p12"
       - name: Upload installation diagnostics
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: ./.github/actions/store
         with:
-          name: installer-check-${{ runner.os }}-${{ github.run_attempt }}
+          artifact: installer-check-${{ runner.os }}-${{ github.run_attempt }}
           path: |
             build/installer/assistant-lifetime.xml
             build/installer/project-retirement.xml

@@ -43,7 +43,8 @@ if [ ! -f "$SRC/tests/fixtures/web_parallel/build.py" ] || [ ! -f "$SRC/tests/fi
   exit 1
 fi
 
-# The unpacked site goes to a scratch folder, so an upload of OUT carries the evidence without a copy of the app.
+# The unpacked site and the observer builds, which copy crysta's source, go to a scratch folder, so an upload of OUT
+# carries the evidence alone.
 SCRATCH="$(mktemp -d)"
 trap 'rm -rf "$SCRATCH"' EXIT
 SITE="$SCRATCH/site"
@@ -73,15 +74,15 @@ for mode in threaded serial-dispatch serial; do
     serial) control=(backend-off) ;;
   esac
   echo "wasm-parallel-check: the witness, $mode"
-  rm -rf "$OUT/observer-$mode"
+  rm -rf "$SCRATCH/observer-$mode"
   if (unset CC CXX CFLAGS CXXFLAGS CPPFLAGS LDFLAGS CONDA_PREFIX CMAKE_CXX_COMPILER_LAUNCHER CMAKE_C_COMPILER_LAUNCHER
-    python "$SRC/tests/fixtures/web_parallel/build.py" "$mode" --emsdk "$EMSDK" --output "$OUT/observer-$mode"); then
-    (cd "$SRC" && node --experimental-websocket tests/system/manual/web_parallel_witness.mjs "$OUT/observer-$mode" \
+    python "$SRC/tests/fixtures/web_parallel/build.py" "$mode" --emsdk "$EMSDK" --output "$SCRATCH/observer-$mode"); then
+    (cd "$SRC" && node --experimental-websocket tests/system/manual/web_parallel_witness.mjs "$SCRATCH/observer-$mode" \
       tests/fitting/ncaf-wish-3bank-s5/project "$OUT/witness-$mode" "$CHROME" "${control[@]}") || status=1
   else
     status=1
   fi
-  rm -rf "$OUT/observer-$mode/build"  # the witness's evidence is its output; the build tree is ~100 MB
+  rm -rf "$SCRATCH/observer-$mode/build"
 done
 
 # The SIMD layer's witness in the browser (crysta tests/fixtures/web_simd): the maths layer as the multithread kit
@@ -89,14 +90,14 @@ done
 # fallback) must agree numerically and be refused as consumption.
 for mode in enabled scalar fallback; do
   echo "wasm-parallel-check: the SIMD witness, $mode"
-  rm -rf "$OUT/simd-$mode"
+  rm -rf "$SCRATCH/simd-$mode"
   if (cd "$SRC" && unset CC CXX CFLAGS CXXFLAGS CPPFLAGS LDFLAGS CONDA_PREFIX CMAKE_CXX_COMPILER_LAUNCHER CMAKE_C_COMPILER_LAUNCHER &&
-    python -m tests.fixtures.web_simd.build "$mode" --emsdk "$EMSDK" --output "$OUT/simd-$mode"); then
-    (cd "$SRC" && node --experimental-websocket tests/system/manual/web_simd_witness.mjs wasm "$OUT/simd-$mode" "$mode" \
+    python -m tests.fixtures.web_simd.build "$mode" --emsdk "$EMSDK" --output "$SCRATCH/simd-$mode"); then
+    (cd "$SRC" && node --experimental-websocket tests/system/manual/web_simd_witness.mjs wasm "$SCRATCH/simd-$mode" "$mode" \
       "$OUT/simd-witness-$mode" "$CHROME") || status=1
   else
     status=1
   fi
-  rm -rf "$OUT/simd-$mode/build"
+  rm -rf "$SCRATCH/simd-$mode/build"
 done
 exit "$status"
