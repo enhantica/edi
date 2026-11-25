@@ -447,9 +447,11 @@ jobs:
         with:
           artifact: installer-${{ runner.os }}-${{ github.run_attempt }}
           path: build/installer/delivery
-          # The installers' own content is their staging folder, checked unpacked.
+          # An installer's content is everything the packer reads, checked unpacked.
           check: |
             build/installer/stage
+            build/installer/package/source
+            build/installer/online/source
             build/installer/delivery
           opaque: 'true'
           if-no-files-found: error
@@ -462,6 +464,8 @@ jobs:
           path: build/installer/components
           check: |
             build/installer/stage
+            build/installer/package/source
+            build/installer/online/source
             build/installer/components
           opaque: 'true'
           if-no-files-found: error

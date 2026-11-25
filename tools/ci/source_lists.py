@@ -17,6 +17,17 @@ LINES = 'CRYSTA_SOURCE_LINE_LIST'
 # A shorter line says nothing about where it came from.
 SHORTEST = 12
 ANSI = re.compile(rb'\x1b\[[0-?]*[ -/]*[@-~]|\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)')
+# What every build and test run prints, which crysta also keeps in recorded logs: not lines of
+# its own.
+TOOLS = re.compile(
+    rb'-- (?:Detecting|Performing|Found|Looking|Check|Configuring|Generating|Install)\b.*'
+    rb'|-- (?:The \w+ compiler|Docs:) .*|\[doctest\] .*'
+    rb'|=+ ?(?:test session starts|warnings summary|short test summary info)? ?=+'
+    rb'|=+ ?(?:FAILURES|ERRORS|PASSES)? ?=+|[.sxXFE]+ +\[ *\d+%\]'
+    rb'|ninja: no work to do\.|All checks passed!|Local storage:|Directory config file:'
+    rb'|Successful lookups:|args = list\(args\)|pixi run [\w-]+|name: crysta-sdk-[\w-]+'
+    rb"|'--experimental-websocket',|(?:E +)?Extra items in the (?:left|right) set:"
+)
 # What a tool puts before a line it quotes: a compiler's gutter, pytest's markers, a diff's sign,
 # a log command, a timestamp.
 QUOTES = (
@@ -35,10 +46,10 @@ class UnavailableError(Exception):
 
 def line_id(text: bytes) -> str | None:
     """The id of a line as the list has it, or None for one too short to judge."""
-    words = text.split()
-    if sum(len(word) for word in words) < SHORTEST:
+    bare = text.strip()
+    if len(b''.join(bare.split())) < SHORTEST or not re.search(rb'[A-Za-z]{2}', bare):
         return None
-    return hashlib.sha256(text.strip()).hexdigest()
+    return None if TOOLS.fullmatch(bare) else hashlib.sha256(bare).hexdigest()
 
 
 def readings(line: bytes) -> set[str]:

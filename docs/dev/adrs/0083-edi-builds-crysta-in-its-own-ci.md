@@ -71,7 +71,7 @@ can restore a cache of main. CI therefore keeps built crysta only.
 3. **One way out.** A job with the source stores only through `.github/actions/store`. `tools/ci/stored_source.py`
    compares every file, and every member of a tar, tar.gz, zip or wheel, with the lists and refuses a source file, a
    text file that quotes a source line and anything it cannot read. The check is of exact bytes and lines; an
-   installer is checked on its unpacked staging folder.
+   installer is checked on the folders its packer reads, which are its whole content.
 4. **Compiler caches** keep the diagnostics a compile printed. `tools/ci/ccache_entries.py` reads every result in the
    directory as it will be saved, restored or new, and deletes one that quotes a source line or cannot be read. The
    six families start under new key prefixes, so nothing from before the check is restored.
