@@ -296,7 +296,7 @@ and the Windows CRT/OpenMP package identities match the SDK/installer contract.
 
 Windows checks the repository out with Git's own protection and without a list of excluded names: the lint
 job refuses a tracked path that some platform reads otherwise (`tools/ci/portable_paths.py`), and the source
-fetch and export hold crysta's paths to the same rule. The matrix and checkout gates compare all three hosts
+export holds crysta's paths to the same rule. The matrix and checkout gates compare all three hosts
 and reject an omitted host or sibling SDK.
 Windows executable suffixes and the qualified `.lib` SDK member are resolved explicitly.
 

@@ -28,7 +28,6 @@ import zipfile
 from collections.abc import Iterable, Iterator
 from pathlib import Path
 
-import portable_paths
 import source_lists
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -72,7 +71,6 @@ def fetch(home: Path, sha: str, also: set[str], token: str) -> None:
         GIT_CONFIG_VALUE_0=f'AUTHORIZATION: basic {credential}',
         GIT_TERMINAL_PROMPT='0',
     )
-    portable_paths.folders_of(list(tree(home, sha)))
     git(home, 'checkout', '-q', '--detach', sha)
     if git(home, 'rev-parse', 'HEAD').decode().strip() != sha:
         raise RefusedError('the checkout is another commit')
@@ -298,7 +296,7 @@ def main() -> int:
     temp = Path(os.environ['RUNNER_TEMP'])
     try:
         count = prepare(temp, args)
-    except (RefusedError, portable_paths.RefusedError) as error:
+    except RefusedError as error:
         return refused(temp, str(error))
     except (OSError, KeyError, ValueError) as error:
         return refused(temp, type(error).__name__)
