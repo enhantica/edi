@@ -1,13 +1,14 @@
 # The members the SDK archive may have (edi ADR-0083), one a line: what it is and its name. `header`: a
 # public header, the listed commit's own file of that name, the one part of the source the SDK may
-# carry. `built`: anything else, checked like any file.
+# carry as it is. `configured`: built by filling in the files named after it, so every source line in it
+# is one of theirs. `built`: anything else, checked like any file.
 built bin/crysta
 built bin/crysta.exe
 built bin/*.dll
 built lib/libcrysta_core.a
 built lib/crysta_core.lib
 built lib/crysta-runtime/*
-built lib/cmake/crysta/crystaConfig.cmake
+configured lib/cmake/crysta/crystaConfig.cmake cmake/crystaConfig.cmake.in CMakeLists.txt
 built lib/cmake/crysta/crystaConfigVersion.cmake
 built lib/cmake/crysta/crystaTargets.cmake
 built lib/cmake/crysta/crystaTargets-release.cmake

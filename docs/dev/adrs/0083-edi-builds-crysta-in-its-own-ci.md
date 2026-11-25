@@ -71,7 +71,8 @@ can restore a cache of main. CI therefore keeps built crysta only.
    script runs under `tools/ci/public_log.py`, a local action's scripts too. It withholds a source line from standard
    output, standard error and the step summary and runs nothing when the lists cannot be read. A line is found alone,
    after a compiler's gutter, pytest's markers, a diff's sign or a timestamp, inside a quoted or escaped value (JSON,
-   XML, HTML), and as a part of 24 characters or more within a longer one, unless the part is a single name or web address. One plain
+   XML, HTML), and as a part of 24 characters or more within a longer one, unless the part is a single name, a web address or
+   command-line options alone. One plain
    word alone is not listed. The fetch proves the filter before any later step.
 3. **One way out.** A job with the source stores only through `.github/actions/store`, which checks the path it stores and
    nothing else. `tools/ci/stored_source.py` compares every file and every entry of a container as the container has
@@ -80,8 +81,9 @@ can restore a cache of main. CI therefore keeps built crysta only.
    SHA-256 that edi's committed pixi locks name. Diagnostic artifacts withhold a quoted line instead (`withhold`).
 4. **The SDK** may carry crysta's public headers, the owner's one exception (2026-11-25): built artifacts include them, no
    other source. `tools/ci/sdk-members.txt` names the members. A header passes only in an archive whose name, manifest
-   and listed commit agree, and only as that commit's own file of that name under `include/`; every other member is
-   checked like any file.
+   and listed commit agree, and only as that commit's own file of that name under `include/`. The CMake configuration file
+   is built from two files of that commit and may hold source lines of theirs; every other member is checked like any
+   file.
 5. **Installers** are read from their bytes (`tools/ci/installer_content.py`), on every platform: each resource and
    archive, with no stretch left over. Only macOS opens its disk images; `tools/installer/packed_source.py` checks their
    files, links and extended attributes and the lines of text anywhere in the unpacked image where they are made, and

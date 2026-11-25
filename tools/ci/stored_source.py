@@ -224,8 +224,8 @@ class Check:
         if made != [(commit, platform)] or commit not in self.source.members:
             self.found.append(f'{name} is not the SDK its name says, or not of a listed commit')
             return
-        kinds = {pattern: kind for kind, pattern in source_lists.sdk_members()}
-        headers = self.source.members[commit]
+        kinds = {pattern: kind for kind, pattern, *_ in source_lists.sdk_members()}
+        carried = self.source.members[commit]
         seen = set()
         for member, content in held:
             kind = kinds.get(sdk_pattern(member, kinds))
@@ -234,8 +234,12 @@ class Check:
             elif kind == 'header':
                 unix = content.replace(b'\r\n', b'\n')
                 made = {source_lists.blob_id(content), source_lists.blob_id(unix)}
-                if headers.get(member) not in made:
+                if not carried.get(member, set()) & made:
                     self.found.append(f'{name}:{member} is not the public header it is named')
+            elif kind == 'configured':
+                quoted = {hit for line in content.splitlines() for hit in self.source.hits(line)}
+                if self.source.is_file(content) or quoted - carried.get(member, set()):
+                    self.found.append(f'{name}:{member} quotes more than it is made from')
             else:
                 self.file(f'{name}:{member}', content)
             seen.add(member)

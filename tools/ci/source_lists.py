@@ -30,10 +30,10 @@ SHORTEST = 12
 # code); a part longer than the longest is not looked up.
 PART = 24
 LONGEST = 1000
-# One plain word is not a line of anyone's, and neither is one name or web address with its
-# punctuation inside a longer line, also when a source line holds nothing else.
+# One plain word is not a line of anyone's. Inside a longer line neither is one name or web address
+# with its punctuation, nor command-line options alone, also when a source line holds nothing else.
 WORD = re.compile(rb'\W*[A-Za-z]+\W*')
-NAME = re.compile(rb'\W*(?:[\w.]+|https?://[^\s<>"\']+)\W*')
+NAME = re.compile(rb'\W*(?:[\w.]+|https?://[^\s<>"\']+|(?:-[\w-]+(?:=[\w.+/-]*)?\s*)+)\W*')
 # Recorded data among the tests (results, logs, structures, measured patterns), the lock and the
 # licences are compared as whole files only: single lines of them recur in any tool's output. A
 # person wrote the lines of everything else, whatever its kind.
@@ -134,7 +134,7 @@ def spans(text: bytes, marks: dict[int, list[int]] | None) -> Iterator[bytes]:
 
 
 def sdk_members() -> list[list[str]]:
-    """The SDK's members, what each is and its name; without the list, none."""
+    """The SDK's members: what each is, its name, what it is made from; without the list, none."""
     listed = Path(__file__).with_name('sdk-members.txt')
     text = listed.read_text(encoding='utf-8') if listed.is_file() else ''
     return [line.split() for line in text.splitlines() if line and not line.startswith('#')]
@@ -184,13 +184,13 @@ class Source:
         return any(self.quoted_in_line(line) for line in re.split(rb'[\r\n]+', text))
 
     @functools.cached_property
-    def members(self) -> dict[str, dict[str, str]]:
-        """The public headers each listed commit's SDK carries, by name, with their blob ids."""
-        found: dict[str, dict[str, str]] = {}
+    def members(self) -> dict[str, dict[str, set[str]]]:
+        """What each listed commit's SDK carries: a header's blob, a configured file's line ids."""
+        found: dict[str, dict[str, set[str]]] = {}
         if MEMBERS in os.environ:
             for entry in Path(os.environ[MEMBERS]).read_text(encoding='utf-8').splitlines():
-                commit, blob, name = entry.split(' ', 2)
-                found.setdefault(commit, {})[name] = blob
+                commit, known, name = entry.split(' ', 2)
+                found.setdefault(commit, {}).setdefault(name, set()).add(known)
         return found
 
     def is_public(self, data: bytes) -> bool:

@@ -151,12 +151,19 @@ class Lists:
     members: set[str]
 
 
-def headers(sha: str, files: dict[str, str]) -> set[str]:
-    """The public headers this commit's SDK carries: the commit, a blob id and its name."""
-    public = {name for kind, name in source_lists.sdk_members() if kind == 'header'}
-    held = {name for name in public & set(files) if re.fullmatch(r'include/.+\.hpp', name)}
+def members(home: Path, sha: str, files: dict[str, str]) -> set[str]:
+    """What this commit's SDK carries: the commit, a blob or line id, and the member's name."""
+    found = set()
+    for kind, name, *sources in source_lists.sdk_members():
+        if kind == 'header' and name in files and re.fullmatch(r'include/.+\.hpp', name):
+            found.add(f'{sha} {files[name]} {name}')
+        elif kind == 'configured':
+            held = {files[source] for source in sources if source in files}
+            lines = set().union(*map(bare, contents(home, held)))
+            known = {source_lists.line_id(line) for line in lines} - {None}
+            found |= {f'{sha} {entry} {name}' for entry in known}
     # A commit without one is listed all the same.
-    return {f'{sha} {files[name]} {name}' for name in held} or {f'{sha} {sha} .'}
+    return found or {f'{sha} {sha} .'}
 
 
 def lists(home: Path, pins: set[str], public: list[tuple[Path, str]]) -> Lists:
@@ -166,7 +173,7 @@ def lists(home: Path, pins: set[str], public: list[tuple[Path, str]]) -> Lists:
         files = tree(home, sha)
         blobs |= set(files.values())
         written |= {blob for path, blob in files.items() if source_lists.written(path)}
-        carried |= headers(sha, files)
+        carried |= members(home, sha, files)
     lines = set().union(*map(bare, contents(home, written)))
     known: set[str] = set()
     for where, commit in public:
