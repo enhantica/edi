@@ -16,7 +16,7 @@ import re
 import shutil
 import subprocess
 import sys
-from collections.abc import Iterator
+from collections.abc import Iterable, Iterator
 from pathlib import Path
 
 import source_lists
@@ -94,19 +94,19 @@ def contents(where: Path, ids: set[str]) -> Iterator[bytes]:
             at += int(head[2]) + 1
 
 
-def lines_of(where: Path, files: dict[str, str]) -> Iterator[set[bytes]]:
-    """The bare lines of each file whose lines a person wrote."""
-    wanted = {blob for path, blob in files.items() if source_lists.written(path)}
-    for data in contents(where, wanted):
+def lines_of(where: Path, files: Iterable[str]) -> Iterator[set[bytes]]:
+    """The bare lines of each text file."""
+    for data in contents(where, set(files)):
         if source_lists.is_text(data):
             yield {line.strip() for line in data.splitlines()}
 
 
 def lists(home: Path, sha: str, own: Path) -> tuple[set[str], dict[str, bytes]]:
-    """The source's blob ids and listed lines, without what edi's own commit publishes."""
+    """The source's blob ids and the lines a person wrote, without what edi's commit publishes."""
     files, public = tree(home, sha), tree(own, 'HEAD')
-    lines = set().union(*lines_of(home, files))
-    for shown in lines_of(own, public):
+    written = [blob for path, blob in files.items() if source_lists.written(path)]
+    lines = set().union(*lines_of(home, written))
+    for shown in lines_of(own, public.values()):
         lines -= shown
     listed = {known: line for line in lines if (known := source_lists.line_id(line))}
     blobs = set(files.values()) - set(public.values())

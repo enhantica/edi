@@ -8,6 +8,7 @@ here and never stored or printed.
 
 from __future__ import annotations
 
+import bisect
 import hashlib
 import html
 import os
@@ -91,13 +92,14 @@ def spans(text: bytes, marks: frozenset[int] | None) -> Iterator[bytes]:
     ends = None
     for begin in BEGINS.finditer(text):
         start = begin.start()
-        if marks is not None and mark(text[start:]) not in marks:
+        if marks is not None and mark(text[start : start + SHORTEST]) not in marks:
             continue
         if ends is None:
             ends = sorted({end.start() for end in ENDS.finditer(text)} | {len(text)})
-        for end in ends:
-            if PART <= end - start <= LONGEST:
-                yield text[start:end]
+        for place in range(bisect.bisect_left(ends, start + PART), len(ends)):
+            if ends[place] > start + LONGEST:
+                break
+            yield text[start : ends[place]]
 
 
 class Source:
