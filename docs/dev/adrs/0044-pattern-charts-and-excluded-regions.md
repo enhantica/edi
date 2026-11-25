@@ -44,6 +44,18 @@ is fitted.
    `edi_chart_hover_tests` repeatedly removes and deletes rendered series and sends hover events before polish,
    and checks the same boundary while replacing entire views.
 
+6. **An area holds points for the axes in force, or none (2026-11-25).** Qt Graphs lays a view out inside the call
+   that changes its height, with the points its areas hold at that moment, and fills an area by triangulating all of
+   it. Switching a chart to another axis published the new ranges and panes first, so the last pattern's areas were
+   laid out on the new axes, far outside the plot, and Qt's triangulation crashed. So whatever moves an axis empties
+   that axis' areas first: a drawing before it publishes a new x or y range, and the residual's scale, which follows
+   the two panes' heights, before it publishes its own. A drawing sets its areas at its end, whether their
+   axes moved or not, and the residual's area is set again at once when only the panes' heights moved its axis. While
+   a slider is held (ADR-0070) a drawing leaves out the structures' areas and the residual's band: its first step
+   empties them before anything is published and they stay empty until the release. It also leaves alone a measured
+   series whose points it does not change. A step that moves a range empties the measured band first and sets it
+   again, changed or not. A single crystal's bars are lines, not areas, and follow every step.
+
 ## Consequences
 
 - Any reader of a project file sees an excluded region as having no calculated pattern, which is true.
