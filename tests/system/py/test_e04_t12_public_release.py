@@ -17,6 +17,7 @@ import os
 import re
 import runpy
 import shlex
+import shutil
 import struct
 import subprocess
 import sys
@@ -33,6 +34,8 @@ import yaml
 from compression import zstd
 
 from tests.fixtures.e09_t75_workflow import active
+from tests.fixtures.fast_ci.workflow import run_shell
+from tests.integration.py import test_crysta_source_archive as source_archive
 
 ROOT = Path(__file__).resolve().parents[3]
 ORACLE = json.loads((ROOT / 'tests/fixtures/e04_t12_public_release/oracle.json').read_text())
@@ -46,6 +49,7 @@ PRIVATE = re.compile(
 # Exact npm release files and upstream members pinned in the dependency notice.
 VENDOR = json.loads((ROOT / 'tests/fixtures/report_transport/vendor.json').read_text())
 SCRIPTS = ROOT / 'tools/public-release'
+publication_engine = source_archive.engine
 SECRET = re.compile(
     r'\bgh[pousr]_[A-Za-z0-9]{36,}\b|\bgithub_pat_[A-Za-z0-9_]{60,}\b'
     r'|\b(?:AKIA|ASIA)[0-9A-Z]{16}\b|\bxox[abposr]-[A-Za-z0-9-]{10,}\b'
@@ -1093,6 +1097,113 @@ def published_tag_boundary(publish, finalize_index):
         and 'tag=v$(' in tag['run']
         and '$GITHUB_OUTPUT' in tag['run']
     ), 'The actual output tag comes from the finalized immutable release metadata'
+
+
+def stage_documentation_publication(root, runner, carried_pins, steps):
+    deployed = runner / 'deployed'
+    (deployed / 'webapp').mkdir(parents=True)
+    (deployed / 'index.html').write_text('old documentation', encoding='utf-8')
+    (deployed / 'webapp/index.html').write_text('retained web app', encoding='utf-8')
+    (deployed / 'crysta-commits.json').write_text(json.dumps(carried_pins), encoding='utf-8')
+    (root / 'documentation').mkdir()
+    (root / 'documentation/index.html').write_text('new documentation', encoding='utf-8')
+
+    _, _, assembly = publication_shell_operation(steps, 'tools/ci/pages_update.py')
+    arguments = [
+        part.replace('$RUNNER_TEMP', str(runner)).replace('$GITHUB_REPOSITORY', 'enhantica/edi')
+        for part in assembly[1:]
+    ]
+    result = run(sys.executable, *arguments, cwd=root, timeout=8)
+    require_success(result, 'the actual publish-docs assembly accepts its deployed counterpart')
+    assert (root / 'site/index.html').read_text(encoding='utf-8') == 'new documentation' and (
+        root / 'site/webapp/index.html'
+    ).read_text(encoding='utf-8') == 'retained web app', (
+        'The docs workflow replaces documentation and preserves the deployed counterpart'
+    )
+
+
+def fetch_documentation_publication_pins(root, runner, remote, pin, steps):
+    _, source = pages_operation(steps, './.github/actions/crysta-source')
+    assert (
+        source['with']['history'] == 'true'
+        and source['with']['site'] == 'site'
+        and source['with']['sha'] == '${{ steps.crysta.outputs.sha }}'
+    ), 'The real docs publisher gives the source action its assembled site and history'
+    action = yaml.safe_load((ROOT / '.github/actions/crysta-source/action.yml').read_text())
+    (fetch,) = [
+        step
+        for step in action['runs']['steps']
+        if 'tools/ci/crysta_fetch.py' in step.get('run', '')
+    ]
+    script = root / 'source-step.sh'
+    script.write_text(fetch['run'], encoding='utf-8')
+    output = runner / 'github-env'
+    result = run_shell(
+        fetch['shell'],
+        script,
+        root,
+        {
+            **os.environ,
+            'GITHUB_SERVER_URL': remote.as_uri(),
+            'RUNNER_TEMP': str(runner),
+            'GITHUB_ENV': str(output),
+            'TOKEN': 'local-fixture-token',
+            'SHA': pin,
+            'HISTORY': '--history',
+            'RECEIPTS': '',
+            'SITE': source['with']['site'],
+        },
+        timeout=8,
+    )
+    require_success(result, 'the actual source action writes the docs record using local Git')
+    return dict(line.split('=', 1) for line in output.read_text(encoding='utf-8').splitlines())
+
+
+def test_docs_publish_retains_deployed_crysta_pins(tmp_path, publication_engine):
+    engine, older = publication_engine
+    git = source_archive.git
+    previous = git(engine, 'rev-parse', 'HEAD').decode()
+    identity = ['-c', 'user.name=Source fixture', '-c', 'user.email=fixture@example.invalid']
+    git(
+        engine,
+        *identity,
+        'commit',
+        '-qm',
+        'Current documentation pin',
+        '--allow-empty',
+        '--no-gpg-sign',
+    )
+    current = git(engine, 'rev-parse', 'HEAD').decode()
+
+    root = tmp_path / 'edi'
+    scripts = root / 'tools/ci'
+    scripts.mkdir(parents=True)
+    for name in (
+        'pages_update.py',
+        'crysta_fetch.py',
+        'public_log.py',
+        'source_lists.py',
+        'portable_paths.py',
+    ):
+        shutil.copyfile(ROOT / 'tools/ci' / name, scripts / name)
+    (root / 'pixi.toml').write_text(f'CRYSTA_COMMIT = "{current}"\n', encoding='utf-8')
+    git(root, 'init', '-q')
+    git(root, 'add', '--', 'pixi.toml')
+    git(root, *identity, 'commit', '-qm', 'History knows only the new pin', '--no-gpg-sign')
+
+    runner = tmp_path / 'runner'
+    workflow = yaml.safe_load((ROOT / '.github/workflows/pages.yml').read_text())
+    steps = workflow['jobs']['publish-docs']['steps']
+    stage_documentation_publication(root, runner, (older, previous), steps)
+    fields = fetch_documentation_publication_pins(root, runner, engine.parents[1], current, steps)
+    record = root / 'site/crysta-commits.json'
+    assert json.loads(record.read_text(encoding='utf-8')) == sorted({older, previous, current}), (
+        'Publishing new documentation retains both deployed pins and adds the current pin'
+    )
+    lines = Path(fields['CRYSTA_SOURCE_LINE_LIST']).read_text(encoding='ascii').splitlines()
+    assert hashlib.sha256(source_archive.PRIVATE).hexdigest() in lines, (
+        'A private line reachable only from a carried pin enters the next publication filter'
+    )
 
 
 def test_pages_builds_docs_and_publishes_the_linked_webapp():
