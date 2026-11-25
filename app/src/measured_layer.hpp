@@ -43,6 +43,8 @@ class MeasuredLayer : public QQuickItem {
     int revision() const { return revision_; }
 
     // The points, and per point the bar's low and high ends (a NaN low end runs to the bottom).
+    // Whether the layer already shows these points and bars.
+    bool holds(const QList<QPointF>& points, const QList<double>& low, const QList<double>& high) const;
     void setData(const QList<QPointF>& points, const QList<double>& low, const QList<double>& high);
     // The same from QML as three equal-length lists: each point's x and y, and its s.u., the bar running from y - su to
     // y + su; a point with no finite s.u. has no bar. The report preview's evolution chart draws the model's points so.

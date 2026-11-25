@@ -49,11 +49,11 @@ is fitted.
    it. Switching a chart to another axis published the new ranges and panes first, so the last pattern's areas were
    laid out on the new axes, far outside the plot, and Qt's triangulation crashed. So whatever moves an axis empties
    that axis' areas first: a drawing before it publishes a new x or y range, and the residual's scale, which follows
-   the two panes' heights, before it publishes its own. A drawing fills its areas at its end, and the residual's area
-   is filled again at once when only the panes' heights moved its axis. An area whose axes did not move stays as drawn.
-   A held slider keeps ADR-0070's rule: the structures' areas, the bars and the residual's band are emptied once, at
-   its first step and before anything is published, and filled on release. The measured band stands as drawn while its
-   axes, data, style and hidden entries stand, and is emptied and drawn for the new ones when they do not.
+   the two panes' heights, before it publishes its own. A drawing sets every area at its end, whether its axes moved
+   or not, and the residual's area is set again at once when only the panes' heights moved its axis. A held slider's
+   first step empties the structures' areas and the residual's band before anything is published and leaves them empty
+   until the release (ADR-0070); a later step that moves an axis empties that axis' areas again, then sets the measured
+   band. A single crystal's bars are lines, not areas, and follow every step.
 
 ## Consequences
 

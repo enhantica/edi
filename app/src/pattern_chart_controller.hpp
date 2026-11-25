@@ -515,22 +515,11 @@ class PatternChartController : public QObject {
         bool missing = false;  // a structure curve whose series the chart has not handed over yet
         double bar_width = std::numeric_limits<double>::quiet_NaN();
     };
-    Fills fillsOf(const edi::PatternPresentation& shown, bool held, bool keep_measured, bool clear_fills) const;
-    // What the measured series were drawn for: a drag leaves them as drawn only while all of it stands.
-    struct MeasuredDrawing {
-        const void* experiment = nullptr;
-        edi::PatternSource::Column measured;  // compared by its values, as a held range's is
-        QString style;
-        std::string axis;
-        int scale = -1;
-        bool included_only = false;
-        QStringList hidden;
-    };
-    std::optional<MeasuredDrawing> measured_drawn_;
+    Fills fillsOf(const edi::PatternPresentation& shown, bool held, bool clear_fills) const;
     // Qt Graphs lays a view out inside the call that changes its height, with the points its areas hold at that moment.
     // So an area's points are for the axes in force, or there are none: an axis that is about to move empties its areas
     // first (ADR-0044).
-    void emptyMainAreas(bool measured);
+    void emptyMainAreas(bool measured);  // the measured band's too, or only those a drag empties
     void emptyResidualArea();
     // The residual's area again after its axis moved between two drawings.
     void fillResidualArea();

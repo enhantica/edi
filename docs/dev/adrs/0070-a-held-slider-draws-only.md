@@ -32,7 +32,8 @@ asynchronous and newest-wins; the cost was everything around it.
    announces one change.
 3. One drag is one Undo step. Its first step records the project as the drag found it, later steps add nothing, and the
    release trims the record to the parameters the drag changed. A drag let go where it started leaves no step.
-4. While held, the charts keep their y range and leave the measured series as drawn. Filled areas (the residual band,
+4. While held, the charts keep their y range, and a measured series is set only when a step changes its points (a
+   wavelength moves them on a d-spacing axis). Filled areas (the residual band,
    the structures' areas) are emptied for the drag and drawn again on release, because Qt Graphs triangulates an area
    on every change and that was the largest cost of a step. The lines on their edges keep following each step.
 5. A save during a drag writes the newest values: the saved files are made when read, and each step marks them stale.
