@@ -12,12 +12,12 @@ inputs:
   path:
     description: The files, one path or pattern a line
     required: true
-  check:
-    description: What to check when it is not `path` itself
-    default: ''
-  opaque:
-    description: Accept archives of other kinds (third-party tools, installers whose content is checked unpacked)
+  withhold:
+    description: Replace a source line in a text file instead of refusing it (diagnostics only)
     default: 'false'
+  receipt:
+    description: A receipt naming installers whose content was checked unpacked
+    default: ''
   ccache:
     description: The command that runs Python beside ccache, for a compiler cache
     default: ''
@@ -36,19 +36,20 @@ inputs:
 runs:
   using: composite
   steps:
-    - name: Check what would be stored
+    - name: Check what is stored
       if: inputs.ccache == ''
       shell: python3 tools/ci/public_log.py {0}
       env:
-        PATHS: ${{ inputs.check || inputs.path }}
-        OPAQUE: ${{ inputs.opaque == 'true' && '--opaque' || '' }}
+        PATHS: ${{ inputs.path }}
+        WITHHOLD: ${{ inputs.withhold == 'true' && '--withhold' || '' }}
+        RECEIPT: ${{ inputs.receipt }}
       run: |
         paths=()
         while IFS= read -r line; do
           line="${line#"${line%%[![:space:]]*}"}"
           case "$line" in '' | '!'*) ;; *) paths+=("$line") ;; esac
         done <<<"$PATHS"
-        python3 tools/ci/stored_source.py $OPAQUE "${paths[@]}"
+        python3 tools/ci/stored_source.py $WITHHOLD ${RECEIPT:+--receipt "$RECEIPT"} "${paths[@]}"
     - name: Check the compiler cache
       if: inputs.ccache != ''
       shell: python3 tools/ci/public_log.py {0}

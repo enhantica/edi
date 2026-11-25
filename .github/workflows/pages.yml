@@ -70,6 +70,18 @@ jobs:
       - uses: ./.github/actions/crysta-sdk
         with:
           platform: ${{ runner.os == 'macOS' && 'osx-arm64' || 'linux-64' }}
+      - name: Find a native build of this commit
+        id: native
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: python3 tools/ci/find_native_artifact.py
+      - name: Download the matching native build
+        if: steps.native.outputs.run-id != ''
+        uses: ./.github/actions/edi-native
+        with:
+          platform: linux-64
+          run-id: ${{ steps.native.outputs.run-id }}
       - name: crysta's source, whose lines no later step prints or stores
         uses: ./.github/actions/crysta-source
         with:
@@ -80,17 +92,6 @@ jobs:
         run: pixi run pages-check
       - name: Prepare notebooks
         run: pixi run notebook-prepare
-      - name: Find a native build of this commit
-        id: native
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: python3 tools/ci/find_native_artifact.py
-      - name: Download the matching native build
-        if: steps.native.outputs.run-id != ''
-        uses: ./.github/actions/edi-native
-        with:
-          platform: linux-64
-          run-id: ${{ steps.native.outputs.run-id }}
       - name: Restore the validated native code or build when absent
         run: pixi run core-build
       # The repository keeps tutorial notebooks without outputs, so the site runs them before it renders them.
@@ -136,6 +137,17 @@ jobs:
       - uses: ./.github/actions/setup-pixi
       - uses: ./.github/actions/wasm-cache
         id: wasm-cache
+      # Installed and kept before crysta's source is on the runner, so it needs no check against it.
+      - name: Install the WebAssembly toolchain  # Emscripten, Qt's wasm kits, Eigen, Chrome
+        id: toolchain
+        shell: bash
+        run: pixi run -e app wasm-toolchain
+      - name: Save the WebAssembly toolchain
+        if: steps.wasm-cache.outputs.toolchain-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ~/.cache/edi-wasm
+          key: ${{ steps.wasm-cache.outputs.toolchain }}
       - uses: ./.github/actions/crysta-sdk
         with:
           platform: ${{ runner.os == 'macOS' && 'osx-arm64' || 'linux-64' }}
@@ -147,8 +159,6 @@ jobs:
           private-key: ${{ secrets.ENHANTICA_APP_KEY }}
       - name: Fetch the pinned crysta source
         run: pixi run crysta-sdk
-      - name: Install the WebAssembly toolchain  # Emscripten, Qt's wasm kits, Eigen, Chrome
-        run: pixi run -e app wasm-toolchain
       - name: Reset browser compiler-cache statistics
         run: pixi run --skip-deps ccache --zero-stats
       - name: Build the multithread kit and pack the web app
@@ -156,11 +166,13 @@ jobs:
       - name: Browser compiler-cache statistics
         if: ${{ !cancelled() }}
         run: pixi run --skip-deps ccache --show-stats --verbose
-      - name: Save the WebAssembly toolchain and compiler cache
+      - name: Save the WebAssembly compiler cache
         if: ${{ !cancelled() && steps.wasm-cache.outcome == 'success' }}
-        uses: ./.github/actions/wasm-cache
+        uses: ./.github/actions/store
         with:
-          operation: save
+          ccache: pixi run --skip-deps python
+          path: ~/.cache/edi-ccache
+          key: ${{ steps.wasm-cache.outputs.objects }}
       - name: Upload WebAssembly
         uses: ./.github/actions/store
         with:
@@ -182,6 +194,9 @@ jobs:
     # The reviewed environment of every public-site publisher, which alone mints the edi-sites token.
     environment: public-site
     runs-on: *linux
+    defaults:
+      run:
+        shell: python3 tools/ci/public_log.py {0}
     steps:
       - uses: actions/checkout@v5
       - name: Download new documentation
@@ -200,9 +215,22 @@ jobs:
       - name: Preserve the deployed web app and assemble the site
         env:
           SITES_TOKEN: ${{ steps.sites-token.outputs.token }}
+        shell: bash
         run: |
           bash tools/ci/fetch_deploy_branch.sh deploy-docs "$RUNNER_TEMP/deployed"
           python3 tools/ci/pages_update.py --repo "$GITHUB_REPOSITORY" --component docs --incoming documentation --site site --base "$RUNNER_TEMP/deployed"
+      - name: The pinned crysta commit
+        id: crysta
+        shell: bash
+        run: bash tools/ci/crysta-source.sh
+      - name: crysta's source, whose lines no later step prints or stores
+        uses: ./.github/actions/crysta-source
+        with:
+          sha: ${{ steps.crysta.outputs.sha }}
+          app-id: ${{ vars.ENHANTICA_APP_ID }}
+          private-key: ${{ secrets.ENHANTICA_APP_KEY }}
+      - name: Check every file that is published
+        run: python3 tools/ci/stored_source.py site
       # The site for the host behind easydiffraction.org, which pulls this branch of edi-sites.
       - name: Update the deploy-docs branch
         env:
@@ -219,6 +247,9 @@ jobs:
     # The reviewed environment of every public-site publisher, which alone mints the edi-sites token.
     environment: public-site
     runs-on: *linux
+    defaults:
+      run:
+        shell: python3 tools/ci/public_log.py {0}
     steps:
       - uses: actions/checkout@v5
       - name: Download new WebAssembly
@@ -237,9 +268,22 @@ jobs:
       - name: Preserve the deployed documentation and assemble the site
         env:
           SITES_TOKEN: ${{ steps.sites-token.outputs.token }}
+        shell: bash
         run: |
           bash tools/ci/fetch_deploy_branch.sh deploy-docs "$RUNNER_TEMP/deployed"
           python3 tools/ci/pages_update.py --repo "$GITHUB_REPOSITORY" --component wasm --incoming webapp --site site --base "$RUNNER_TEMP/deployed"
+      - name: The pinned crysta commit
+        id: crysta
+        shell: bash
+        run: bash tools/ci/crysta-source.sh
+      - name: crysta's source, whose lines no later step prints or stores
+        uses: ./.github/actions/crysta-source
+        with:
+          sha: ${{ steps.crysta.outputs.sha }}
+          app-id: ${{ vars.ENHANTICA_APP_ID }}
+          private-key: ${{ secrets.ENHANTICA_APP_KEY }}
+      - name: Check every file that is published
+        run: python3 tools/ci/stored_source.py site
       # The whole site for easydiffraction.org, its web app a preview of main; app.easydiffraction.org takes only a
       # release's own web app, from release-publish.yml.
       - name: Update the deploy-docs branch

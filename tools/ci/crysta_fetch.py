@@ -24,8 +24,6 @@ import source_lists
 ROOT = Path(__file__).resolve().parents[2]
 SERVER = os.environ.get('GITHUB_SERVER_URL', 'https://github.com')
 REPOSITORY = 'enhantica/crysta'
-# What the published SDK carries of the source as it is (its public headers and interface record).
-PUBLIC = ('include/', 'data/python-surface.json', 'cmake/crystaConfig.cmake.in')
 
 
 class RefusedError(Exception):
@@ -70,54 +68,66 @@ def fetch(home: Path, sha: str, token: str) -> None:
         raise RefusedError('the checkout is another commit')
 
 
-def source(home: Path, sha: str) -> tuple[dict[str, bytes], set[bytes]]:
-    """Each source file's bytes by its blob id, and the lines of what the SDK publishes."""
-    listed = git(home, 'ls-tree', '-r', '-z', sha).decode('utf-8', 'surrogateescape').split('\0')
-    wanted, public = set(), set()
-    for entry in filter(None, listed):
+def tree(where: Path, commit: str) -> dict[str, str]:
+    """The regular files of a commit: each path and its blob id (links are not files)."""
+    found = {}
+    listed = git(where, 'ls-tree', '-r', '-z', commit).decode('utf-8', 'surrogateescape')
+    for entry in filter(None, listed.split('\0')):
         head, path = entry.split('\t', 1)
-        _, kind, blob = head.split()
-        if kind == 'blob':
-            (public if path.startswith(PUBLIC) else wanted).add(blob)
-    out = git(home, 'cat-file', '--batch', stdin='\n'.join(sorted(wanted | public)).encode())
-    contents, at = {}, 0
+        mode, kind, blob = head.split()
+        if kind == 'blob' and mode != '120000':
+            found[path] = blob
+    return found
+
+
+def contents(where: Path, ids: set[str]) -> Iterator[bytes]:
+    """The blobs this repository holds; a sparse checkout lacks some, and none is fetched."""
+    asked = '\n'.join(sorted(ids)).encode()
+    out = git(where, 'cat-file', '--batch', stdin=asked, GIT_NO_LAZY_FETCH='1')
+    at = 0
     while at < len(out):
         end = out.index(b'\n', at)
-        blob, _, size = out[at:end].split()
-        contents[blob.decode()] = out[end + 1 : end + 1 + int(size)]
-        at = end + 2 + int(size)
-    shown = set().union(*(lines_of(contents[blob]) for blob in public))
-    return {blob: data for blob, data in contents.items() if blob not in public}, shown
+        head = out[at:end].split()
+        at = end + 1
+        if head[1] != b'missing':
+            yield out[at : at + int(head[2])]
+            at += int(head[2]) + 1
 
 
-def own() -> Iterator[bytes]:
-    """Every file edi tracks, which is public."""
-    for name in git(ROOT, 'ls-files', '-z').decode('utf-8', 'surrogateescape').split('\0'):
-        path = ROOT / name
-        if name and path.is_file():
-            yield path.read_bytes()
+def lines_of(where: Path, files: dict[str, str]) -> Iterator[set[bytes]]:
+    """The bare lines of each file whose lines a person wrote."""
+    wanted = {blob for path, blob in files.items() if source_lists.written(path)}
+    for data in contents(where, wanted):
+        if source_lists.is_text(data):
+            yield {line.strip() for line in data.splitlines()}
 
 
-def lines_of(data: bytes) -> set[bytes]:
-    """A text file's lines, bare."""
-    return set() if b'\0' in data[:8192] else {line.strip() for line in data.splitlines()}
-
-
-def write_lists(
-    contents: dict[str, bytes], shown: set[bytes], home: Path
-) -> tuple[Path, Path, bytes]:
-    """Write both lists beside the checkout; one listed line comes back for the proof."""
-    blobs, lines = set(contents), set().union(*map(lines_of, contents.values())) - shown
-    for data in own():
-        blobs.discard(source_lists.blob_id(data))
-        lines -= lines_of(data)
+def lists(home: Path, sha: str, own: Path) -> tuple[set[str], dict[str, bytes]]:
+    """The source's blob ids and listed lines, without what edi's own commit publishes."""
+    files, public = tree(home, sha), tree(own, 'HEAD')
+    lines = set().union(*lines_of(home, files))
+    for shown in lines_of(own, public):
+        lines -= shown
     listed = {known: line for line in lines if (known := source_lists.line_id(line))}
+    blobs = set(files.values()) - set(public.values())
     if not blobs or not listed:
         raise RefusedError('the source lists are empty')
-    blob_list, line_list = home.parent / 'crysta-source-blobs', home.parent / 'crysta-source-lines'
-    blob_list.write_text('\n'.join(sorted(blobs)) + '\n', encoding='ascii')
-    line_list.write_text('\n'.join(sorted(listed)) + '\n', encoding='ascii')
-    return blob_list, line_list, listed[min(listed)]
+    return blobs, listed
+
+
+def write_lists(blobs: set[str], listed: dict[str, bytes], folder: Path) -> dict[str, str]:
+    """Write the lists beside the checkout and name them."""
+    marks = {f'{source_lists.mark(line):08x}' for line in listed.values()}
+    written = {}
+    for variable, entries in (
+        (source_lists.BLOBS, blobs),
+        (source_lists.LINES, listed),
+        (source_lists.MARKS, marks),
+    ):
+        path = folder / variable.lower().replace('_', '-')
+        path.write_text('\n'.join(sorted(entries)) + '\n', encoding='ascii')
+        written[variable] = str(path)
+    return written
 
 
 def prove(home: Path, environment: dict[str, str], sample: bytes) -> None:
@@ -149,17 +159,12 @@ def prepare(temp: Path, sha: str) -> int:
         raise RefusedError('the commit is not a full id')
     home = temp / 'crysta'
     fetch(home, sha, os.environ['TOKEN'])
-    contents, shown = source(home, sha)
-    blob_list, line_list, sample = write_lists(contents, shown, home)
-    environment = {
-        'CRYSTA_SRC': str(home),
-        source_lists.BLOBS: str(blob_list),
-        source_lists.LINES: str(line_list),
-    }
-    prove(home, environment, sample)
+    blobs, listed = lists(home, sha, ROOT)
+    environment = {'CRYSTA_SRC': str(home), **write_lists(blobs, listed, temp)}
+    prove(home, environment, listed[min(listed)])
     with Path(os.environ['GITHUB_ENV']).open('a', encoding='utf-8') as output:
         output.writelines(f'{name}={value}\n' for name, value in environment.items())
-    return len(contents)
+    return len(blobs)
 
 
 def main() -> int:

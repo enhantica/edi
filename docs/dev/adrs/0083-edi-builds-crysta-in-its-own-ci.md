@@ -62,21 +62,34 @@ can restore a cache of main. CI therefore keeps built crysta only.
 
 1. **One way in.** `.github/actions/crysta-source` fetches one commit into the runner's temporary folder with a token that
    reads crysta's contents and nothing else, refuses another commit, passes on nothing a child process prints, and
-   writes two lists beside the checkout: the Git blob id of each source file and the SHA-256 of each source line.
-   What edi itself publishes, and what the SDK installs (its headers and interface record), is not in the lists.
+   writes three lists beside the checkout: the Git blob id of each source file, the SHA-256 of each line a person wrote
+   in it, and a short mark of how each line begins. Recorded data is listed as whole files only: its lines are numbers
+   and names that a report of edi's own tests also prints. A line edi itself publishes is not in the lists; edi's files
+   are read from its commit, not from the working folder.
 2. **Two phases.** Before the fetch each script of the job names `shell: bash`; no crysta file exists yet. After it every
-   script runs under `tools/ci/public_log.py`, which withholds a source line from standard output, standard error and
-   the step summary, with a compiler's gutter, pytest's markers or a timestamp before it, and runs nothing when the
-   list cannot be read. The fetch proves the filter before any later step.
-3. **One way out.** A job with the source stores only through `.github/actions/store`. `tools/ci/stored_source.py`
-   compares every file, and every member of a tar, tar.gz, zip or wheel, with the lists and refuses a source file, a
-   text file that quotes a source line and anything it cannot read. The check is of exact bytes and lines; an
-   installer is checked on the folders its packer reads, which are its whole content.
-4. **Compiler caches** keep the diagnostics a compile printed. `tools/ci/ccache_entries.py` reads every result in the
-   directory as it will be saved, restored or new, and deletes one that quotes a source line or cannot be read. The
-   six families start under new key prefixes, so nothing from before the check is restored.
-5. **The policy.** `tools/ci/source_publishers.py`, part of the lint job, reads the workflows: the two phases, the store
-   action, the table of every publisher, the retired cache prefixes. A new publisher is a change of that table.
+   script runs under `tools/ci/public_log.py`, a local action's scripts too. It withholds a source line from standard
+   output, standard error and the step summary and runs nothing when the lists cannot be read. A line is found alone,
+   after a compiler's gutter, pytest's markers or a timestamp, inside a quoted or escaped value (JSON, XML, HTML), and
+   as a part of 24 characters or more within a longer one. The fetch proves the filter before any later step.
+3. **One way out.** A job with the source stores only through `.github/actions/store`, which checks the path it stores and
+   nothing else. `tools/ci/stored_source.py` compares every file and every member of an archive, which it knows by its
+   first bytes. It refuses a source file, also with Windows line ends, a text file that quotes a source line, and
+   anything it cannot read or open. Diagnostic artifacts withhold a quoted line instead (`withhold`). The SDK carries
+   files of crysta's on purpose, its headers and interface record: `tools/ci/sdk-members.txt` names them, and they are
+   allowed only in an archive named as an SDK and only where they belong.
+4. **Installers** are opened down to their members by `tools/installer/packed_source.py`, and its receipt names the
+   SHA-256 of each delivered file that passed. An installer or a disk image without a receipt is refused, so one from
+   before the check cannot be published again.
+5. **Publishing** checks the published folder itself: the site, the release's assets and their copies, the draft's
+   installers and the released web app are each checked in the job that publishes them, before it does.
+6. **Compiler caches** keep the diagnostics a compile printed. `tools/ci/ccache_entries.py` reads every file in the
+   directory as it will be saved, restored or new, and deletes an entry that quotes a source line or cannot be read and
+   any file that is neither an entry nor ccache's own. A family is restored and saved under its own prefix, and the
+   prefixes are new, so nothing from before the check is restored.
+7. **The policy.** `tools/ci/source_publishers.py`, part of the lint job, reads the workflows and the local actions they
+   use: the two phases, the store action, the check before each publishing step, the cache families, the retired
+   prefixes and the table of what a job without the source publishes, each by its own name. A new publisher is a
+   change of that table.
 
 ## Shared production and exact artifact transfer
 

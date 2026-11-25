@@ -45,6 +45,7 @@ jobs:
         uses: ./.github/actions/store
         with:
           artifact: unit-coverage
+          withhold: 'true'
           path: |
             build/coverage-unit/coverage-report.txt
             build/py-coverage-report.txt

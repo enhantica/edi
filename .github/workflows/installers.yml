@@ -442,18 +442,25 @@ jobs:
           if preview_history.is_file():
               shutil.copy2(preview_history, delivery / 'preview-history.json')
           PYTHON
+      - name: Check what the installers and components hold
+        run: |
+          pixi run --manifest-path tools/installer/pixi.toml python tools/installer/packed_source.py \
+            --devtool build/installer/ifw/tools/bin/devtool${{ runner.os == 'Windows' && '.exe' || '' }} \
+            --known build/installer/ifw/tools --known build/installer/maintenance \
+            --receipt build/installer/source-check/receipt.json build/installer/delivery build/installer/components
+      - name: Keep the receipt of that check
+        uses: ./.github/actions/store
+        with:
+          artifact: installer-source-check-${{ runner.os }}-${{ github.run_attempt }}
+          path: build/installer/source-check/receipt.json
+          if-no-files-found: error
+          retention-days: 30
       - name: Upload qualified release files
         uses: ./.github/actions/store
         with:
           artifact: installer-${{ runner.os }}-${{ github.run_attempt }}
           path: build/installer/delivery
-          # An installer's content is everything the packer reads, checked unpacked.
-          check: |
-            build/installer/stage
-            build/installer/package/source
-            build/installer/online/source
-            build/installer/delivery
-          opaque: 'true'
+          receipt: build/installer/source-check/receipt.json
           if-no-files-found: error
           compression-level: 0
           retention-days: 30  # the release publication takes the qualified files
@@ -462,12 +469,7 @@ jobs:
         with:
           artifact: installer-components-${{ runner.os }}-${{ github.run_attempt }}
           path: build/installer/components
-          check: |
-            build/installer/stage
-            build/installer/package/source
-            build/installer/online/source
-            build/installer/components
-          opaque: 'true'
+          receipt: build/installer/source-check/receipt.json
           if-no-files-found: error
           compression-level: 0
           retention-days: 30  # the release publication takes the tested components
@@ -478,6 +480,7 @@ jobs:
         if: always()
         uses: ./.github/actions/store
         with:
+          withhold: 'true'
           artifact: installer-check-${{ runner.os }}-${{ github.run_attempt }}
           path: |
             build/installer/assistant-lifetime.xml
@@ -607,6 +610,9 @@ jobs:
     permissions:
       contents: read
       actions: read
+    defaults:
+      run:
+        shell: python3 tools/ci/public_log.py {0}
     steps:
       - uses: actions/checkout@v5
         with:
@@ -621,9 +627,32 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           PREVIEW_RUN: ${{ inputs.preview_run }}
+        shell: bash
         run: |
           python3 tools/release/preview.py --repo "$GITHUB_REPOSITORY" --branch "$GITHUB_REF_NAME" \
             --run "$PREVIEW_RUN" --output preview-delivery --deliveries
+      - name: The pinned crysta commit
+        id: crysta
+        shell: bash
+        run: bash tools/ci/crysta-source.sh
+      - name: The receipts of the installers' checked content
+        uses: actions/download-artifact@v4
+        with:
+          pattern: installer-source-check-*
+          path: source-checks
+          run-id: ${{ inputs.preview_run || github.run_id }}
+          github-token: ${{ github.token }}
+      - name: crysta's source, whose lines no later step prints or stores
+        uses: ./.github/actions/crysta-source
+        with:
+          sha: ${{ steps.crysta.outputs.sha }}
+          app-id: ${{ vars.ENHANTICA_APP_ID }}
+          private-key: ${{ secrets.ENHANTICA_APP_KEY }}
+      - name: Check every file that is published
+        run: |
+          receipts=()
+          for file in source-checks/*/*.json; do receipts+=(--receipt "$file"); done
+          python3 tools/ci/stored_source.py "${receipts[@]}" preview-delivery
       - name: Attach qualified online installers to the draft
         if: github.event.pull_request.head.repo.fork == false
         env:
@@ -697,6 +726,9 @@ jobs:
       contents: read
       actions: read
     environment: public-site
+    defaults:
+      run:
+        shell: python3 tools/ci/public_log.py {0}
     steps:
       - uses: actions/checkout@v5
       - name: Download tested platform repositories
@@ -711,12 +743,14 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           PREVIEW_RUN: ${{ inputs.preview_run }}
+        shell: bash
         run: |
           python3 tools/release/preview.py --repo "$GITHUB_REPOSITORY" --branch "$GITHUB_REF_NAME" \
             --run "$PREVIEW_RUN" --output preview
           mv preview/components components
       - name: Require the selected platforms from this successful attempt
         if: inputs.preview_run == ''
+        shell: bash
         run: |
           python3 - <<'PYTHON'
           from pathlib import Path
@@ -736,6 +770,7 @@ jobs:
           path: preview-delivery
       - name: Prepare the testing update feed
         if: inputs.prepare_preview_release && inputs.preview_run == ''
+        shell: bash
         run: |
           python3 - <<'PYTHON'
           import json
@@ -764,9 +799,32 @@ jobs:
       - name: Preserve documentation, web app and previous components
         env:
           SITES_TOKEN: ${{ steps.sites-token.outputs.token }}
+        shell: bash
         run: |
           bash tools/ci/fetch_deploy_branch.sh deploy-docs "$RUNNER_TEMP/deployed"
           python3 tools/ci/pages_update.py --repo "$GITHUB_REPOSITORY" --component installers --incoming components --site site --base "$RUNNER_TEMP/deployed"
+      - name: The pinned crysta commit
+        id: crysta
+        shell: bash
+        run: bash tools/ci/crysta-source.sh
+      - name: The receipts of the installers' checked content
+        uses: actions/download-artifact@v4
+        with:
+          pattern: installer-source-check-*
+          path: source-checks
+          run-id: ${{ inputs.preview_run || github.run_id }}
+          github-token: ${{ github.token }}
+      - name: crysta's source, whose lines no later step prints or stores
+        uses: ./.github/actions/crysta-source
+        with:
+          sha: ${{ steps.crysta.outputs.sha }}
+          app-id: ${{ vars.ENHANTICA_APP_ID }}
+          private-key: ${{ secrets.ENHANTICA_APP_KEY }}
+      - name: Check every file that is published
+        run: |
+          receipts=()
+          for file in source-checks/*/*.json; do receipts+=(--receipt "$file"); done
+          python3 tools/ci/stored_source.py "${receipts[@]}" site
       - name: Update the deploy-docs branch
         env:
           SITES_TOKEN: ${{ steps.sites-token.outputs.token }}

@@ -1,21 +1,20 @@
 name: WebAssembly caches
-description: Reuse the pinned browser toolchain and compiler outputs across CI and publication builds.
-inputs:
-  operation:
-    description: Restore before building, or save afterward even when compilation or checks fail.
-    default: restore
+description: >-
+  Restore the pinned browser toolchain and compiler outputs. The job saves them itself with the store action under the
+  keys this gives.
+outputs:
+  objects:
+    description: The key to save the compiler outputs under
+    value: ${{ steps.keys.outputs.objects }}
+  toolchain:
+    description: The key to save the toolchain under
+    value: ${{ steps.keys.outputs.toolchain }}
+  toolchain-hit:
+    description: Whether the toolchain was restored, so there is nothing to save
+    value: ${{ steps.toolchain.outputs.cache-hit }}
 runs:
   using: composite
   steps:
-    - name: Validate the cache operation
-      shell: bash
-      env:
-        OPERATION: ${{ inputs.operation }}
-      run: |
-        case "$OPERATION" in
-          restore | save) ;;
-          *) echo "Unknown WebAssembly cache operation: $OPERATION" >&2; exit 2 ;;
-        esac
     - id: compiler
       uses: ./.github/actions/ccache
       with:
@@ -26,7 +25,6 @@ runs:
         echo "objects=ccache2-wasm-${{ steps.compiler.outputs.key-prefix }}${{ hashFiles('tools/ci/wasm-env.sh') }}-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.job }}" >> "$GITHUB_OUTPUT"
         echo "toolchain=edi-wasm-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('tools/ci/wasm-env.sh', 'tests/fixtures/web_parallel/package-lock.json') }}" >> "$GITHUB_OUTPUT"
     - uses: actions/cache/restore@v4
-      if: inputs.operation == 'restore'
       with:
         path: ~/.cache/edi-ccache
         key: ${{ steps.keys.outputs.objects }}
@@ -35,19 +33,7 @@ runs:
           ccache2-wasm-${{ steps.compiler.outputs.key-prefix }}
           ccache2-wasm-${{ runner.os }}-${{ runner.arch }}-
     - uses: actions/cache/restore@v4
-      if: inputs.operation == 'restore'
+      id: toolchain
       with:
-        path: ~/.cache/edi-wasm
-        key: ${{ steps.keys.outputs.toolchain }}
-    - uses: ./.github/actions/store
-      if: inputs.operation == 'save'
-      with:
-        ccache: pixi run --skip-deps python
-        path: ~/.cache/edi-ccache
-        key: ${{ steps.keys.outputs.objects }}
-    - uses: ./.github/actions/store
-      if: inputs.operation == 'save'
-      with:
-        opaque: 'true'
         path: ~/.cache/edi-wasm
         key: ${{ steps.keys.outputs.toolchain }}

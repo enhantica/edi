@@ -211,11 +211,17 @@ jobs:
           path: crysta-sdk-archives
           retention-days: 30
           if-no-files-found: error
+      # The reports themselves hold the compared expressions; the summary names the cases and lines.
+      - name: Say which SDK tests failed
+        if: ${{ failure() && !cancelled() }}
+        env:
+          SHA: ${{ needs.resolve.outputs.sha }}
+        run: python3 tools/ci/sdk_red_summary.py "$RUNNER_TEMP/crysta/build/sdk-pack-red/$SHA" "$RUNNER_TEMP/sdk-red/summary.json"
       - name: Retain failed SDK native observations
         if: ${{ failure() && !cancelled() }}
         uses: ./.github/actions/store
         with:
           artifact: crysta-sdk-red-${{ matrix.platform }}-${{ needs.resolve.outputs.sha }}
-          path: ${{ runner.temp }}/crysta/build/sdk-pack-red/${{ needs.resolve.outputs.sha }}
+          path: ${{ runner.temp }}/sdk-red/summary.json
           retention-days: 7
           if-no-files-found: ignore

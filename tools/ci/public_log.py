@@ -32,15 +32,15 @@ def bash() -> str:
     return 'bash'
 
 
-def passed(line: bytes, known: frozenset[str]) -> bytes:
+def passed(line: bytes, known: source_lists.Source) -> bytes:
     """``line`` as it may be shown, its ending kept."""
     body = line.rstrip(b'\r\n')
     parts = body.split(b'\r')
-    shown = [WITHHELD if source_lists.quotes_source(part, known) else part for part in parts]
+    shown = [WITHHELD if known.quoted_in_line(part) else part for part in parts]
     return b'\r'.join(shown) + line[len(body) :]
 
 
-def forward(source, sink, known: frozenset[str]) -> None:
+def forward(source, sink, known: source_lists.Source) -> None:
     """Copy one stream, a line at a time."""
     for line in iter(source.readline, b''):
         sink.write(passed(line, known))
@@ -50,7 +50,7 @@ def forward(source, sink, known: frozenset[str]) -> None:
 def main() -> int:
     """Run the script; its own exit code is the step's."""
     try:
-        known = source_lists.lines()
+        known = source_lists.Source()
     except source_lists.UnavailableError:
         return UNAVAILABLE
     environment = dict(os.environ)

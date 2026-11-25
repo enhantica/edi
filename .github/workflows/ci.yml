@@ -235,10 +235,10 @@ jobs:
       - uses: ./.github/actions/crysta-sdk
         with:
           platform: ${{ runner.os == 'macOS' && 'osx-arm64' || 'linux-64' }}
-      - *crysta-source
       - uses: ./.github/actions/edi-native
         with:
           platform: ${{ runner.os == 'macOS' && 'osx-arm64' || 'linux-64' }}
+      - *crysta-source
       - name: Build the native code
         run: pixi run core-build
       - name: Runtime-manifest equality audit
@@ -294,10 +294,10 @@ jobs:
       - uses: ./.github/actions/crysta-sdk
         with:
           platform: ${{ matrix.sdk }}
-      - *crysta-source
       - uses: ./.github/actions/edi-native
         with:
           platform: ${{ matrix.sdk }}
+      - *crysta-source
       - name: Build the native code
         id: build
         run: pixi run core-build
@@ -401,10 +401,10 @@ jobs:
       - uses: ./.github/actions/crysta-sdk
         with:
           platform: ${{ runner.os == 'macOS' && 'osx-arm64' || 'linux-64' }}
-      - *crysta-source
       - uses: ./.github/actions/edi-native
         with:
           platform: ${{ runner.os == 'macOS' && 'osx-arm64' || 'linux-64' }}
+      - *crysta-source
       - name: Build the native code
         run: pixi run core-build
       # Each platform's app job keeps its app as soon as it is built. Whenever that job ran, each part restores its
@@ -456,6 +456,7 @@ jobs:
         uses: ./.github/actions/store
         with:
           artifact: project-opening-${{ matrix.platform }}-${{ matrix.part }}
+          withhold: 'true'
           path: build/project-opening/*.json
           if-no-files-found: ignore
       - name: Keep the part's durations
@@ -463,6 +464,7 @@ jobs:
         uses: ./.github/actions/store
         with:
           artifact: system-${{ matrix.platform }}-${{ matrix.part }}
+          withhold: 'true'
           path: build/test-durations-${{ matrix.part }}.json
           if-no-files-found: warn
 
@@ -584,6 +586,10 @@ jobs:
         if: env.NIGHTLY == 'true'
         with:
           platform: ${{ runner.os == 'macOS' && 'osx-arm64' || 'linux-64' }}
+      - uses: ./.github/actions/edi-native
+        if: env.NIGHTLY == 'true'
+        with:
+          platform: ${{ runner.os == 'macOS' && 'osx-arm64' || 'linux-64' }}
       - name: crysta's source, whose lines no later step prints or stores
         if: env.NIGHTLY == 'true'
         uses: ./.github/actions/crysta-source
@@ -591,10 +597,6 @@ jobs:
           sha: ${{ env.CRYSTA_SOURCE_SHA }}
           app-id: ${{ vars.ENHANTICA_APP_ID }}
           private-key: ${{ secrets.ENHANTICA_APP_KEY }}
-      - uses: ./.github/actions/edi-native
-        if: env.NIGHTLY == 'true'
-        with:
-          platform: ${{ runner.os == 'macOS' && 'osx-arm64' || 'linux-64' }}
       - name: Build the native code
         if: ${{ env.NIGHTLY == 'true' && (github.event.pull_request.head.repo.fork == false) }}
         run: pixi run core-build
@@ -652,10 +654,10 @@ jobs:
       - uses: ./.github/actions/crysta-sdk
         with:
           platform: ${{ matrix.sdk }}
-      - *crysta-source
       - uses: ./.github/actions/edi-native
         with:
           platform: ${{ matrix.sdk }}
+      - *crysta-source
       - name: Build the native code
         run: pixi run core-build
       - name: Execute the CLI projects through python -m edi fit
@@ -722,6 +724,10 @@ jobs:
         if: env.NIGHTLY == 'true'
         with:
           platform: ${{ runner.os == 'macOS' && 'osx-arm64' || 'linux-64' }}
+      - uses: ./.github/actions/edi-native
+        if: env.NIGHTLY == 'true'
+        with:
+          platform: ${{ runner.os == 'macOS' && 'osx-arm64' || 'linux-64' }}
       - name: crysta's source, whose lines no later step prints or stores
         if: env.NIGHTLY == 'true'
         uses: ./.github/actions/crysta-source
@@ -732,10 +738,6 @@ jobs:
       - name: Prepare notebooks
         if: env.NIGHTLY == 'true'
         run: pixi run notebook-prepare
-      - uses: ./.github/actions/edi-native
-        if: env.NIGHTLY == 'true'
-        with:
-          platform: ${{ runner.os == 'macOS' && 'osx-arm64' || 'linux-64' }}
       - name: Build the native code
         if: env.NIGHTLY == 'true'
         id: build
@@ -819,6 +821,10 @@ jobs:
       - uses: ./.github/actions/crysta-sdk
         with:
           platform: ${{ runner.os == 'Windows' && 'win-64' || runner.os == 'macOS' && 'osx-arm64' || 'linux-64' }}
+      - uses: ./.github/actions/edi-native
+        if: runner.os != 'Windows'
+        with:
+          platform: ${{ runner.os == 'macOS' && 'osx-arm64' || 'linux-64' }}
       - *crysta-source
       - name: Unpack the pinned crysta source
         if: runner.os == 'Windows'
@@ -835,10 +841,6 @@ jobs:
           ccache: pixi run --manifest-path tools/installer/pixi.toml python
           path: ${{ runner.temp }}/edi-ccache
           key: ccache2-app-windows-${{ hashFiles('tools/installer/pixi.lock') }}-${{ github.run_id }}-${{ github.run_attempt }}
-      - uses: ./.github/actions/edi-native
-        if: runner.os != 'Windows'
-        with:
-          platform: ${{ runner.os == 'macOS' && 'osx-arm64' || 'linux-64' }}
       # A pull request builds and tests the app only when it changes an app input (tools/ci/app_inputs.py) or runs
       # paired with a crysta branch; main pushes, the nightly and manual runs always do (owner record 2026-11-09).
       - name: Decide whether this run builds and tests the app
@@ -968,6 +970,7 @@ jobs:
         uses: ./.github/actions/store
         with:
           artifact: app-watchdog-${{ env.APP_PLATFORM }}
+          withhold: 'true'
           path: |
             build/app/watchdog/runs/*/trace.jsonl
             build/app/watchdog/runs/*/app.log
@@ -994,6 +997,7 @@ jobs:
         uses: ./.github/actions/store
         with:
           artifact: app-ui-${{ env.APP_PLATFORM }}
+          withhold: 'true'
           path: |
             build/app/ui-actual
             build/app/ui-diff
@@ -1074,20 +1078,28 @@ jobs:
       - uses: ./.github/actions/setup-pixi
       - uses: ./.github/actions/wasm-cache
         id: wasm-cache
+      # Installed and kept before crysta's source is on the runner, so it needs no check against it.
+      - name: Install the WebAssembly toolchain  # Emscripten, Qt's wasm kits, Eigen, Chrome
+        id: toolchain
+        shell: bash
+        run: pixi run -e app wasm-toolchain
+      - name: Save the WebAssembly toolchain
+        if: steps.wasm-cache.outputs.toolchain-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ~/.cache/edi-wasm
+          key: ${{ steps.wasm-cache.outputs.toolchain }}
       - uses: ./.github/actions/crysta-sdk
         with:
           platform: ${{ runner.os == 'macOS' && 'osx-arm64' || 'linux-64' }}
-      - *crysta-source
       - uses: ./.github/actions/edi-native
         with:
           platform: ${{ runner.os == 'macOS' && 'osx-arm64' || 'linux-64' }}
+      - *crysta-source
       # The pinned crysta SDK and its source (the wasm builds compile that source), and the native build the
       # checks' tests import.
       - name: Build the native code
         run: pixi run core-build
-      - name: Install the WebAssembly toolchain  # Emscripten, Qt's wasm kits, Eigen, Chrome
-        id: toolchain
-        run: pixi run -e app wasm-toolchain
       # The survey test and the site build each need only the toolchain, so one failing does not hide the other.
       - name: Survey event windows in the browser
         if: ${{ !cancelled() && steps.toolchain.outcome == 'success' }}
@@ -1102,11 +1114,13 @@ jobs:
       - name: Browser compiler-cache statistics
         if: ${{ !cancelled() }}
         run: pixi run --skip-deps ccache --show-stats --verbose
-      - name: Save the WebAssembly toolchain and compiler cache
+      - name: Save the WebAssembly compiler cache
         if: ${{ !cancelled() && steps.wasm-cache.outcome == 'success' }}
-        uses: ./.github/actions/wasm-cache
+        uses: ./.github/actions/store
         with:
-          operation: save
+          ccache: pixi run --skip-deps python
+          path: ~/.cache/edi-ccache
+          key: ${{ steps.wasm-cache.outputs.objects }}
       - name: Upload the site
         if: ${{ !cancelled() && steps.site.outcome == 'success' }}
         uses: ./.github/actions/store
@@ -1145,6 +1159,7 @@ jobs:
         uses: ./.github/actions/store
         with:
           artifact: edi-webapp-checks
+          withhold: 'true'
           path: ${{ runner.temp }}/edi-webapp-checks
           retention-days: 7
           if-no-files-found: ignore
