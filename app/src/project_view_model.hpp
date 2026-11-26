@@ -33,6 +33,7 @@
 #include <vector>
 
 #include "edi/calculation.hpp"
+#include "edi/magnetic_cell.hpp"
 #include "analysis_view_model.hpp"
 #include "block_text.hpp"
 #include "category_list_model.hpp"
@@ -550,6 +551,17 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // Duplicate structure: a copy of the current structure (edi::structure_copy) named `<name>_copy`, selected and
     // linked to no experiment. One undoable step.
     Q_INVOKABLE bool duplicateStructure();
+    // The magnetic popup (edi ADR-0078 "The magnetic popup"). The presets of structure `index` as {k, label} maps, k = 0
+    // first; its site ids with whether each is ticked by default ({id, type, magnetic}).
+    Q_INVOKABLE QVariantList magneticPresets(int index) const;
+    Q_INVOKABLE QVariantList magneticSites(int index) const;
+    // Finds the magnetic groups `k` allows for structure `index` off the GUI thread; magneticGroupsFound or
+    // magneticGroupsRefused answers. A newer search supersedes an older one.
+    Q_INVOKABLE void findMagneticGroups(int index, const QString& k, const QStringList& sites, bool withZeroMomentGroups);
+    // The allowed moment components of found group `node`, per magnetic site.
+    Q_INVOKABLE QString magneticGroupMoments(int node);
+    // Adds found groups `nodes` as structures, one undoable step; false and `refused` on a refusal, nothing changed.
+    Q_INVOKABLE bool addMagneticCandidates(int index, const QList<int>& nodes, bool startMoments);
     // The parameter table's "free" header: free or fix every one of `parameters` (the rows the filters show) that can
     // be fitted, as one edit with one Undo step (the owner, 2026-10-11).
     Q_INVOKABLE bool setParametersFree(const QList<ParameterItem*>& parameters, bool free);
@@ -867,6 +879,8 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // Each edit, as it is made: what keeps unsaved work follows it (the web app, edi ADR-0052 §9).
     void edited();
     void refused(const QString& message);
+    void magneticGroupsFound(const QVariantMap& graph);
+    void magneticGroupsRefused(const QString& message);
     // A grouping previewSeriesGroups worked out: what it found, and whether the files make a series.
     void seriesGroupsPreviewed(int request, const QString& text, bool valid);
     // A message for the status bar's Messages (Session lists it): a load's account, a removal's links.
@@ -913,6 +927,10 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     void calculationFinished();
 
    private:
+    // The popup's last found graph, and the search it answers (a newer search drops an older result).
+    std::optional<edi::MagneticCandidateGraph> magnetic_graph_;
+    int magnetic_graph_structure_ = -1;
+    unsigned magnetic_search_ = 0;
     // The information entry for an estimate with the calculated peaks set to auto (none for another setting).
     void postAutoModelReason(const std::string& experiment, const std::string& reason);
     void publish(bool structural);

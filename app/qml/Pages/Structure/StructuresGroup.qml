@@ -134,9 +134,15 @@ SideBarGroup {
                             currentIndex = Qt.binding(() => row.structure && row.structure.magnetic ? 1 : 0);
                             if (!structure || (index === 1) === structure.magnetic)
                                 return;
+                            // An atom-based Crystal structure opens the magnetic popup (edi ADR-0078); Cancel changes
+                            // nothing.
                             if (index === 1) {
-                                if (!structure.setMagnetic(true))
-                                    Session.reportRefusal(structure.magneticGroupRefusal);
+                                const popup = magneticPopupComponent.createObject(Overlay.overlay, {
+                                    project: group.project,
+                                    structureIndex: row.index,
+                                    structure: structure
+                                }) as AppDialog;
+                                popup.open();
                                 return;
                             }
                             const dialog = toCrystalComponent.createObject(Overlay.overlay, {
@@ -154,6 +160,11 @@ SideBarGroup {
                     onClicked: group.project.removeStructure(row.index)
                 }
             }
+        }
+
+        Component {
+            id: magneticPopupComponent
+            MagneticPopup {}
         }
 
         Component {

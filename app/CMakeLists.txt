@@ -329,7 +329,9 @@ qt_add_qml_module(edi_app_module
         qml/Pages/Structure/AtomSiteAdpGroup.qml
         qml/Pages/Structure/AtomSiteMomentGroup.qml
         qml/Pages/Structure/MagneticFormFactorsGroup.qml
+        qml/Pages/Structure/MagneticPopup.qml
         qml/Pages/Structure/MagneticSpaceGroupGroup.qml
+        qml/Pages/Structure/MagneticSubgroupGraph.qml
         qml/Pages/Structure/MagneticSymbolsGroup.qml
         qml/Pages/Structure/ParentSpaceGroupGroup.qml
         qml/Pages/Structure/PolyhedraGroup.qml

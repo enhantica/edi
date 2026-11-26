@@ -8,6 +8,8 @@
 
 #include "run_log.hpp"
 
+#include <QtConcurrent/QtConcurrentRun>
+#include <QFutureWatcher>
 #include <QCoreApplication>
 #include <QJsonArray>
 #include <QJsonObject>
@@ -4042,6 +4044,132 @@ bool ProjectViewModel::duplicateStructure() {
     undo_history_.emplace_back(std::move(before));
     syncUndo();
     setCurrentStructureIndex(static_cast<int>(structure_models_.size()) - 1);
+    return true;
+}
+
+QVariantList ProjectViewModel::magneticPresets(int index) const {
+    QVariantList out;
+    if (index < 0 || index >= static_cast<int>(project_->structures.size())) return out;
+    try {
+        for (const edi::MagneticPreset& p : edi::magnetic_presets(*project_->structures[static_cast<std::size_t>(index)])) {
+            out.push_back(QVariantMap{{QStringLiteral("k"), QString::fromStdString(p.k)},
+                                      {QStringLiteral("label"), QString::fromStdString(p.label)}});
+        }
+    } catch (const std::exception&) {
+        out.push_back(QVariantMap{{QStringLiteral("k"), QStringLiteral("0,0,0")}, {QStringLiteral("label"), QStringLiteral("Γ")}});
+    }
+    return out;
+}
+
+QVariantList ProjectViewModel::magneticSites(int index) const {
+    QVariantList out;
+    if (index < 0 || index >= static_cast<int>(project_->structures.size())) return out;
+    const edi::Structure& parent = *project_->structures[static_cast<std::size_t>(index)];
+    std::vector<std::string> ticked;
+    try {
+        ticked = edi::magnetic_default_sites(parent);
+    } catch (const std::exception&) {
+    }
+    for (const auto& site : parent.atom_sites) {
+        const std::string id = site->id.value();
+        out.push_back(QVariantMap{{QStringLiteral("id"), QString::fromStdString(id)},
+                                  {QStringLiteral("type"), QString::fromStdString(site->type_symbol.value())},
+                                  {QStringLiteral("magnetic"), std::find(ticked.begin(), ticked.end(), id) != ticked.end()}});
+    }
+    return out;
+}
+
+void ProjectViewModel::findMagneticGroups(int index, const QString& k, const QStringList& sites, bool withZeroMomentGroups) {
+    const unsigned search = ++magnetic_search_;
+    magnetic_graph_.reset();
+    if (index < 0 || index >= static_cast<int>(project_->structures.size())) {
+        emit magneticGroupsRefused(tr("the project has no such structure"));
+        return;
+    }
+    auto parent = std::make_shared<const edi::Structure>(*project_->structures[static_cast<std::size_t>(index)]);
+    std::vector<std::string> ticked;
+    for (const QString& s : sites) ticked.push_back(s.toStdString());
+    using Result = std::variant<edi::MagneticCandidateGraph, QString>;
+    auto* watcher = new QFutureWatcher<Result>(this);
+    connect(watcher, &QFutureWatcher<Result>::finished, this, [this, watcher, search, index] {
+        watcher->deleteLater();
+        if (search != magnetic_search_) return;
+        const Result result = watcher->result();
+        if (const auto* refusal = std::get_if<QString>(&result)) {
+            emit magneticGroupsRefused(*refusal);
+            return;
+        }
+        magnetic_graph_ = std::get<edi::MagneticCandidateGraph>(result);
+        magnetic_graph_structure_ = index;
+        QVariantList nodes;
+        for (const edi::MagneticCandidateNode& n : magnetic_graph_->nodes) {
+            QVariantList subgroups;
+            for (const std::size_t s : n.subgroups) subgroups.push_back(static_cast<int>(s));
+            nodes.push_back(QVariantMap{{QStringLiteral("bns"), QString::fromStdString(n.bns)},
+                                        {QStringLiteral("name"), QString::fromStdString(n.name)},
+                                        {QStringLiteral("type"), n.type},
+                                        {QStringLiteral("row"), n.row},
+                                        {QStringLiteral("embedding"), static_cast<int>(n.embedding)},
+                                        {QStringLiteral("domains"), static_cast<int>(n.domains)},
+                                        {QStringLiteral("netMoment"), n.net_moment},
+                                        {QStringLiteral("momentAllowed"), n.moment_allowed},
+                                        {QStringLiteral("transform"), QString::fromStdString(n.transform_to_bns)},
+                                        {QStringLiteral("moments"), QString::fromStdString(n.moments)},
+                                        {QStringLiteral("subgroups"), subgroups}});
+        }
+        emit magneticGroupsFound(QVariantMap{{QStringLiteral("cell"), QString::fromStdString(magnetic_graph_->cell)},
+                                             {QStringLiteral("parentCells"), static_cast<int>(magnetic_graph_->parent_cells)},
+                                             {QStringLiteral("nodes"), nodes}});
+    });
+    watcher->setFuture(QtConcurrent::run([parent, k = k.toStdString(), ticked, withZeroMomentGroups]() -> Result {
+        try {
+            return edi::magnetic_candidate_graph(*parent, k, ticked, withZeroMomentGroups);
+        } catch (const std::exception& refusal) {
+            return QString::fromUtf8(refusal.what());
+        }
+    }));
+}
+
+QString ProjectViewModel::magneticGroupMoments(int node) {
+    if (!magnetic_graph_ || node < 0) return QString();
+    try {
+        return QString::fromStdString(edi::magnetic_candidate_moments(*magnetic_graph_, static_cast<std::size_t>(node)));
+    } catch (const std::exception& refusal) {
+        return QString::fromUtf8(refusal.what());
+    }
+}
+
+bool ProjectViewModel::addMagneticCandidates(int index, const QList<int>& nodes, bool startMoments) {
+    edi::Project& project = *project_;
+    QString error;
+    std::shared_ptr<edi::PreparedMagneticCandidates> prepared;
+    try {
+        if (!magnetic_graph_ || magnetic_graph_structure_ != index)
+            throw std::invalid_argument("find the magnetic groups first");
+        std::vector<std::size_t> picked;
+        for (const int n : nodes) picked.push_back(static_cast<std::size_t>(n));
+        prepared = edi::prepare_magnetic_candidates(project, static_cast<std::size_t>(index), *magnetic_graph_, picked,
+                                                    startMoments);
+    } catch (const std::exception& refusal) {
+        error = QString::fromUtf8(refusal.what());
+        setLastError(error);
+    }
+    edi::StructuresUndo before = edi::capture_structures(project);
+    if (error.isEmpty()) {
+        try {
+            error = apply(edi::Edit::add_magnetic_candidates(project, prepared), true);
+        } catch (const std::exception& refusal) {
+            error = QString::fromUtf8(refusal.what());
+            setLastError(error);
+        }
+    }
+    if (!error.isEmpty()) {
+        announceRefused(error);
+        return false;
+    }
+    undo_history_.emplace_back(std::move(before));
+    syncUndo();
+    setCurrentStructureIndex(static_cast<int>(structure_models_.size()) - static_cast<int>(prepared->structures.size()));
     return true;
 }
 
