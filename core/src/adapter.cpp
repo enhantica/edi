@@ -53,6 +53,7 @@
 #include "crysta/magnetic.hpp"
 #include "crysta/magnetic_subgroups.hpp"
 #include "crysta/k_search.hpp"
+#include "crysta/magnetic_type_iv.hpp"
 #include "crysta/adp.hpp"
 #include "crysta/analysis.hpp"
 #include "crysta/background_estimate.hpp"
@@ -245,6 +246,17 @@ std::optional<std::string> view_item(const Structure& s, const char* name) {
 // its magnetic operators form no table setting (edi ADR-0078). Throws when the group does not
 // resolve.
 crysta::CellFreedom structure_freedom(const Structure& s, const crysta::SpaceGroup& space_group) {
+    // A type IV group ties its cell from its metric, when a CellFreedom can state it (crysta ADR-0137 B5).
+    if (!s.magnetic->operations.empty() &&
+        crysta::operator_defined_symmetry(s.magnetic->operations, s.magnetic->centerings, space_group)) {
+        std::vector<std::string> operations;
+        std::vector<std::string> centerings;
+        for (const auto& [id, xyz] : s.magnetic->operations) operations.push_back(xyz);
+        for (const auto& [id, xyz] : s.magnetic->centerings) centerings.push_back(xyz);
+        if (crysta::holds_anti_translation(operations, centerings)) {
+            return crysta::metric_cell_freedom(operations, centerings).value_or(crysta::CellFreedom{});
+        }
+    }
     return crysta::operator_defined_symmetry(s.magnetic->operations, s.magnetic->centerings, space_group)
                ? crysta::CellFreedom{}
                : crysta::cell_freedom(space_group);
@@ -647,6 +659,22 @@ void complete_atom_site_moments(Structure& structure) {
     }
     // A site in a table setting takes the letter crysta resolves for it when it had none or one
     // the setting lacks (an operator-defined structure takes none, and edi shows none for it).
+    // A type IV site: crysta's admitted coordinates and its derived letter, a stale one retracted
+    // to `.` (crysta ADR-0137 B2, B4).
+    if (crysta::type_iv_route(engine)) {
+        for (const crysta::AtomSite& done : engine.atom_sites) {
+            for (const auto& site : structure.atom_sites) {
+                if (site->id.value() != done.site_id.value()) continue;
+                Parameter* const axes[3] = {&site->fract_x, &site->fract_y, &site->fract_z};
+                for (std::size_t i = 0; i < 3; ++i) {
+                    if (axes[i]->value.get() != done.fract[i].value()) axes[i]->value = done.fract[i].value();
+                }
+                const std::string letter = done.wyckoff_letter.get().empty() ? "." : done.wyckoff_letter.get();
+                if (site->wyckoff_letter.value() != letter) site->wyckoff_letter = letter;
+            }
+        }
+        return;
+    }
     if (!crysta::operator_defined_symmetry(engine)) {
         for (const crysta::AtomSite& done : engine.atom_sites) {
             for (const auto& site : structure.atom_sites) {
@@ -656,6 +684,19 @@ void complete_atom_site_moments(Structure& structure) {
                 }
             }
         }
+    }
+}
+
+LetterSource letter_source(const Structure& structure) {
+    if (structure.magnetic->operations.empty()) {
+        return LetterSource::Table;
+    }
+    try {
+        const crysta::Structure engine = to_crysta_structure(structure);
+        if (!crysta::operator_defined_symmetry(engine)) return LetterSource::Table;
+        return crysta::type_iv_route(engine) ? LetterSource::Magnetic : LetterSource::None;
+    } catch (const std::exception&) {
+        return LetterSource::Table;  // a structure crysta refuses keeps its letters as written
     }
 }
 
@@ -1976,7 +2017,7 @@ void change_adp_type(Structure& s, AtomSite& site, const std::string& adp_type) 
     }
     // crysta's symmetry decision: an operator-defined structure holds no anisotropic site, so the
     // change refuses before anything is written (edi ADR-0078).
-    if ((adp_type == "Bani" || adp_type == "Uani" || adp_type == "beta") && !takes_wyckoff_letter(s)) {
+    if ((adp_type == "Bani" || adp_type == "Uani" || adp_type == "beta") && letter_source(s) == LetterSource::None) {
         throw std::invalid_argument("site '" + site.id.value() +
                                     "' cannot be anisotropic: the structure's symmetry comes from its magnetic "
                                     "operators, which form no table setting");

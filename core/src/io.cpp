@@ -5099,7 +5099,8 @@ static Project load_project_folder(const std::string& directory, const WarningSi
     // A structure whose magnetic operators form no table setting takes no Wyckoff letter; each one a
     // file supplies is said, as crysta says it (edi ADR-0078).
     for (const auto& structure : project.structures) {
-        if (takes_wyckoff_letter(*structure)) {
+        // A type IV structure's letters are crysta's, which warns only on a differing one.
+        if (letter_source(*structure) != LetterSource::None) {
             continue;
         }
         const auto held = structure_source.find(datablock_key(structure->name, "structure"));

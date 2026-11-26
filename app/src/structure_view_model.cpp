@@ -310,7 +310,7 @@ QString wyckoff_coordinates_display(const std::string& representative) {
 
 void AtomSiteListModel::sync() {
     QList<Row> rows;
-    const bool lettered = edi::takes_wyckoff_letter(structure_);
+    const bool lettered = edi::letter_source(structure_) != edi::LetterSource::None;  // type IV: crysta's letter
     for (const auto& site : structure_.atom_sites) {
         rows.append({site.get(),
                      {QString::fromStdString(site->id), QString::fromStdString(site->type_symbol),

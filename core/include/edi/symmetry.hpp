@@ -81,6 +81,12 @@ std::vector<WyckoffOption> wyckoff_positions(const Structure& structure);
 // letter to show or choose.
 bool takes_wyckoff_letter(const Structure& structure);
 
+// Where a site's Wyckoff letter comes from (crysta ADR-0137 B.1.6): the ordinary table (editable),
+// crysta's type IV derivation (read-only; `.` until the group verifies), or none (a type I-III
+// structure whose operators form no table setting).
+enum class LetterSource { Table, Magnetic, None };
+LetterSource letter_source(const Structure& structure);
+
 // crysta's one acceptance rule for a magnetic structure, on `structure` as it is (the signed group,
 // the exact family, k, the moment ties, the anisotropic refusal, the metric). Throws
 // std::invalid_argument naming what refuses; changes nothing.
