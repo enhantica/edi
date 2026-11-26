@@ -56,7 +56,10 @@ equality (TOPAS, GSAS-II, FullProf, Jana); general fitting tools put a Share col
 
 - The "Same for all experiments" switch of ADR-0087 point 3 stays hidden; Shared in Joint mode takes its place without
   writing constraint rows.
-- A fit in the Parametric mode, and a Joint fit with shared parameters, refuse until crysta's solver supports them.
+- A Joint fit hands crysta each shared group as equality ties `<member> = <leader>`, built for that fit only and never
+  saved or listed with the user's constraints; the result is the constrained fit's.
+- The Parametric fit of a scan of one experiment is crysta's (its ADR-0136); a series of joint fits with shared
+  parameters refuses until crysta supports it.
 
 ## Alternatives considered
 

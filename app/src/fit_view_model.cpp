@@ -856,8 +856,6 @@ void FitViewModel::sync() {
         reason = tr("A fit needs measured data: no experiment in this project has any");
     } else if (project_.free_parameters().empty()) {
         reason = tr("Select at least one free parameter");
-    } else if (mode == QLatin1String("joint") && !project_.sequential_fit.shared.empty()) {
-        reason = tr("A joint fit with shared parameters is not available yet");
     } else if (scan) {
         reason = owner_.scanRefusal();
         // Outdated results can always be fitted again (Refit; the owner, 2026-10-26).

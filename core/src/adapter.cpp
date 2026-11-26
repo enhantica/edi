@@ -4297,6 +4297,43 @@ void fill_crysta_relations(const Project& model, crysta::Project& converted) {
     }
 }
 
+// ADR-0107: a joint fit's shared groups as equality ties, `<member> = <leader>`, built for this fit only and never
+// saved or shown: the same relations "Same for all experiments" writes as rows (ADR-0087 point 3).
+void append_shared_ties(const Project& model, crysta::Project& converted) {
+    if (model.sequential_fit.declared() || model.sequential_fit.shared.empty()) {
+        return;
+    }
+    std::set<std::string> held;
+    for (const NamedParameter& named : named_parameters(model)) {
+        held.insert(named.unique_name);
+    }
+    std::size_t group = 0;
+    for (const auto& row : model.sequential_fit.shared) {
+        const std::string& leader = row->parameter_unique_name.value();
+        std::string path;
+        for (const auto& experiment : model.experiments) {
+            const std::string prefix = experiment->name + ".";
+            if (leader.rfind(prefix, 0) == 0) path = leader.substr(prefix.size());
+        }
+        if (path.empty()) {
+            continue;
+        }
+        const std::string leader_alias = "shared_tie_" + std::to_string(group) + "_leader";
+        converted.aliases.push_back({leader_alias, leader});
+        std::size_t member = 0;
+        for (const auto& experiment : model.experiments) {
+            const std::string name = experiment->name + "." + path;
+            if (name == leader || !held.contains(name)) {
+                continue;
+            }
+            const std::string alias = "shared_tie_" + std::to_string(group) + "_" + std::to_string(member++);
+            converted.aliases.push_back({alias, name});
+            converted.constraints.push_back({alias, alias + " = " + leader_alias, true});
+        }
+        ++group;
+    }
+}
+
 // crysta's coded problems as edi's DomainValidationError, each code kept (ADR-0024).
 DomainValidationError coded_refusal(const std::vector<crysta::RelationProblem>& problems) {
     std::vector<Diagnostic> diagnostics;
@@ -8934,6 +8971,7 @@ FitResultBase Project::fit_joint(const std::vector<PdDataBase>& patterns,
             return crysta::Project(to_crysta_structure(structure()), experiment_list(built));
         }();
         fill_crysta_relations(*this, project);
+        append_shared_ties(*this, project);  // ADR-0107: shared across the experiments, for this fit only
         // The atom-site rule on exactly this fit's participants: every bank's enabled phases.
         detail::require_populated_participants(project, "edi fit_joint");
         if (phases) {
