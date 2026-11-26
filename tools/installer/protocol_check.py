@@ -140,12 +140,7 @@ def exercise(
                 # check waits for it a while, and says what it found if it never comes.
                 tool_replaced(target, new_metadata)
                 # Nothing is left to offer after the update.
-                again = subprocess.run(
-                    [maintenance, 'check-updates'],
-                    env=env, capture_output=True, text=True, timeout=60, check=False,
-                )  # fmt: skip
-                if again.returncode not in {0, 1} or '<update ' in again.stdout:
-                    raise RuntimeError('The maintenance tool still offers an update')
+                nothing_offered(maintenance, env)
                 if user_file.read_text() != 'keep the project\n':
                     raise RuntimeError('In-place update changed an unrelated user file')
             maintenance_args = [
@@ -166,12 +161,29 @@ def exercise(
             raise RuntimeError('Maintenance tool left the component installed')
 
 
+def nothing_offered(maintenance: Path, env: dict) -> None:
+    """Require a successful update query with no update in it.
+
+    A query that failed to fetch the repository ends with an error status and proves nothing.
+    """
+    again = subprocess.run(
+        [maintenance, 'check-updates'],
+        env=env, capture_output=True, text=True, timeout=60, check=False,
+    )  # fmt: skip
+    print(again.stdout + again.stderr, flush=True)
+    if again.returncode != 0:
+        raise RuntimeError('The second update query failed')
+    if '<update ' in again.stdout:
+        raise RuntimeError('The maintenance tool still offers an update')
+
+
 def tool_replaced(target: Path, metadata: dict, wait: float = 60) -> None:
     deadline = time.monotonic() + wait
     while True:
         try:
             verify_installed_maintenance_tool(target, metadata)
-        except RuntimeError:
+        # The signature probe fails with CalledProcessError while the bundle is being swapped.
+        except (RuntimeError, subprocess.CalledProcessError):
             if time.monotonic() > deadline:
                 found = sorted(path.name for path in target.iterdir())
                 print(f'protocol check: after the update the folder holds {found}', flush=True)
