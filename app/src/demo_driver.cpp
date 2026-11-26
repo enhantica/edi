@@ -1983,7 +1983,7 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
         steps_.push_back({"jointtied-1-structure",
                           QStringList{"resize:1480x900", "theme:light"} + start
                               + open_cli_project("sc-neut-tof_taurine-senju")
-                              + QStringList{analysis, basic, "parameters.nameFilter", "type:beta_11"}});
+                              + QStringList{analysis, basic, "parameters.nameFilter", "type:adp_11"}});
         steps_.push_back({"jointtied-2-tied-before", {"open-project:" + qEnvironmentVariable("EDI_DEMO_TIED_PROJECT"), analysis,
                                                       basic, "parameters.nameFilter", "type:coefficient_11"}});
     }
