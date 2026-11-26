@@ -20,8 +20,8 @@ AdaptiveLabel {
 
     readonly property string units: uid !== "" ? Session.units(uid, variant) : ""
     readonly property string unitsText: withUnits && units !== "" ? ` (${units})` : ""
-    longText: (forms.long ?? "") !== "" ? forms.long + unitsText : ""
-    shortText: (forms.short ?? "") !== "" ? forms.short + unitsText : ""
+    longText: (forms.longText ?? "") !== "" ? forms.longText + unitsText : ""
+    shortText: (forms.shortText ?? "") !== "" ? forms.shortText + unitsText : ""
 
     // What the column reserves for its title: the short one where there is one, whichever it shows, so the width never
     // follows the choice (T6).
