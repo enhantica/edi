@@ -2,6 +2,8 @@
 #ifndef EDI_APP_EVOLUTION_VIEW_MODEL_HPP
 #define EDI_APP_EVOLUTION_VIEW_MODEL_HPP
 
+#include <QHash>
+#include <QVariantList>
 #include <QObject>
 #include <functional>
 #include <QPointer>
@@ -73,6 +75,13 @@ class EvolutionViewModel : public QObject {
     Q_PROPERTY(bool perExperiment READ perExperiment WRITE setPerExperiment NOTIFY perExperimentChanged)
     Q_PROPERTY(QStringList experiments READ experiments NOTIFY experimentsChanged)
     Q_PROPERTY(int currentExperiment READ currentExperiment WRITE setCurrentExperiment NOTIFY currentExperimentChanged)
+    // ADR-0089 point 2: "Compare with": a second parameter of the same section (a place in `parameters`, -1 none), drawn
+    // on its own layer against a right axis whose range is compareYMin to compareYMax.
+    Q_PROPERTY(int compareParameter READ compareParameter WRITE setCompareParameter NOTIFY compareParameterChanged)
+    Q_PROPERTY(QString compareLabel READ compareLabel NOTIFY compareParameterChanged)
+    Q_PROPERTY(double compareYMin READ compareYMin NOTIFY compareRangeChanged)
+    Q_PROPERTY(double compareYMax READ compareYMax NOTIFY compareRangeChanged)
+    Q_PROPERTY(edi_app::MeasuredLayer* compareLayer READ compareLayer WRITE setCompareLayer NOTIFY compareLayerChanged)
     // The layer the points are drawn on (the chart's).
     Q_PROPERTY(edi_app::MeasuredLayer* layer READ layer WRITE setLayer NOTIFY layerChanged)
 
@@ -115,6 +124,13 @@ class EvolutionViewModel : public QObject {
     bool outOfDate() const { return out_of_date_; }
     bool fitted() const { return fitted_; }
     void setOutOfDate(bool out_of_date);
+    int compareParameter() const { return compare_; }
+    void setCompareParameter(int index);
+    QString compareLabel() const { return compare_ >= 0 && compare_ < labels_.size() ? labels_[compare_] : QString(); }
+    double compareYMin() const { return compare_y_min_; }
+    double compareYMax() const { return compare_y_max_; }
+    MeasuredLayer* compareLayer() const { return compare_layer_; }
+    void setCompareLayer(MeasuredLayer* layer);
     MeasuredLayer* layer() const { return layer_; }
     void setLayer(MeasuredLayer* layer);
 
@@ -131,6 +147,9 @@ class EvolutionViewModel : public QObject {
     Q_INVOKABLE QObject* parameterItem(int index) const {
         return finder_ && index >= 0 && index < names_.size() ? finder_(names_[index], per_experiment_) : nullptr;
     }
+    // ADR-0089 point 3: every bank's points as a map's cells, a flat list of [x, bank, value, s.u.], s.u. NaN when
+    // undefined; empty unless every bank is shown.
+    Q_INVOKABLE QVariantList bankMap() const;
     // The layer bank `bank` is drawn on when every bank is shown; null unregisters it.
     Q_INVOKABLE void setBankLayer(int bank, edi_app::MeasuredLayer* layer);
     // The project's Evolution chart settings changed: the range and the drawing follow them.
@@ -164,6 +183,10 @@ class EvolutionViewModel : public QObject {
     void perExperimentChanged();
     void currentExperimentChanged();
     void layerChanged();
+    void compareParameterChanged();
+    void drawn();
+    void compareRangeChanged();
+    void compareLayerChanged();
 
    private:
     // Lists the parameters again; whether the list changed. The shown one stays, else the first.
@@ -196,6 +219,7 @@ class EvolutionViewModel : public QObject {
         std::string name;
         bool by_value = false, per_experiment = false, all_banks = false;
         int experiment = -1;
+        int leader = -1;  // a shared experiment parameter's leader experiment, else -1
     };
     // The points of a parameter's column, read from the results (throws when the read refuses).
     static std::vector<Point> readPoints(const Read& read);
@@ -203,6 +227,14 @@ class EvolutionViewModel : public QObject {
     bool rebuild_owed_ = false;  // a rebuild asked for while no chart showed the points (ADR-0102 rule 1)
     void draw();
 
+    QHash<QString, int> shared_paths_;  // ADR-0089 point 1: path -> leader experiment
+    int compare_ = -1;
+    std::vector<Point> compare_points_;
+    double compare_y_min_ = 0.0, compare_y_max_ = 1.0;
+    QPointer<MeasuredLayer> compare_layer_;
+    std::uint64_t compare_request_ = 0;
+    void rebuildCompare();
+    void drawCompare();
     EvolutionParameterListModel* parameters_;
     QPointer<MeasuredLayer> layer_;
     QList<QPointer<MeasuredLayer>> bank_layers_;

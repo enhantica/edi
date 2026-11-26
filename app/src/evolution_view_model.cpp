@@ -16,6 +16,7 @@
 #include "background.hpp"
 #include "edi/categories.hpp"
 #include "edi/scan.hpp"
+#include "edi/sharing.hpp"
 
 namespace edi_app {
 
@@ -199,9 +200,17 @@ bool EvolutionViewModel::syncNames() {
     // is fitted, then the ones results.csv records that are no longer free; the shown one kept, else the first. Per
     // experiment, the columns results_experiments.csv records (edi::evolution_experiment_parameters).
     QStringList names;
+    // ADR-0089 point 1: an experiment parameter tied equal across experiments is listed once, under Shared, and read
+    // from its leader's rows; Per experiment leaves it out.
+    shared_paths_.clear();
+    if (project_ != nullptr && series()) {
+        for (const auto& [path, leader] : edi::experiment_shared_paths(*project_)) {
+            shared_paths_.insert(QString::fromStdString(path), static_cast<int>(leader));
+        }
+    }
     if (project_ != nullptr && per_experiment_) {
         for (const std::string& name : edi::evolution_experiment_parameters(*project_)) {
-            names.append(QString::fromStdString(name));
+            if (!shared_paths_.contains(QString::fromStdString(name))) names.append(QString::fromStdString(name));
         }
     } else if (project_ != nullptr) {
         static const edi::ScanResultIndex kNoResults;
@@ -209,15 +218,27 @@ bool EvolutionViewModel::syncNames() {
              edi::evolution_parameters(*project_, session_ != nullptr ? session_->index() : kNoResults)) {
             names.append(QString::fromStdString(name));
         }
+        const std::vector<std::string> recorded = edi::evolution_experiment_parameters(*project_);
+        for (auto shared = shared_paths_.cbegin(); shared != shared_paths_.cend(); ++shared) {
+            if (std::find(recorded.begin(), recorded.end(), shared.key().toStdString()) != recorded.end()) {
+                names.append(shared.key());
+            }
+        }
     }
     const QString shown = current_ >= 0 && current_ < names_.size() ? names_[current_] : QString();
     const bool changed = names != names_;
     if (changed) {
         names_ = names;
         QStringList labels;
-        for (const QString& name : names_) labels.append(labeller_ ? labeller_(name, per_experiment_) : QString());
+        for (const QString& name : names_)
+            labels.append(labeller_ ? labeller_(name, per_experiment_ || shared_paths_.contains(name)) : QString());
         labels_ = labels;
         parameters_->setNames(names_, labels);
+        if (compare_ >= 0) {  // the list changed: the second parameter is chosen again
+            compare_ = -1;
+            emit compareParameterChanged();
+            rebuildCompare();
+        }
     }
     const int current = names_.isEmpty() ? -1 : std::max(0, static_cast<int>(names_.indexOf(shown)));
     if (current != current_ || changed) {
@@ -282,6 +303,10 @@ void EvolutionViewModel::addRow(int dataset, const std::vector<std::string>& cel
         if (added) {
             finishRow();
         }
+        return;
+    }
+    if (shared_paths_.contains(names_[current_])) {  // read from the leader's rows, as the rebuild does
+        rebuild();
         return;
     }
     const std::string name = names_[current_].toStdString();
@@ -403,6 +428,7 @@ void EvolutionViewModel::rebuild() {
         return;
     }
     rebuild_owed_ = false;
+    rebuildCompare();
     const std::uint64_t request = ++rebuild_request_;
     points_.clear();
     template_point_ = per_experiment_ ? std::nullopt : templatePoint();
@@ -420,10 +446,11 @@ void EvolutionViewModel::rebuild() {
     read.places = session_->places();
     read.index = session_->indexSnapshot();  // shared, not copied: a long scan's index is large
     read.datasets = session_->datasets();
-    if (per_experiment_) {
+    read.name = names_[current_].toStdString();
+    read.leader = per_experiment_ ? -1 : shared_paths_.value(names_[current_], -1);
+    if (per_experiment_ || read.leader >= 0) {
         read.rule = session_->bankRule(*project_);
     }
-    read.name = names_[current_].toStdString();
     read.by_value = x_mode_ == 0 && !extracted_title_.isEmpty();
     read.per_experiment = per_experiment_;
     read.experiment = current_experiment_;
@@ -467,6 +494,14 @@ std::vector<EvolutionViewModel::Point> EvolutionViewModel::readPoints(const Read
     // the points thinning the whole column keeps, without ever holding it.
     int bank = -1;
     const auto points = [&](const std::function<void(const edi::EvolutionPoint&)>& visit) {
+        if (read.leader >= 0) {  // a shared experiment parameter: its leader's rows
+            edi::evolution_experiment_series(*read.project, read.places, *read.index, read.rule, read.datasets,
+                                             read.name, read.by_value,
+                                             [&](std::size_t experiment, const edi::EvolutionPoint& point) {
+                                                 if (experiment == static_cast<std::size_t>(read.leader)) visit(point);
+                                             });
+            return;
+        }
         if (read.per_experiment) {
             edi::evolution_experiment_series(*read.project, read.places, *read.index, read.rule, read.datasets,
                                              read.name, read.by_value,
@@ -653,12 +688,24 @@ void EvolutionViewModel::draw() {
             bank_layers_[bank]->setData(own, own_low, own_high);
         }
         layer_->setData({}, {}, {});
+        emit drawn();
         return;
     }
     for (const QPointer<MeasuredLayer>& layer : bank_layers_) {
         if (layer) layer->setData({}, {}, {});
     }
     layer_->setData(points, low, high);
+    emit drawn();
+}
+
+QVariantList EvolutionViewModel::bankMap() const {
+    QVariantList cells;
+    if (!allBanks()) return cells;
+    for (const Point& point : points_) {
+        if (point.bank < 0) continue;
+        cells.append(QVariant::fromValue(QVariantList{point.x, point.bank, point.y, point.error}));
+    }
+    return cells;
 }
 
 void EvolutionViewModel::setBankLayer(int bank, MeasuredLayer* layer) {
@@ -693,6 +740,78 @@ double EvolutionViewModel::datasetX(int dataset) const {
     }
     const std::optional<double> x = xOf(dataset, session_->extracted(dataset));
     return x ? *x : std::numeric_limits<double>::quiet_NaN();
+}
+
+void EvolutionViewModel::setCompareParameter(int index) {
+    if (index < -1 || index >= names_.size() || index == compare_) return;
+    compare_ = index;
+    emit compareParameterChanged();
+    rebuildCompare();
+}
+
+void EvolutionViewModel::setCompareLayer(MeasuredLayer* layer) {
+    if (compare_layer_ == layer) return;
+    compare_layer_ = layer;
+    emit compareLayerChanged();
+    drawCompare();
+}
+
+// The second parameter's points, read on a worker as the main ones are; its own range, with the same margins.
+void EvolutionViewModel::rebuildCompare() {
+    const std::uint64_t request = ++compare_request_;
+    if (compare_ < 0 || session_ == nullptr || project_ == nullptr || compare_ >= names_.size()) {
+        compare_points_.clear();
+        drawCompare();
+        return;
+    }
+    Read read;
+    read.project = std::make_shared<const edi::Project>(*project_);
+    read.places = session_->places();
+    read.index = session_->indexSnapshot();
+    read.datasets = session_->datasets();
+    read.name = names_[compare_].toStdString();
+    read.by_value = x_mode_ == 0 && !extracted_title_.isEmpty();
+    read.per_experiment = per_experiment_;
+    read.experiment = std::max(0, current_experiment_);
+    read.leader = per_experiment_ ? -1 : shared_paths_.value(names_[compare_], -1);
+    if (per_experiment_ || read.leader >= 0) read.rule = session_->bankRule(*project_);
+    const QPointer<EvolutionViewModel> self(this);
+    run_in_background([self, request, read = std::move(read)]() {
+        std::vector<Point> points;
+        try {
+            points = readPoints(read);
+        } catch (const std::exception&) {
+            points.clear();
+        }
+        QMetaObject::invokeMethod(
+            QCoreApplication::instance(),
+            [self, request, points = std::move(points)]() mutable {
+                if (!self || request != self->compare_request_) return;
+                self->compare_points_ = std::move(points);
+                self->drawCompare();
+            },
+            Qt::QueuedConnection);
+    });
+}
+
+void EvolutionViewModel::drawCompare() {
+    double low = std::numeric_limits<double>::infinity(), high = -low;
+    QList<QPointF> points;
+    QList<double> lows, highs;
+    for (const Point& point : compare_points_) {
+        points.append(QPointF(point.x, point.y));
+        lows.append(point.y - bar_of(point.error));
+        highs.append(point.y + bar_of(point.error));
+        low = std::min(low, lows.back());
+        high = std::max(high, highs.back());
+    }
+    if (std::isfinite(low) && std::isfinite(high)) {
+        const double margin = high > low ? 0.05 * (high - low) : std::max(1e-12, std::abs(high) * 0.05 + 1e-12);
+        compare_y_min_ = low - margin;
+        compare_y_max_ = high + margin;
+        emit compareRangeChanged();
+    }
+    if (compare_layer_) compare_layer_->setData(points, lows, highs);
 }
 
 }  // namespace edi_app
