@@ -228,9 +228,9 @@ def observe_publication_files(prefix, command, output, observer, native):
         typed = set(
             re.findall(
                 r'_+ZN[A-Za-z0-9_]*filesystem[A-Za-z0-9_]*'
-                + str(len(method))
-                + method
-                + r'E[A-Za-z0-9_]+',
+                # libc++ (macOS) exports __copy, __rename and so on; libstdc++ the plain names.
+                f'(?:{len(method)}{method}|{len(method) + 2}__{method})'
+                r'E[A-Za-z0-9_]+',
                 trace,
             )
         )
@@ -252,7 +252,8 @@ def observe_publication_files(prefix, command, output, observer, native):
         used = set(
             re.findall(
                 r'_+ZN[A-Za-z0-9_]*filesystem[A-Za-z0-9_]*'
-                r'(?:4copy|9copy_file|6rename|16create_hard_link)E[A-Za-z0-9_]+',
+                r'(?:4copy|9copy_file|6rename|16create_hard_link'
+                r'|6__copy|11__copy_file|8__rename|18__create_hard_link)E[A-Za-z0-9_]+',
                 undefined,
             )
         )
