@@ -634,6 +634,8 @@ def verify_installed_maintenance_tool(target: Path, metadata: dict) -> None:
         )
     if SYSTEM == 'macos' and (target / 'maintenancetool').exists():
         raise RuntimeError('The installer left the shipped maintenance tool in place')
+    if SYSTEM == 'macos' and (target / 'MaintenanceTool.app.old').exists():
+        raise RuntimeError('The update left the replaced maintenance tool behind')
 
 
 def acquire_installer_licenses(tools: Path, destination: Path) -> None:

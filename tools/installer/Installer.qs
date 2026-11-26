@@ -10,6 +10,15 @@ function clearQuarantine() {
         installer.execute("/usr/bin/xattr", ["-r", "-d", "com.apple.quarantine", target]);
 }
 
+// macOS: once an update has finished, the maintenance tool it replaced (kept until then, maintenancescript.qs) goes.
+function dropOldTool() {
+    if (systemInfo.kernelType !== "darwin")
+        return;
+    var target = installer.value("TargetDir");
+    if (target !== "")
+        installer.execute("/bin/rm", ["-rf", target + "/MaintenanceTool.app.old"]);
+}
+
 // Windows: a new installation goes to %LOCALAPPDATA%\Programs\EasyDiffraction, or to
 // C:\Program Files\EasyDiffraction when the installer runs as administrator (edi ADR-0071). Set from the
 // environment, as the Framework's own directory variables differ between its versions. An existing
@@ -321,6 +330,7 @@ function Controller() {
     });
     installer.installationFinished.connect(clearQuarantine);
     installer.updateFinished.connect(clearQuarantine);
+    installer.updateFinished.connect(dropOldTool);
     // When the work is done the Framework moves on to the last page by itself; should it stay on the progress page,
     // Next is pressed for it, so the tool always ends by saying what it did.
     if (captureFolder === "") {

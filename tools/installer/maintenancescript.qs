@@ -28,6 +28,38 @@ Component.prototype.createOperations = function () {
         return;
     // On macOS the framework moves the staged bundle into place on a first installation only: an update leaves it in
     // the staging folder and keeps the old tool (measured on CI). So the update swaps the bundles itself, once the new
+    // one is unpacked. The old bundle is kept as MaintenanceTool.app.old until the update has finished (Installer.qs
+    // removes it then), the new one is renamed into place from a name beside it, and undoing the step puts the old one
+    // back. A rerun after a failed swap keeps the backup that survived it. The running tool keeps its open files.
+    if (systemInfo.kernelType === "darwin") {
+        component.addOperation("Execute", "/bin/sh", "-c",
+            't="$1"; staged="$t/maintenancetool/MaintenanceTool.app"; [ -d "$staged" ] || exit 1;'
+            + ' rm -rf "$t/MaintenanceTool.app.new" && mv "$staged" "$t/MaintenanceTool.app.new" || exit 1;'
+            + ' if [ ! -d "$t/MaintenanceTool.app.old" ]; then mv "$t/MaintenanceTool.app" "$t/MaintenanceTool.app.old" || exit 1;'
+            + ' else rm -rf "$t/MaintenanceTool.app"; fi;'
+            + ' mv "$t/MaintenanceTool.app.new" "$t/MaintenanceTool.app" || exit 1; rmdir "$t/maintenancetool" 2>/dev/null; exit 0',
+            "sh", "@TargetDir@",
+            "UNDOEXECUTE", "/bin/sh", "-c",
+            't="$1"; [ -d "$t/MaintenanceTool.app.old" ] || exit 0; rm -rf "$t/MaintenanceTool.app";'
+            + ' mv "$t/MaintenanceTool.app.old" "$t/MaintenanceTool.app"',
+            "sh", "@TargetDir@");
+        return;
+    }
+    installer.setInstallerBaseBinary(stagedTool());
+}
+
+// The component carries the app version, so every update lists it. An update unpacks the new signed tool as well
+// and asks for it here, where only a component being updated runs, so an update without it keeps the installed
+// tool. On Windows the framework replaces the tool at the end, once it has quit; on macOS the update swaps the bundle
+// itself (below; edi ADR-0106).
+Component.prototype.createOperations = function () {
+    if (!installer.isInstaller() && !installer.isUpdater())
+        return;
+    component.createOperations();
+    if (!installer.isUpdater() || stagedTool() === "")
+        return;
+    // On macOS the framework moves the staged bundle into place on a first installation only: an update leaves it in
+    // the staging folder and keeps the old tool (measured on CI). So the update swaps the bundles itself, once the new
     // one is unpacked; the running tool keeps its open files until it quits.
     if (systemInfo.kernelType === "darwin") {
         component.addOperation("Execute", "/bin/sh", "-c",
