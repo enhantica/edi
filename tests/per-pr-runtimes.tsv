@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-26T23:31:29Z
+# measured_utc = 2026-11-26T23:36:50Z
 #
-# Recorded from: /home/andrewsazonov/runs/c18-t3-tests-seq1/edi-native-final.log
-# Collected tests: 267569; with a reported duration: 86318
+# Recorded from: /home/andrewsazonov/runs/c18-t3-tests-seq1/edi-legacy.log
+# Collected tests: 267571; with a reported duration: 86320
 # Module-scoped fixture costs recorded: 221
 #
 # Breaches are decided PER TIER against the table
@@ -30,8 +30,8 @@
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
 # inventory_python = 267562
-# inventory_cpp = 7
-# inventory_measured = 187625
+# inventory_cpp = 9
+# inventory_measured = 187627
 # inventory_unmeasured = 79944
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
 # inventory_pr_python = 92651
@@ -1346,6 +1346,8 @@ UNMEASURED:failed-in-this-run	tests/integration/app/test_web_control_geometry.py
 UNMEASURED:failed-in-this-run	tests/integration/app/test_web_control_geometry.py::test_transformed_control_extent_is_independent_of_ink_and_clip[populated]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_web_control_geometry.py::test_transformed_control_extent_is_independent_of_ink_and_clip[unclipped]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_web_control_geometry.py::test_visual_children_remain_discoverable_without_qobject_parentage
+0.064	tests/integration/cpp/test_magnetic_legacy_editor.cpp::Regression pin preserves type I native and FullProf editor paths
+0.023	tests/integration/cpp/test_magnetic_legacy_editor.cpp::Regression pin preserves type III native and FullProf editor paths
 UNMEASURED:expected-red-on-499909374	tests/integration/cpp/test_type_iv_site_symmetry.cpp::Equivalent type IV signed rows retain verified metadata in the native editor
 UNMEASURED:expected-red-on-499909374	tests/integration/cpp/test_type_iv_site_symmetry.cpp::Native type IV ADP conversion and new atoms use magnetic site geometry
 UNMEASURED:expected-red-on-499909374	tests/integration/cpp/test_type_iv_site_symmetry.cpp::The native structure page accepts verified type IV Wyckoff letters
@@ -267671,7 +267673,7 @@ UNMEASURED:not-completed-in-this-run	tests/unit/py/test_web_science_identity.py:
 # module-cost: 6.489	tests/integration/py/test_tutorial_strategy.py
 # module-cost: 2.933	tests/integration/py/test_weight_fraction_app.py
 # module-cost: 0.951	tests/system/app/test_likes_feedback.py
-# module-cost: 2.489	tests/system/app/test_magnetic_operator_workflow.py
+# module-cost: 2.017	tests/system/app/test_magnetic_operator_workflow.py
 # module-cost: 1.325	tests/system/app/test_magnetic_structure_type_native.py
 # module-cost: 12.650	tests/system/app/test_rendered_caption_capitalisation.py
 # module-cost: 84.777	tests/system/app/test_replaced_data_drawn.py
