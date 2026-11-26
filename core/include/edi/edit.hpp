@@ -41,6 +41,7 @@
 #include <utility>
 #include <vector>
 
+#include "edi/magnetic_cell.hpp"
 #include "edi/background_estimate.hpp"
 #include "edi/edits.hpp"
 #include "edi/io.hpp"
@@ -1262,6 +1263,61 @@ class Edit {
             const auto* inserted=project.structures.back().get();
             return AppliedResult{inserted, nullptr,
                 inserted->atom_sites.size()==1?inserted->atom_sites[0].get():nullptr};
+        });
+    }
+    // The magnetic popup's Add (edi ADR-0078): the prepared candidate structures, each powder experiment's links to
+    // them with only the first enabled, its parent's link disabled, and the carried texture rows, all or none.
+    static Edit add_magnetic_candidates(Project& project, std::shared_ptr<const PreparedMagneticCandidates> prepared) {
+        return Edit([&project, prepared = std::move(prepared)] {
+            for (const auto& structure : prepared->structures) {
+                for (const auto& held : project.structures) {
+                    if (held->name.value() == structure->name.value()) {
+                        throw std::invalid_argument("a structure named '" + structure->name.value() +
+                                                    "' is already in the project");
+                    }
+                }
+            }
+            std::vector<ItemVec<Structure>::Ptr> structures(project.structures.begin(), project.structures.end());
+            for (const auto& structure : prepared->structures) structures.push_back(std::make_shared<Structure>(*structure));
+            std::vector<std::vector<ItemVec<LinkedStructure>::Ptr>> links;
+            std::vector<std::vector<ItemVec<PrefOrient>::Ptr>> texture;
+            for (std::size_t e = 0; e < project.experiments.size(); ++e) {
+                const auto& experiment = project.experiments[e];
+                auto& kept_links = links.emplace_back();
+                for (const auto& link : experiment->linked_structures) {
+                    auto row = std::make_shared<LinkedStructure>(*link);
+                    if (row->structure_id.value() == prepared->parent) row->enabled = false;
+                    kept_links.push_back(std::move(row));
+                }
+                for (const auto& add : prepared->links) {
+                    if (add.experiment != e) continue;
+                    auto row = std::make_shared<LinkedStructure>();
+                    row->structure_id = add.structure;
+                    row->scale.value = add.scale;
+                    row->enabled = add.enabled;
+                    kept_links.push_back(std::move(row));
+                }
+                auto& kept_texture = texture.emplace_back(experiment->preferred_orientation.begin(),
+                                                          experiment->preferred_orientation.end());
+                for (const auto& add : prepared->textures) {
+                    if (add.experiment != e) continue;
+                    auto row = std::make_shared<PrefOrient>();
+                    row->structure_id = add.structure;
+                    row->march_r.value = add.march_r;
+                    row->march_r.free = add.march_r_free;
+                    row->march_random_fract.value = add.march_random_fract;
+                    row->march_random_fract.free = add.march_random_fract_free;
+                    row->index_h = add.axis[0];
+                    row->index_k = add.axis[1];
+                    row->index_l = add.axis[2];
+                    kept_texture.push_back(std::move(row));
+                }
+            }
+            for (std::size_t i = 0; i < project.experiments.size(); ++i) {
+                project.experiments[i]->linked_structures.assign(std::move(links[i]));
+                project.experiments[i]->preferred_orientation.assign(std::move(texture[i]));
+            }
+            project.structures.assign(std::move(structures));
         });
     }
     // A structure removed with every experiment's link to it and texture row for it, all or none.

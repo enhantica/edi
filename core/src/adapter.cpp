@@ -20,6 +20,7 @@
 #include <sys/stat.h>
 #endif
 #include <deque>
+#include <numeric>
 #include <map>
 #include <unordered_map>
 #include <optional>
@@ -35,6 +36,7 @@
 #include <vector>
 
 #include "edi/background_estimate.hpp"
+#include "edi/magnetic_cell.hpp"
 #include "edi/fit_job.hpp"
 #include "edi/calculation.hpp"
 #include "edi/display.hpp"
@@ -49,6 +51,7 @@
 #include "identity_bridge.hpp"  // The loader's reach into crysta's identity rules
 #include "crysta/derived_values.hpp"
 #include "crysta/magnetic.hpp"
+#include "crysta/magnetic_subgroups.hpp"
 #include "crysta/adp.hpp"
 #include "crysta/analysis.hpp"
 #include "crysta/background_estimate.hpp"
@@ -1354,10 +1357,12 @@ void set_magnetic_space_group(Structure& s, const std::string& number_bns) {
         return rows;
     };
     const crysta::MagneticGroupName name = group_name(entry);
-    // The table's operations are in the BNS standard setting: its transform is the identity.
+    // crysta ADR-0137 A10: the group only within this structure's cell, through its held BNS transform, with its
+    // propagation vectors and its atoms; a refusal names the reason and points to Crystal → Magnetic. The admitted
+    // elements are the group in the structure's own setting, so the held transform stays.
+    const std::vector<std::string> elements = crysta::admit_magnetic_space_group(to_crysta_structure(s), number_bns);
     Structure trial = s;
-    trial.magnetic.modify([](MagneticDescription& magnetic) { set_bns_transform(magnetic, "a,b,c;0,0,0"); });
-    set_magnetic_symmetry(trial, numbered(entry.operations), numbered(entry.centerings), name);
+    set_magnetic_symmetry(trial, numbered(elements), numbered({"x,y,z,+1"}), name);
     s = trial;  // Structure assigns by copy
 }
 
@@ -9850,6 +9855,178 @@ void restore_background(ExperimentBase& experiment, const BackgroundState& state
     experiment.background_estimate_mode = state.mode;
     experiment.background_estimate_inputs = state.inputs;
     experiment.background_estimate_points = state.written;
+}
+
+}  // namespace edi
+
+// The magnetic popup (edi ADR-0078 "The magnetic popup", crysta ADR-0137).
+namespace edi {
+
+std::vector<MagneticPreset> magnetic_presets(const Structure& parent) {
+    std::vector<MagneticPreset> out;
+    for (const crysta::PresetPropagationVector& p :
+         crysta::special_propagation_vectors(to_crysta_structure(parent))) {
+        out.push_back({p.k_text, p.label});
+    }
+    return out;
+}
+
+std::vector<std::string> magnetic_default_sites(const Structure& parent) {
+    std::vector<std::string> out;
+    for (const auto& site : parent.atom_sites) {
+        if (!crysta::magnetic_type_ion(site->type_symbol.value()).empty()) {
+            out.push_back(site->id.value());
+        }
+    }
+    return out;
+}
+
+struct MagneticEngineGraph {
+    explicit MagneticEngineGraph(const Structure& s) : parent(to_crysta_structure(s)) {}
+    crysta::Structure parent;
+    crysta::MagneticSubgroupGraph graph;
+};
+
+MagneticCandidateGraph magnetic_candidate_graph(const Structure& parent, const std::string& k,
+                                                const std::vector<std::string>& sites,
+                                                bool with_zero_moment_groups) {
+    auto engine = std::make_shared<MagneticEngineGraph>(parent);
+    engine->graph = crysta::magnetic_subgroups(engine->parent, k, sites, with_zero_moment_groups);
+    MagneticCandidateGraph out;
+    out.cell = engine->graph.cell.child_transform;
+    out.parent_cells = engine->graph.cell.parent_cells;
+    out.sites = sites;
+    std::map<std::string, std::size_t> seen;
+    for (const crysta::MagneticSubgroupClass& c : engine->graph.classes) {
+        MagneticCandidateNode node;
+        node.bns = c.number_bns;
+        node.name = c.name_bns;
+        node.type = c.magnetic_type;
+        node.row = c.row;
+        node.embedding = ++seen[c.number_bns];
+        node.domains = c.domains;
+        node.net_moment = c.net_moment_allowed;
+        node.moment_allowed = c.moment_allowed;
+        node.subgroups = c.subgroups;
+        node.transform_to_bns = c.transform_to_bns;
+        out.nodes.push_back(std::move(node));
+    }
+    out.engine = engine;
+    for (std::size_t i = 0; i < out.nodes.size(); ++i) {
+        if (out.nodes[i].bns.empty()) {
+            continue;
+        }
+        try {
+            out.nodes[i].moments = magnetic_candidate_moments(out, i);
+        } catch (const std::exception& refusal) {
+            out.nodes[i].moments = refusal.what();
+        }
+    }
+    return out;
+}
+
+std::string magnetic_candidate_moments(const MagneticCandidateGraph& graph, std::size_t node) {
+    if (!graph.engine || node >= graph.engine->graph.classes.size()) {
+        throw std::invalid_argument("no such magnetic group");
+    }
+    const crysta::Structure child = crysta::magnetic_structure_from_parent(
+        graph.engine->parent, graph.engine->graph, node, graph.sites, false, "candidate");
+    std::string out;
+    for (const crysta::AtomSiteMoment& row : child.atom_site_moment) {
+        out += (out.empty() ? "" : " · ") + row.site_id.value() + " " + crysta::symmform_of(child, row);
+    }
+    return out;
+}
+
+std::shared_ptr<PreparedMagneticCandidates> prepare_magnetic_candidates(
+    const Project& project, std::size_t parent_index, const MagneticCandidateGraph& candidates,
+    const std::vector<std::size_t>& nodes, bool start_moments) {
+    if (!candidates.engine) {
+        throw std::invalid_argument("no magnetic groups have been found");
+    }
+    if (parent_index >= project.structures.size()) {
+        throw std::invalid_argument("the project has no such structure");
+    }
+    if (nodes.empty()) {
+        throw std::invalid_argument("select at least one magnetic group to add");
+    }
+    const Structure& parent = *project.structures[parent_index];
+    const std::string parent_name = parent.name.value();
+    auto prepared = std::make_shared<PreparedMagneticCandidates>();
+    prepared->parent = parent_name;
+    // Powder only (relay decision 2026-11-26, "C18-T3 adds magnetic candidates for powder
+    // experiments only"): a single-crystal link, enabled or not, refuses the whole Add.
+    for (const auto& experiment : project.experiments) {
+        for (const auto& link : experiment->linked_structures) {
+            if (link->structure_id.value() == parent_name &&
+                experiment->experiment_type.effective_sample_form() != SampleFormEnum::POWDER) {
+                throw std::invalid_argument(
+                    "the parent is linked to a single-crystal experiment, whose reflections are indexed "
+                    "in the parent cell; adding magnetic candidates to it is not supported yet");
+            }
+        }
+    }
+    const crysta::Structure& engine = candidates.engine->parent;
+    const crysta::MagneticSubgroupGraph& graph = candidates.engine->graph;
+    const std::vector<std::string>& sites = candidates.sites;
+    std::set<std::string> names;
+    for (const auto& s : project.structures) {
+        names.insert(s->name.value());
+    }
+    const std::array<long long, 3> m = graph.cell.multipliers;
+    const double n = static_cast<double>(graph.cell.parent_cells);
+    for (std::size_t i = 0; i < nodes.size(); ++i) {
+        if (nodes[i] >= graph.classes.size()) {
+            throw std::invalid_argument("no such magnetic group");
+        }
+        const crysta::MagneticSubgroupClass& c = graph.classes[nodes[i]];
+        std::string bns = c.number_bns;
+        std::replace(bns.begin(), bns.end(), '.', '_');
+        std::string name = parent_name + "_" + bns;
+        for (int suffix = 2; names.contains(name); ++suffix) {
+            name = parent_name + "_" + bns + "_" + std::to_string(suffix);
+        }
+        names.insert(name);
+        const std::string text =
+            crysta::magnetic_child_text(engine, graph, nodes[i], sites, start_moments, name);
+        prepared->structures.push_back(std::make_shared<Structure>(structure_from_edi_text(text, name)));
+        for (std::size_t e = 0; e < project.experiments.size(); ++e) {
+            const auto& experiment = project.experiments[e];
+            for (const auto& link : experiment->linked_structures) {
+                if (link->structure_id.value() != parent_name) {
+                    continue;
+                }
+                prepared->links.push_back({e, name, link->scale.value.get() / (n * n), i == 0});
+            }
+            for (const auto& row : experiment->preferred_orientation) {
+                if (row->structure_id.value() != parent_name) {
+                    continue;
+                }
+                // The same reciprocal direction in the child's basis: h_child = Dᵀ h_parent, reduced.
+                std::array<long long, 3> h{m[0] * row->index_h.get(), m[1] * row->index_k.get(),
+                                           m[2] * row->index_l.get()};
+                const long long g = std::gcd(std::gcd(std::llabs(h[0]), std::llabs(h[1])), std::llabs(h[2]));
+                for (long long& x : h) {
+                    x /= g == 0 ? 1 : g;
+                }
+                for (const long long x : h) {
+                    if (std::llabs(x) > 1000) {
+                        throw std::invalid_argument(
+                            "the texture axis (" + std::to_string(row->index_h.get()) + "," +
+                            std::to_string(row->index_k.get()) + "," + std::to_string(row->index_l.get()) +
+                            ") becomes (" + std::to_string(h[0]) + "," + std::to_string(h[1]) + "," +
+                            std::to_string(h[2]) + ") in the magnetic cell, beyond the 1000 limit");
+                    }
+                }
+                prepared->textures.push_back({e, name, row->march_r.value.get(),
+                                              row->march_random_fract.value.get(), row->march_r.free.get(),
+                                              row->march_random_fract.free.get(),
+                                              {static_cast<int>(h[0]), static_cast<int>(h[1]),
+                                               static_cast<int>(h[2])}});
+            }
+        }
+    }
+    return prepared;
 }
 
 }  // namespace edi
