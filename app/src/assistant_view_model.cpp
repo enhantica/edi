@@ -4320,9 +4320,12 @@ struct AssistantViewModel::State {
     }
     const QString widget_outcome_error = QStringLiteral("The actual widget outcome could not be confirmed; inspect the project");
     // Why a shown step failed, in its handler: the reason it threw, else the general one.
+    // Called only from a catch handler: the exception it reads is the one being handled.
     QString widget_caught() const noexcept {
+        const std::exception_ptr current=std::current_exception();
+        if(!current)return widget_outcome_error;
         try {
-            try {throw;}
+            try {std::rethrow_exception(current);}
             catch(const ActionRefusal& refusal) {if(refusal.reason)return QObject::tr(refusal.reason);}
             catch(const std::bad_alloc&) {}
             catch(const std::exception& failure) {

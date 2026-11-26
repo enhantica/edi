@@ -2328,7 +2328,7 @@ QString ProjectViewModel::declareDataFolder(const QString& folder) {
     edi::Project next(*project_);
     next.sequential_fit.data_dir = declared_folder(project_->path, folder).toStdString();
     auto before = std::make_shared<const edi::Project>(*project_);
-    const QString error = apply(edi::Edit::replace_project(*project_, std::move(next)), true);
+    QString error = apply(edi::Edit::replace_project(*project_, std::move(next)), true);
     if (!self || retired_) return error;
     if (!error.isEmpty()) {
         setLastError(error);
