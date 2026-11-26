@@ -461,23 +461,11 @@ EaComponents.ApplicationWindow {
             // Once made, the page stays while another project replaces the open one (edi ADR-0052): a press on it, or its
             // open Load menu, would go with a page let go.
             property bool made: false
-            // Once the new project is open the old page is let go and made again for it, so nothing of the replaced
-            // project's page stays (edi ADR-0052).
-            property bool retiring: false
-            active: wanted && !window.quitting && !retiring && (made || window.pageTurn(projectLoader))
+            active: wanted && !window.quitting && (made || window.pageTurn(projectLoader))
             onLoaded: made = true
             onActiveChanged: {
                 if (!active)
                     made = false;
-            }
-            Connections {
-                target: Session
-                function onProjectChanged() {
-                    if (projectLoader.made && Session.project !== null) {
-                        projectLoader.retiring = true;
-                        Qt.callLater(() => projectLoader.retiring = false);
-                    }
-                }
             }
             // In the browser built at once: a click on the page was lost while it was being built in the background.
             asynchronous: Qt.platform.os !== "wasm"
