@@ -10,11 +10,11 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-26T17:54:01Z
+# measured_utc = 2026-11-26T18:15:09Z
 #
-# Recorded from: measured test run (351 node(s) measured once, 187623 banked, 0 stale row(s) dropped)
-# Collected tests: 267876; with a reported duration: 86321
-# Module-scoped fixture costs recorded: 219
+# Recorded from: measured test run (2 node(s) measured once, 187629 banked, 0 stale row(s) dropped)
+# Collected tests: 267878; with a reported duration: 86322
+# Module-scoped fixture costs recorded: 220
 #
 # Breaches are decided PER TIER against the table
 # below, which the loader validates against the code constants - a manifest must state
@@ -29,12 +29,12 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 267876
+# inventory_python = 267878
 # inventory_cpp = 0
-# inventory_measured = 187628
-# inventory_unmeasured = 80248
+# inventory_measured = 187629
+# inventory_unmeasured = 80249
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
-# inventory_pr_python = 92725
+# inventory_pr_python = 92727
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -548,9 +548,9 @@ UNMEASURED:failed-in-this-run	tests/integration/app/test_online_load.py::test_on
 0.025	tests/integration/app/test_online_load.py::test_online_load_controls[new_experiment_wavelength-]
 0.400	tests/integration/app/test_online_structure_loading.py::test_cod_falls_back_to_easydiffraction
 UNMEASURED:failed-in-this-run	tests/integration/app/test_online_structure_loading.py::test_structure_matches_disk
-UNMEASURED:not-completed-in-this-run	tests/integration/app/test_parametric_sharing_controls.py::test_sharing_controls[bulk_shared_is_one_undo]
-UNMEASURED:not-completed-in-this-run	tests/integration/app/test_parametric_sharing_controls.py::test_sharing_controls[column_follows_fitting_mode]
-UNMEASURED:not-completed-in-this-run	tests/integration/app/test_parametric_sharing_controls.py::test_sharing_controls[group_edits_and_undo]
+UNMEASURED:failed-in-this-run	tests/integration/app/test_parametric_sharing_controls.py::test_sharing_controls[bulk_shared_is_one_undo]
+0.400	tests/integration/app/test_parametric_sharing_controls.py::test_sharing_controls[column_follows_fitting_mode]
+UNMEASURED:failed-in-this-run	tests/integration/app/test_parametric_sharing_controls.py::test_sharing_controls[group_edits_and_undo]
 0.600	tests/integration/app/test_phase_scan_progress.py::test_app_converted_skip_live_population_matches_reopen[independent]
 0.600	tests/integration/app/test_phase_scan_progress.py::test_app_converted_skip_live_population_matches_reopen[sequential]
 0.570	tests/integration/app/test_phase_scan_progress.py::test_app_incremental_notes_failure_invalidates_before_progress[index-foreign-independent]
@@ -255396,6 +255396,8 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_parametric_linear.py::test_no
 UNMEASURED:failed-in-this-run	tests/system/py/test_parametric_linear.py::test_repeated_fit_never_turns_results_into_start_rows
 UNMEASURED:failed-in-this-run	tests/system/py/test_parametric_linear.py::test_shared_linear_fit_recovers_truth_and_undamped_covariance[False]
 UNMEASURED:failed-in-this-run	tests/system/py/test_parametric_linear.py::test_shared_linear_fit_recovers_truth_and_undamped_covariance[True]
+UNMEASURED:failed-in-this-run	tests/system/py/test_parametric_linear.py::test_shared_scale_and_local_background_follow_the_analytic_fit[False]
+UNMEASURED:failed-in-this-run	tests/system/py/test_parametric_linear.py::test_shared_scale_and_local_background_follow_the_analytic_fit[True]
 UNMEASURED:failed-in-this-run	tests/system/py/test_pattern_owner_styles.py::test_pattern_owner_style[test_background_and_legend_dashed:analysis-dark]
 UNMEASURED:failed-in-this-run	tests/system/py/test_pattern_owner_styles.py::test_pattern_owner_style[test_background_and_legend_dashed:analysis-light]
 UNMEASURED:failed-in-this-run	tests/system/py/test_pattern_owner_styles.py::test_pattern_owner_style[test_background_and_legend_dashed:experiment-dark]
@@ -267941,6 +267943,7 @@ UNMEASURED:not-completed-in-this-run	tests/unit/py/test_web_science_identity.py:
 # module-cost: 19.123	tests/integration/app/test_magnetic_preview.py
 # module-cost: 5.691	tests/integration/app/test_online_load.py
 # module-cost: 1.077	tests/integration/app/test_online_structure_loading.py
+# module-cost: 0.406	tests/integration/app/test_parametric_sharing_controls.py
 # module-cost: 0.258	tests/integration/app/test_phase_scan_state.py
 # module-cost: 34.721	tests/integration/app/test_report_deferred_save.py
 # module-cost: 4.282	tests/integration/app/test_scan_axis_sync.py

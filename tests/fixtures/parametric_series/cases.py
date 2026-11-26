@@ -1,6 +1,8 @@
 """Small handwritten projects for the four sharing states and linear inverse fits."""
 
 import csv
+import shutil
+from pathlib import Path
 
 import numpy as np
 
@@ -94,3 +96,49 @@ def linear_covariance(*, shared=True, fixed=False):
         matrix[block * 5 : (block + 1) * 5, column] = t
     residual_square = 14 * 0.03**2 * (1 + 4 + 9)
     return np.linalg.inv(matrix.T @ matrix) * residual_square / (15 - size)
+
+
+def scale_scan(root, *, fixed=False):
+    """Use a frozen pre-solver profile as a regressor with authored scale/background."""
+    fixture = Path(__file__).parent
+    shutil.copytree(fixture / 'cubic', root)
+    structure = root / 'structures/phase.edi'
+    structure.write_text(structure.read_text().replace('()', ''))
+    experiment = root / 'experiments/0_zeta.edi'
+    text = experiment.read_text().split('loop_\n_data.two_theta')[0]
+    text = text.replace('_peak.broad_gauss_u 0.1()', '_peak.broad_gauss_u 0.12')
+    text = text.replace('_peak.broad_gauss_v -0.02()', '_peak.broad_gauss_v -0.03')
+    text = text.replace('_peak.broad_gauss_w 0.17()', '_peak.broad_gauss_w 0.15')
+    text = text.replace('phase 2.0()', 'phase ' + ('2.5' if fixed else '1.8()'))
+    text = text.replace('1 12 2', '1 12 1()').replace('2 105 2', '2 105 1()')
+    data = np.loadtxt(fixture / 'cubic/scan/p0.xy')
+    x, profile = data[:, 0], (data[:, 1] - 2) / 2
+    t = (x - 12) / 93
+    design = np.column_stack((profile, 1 - t, t))
+    raw = np.sin(np.arange(len(x)) * 1.7) * 0.03
+    noise = raw - design @ np.linalg.lstsq(design, raw, rcond=None)[0]
+    for path in (root / 'scan').glob('*.xy'):
+        path.unlink()
+    for index in range(3):
+        y = 2.5 * profile + (3.25 + index) * (1 - t) + (8.75 - index) * t
+        y += noise * (index + 1)
+        np.savetxt(root / 'scan' / f'p{index}.xy', np.column_stack((x, y, np.ones(len(x)))))
+    experiment.write_text(
+        text
+        + '\nloop_\n_data.two_theta\n_data.intensity_meas\n_data.intensity_meas_su\n'
+        + ''.join(f'{a} {b} 1\n' for a, b in zip(x, data[:, 1], strict=True))
+    )
+    (root / 'analysis/analysis.edi').write_text(
+        '_edi.schema_version 3\n_fitting_mode.type parametric\n'
+        '_minimizer.max_iterations 60\n_minimizer.chi_square_tolerance 1e-12\n'
+        '_sequential_fit.data_dir scan\n_sequential_fit.file_pattern "p?.xy"\n'
+    )
+    append_shared(root, ['zeta.linked_structure.phase.scale'])
+    size = 6 if fixed else 7
+    matrix = np.zeros((3 * len(x), size))
+    for block in range(3):
+        if not fixed:
+            matrix[block * len(x) : (block + 1) * len(x), 0] = profile
+        start = 2 * block + (0 if fixed else 1)
+        matrix[block * len(x) : (block + 1) * len(x), start : start + 2] = design[:, 1:]
+    return np.linalg.inv(matrix.T @ matrix) * (noise @ noise) * 14 / (3 * len(x) - size)

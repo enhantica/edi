@@ -1,12 +1,14 @@
 import QtQuick
 import QtQuick.Controls
 import QtTest
+import "NativeTurn.js" as Turn
 import edi.app
 import EdiAcceptance 1.0
 import ReportAcceptance 1.0
 
 TestCase {
     id: test
+    property string gateTurnSelector: ""
     name: "ParametricSharing"
     when: windowShown
     property var window
@@ -27,6 +29,7 @@ TestCase {
         }
     }
     function init() {
+        gateTurnSelector = Turn.begin(test, Probe);
         window = host.createObject(null);
         verify(window !== null, "The sharing controls need their real Qt window");
         const source = SettingsProof.copyProject(Probe.repoUrl("tests/fixtures/parametric_series/project"));
@@ -45,6 +48,7 @@ TestCase {
             window.destroy();
         window = null;
         Probe.releaseScratchProjects();
+        Turn.end(gateTurnSelector);
     }
     function members() {
         const rows = Probe.rows(Session.project.parameters);
@@ -53,7 +57,7 @@ TestCase {
         return result.map(row => row.parameter);
     }
     function test_group_edits_and_undo() {
-        const parameters = members();
+        let parameters = members();
         parameters.forEach((parameter, index) => {
             parameter.free = false;
             parameter.value = 0.3 + index;
@@ -65,6 +69,7 @@ TestCase {
             compare(parameter.value, 1.3, "The clicked member supplies the common value");
         });
         Session.project.undo();
+        parameters = members();
         parameters.forEach((parameter, index) => {
             compare(parameter.shared, false, "One undo restores every member sharing flag");
             compare(parameter.value, 0.3 + index, "One undo restores the distinct member values");
@@ -73,6 +78,7 @@ TestCase {
         parameters[1].free = true;
         parameters.forEach(parameter => compare(parameter.free, true, "The Free edit updates the whole shared group"));
         Session.project.undo();
+        parameters = members();
         parameters.forEach(parameter => {
             compare(parameter.free, false, "One undo restores the whole group Free flag");
             compare(parameter.shared, true, "Undoing Free retains Shared");
@@ -83,7 +89,7 @@ TestCase {
         verify(Session.project.setParametersShared([parameters[1], parameters[2]], true), "The bulk operation accepts eligible visible members");
         parameters.forEach(parameter => compare(parameter.shared, true, "Bulk sharing includes every member of the selected group"));
         Session.project.undo();
-        parameters.forEach(parameter => compare(parameter.shared, false, "Bulk sharing is one undo step even with duplicate group members"));
+        members().forEach(parameter => compare(parameter.shared, false, "Bulk sharing is one undo step even with duplicate group members"));
     }
     function test_column_follows_fitting_mode() {
         compare(table.sharedShown, true, "Joint mode shows the Shared column");

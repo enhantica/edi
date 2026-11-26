@@ -164,3 +164,43 @@ def test_iteration_delivery_has_one_series_record_per_round(tmp_path):
         'Independent blocks deliver one increasing series iteration each round'
     )
     assert len(cases.rows(root)) == 3, 'Final publication retains every admitted scan point'
+
+
+@pytest.mark.parametrize('fixed', [False, True])
+def test_shared_scale_and_local_background_follow_the_analytic_fit(tmp_path, fixed):
+    root = tmp_path / 'scale'
+    covariance = cases.scale_scan(root, fixed=fixed)
+    project = engine.Project.load(root)
+    project.save_as(tmp_path / 'reloaded')
+    root = tmp_path / 'reloaded'
+    project = engine.Project.load(root)
+    project.analysis.fit()
+    rows = cases.rows(root)
+    assert len(rows) == 3, 'A shared scale fit publishes every independently authored point'
+    for index, row in enumerate(rows):
+        name = 'zeta.linked_structure.phase.scale'
+        actual = (
+            project.experiments['zeta'].linked_structures['phase'].scale.value
+            if fixed
+            else float(row[name])
+        )
+        expected = 2.5 if fixed else rounded_pair(2.5, np.sqrt(covariance[0, 0]), 'iucr_99')[0]
+        assert actual == pytest.approx(expected, abs=1e-8), (
+            'Shared scale retains the authored amplitude after reload and solve'
+        )
+        if not fixed:
+            assert float(row[name + '.uncertainty']) == pytest.approx(
+                rounded_pair(0, np.sqrt(covariance[0, 0]), 'iucr_99')[1], rel=1e-8
+            ), 'Shared scale uncertainty matches the independent design matrix'
+        for endpoint, truth in enumerate((3.25 + index, 8.75 - index)):
+            column = 2 * index + endpoint + (0 if fixed else 1)
+            value, uncertainty = rounded_pair(
+                truth, np.sqrt(covariance[column, column]), 'iucr_99'
+            )
+            name = f'zeta.background.{endpoint + 1}.intensity'
+            assert float(row[name]) == pytest.approx(value, abs=1e-8), (
+                'Sharing scale retains both local background degrees of freedom'
+            )
+            assert float(row[name + '.uncertainty']) == pytest.approx(uncertainty, rel=1e-8), (
+                'Local uncertainty includes shared-scale coupling and global degrees of freedom'
+            )
