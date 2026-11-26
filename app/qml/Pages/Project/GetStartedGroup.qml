@@ -318,7 +318,10 @@ SideBarGroup {
     Connections {
         target: Session
         // The replaced project's Create dialog is hidden as the replacement starts, before a new name can show.
+        // Its untitled request is dropped first, as the later close does: the replacement supersedes it (edi ADR-0100),
+        // and the dialog's close would otherwise reject it.
         function onProjectReplacing() {
+            createDialog.untitledId = 0;
             EaGlobals.Vars.showProjectDescriptionDialog = false;
         }
         function onProjectAboutToChange() {
