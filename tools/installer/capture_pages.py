@@ -3,10 +3,11 @@
 
 Builds the small marker installer the protocol check uses (no app build), then runs it with the
 pages saving themselves (Installer.qs, EDI_INSTALLER_CAPTURE) and moving on: on Windows and macOS
-once per theme with the system's own appearance set, on Linux in light only. --marker-only builds
-the marker installer and prints its path, for the macOS accessibility check (a11y-check.sh).
-After each install the installed maintenance tool runs the same way, then the installation is
-removed. The PNGs go to --output for a run artifact; nothing is committed.
+once per theme with the system's own appearance set, on Linux with a KDE colour scheme for dark
+(the palette Qt reads from kdeglobals). --marker-only builds the marker installer and prints its
+path, for the macOS accessibility check (a11y-check.sh). After each install the installed
+maintenance tool runs the same way, then the installation is removed. The PNGs go to --output for
+a run artifact; nothing is committed.
 
 The walks write every page they show to pages/pages.log, in order (Installer.qs). The run fails
 unless that list is exactly the expected (page, mode, theme) sequence and each page that has a
@@ -14,14 +15,19 @@ picture has one: no page missing, none extra. What each maintenance mode did is 
 """
 
 import argparse
+import base64
+import contextlib
+import ctypes
 import json
 import os
 import plistlib
 import re
+import shutil
 import subprocess
 import tempfile
 import threading
 import time
+from collections.abc import Iterator
 from pathlib import Path
 from unittest.mock import patch
 
@@ -99,7 +105,7 @@ class ScreenFrames(threading.Thread):
         while not self.done.is_set():
             before = current_page(self.pages)
             subprocess.run(
-                ['powershell', '-NoProfile', '-Command', SCREEN.format(file=scratch)],
+                powershell(SCREEN.format(file=scratch)),
                 capture_output=True, timeout=60, check=False,
             )  # fmt: skip
             if scratch.exists():
@@ -110,19 +116,64 @@ class ScreenFrames(threading.Thread):
                     scratch.unlink()
 
 
-def run_pages(
-    command: list, env: dict, log: Path, pages: Path, finished: str, allowed: tuple = (0,)
-) -> None:
-    """Run a wizard whose pages move on by themselves; it ends at its last page, `finished`."""
-    frames = ScreenFrames(pages, log.stem) if SYSTEM == 'windows' else None
+@contextlib.contextmanager
+def screen_frames(pages: Path, prefix: str) -> Iterator[None]:
+    """Windows: screenshots while wizards run (ScreenFrames); elsewhere pages take their own."""
+    frames = ScreenFrames(pages, prefix) if SYSTEM == 'windows' else None
     if frames:
         frames.start()
     try:
-        _run_wizard(command, env, log, pages, finished, allowed)
+        yield
     finally:
         if frames:
             frames.done.set()
             frames.join(timeout=90)
+
+
+def run_pages(
+    command: list, env: dict, log: Path, pages: Path, finished: str, allowed: tuple = (0,)
+) -> None:
+    """Run a wizard whose pages move on by themselves; it ends at its last page, `finished`."""
+    with screen_frames(pages, log.stem):
+        _run_wizard(command, env, log, pages, finished, allowed)
+
+
+def start_wizard(command: list, env: dict, log: Path) -> subprocess.Popen:
+    """A wizard the walk leaves open on a pop-up or a refusal; stop_wizard ends it."""
+    stream = log.open('w', encoding='utf-8')
+    process = subprocess.Popen(
+        [*command, '--verbose'] if SYSTEM == 'windows' else command,
+        env=env, stdout=stream, stderr=subprocess.STDOUT,
+    )  # fmt: skip
+    process.log_stream = stream
+    return process
+
+
+def wait_picture(pages: Path, picture: str, process: subprocess.Popen, log: Path) -> None:
+    """Wait until `picture` is taken; the wizard stays on that state until it is stopped."""
+    deadline = time.monotonic() + 180
+    while not (pages / picture).exists():
+        # On Windows the wizard can go on in a process of its own, so this one ending says nothing.
+        if SYSTEM != 'windows' and process.poll() is not None:
+            raise RuntimeError(
+                f'{process.args[0]} ended with {process.returncode} before {picture}; see {log}'
+            )
+        if time.monotonic() > deadline:
+            raise RuntimeError(f'No {picture} after 180 s; see {log}')
+        time.sleep(1)
+    # The grab writes its file a moment after it starts; on Windows a later frame is surer.
+    time.sleep(3)
+
+
+def stop_wizard(process: subprocess.Popen) -> None:
+    if process.poll() is None:
+        process.kill()
+    process.wait(timeout=60)
+    # The wizard that went on in a process of its own (Windows) is ended by its name.
+    image = Path(process.args[0]).name
+    if SYSTEM == 'windows' and running(image):
+        subprocess.run(['taskkill', '/F', '/IM', image], capture_output=True, check=False)
+    process.log_stream.close()
 
 
 def _run_wizard(
@@ -153,9 +204,25 @@ def _run_wizard(
         raise RuntimeError(f'{command[0]} ended with {rc}; its log is {log}')
 
 
+# The foreground window only (the wizard, or its pop-up), as DWM draws it: GetWindowRect would add
+# the invisible resize border. DPI aware, so the rectangle and the copy are in the same pixels.
+# With no foreground window the whole screen is taken.
 SCREEN = (
     'Add-Type -AssemblyName System.Windows.Forms,System.Drawing; '
+    "Add-Type -TypeDefinition 'using System; using System.Runtime.InteropServices; "
+    'public struct EdiRect {{ public int L, T, R, B; }} '
+    'public static class EdiWindow {{ '
+    '[DllImport("user32.dll")] public static extern bool SetProcessDPIAware(); '
+    '[DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow(); '
+    '[DllImport("dwmapi.dll")] public static extern int DwmGetWindowAttribute('
+    "IntPtr w, int a, out EdiRect r, int s); }}'; "
+    '[void][EdiWindow]::SetProcessDPIAware(); '
     '$b=[System.Windows.Forms.Screen]::PrimaryScreen.Bounds; '
+    '$r=New-Object EdiRect; '
+    '$h=[EdiWindow]::GetForegroundWindow(); '
+    'if ($h -ne [IntPtr]::Zero -and [EdiWindow]::DwmGetWindowAttribute($h, 9, [ref]$r, 16) -eq 0 '
+    '-and $r.R -gt $r.L -and $r.B -gt $r.T) '
+    '{{ $b=New-Object System.Drawing.Rectangle $r.L,$r.T,($r.R-$r.L),($r.B-$r.T) }}; '
     '$i=New-Object System.Drawing.Bitmap $b.Width,$b.Height; '
     '$g=[System.Drawing.Graphics]::FromImage($i); '
     '$g.CopyFromScreen($b.Location,[System.Drawing.Point]::Empty,$b.Size); '
@@ -163,15 +230,60 @@ SCREEN = (
 )
 
 
+def powershell(script: str) -> list:
+    """A PowerShell command line for `script`, encoded so its quotes reach it as written."""
+    encoded = base64.b64encode(script.encode('utf-16-le')).decode('ascii')
+    return ['powershell', '-NoProfile', '-EncodedCommand', encoded]
+
+
 def probe_screen(pages: Path, output: Path) -> None:
     """Whether this Windows session can take a screenshot at all, written to screen-probe.log."""
     result = subprocess.run(
-        ['powershell', '-NoProfile', '-Command', SCREEN.format(file=pages / 'probe.png')],
+        powershell(SCREEN.format(file=pages / 'probe.png')),
         capture_output=True, text=True, timeout=60, check=False,
     )  # fmt: skip
     (output / 'screen-probe.log').write_text(
         f'exit {result.returncode}\n{result.stdout}\n{result.stderr}', encoding='utf-8'
     )
+
+
+# KDE's Breeze Dark colours, as kdeglobals holds them: on Linux Qt takes its palette from them when
+# the desktop is KDE, as a KDE user in dark mode sees the installer.
+BREEZE_DARK = """[General]
+ColorScheme=BreezeDark
+
+[Colors:Window]
+BackgroundNormal=32,35,38
+ForegroundNormal=252,252,252
+
+[Colors:View]
+BackgroundNormal=20,22,24
+ForegroundNormal=252,252,252
+
+[Colors:Button]
+BackgroundNormal=41,44,48
+ForegroundNormal=252,252,252
+
+[Colors:Selection]
+BackgroundNormal=61,174,233
+ForegroundNormal=252,252,252
+
+[Colors:Tooltip]
+BackgroundNormal=41,44,48
+ForegroundNormal=252,252,252
+"""
+
+
+def kde_dark(home: Path) -> dict:
+    """Linux: the environment of a KDE session in Breeze Dark, its kdeglobals written in `home`."""
+    for folder in (home / 'config', home / '.kde/share/config'):
+        folder.mkdir(parents=True, exist_ok=True)
+        (folder / 'kdeglobals').write_text(BREEZE_DARK, encoding='utf-8')
+    return {
+        'XDG_CURRENT_DESKTOP': 'KDE',
+        'KDE_SESSION_VERSION': '5',
+        'KDEHOME': str(home / '.kde'),
+    }
 
 
 def set_macos_theme(theme: str) -> None:
@@ -188,6 +300,15 @@ def set_macos_theme(theme: str) -> None:
 CLOSE_WINDOW = (
     'tell application "Finder" to close (every window whose target is '
     '(POSIX file (item 1 of argv) as alias))'
+)
+
+
+# The window number of Finder's front window (listed first), for screencapture -l.
+FINDER_WINDOW = (
+    "ObjC.import('CoreGraphics');"
+    ' var w = ObjC.deepUnwrap(ObjC.castRefToObject($.CGWindowListCopyWindowInfo(1, 0)))'
+    ".filter(function (x) { return x.kCGWindowOwnerName == 'Finder' && x.kCGWindowLayer == 0; });"
+    " w.length ? String(w[0].kCGWindowNumber) : ''"
 )
 
 
@@ -212,9 +333,16 @@ def capture_disk_image(image: Path, pages: Path, theme: str) -> None:
     try:
         subprocess.run(['open', str(mount)], check=True, timeout=60)
         time.sleep(4)
+        picture = pages / f'disk-image-{theme}.png'
+        # Finder's front window only, without its shadow (the whole screen if none is found).
+        window = subprocess.run(
+            ['osascript', '-l', 'JavaScript', '-e', FINDER_WINDOW],
+            capture_output=True, text=True, check=True, timeout=60,
+        ).stdout.strip()  # fmt: skip
         subprocess.run(
-            ['screencapture', '-x', str(pages / f'disk-image-{theme}.png')], check=True, timeout=60
-        )
+            ['screencapture', '-x', '-o', *([f'-l{window}'] if window else []), str(picture)],
+            check=True, timeout=60,
+        )  # fmt: skip
     finally:
         subprocess.run(
             [
@@ -240,11 +368,11 @@ def marker_installer(tools: Path, work: Path) -> Path:
     stage = marker_stage(work)
     repository = (work / 'online/repository').as_uri() + '/'
     with patch('package.repository_urls', return_value=(repository,)):
-        package_app(stage, tools, work / 'offline', '2026.11.0')
+        package_app(stage, tools, work / 'offline', '26.17')
     app = stage / APP_MARKER
     app.write_text('updated marker\n')
     (stage / ASSISTANT_RUNTIME / 'assistant.txt').write_text('updated assistant marker\n')
-    package_app(stage, tools, work / 'online', '2026.11.1', repository)
+    package_app(stage, tools, work / 'online', '26.18', repository)
     metadata = (work / 'offline/installer.json').read_text()
     return work / 'offline' / json.loads(metadata)['download']
 
@@ -258,8 +386,7 @@ def capture(tools: Path, output: Path) -> None:
     if SYSTEM == 'windows':
         probe_screen(pages, output)
     download = marker_installer(tools, work)
-    # Linux cannot be given a dark palette here, so light only; Windows and macOS set their own.
-    themes = ('light',) if SYSTEM == 'linux' else ('light', 'dark')
+    themes = ('light', 'dark')
     for theme in themes:
         home = work / f'home-{theme}'
         home.mkdir()
@@ -274,6 +401,8 @@ def capture(tools: Path, output: Path) -> None:
         if SYSTEM == 'macos':
             set_macos_theme(theme)
             capture_disk_image(download, pages, theme)
+        if SYSTEM == 'linux' and theme == 'dark':
+            env |= kde_dark(home)
         if 'DISPLAY' in os.environ:
             env['DISPLAY'] = os.environ['DISPLAY']
         installer = installer_command(
@@ -292,15 +421,13 @@ def capture(tools: Path, output: Path) -> None:
         )
         # The install page's assistant box starts ticked, so the walk installs the assistant too.
         check_installation(target, '', 'installing')
+        walk_installed(installer, target, env, output, pages, theme)
         # Updating both, turning the assistant over (so removing it here), removing everything.
         for mode in ('update', 'add', 'remove'):
             walk_maintenance(mode, target, env, output, pages, theme)
-        # Updating with the assistant unticked, and updating where it is not installed: each on an
-        # installation of its own, made from the command line.
-        for mode, components in (
-            ('updatekept', ['org.easydiffraction.app', 'org.easydiffraction.app.assistant']),
-            ('updatewithout', []),
-        ):
+        # Updating where the assistant is not installed, on an installation of its own made from
+        # the command line.
+        for mode, components in (('updatewithout', []),):
             target = home / mode
             subprocess.run(
                 [
@@ -314,10 +441,146 @@ def capture(tools: Path, output: Path) -> None:
             check_installation(target, '' if components else 'none', 'installing')
             walk_maintenance(mode, target, env, output, pages, theme)
             purge(target, env)
+        walk_locked(installer, home, env, output, pages, theme)
+        icon_check(pages, theme)
     if SYSTEM == 'macos':
         set_macos_theme('light')
     require_pages(pages, themes)
     print(f'{len(list(pages.glob("*.png")))} page captures in {pages}')
+
+
+def walk_installed(
+    installer: Path, target: Path, env: dict, output: Path, pages: Path, theme: str
+) -> None:
+    """The installer again over its installation: its warning, then Install leaving the page."""
+    state = env | {'EDI_INSTALLER_CAPTURE_STATE': 'installed'}
+    log = output / f'installer-installed-{theme}.log'
+    with screen_frames(pages, log.stem):
+        process = start_wizard([str(installer), f'TargetDir={target}'], state, log)
+        try:
+            wait_picture(pages, f'installer-installed-InstallPressed-{theme}.png', process, log)
+        finally:
+            stop_wizard(process)
+    check_installation(target, '', 'installing')
+
+
+def second_installer(installer: Path) -> Path:
+    """The installer under another file name, as a second download would be.
+
+    The Framework refuses a second copy of the same file outright (a lock named after it); another
+    one starts and finds the download cache locked, the state users meet (Installer.qs, LOCKED).
+    """
+    if SYSTEM == 'macos':
+        bundle = installer.parents[2]
+        copy = bundle.with_name(f'{bundle.stem}-second.app')
+        if not copy.exists():
+            shutil.copytree(bundle, copy, symlinks=True)
+        renamed = copy / 'Contents/MacOS' / f'{installer.name}-second'
+        if not renamed.exists():
+            shutil.copy2(copy / 'Contents/MacOS' / installer.name, renamed)
+        return renamed
+    copy = installer.with_name(f'{installer.stem}-second{installer.suffix}')
+    if not copy.exists():
+        shutil.copy2(installer, copy)
+    return copy
+
+
+# Linux only for now: the X server moves the pointer onto a button by its own call, so one picture
+# shows a hovered secondary button. Windows and macOS do not take that picture.
+HOVER = {'EDI_INSTALLER_CAPTURE_HOVER': '1'} if SYSTEM == 'linux' else {}
+
+
+def point_at_cancel(pages: Path, page: str, process: subprocess.Popen, log: Path) -> None:
+    """Once the walk notes `page`, put the pointer on the window's Cancel button.
+
+    The window is found as the screen's one non-black area (the grab trims the same way); Cancel is
+    the last button, its centre 62 px from the window's right edge and 31 from its bottom.
+    """
+    deadline = time.monotonic() + 120
+    while current_page(pages) != page:
+        if process.poll() is not None or time.monotonic() > deadline:
+            raise RuntimeError(f'The walk never showed {page}; see {log}')
+        time.sleep(0.2)
+    area = subprocess.run(
+        ['import', '-window', 'root', '-format', '%@', 'info:'],
+        capture_output=True, text=True, check=True, timeout=60,
+    ).stdout  # fmt: skip
+    width, height, left, top = map(int, re.match(r'(\d+)x(\d+)\+(\d+)\+(\d+)', area).groups())
+    x11 = ctypes.CDLL('libX11.so.6')
+    x11.XOpenDisplay.restype = ctypes.c_void_p
+    x11.XOpenDisplay.argtypes = [ctypes.c_char_p]
+    x11.XDefaultRootWindow.restype = ctypes.c_ulong
+    x11.XDefaultRootWindow.argtypes = [ctypes.c_void_p]
+    x11.XWarpPointer.argtypes = [ctypes.c_void_p, ctypes.c_ulong, ctypes.c_ulong, ctypes.c_int]
+    x11.XWarpPointer.argtypes += [
+        ctypes.c_int,
+        ctypes.c_uint,
+        ctypes.c_uint,
+        ctypes.c_int,
+        ctypes.c_int,
+    ]
+    x11.XFlush.argtypes = x11.XCloseDisplay.argtypes = [ctypes.c_void_p]
+    display = x11.XOpenDisplay(None)
+    if not display:
+        raise RuntimeError('No X display to move the pointer on')
+    try:
+        root = x11.XDefaultRootWindow(display)
+        x11.XWarpPointer(display, 0, root, 0, 0, 0, 0, left + width - 62, top + height - 31)
+        x11.XFlush(display)
+    finally:
+        x11.XCloseDisplay(display)
+
+
+def walk_locked(
+    installer: Path, home: Path, env: dict, output: Path, pages: Path, theme: str
+) -> None:
+    """One installer asks whether to quit while a second starts, which finds the first's lock."""
+    first_log = output / f'installer-quit-{theme}.log'
+    second_log = output / f'installer-locked-{theme}.log'
+    with screen_frames(pages, first_log.stem):
+        first = start_wizard(
+            [str(installer), f'TargetDir={home / "quit"}'],
+            env | {'EDI_INSTALLER_CAPTURE_STATE': 'quit'} | HOVER,
+            first_log,
+        )
+        try:
+            if HOVER:
+                point_at_cancel(pages, f'installer-quit-CancelHover-{theme}', first, first_log)
+            wait_picture(pages, f'installer-quit-Quit-{theme}.png', first, first_log)
+            second = start_wizard(
+                [str(second_installer(installer)), f'TargetDir={home / "locked"}'],
+                env | {'EDI_INSTALLER_CAPTURE_STATE': 'locked'},
+                second_log,
+            )
+            try:
+                wait_picture(
+                    pages, f'installer-locked-Introduction-{theme}.png', second, second_log
+                )
+            finally:
+                stop_wizard(second)
+        finally:
+            stop_wizard(first)
+
+
+# The icon check (Installer.qs, InstallerChrome.qss): a wizard button's icon (Back), an icon in a
+# page's message (the warning over an installation) and one in a pop-up, each a picture of its own.
+ICON_CHECK = {
+    'button': 'installer-installed-TargetDirectory',
+    'message': 'installer-installed-TargetDirectory',
+    'popup': 'installer-quit-Quit',
+}
+
+
+def icon_check(pages: Path, theme: str) -> None:
+    for name, source in ICON_CHECK.items():
+        shutil.copy2(
+            pages / f'{source}-{theme}.png', pages / f'installer-iconcheck-{name}-{theme}.png'
+        )
+
+
+def extra_pictures(theme: str) -> set:
+    """The pictures made from the walks' own: the icon check."""
+    return {f'installer-iconcheck-{name}-{theme}.png' for name in ICON_CHECK}
 
 
 MAINTENANCE_TOOL = Path(
@@ -331,7 +594,6 @@ LEFT = {
     'update': ('updated marker', 'updated assistant marker'),
     'add': ('updated marker', None),
     'remove': (None, None),
-    'updatekept': ('updated marker', 'optional assistant marker'),
     'updatewithout': ('updated marker', None),
 }
 
@@ -386,6 +648,8 @@ def purge(target: Path, env: dict) -> None:
 
 # Every page each walk shows, in order. The installer passes its welcome and summary pages by
 # itself and takes no picture of them; every other page has one.
+# Updating goes straight to its summary; changing components asks about the assistant first.
+UPDATING = ['Introduction', 'ReadyForInstallation', 'PerformInstallation', 'Finished']
 CHANGING = [
     'Introduction',
     'AssistantForm',
@@ -401,7 +665,10 @@ WALKS = {
         'PerformInstallation',
         'Finished',
     ],
-    'maintenance-update': CHANGING,
+    # Over the installation: its warning, then the page staying when Install is pressed (the walk
+    # stops there).
+    'installer-installed': ['Introduction', 'TargetDirectory', 'InstallPressed'],
+    'maintenance-update': UPDATING,
     'maintenance-add': CHANGING,
     'maintenance-remove': [
         'Introduction',
@@ -409,10 +676,24 @@ WALKS = {
         'PerformInstallation',
         'Finished',
     ],
-    'maintenance-updatekept': CHANGING,
-    'maintenance-updatewithout': CHANGING,
+    'maintenance-updatewithout': UPDATING,
+    # Cancel asks whether to quit (a pop-up) and the walk stops there, holding its lock while a
+    # second installer starts and stays on its first page saying so.
+    'installer-quit': [
+        'Introduction',
+        'TargetDirectory',
+        *(['CancelHover'] if HOVER else []),
+        'Quit',
+    ],
+    'installer-locked': ['Introduction'],
 }
-UNPICTURED = {'installer-Introduction', 'installer-ReadyForInstallation'}
+UNPICTURED = {
+    'installer-Introduction',
+    'installer-ReadyForInstallation',
+    'installer-installed-Introduction',
+    'installer-quit-Introduction',
+    'installer-quit-TargetDirectory',
+}
 
 
 def expected_pages(themes: tuple) -> list:
@@ -436,6 +717,7 @@ def require_pages(pages: Path, themes: tuple) -> None:
     pictured = {f'{page}.png' for page in expected if page.rsplit('-', 1)[0] not in UNPICTURED}
     if SYSTEM == 'macos':
         pictured |= {f'disk-image-{theme}.png' for theme in themes}
+    pictured |= {name for theme in themes for name in extra_pictures(theme)}
     found = {path.name for path in pages.glob('*.png')} - {'probe.png'}
     missing, extra = sorted(pictured - found), sorted(found - pictured)
     if missing or extra:

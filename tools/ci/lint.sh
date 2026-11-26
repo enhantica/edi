@@ -5,7 +5,7 @@
 set -u
 style=(check format-check entity-path-check)
 policy=(weakref-policy tutorial-exclusions tutorial-code notebook-outputs wheel-packages report-pattern-panes
-        generated-regions category-census-check)
+        generated-regions category-census-check label-registry-check)
 case "${1:-all}" in
     style) tasks=("${style[@]}") ;;
     policy) tasks=("${policy[@]}") ;;

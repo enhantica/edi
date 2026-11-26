@@ -15,7 +15,7 @@ import zipfile
 from collections.abc import Callable
 from pathlib import Path, PurePosixPath
 
-from plan import markdown_notes, validate_history, version_key
+from plan import installer_stem, markdown_notes, validate_history, version_key
 
 PLATFORMS = {'Linux': 'linux-x86_64', 'macOS': 'macos-arm64', 'Windows': 'windows-x86_64'}
 ROOT = Path(__file__).resolve().parents[2]
@@ -31,10 +31,8 @@ INSTALLER_PLATFORMS = {
 
 def installer_name(version: str, platform: str, kind: str) -> str:
     """The file name of a platform's online or offline installer download."""
-    offline = '-Offline' if kind == 'offline' else ''
     return (
-        f'EasyDiffraction-Installer{offline}-{version}-{INSTALLER_PLATFORMS[platform]}'
-        f'{INSTALLER_SUFFIXES[platform]}'
+        installer_stem(version, INSTALLER_PLATFORMS[platform], kind) + INSTALLER_SUFFIXES[platform]
     )
 
 

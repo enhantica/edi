@@ -2,6 +2,7 @@
 #include <cmath>
 #include <functional>
 #include <QDir>
+#include <QDirIterator>
 #include <QFile>
 #include <QFileInfo>
 #include <QGuiApplication>
@@ -20,6 +21,7 @@
 #include "engine_setup.hpp"
 #include "session.hpp"
 #include "edi/duration_text.hpp"
+#include "edi/edits.hpp"
 #include "project_view_model.hpp"
 #include "structure_view_model.hpp"
 
@@ -1256,6 +1258,46 @@ private slots:
         QVERIFY2(session->save(), qPrintable(session->lastError()));
         QVERIFY(QFileInfo(run).isFile());
         QVERIFY2(session->save(), qPrintable(session->lastError()));
+    }
+    // A target read from a file may hold what the editor refuses (the fit's reserved prefix, a comma); Duplicate still
+    // gives the copy a target the editor accepts.
+    void duplicateGivesALoadedRuleAnAcceptedTarget() {
+        for (const QByteArray& loaded : {QByteArrayLiteral("fit_result.user_reading"), QByteArrayLiteral("user,reading")}) {
+            QQmlApplicationEngine engine;
+            edi_app::configure_engine(engine);
+            auto* session = engine.singletonInstance<edi_app::Session*>("edi.app", "Session");
+            QVERIFY(session);
+            QTemporaryDir root;
+            QVERIFY(root.isValid());
+            const QDir source(QStringLiteral(EDI_SOURCE_DIR "/docs/user/cli/pd-neut-cwl_cosio-d20_scan-3f/project"));
+            QDirIterator files(source.path(), QDir::Files, QDirIterator::Subdirectories);
+            while (files.hasNext()) {
+                const QString path = files.next();
+                const QString target = QDir(root.path()).filePath(source.relativeFilePath(path));
+                QVERIFY(QDir().mkpath(QFileInfo(target).absolutePath()));
+                QFile input(path);
+                QVERIFY(input.open(QIODevice::ReadOnly));
+                QByteArray text = input.readAll();
+                if (path.endsWith("analysis/analysis.edi"))
+                    text.replace("temperature diffrn.ambient_temperature ", "temperature " + loaded + " ");
+                QFile output(target);
+                QVERIFY(output.open(QIODevice::WriteOnly));
+                QCOMPARE(output.write(text), text.size());
+            }
+            QVERIFY2(session->openProject(QUrl::fromLocalFile(root.path())), qPrintable(session->lastError()));
+            auto* rules = session->project()->analysis()->sequentialExtract();
+            QTRY_COMPARE_WITH_TIMEOUT(rules->count(), 1, 10000);
+            QCOMPARE(rules->text(0, "target"), QString::fromUtf8(loaded));
+            rules->duplicate(0);
+            QTRY_COMPARE_WITH_TIMEOUT(rules->count(), 2, 10000);
+            const std::string copied = rules->text(1, "target").toStdString();
+            QVERIFY2(!copied.empty() && copied != loaded.toStdString(), copied.c_str());
+            try {
+                edi::check_extract_target(session->project()->project(), nullptr, copied);
+            } catch (const std::invalid_argument& error) {
+                QFAIL(error.what());
+            }
+        }
     }
 };
 int main(int argc, char** argv) {

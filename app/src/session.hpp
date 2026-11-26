@@ -14,6 +14,7 @@
 #include <QStringList>
 #include <QTimer>
 #include <QUrl>
+#include <QVariantMap>
 #include <QtQml/qqmlregistration.h>
 #include <functional>
 #include <memory>
@@ -357,6 +358,10 @@ class Session : public QObject {
     Q_INVOKABLE QString categoryTitle(const QString& id) const;
     // A category's Font Awesome icon name from crysta's dictionary; empty for an id it does not hold.
     Q_INVOKABLE QString categoryIcon(const QString& id) const;
+    // A label's forms from the label registry (app/data/labels.tsv): {long, short, icon}. An item's, a variant's, an
+    // option's and a category's long form is the dictionary's, as label(), optionLabel() and categoryTitle() give it;
+    // any other key's is the registry's. Empty for a key neither holds.
+    Q_INVOKABLE QVariantMap labelForms(const QString& key, const QString& variant = QString()) const;
     // A value of item `uid` as a save writes it, for an input field or an editable cell (edi ADR-0051).
     Q_INVOKABLE QString written(const QString& uid, double value) const;
     Q_INVOKABLE QString display(const QString& uid, double value, const QString& variant = QString()) const;

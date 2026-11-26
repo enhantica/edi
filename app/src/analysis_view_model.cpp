@@ -10,6 +10,7 @@
 #include <QMetaObject>
 
 #include <algorithm>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -42,8 +43,20 @@ void JointWeightListModel::sync() {
 
 // ---- SequentialExtractListModel -----------------------------------------------------------------
 
-SequentialExtractListModel::SequentialExtractListModel(const edi::Project& project, QObject* parent)
-    : RowTableModel({"id", "target", "pattern", "required"}, parent), project_(project) {
+namespace {
+template <typename Row>
+bool holds_id(const edi::ItemVec<Row>& rows, const std::string& id) {
+    for (const auto& row : rows) {
+        if (row->id.value() == id) {
+            return true;
+        }
+    }
+    return false;
+}
+}  // namespace
+
+SequentialExtractListModel::SequentialExtractListModel(edi::Project& project, ProjectEditor& editor, QObject* parent)
+    : RowTableModel({"id", "target", "pattern", "required"}, parent), project_(project), editor_(editor) {
     sync();
 }
 
@@ -59,19 +72,95 @@ void SequentialExtractListModel::sync() {
     setTableRows(rows);
 }
 
-// ---- AliasListModel -----------------------------------------------------------------------------
+edi::SequentialExtractRule* SequentialExtractListModel::ruleAt(int row) const {
+    return const_cast<edi::SequentialExtractRule*>(static_cast<const edi::SequentialExtractRule*>(keyAt(row)));
+}
 
-namespace {
-template <typename Row>
-bool holds_id(const edi::ItemVec<Row>& rows, const std::string& id) {
-    for (const auto& row : rows) {
-        if (row->id.value() == id) {
-            return true;
-        }
+std::string SequentialExtractListModel::unusedName(const std::string& stem) const {
+    return unused_name(stem, [this](const std::string& name) {
+        const auto& rules = project_.sequential_fit.extract;
+        return holds_id(rules, name) ||
+               std::any_of(rules.begin(), rules.end(), [&name](const auto& rule) { return rule->target.value() == name; });
+    });
+}
+
+bool SequentialExtractListModel::setRole(int row, const QString& role, const QVariant& value) {
+    return role == QLatin1String("required") ? setRequired(row, value.toBool()) : setText(row, role, value.toString());
+}
+
+bool SequentialExtractListModel::setText(int row, const QString& role, const QString& value) {
+    edi::SequentialExtractRule* rule = ruleAt(row);
+    if (rule == nullptr) {
+        return false;
+    }
+    const std::string text = value.toStdString();
+    if (role == QLatin1String("id")) {
+        return editor_.apply_extract_rules(edi::Edit::rename_extract_rule(*rule, text)).isEmpty();
+    }
+    if (role == QLatin1String("target")) {
+        return editor_.apply_extract_rules(edi::Edit::extract_rule_target(project_, *rule, text)).isEmpty();
+    }
+    if (role == QLatin1String("pattern")) {
+        return editor_.apply_extract_rules(edi::Edit::extract_rule_pattern(*rule, text)).isEmpty();
     }
     return false;
 }
-}  // namespace
+
+bool SequentialExtractListModel::setRequired(int row, bool required) {
+    edi::SequentialExtractRule* rule = ruleAt(row);
+    return rule != nullptr && editor_.apply_extract_rules(edi::Edit::assign(rule->required, required)).isEmpty();
+}
+
+void SequentialExtractListModel::append() {
+    // A starting rule for the user to edit: the sample temperature, the value most scans follow, while no rule reads
+    // it. Not required, so a file without a match is still read and fitted.
+    edi::SequentialExtractRule rule;
+    rule.id = unusedName("rule_");
+    const auto& rules = project_.sequential_fit.extract;
+    const std::string temperature = "diffrn.ambient_temperature";
+    const bool read = std::any_of(rules.begin(), rules.end(),
+                                  [&temperature](const auto& held) { return held->target.value() == temperature; });
+    rule.target = read ? rule.id.value() : temperature;
+    rule.pattern = "^TEMP\\s+([0-9.]+)";
+    rule.required = false;
+    editor_.apply_extract_rules(edi::Edit::append_extract_rule(project_, rule));
+}
+
+void SequentialExtractListModel::duplicate(int row) {
+    const edi::SequentialExtractRule* source = ruleAt(row);
+    if (source == nullptr) {
+        return;
+    }
+    // Two rules cannot write one results column: the copy's target is the source's with a number, kept to the two parts
+    // a target may have, whatever the rule's id is.
+    edi::SequentialExtractRule copy = *source;
+    copy.id = unusedName(source->id.value() + "_");
+    std::string base = source->target.value();
+    if (const auto last = base.rfind('.'); last != std::string::npos) {
+        const auto before = base.rfind('.', last - 1);
+        if (before != std::string::npos) base = base.substr(before + 1);
+    }
+    // A target loaded from a file may hold what the editor refuses (a reserved fit_result. prefix, a comma, a quote, a
+    // space); the copy drops it, and falls back to a plain name when what is left still cannot be a target.
+    std::erase_if(base, [](char c) { return c == ',' || c == '"' || c == ' ' || c == '\t'; });
+    if (base.starts_with("fit_result.")) base = base.substr(std::string("fit_result.").size());
+    copy.target = unusedName((base.empty() ? std::string("value") : base) + "_");
+    try {
+        edi::check_extract_target(project_, nullptr, copy.target.value());
+    } catch (const std::invalid_argument&) {
+        copy.target = unusedName("value_");
+    }
+    editor_.apply_extract_rules(edi::Edit::append_extract_rule(project_, copy));
+}
+
+void SequentialExtractListModel::remove(int row) {
+    if (keyAt(row) == nullptr) {
+        return;
+    }
+    editor_.apply_extract_rules(edi::Edit::erase_extract_rule(project_, static_cast<std::size_t>(row)));
+}
+
+// ---- AliasListModel -----------------------------------------------------------------------------
 
 AliasListModel::AliasListModel(edi::Project& project, ProjectEditor& editor, QObject* parent)
     : RowTableModel({"id", "parameter"}, parent), project_(project), editor_(editor) {
@@ -319,7 +408,7 @@ AnalysisViewModel::AnalysisViewModel(edi::Project& project, ProjectEditor& edito
       minimizer_type_options_(new OptionListModel(this)),
       joint_weights_(new JointWeightListModel(project, this)),
       sequential_fit_(new SequentialFitViewModel(project, this)),
-      sequential_extract_(new SequentialExtractListModel(project, this)),
+      sequential_extract_(new SequentialExtractListModel(project, editor, this)),
       fit_start_(new FitStartListModel(project, this)),
       aliases_(new AliasListModel(project, editor, this)),
       constraints_(new ConstraintListModel(project, editor, this)),

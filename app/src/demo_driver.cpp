@@ -34,6 +34,7 @@
 #include <QTextBlock>
 #include <QTextDocument>
 #include <QVector3D>
+#include <QtGraphs/QAreaSeries>
 #include <QtGraphs/QXYSeries>
 #include <QtQuick/private/qquickrectangle_p.h>
 #include <QtQuick/private/qquickrectangle_p_p.h>
@@ -82,6 +83,23 @@ constexpr int kIdlePollMs = 5;
 constexpr int kUnsettledCaptureMs = 150;
 // A timed change whose frame has not been swapped within this counts as none.
 constexpr int kFrameWaitMs = 5000;
+
+// The layout contract's numbers (ADR-0103), stated in the 14 px app font; a run in another font logs them unjudged.
+constexpr double kContractFontPx = 14.0;
+// W3 and W4: the sidebar goes to the bottom below 913 px, and at 913 px it is at the side.
+constexpr int kSwitchWidthPx = 913;
+// W4: Auto stops at all columns plus at most one column gap, 681 px.
+constexpr double kAutoStopPx = 681.0;
+// W5: the parameter table's name budget, the widest bundled example's name with its cell margins. Measured on the final
+// build (the e58-names scenario logs each example's widest drawn name); this value is a placeholder until then.
+constexpr double kNameBudgetPx = 171.0;
+// T8: a number shows at most six significant digits, and a data table goes down to two (×10ⁿ), never fewer.
+constexpr int kNumberDigitsMost = 6;
+constexpr int kNumberDigitsLeast = 2;
+// C1: a legend's datablock name over 20 characters may elide, in its middle; anything shorter shows whole.
+constexpr qsizetype kLegendNameChars = 20;
+// D1: a dialog is at most its content's width plus 2 em.
+constexpr double kDialogSpareEm = 2.0;
 
 // Open a bundled example from the Project page: scroll its row into view, click it.
 QStringList open_example(const QString& id) {
@@ -424,8 +442,12 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     steps_.push_back({"sc-04-tb2ti2o7-analysis-dark", {"theme:dark"}});
     steps_.push_back({"sc-05-tb2ti2o7-experiment-dark", {experiment, basic}});
     steps_.push_back({"sc-05b-tb2ti2o7-reflections-dark", {extras, "expand:group.refln"}});
-    steps_.push_back({"sc-05c-tb2ti2o7-f-dark", {basic, "singleCrystal.toolbar.quantity", "choose:F"}});
-    steps_.push_back({"sc-05d-tb2ti2o7-narrow-dark", {"singleCrystal.toolbar.quantity", "choose:F²", "resize:960x768"}});
+    // At this width the quantity is under More, opened and closed again by its button.
+    const auto quantity = [](const QString& choice) {
+        return QStringList{"singleCrystal.toolbar.more", "singleCrystal.toolbar.quantity.overflow", "choose:" + choice, "singleCrystal.toolbar.more"};
+    };
+    steps_.push_back({"sc-05c-tb2ti2o7-f-dark", QStringList{basic} + quantity("F")});
+    steps_.push_back({"sc-05d-tb2ti2o7-narrow-dark", quantity("F²") + QStringList{"resize:960x768"}});
     steps_.push_back({"sc-05e-tb2ti2o7-narrow-light", {"theme:light"}});
     steps_.push_back({"sc-05f-tb2ti2o7-isotropic-extinction", QStringList{"resize:1280x768"} + start
                                                                   + QStringList{"appBar.tab.project", "open-cli-project:sc-neut-cwl_tb2ti2o7-heidi_isotropic-extinction"}
@@ -1161,12 +1183,25 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
                                     QStringLiteral("analysis")})
             steps_.push_back({"e58-case48-page-" + page, {"resize:1496x900", "appBar.tab." + page, "wait-settled", "check-layout"}});
     }
+    // `e58-dialogs`: the fit's results dialog, at the owner's window of about 1000 px and at 1496 px, the layout check
+    // over it (D1: at most its content's width plus 2 em, every row and value whole).
+    if (only == QLatin1String("e58-dialogs")) {
+        steps_.push_back({"e58-dialogs-0", {"preference:loggingLevel=Info", "resize:1496x900", "open-cli-project:pd-neut-cwl_cosio-d20_2k", "wait-settled", "appBar.tab.analysis",
+                                            "wait-settled"}});
+        steps_.back().capture = false;
+        for (const QString& size : {QStringLiteral("1496x900"), QStringLiteral("1000x620")})
+            steps_.push_back({"e58-dialogs-fit-results-" + size, {"resize:" + size, "wait-settled", "statusBar.fit.button", "wait-fit", "wait-settled", "check-layout", "choose:OK", "wait-settled"}});
+    }
     // `e58-legend`: the 2k example fitted, every legend entry of the Analysis pattern switched off: nothing is drawn.
     if (only == QLatin1String("e58-legend")) {
         steps_.push_back({"e58-legend-1-shown", {"resize:1496x900", "open-cli-project:pd-neut-cwl_cosio-d20_2k", "wait-settled", "appBar.tab.analysis",
                                                  "statusBar.fit.button", "wait-fit", "choose:OK", "preference:patternLegendShown=true",
                                                  "mainArea.tab.pattern", "wait-settled"}});
         steps_.push_back({"e58-legend-2-all-off", {"legend-hide-all:chart", "wait-settled", "check-hidden-series:chart"}});
+        // The other kinds of series: the structure curves, and a time-of-flight pattern with its own Bragg rows.
+        steps_.push_back({"e58-legend-3-curves", {"preference:structureCurves=true", "legend-hide-all:chart", "wait-settled", "check-hidden-series:chart"}});
+        steps_.push_back({"e58-legend-4-tof", {"open-cli-project:pd-neut-tof_ncaf-wish", "wait-settled", "appBar.tab.analysis", "preference:patternLegendShown=true",
+                                               "mainArea.tab.pattern", "wait-settled", "legend-hide-all:chart", "wait-settled", "check-hidden-series:chart"}});
     }
     // `e58-report-pdf`: a fitted scan's report saved, PDF included, right after the Report page first shows.
     if (only == QLatin1String("e58-report-pdf")) {
@@ -1333,15 +1368,18 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
             }
     }
     // `e58-bottomchart`: the bottom layout's sidebar from page to page, before and after a fit, with one Bragg row and
-    // with two, at five windows; its height moves with the window and the project alone (W7).
+    // with two, and before one for a scan with three, at five windows; its height moves with the window and the project
+    // alone (W7).
     if (only == QLatin1String("e58-bottomchart")) {
         steps_.push_back({"e58-bottomchart-0", {"preference:loggingLevel=Info", "resize:860x1000"}});
         steps_.back().capture = false;
-        for (const QString& project : {QStringLiteral("pd-neut-cwl_lbco-hrpt"), QStringLiteral("pd-neut-cwl_cosio-d20_2k")}) {
+        const QString scanned = QStringLiteral("pd-xray-cwl_latp_scan-4f");
+        for (const QString& project : {QStringLiteral("pd-neut-cwl_lbco-hrpt"), QStringLiteral("pd-neut-cwl_cosio-d20_2k"), scanned}) {
             const QString tag = project.section(QLatin1Char('-'), 2, 2);
             steps_.push_back({"e58-bottomchart-" + tag + "-open", {"resize:860x1000", "open-cli-project:" + project, "wait-settled"}});
             for (const QString& when : {QStringLiteral("before"), QStringLiteral("after")}) {
                 if (when == QLatin1String("after")) {
+                    if (project == scanned) break;
                     steps_.push_back({"e58-bottomchart-" + tag + "-fit", {"resize:860x1000", "appBar.tab.analysis", "wait-settled", "statusBar.fit.button", "wait-fit", "choose:OK", "wait-settled"}});
                     steps_.back().capture = false;
                 }
@@ -1380,7 +1418,8 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
             if (id.contains(QLatin1String("scan")) || id.contains(QLatin1String("synthetic"))) continue;
             QStringList open = open_example(id);
             open.insert(2, QStringLiteral("expand:group.examples"));
-            steps_.push_back({"e58-names-" + id, open + QStringList{"wait-settled", "appBar.tab.analysis", "wait-settled"}});
+            // The layout check at the Auto stop: W5's spare and name budget for this example.
+            steps_.push_back({"e58-names-" + id, open + QStringList{"wait-settled", "appBar.tab.analysis", "wait-settled", "check-layout"}});
             steps_.back().capture = false;
         }
     }
@@ -1393,7 +1432,10 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
         steps_.back().capture = false;
         steps_.push_back({"e58-contract-typed", {"parameters.clearFilters", "wait-settled"}});
         steps_.back().capture = false;
-        for (int width = 900; width <= 2000; width += 40) {
+        // Every 40 px, and the switch width and the pixel below it (W3).
+        QList<int> seriesWidths{900, kSwitchWidthPx - 1, kSwitchWidthPx};
+        for (int width = 940; width <= 2000; width += 40) seriesWidths << width;
+        for (const int width : seriesWidths) {
             steps_.push_back({QStringLiteral("e58-contract-series-%1").arg(width), {QStringLiteral("resize:%1x900").arg(width), "wait-settled", "series-point"}});
             steps_.back().capture = false;
         }
@@ -1431,6 +1473,12 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
         steps_.push_back({"e58-columns-case80", {"resize:1380x900", "wait-settled", "check-layout", "resize:1496x900", "wait-settled", "note-columns:atomSiteAdps.list"}});
         steps_.push_back({"e58-columns-type", {"atomSiteAdp.type.0", "choose:Uani", "wait-settled", "check-columns:atomSiteAdps.list"}});
         steps_.push_back({"e58-columns-value", {"atomSiteAdp.iso.2", "wait-settled", "type:0.123456", "key:Return", "wait-settled", "check-columns:atomSiteAdps.list"}});
+        // T6 also across a page switch and back, a fit, and a load of the same project.
+        steps_.push_back({"e58-columns-page", {"appBar.tab.analysis", "wait-settled", "appBar.tab.structure", "wait-settled", "check-columns:atomSiteAdps.list"}});
+        steps_.push_back({"e58-columns-fit", {"appBar.tab.analysis", "wait-settled", "statusBar.fit.button", "wait-fit", "choose:OK", "wait-settled",
+                                              "appBar.tab.structure", "wait-settled", "expand:group.atom_site_aniso", "wait-settled", "check-columns:atomSiteAdps.list"}});
+        steps_.push_back({"e58-columns-reload", {"open-cli-project:pd-neut-cwl_cosio-d20_2k", "wait-settled", "appBar.tab.structure", "wait-settled",
+                                                 "expand:group.atom_site_aniso", "wait-settled", "check-columns:atomSiteAdps.list"}});
     }
     // `e58-assistant`: the assistant panel open over the sidebar, at rest, at the contract's windows, in Auto and Compact.
     if (only == QLatin1String("e58-assistant")) {
@@ -1441,20 +1489,21 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
                 steps_.push_back({QStringLiteral("e58-assistant-%1-%2-%3").arg(++n, 2, 10, QLatin1Char('0')).arg(mode, size),
                                   {"preference:sideBarWidthMode=" + mode, "resize:" + size, "wait-settled", "check-assistant-panel"}});
     }
-    // `e58-names`: the Experiments table with an experiment without data beside one with data, for datablock names of 11,
-    // 20 and 24 characters, in Auto and Compact, wide and at the narrowest, the layout check (T10: every name whole, or
-    // cut in the middle by an ellipsis, never elsewhere) at each.
-    if (only == QLatin1String("e58-names")) {
-        steps_.push_back({"e58-names-00-two", {"preference:loggingLevel=Info", "resize:1496x900", "open-cli-project:pd-neut-cwl_lbco-hrpt", "appBar.tab.experiment",
+    // `e58-experimentnames`: the Experiments table with an experiment without data beside one with data, for datablock
+    // names of 11, 20 and 24 characters, in Auto and Compact, wide and at the narrowest, the layout check (T10: every name
+    // whole, or cut in the middle by an ellipsis, never elsewhere) at each. The mode is in the frame's first word, as W1
+    // holds within one mode.
+    if (only == QLatin1String("e58-experimentnames")) {
+        steps_.push_back({"e58-experimentnames-00-two", {"preference:loggingLevel=Info", "resize:1496x900", "open-cli-project:pd-neut-cwl_lbco-hrpt", "appBar.tab.experiment",
                                                "wait-settled", "expand:group.experiments", "experiments.create", "wait-settled"}});
         int n = 0;
         for (const QString& name : {QStringLiteral("experiment1"), QStringLiteral("experiment_high_temp"), QStringLiteral("experiment_high_temp_new")}) {
-            steps_.push_back({QStringLiteral("e58-names-%1-name-%2").arg(++n, 2, 10, QLatin1Char('0')).arg(name.size()),
+            steps_.push_back({QStringLiteral("e58-experimentnames-%1-name-%2").arg(++n, 2, 10, QLatin1Char('0')).arg(name.size()),
                               {"reveal:experiments.name.1", "wait-settled", "experiments.name.1", "wait-settled", "key:Ctrl+A", "type:" + name, "key:Return", "wait-settled",
                                "appBar.tab.structure", "wait-settled", "appBar.tab.experiment", "wait-settled", "reveal:experiments.name.1", "wait-settled"}});
             for (const QString& mode : {QStringLiteral("auto"), QStringLiteral("compact")})
                 for (const QString& size : {QStringLiteral("1496x900"), QStringLiteral("1280x900"), QStringLiteral("1024x700")})
-                    steps_.push_back({QStringLiteral("e58-names-%1-%2-%3-%4").arg(++n, 2, 10, QLatin1Char('0')).arg(name.size()).arg(mode, size),
+                    steps_.push_back({QStringLiteral("e58-experimentnames%1-%2-%3-%4").arg(mode).arg(++n, 2, 10, QLatin1Char('0')).arg(name.size()).arg(size),
                                       {"preference:sideBarWidthMode=" + mode, "resize:" + size, "wait-settled", "check-layout"}});
         }
     }
@@ -1705,6 +1754,37 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
         steps_.push_back({"e58-zoom-7-map-mid", {"drag:scanView.map.pointer" + box, "capture-at:120"}});
         steps_.push_back({"e58-zoom-8-map-end", {"wait-scan:map"}});
     }
+    // `e58-states`: the contract's states the sweep does not reach (ADR-0103 "The states"): the 2k example after a fit
+    // and then with a 24-character structure name, and the time-of-flight joint fit after its fit at the bottom windows
+    // (the sweep fits it at the side only), each in every width mode and window, the layout check on four pages. The
+    // frames are named as the sweep's, so the report reads their state from the name.
+    if (only == QLatin1String("e58-states")) {
+        const QStringList modes{"auto", "full", "bounds", "values", "compact"};
+        const QStringList side{"1280x800", "1496x900", "1920x1080"}, bottom{"900x1000", "700x900"};
+        const QStringList pages{"structure", "experiment", "analysis", "report"};
+        int n = 0;
+        const auto pass = [&](const QString& state, const QStringList& sizes) {
+            for (const QString& mode : modes)
+                for (const QString& size : sizes)
+                    for (const QString& page : pages) {
+                        steps_.push_back({QStringLiteral("e58-states-%1-%2-%3-%4-%5").arg(++n, 4, 10, QLatin1Char('0')).arg(state, mode, size, page),
+                                          {"preference:sideBarWidthMode=" + mode, "resize:" + size, "appBar.tab." + page, "wait-settled", "expand-all", "wait-settled", "check-layout"}});
+                        steps_.back().capture = false;
+                    }
+        };
+        const QStringList fit{"appBar.tab.analysis", "wait-settled", "statusBar.fit.button", "wait-fit", "choose:OK", "wait-settled"};
+        steps_.push_back({"e58-states-0000-open", QStringList{"preference:loggingLevel=Info", "preference:autoCollapse=false", "preference:patternLegendShown=true",
+                                                              "preference:sideBarWidthMode=auto", "resize:1496x900", "open-cli-project:pd-neut-cwl_cosio-d20_2k", "wait-settled"} + fit});
+        steps_.back().capture = false;
+        pass("cosio-d20_2k+fitted", side + bottom);
+        steps_.push_back({"e58-states-0000-renamed", {"preference:sideBarWidthMode=auto", "resize:1496x900", "appBar.tab.structure", "wait-settled", "expand:group.structures",
+                                                      "structures.name.0", "key:Ctrl+A", "type:cosio_structure_renamed1", "key:Return", "wait-settled"}});
+        steps_.back().capture = false;
+        pass("cosio-d20_2k+name24", side + bottom);
+        steps_.push_back({"e58-states-0000-tof", QStringList{"preference:sideBarWidthMode=auto", "resize:1496x900", "open-cli-project:pd-neut-tof_ncaf-wish", "wait-settled"} + fit});
+        steps_.back().capture = false;
+        pass("ncaf-wish+fitted", bottom);
+    }
     // `e58-sweep`: every page, main-view tab and sidebar tab (its groups open) of each CLI project EDI_SWEEP_PROJECTS
     // names, at each window size EDI_SWEEP_SIZES names, every frame checked by check-layout (the owner, 2026-11-21: a
     // sweep inspected before the owner sees it). A check, not a test gate and not the documentation capture.
@@ -1744,7 +1824,9 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
                               {"preference:sideBarManualWidth=600", "preference:sideBarWidthMode=" + mode, "wait-settled"}});
             steps_.back().capture = false;
             for (const QString& size : sizes) {
-                const QString key = project.section(QLatin1Char('_'), 1) + "-" + mode + "-" + size;
+                // The project's whole name after its kind, so the 2k example and the scan of the same sample are two
+                // states of the report's matrix.
+                const QString key = project.section(QLatin1Char('_'), 1, -1) + "-" + mode + "-" + size;
                 steps_.push_back({QStringLiteral("e58-sweep-%1-%2-resize").arg(++n, 4, 10, QLatin1Char('0')).arg(key),
                                   {"resize:" + size, "wait-settled"}});
                 steps_.back().capture = false;
@@ -1804,7 +1886,7 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
                 for (const QString& mode : modes) {
                     for (const QString& size : sizes) {
                         if (size.section(QLatin1Char('x'), 0, 0).toInt() < 1020) continue;
-                        const QString key = project.section(QLatin1Char('_'), 1) + "-" + mode + "-" + size;
+                        const QString key = project.section(QLatin1Char('_'), 1, -1) + "-" + mode + "-" + size;
                         steps_.push_back({QStringLiteral("e58-sweep-%1-%2-analysis-fitted").arg(++n, 4, 10, QLatin1Char('0')).arg(key),
                                           {"preference:sideBarWidthMode=" + mode, "appBar.tab.analysis", "resize:" + size, "wait-settled",
                                            "check-layout"}});
@@ -2065,7 +2147,9 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
         shot("reflections", start + open_example("pd-neut-cwl_lbco-hrpt") +
                                 QStringList{experiment, extras, "expand:group.refln"});
         shot("fit-results", start + open_example("pd-neut-cwl_lbco-hrpt") +
-                                QStringList{analysis, basic, "reveal:fitting.start", "fitting.start", "wait-fit"});
+                                QStringList{analysis, basic, "statusBar.fit.button", "wait-fit"});
+        steps_.push_back({"tableshots-fit-results-closed", {"choose:OK"}});
+        steps_.back().capture = false;
         // A scan's window keeps changing while its datasets load, so its step is captured unsettled.
         shot("sequential-extract", start + open_cli_project("pd-neut-cwl_cosio-d20_scan") +
                                        QStringList{analysis, extras, "expand:group.sequential_fit_extract", "capture-now"});
@@ -3149,6 +3233,7 @@ bool DemoDriver::trace_complete(int) { return false; }
 
 namespace {
 QString item_path(const QQuickItem* item);
+bool awaiting_owner(const QQuickItem* item);
 // Every item under `root` by the visual tree: a Loader's or a SwipeView's items need not be QObject children of it.
 QList<QQuickItem*> visual_items(QQuickItem* root) {
     QList<QQuickItem*> out;
@@ -3744,6 +3829,10 @@ void DemoDriver::next_action() {
                     const Seen now{table->height(), widths, cells.join(QLatin1Char(' '))};
                     if (!first->contains(table)) {
                         first->insert(table, now);
+                        // First draw: a table is drawn from its first frame with its columns measured, so nothing moves
+                        // after it shows (T7, and precedence 2).
+                        if ((table->property("unfitted").toBool() || table->property("measureRunning").toBool()) && !awaiting_owner(table) && moved->size() < 12)
+                            *moved << QStringLiteral("T7:first-draw\t%1 drawn before its columns were measured").arg(table->objectName());
                         continue;
                     }
                     const Seen& was = first->value(table);
@@ -3785,7 +3874,10 @@ void DemoDriver::next_action() {
                         line << frame << "\tR2:checked\t" << action << "\tlongest frame " << *longest << " ms\n";
                         if (*longest > 33) line << frame << "\tR2:frame\t" << action << '\t' << *longest << " ms between frames, at most 33\n";
                     }
-                    for (const QString& what : *moved) line << frame << '\t' << what.section(QLatin1Char('\t'), 0, 0) << ":moved\t" << action << '\t' << what.section(QLatin1Char('\t'), 1) << '\n';
+                    for (const QString& what : *moved) {
+                        const QString kind = what.section(QLatin1Char('\t'), 0, 0);
+                        line << frame << '\t' << kind << (kind.contains(QLatin1Char(':')) ? "" : ":moved") << '\t' << action << '\t' << what.section(QLatin1Char('\t'), 1) << '\n';
+                    }
                     check_table_room(line, frame, action);
                 }
                 next_action();
@@ -4674,10 +4766,27 @@ bool DemoDriver::perform(const QString& action) {
             QTextStream out(&file);
             out << steps_[current_].image << "\tC2:checked\tchart\tevery series with its legend entry off\n";
             int drawn = 0;
-            for (QXYSeries* series : chart->findChildren<QXYSeries*>()) {
+            const auto finitePoints = [](const QXYSeries* series) {
                 int finite = 0;
-                for (const QPointF& point : series->points())
+                for (const QPointF& point : series != nullptr ? series->points() : QList<QPointF>{})
                     finite += std::isfinite(point.x()) && std::isfinite(point.y()) ? 1 : 0;
+                return finite;
+            };
+            // The filled kinds too (the measured and residual bands, a single crystal's bars, the structure curves): an
+            // area draws its fill and border from its two edge lines, which are judged with it.
+            QSet<const QXYSeries*> edges;
+            for (QAreaSeries* area : chart->findChildren<QAreaSeries*>()) {
+                edges << area->upperSeries() << area->lowerSeries();
+                const int finite = finitePoints(area->upperSeries());
+                const bool painted = area->color().alpha() > 0 || (area->borderColor().alpha() > 0 && area->borderWidth() > 0);
+                if (area->isVisible() && painted && finite > 1) {
+                    out << steps_[current_].image << "\tC2:legend-hidden-drawn\t" << area->objectName() << " area " << area->name() << '\t' << finite << " points\n";
+                    ++drawn;
+                }
+            }
+            for (QXYSeries* series : chart->findChildren<QXYSeries*>()) {
+                if (edges.contains(series)) continue;
+                const int finite = finitePoints(series);
                 if (series->isVisible() && finite > 1) {
                     out << steps_[current_].image << "\tC2:legend-hidden-drawn\t" << series->objectName() << ' ' << series->name() << '\t' << finite << " points\n";
                     ++drawn;
@@ -5106,11 +5215,44 @@ bool DemoDriver::perform(const QString& action) {
                 if (on) shown << QString::number(column);
             }
         QFile summary(qEnvironmentVariable("EDI_SWEEP_SUMMARY"));
-        if (summary.open(QIODevice::Append | QIODevice::Text) && sizes != nullptr)
-            QTextStream(&summary) << steps_[current_].image << "\tW:series\t" << window_.width() << '\t'
-                                  << (sizes->property("sideBarBelow").toBool() ? "below " : "side ") << sizes->property("sideBarWidth").toDouble()
-                                  << " columns " << shown.join(QLatin1Char(',')) << " spare " << (parameters != nullptr ? parameters->property("spareWidth").toDouble() : -1)
-                                  << " gap " << (sizes->property("fontPixelSize").toDouble()) << '\n';
+        if (!summary.open(QIODevice::Append | QIODevice::Text) || sizes == nullptr) return true;
+        QTextStream line(&summary);
+        const QString frame = steps_[current_].image;
+        const bool below = sizes->property("sideBarBelow").toBool();
+        const double width = sizes->property("sideBarWidth").toDouble();
+        const double em = sizes->property("fontPixelSize").toDouble();
+        const int window = window_.width();
+        line << frame << "\tW:series\t" << window << '\t' << (below ? "below " : "side ") << width << " columns " << shown.join(QLatin1Char(','))
+             << " spare " << (parameters != nullptr ? parameters->property("spareWidth").toDouble() : -1) << " gap " << em << '\n';
+        if (std::abs(em - kContractFontPx) > 0.01) return true;
+        const auto has = [&](int column) { return shown.contains(QString::number(column)); };
+        // W3 at the switch width itself, against the ADR's 913 px: at the side there, at the bottom one pixel below.
+        if (window == kSwitchWidthPx || window == kSwitchWidthPx - 1) {
+            line << frame << "\tW3:checked\tswitch\twindow " << window << ", sidebar " << (below ? "below " : "side ") << width << " px, columns " << shown.join(QLatin1Char(',')) << '\n';
+            if (window == kSwitchWidthPx - 1 && !below) line << frame << "\tW3:switch\tswitch\tat the side at " << window << " px, the bottom below " << kSwitchWidthPx << '\n';
+            if (window == kSwitchWidthPx && (below || width > window / 2.0 + 0.5 || !(has(1) && has(3) && has(5))))
+                line << frame << "\tW3:switch\tswitch\t" << (below ? "below" : "side") << ' ' << width << " px at " << window << ", at most half, columns " << shown.join(QLatin1Char(',')) << '\n';
+        }
+        if (!below) {
+            // W4: Start, Min, Max and Change join in that order, each as soon as it fits, and with all of them Auto is at
+            // most 681 px. The width never shrinks as the window grows (the series runs from narrow to wide).
+            QString order;
+            bool missing = false;
+            for (const int column : {2, 7, 8, 6}) {
+                if (!has(column)) missing = true;
+                else if (missing) order = QStringLiteral("column %1 shown before an earlier one").arg(column);
+            }
+            const bool all = has(2) && has(6) && has(7) && has(8);
+            static int lastWindow = 0;
+            static double lastWidth = 0;
+            line << frame << "\tW4:checked\tseries\twindow " << window << ", sidebar " << width << " px, " << (all ? QStringLiteral("all columns") : "columns " + shown.join(QLatin1Char(','))) << '\n';
+            if (!order.isEmpty()) line << frame << "\tW4:order\tseries\t" << order << ", columns " << shown.join(QLatin1Char(',')) << '\n';
+            if (all && width > kAutoStopPx + 0.5) line << frame << "\tW4:stop\tseries\t" << width << " px with all columns, at most " << kAutoStopPx << '\n';
+            if (window > lastWindow && lastWindow > 0 && width < lastWidth - 0.5)
+                line << frame << "\tW4:shrink\tseries\t" << lastWidth << " px at " << lastWindow << " -> " << width << " px at " << window << '\n';
+            lastWindow = window;
+            lastWidth = width;
+        }
         return true;
     }
     // `check-popup:<editor>`: the parameter popup a click just opened shows its value editor, with the keyboard focus
@@ -5179,10 +5321,11 @@ bool DemoDriver::perform(const QString& action) {
         qWarning("%s %s", qPrintable(action), qPrintable(widths));
         if (action.startsWith(QLatin1String("note-columns:"))) {
             column_widths_[name] = widths;
-        } else if (column_widths_.value(name) != widths) {
-            QFile summary(qEnvironmentVariable("EDI_SWEEP_SUMMARY"));
-            if (summary.open(QIODevice::Append | QIODevice::Text))
-                QTextStream(&summary) << steps_[current_].image << "\tT6:columns-moved\t" << name << '\t' << column_widths_.value(name) << " -> " << widths << '\n';
+        } else if (QFile summary(qEnvironmentVariable("EDI_SWEEP_SUMMARY")); summary.open(QIODevice::Append | QIODevice::Text)) {
+            QTextStream line(&summary);
+            line << steps_[current_].image << "\tT6:checked\t" << name << '\t' << widths << '\n';
+            if (column_widths_.value(name) != widths)
+                line << steps_[current_].image << "\tT6:columns-moved\t" << name << '\t' << column_widths_.value(name) << " -> " << widths << '\n';
         }
         return true;
     }
@@ -5947,6 +6090,84 @@ int kept_characters(QQuickItem* item) {
 
 QString without_tags(QString text) { return text.remove(QRegularExpression(QStringLiteral("<[^>]*>"))).trimmed(); }
 
+bool icon_font(const QQuickItem* item) {
+    return item->property("font").value<QFont>().family().contains(QLatin1String("Awesome"), Qt::CaseInsensitive);
+}
+
+// The words a control draws inside `root`, left to right, icons left out; `cut` is set when one is elided or runs past
+// the root's right edge.
+QString drawn_words(QQuickItem* root, bool* cut) {
+    if (root == nullptr) return QString();
+    QList<QQuickItem*> pieces;
+    for (QQuickItem* item : visual_items(root))
+        if (item->inherits("QQuickText") && item->isVisible() && item->opacity() > 0.01 && !icon_font(item) &&
+            !item->property("text").toString().trimmed().isEmpty())
+            pieces << item;
+    std::sort(pieces.begin(), pieces.end(), [root](QQuickItem* a, QQuickItem* b) { return a->mapToItem(root, QPointF()).x() < b->mapToItem(root, QPointF()).x(); });
+    QStringList words;
+    for (QQuickItem* piece : pieces) {
+        words << without_tags(piece->property("text").toString());
+        const double right = piece->mapToItem(root, QPointF(piece->property("contentWidth").toDouble(), 0)).x();
+        if (piece->property("truncated").toBool() || right > root->width() + 0.5) *cut = true;
+    }
+    return words.join(QLatin1Char(' '));
+}
+
+// The right end of the widest name a parameter table's shown rows hold, uncut, from its cell's left edge: the name
+// column is the second, after the row number when that shows.
+double widest_drawn_name(QQuickItem* list) {
+    const QVariantList widths = list->property("columnWidths").toList();
+    auto* content = list->property("contentItem").value<QQuickItem*>();
+    if (widths.size() < 2 || content == nullptr) return 0;
+    const qsizetype at = widths[0].toDouble() > 0.5 ? 1 : 0;
+    double widest = 0;
+    for (QQuickItem* row : content->childItems()) {
+        if (!row->isVisible() || row->height() <= 1 || row == list->property("headerItem").value<QQuickItem*>()) continue;
+        QQuickItem* cells = nullptr;
+        for (QQuickItem* item : visual_items(row))
+            if (item->inherits("QQuickRow") && item->isVisible()) {
+                cells = item;
+                break;
+            }
+        if (cells == nullptr) continue;
+        QList<QQuickItem*> shown;
+        for (QQuickItem* cell : cells->childItems())
+            if (cell->isVisible() && cell->width() > 0.5) shown << cell;
+        std::sort(shown.begin(), shown.end(), [](QQuickItem* a, QQuickItem* b) { return a->x() < b->x(); });
+        if (shown.size() <= at) continue;
+        for (QQuickItem* piece : QList<QQuickItem*>{shown[at]} + visual_items(shown[at]))
+            if (piece->inherits("QQuickText") && piece->isVisible() && !piece->property("text").toString().trimmed().isEmpty())
+                widest = std::max(widest, piece->mapToItem(shown[at], QPointF(piece->implicitWidth(), 0)).x());
+    }
+    return widest;
+}
+
+// Two layouts wait for the owner's decision on columns that do not fit: a scan's row with six extract columns in
+// Compact (the Experiments table) and the expanded atom sites in Compact and Fit values. The table checks added with
+// the declared numbers leave them out until that decision, so they report only what the owner has ruled on.
+bool awaiting_owner(const QQuickItem* item) {
+    const QQuickItem* table = item;
+    while (table != nullptr && !(table->inherits("QQuickListView") && table->objectName().endsWith(QLatin1String(".list")))) table = table->parentItem();
+    if (table == nullptr) return false;
+    QQmlEngine* engine = qmlEngine(table);
+    QObject* preferences = engine != nullptr ? engine->singletonInstance<QObject*>("edi.app", "Preferences") : nullptr;
+    const QString mode = preferences != nullptr ? preferences->property("sideBarWidthMode").toString() : QString();
+    if (table->objectName() == QLatin1String("experiments.list")) return mode == QLatin1String("compact");
+    if (table->objectName() == QLatin1String("generated.expanded_atom_site.list")) return mode == QLatin1String("compact") || mode == QLatin1String("values");
+    return false;
+}
+
+// A number's significant digits as shown: its mantissa's digits from the first that is not zero, an s.u. in brackets
+// and a power of ten left out. -1 for a text that does not start with a number.
+int significant_digits(const QString& shown) {
+    static const QRegularExpression mantissa(QStringLiteral(R"(^\s*[-+\x{2212}]?(\d*\.?\d+))"));
+    const QRegularExpressionMatch match = mantissa.match(without_tags(shown));
+    if (!match.hasMatch()) return -1;
+    QString digits = match.captured(1).remove(QLatin1Char('.'));
+    while (digits.startsWith(QLatin1Char('0'))) digits.remove(0, 1);
+    return static_cast<int>(digits.size());
+}
+
 // The texts the user gave the open project: datablock, row and alias names, expressions, file names, its title; and the
 // folders of the recent projects.
 QSet<QString> user_texts(QQmlEngine* engine, const ProjectViewModel* project) {
@@ -6004,14 +6225,16 @@ QString contract_rule(const QString& kind, const QString& path, const QString& t
     if (kind == QLatin1String("header-cut")) return QStringLiteral("T9");
     if (kind == QLatin1String("number-cut")) return QStringLiteral("T8");
     if (kind == QLatin1String("label-cut")) return header ? QStringLiteral("T9") : QStringLiteral("N1");
-    if (kind == QLatin1String("value-short") || kind == QLatin1String("column-cut")) return QStringLiteral("T8");
+    if (kind == QLatin1String("value-short") || kind == QLatin1String("column-cut") || kind == QLatin1String("digits-most") ||
+        kind == QLatin1String("digits-least"))
+        return QStringLiteral("T8");
     if (kind == QLatin1String("combo-gap")) return QStringLiteral("F4");
     if (kind == QLatin1String("overlap")) return QStringLiteral("N3");
     if (kind == QLatin1String("under-header")) return QStringLiteral("N2");
     if (kind == QLatin1String("scrollbar-fits")) return QStringLiteral("T12");
-    if (kind == QLatin1String("tooltip-tall")) return QStringLiteral("D1");
+    if (kind == QLatin1String("tooltip-tall") || kind == QLatin1String("dialog-wide")) return QStringLiteral("D1");
     if (kind == QLatin1String("icon-colour") || kind == QLatin1String("icon-size") || kind == QLatin1String("width-icon")) return QStringLiteral("I1");
-    if (kind == QLatin1String("legend-cut")) return QStringLiteral("C1");
+    if (kind == QLatin1String("legend-cut") || kind == QLatin1String("legend-name")) return QStringLiteral("C1");
     if (kind == QLatin1String("resid-title")) return QStringLiteral("C3");
     if (kind == QLatin1String("below-border") || kind == QLatin1String("side-border") || kind == QLatin1String("below-filters")) return QStringLiteral("W7");
     if (kind == QLatin1String("table-rule")) {
@@ -6171,7 +6394,17 @@ void DemoDriver::check_layout(const QString& frame) {
                 const QFontMetricsF metrics(item->property("font").value<QFont>());
                 double room = item->width() - item->property("leftPadding").toDouble() - item->property("rightPadding").toDouble();
                 // A label under its icon has the button's whole width.
-                if (item->property("display").toInt() != 3 && !item->property("fontIcon").toString().isEmpty()) room -= em * 1.5;
+                if (item->property("display").toInt() != 3 && !item->property("fontIcon").toString().isEmpty()) {
+                    // The icon drawn and the gap after it, 1.5 em where the icon is not a text of its own.
+                    double iconRoom = em * 1.5;
+                    if (label != nullptr)
+                        for (const QQuickItem* inside : visual_items(label))
+                            if (inside->isVisible() && inside->property("text").toString() == item->property("fontIcon").toString() &&
+                                inside->property("font").value<QFont>().family().contains(QLatin1String("Awesome"), Qt::CaseInsensitive))
+                                iconRoom = label->property("glyphPadding").isValid() ? label->property("glyphPadding").toDouble()
+                                                                                     : inside->implicitWidth() + item->property("spacing").toDouble();
+                    room -= iconRoom;
+                }
                 if (metrics.horizontalAdvance(shown) > room + 0.5)
                     note("combo-gap", item, QStringLiteral("'%1' %2 px in %3 px").arg(shown).arg(qRound(metrics.horizontalAdvance(shown))).arg(qRound(room)));
             }
@@ -6194,15 +6427,43 @@ void DemoDriver::check_layout(const QString& frame) {
                     break;
                 }
         }
+        // T8 in a table's number cell: at most six significant digits, and when digits drop, never fewer than two. The
+        // full form is the cell's own spelling before it is fitted (a parameter's value text, a number as written).
+        if (item->property("shownValue").isValid() && (item->property("valueText").isValid() || item->property("numeric").toBool()) &&
+            inner.intersects(box) && !awaiting_owner(item)) {
+            const QQuickItem* table = item->parentItem();
+            while (table != nullptr && !(table->inherits("QQuickListView") && table->objectName().endsWith(QLatin1String(".list")))) table = table->parentItem();
+            const QString shown = item->property("shownValue").toString();
+            const QString full = item->property(item->property("valueText").isValid() ? "valueText" : "written").toString();
+            const int digits = significant_digits(shown), fullDigits = significant_digits(full);
+            if (table != nullptr && digits > kNumberDigitsMost)
+                note("digits-most", item, QStringLiteral("'%1' %2 significant digits, at most %3").arg(shown).arg(digits).arg(kNumberDigitsMost));
+            if (table != nullptr && digits >= 0 && shown != full && digits < kNumberDigitsLeast && fullDigits >= kNumberDigitsLeast)
+                note("digits-least", item, QStringLiteral("'%1' for '%2', %3 significant digits, at least %4").arg(shown, full).arg(digits).arg(kNumberDigitsLeast));
+        }
         // A chart legend reads whole (the owner, 2026-11-23): a series' own label is never cut, and a datablock's name
         // only when it is longer than the legend's budget.
         if (item->objectName() == QLatin1String("chart.legend.entry") && item->property("fullWidth").toDouble() > item->width() + 0.5) {
             const QString named = item->property("named").toString();
-            QQuickItem* legendItem = item->parentItem() != nullptr ? item->parentItem()->parentItem() : nullptr;
-            const int budget = legendItem != nullptr && legendItem->property("nameBudget").isValid() ? legendItem->property("nameBudget").toInt() : 20;
-            if (named.isEmpty() || named.size() <= budget)
+            if (named.isEmpty() || named.size() <= kLegendNameChars)
                 note("legend-cut", item, QStringLiteral("%1 cut to %2 of %3 px").arg(item->property("label").toString()).arg(qRound(item->width()))
                                              .arg(qRound(item->property("fullWidth").toDouble())));
+            // A long name is the only piece cut, in its middle, and the whole label shows on hover.
+            if (!named.isEmpty() && named.size() > kLegendNameChars) {
+                QStringList wrong;
+                for (QQuickItem* piece : visual_items(item)) {
+                    if (!piece->inherits("QQuickText") || !piece->isVisible() || icon_font(piece) || !piece->property("truncated").toBool()) continue;
+                    const QString drawnText = without_tags(piece->property("text").toString());
+                    if (drawnText != named) wrong << QStringLiteral("'%1' cut").arg(drawnText);
+                    else if (piece->property("elide").toInt() != int(Qt::ElideMiddle)) wrong << QStringLiteral("the name not cut in its middle");
+                }
+                bool hover = false;
+                for (QObject* child : item->findChildren<QObject*>())
+                    hover = hover || (QString::fromLatin1(child->metaObject()->className()).contains(QLatin1String("ToolTip")) &&
+                                      child->property("text").toString().contains(named));
+                if (!hover) wrong << QStringLiteral("no tooltip with the whole name");
+                if (!wrong.isEmpty()) note("legend-name", item, QStringLiteral("%1: %2").arg(item->property("label").toString(), wrong.join(QLatin1String(", "))));
+            }
         }
         // The residual pane's title: the standard size, "meas − calc" or "resid", whole (the owner, 2026-11-23).
         if (item->objectName() == QLatin1String("chart.title.residual") && item->isVisible() && inner.intersects(box)) {
@@ -6253,6 +6514,20 @@ void DemoDriver::check_layout(const QString& frame) {
                 const double share = (item->parentItem() != nullptr ? item->parentItem()->height() : box.height()) / window_.height();
                 if (share > 0.6) note("below-filters", item, QStringLiteral("sidebar %1 % of the window's height").arg(qRound(share * 100)));
             }
+        }
+        // D1: a dialog is at most its content's width plus 2 em; its rows and values are read as every text is (N1, T8).
+        if (item->inherits("QQuickPopupItem") && item->isVisible() && item->parent() != nullptr &&
+            QString::fromLatin1(item->parent()->metaObject()->className()).contains(QLatin1String("Dialog"))) {
+            const QObject* dialog = item->parent();
+            QQmlEngine* dialogEngine = qmlEngine(item);
+            QObject* dialogSizes = dialogEngine != nullptr ? dialogEngine->singletonInstance<QObject*>("EasyApplication.Gui.Style", "Sizes") : nullptr;
+            const double em = dialogSizes != nullptr ? dialogSizes->property("fontPixelSize").toDouble() : 14.0;
+            const double content = std::max({dialog->property("implicitContentWidth").toDouble(), dialog->property("implicitHeaderWidth").toDouble(),
+                                             dialog->property("implicitFooterWidth").toDouble()});
+            const double room = dialog->property("availableWidth").toDouble();
+            out << frame << "\tD1:checked\t" << item_path(item) << "\tdialog " << room << " px for content " << content << " px\n";
+            if (content > 0 && room > content + kDialogSpareEm * em + 0.5)
+                note("dialog-wide", item, QStringLiteral("%1 px for content %2 px, at most %3 em more").arg(room).arg(content).arg(kDialogSpareEm));
         }
         // D1: a tooltip has at most 12 lines and stays inside the window (the owner, 2026-11-23: one held a whole log).
         if (item->inherits("QQuickPopupItem") && item->isVisible() &&
@@ -6374,6 +6649,7 @@ void DemoDriver::check_layout(const QString& frame) {
                 const QVariantList widths = item->property("columnWidths").toList();
                 if (!kinds.isEmpty() && kinds.size() == widths.size()) {
                     QHash<QString, double> first;
+                    int compared = 0;
                     QStringList unequal;
                     bool index = false;
                     const int filler = item->property("fillerIndex").isValid() ? item->property("fillerIndex").toInt() : -1;
@@ -6387,12 +6663,30 @@ void DemoDriver::check_layout(const QString& frame) {
                             continue;
                         if (widths[c].toDouble() < 0.5 || (item->property("kindFloors").isValid() && !item->property("kindFloors").toBool()))
                             continue;
+                        ++compared;
                         if (!first.contains(kind))
                             first.insert(kind, widths[c].toDouble());
                         else if (std::abs(first.value(kind) - widths[c].toDouble()) > 0.5)
                             unequal << QStringLiteral("%1 column %2 is %3, the first %4").arg(kind).arg(c).arg(widths[c].toDouble()).arg(first.value(kind));
                     }
-                    out << frame << "\tT5:checked\t" << item_path(item) << '\t' << first.size() << " kinds\n";
+                    // The filler too: the part of it before the spare is its kind's reserve, as wide as the other columns of
+                    // that kind (T5); only the rest is spare (T4).
+                    const QVariantList reserves = item->property("fittedWidths").toList();
+                    if (filler >= 0 && filler < kinds.size() && filler < reserves.size() && first.contains(kinds[filler].toString()) && !awaiting_owner(item)) {
+                        const QString kind = kinds[filler].toString();
+                        out << frame << "\tT5:checked\t" << item_path(item) << "\tfiller column " << filler << " reserves " << reserves[filler].toDouble() << " px, its kind "
+                            << first.value(kind) << " px\n";
+                        if (std::abs(reserves[filler].toDouble() - first.value(kind)) > 0.5)
+                            out << frame << "\tT5:filler\t" << item_path(item) << '\t' << kind << " filler column " << filler << " reserves " << reserves[filler].toDouble()
+                                << " px, the other " << kind << " columns " << first.value(kind) << " px\n";
+                    }
+                    // A table with no sized number column has nothing for T5 to compare: say so rather than pass it.
+                    if (first.isEmpty())
+                        out << frame << "\tT5:inapplicable\t" << item_path(item) << '\t'
+                            << (item->property("kindFloors").isValid() && !item->property("kindFloors").toBool() ? "columns not at their kind's width" : "no sized column of a number kind")
+                            << '\n';
+                    else
+                        out << frame << "\tT5:checked\t" << item_path(item) << '\t' << first.size() << " kinds, " << compared << " columns\n";
                     // T12: a table whose rows are taller than it shows its scroll bar.
                     if (item->property("contentHeight").toDouble() > item->height() + 0.5 && item->property("scrollBarPolicy").toInt() != int(Qt::ScrollBarAlwaysOn))
                         out << frame << "\tT12:no-bar\t" << item_path(item) << "\tcontent " << item->property("contentHeight").toDouble() << " px in " << item->height() << " px, no scroll bar\n";
@@ -6406,7 +6700,7 @@ void DemoDriver::check_layout(const QString& frame) {
                         for (QQuickItem* cell : header->findChildren<QQuickItem*>())
                             if (cell->isVisible() && cell->property("text").toString().section(QLatin1Char(' '), 0, 0).toLower() == titleWord)
                                 out << frame << "\tN10:repeats\t" << item_path(item) << "\theader '" << cell->property("text").toString() << "' under '" << title << "'\n";
-                    for (const char* ruleId : {"T1", "T2", "T3", "T4", "T9"}) out << frame << '\t' << ruleId << ":checked\t" << item_path(item) << "\ttable rules\n";
+                    // T1 to T4 and T9 write their receipts where they measure (below), never here.
                     for (const QString& line : unequal) out << frame << "\tT5:unequal\t" << item_path(item) << '\t' << line << '\n';
                     if (kinds.contains(QStringLiteral("index"))) {
                         out << frame << "\tT11:checked\t" << item_path(item) << "\trow number " << (index ? "shown" : "missing") << '\n';
@@ -6451,12 +6745,16 @@ void DemoDriver::check_layout(const QString& frame) {
             if (item->property("scrollsSideways").toBool()) rule(QStringLiteral("scrolls sideways"), -1);
             // T9: a title starts with a capital letter, but a symbol written as science writes it and a structure's own
             // name, read from the project.
+            int titlesRead = 0;
             for (QQuickItem* head : heads2) {
                 static const QSet<QString> symbols{
                     QStringLiteral("b"), QStringLiteral("d"), QStringLiteral("h"), QStringLiteral("k"), QStringLiteral("l"), QStringLiteral("x"),
                     QStringLiteral("y"), QStringLiteral("z"), QStringLiteral("h k l"), QStringLiteral("s.u."), QStringLiteral("θ"), QStringLiteral("φ"),
-                    QStringLiteral("ϕ"), QStringLiteral("λ"), QStringLiteral("χ²"), QStringLiteral("sin θ/λ"), QStringLiteral("cRp"), QStringLiteral("cRwp")};
+                    QStringLiteral("ϕ"), QStringLiteral("λ"), QStringLiteral("χ²"), QStringLiteral("sin θ/λ"), QStringLiteral("cRp"), QStringLiteral("cRwp"),
+                    // March-Dollase: the coefficient and the random fraction.
+                    QStringLiteral("r"), QStringLiteral("f rand")};
                 const QString title = without_tags(head->property("text").toString());
+                if (!title.isEmpty()) ++titlesRead;
                 if (title.isEmpty() || !title.at(0).isLower()) continue;
                 // Its unit aside: "b (fm)".
                 if (symbols.contains(QString(title).remove(QRegularExpression(QStringLiteral(R"(\s*\([^()]*\)$)"))))) continue;
@@ -6466,8 +6764,10 @@ void DemoDriver::check_layout(const QString& frame) {
                 }
                 out << frame << "\tT9:capital\t" << item_path(item) << "\theader '" << title << "' starts with a small letter\n";
             }
+            if (titlesRead > 0) out << frame << "\tT9:checked\t" << item_path(item) << '\t' << titlesRead << " header titles\n";
             // T4: the spare (a column wider than its kind's reserve, fittedWidths) is one block, in the column just before
             // the trailing controls, or the last one where there are none. The parameter table places its own (W5).
+            qsizetype spareColumn = -1;  // the last content column, which may hold the spare
             if (!(item->property("kindFloors").isValid() && !item->property("kindFloors").toBool())) {
                 const QVariantList ruled = item->property("columnWidths").toList(), reserved = item->property("fittedWidths").toList();
                 const QVariantList columnsNow = item->property("columns").toList();
@@ -6485,12 +6785,15 @@ void DemoDriver::check_layout(const QString& frame) {
                     };
                     qsizetype last = wide.size() - 1;
                     while (last > 0 && control(last)) --last;
+                    // A mark right before the controls stands with them (the recent projects' status, the owner, 2026-10-27).
+                    while (last > 0 && last < wide.size() - 1 && kinds.size() == ruled.size() && kinds[wide[last]].toString() == QLatin1String("mark")) --last;
                     const qsizetype lastData = wide.isEmpty() ? -1 : wide[last];
+                    spareColumn = lastData;
                     QStringList spare;
                     for (qsizetype i = 0; i < ruled.size(); ++i)
                         if (columnsNow.value(i).toDouble() == -1 && ruled[i].toDouble() > 0.5 && reserved[i].toDouble() > 0.5 && ruled[i].toDouble() - reserved[i].toDouble() > 1.0 && i != lastData)
                             spare << QStringLiteral("column %1 %2 px over its reserve").arg(i).arg(qRound(ruled[i].toDouble() - reserved[i].toDouble()));
-                    out << frame << "\tT4:checked\t" << item_path(item) << "\tspare in column " << lastData << " only"
+                    out << frame << "\tT4:checked\t" << item_path(item) << '\t' << ruled.size() << " columns, spare in column " << lastData << " only"
                         << (kinds.size() == ruled.size() || mapped ? "" : " (no row to read)") << '\n';
                     for (const QString& line : spare) out << frame << "\tT4:spare\t" << item_path(item) << '\t' << line << '\n';
                 }
@@ -6499,7 +6802,12 @@ void DemoDriver::check_layout(const QString& frame) {
             // included, each at its own content's edge: what the header and the rows draw, and for a number its kind's
             // typical value (T5), in every column of that kind alike. Only an identified empty spare block (T4) is left out
             // of a gap, and a unit's gap is T2's.
-            if (!cells2.isEmpty()) {
+            // A table whose rows are still to be measured has not given its cells their margins: there is nothing to measure.
+            const bool unmeasured = item->property("unfitted").toBool() || item->property("refitting").toBool() || item->property("measureRunning").toBool();
+            // Deferred, never a pass: the report shows the state as not measured until a settled frame measures it.
+            if (unmeasured) out << frame << "\tT1:deferred\t" << item_path(item) << "\tnot measured yet, no gaps read\n";
+            int pairs = 0;  // neighbouring columns whose gap was measured
+            if (!cells2.isEmpty() && !unmeasured) {
                 QQmlEngine* gapEngine = qmlEngine(item);
                 QObject* gapSizes = gapEngine != nullptr ? gapEngine->singletonInstance<QObject*>("EasyApplication.Gui.Style", "Sizes") : nullptr;
                 const double oneEm = gapSizes != nullptr ? gapSizes->property("fontPixelSize").toDouble() : 14.0;
@@ -6603,6 +6911,14 @@ void DemoDriver::check_layout(const QString& frame) {
                         QFont bold = font;
                         bold.setBold(true);
                         const double widest = QFontMetricsF(bold).horizontalAdvance(QString::number(std::max(1, item->property("count").toInt())));
+                        // T11: the column shows its widest row number whole inside its margins, not only some width.
+                        if (column.kind == QLatin1String("index") && !awaiting_owner(item)) {
+                            out << frame << "\tT11:checked\t" << item_path(item) << "\trow " << item->property("count").toInt() << ' ' << widest << " px in "
+                                << innerRight - innerLeft << " px\n";
+                            if (widest > innerRight - innerLeft + 0.5)
+                                out << frame << "\tT11:narrow\t" << item_path(item) << "\trow number " << item->property("count").toInt() << " needs " << widest
+                                    << " px, the column holds " << innerRight - innerLeft << '\n';
+                        }
                         const int alignment = cell->property("horizontalAlignment").toInt();
                         column.left = (alignment & int(Qt::AlignRight)) != 0 ? innerRight - widest : (alignment & int(Qt::AlignHCenter)) != 0 ? (innerLeft + innerRight - widest) / 2 : innerLeft;
                         column.right = column.left + widest;
@@ -6668,6 +6984,7 @@ void DemoDriver::check_layout(const QString& frame) {
                         continue;
                     }
                     if (previous != nullptr && column.kind != QLatin1String("unit")) {
+                        ++pairs;
                         const double widest = column.left - previous->right - previous->spare - between, least = column.left - previous->farthest - previous->spare - between;
                         if (least > oneEm + 1.0 || widest < oneEm - 1.0)
                             out << frame << "\tT1:gap\t" << item_path(item) << '\t' << QStringLiteral("%1 px between columns %2 and %3 (%4, %5), 1 em is %6")
@@ -6677,6 +6994,23 @@ void DemoDriver::check_layout(const QString& frame) {
                     previous = &column;
                     between = 0;
                 }
+                if (pairs > 0) out << frame << "\tT1:checked\t" << item_path(item) << '\t' << pairs << " gaps measured\n";
+            }
+            // A settled table that measured no gap is either one with no pair to measure or one whose cells were not read:
+            // the second is unsampled, which the report never takes as a pass.
+            if (!unmeasured && pairs == 0) {
+                qsizetype shownColumns = 0;
+                for (const QVariant& width : item->property("columnWidths").toList())
+                    if (width.toDouble() > 0.5) ++shownColumns;
+                if (shownColumns == 0) shownColumns = std::max(heads2.size(), cells2.size());
+                const int rows = item->property("count").toInt();
+                if (rows == 0 || shownColumns < 2)
+                    out << frame << "\tT1:inapplicable\t" << item_path(item) << '\t' << (rows == 0 ? "no rows" : "one column") << '\n';
+                else if (cells2.size() == shownColumns)
+                    out << frame << "\tT1:inapplicable\t" << item_path(item) << "\tonly a unit or the spare beside a column\n";
+                else
+                    out << frame << "\tT1:unsampled\t" << item_path(item) << '\t' << rows << " rows, " << shownColumns << " columns, " << cells2.size()
+                        << " cells read\n";
             }
             if (!heads2.isEmpty() && !cells2.isEmpty()) {
                 if (heads2.size() != cells2.size()) {
@@ -6729,6 +7063,9 @@ void DemoDriver::check_layout(const QString& frame) {
                              .arg(qRound(last->mapRectToScene(QRectF(0, 0, last->width(), 1)).right() - box.left())).arg(qRound(edge - box.left())), int(cells2.size() - 1));
                 // Its box, which its insets draw smaller than its cell.
                 const double controlRight = last->mapRectToScene(QRectF(0, 0, last->width(), 1)).right() - last->property("rightInset").toDouble();
+                if (control)
+                    out << frame << "\tT3:checked\t" << item_path(item) << "\t1 trailing control, ends at " << qRound(controlRight - box.left()) << ", edge "
+                        << qRound(edge - box.left()) << '\n';
                 if (control && std::abs(controlRight - edge) > 1.0)
                     rule(QStringLiteral("trailing control ends at %1, table edge %2")
                              .arg(qRound(controlRight - box.left())).arg(qRound(edge - box.left())), int(cells2.size() - 1));
@@ -6773,6 +7110,7 @@ void DemoDriver::check_layout(const QString& frame) {
                     }
                 }
                 // A unit one space after its value, in the value's font (the owner, 2026-11-23).
+                int unitsRead = 0;
                 for (QQuickItem* row : content != nullptr ? content->childItems() : QList<QQuickItem*>{}) {
                     QQuickItem* cellsRow = rowOf(row);
                     if (cellsRow == nullptr || row == item->property("headerItem").value<QQuickItem*>()) continue;
@@ -6790,6 +7128,7 @@ void DemoDriver::check_layout(const QString& frame) {
                                      .arg(rowCells[c - 1]->mapRectToScene(QRectF(0, 0, 1, 1)).left(), 0, 'f', 1).arg(rowCells[c - 1]->width(), 0, 'f', 1)
                                      .arg(rowCells[c - 1]->property("contentWidth").toDouble(), 0, 'f', 1).arg(rowCells[c - 1]->property("rightPadding").toDouble(), 0, 'f', 1)
                                      .arg(unitAt.first, 0, 'f', 1), int(c));
+                        ++unitsRead;
                         // The value's size, never bold (the owner, 2026-11-23).
                         if (unitFont.pixelSize() != valueFont.pixelSize() || unitFont.bold())
                             rule(QStringLiteral("unit font %1 px%2, value %3 px%4").arg(unitFont.pixelSize()).arg(unitFont.bold() ? " bold" : "")
@@ -6797,13 +7136,16 @@ void DemoDriver::check_layout(const QString& frame) {
                         break;
                     }
                 }
+                if (unitsRead > 0) {
+                    out << frame << "\tN9:checked\t" << item_path(item) << '\t' << unitsRead << " units\n";
+                    out << frame << "\tT2:checked\t" << item_path(item) << '\t' << unitsRead << " units\n";
+                }
                 // The kind model: every column at its content width (its header or widest value), the spare only in the
                 // last data column, before the controls (the owner, 2026-11-23).
                 const QVariantList kinds = item->property("columnKinds").toList();
                 const QVariantList widths = item->property("columnWidths").toList();
                 const QVariantList fitted = item->property("fittedWidths").toList();
                 if (!kinds.isEmpty() && widths.size() == kinds.size()) {
-                    const int filler = item->property("fillerIndex").toInt();
                     for (qsizetype index = 0, shown = 0; index < widths.size(); ++index) {
                         if (widths[index].toDouble() <= 0.5) continue;
                         const qsizetype c = shown++;
@@ -6811,7 +7153,7 @@ void DemoDriver::check_layout(const QString& frame) {
                         // A unit's column is narrower than the unit by the pull that draws it one space after its value.
                         if (kind.isEmpty() || kind == QLatin1String("index") || kind == QLatin1String("control") || kind == QLatin1String("mark") ||
                             kind == QLatin1String("unit") ||
-                            index == filler || index >= fitted.size())
+                            index == spareColumn || index >= fitted.size())
                             continue;
                         // A name may hold up to one column spacing of spare (the owner, 2026-11-23).
                         const double allowance = kind == QLatin1String("name") ? 3.0 + item->property("columnSpacing").toDouble() : 3.0;
@@ -6941,6 +7283,25 @@ void DemoDriver::check_layout(const QString& frame) {
                     out << frame << "\tW5:checked\tparameters\tspare " << spare << " px, all columns " << (stopped ? "shown" : "not all shown") << '\n';
                     if (stopped && spare > gap + 0.5)
                         out << frame << "\tW5:spare\tparameters\t" << spare << " px before Free, at most " << gap << '\n';
+                    // Against the ADR's numbers: a sidebar at the Auto stop shows every column, and the name column ends at
+                    // the name budget, holding at most one column spacing more (T4 measures the name against it). The
+                    // names are read as drawn, uncut, in the rows shown.
+                    if (std::abs(gap - kContractFontPx) < 0.01) {
+                        const double nameDrawn = widest_drawn_name(parameters);
+                        const QVariantList columnWidths = parameters->property("columnWidths").toList();
+                        const double nameColumn = columnWidths.size() > 1 ? columnWidths[1].toDouble() : 0;
+                        const double margin = appSizes->property("tableCellMargin").toDouble();
+                        const double spacing = parameters->property("columnSpacing").toDouble();
+                        out << frame << "\tW5:checked\tparameters\tsidebar " << width << " px, name column " << nameColumn << " px, widest drawn name "
+                            << nameDrawn << " px, budget " << kNameBudgetPx << " px\n";
+                        if (!stopped && width >= kAutoStopPx - 0.5)
+                            out << frame << "\tW5:stop\tparameters\t" << width << " px, at the stop " << kAutoStopPx << ", not every column shown\n";
+                        if (nameDrawn > kNameBudgetPx + 0.5)
+                            out << frame << "\tW5:name\tparameters\ta name drawn to " << nameDrawn << " px, past the budget " << kNameBudgetPx << '\n';
+                        if (stopped && (nameColumn < kNameBudgetPx + margin - 0.5 || nameColumn > kNameBudgetPx + margin + spacing + 0.5))
+                            out << frame << "\tW5:name-spare\tparameters\tname column " << nameColumn << " px, the budget and its margin " << kNameBudgetPx + margin
+                                << " px plus at most " << spacing << '\n';
+                    }
                 }
                 if (mode == QLatin1String("compact")) {
                     QObject* group = parameters;
@@ -6951,6 +7312,18 @@ void DemoDriver::check_layout(const QString& frame) {
                     out << frame << "\tW6:checked\tparameters\tcolumns " << (columns ? "Name Value s.u. Free" : "other") << ", pickers need " << need << " in " << room << '\n';
                     if (!columns || need < 0 || need > room + 0.5)
                         out << frame << "\tW6:compact\tparameters\tcolumns " << (columns ? "right" : "wrong") << ", pickers need " << need << " px in " << room << '\n';
+                    // The three pickers' default texts whole, as the boxes draw them ("All categories (58)"), not as the
+                    // app computes its need. Another choice may give way to a shorter form, with its tooltip.
+                    for (const char* name : {"parameters.datablock", "parameters.category", "parameters.variability"}) {
+                        QQuickItem* picker = itemNamed(window_.contentItem(), QString::fromLatin1(name));
+                        if (picker == nullptr || !picker->isVisible() || picker->property("currentIndex").toInt() != 0) continue;
+                        bool cut = false;
+                        const QString drawn = drawn_words(picker->property("contentItem").value<QQuickItem*>(), &cut);
+                        const QString whole = without_tags(picker->property("displayText").toString());
+                        out << frame << "\tW6:checked\t" << name << "\t'" << drawn << "' for '" << whole << "'\n";
+                        if (cut || !QString(drawn).remove(QLatin1Char(' ')).contains(QString(whole).remove(QLatin1Char(' '))))
+                            out << frame << "\tW6:picker\t" << name << "\t'" << drawn << "' drawn for '" << whole << '\'' << (cut ? ", cut" : "") << '\n';
+                    }
                 }
             }
         }

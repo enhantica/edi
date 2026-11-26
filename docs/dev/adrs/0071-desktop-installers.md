@@ -312,9 +312,18 @@ under `libexec/edi/codex`, including on macOS where it sits beside the signed ap
 The installer ticks it by default (the command line installs it only when named), and it depends on EasyDiffraction. Users can select it during
 installation or add and remove it with Maintenance Tool.
 
-The choice is one checkbox, "Also install the AI assistant", right under the folder on the
-installation folder page; in Maintenance Tool's add or remove flow it is a page
-of its own whose box shows whether the assistant is installed. The Framework's component tree page
+The choice is one checkbox, "AI assistant", on the installation folder page: under the folder and
+the space line, after EasyDiffraction's and the Maintenance Tool's boxes (both ticked and fixed, the
+tool's tooltip "Updates and uninstalls EasyDiffraction"), each with its size on the right, as the
+update summary lists them; then the licence and, on Windows and Linux, the desktop shortcut boxes.
+Every page and list orders the components EasyDiffraction, Maintenance Tool, AI assistant (their
+sorting priorities 200, 150, 100). The tool's component has no payload on Linux, so its row shows
+the size of the Framework's binary the installation writes as the tool. In Maintenance Tool's Change components flow
+it is a page of its own whose box shows whether the assistant is installed; Update has no such page and goes straight
+to Ready to update, updating everything installed (owner, 2026-11-26). Ready to update lists the tool only when the update
+changes it: with checksum updates (ADR-0106) it can stay unchanged while EasyDiffraction changes, or be the only change.
+Ready to apply your changes lists what is added ticked and what is removed unticked, in one list, and its button reads
+Apply. The Framework's component tree page
 is hidden. With macOS accessibility on, a client asking the tree for its selected children crashed
 the installer (edi #150): the Qt inside Installer Framework 4.11.0, the newest release, frees table
 cells that its accessibility cache still holds, fixed upstream in qtbase after that release. One
@@ -326,16 +335,34 @@ Framework's placeholder, which crash reports and privacy settings showed.
 
 ## Download names and the macOS disk image
 
-Installer downloads are named `EasyDiffraction-Installer-<version>-<platform>` with the platform
-`macOS-arm64`, `Windows-x64` or `Linux-x64`, and `EasyDiffraction-Installer-Offline-...` for the
-offline kind: a `.dmg` on macOS, the `.exe` on Windows, and on Linux a `.zip` holding the `.run`
-beside its runtime libraries. The website still finds the older names on releases made before the
-change. The disk image's volume is `EasyDiffraction Installer` and holds `EasyDiffraction
-Installer.app` and `BRANDING-LICENSE.txt`. `dmgbuild` writes its Finder window into the image: about
-760 by 530 points, 96-point icons with labels below, no toolbar or status bar, each item at a fixed
-place, and the installer's icon as the volume icon. The image file gets the same icon on the build
-machine, but the icon lives in extended attributes that a browser download drops, so a downloaded
-image shows the standard disk image icon.
+Installer downloads are named `EasyDiffraction-<version>-<platform>` with the platform
+`macOS-arm64`, `Windows-x64` or `Linux-x64`, and `EasyDiffraction-Offline-<version>-<platform>` for the
+offline kind (ADR-0106; up to 2026.11.31 they were `EasyDiffraction-Installer-<version>-<platform>` and
+`EasyDiffraction-Installer-Offline-...`): a `.dmg` on macOS, the `.exe` on Windows, and on Linux a `.zip`
+holding the `.run` beside its runtime libraries. The website still finds the older names on releases made
+before each change. The disk image's volume is `EasyDiffraction Installer` and holds only `EasyDiffraction
+Installer.app`; the branding licence the installer's icon asks for (BSD, its notice with the binaries) is
+`Contents/Resources/BRANDING-LICENSE.txt` inside the app. `dmgbuild` writes its Finder window into the image: 400 by
+250 points of content on a white background, as the website's, reading "Double-click to install" in the app's dark
+text colour (PT Sans, `#333333`), the website's network (its two banks, at 0.42 of their size, in its light grey a
+little stronger) in the top-right and bottom-left corners with three blue charges along its lines, two crossing in
+the top-right and one in the bottom-left (`DiskImageBackground.png` and its `@2x` copy, written by
+`disk_image_background.qml` from the website's `network.svg` and joined into one TIFF, which Finder needs to show the
+sharper picture on a Retina screen), and the 96-point installer icon in the window's middle under the text. Finder
+shows the picture the same in light and dark mode: it has no dark variant of a background, shows even a transparent
+picture white (a macOS capture, 2026-11-26), and draws the icon's label black, which the window's settings can neither
+recolour nor hide; a light background is what reads in both,
+every bar off (toolbar, status, path, sidebar and tab bar), and the installer's icon as the volume icon.
+A Finder whose tab bar the user turned on shows it in this window too: the window setting cannot override
+it, so the icon sits high enough to keep its label in view under a tab bar. The volume icon is
+`.VolumeIcon.icns` with the volume's custom icon flag, both inside the image, so a downloaded image shows
+it once mounted (on the desktop, in the Finder sidebar and in the window's title); packaging mounts the
+image and refuses one without either. The image file gets the same icon on the build machine, but a file's
+own icon lives in its extended attributes (a resource fork and Finder info), which an HTTP download does
+not carry, so a downloaded image file shows the standard disk image icon until it is opened; nothing in
+the file's bytes can change that, and no other route for a `.dmg` survives a browser download. Only a
+different kind of file brings its own picture: an `.app` inside a `.zip` shows its icon once unzipped, and a
+`.pkg` shows the installer package icon. edi keeps the disk image and puts its icon on the mounted volume.
 
 ## Look and wording
 
@@ -349,7 +376,7 @@ translation, ifw_en.ts: the window is "EasyDiffraction Installer" and the mainte
 arrows or mnemonic underlines. There is no Settings button. Cancel shows on Windows and Linux only:
 Qt's macOS wizard has none and the Framework offers no way to add it; the window's close button
 cancels on every platform. The installer's icon is the same art cropped to its visible pixels and
-enlarged to a document icon's height, so it reads as large as BRANDING-LICENSE.txt beside it. The two components have independent
+enlarged to a document icon's height, so it reads as large as the files beside it in a folder. The two components have independent
 payload manifests and share the release version. Publication verifies the archives for both.
 
 At startup, the desktop app uses its existing runtime manifest and executable checks to determine
@@ -379,7 +406,7 @@ as its minimum because the bundled assistant shell declares that deployment targ
 
 
 Calendar-versioned previews build macOS and Linux together and publish only to testing.
-They allocate versions from the same monthly sequence as stable releases. A published
+They allocate versions from the same counter as stable releases (ADR-0106). A published
 preview reserves its version tag. The app and installer carry the same version and the
 installed smoke test compares them. Preview history remains separate from stable history.
 
@@ -415,9 +442,10 @@ folder or the Dock: the app logo coming out of a flat isometric cardboard box, t
 hidden behind the box front (the approved sketch G1). `tools/installer/Installer.svg` is the source, drawn
 within the usual icon margins; `Installer.icns` (macOS, 16–1024 px), `Installer.ico` (Windows, 16–256 px)
 and `Installer.png` (the Linux and Windows window icon, 256 px) were rendered from it with Chromium and
-resized with Lanczos filtering. The installer uses it as its application and window icon; the app and its
-maintenance tool keep the app icon, whose transparent canvas keeps the blue mark clear of the Dock's
-running indicator.
+resized with Lanczos filtering. The installer and its maintenance tool use it as their application icon,
+the macOS tool's bundle taking the enlarged copy the installer has and the Windows tool's executable the
+`.ico` written into it before signing (`windows_icon.py`); the installer also uses it as its window icon. The
+app keeps the app icon, whose transparent canvas keeps the blue mark clear of the Dock's running indicator.
 
 The running macOS application uses its bundle icon for the Dock.
 
@@ -429,8 +457,13 @@ mode the header shows the white wordmark, only where the pages turn dark: macOS'
 dark app theme. Windows 10 (and Windows Server 2022) keeps a light palette in dark mode, as Linux does here, so
 those show the normal wordmark (seen in the Windows dark-mode captures). The maintenance tool built on its own carries the same controller and sheet. The installers workflow's
 `capture_pages` dispatch builds a small marker installer and saves every page of the installer and the maintenance
-tool, on Windows in light and dark with its own app theme set, on Linux in light under a virtual display, as a run
-artifact.
+tool, on Windows in light and dark with its own app theme set, on Linux in light and dark (a KDE session's Breeze Dark
+colours, which Qt reads from kdeglobals) under a virtual display, as a run
+artifact. It also saves the states a walk does not pass through: the first page over an existing installation and
+the same page after Install (it stays: the Framework's refusal is answered silently, as the page already says why),
+the question Cancel asks, and a second installer's first page while another holds the lock (it asks to close the other installer and open this one
+again, and offers only Quit: the Framework keeps Next disabled and a script cannot enable it).
+Each picture shows only the window (and a pop-up over it).
 
 
 ## Offline installation with maintenance updates
@@ -449,14 +482,14 @@ This exercises the installed default configuration while keeping public servers 
 
 ## One download file per installer
 
-Each installer is one file that needs no unpacking. macOS: a disk image (`.dmg`) holding the installer app and
-the branding licence; the image is the download because a ZIP of an app needs unpacking first, and an image keeps
+Each installer is one file that needs no unpacking. macOS: a disk image (`.dmg`) holding the installer app,
+which carries the branding licence inside; the image is the download because a ZIP of an app needs unpacking first, and an image keeps
 the signed app and the maintenance tool it carries intact. On release builds the installer app is signed,
 notarised and stapled first, then the image itself is signed, notarised and stapled, and `spctl --assess --type
 open` accepts it. Windows: the self-contained installer `.exe` itself, signed on release builds; it needs no
 library beside it. Linux keeps a ZIP, because its `.run` installer needs the portable `installer-runtime`
 libraries next to it. `installer.json` names the file as `download` with its `download_sha256`, the release tools
-expect `EasyDiffraction-<version>-<platform>-<kind>` with `.dmg`, `.exe` or `.zip`, and each test installation
+expect the download names above with `.dmg`, `.exe` or `.zip`, and each test installation
 starts from that file (mounting the image on macOS). The download page links the new names and still finds the
 ZIPs of releases made before this.
 

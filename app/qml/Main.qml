@@ -77,14 +77,10 @@ EaComponents.ApplicationWindow {
     // Same Create API/preferences as the ordinary current-window form. Native
     // callers pass an original Session-bound intent, never another app/window.
     property var assistantCreateGuard: null
+    // The assistant creates no project while a tutorial runs.
+    readonly property bool tutorialRunning: AppState.tutorialRunning || Session.hasProjectSetAside
     function prepareNativeProjectCreate(intent) {
         return ApplicationInfo.prepareProjectCreation(intent);
-    }
-    function nativeProjectCreateSaveCurrent(intent, control) {
-        return ApplicationInfo.projectCreationSaveCurrent(intent, control);
-    }
-    function chooseNativeProjectCreateSave(intent, control) {
-        return ApplicationInfo.chooseProjectCreationSave(intent, control);
     }
     function finishNativeProjectCreateGuard(intent) {
         ApplicationInfo.finishProjectCreationGuard(intent);
@@ -461,7 +457,15 @@ EaComponents.ApplicationWindow {
             id: projectLoader
 
             readonly property bool wanted: AppState.projectPageEnabled
-            active: wanted && window.pageTurn(projectLoader)
+            // Once made, the page stays while another project replaces the open one (edi ADR-0052): a press on it, or its
+            // open Load menu, would go with a page let go.
+            property bool made: false
+            active: wanted && !window.quitting && (made || window.pageTurn(projectLoader))
+            onLoaded: made = true
+            onActiveChanged: {
+                if (!active)
+                    made = false;
+            }
             // In the browser built at once: a click on the page was lost while it was being built in the background.
             asynchronous: Qt.platform.os !== "wasm"
             sourceComponent: Component {
@@ -691,6 +695,9 @@ EaComponents.ApplicationWindow {
             const panel = window.assistantPanel;
             panel.parent = assistantFallbackHost;
             panel.shown = Qt.binding(() => (Session.assistant.chatRevealRequested || Preferences.assistantShown && (!Session.assistant.showingActions || window.assistantManualPane) && !window.assistantManualTakeover) && window.assistantWorkflowPage !== null);
+            // Under the window's questions the user answers while the assistant works (Close project, Save as): they are
+            // centred over the sidebar, where the panel lies, and a panel raised after them covered their buttons.
+            panel.z = Qt.binding(() => unsavedChanges.visible || saveAsChoice.visible ? -1 : 0);
             panel.aboutToHide.connect(window.retireAssistantFocus);
             // `opened` is the popup's state as well as its signal: watch the state.
             panel.openedChanged.connect(() => {
@@ -900,6 +907,9 @@ EaComponents.ApplicationWindow {
         function onChangesQuestion(action, abandoned) {
             ApplicationInfo.projectChangesQuestion(action, abandoned);
         }
+        function onCloseQuestion(action, abandoned, closing) {
+            ApplicationInfo.projectChangesQuestion(action, abandoned, false, closing);
+        }
         // The same question about the user's own project while a tutorial holds it aside (edi ADR-0064).
         function onSetAsideChangesQuestion(action) {
             ApplicationInfo.projectChangesQuestion(action, null, true);
@@ -916,8 +926,18 @@ EaComponents.ApplicationWindow {
             ApplicationInfo.abandonUnsavedProjectAction();
         }
         onRejected: abandonAction()
-        title: qsTr("Save the changes?")
-        standardButtons: Dialog.Save | Dialog.Discard | Dialog.Cancel
+        // The assistant closes a saved project: nothing to save, only Close project or Cancel.
+        property bool saved: false
+        property string closing: ""
+        title: saved ? qsTr("Close the project?") : qsTr("Save the changes?")
+        standardButtons: saved ? Dialog.Yes | Dialog.Cancel : Dialog.Save | Dialog.Discard | Dialog.Cancel
+        onAboutToShow: {
+            const yes = standardButton(Dialog.Yes);
+            if (yes !== null) {
+                yes.text = qsTr("Close project");
+                yes.objectName = "unsavedChanges.close";
+            }
+        }
         // Name the existing visible controls, as Save as names its real native OK button.
         Binding {
             target: unsavedChanges.opened ? unsavedChanges.header : null

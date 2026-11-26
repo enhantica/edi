@@ -2,46 +2,32 @@
 import QtQuick
 import QtQuick.Controls
 
-import EasyApplication.Gui.Components as EaComponents
-
 import edi.app
 
-// A table column's header for a `.edi` item: its label, and its units when asked, from crysta's dictionary through
-// Session, and as its tooltip the label and the `.edi` name it labels, so every header says which item of the file
-// its column shows.
-EaComponents.ListViewLabel {
+// A table column's header for a `.edi` item: its forms from the label registry (the dictionary's label, a short form,
+// an icon), with its units when asked, and as its tooltip the label and the `.edi` name it labels, so every header says
+// which item of the file its column shows. A header is never cut (T9): it shows the widest form that fits.
+AdaptiveLabel {
     id: header
-    elide: Text.ElideRight
 
     // The item, `category.name`, and the token its label depends on (an ADP's type).
     property string uid: ""
-    property string variant: ""
+    key: uid
     // Whether the units follow the label in brackets: `2θ (deg)`.
     property bool withUnits: false
     // A tooltip of the header's own, before the item's label and `.edi` name; empty: those alone.
     property string toolTipText: ""
 
     readonly property string units: uid !== "" ? Session.units(uid, variant) : ""
+    readonly property string unitsText: withUnits && units !== "" ? ` (${units})` : ""
+    longText: (forms.long ?? "") !== "" ? forms.long + unitsText : ""
+    shortText: (forms.short ?? "") !== "" ? forms.short + unitsText : ""
 
-    // A shorter title for a column too narrow for the whole one ("Sym 1"): a title is never cut (T9).
-    property string shortText: ""
-    fullText: uid === "" ? "" : withUnits && units !== "" ? `${Session.label(uid, variant)} (${units})` : Session.label(uid, variant)
-    TextMetrics {
-        id: fullMetrics
-        font: header.font
-        text: header.fullText
-    }
-    TextMetrics {
-        id: reservedMetrics
-        font: header.font
-        text: header.shortText !== "" ? header.shortText : header.fullText
-    }
     // What the column reserves for its title: the short one where there is one, whichever it shows, so the width never
     // follows the choice (T6).
-    readonly property real reservedWidth: Math.ceil(reservedMetrics.advanceWidth) + leftPadding + rightPadding
+    readonly property real reservedWidth: shortWidth
     horizontalAlignment: Text.AlignHCenter
-    text: shortText !== "" && width > 0 && fullMetrics.advanceWidth + leftPadding + rightPadding > width + 0.5 ? shortText : fullText
 
-    // The base label owns the popup (edi ADR-0076 point 6): the help, and the whole header while it is elided.
+    // The base label owns the popup (edi ADR-0076 point 6): the help, and the whole header while another form shows.
     ToolTip.text: uid === "" ? toolTipText : toolTipText !== "" ? `${toolTipText} (${Session.tooltip(uid, variant)})` : Session.tooltip(uid, variant)
 }

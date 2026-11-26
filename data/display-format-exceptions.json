@@ -683,11 +683,6 @@
    "reason": "the name of a sidebar width mode, a choice of the window and not an item's option"
   },
   {
-   "file": "app/qml/Pages/Experiment/ExperimentTypeGroup.qml",
-   "literal": "TOF",
-   "reason": "the short form of the beam mode option in a selector too narrow for the dictionary's name"
-  },
-  {
    "file": "app/qml/Pages/Structure/AtomSiteMomentGroup.qml",
    "literal": "θ",
    "reason": "the symbol of the polar angle over its column"

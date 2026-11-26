@@ -68,6 +68,7 @@ SideBarGroup {
             // The status is icons only, so it sits by the remove buttons (the owner, 2026-10-27).
             // Its columns by kind (the shared column model, DataTable.columnKinds; ADR-0103 decision 4).
             columnKinds: ["index", "name", "mark", "control"]
+            columnTexts: ["", "label"]
             // The path takes all the width between the number and the status, so it is cut only when it does not fit
             // the row, whatever its first measure (the owner, 2026-11-02).
             // Widths from column types, not rows (ADR-0103 rule 4): the path, which the spread widens.

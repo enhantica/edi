@@ -3644,7 +3644,7 @@ The FIRST dependency acquisition owners move from cached developer tasks to genu
 
 The package migration has now generated the actual Pixi lock for both declared platforms and installed the Linux source artifacts. The installed runtime executable/resource hashes and modes match the retained qualified official closure; all notices match the original authoritative tree, and the installed math member/hash closure matches the prior qualified source. Existing environment package bindings are unchanged; additional lock records belong to the new source/build dependencies. This does not claim macOS installation or an app link. Default CMake discovery explicitly chooses the installed receipt instead of reusing the old provision-task cache entry; qualified dedicated input remains an explicit separate option. Prefix discovery honors the actual Pixi environment while the original app compiler/Qt kit can remain independently pinned.
 
-Review72 corrects normal Create's preservation ordering: the FIRST AppState.afterChanges opens its original unsaved-work dialog BEFORE any prior-project write. Delegated OFF chooses that dialog's real Save role; ON physically cues/clicks its original Save button. Only the actual accepted in-place Save uses the existing own-edit/NativeSave outcome owner, then returns to the original QML continuation. The original needsSaveAs branch abandons this Create before opening SaveAs; no saved-result helper revives it. Actual Cancel/manual takeover or a replaced dialog/action retires only its matching Create, and completed prior Save remains factual. No new permission prompt, auto-Discard, second form or pre-guard write is introduced.
+Review72 corrects normal Create's preservation ordering: the FIRST AppState.afterChanges opens its original unsaved-work dialog BEFORE any prior-project write. The assistant chose its Save then; since 2026-11-25 only the user answers it (Closing the open project). Only the actual accepted in-place Save uses the existing own-edit/NativeSave outcome owner, then returns to the original QML continuation. The original needsSaveAs branch abandons this Create before opening SaveAs; no saved-result helper revives it. Actual Cancel/manual takeover or a replaced dialog/action retires only its matching Create, and completed prior Save remains factual. No new permission prompt, auto-Discard, second form or pre-guard write is introduced.
 
 Review73 separates valid nullable account metadata from identity proof. A missing/empty expected or returned identity on a viable current managed connection retains accepted work and pauses new authority through the existing account-confirmation owner; it is not labelled a proved account change. New cross-helper session staging/checkpoints require a real nonempty original identity before retiring the current helper; an empty saved email cannot override a known current identity. Verified different/nonmanaged accounts still revoke authority. Existing account/browser diagnostics record only closed read-role, shape/presence, comparison and reached substage; shape, unavailable proof, saved/current mismatch, login-not-established, disclosure change and local processing no longer collapse into ACCOUNT_KIND. No credential/response dump or new account registry is added.
 
@@ -5085,6 +5085,16 @@ The panel reads the pending question and plan, the account, a draft's admission 
 
 Consecutive successful reads with the same tool (`inspect_data`, `inspect_project`, `list_parameters`, `diagnostics`) show as one step in the conversation: the first read's row, its caption counting the reads ("Inspect diffraction data (4 times)") and its details listing what each read, such as the rows and dataset of a data read. Only the display folds; history, copies of the step and work reports keep every call. A failed, refused or still-running read stands alone, and so does any step that changes the project.
 
+## Finished steps fold into one line
+
+Two or more finished steps in a row show as one line with their icons in order and their number ("5 steps"); steps that fold
+reads count as one. A click on the line shows the steps under it as rows of their own, and a click on a step shows its
+details; another click on the line folds them again. A step that is pending, failed, refused, partial or unconfirmed, a
+question, a plan and an answered request are never folded: they stay in their place and end the line. The steps fold as
+they finish, so during a turn the line grows and the running step stays below it. Which lines are open is kept in the
+message model by the line's first step, because the list reuses its rows. A step's number does not change with folding.
+Only the display folds; history, copies and work reports keep every step.
+
 ## Working status while actions are shown
 
 The status bar keeps its existing working label and rotating icon visible during
@@ -5145,3 +5155,25 @@ call, such as a parameter, an alias, a create, Save or Report. It also has 45 s 
 backstop: an item of several clicks normally takes 20 to 25 s, so the backstop does not end a step that is moving. A
 calculation, a load or a fit does not count against either. One look adds at most 1 s to the 10 s, so a window that was at
 work does not count as a control that did not answer.
+
+A shown step that fails by an error in its own code says that error's reason in the result's `message`; only a failure with
+no reason of its own says that the outcome could not be confirmed.
+
+When the shown actions end, with the turn or at a question, the shown pointer leaves the window, so the last control it
+used does not stay hovered; a pointer the user moved since is left alone.
+
+## Closing the open project
+
+The assistant never closes a project that is not empty without the user's answer (the owner, 2026-11-25). Its two ways to
+close one are `create_project` and a conversation chosen in Sessions whose own project is another one. Both go through
+the window's question about unsaved changes (edi ADR-0052), which then says what the assistant asks for:
+
+- With unsaved changes the buttons are Save, Discard and Cancel. The assistant no longer presses Save itself.
+- With nothing unsaved they are Close project and Cancel.
+- Cancel, or no answer within 300 s for `create_project`, closes nothing, and the model reads that no project was created
+  and why. Discard counts for the project as it was then: a later change asks again.
+- A project without structures, experiments, relations, scan settings or results, and without unsaved changes, is
+  replaced without a question.
+- While a tutorial runs, or holds the user's project aside, both are refused with that reason, and the tutorial goes on.
+
+No other tool closes a project: the undo tool undoes a fit in the open project, the loads add to it, Save writes it.

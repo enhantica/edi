@@ -12,15 +12,19 @@ import argparse
 import json
 import os
 import shutil
+import sys
 import zipfile
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from versions import installer_stem
 
 FORM = 'https://www.microsoft.com/en-us/wdsi/filesubmission'
 
 
 def find_installer(assets: Path, version: str, output: Path) -> Path:
     """The Windows online installer in `output`: copied, or taken out of its ZIP."""
-    stem = f'EasyDiffraction-Installer-{version}-Windows-x64'
+    stem = installer_stem(version, 'Windows-x64', 'online')
     executable = assets / f'{stem}.exe'
     output.mkdir(parents=True, exist_ok=True)
     if executable.is_file():

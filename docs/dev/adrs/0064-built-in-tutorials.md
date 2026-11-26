@@ -130,7 +130,8 @@ the app's emulated actions; the step scripts written now are what that player wi
   tutorial's project or quit the app (open, new project, the app bar's reset, closing the window) asks about the user's
   project first when it has unsaved changes: Cancel goes on with the tutorial, Save or Discard brings that project back,
   ends the tutorial and goes ahead. With no unsaved changes it brings the user's project back and goes ahead. The
-  set-aside project keeps its browser copy and place, so Save writes where it did before.
+  assistant closes nothing here: while a tutorial runs its new project, and a conversation's own project, are refused
+  with that reason (ADR-0057). The set-aside project keeps its browser copy and place, so Save writes where it did before.
 - An example or a read-only project is copied into the session's temporary folder under its own name, or the name with
   `-2`, `-3`, ... when the open project or the set-aside one still works in that folder. A new copy never replaces the
   files of a live project, whether it came from the same example before a tutorial, during one or after Keep.

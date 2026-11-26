@@ -2,11 +2,16 @@
 """Link download cards to public GitHub release assets."""
 
 import re
+import sys
 from datetime import date
 from operator import itemgetter
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'tools/release'))
+from versions import PATTERN, installer_stem, version_key
 
 PLATFORMS = ('macos-arm64', 'windows-x86_64', 'linux-x86_64')
-TAG = re.compile(r'v([0-9]{4})\.(0[1-9]|1[0-2])\.(0|[1-9][0-9]*)')
+TAG = re.compile('v' + PATTERN)
 # The desktop installers' downloads: a disk image on macOS, the installer itself on Windows, a ZIP
 # on Linux; releases before single-file installers had a ZIP everywhere.
 SUFFIXES = {'macos-arm64': ('.dmg', '.zip'), 'windows-x86_64': ('.exe', '.zip')}
@@ -17,12 +22,6 @@ INSTALLER_PLATFORMS = {
     'macos-arm64': 'macOS-arm64',
     'windows-x86_64': 'Windows-x64',
 }
-
-
-def installer_stem(version: str, platform: str, kind: str) -> str:
-    """An installer download's name without its suffix (promote.py installer_name)."""
-    offline = '-Offline' if kind == 'offline' else ''
-    return f'EasyDiffraction-Installer{offline}-{version}-{INSTALLER_PLATFORMS[platform]}'
 
 
 def asset_url(sizes: dict, tag: str, stem: str, platform: str) -> str | None:
@@ -60,14 +59,17 @@ def render(page: str, pages: list[list[dict]], *, kind: str = 'online') -> str:
             for platform in PLATFORMS:
                 # Releases before 2026.11.30 used the older names.
                 found = asset_url(
-                    sizes, tag, installer_stem(version, platform, each), platform
+                    sizes,
+                    tag,
+                    installer_stem(version, INSTALLER_PLATFORMS[platform], each),
+                    platform,
                 ) or asset_url(
                     sizes, tag, f'EasyDiffraction-{version}-{platform}-{each}', platform
                 )
                 if found:
                     installers[platform, each] = found, sizes[found]
         if any(each == kinds[0] for _, each in installers):
-            rank = not release['prerelease'], tuple(map(int, match.groups()))
+            rank = not release['prerelease'], version_key(version)
             candidates.append((rank, version, installers, release['published_at']))
     if not candidates:
         return page

@@ -72,6 +72,25 @@ private slots:
         QVERIFY(!updates.newerVersion("2026.11.01", "2026.11.0"));
         QVERIFY(!updates.newerVersion("2026.11.0", "git-build"));
     }
+    void yearCounterOrdering() {
+        // Old releases come first, then YY.N by year and counter, though 26.17 is the smaller number.
+        edi_app::DesktopUpdates updates("26.17", {}, {}, false);
+        const QStringList ordered{"2026.11.0", "2026.11.31", "26.17", "26.18", "27.1"};
+        for (qsizetype i = 1; i < ordered.size(); ++i) {
+            QVERIFY2(updates.newerVersion(ordered[i], ordered[i - 1]), qPrintable(ordered[i]));
+            QVERIFY2(!updates.newerVersion(ordered[i - 1], ordered[i]), qPrintable(ordered[i]));
+        }
+        for (const auto* invalid : {"26.0", "26.017", "05.1", "2026.17", "126.1", "v26.17"})
+            QVERIFY2(!edi_app::release_version_key(QString::fromLatin1(invalid)), invalid);
+        bool valid = false;
+        const auto values = edi_app::release_changes(
+            history({release("2026.11.31"), release("26.18"), release("26.17"), release("2026.11.0")}), "26.17", &valid);
+        QVERIFY(valid);
+        QCOMPARE(values.size(), 3);
+        QCOMPARE(values[0].toMap()["version"].toString(), "26.17");
+        QCOMPARE(values[1].toMap()["version"].toString(), "2026.11.31");
+        QCOMPARE(values[2].toMap()["version"].toString(), "2026.11.0");
+    }
     void orderedBundledRangeAndEscapedTitles() {
         bool valid = false;
         const auto values = edi_app::release_changes(history({release("2026.11.0"), release("2026.11.10", "<image> [link](url)"), release("2026.11.9"), release("2026.12.0")}), "2026.11.10", &valid);

@@ -42,11 +42,12 @@ The decisions it rests on, unchanged here:
 - **The wordmark and the version are one composition on Home and in About**, from one component
   (`Components/WordmarkWithVersion.qml`), so the two cannot drift apart (ideas 2 and 3; the owner's review of
   2026-09-29): the wordmark (`Components/Wordmark.qml`, the mark and "easy" over "diffraction") centred
-  horizontally as one unit, then the version line `Version <version> (<date>)` centred on its own below it,
+  horizontally as one unit, then the version line `Version <version> · <date>` (`Version 26.17 · 26 Nov 2026`,
+  ADR-0106) centred on its own below it,
   one x-height of the version's font apart (measured, `FontMetrics.xHeight`; the owner, 2026-09-29, was two
   font units). The wordmark carries no caption: the version never hangs under the name.
-- **The version shown** (the owner, 2026-11-11): a release shows its calendar version (`2026.11.1`); any other
-  build the last release it follows and its commit (`2026.11.1+d42e09f`, `.dirty` with uncommitted changes),
+- **The version shown** (the owner, 2026-11-11): a release shows its version (`26.17`, ADR-0106); any other
+  build the last release it follows and its commit (`26.17+d42e09f`, `.dirty` with uncommitted changes),
   or `dev+<commit>` before any release tag (`cmake/build_version.cmake`). A desktop installer is given its
   version. app.easydiffraction.org carries only released web apps: `release-publish.yml` pushes the release's own
   archived web app, whose `build.json` names the release, and the page passes that to the app, which shows it
@@ -311,8 +312,12 @@ and `stepMaximum`.
   long one cut in the middle. The row is hidden while the project holds no block of the page's kind.
 - **Long lists are searchable** (owner, 2026-10-05): every combo box that lists project items (the block selector,
   the alias parameter) is a `Components/SearchableComboBox.qml`, which puts a search field at the top of its list
-  when it holds more than 10 entries. The field filters by any part of an entry's text, ignoring case; Enter picks
-  the first entry left.
+  when it holds more than 10 entries. The field filters by any part of an entry's text, ignoring case. A typed
+  search lists the entry spelled as typed first, then those starting with the text, then the others, each in the
+  list's own order; Enter picks the first. A list drawn in groups (Evolution's parameters) ranks within each group
+  and keeps the groups whole and in their order, each group's title over its first shown entry; Enter picks the top
+  entry. The list's height follows the entries left and the titles of their groups, on the side of the box it opened
+  on, and a line under the field says when nothing matches.
 - **Block selectors: one component, one shared current block** (the owner, 2026-09-29). Every selector that
   chooses among a project's blocks is a `BlockSelector` — the shared one on Structure and Experiment, and the
   experiment selector of Analysis — so all read number, coloured icon and
@@ -1247,8 +1252,17 @@ are required; source repair is not final browser or scientific acceptance.
   calculated from it. A project opens on the first dataset. Showing a dataset is not an edit of the project.
 - **The template is held apart from the shown dataset.** An admitted edit of the experiment or the structures while a
   dataset is shown makes the shown values the template's, over the template's own data file; a project-wide setting
-  (name, title, description, fitting mode, minimizer) goes to the template unchanged otherwise. A save writes the
+  (name, title, description, fitting mode, minimizer, extraction rules) goes to the template unchanged otherwise. A save writes the
   template, never a dataset's data; a refused edit changes nothing.
+- **The extraction rules are edited** in their table (Analysis, Extra), which a declared scan shows with no rule too, so
+  the first can be added: id, target and pattern as text, Required, append, duplicate and remove, as the constraints,
+  each one Undo step. A pattern must be a regular expression with a group, a target a results column nothing else has,
+  and both text the file holds without quotes; anything else is refused in the cell. The columns a target cannot take
+  are the fit's own (`file_path`, `point`, `fit_result.*`), the other rules', and any name of three dotted parts or more,
+  the form of every column the fit writes itself in either scan mode (a parameter's and its uncertainty, a moment's
+  spherical form, a phase's weight fraction), so no later edit of the model can give the fit a column a rule took. An edit changes the scan's
+  declaration: the datasets' values are read again, and results fitted before it are *Outdated*, or, when their columns
+  no longer match the rules, not read until Reset or Undo, as after the same edit in the Text tab.
 - **A dataset's Fit outcome** comes from its results row: *Success* when it converged; otherwise *Max iterations* when
   its iteration count reached the bound, else *No step*; *Not fitted* without a row. Its extracted values come from
   its row, or from its file when a view shows its entry.
@@ -1256,7 +1270,11 @@ are required; source repair is not final browser or scientific acceptance.
   the datasets (`Components/EvolutionChart.qml`, `EvolutionViewModel`): a point per fitted dataset with its
   uncertainty as an error bar, drawn as the pattern chart draws measured points. The page's selector row keeps listing the
   datasets, as on the Pattern tab; a selector in the chart's own toolbar, beside the x box, lists every free
-  parameter, then any other one `analysis/results.csv` records, already before a dataset is fitted. Until one is, a
+  parameter and any other one `analysis/results.csv` records, already before a dataset is fitted, in groups with a
+  title each: one per datablock in the Analysis table's order and each as that table lists its parameters, then the
+  derived values, then the fit quality (a series' Per bank list has one group, Each bank, for its parameters). A title
+  is drawn over its group's first entry and is no row. Every line has its icons, its row and short name, and its full
+  name in grey, cut at its start when it is long, where the icons and the title say the same. Until a dataset is fitted, a
   fitted template experiment is plotted as one point, its current value and s.u. at its dataset's x, so a parameter
   can be chosen before the scan starts, its range padded to show its error bar; the scan's first fitted dataset
   replaces it (owner, 2026-11-04). With neither, the chart has no axes and shows "No fitted results yet" as the other
@@ -1400,7 +1418,7 @@ The member-call thunk bridge roots the original receiver, evaluates the argument
 
 ## Native searchable-popup procedures
 
-ApplicationInfo executes SearchableComboBox's folding/matching/pick algorithm, option and fitted measurement, popup positioning/placement, acceptance transaction, initial setup and opening/request/timer lifecycle. The first control remains §7's project/vocabulary picker. Existing control/popup/header/ListView/Timer objects and opening/request records retain their authority and state; no popup controller, filter model, timer or store is added. Every original identity/currentness check, property read, repeated check after layout/write, effect and exception point remains in its original sequence. Closed-list model binding, selection and focus policy are retained.
+ApplicationInfo executes SearchableComboBox's folding/matching/pick algorithm, option and fitted measurement, popup positioning/placement, acceptance transaction, initial setup and opening/request/timer lifecycle. The first control remains §7's project/vocabulary picker. Existing control/popup/header/ListView/Timer objects and opening/request records retain their authority and state; no popup controller, timer or store is added. A typed search whose order differs from the list's shows the same entries through a delegate model of the list's own, mapped back to the box's rows; the box's model, count and index stay as they are, and so does the list for text the program sets. Every original identity/currentness check, property read, repeated check after layout/write, effect and exception point remains in its original sequence. Closed-list model binding, selection and focus policy are retained.
 
 The current VM handles String/regex/method/context operations, typed casts and arithmetic. The only inline callbacks install the original compiled alignment, closed-list model and focus bindings at native-selected original points; clear/focus and visual declarations remain direct Qt host actions. The pinned ordinary dot-call rule above applies to argument thunks; unlike an early-callee policy, a getter runs after argument effects. Full desktop/browser compilation and filtering/geometry/selection/coldness/destruction/reentry/error verification follows the complete source migration.
 

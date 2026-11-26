@@ -3,6 +3,7 @@
 #define EDI_PARAMETER_SPEC_HPP
 
 #include <array>
+#include <cmath>
 #include <limits>
 #include <span>
 #include <stdexcept>
@@ -343,6 +344,13 @@ inline void check_admissible(const ParameterSpec* spec, double value, const char
     }
 }
 
+// A value inside its range that a user may still not enter. A wavelength is above 0, which a closed range cannot say;
+// the second wavelength is 0 where there is none, so it stays allowed.
+inline void check_enterable(const ParameterSpec* spec, double value) {
+    if (spec == &spec::instrument_wavelength && !(std::isfinite(value) && value > 0.0)) {
+        throw std::invalid_argument("A wavelength must be above 0 Å");
+    }
+}
 
 }  // namespace edi
 
