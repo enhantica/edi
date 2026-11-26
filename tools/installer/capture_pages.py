@@ -726,6 +726,12 @@ def expected_pages(themes: tuple) -> list:
 
 def require_pages(pages: Path, themes: tuple) -> None:
     """Fail unless the walks showed exactly the expected pages in order, each with its picture."""
+    # A page that never held still, or whose grab wrote nothing in time, is a fault, not a picture.
+    stalled = sorted(
+        path.name for path in [*pages.glob('*.timeout'), *pages.glob('*.unsettled.png')]
+    )
+    if stalled:
+        raise RuntimeError(f'Pages never settled for their picture: {", ".join(stalled)}')
     log = pages / 'pages.log'
     shown = log.read_text(encoding='utf-8').split() if log.exists() else []
     expected = expected_pages(themes)

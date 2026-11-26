@@ -107,20 +107,31 @@ function proceed(name, button, delay) {
     }
     // macOS and Linux: the page stays until its settled picture is written (or found unsettled), so a later page is
     // never grabbed under its name. The progress page is kept as grabbed and needs no wait.
-    if (captureFolder !== "" && systemInfo.kernelType !== "winnt" && name !== "PerformInstallation") {
+    if (grabbing[pageId(name)] && systemInfo.kernelType !== "winnt" && name !== "PerformInstallation") {
         waitForGrab(name, button, delay, 0);
         return;
     }
     gui.clickButton(button, delay);
 }
 
+// The pages a grab was started for (capture), by picture name: only those wait for their picture.
+var grabbing = {};
+
+// A grab that writes nothing within 10 s fails the walk rather than moving on, which could leave the next page's frames
+// to be saved under this page's name: a .timeout marker names the page and the installer quits.
 function waitForGrab(name, button, delay, tries) {
     var stem = captureFolder + "/" + pageId(name);
-    if (!installer.fileExists(stem + ".png") && !installer.fileExists(stem + ".unsettled.png") && tries < 40) {
-        later(250, function () { waitForGrab(name, button, delay, tries + 1); });
+    if (installer.fileExists(stem + ".png") || installer.fileExists(stem + ".unsettled.png")) {
+        delete grabbing[pageId(name)];
+        gui.clickButton(button, delay);
         return;
     }
-    gui.clickButton(button, delay);
+    if (tries >= 40) {
+        installer.execute("/bin/sh", ["-c", 'echo "no settled picture within 10 s" > "$1"', "sh", stem + ".timeout"]);
+        gui.rejectWithoutPrompt();
+        return;
+    }
+    later(250, function () { waitForGrab(name, button, delay, tries + 1); });
 }
 
 // Windows: capture_pages.py takes the pictures, and Next on the maintenance tool's first page starts loading, which
@@ -148,6 +159,8 @@ function capture(name) {
     var delay = name === "PerformInstallation" ? "0.2"
         : name === "Introduction" || name === "CancelHover" || name === "TargetDirectory" ? "2" : "1";
     var file = captureFolder + "/" + pageId(name) + ".png";
+    if (systemInfo.kernelType !== "winnt")
+        grabbing[pageId(name)] = true;
     if (systemInfo.kernelType === "winnt") {
         // A process started here cannot take a screenshot; capture_pages.py takes them on Windows.
     } else if (systemInfo.kernelType === "darwin") {
