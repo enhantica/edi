@@ -52,6 +52,7 @@
 #include "crysta/derived_values.hpp"
 #include "crysta/magnetic.hpp"
 #include "crysta/magnetic_subgroups.hpp"
+#include "crysta/k_search.hpp"
 #include "crysta/adp.hpp"
 #include "crysta/analysis.hpp"
 #include "crysta/background_estimate.hpp"
@@ -10027,6 +10028,92 @@ std::shared_ptr<PreparedMagneticCandidates> prepare_magnetic_candidates(
         }
     }
     return prepared;
+}
+
+namespace {
+// The engine project a calculation would build, and the parent's structure in it.
+struct KEngine {
+    explicit KEngine(const Project& project)
+        : banks(calculation_banks(project.experiments)),
+          engine(to_crysta_structures(project), experiment_list(banks)) {
+        fill_crysta_relations(project, engine);
+    }
+    BuiltExperiments banks;
+    crysta::Project engine;
+};
+
+const crysta::Structure& engine_structure(const crysta::Project& engine, const std::string& name) {
+    for (const crysta::Structure& s : engine.structures) {
+        if (s.name.value() == name) return s;
+    }
+    throw std::invalid_argument("the project has no structure '" + name + "'");
+}
+
+void require_experiment(const Project& project, std::size_t experiment, std::size_t parent) {
+    if (experiment >= project.experiments.size()) throw std::invalid_argument("the project has no such experiment");
+    if (parent >= project.structures.size()) throw std::invalid_argument("the project has no such structure");
+}
+}  // namespace
+
+std::uint64_t magnetic_fit_inputs_hash(const Project& project, std::size_t experiment) {
+    if (experiment >= project.experiments.size()) throw std::invalid_argument("the project has no such experiment");
+    const KEngine k(project);
+    return crysta::fit_inputs_hash(k.engine, k.engine.experiments.at(experiment));
+}
+
+std::vector<MagneticPeak> magnetic_unexplained_peaks(const Project& project, std::size_t experiment,
+                                                     std::size_t parent) {
+    require_experiment(project, experiment, parent);
+    const BraggPdExperiment& source = *project.experiments[experiment];
+    if (!source.data.has_value() || source.data->intensity_calc.empty()) {
+        throw std::invalid_argument("the experiment has no calculated curve; fit it and keep the fit first");
+    }
+    const PdDataBase& data = *source.data;
+    const std::vector<double>& x = data.axis();
+    const std::vector<double>& observed = data.intensity_meas.get();
+    const std::vector<double>& sigma = data.intensity_meas_su.get();
+    const std::vector<double>& calculated = data.intensity_calc.values();
+    std::vector<bool> included(x.size(), true);
+    const std::vector<std::string>& status = data.calc_status.values();
+    for (std::size_t i = 0; i < included.size() && i < status.size(); ++i) included[i] = status[i] == "incl";
+    const KEngine k(project);
+    const crysta::Structure& structure = engine_structure(k.engine, project.structures[parent]->name.value());
+    std::vector<MagneticPeak> out;
+    for (const crysta::UnexplainedPeak& p : crysta::unexplained_peaks(structure, k.engine.experiments.at(experiment), x,
+                                                                      observed, calculated, sigma, included)) {
+        out.push_back({p.x, p.d, p.tolerance, p.significance});
+    }
+    return out;
+}
+
+std::vector<MagneticKRow> magnetic_k_search(const Project& project, std::size_t experiment, std::size_t parent,
+                                            const std::vector<MagneticPeak>& peaks) {
+    require_experiment(project, experiment, parent);
+    const KEngine k(project);
+    const crysta::Structure& structure = engine_structure(k.engine, project.structures[parent]->name.value());
+    std::vector<crysta::UnexplainedPeak> in;
+    for (const MagneticPeak& p : peaks) in.push_back({p.x, p.d, p.tolerance, p.significance});
+    std::vector<MagneticKRow> out;
+    for (const crysta::PropagationVectorRow& r :
+         crysta::search_propagation_vectors(structure, k.engine.experiments.at(experiment), in)) {
+        MagneticKRow row;
+        row.k = r.k_text;
+        row.label = r.label;
+        row.stage = r.stage;
+        row.explained = r.explained;
+        row.worst_misfit = r.worst_misfit;
+        row.equally_good = r.equally_good;
+        using V = crysta::PropagationVectorRow::Verdict;
+        row.verdict = r.verdict == V::Buildable        ? "buildable"
+                      : r.verdict == V::OverLimit      ? "over the limit"
+                      : r.verdict == V::Incommensurate ? "incommensurate"
+                                                       : "underdetermined";
+        row.parent_cells = r.parent_cells;
+        row.undetermined = r.undetermined;
+        row.estimate = r.estimate;
+        out.push_back(std::move(row));
+    }
+    return out;
 }
 
 }  // namespace edi

@@ -6,6 +6,7 @@
 
 #include <array>
 #include <cstddef>
+#include <cstdint>
 #include <memory>
 #include <string>
 #include <vector>
@@ -87,5 +88,38 @@ struct PreparedMagneticCandidates {
 std::shared_ptr<PreparedMagneticCandidates> prepare_magnetic_candidates(
     const Project& project, std::size_t parent, const MagneticCandidateGraph& graph,
     const std::vector<std::size_t>& nodes, bool start_moments);
+
+/// Find k from data (edi ADR-0078, crysta ADR-0137 A11). The hash of what experiment `experiment`'s calculated
+/// curve depends on and of its measured data (crysta::fit_inputs_hash): recorded when a fit is kept, compared before
+/// the experiment is offered and again when a row is chosen.
+std::uint64_t magnetic_fit_inputs_hash(const Project& project, std::size_t experiment);
+
+struct MagneticPeak {
+    double x = 0.0;
+    double d = 0.0;
+    double tolerance = 0.0;
+    double significance = 0.0;
+};
+/// The peaks the experiment's current calculated curve leaves unexplained, over its included points (crysta's
+/// unexplained_peaks), highest first. Throws std::invalid_argument naming the reason.
+std::vector<MagneticPeak> magnetic_unexplained_peaks(const Project& project, std::size_t experiment,
+                                                     std::size_t parent);
+
+struct MagneticKRow {
+    std::string k;
+    std::string label;
+    int stage = 1;
+    std::size_t explained = 0;
+    double worst_misfit = 0.0;
+    bool equally_good = false;
+    std::string verdict;  ///< buildable, over the limit, incommensurate, underdetermined
+    long long parent_cells = 1;
+    std::size_t undetermined = 0;
+    std::string estimate;
+};
+/// The ranked propagation vectors for `peaks` (crysta's search_propagation_vectors). Reads only its arguments'
+/// copies, so it runs off the GUI thread.
+std::vector<MagneticKRow> magnetic_k_search(const Project& project, std::size_t experiment, std::size_t parent,
+                                            const std::vector<MagneticPeak>& peaks);
 
 }  // namespace edi
