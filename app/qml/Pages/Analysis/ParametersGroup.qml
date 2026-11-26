@@ -783,6 +783,7 @@ SideBarGroup {
                     }
                     FreeHeaderMenu {
                         id: freeMenu
+                        header: freeTitle
                         project: group.project
                         filter: parameterFilter
                     }
@@ -826,6 +827,7 @@ SideBarGroup {
                     }
                     SharedHeaderMenu {
                         id: sharedMenu
+                        header: sharedTitle
                         project: group.project
                         filter: parameterFilter
                     }

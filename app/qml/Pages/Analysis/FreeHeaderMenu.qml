@@ -75,11 +75,18 @@ EaElements.Menu {
         }
     }
 
-    // Centred in the app window, as the app's dialogs are, not at the click (the owner, 2026-10-27).
-    parent: Overlay.overlay
-    x: Math.round((parent.width - width) / 2)
-    y: Math.round((parent.height - height) / 2)
-    anchors.centerIn: Overlay.overlay
+    // A drop-down under its column title, its right edge at the title's arrow, opening upwards when the window has no
+    // room below, as a combo box list does (the owner, 2026-11-26; it replaced the centred placement of 2026-10-27).
+    // Placed when it opens: the title scrolls with the table.
+    property Item header: null
+    property bool opensUp: false
+    parent: header ? header : Overlay.overlay
+    x: header ? Math.round(header.width - width) : 0
+    y: header ? (opensUp ? -height : header.height) : 0
+    onAboutToShow: {
+        if (header)
+            opensUp = header.mapToItem(Overlay.overlay, 0, header.height).y + implicitHeight > Overlay.overlay.height;
+    }
     width: layout.implicitWidth
     verticalPadding: 0
 
