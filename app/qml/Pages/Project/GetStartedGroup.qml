@@ -322,7 +322,15 @@ SideBarGroup {
                 EaGlobals.Vars.showProjectDescriptionDialog = false;
             }
         }
+        // At the new project's publication nothing of the replaced one's page stays open, also what was opened while it
+        // was being opened: the Create dialog among them.
         function onProjectChanged() {
+            saveMenu.close();
+            replaceProject.close();
+            exportFolder.close();
+            // Its `visible` follows the flag; closing it directly would end that binding.
+            if (createDialog.visible)
+                EaGlobals.Vars.showProjectDescriptionDialog = false;
             Qt.callLater(group.dropCreate);
         }
     }
