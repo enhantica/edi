@@ -10,13 +10,17 @@ function clearQuarantine() {
         installer.execute("/usr/bin/xattr", ["-r", "-d", "com.apple.quarantine", target]);
 }
 
-// macOS: once an update has finished, the maintenance tool it replaced (kept until then, maintenancescript.qs) goes.
+// macOS: the maintenance tool an update replaced is kept (maintenance_swap.sh) until the update has succeeded with the
+// new tool in place; then it goes. The Framework signals the end of an update, a successful one or one rolled back,
+// as installationFinished, so the status and the tool are checked first: after a rollback the kept tool was put
+// back by the swap's undo and nothing is removed.
 function dropOldTool() {
-    if (systemInfo.kernelType !== "darwin")
+    if (systemInfo.kernelType !== "darwin" || !installer.isUpdater() || installer.status !== QInstaller.Success)
         return;
     var target = installer.value("TargetDir");
-    if (target !== "")
-        installer.execute("/bin/rm", ["-rf", target + "/MaintenanceTool.app.old"]);
+    if (target === "" || !installer.fileExists(target + "/MaintenanceTool.app/Contents/MacOS/MaintenanceTool"))
+        return;
+    installer.execute("/bin/rm", ["-rf", target + "/MaintenanceTool.app.old"]);
 }
 
 // Windows: a new installation goes to %LOCALAPPDATA%\Programs\EasyDiffraction, or to
@@ -330,7 +334,7 @@ function Controller() {
     });
     installer.installationFinished.connect(clearQuarantine);
     installer.updateFinished.connect(clearQuarantine);
-    installer.updateFinished.connect(dropOldTool);
+    installer.installationFinished.connect(dropOldTool);
     // When the work is done the Framework moves on to the last page by itself; should it stay on the progress page,
     // Next is pressed for it, so the tool always ends by saying what it did.
     if (captureFolder === "") {

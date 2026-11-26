@@ -474,7 +474,22 @@ def write_maintenance_tool_metadata(meta: Path, version: str) -> None:
             'Script': 'maintenancescript.qs',
         },
     )
-    shutil.copy2(ROOT / 'tools/installer/maintenancescript.qs', meta / 'maintenancescript.qs')
+    (meta / 'maintenancescript.qs').write_text(maintenance_script(), encoding='utf-8')
+
+
+def maintenance_script() -> str:
+    """The tool component's script, the macOS swap and its undo written in as string literals."""
+    folder = ROOT / 'tools/installer'
+    script = (folder / 'maintenancescript.qs').read_text(encoding='utf-8')
+    for marker, name in (
+        ('EDI_SWAP_SCRIPT', 'maintenance_swap.sh'),
+        ('EDI_RESTORE_SCRIPT', 'maintenance_restore.sh'),
+    ):
+        quoted = f'"@{marker}@"'
+        if script.count(quoted) != 1:
+            raise RuntimeError(f'maintenancescript.qs must name {quoted} once')
+        script = script.replace(quoted, json.dumps((folder / name).read_text(encoding='utf-8')))
+    return script
 
 
 def maintenance_tool_name() -> str:
