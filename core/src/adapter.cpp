@@ -2682,6 +2682,11 @@ void fill_crysta_sequential(const SequentialFitConfig& config,
     for (const auto& member : config.experiments) {
         converted.experiments.push_back({member->experiment_id.value(), member->file_pattern});
     }
+    std::vector<std::string> shared;
+    for (const auto& row : config.shared) {
+        shared.push_back(row->parameter_unique_name.value());
+    }
+    converted.shared = std::move(shared);
 }
 
 std::string effective_scan_template_file(const Project& scan, const ScanDatasets& datasets) {

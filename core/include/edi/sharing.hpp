@@ -36,6 +36,18 @@ bool phase_ratios_shared(const Project& project, const std::string& experiment);
 /// structures.
 void share_phase_ratios(Project& project, const std::string& experiment, bool on);
 
+/// ADR-0107: whether the parametric fit gives `parameter` one value for every point of the scan. False for a
+/// parameter the project does not name.
+bool parametric_shared(const Project& project, const Parameter& parameter);
+
+/// ADR-0107: shares or unshares `parameter` in the parametric fit: one value for every point, fixed or free. The free
+/// flag is left as it is. Refuses (std::invalid_argument) a dependent and a parameter the project does not name.
+void set_parametric_shared(Project& project, Parameter& parameter, bool shared);
+
+/// ADR-0107, at load: a name the project does not hold, or a dependent's, is dropped; a listed parameter keeps the free
+/// flag its value's spelling gives. Returns a note for each dropped name.
+std::vector<std::string> settle_parametric_shared(Project& project);
+
 }  // namespace edi
 
 #endif  // EDI_SHARING_HPP

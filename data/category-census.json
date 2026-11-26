@@ -798,6 +798,23 @@
       "row": "SequentialFitExperiment"
     },
     {
+      "name": "_parametric_fit_shared",
+      "form": "loop",
+      "columns": [
+        {
+          "member": "ParametricSharedParameter::parameter_unique_name",
+          "type": "ItemKey",
+          "items": [
+            "parameter_unique_name"
+          ],
+          "storage": [
+            "crysta::Column<std::string>"
+          ]
+        }
+      ],
+      "row": "ParametricSharedParameter"
+    },
+    {
       "name": "_experiment_set",
       "form": "loop",
       "columns": [
@@ -5880,6 +5897,11 @@
       "category": "_sequential_fit_experiment"
     },
     {
+      "member": "ParametricSharedParameter::parameter_unique_name",
+      "type": "ItemKey",
+      "category": "_parametric_fit_shared"
+    },
+    {
       "member": "ExperimentSet::id",
       "type": "ItemKey",
       "category": "_experiment_set"
@@ -5981,6 +6003,13 @@
       "type": "ItemVec<SequentialFitExperiment>",
       "holds": [
         "_sequential_fit_experiment"
+      ]
+    },
+    {
+      "member": "SequentialFitConfig::shared",
+      "type": "ItemVec<ParametricSharedParameter>",
+      "holds": [
+        "_parametric_fit_shared"
       ]
     },
     {
@@ -6284,7 +6313,8 @@
       "holds": [
         "_sequential_fit",
         "_sequential_fit_extract",
-        "_sequential_fit_experiment"
+        "_sequential_fit_experiment",
+        "_parametric_fit_shared"
       ]
     },
     {
@@ -6486,6 +6516,9 @@
     ],
     "_minimizer": [
       "_minimizer"
+    ],
+    "_parametric_fit_shared": [
+      "_parametric_fit_shared"
     ],
     "_parent_propagation_vector": [
       "_parent_propagation_vector"

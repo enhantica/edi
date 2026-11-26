@@ -384,4 +384,83 @@ void share_phase_ratios(Project& project, const std::string& experiment, bool on
     settle(project, added);
 }
 
+namespace {
+
+std::optional<std::string> unique_name_of(const Project& project, const Parameter& parameter) {
+    for (const NamedParameter& named : named_parameters(project)) {
+        if (named.parameter == &parameter) {
+            return named.unique_name;
+        }
+    }
+    return std::nullopt;
+}
+
+}  // namespace
+
+namespace {
+
+std::optional<std::size_t> shared_row(const Project& project, const std::string& name) {
+    for (std::size_t i = 0; i < project.sequential_fit.shared.size(); ++i) {
+        if (project.sequential_fit.shared[i]->parameter_unique_name.value() == name) {
+            return i;
+        }
+    }
+    return std::nullopt;
+}
+
+}  // namespace
+
+bool parametric_shared(const Project& project, const Parameter& parameter) {
+    if (project.sequential_fit.shared.empty()) {
+        return false;
+    }
+    const std::optional<std::string> name = unique_name_of(project, parameter);
+    return name && shared_row(project, *name);
+}
+
+void set_parametric_shared(Project& project, Parameter& parameter, bool shared) {
+    const std::optional<std::string> name = unique_name_of(project, parameter);
+    if (!shared) {
+        if (name) {
+            if (const std::optional<std::size_t> row = shared_row(project, *name)) {
+                project.sequential_fit.shared.erase_at(*row);
+            }
+        }
+        return;
+    }
+    if (!name) {
+        throw std::invalid_argument("only a parameter of the project that a fit can vary can be shared");
+    }
+    if (parameter.dependence != Dependence::Independent) {
+        throw std::invalid_argument(*name + " is set by a constraint or by symmetry and cannot be shared");
+    }
+    if (!shared_row(project, *name)) {
+        ParametricSharedParameter row;
+        row.parameter_unique_name = *name;
+        project.sequential_fit.shared.push_back(std::move(row));
+    }
+}
+
+std::vector<std::string> settle_parametric_shared(Project& project) {
+    std::vector<std::string> notes;
+    for (std::size_t i = project.sequential_fit.shared.size(); i-- > 0;) {
+        const std::string name = project.sequential_fit.shared[i]->parameter_unique_name.value();
+        Parameter* found = nullptr;
+        for (const NamedSlot& slot : named_slots(project)) {
+            if (slot.unique_name == name) {
+                found = slot.parameter;
+                break;
+            }
+        }
+        const char* why = found == nullptr ? "is not in the project"
+                          : found->dependence != Dependence::Independent ? "is set by a constraint or by symmetry"
+                                                                         : nullptr;
+        if (why != nullptr) {
+            notes.insert(notes.begin(), "shared parameter '" + name + "' " + why + "; dropped");
+            project.sequential_fit.shared.erase_at(i);
+        }
+    }
+    return notes;
+}
+
 }  // namespace edi

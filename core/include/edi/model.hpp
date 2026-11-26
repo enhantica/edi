@@ -4965,6 +4965,19 @@ struct KeyTraits<SequentialFitExperiment> {
     static const char* category() { return "sequential-fit experiment"; }
 };
 
+// ADR-0107: one parameter the parametric fit gives one value for every point, by its unique name.
+struct ParametricSharedParameter {
+    ItemKey parameter_unique_name;
+};
+
+template <>
+struct KeyTraits<ParametricSharedParameter> {
+    static ItemKey& key(ParametricSharedParameter& row) { return row.parameter_unique_name; }
+    static const ItemKey& key(const ParametricSharedParameter& row) { return row.parameter_unique_name; }
+    static std::string canonical(const std::string& name) { return name; }
+    static const char* category() { return "shared parameter"; }
+};
+
 // ADR-0087: an experiment set, a template experiment and its members, each an ordinary experiment.
 struct ExperimentSet {
     ItemKey id;
@@ -5009,6 +5022,12 @@ struct RowSchema<edi::SequentialFitExperiment> {
     static constexpr auto fields =
         std::tuple{&edi::SequentialFitExperiment::experiment_id, &edi::SequentialFitExperiment::file_pattern};
     static constexpr std::array items{"experiment_id", "file_pattern"};
+};
+template <>
+struct RowSchema<edi::ParametricSharedParameter> {
+    static constexpr const char* name = "_parametric_fit_shared";
+    static constexpr auto fields = std::tuple{&edi::ParametricSharedParameter::parameter_unique_name};
+    static constexpr std::array items{"parameter_unique_name"};
 };
 template <>
 struct RowSchema<edi::ExperimentSet> {
@@ -5128,6 +5147,9 @@ struct SequentialFitConfig {
     // ADR-0088: a series of joint fits, one file pattern per experiment; empty for a scan of one
     // experiment, which reads `file_pattern`.
     ItemVec<SequentialFitExperiment> experiments;
+    // ADR-0107: the `_parametric_fit_shared` names, the parameters a parametric fit gives one value for every
+    // point (each also free). Kept in every mode; only `parametric` reads them.
+    ItemVec<ParametricSharedParameter> shared;
     bool declared() const { return !data_dir.empty(); }
     bool joint() const { return !experiments.empty(); }
     // ADR-0018: the row of this object's non-loop categories.
@@ -5200,18 +5222,20 @@ struct FitResultRecord {
 //   joint        several banks, one simultaneous fit
 //   sequential   scan: each file seeded from the previous fit's converged parameters
 //   independent  scan: each file seeded from the SAME initial parameters
-// Both scan modes execute SERIALLY; the distinction is the starting point, never concurrency.
+//   parametric   scan: every file in one fit, the shared parameters one value for all (ADR-0107)
+// The scan modes execute SERIALLY; the distinction is the starting point, never concurrency.
 inline bool is_declared_fitting_mode(const std::string& mode) {
-    return mode == "single" || mode == "joint" || mode == "sequential" || mode == "independent";
+    return mode == "single" || mode == "joint" || mode == "sequential" || mode == "independent" ||
+           mode == "parametric";
 }
-// True for the two modes driven by crysta's scan driver over a declared `_sequential_fit` block.
+// True for the three modes driven by crysta's scan driver over a declared `_sequential_fit` block.
 // A site that means "a scan" asks this instead of comparing against `sequential` and forgetting
 // `independent` — which is exactly how the mode contract drifted in the first place.
 inline bool is_scan_fitting_mode(const std::string& mode) {
-    return mode == "sequential" || mode == "independent";
+    return mode == "sequential" || mode == "independent" || mode == "parametric";
 }
 inline std::string declared_fitting_modes() {
-    return "'single', 'joint', 'sequential', 'independent'";
+    return "'single', 'joint', 'sequential', 'independent', 'parametric'";
 }
 
 // The SPELLING half of the scan-directory containment rule, mirroring crysta's

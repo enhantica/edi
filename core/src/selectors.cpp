@@ -105,12 +105,12 @@ std::vector<std::string> supported_background_types() {
 std::vector<std::string> supported_minimizer_types() { return {"crysta"}; }
 
 std::vector<std::string> supported_fitting_modes() {
-    return {"single", "joint", "sequential", "independent"};
+    return {"single", "joint", "sequential", "independent", "parametric"};
 }
 
 std::vector<std::string> applicable_fitting_modes(const Project& project) {
     if (project.sequential_fit.declared()) {
-        return {"sequential", "independent", "single"};
+        return {"sequential", "independent", "parametric", "single"};
     }
     if (project.experiments.size() > 1) {
         return {"joint", "independent"};  // independent: each experiment alone (ADR-0081)

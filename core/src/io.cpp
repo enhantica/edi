@@ -16,6 +16,7 @@
 #include "edi/background_estimate.hpp"
 #include "edi/parameter_walk.hpp"
 #include "edi/categories.hpp"
+#include "edi/sharing.hpp"
 #include "edi/display.hpp"
 #include "edi/fittability.hpp"
 #include "edi/validation.hpp"
@@ -4418,6 +4419,14 @@ static Project load_project_folder(const std::string& directory, const WarningSi
                 project.sequential_fit.experiments.push_back(member);
             }
         }
+        if (const Loop* shared = block.loop_with("_parametric_fit_shared.parameter_unique_name")) {
+            for (const auto& row : shared->rows) {
+                ParametricSharedParameter parameter;
+                parameter.parameter_unique_name = loop_cell(
+                    *shared, row, "_parametric_fit_shared.parameter_unique_name", analysis_file.string());
+                project.sequential_fit.shared.push_back(std::move(parameter));
+            }
+        }
         if (const Loop* sets = block.loop_with("_experiment_set.id")) {
             for (const auto& row : sets->rows) {
                 ExperimentSet set;
@@ -5118,6 +5127,10 @@ static Project load_project_folder(const std::string& directory, const WarningSi
     source.clear();
     for (const std::string& note : clear_unfittable_free(project)) {
         warn("crysta.domain.unfittable_free_ignored: " + note);
+    }
+    // ADR-0107: a shared parameter counts as free; a name that cannot be shared is dropped.
+    for (const std::string& note : settle_parametric_shared(project)) {
+        warn("crysta.domain.shared_ignored: " + note);
     }
     rename_for_saving(project, on_warning);
     return project;

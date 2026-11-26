@@ -748,6 +748,10 @@ class Edit {
             set_fitting_mode(project, mode);
         });
     }
+    // ADR-0107: share or unshare a parameter in the parametric fit; its free flag is left as it is.
+    static Edit parameter_shared(Project& project, Parameter& parameter, bool shared) {
+        return Edit([&project, &parameter, shared] { set_parametric_shared(project, parameter, shared); });
+    }
     static Edit descent(Project& project, std::string id) {
         return Edit([&project, id = std::move(id)] { set_descent(project, id); });
     }
