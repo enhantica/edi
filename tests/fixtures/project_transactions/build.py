@@ -209,6 +209,18 @@ def observe_file_writes(prefix, observed, observer):
     return names
 
 
+def filesystem_calls(trace, method):
+    """Calls to std::filesystem `method`: the plain name, the exported __ name or its inline."""
+    return set(
+        re.findall(
+            r'_+ZN[A-Za-z0-9_]*filesystem[A-Za-z0-9_]*'
+            f'(?:{len(method)}{method}|{len(method) + 2}__{method})'
+            r'(?:B\d+[a-z0-9]+)?E[A-Za-z0-9_]+',
+            trace,
+        )
+    )
+
+
 def observe_publication_files(prefix, command, output, observer, native):
     """Redirect the actual filesystem imports in private copies of every static input."""
     names = {}
@@ -225,15 +237,17 @@ def observe_publication_files(prefix, command, output, observer, native):
             '--disassemble-symbols=' + alias,
             str(observer),
         ])
-        typed = set(
-            re.findall(
-                r'_+ZN[A-Za-z0-9_]*filesystem[A-Za-z0-9_]*'
-                # libc++ (macOS) exports __copy, __rename and so on; libstdc++ the plain names.
-                f'(?:{len(method)}{method}|{len(method) + 2}__{method})'
-                r'E[A-Za-z0-9_]+',
-                trace,
-            )
-        )
+        typed = filesystem_calls(trace, method)
+        tagged = {symbol for symbol in typed if re.search(r'B\d+[a-z0-9]+E', symbol)}
+        if len(typed) == 1 and tagged:
+            # libc++ (macOS) inlines the call into a hidden wrapper; follow it to the exported one.
+            inner = run([
+                str(prefix / 'bin/llvm-objdump'),
+                '-dr',
+                '--disassemble-symbols=' + next(iter(tagged)),
+                str(observer),
+            ])
+            typed = {s for s in filesystem_calls(inner, method) if f'__{method}E' in s}
         if len(typed) != 1:
             seen = sorted(set(re.findall(r'_+ZN[A-Za-z0-9_]*filesystem[A-Za-z0-9_]*', trace)))
             raise RuntimeError(
