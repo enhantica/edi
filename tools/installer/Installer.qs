@@ -105,6 +105,21 @@ function proceed(name, button, delay) {
         waitForPicture(name, button, delay, 0);
         return;
     }
+    // macOS and Linux: the page stays until its settled picture is written (or found unsettled), so a later page is
+    // never grabbed under its name. The progress page is kept as grabbed and needs no wait.
+    if (captureFolder !== "" && systemInfo.kernelType !== "winnt" && name !== "PerformInstallation") {
+        waitForGrab(name, button, delay, 0);
+        return;
+    }
+    gui.clickButton(button, delay);
+}
+
+function waitForGrab(name, button, delay, tries) {
+    var stem = captureFolder + "/" + pageId(name);
+    if (!installer.fileExists(stem + ".png") && !installer.fileExists(stem + ".unsettled.png") && tries < 40) {
+        later(250, function () { waitForGrab(name, button, delay, tries + 1); });
+        return;
+    }
     gui.clickButton(button, delay);
 }
 
