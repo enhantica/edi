@@ -2783,6 +2783,9 @@ bool Session::replaceProject(ProjectViewModel* project, const QStringList& warni
         setLastError(refusal);
         return false;
     }
+    // Before anything of the replacement shows (a new name included): what belongs to the open project's page closes
+    // now, in the same frame, not once the new project is published.
+    emit projectReplacing();
     const QPointer<Session> receiver(this); const QPointer<ProjectViewModel> target(project);
     const bool hasTarget=project!=nullptr;
     const QPointer<ProjectViewModel> previous(project_);

@@ -374,6 +374,8 @@ class Session : public QObject {
     Q_INVOKABLE QString suText(const QString& uid, double value, double su) const;
 
    signals:
+    // As a replacement (or a close) starts, before anything of it shows: the page's own dialogs close (edi ADR-0052).
+    void projectReplacing();
     // Just before the open project is replaced (or closed): the pages let go of it first (edi ADR-0052).
     void projectAboutToChange();
     void projectChanged();

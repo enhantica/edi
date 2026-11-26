@@ -317,6 +317,10 @@ SideBarGroup {
     // held go once the call that replaces the project is over (edi ADR-0052). The Load menu stays open.
     Connections {
         target: Session
+        // The replaced project's Create dialog is hidden as the replacement starts, before a new name can show.
+        function onProjectReplacing() {
+            EaGlobals.Vars.showProjectDescriptionDialog = false;
+        }
         function onProjectAboutToChange() {
             saveMenu.close();
             replaceProject.close();
