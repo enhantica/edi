@@ -235,7 +235,11 @@ def observe_publication_files(prefix, command, output, observer, native):
             )
         )
         if len(typed) != 1:
-            raise RuntimeError('Every filesystem observer has exactly its compiler-typed delegate')
+            seen = sorted(set(re.findall(r'_+ZN[A-Za-z0-9_]*filesystem[A-Za-z0-9_]*', trace)))
+            raise RuntimeError(
+                'Every filesystem observer has exactly its compiler-typed delegate: '
+                f'{alias} calls {seen}'
+            )
         names[next(iter(typed))] = alias
     actual = set()
     originals = {}
