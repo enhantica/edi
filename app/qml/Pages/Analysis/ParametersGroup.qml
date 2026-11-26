@@ -56,7 +56,10 @@ SideBarGroup {
     // Shown in that mode only, beside Free, and independent of it: a shared parameter has one value for every dataset,
     // fixed or free (owner, 2026-11-26).
     readonly property bool sharedShown: measured && project !== null && project.analysis !== null && (project.analysis.fittingMode === "parametric" || project.analysis.fittingMode === "joint")
-    readonly property real sharedColumnWidth: sharedShown ? Math.ceil(sharedTitleText.advanceWidth) + AppSizes.tableCellMargin * 2 + EaStyle.Sizes.fontPixelSize : 0
+    // Sized by Free's rule: a cell margin, the title, the gap, the arrow and the inset.
+    readonly property real sharedColumnWidth: sharedShown ? Math.ceil(AppSizes.tableCellMargin + sharedTitleText.advanceWidth + freeGap + freeArrowText.advanceWidth + freeInset) : 0
+    property bool sharedTitleHovered: false
+    readonly property color sharedTitleColor: !measured ? EaStyle.Colors.themeForegroundMinor : sharedTitleHovered ? EaStyle.Colors.themeAccent : EaStyle.Colors.themeForeground
     // Read again whenever the relation rows change.
     readonly property int relationRows: project && project.analysis ? project.analysis.constraints.count + project.analysis.aliases.count : 0
 
@@ -64,7 +67,7 @@ SideBarGroup {
         id: sharedTitleText
         font.family: EaStyle.Fonts.fontFamily
         font.pixelSize: EaStyle.Sizes.fontPixelSize
-        text: qsTr("Shared") + " ▾"
+        text: qsTr("Shared")
     }
 
     TextMetrics {
@@ -784,14 +787,28 @@ SideBarGroup {
                         filter: parameterFilter
                     }
                 }
-                // A click opens the Shared menu: share or unshare the shown rows at once (edi ADR-0107).
+                // Shared (edi ADR-0107) copies Free's title: the same word-and-arrow button, colours and menu kind.
                 EaComponents.ListViewLabel {
                     id: sharedTitle
                     elide: Text.ElideRight
+                    readonly property bool keepsAlignment: true
                     objectName: "parameters.sharedHeader"
                     visible: group.sharedShown
-                    horizontalAlignment: Text.AlignHCenter
-                    text: qsTr("Shared") + " ▾"
+                    horizontalAlignment: Text.AlignRight
+                    rightPadding: sharedArrow.width + group.freeGap + group.freeInset
+                    color: group.sharedTitleColor
+                    text: qsTr("Shared")
+
+                    readonly property SharedHeaderMenu menu: sharedMenu
+
+                    EaElements.Label {
+                        id: sharedArrow
+                        x: sharedTitle.width - sharedTitle.rightPadding + group.freeGap
+                        anchors.verticalCenter: parent.verticalCenter
+                        font: freeArrowProbe.font
+                        color: group.sharedTitleColor
+                        text: freeArrowProbe.text
+                    }
 
                     MouseArea {
                         id: sharedArea
@@ -802,7 +819,9 @@ SideBarGroup {
                         width: sharedTitle.width
                         height: sharedTitle.height
                         enabled: group.sharedShown
+                        hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
+                        onContainsMouseChanged: group.sharedTitleHovered = containsMouse
                         onClicked: sharedMenu.open()
                     }
                     SharedHeaderMenu {
@@ -1000,24 +1019,23 @@ SideBarGroup {
                     }
                 }
                 Item {
-                    property int horizontalAlignment: Text.AlignHCenter
+                    property int horizontalAlignment: Text.AlignRight
                     visible: group.sharedShown
                     height: parent.height
 
-                    // Enabled wherever Free is; checking it never changes Free (owner, 2026-11-26).
+                    // Enabled where the parameter can be shared, its reason otherwise, as Free shows one that cannot be fitted.
                     EaComponents.ListViewCheckBox {
                         id: sharedBox
-                        anchors.fill: parent
-                        horizontalAlignment: Text.AlignHCenter
+                        anchors.right: parent.right
+                        horizontalAlignment: Text.AlignRight
                         objectName: `parameters.shared.${row.index}`
-                        enabled: group.measured && row.parameter !== null && (row.parameter.fittable || row.parameter.shared)
+                        enabled: group.measured && row.parameter !== null && (row.parameter.shareReason === "" || row.parameter.shared)
                         checked: row.parameter ? row.parameter.shared : false
                         onToggled: {
                             row.parameter.shared = checked;
                             checked = Qt.binding(() => row.parameter ? row.parameter.shared : false);
                         }
-                        ToolTip.text: row.parameter && !row.parameter.fittable ? qsTr("Cannot be fitted: %1").arg(row.parameter.fitReason)
-                                                                                : qsTr("One value for every dataset of the scan")
+                        ToolTip.text: row.parameter && row.parameter.shareReason !== "" ? qsTr("Cannot be shared: %1").arg(row.parameter.shareReason) : ""
                     }
                 }
             }

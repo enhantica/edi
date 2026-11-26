@@ -109,6 +109,8 @@ struct RelationsUndo {
     std::vector<ParameterAlias> aliases;
     std::vector<ParameterConstraint> constraints;
     std::vector<ParameterState> parameters;
+    // ADR-0107: the shared names, which a Shared edit and a relation edit both change.
+    std::vector<std::string> shared;
 };
 
 inline RelationsUndo capture_relations(Project& project) {
@@ -118,6 +120,9 @@ inline RelationsUndo capture_relations(Project& project) {
     }
     for (const auto& constraint : project.constraints) {
         before.constraints.push_back(*constraint);
+    }
+    for (const auto& row : project.sequential_fit.shared) {
+        before.shared.push_back(row->parameter_unique_name.value());
     }
     for (const NamedSlot& slot : named_slots(project)) {
         before.parameters.push_back({slot.unique_name, slot.parameter->value.get(),
@@ -1771,8 +1776,16 @@ class Edit {
             // collections before either live write; their move commits cannot throw.
             ItemVec<ParameterAlias> prepared_aliases(std::move(aliases));
             ItemVec<ParameterConstraint> prepared_constraints(std::move(constraints));
+            std::vector<std::shared_ptr<ParametricSharedParameter>> shared_rows;
+            for (const std::string& name : before.shared) {
+                auto row = std::make_shared<ParametricSharedParameter>();
+                row->parameter_unique_name = name;
+                shared_rows.push_back(std::move(row));
+            }
+            ItemVec<ParametricSharedParameter> prepared_shared(std::move(shared_rows));
             project.aliases = std::move(prepared_aliases);
             project.constraints = std::move(prepared_constraints);
+            project.sequential_fit.shared = std::move(prepared_shared);
             for (const auto& [parameter, state] : targets) {
                 parameter->value = state->value;
                 parameter->uncertainty = state->uncertainty;

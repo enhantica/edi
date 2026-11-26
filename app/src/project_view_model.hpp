@@ -555,10 +555,6 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     Q_INVOKABLE bool setParametersFree(const QList<ParameterItem*>& parameters, bool free);
     // ADR-0107: share or unshare the given rows (the Shared header menu), one undo step; dependents are left out.
     Q_INVOKABLE bool setParametersShared(const QList<ParameterItem*>& parameters, bool shared);
-    // edi ADR-0087 point 2: each experiment set member's values that differ from its template, computed when asked:
-    // a list of {set, member, path, value, template}.
-    Q_INVOKABLE QVariantList setDifferences() const;
-    Q_INVOKABLE int experimentSetCount() const { return static_cast<int>(project_->experiment_sets.size()); }
     struct EditOutcome {
         bool applied = false;
         bool published = false;
@@ -749,6 +745,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     QString assign_parameter_value(edi::Parameter& parameter, double value) override;
     QString assign_parameter_free(edi::Parameter& parameter, bool free) override;
     bool parameter_shared(const edi::Parameter& parameter) const override;
+    QString parameter_share_refusal(const edi::Parameter& parameter) const override;
     QString assign_parameter_shared(edi::Parameter& parameter, bool shared) override;
     QString apply_relation_edit(const edi::Edit& change) override;
     QString apply_relation_control(const edi::Edit& change, const ProjectEditor::RelationAction& action) override;

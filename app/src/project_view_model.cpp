@@ -3969,18 +3969,6 @@ void ProjectViewModel::postAutoModelReason(const std::string& experiment, const 
                               QString::number(100.0 * edi::kAutoModelBelowShare)));
 }
 
-QVariantList ProjectViewModel::setDifferences() const {
-    QVariantList rows;
-    for (const edi::SetDifference& difference : edi::set_differences(*project_)) {
-        rows.append(QVariantMap{{QStringLiteral("set"), QString::fromStdString(difference.set)},
-                                {QStringLiteral("member"), QString::fromStdString(difference.member)},
-                                {QStringLiteral("path"), QString::fromStdString(difference.path)},
-                                {QStringLiteral("value"), difference.value},
-                                {QStringLiteral("template"), difference.template_value}});
-    }
-    return rows;
-}
-
 bool ProjectViewModel::setParametersShared(const QList<ParameterItem*>& parameters, bool shared) {
     const PublicationScope publication(*this);
     if (const QString refusal = free_refusal(); !refusal.isEmpty()) {
@@ -4437,7 +4425,7 @@ void ProjectViewModel::syncDatasets() {
             const auto at = static_cast<std::size_t>(index);
             if (at < files.size()) {
                 dataset.file = files[at].size() == 1 ? QString::fromStdString(files[at].front())
-                                                     : tr("%1 banks").arg(files[at].size());
+                                                     : tr("%1 experiments").arg(files[at].size());
             }
             return dataset;
         };
@@ -5982,6 +5970,10 @@ bool ProjectViewModel::parameter_shared(const edi::Parameter& parameter) const {
     return edi::parametric_shared(*project_, parameter);
 }
 
+QString ProjectViewModel::parameter_share_refusal(const edi::Parameter& parameter) const {
+    return QString::fromStdString(edi::share_refusal(*project_, parameter));
+}
+
 QString ProjectViewModel::assign_parameter_shared(edi::Parameter& parameter, bool shared) {
     if (const auto refusal = free_refusal(); !refusal.isEmpty()) return refusal;
     const PublicationScope publication(*this);
@@ -6523,7 +6515,7 @@ ProjectViewModel::EditOutcome ProjectViewModel::changeBackgroundPoint(
     } catch (...) {
         if (input && input->outcome.applied) result = input->outcome;
         if (prepared && prepared->committed) result.applied = true;
-        if (!result.applied) result.message = tr("The background edit was refused; check its current bank, ID, measured domain and relation ownership");
+        if (!result.applied) result.message = tr("The background edit was refused; check its current experiment, ID, measured domain and relation ownership");
         else { result.published = false; result.message = tr("The background edit was applied; final presentation was not confirmed"); }
     }
     if (input) input->outcome = result;

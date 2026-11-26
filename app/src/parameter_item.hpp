@@ -28,6 +28,8 @@ class ParameterItem : public QObject {
     Q_PROPERTY(bool free READ isFree WRITE setFree NOTIFY freeChanged)
     // ADR-0107: whether the parametric fit gives this parameter one value for every point; checking it also frees it.
     Q_PROPERTY(bool shared READ isShared WRITE setShared NOTIFY sharedChanged)
+    // Why it cannot be shared ("already one value for all experiments"), empty when it can.
+    Q_PROPERTY(QString shareReason READ shareReason NOTIFY sharedChanged)
     // False while the space group fixes the parameter or ties it to another (edi ADR-0019), and for a
     // descriptor that is no parameter: a page shows it disabled, with the value symmetry implies.
     Q_PROPERTY(bool refinable READ isRefinable NOTIFY refinableChanged)
@@ -110,6 +112,7 @@ class ParameterItem : public QObject {
     bool isFree() const { return free_; }
     void setFree(bool free);
     bool isShared() const { return shared_; }
+    QString shareReason() const { return share_reason_; }
     void setShared(bool shared);
     bool isRefinable() const { return refinable_; }
     bool isFittable() const { return fittable_; }
@@ -243,6 +246,7 @@ class ParameterItem : public QObject {
     std::optional<double> uncertainty_;
     bool free_;
     bool shared_ = false;
+    QString share_reason_;
     bool refinable_;
     bool fittable_ = true;
     QString fit_reason_;

@@ -6,7 +6,7 @@
 - **Priority:** High
 
 Amends [ADR-0087](0087-experiment-sets-and-shared-parameters.md) point 3 (its 2026-11-17 amendment: the Free box does
-not become three-state; Shared is its own column) and [ADR-0089](0089-series-views-shared-and-per-experiment.md) point 1 (the Shared section).
+not become three-state; Shared is its own column) and [ADR-0089](0089-series-views-shared-and-per-experiment.md) point 1 (the Shared section, now named Common).
 crysta's [ADR-0136](https://github.com/enhantica/crysta/blob/main/docs/dev/adrs/0136-parametric-fit-of-a-series.md)
 holds the solver and the file format.
 
@@ -31,19 +31,26 @@ equality (TOPAS, GSAS-II, FullProf, Jana); general fitting tools put a Share col
    - In a joint fit, the same parameter is shared across every experiment, stored under the first experiment holding it.
    - A shared group has one value and one Free flag: editing either on any member changes all members, as one undo
      step.
-   - A parameter set by a constraint or by symmetry cannot be shared.
+   - In a joint fit, a parameter with no copy in another experiment (every structure parameter, or one only one
+     experiment holds) is already one value for all experiments: its Shared box is disabled and says so. In a scan every
+     point has its own copy, so structure parameters keep the box.
+   - A parameter set by a constraint or by symmetry cannot be shared, with one exception: a copy that an equality
+     constraint ties to the same parameter of another experiment (`<copy> = <other copy>`, as "Same for all
+     experiments" or a hand-written file writes it). Checking Shared on any of those copies replaces the ties: the
+     equality constraints of that parameter across experiments and the aliases they leave unused are removed, the
+     group takes the first experiment's value and Free flag, and every experiment then shows Shared checked. One undo
+     step puts the constraints back.
 5. **Values.** Checking Shared sets every member to the value shown. Unchecking leaves each member that value as its
    own.
 6. **File.** `analysis.edi` keeps the shared names in one `_parametric_fit_shared` loop, written in every mode when not
    empty. Nothing is written as alias or constraint rows. Loading drops names the project does not hold or that a
    relation sets, and gives a group its first member's Free flag.
-7. **Evolution and sets.**
-   - In a series of joint fits, a bank parameter tied the same for all banks is listed once under Shared, read from its
-     first bank's rows.
-   - "Compare with" draws a second parameter on a right axis.
-   - Past ten banks, Per bank opens as a map (one row per bank, colour the value) with a switch to curves for chosen
-     banks.
-   - The Experiment page lists, for each experiment set, the values each member holds that differ from the template.
+7. **Evolution.**
+   - A parameter shared across the series has one value, so it is not offered as a curve.
+   - In a series of joint fits, a parameter of every experiment tied the same for all is listed once under Common,
+     read from its first experiment's rows.
+   - The words follow the app's: Evolution's box reads "Common" / "Per experiment", and the selector above the charts
+     names experiments, never banks.
 
 ## Consequences
 

@@ -40,6 +40,12 @@ void share_phase_ratios(Project& project, const std::string& experiment, bool on
 /// parameter the project does not name.
 bool parametric_shared(const Project& project, const Parameter& parameter);
 
+/// ADR-0107: why `parameter` cannot be shared, empty when it can. In a joint fit (no scan declared) a parameter with no
+/// copy in another experiment (a structure's, or one only one experiment holds) is already one value for all
+/// experiments. A parameter set by a relation cannot be shared, except a copy that an equality constraint ties to the
+/// same parameter of another experiment: sharing it replaces those ties.
+std::string share_refusal(const Project& project, const Parameter& parameter);
+
 /// ADR-0107: shares or unshares `parameter` in the parametric fit: one value for every point, fixed or free. The free
 /// flag is left as it is. Refuses (std::invalid_argument) a dependent and a parameter the project does not name.
 void set_parametric_shared(Project& project, Parameter& parameter, bool shared);
@@ -58,18 +64,6 @@ void set_group_value(Project& project, Parameter& parameter, double value);
 /// <leader alias>`, both aliases naming the same path, as "Same for all experiments" writes them), each once: its path
 /// without the datablock and the leader's place in `project.experiments`.
 std::vector<std::pair<std::string, std::size_t>> experiment_shared_paths(const Project& project);
-
-/// ADR-0087 point 2: one value of a set member that differs from its set's template, by the parameter's path without
-/// the datablock.
-struct SetDifference {
-    std::string set;
-    std::string member;
-    std::string path;
-    double value = 0.0;
-    double template_value = 0.0;
-};
-/// Every member value of every experiment set that differs from the template's, computed now and never stored.
-std::vector<SetDifference> set_differences(const Project& project);
 
 /// ADR-0107, at load: a name the project does not hold, or a dependent's, is dropped; a listed parameter keeps the free
 /// flag its value's spelling gives. Returns a note for each dropped name.

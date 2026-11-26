@@ -6,7 +6,6 @@
 
 #include <algorithm>
 #include <cstddef>
-#include <map>
 #include <optional>
 #include <set>
 #include <stdexcept>
@@ -460,6 +459,97 @@ std::vector<Parameter*> group_members(Project& project, const std::string& key) 
 
 }  // namespace
 
+namespace {
+
+// A parameter's unique name, a dependent's included.
+std::optional<std::string> any_name_of(const Project& project, const Parameter& parameter) {
+    for (const NamedParameter& named : named_parameters(project)) {
+        if (named.parameter == &parameter) return named.unique_name;
+    }
+    for (const NamedParameter& named : named_dependents(project)) {
+        if (named.parameter == &parameter) return named.unique_name;
+    }
+    return std::nullopt;
+}
+
+// How many experiments hold `path` (a unique name without its datablock), as a parameter or a dependent.
+std::size_t holders_of(const Project& project, const std::string& path) {
+    std::set<std::string> experiments;
+    const auto count = [&](const std::vector<NamedParameter>& list) {
+        for (const NamedParameter& named : list) {
+            const auto part = experiment_part(project, named.unique_name);
+            if (part && part->second == path) experiments.insert(part->first);
+        }
+    };
+    count(named_parameters(project));
+    count(named_dependents(project));
+    return experiments.size();
+}
+
+bool tied_across_experiments(const Project& project, const std::string& path) {
+    for (const auto& [tied, leader] : experiment_shared_paths(project)) {
+        if (tied == path) return true;
+    }
+    return false;
+}
+
+// Removes the equality constraints that tie `path` across experiments, and the aliases they leave unused.
+void untie_across_experiments(Project& project, const std::string& path) {
+    const auto aliased = [&project](const std::string& id) -> std::optional<std::string> {
+        for (const auto& alias : project.aliases) {
+            if (alias->id.value() == id) return alias->parameter_unique_name.value();
+        }
+        return std::nullopt;
+    };
+    const auto trimmed = [](std::string text) {
+        const auto first = text.find_first_not_of(" \t");
+        const auto last = text.find_last_not_of(" \t");
+        return first == std::string::npos ? std::string() : text.substr(first, last - first + 1);
+    };
+    std::set<std::string> released;
+    for (std::size_t i = project.constraints.size(); i-- > 0;) {
+        const std::string text = project.constraints[i]->expression.value();
+        const auto equals = text.find('=');
+        if (equals == std::string::npos) continue;
+        const std::string lhs = trimmed(text.substr(0, equals)), rhs = trimmed(text.substr(equals + 1));
+        const auto left = aliased(lhs), right = aliased(rhs);
+        if (!left || !right) continue;
+        const auto a = experiment_part(project, *left), b = experiment_part(project, *right);
+        if (a && b && a->first != b->first && a->second == path && b->second == path) {
+            released.insert(lhs);
+            released.insert(rhs);
+            project.constraints.erase_at(i);
+        }
+    }
+    for (std::size_t i = project.aliases.size(); i-- > 0;) {
+        const std::string id = project.aliases[i]->id.value();
+        if (!released.contains(id)) continue;
+        bool used = false;
+        for (const auto& constraint : project.constraints) {
+            used = used || constraint->expression.value().find(id) != std::string::npos;
+        }
+        if (!used) project.aliases.erase_at(i);
+    }
+    refresh_relations(project);
+}
+
+}  // namespace
+
+std::string share_refusal(const Project& project, const Parameter& parameter) {
+    const std::optional<std::string> name = any_name_of(project, parameter);
+    if (!name) return "only a parameter a fit can vary can be shared";
+    if (project.sequential_fit.declared()) {
+        return parameter.dependence == Dependence::Independent ? std::string()
+                                                               : "set by a constraint or by symmetry";
+    }
+    const auto part = experiment_part(project, *name);
+    if (!part || holders_of(project, part->second) < 2) return "already one value for all experiments";
+    if (parameter.dependence != Dependence::Independent && !tied_across_experiments(project, part->second)) {
+        return "set by a constraint or by symmetry";
+    }
+    return {};
+}
+
 bool parametric_shared(const Project& project, const Parameter& parameter) {
     if (project.sequential_fit.shared.empty()) {
         return false;
@@ -487,11 +577,22 @@ std::vector<Parameter*> shared_group(Project& project, Parameter& parameter) {
 }
 
 void set_parametric_shared(Project& project, Parameter& parameter, bool shared) {
-    const std::optional<std::string> name = unique_name_of(project, parameter);
-    if (shared && parameter.dependence != Dependence::Independent) {
-        throw std::invalid_argument((name ? *name : std::string("parameter")) +
-                                    " is set by a constraint or by symmetry and cannot be shared");
+    bool was_follower = false;
+    if (shared) {
+        was_follower = parameter.dependence != Dependence::Independent;
+        if (const std::string refusal = share_refusal(project, parameter); !refusal.empty()) {
+            const std::optional<std::string> any = any_name_of(project, parameter);
+            throw std::invalid_argument((any ? *any : std::string("parameter")) + " cannot be shared: " + refusal);
+        }
+        // A copy tied by equality constraints to the same parameter of the other experiments: the ties give way to
+        // the shared group, so every experiment shows the same Shared state.
+        if (const auto any = any_name_of(project, parameter); any && !project.sequential_fit.declared()) {
+            if (const auto part = experiment_part(project, *any); part && tied_across_experiments(project, part->second)) {
+                untie_across_experiments(project, part->second);
+            }
+        }
     }
+    const std::optional<std::string> name = unique_name_of(project, parameter);
     if (!name) {
         if (shared) {
             throw std::invalid_argument("only a parameter of the project that a fit can vary can be shared");
@@ -510,11 +611,15 @@ void set_parametric_shared(Project& project, Parameter& parameter, bool shared) 
         row.parameter_unique_name = key;
         project.sequential_fit.shared.push_back(std::move(row));
     }
-    // One value and one free flag for the group: the shown row's.
-    for (Parameter* member : group_members(project, key)) {
-        if (member != &parameter) {
-            assign_value(*member, parameter.value.get());
-            member->free = parameter.free.get();
+    // One value and one free flag for the group: the shown row's, or its leader's when the row was a tied copy.
+    const std::vector<Parameter*> members = group_members(project, key);
+    const Parameter& source = was_follower && !members.empty() ? *members.front() : parameter;
+    const double value = source.value.get();
+    const bool free = source.free.get();
+    for (Parameter* member : members) {
+        if (member != &source) {
+            assign_value(*member, value);
+            member->free = free;
         }
     }
 }
@@ -609,33 +714,6 @@ std::vector<std::pair<std::string, std::size_t>> experiment_shared_paths(const P
         if (listed) continue;
         for (std::size_t i = 0; i < project.experiments.size(); ++i) {
             if (project.experiments[i]->name == leader->first) found.emplace_back(leader->second, i);
-        }
-    }
-    return found;
-}
-
-std::vector<SetDifference> set_differences(const Project& project) {
-    std::vector<SetDifference> found;
-    const std::vector<NamedParameter> named = named_parameters(project);
-    std::map<std::string, std::map<std::string, double>> by_experiment;  // experiment -> path -> value
-    for (const NamedParameter& each : named) {
-        if (const auto part = experiment_part(project, each.unique_name)) {
-            by_experiment[part->first][part->second] = each.parameter->value.get();
-        }
-    }
-    for (const auto& set : project.experiment_sets) {
-        const std::string leader = set->template_experiment_id.value();
-        const auto template_values = by_experiment.find(leader);
-        if (template_values == by_experiment.end()) continue;
-        for (const auto& member : project.experiment_set_members) {
-            const std::string name = member->experiment_id.value();
-            if (member->set_id.value() != set->id.value() || name == leader) continue;
-            for (const auto& [path, value] : by_experiment[name]) {
-                const auto there = template_values->second.find(path);
-                if (there != template_values->second.end() && there->second != value) {
-                    found.push_back({set->id.value(), name, path, value, there->second});
-                }
-            }
         }
     }
     return found;

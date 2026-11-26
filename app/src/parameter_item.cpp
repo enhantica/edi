@@ -347,9 +347,10 @@ void ParameterItem::setFree(bool free) {
 }
 
 void ParameterItem::setShared(bool shared) {
-    // Shared and Free are independent; a parameter symmetry sets follows its source instead.
-    if (shared && !refinable_) {
-        setLastError(symmetry_refusal());
+    // Shared and Free are independent; a parameter that cannot be shared says why (edi ADR-0107).
+    if (const QString refusal = own_ == nullptr ? editor_.parameter_share_refusal(*parameter_) : tr("a setting");
+        shared && !refusal.isEmpty()) {
+        setLastError(tr("Cannot be shared: %1").arg(refusal));
         return;
     }
     edi::Parameter* parameter = parameter_;
@@ -374,6 +375,11 @@ int ParameterItem::publish(bool formatted) {
     }
     if (const bool shared = own_ == nullptr && editor_.parameter_shared(*parameter_); shared != shared_) {
         shared_ = shared;
+        changed |= SharedField;
+    }
+    if (const QString reason = own_ == nullptr ? editor_.parameter_share_refusal(*parameter_) : tr("a setting");
+        reason != share_reason_) {
+        share_reason_ = reason;
         changed |= SharedField;
     }
     if ((changed & ValueField) != 0) {
