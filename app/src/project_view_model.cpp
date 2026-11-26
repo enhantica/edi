@@ -4173,6 +4173,139 @@ bool ProjectViewModel::addMagneticCandidates(int index, const QList<int>& nodes,
     return true;
 }
 
+void ProjectViewModel::recordFitAdoption() {
+    fit_stamps_.clear();
+    for (std::size_t i = 0; i < project_->experiments.size(); ++i) {
+        const auto& experiment = project_->experiments[i];
+        if (!experiment->data.has_value() || experiment->data->intensity_calc.empty()) continue;
+        try {
+            fit_stamps_[experiment->name] = edi::magnetic_fit_inputs_hash(*project_, i);
+        } catch (const std::exception&) {
+        }
+    }
+}
+
+QVariantList ProjectViewModel::magneticDataChoices(int index) const {
+    QVariantList out;
+    if (index < 0 || index >= static_cast<int>(project_->structures.size())) return out;
+    const std::string parent = project_->structures[static_cast<std::size_t>(index)]->name.value();
+    for (std::size_t i = 0; i < project_->experiments.size(); ++i) {
+        const auto& experiment = project_->experiments[i];
+        bool linked = false;
+        for (const auto& link : experiment->linked_structures)
+            linked = linked || (link->structure_id.value() == parent && link->enabled.get());
+        if (!linked) continue;
+        QString reason;
+        const auto stamp = fit_stamps_.find(experiment->name);
+        if (experiment->experiment_type.effective_sample_form() != edi::SampleFormEnum::POWDER) {
+            reason = tr("a single-crystal experiment");
+        } else if (stamp == fit_stamps_.end()) {
+            reason = tr("fit this experiment with this structure and keep the fit first");
+        } else {
+            try {
+                if (edi::magnetic_fit_inputs_hash(*project_, i) != stamp->second) reason = tr("the fit is out of date");
+            } catch (const std::exception& refusal) {
+                reason = QString::fromUtf8(refusal.what());
+            }
+        }
+        out.push_back(QVariantMap{{QStringLiteral("index"), static_cast<int>(i)},
+                                  {QStringLiteral("name"), QString::fromStdString(experiment->name)},
+                                  {QStringLiteral("eligible"), reason.isEmpty()},
+                                  {QStringLiteral("reason"), reason}});
+    }
+    return out;
+}
+
+QVariantList ProjectViewModel::magneticPeaks(int index, int experiment) {
+    QVariantList out;
+    magnetic_peaks_.clear();
+    k_search_experiment_ = -1;
+    try {
+        bool eligible = false;
+        for (const QVariant& choice : magneticDataChoices(index)) {
+            const QVariantMap c = choice.toMap();
+            if (c.value(QStringLiteral("index")).toInt() == experiment) {
+                if (!c.value(QStringLiteral("eligible")).toBool())
+                    throw std::invalid_argument(c.value(QStringLiteral("reason")).toString().toStdString());
+                eligible = true;
+            }
+        }
+        if (!eligible) throw std::invalid_argument("the experiment does not link this structure");
+        magnetic_peaks_ = edi::magnetic_unexplained_peaks(*project_, static_cast<std::size_t>(experiment),
+                                                          static_cast<std::size_t>(index));
+        k_search_stamp_ = edi::magnetic_fit_inputs_hash(*project_, static_cast<std::size_t>(experiment));
+        k_search_experiment_ = experiment;
+    } catch (const std::exception& refusal) {
+        setLastError(QString::fromUtf8(refusal.what()));
+        return out;
+    }
+    for (const edi::MagneticPeak& p : magnetic_peaks_) {
+        out.push_back(QVariantMap{{QStringLiteral("x"), p.x},
+                                  {QStringLiteral("d"), p.d},
+                                  {QStringLiteral("tolerance"), p.tolerance},
+                                  {QStringLiteral("significance"), p.significance}});
+    }
+    return out;
+}
+
+void ProjectViewModel::findPropagationVectors(int index, int experiment, const QList<int>& ticked) {
+    const unsigned search = ++k_search_;
+    if (experiment != k_search_experiment_ || !propagationSearchCurrent(experiment)) {
+        emit propagationVectorsRefused(tr("the data or the peaks changed; search again"));
+        return;
+    }
+    std::vector<edi::MagneticPeak> peaks;
+    for (const int i : ticked)
+        if (i >= 0 && i < static_cast<int>(magnetic_peaks_.size())) peaks.push_back(magnetic_peaks_[static_cast<std::size_t>(i)]);
+    if (peaks.empty()) {
+        emit propagationVectorsRefused(tr("tick at least one peak"));
+        return;
+    }
+    auto project = std::make_shared<const edi::Project>(*project_);
+    using Result = std::variant<std::vector<edi::MagneticKRow>, QString>;
+    auto* watcher = new QFutureWatcher<Result>(this);
+    connect(watcher, &QFutureWatcher<Result>::finished, this, [this, watcher, search] {
+        watcher->deleteLater();
+        if (search != k_search_) return;
+        const Result result = watcher->result();
+        if (const auto* refusal = std::get_if<QString>(&result)) {
+            emit propagationVectorsRefused(*refusal);
+            return;
+        }
+        QVariantList rows;
+        for (const edi::MagneticKRow& r : std::get<std::vector<edi::MagneticKRow>>(result)) {
+            rows.push_back(QVariantMap{{QStringLiteral("k"), QString::fromStdString(r.k)},
+                                       {QStringLiteral("label"), QString::fromStdString(r.label)},
+                                       {QStringLiteral("stage"), r.stage},
+                                       {QStringLiteral("explained"), static_cast<int>(r.explained)},
+                                       {QStringLiteral("misfit"), r.worst_misfit},
+                                       {QStringLiteral("equallyGood"), r.equally_good},
+                                       {QStringLiteral("verdict"), QString::fromStdString(r.verdict)},
+                                       {QStringLiteral("parentCells"), static_cast<int>(r.parent_cells)},
+                                       {QStringLiteral("undetermined"), static_cast<int>(r.undetermined)},
+                                       {QStringLiteral("estimate"), QString::fromStdString(r.estimate)}});
+        }
+        emit propagationVectorsFound(rows);
+    });
+    watcher->setFuture(QtConcurrent::run([project, experiment, index, peaks]() -> Result {
+        try {
+            return edi::magnetic_k_search(*project, static_cast<std::size_t>(experiment), static_cast<std::size_t>(index),
+                                          peaks);
+        } catch (const std::exception& refusal) {
+            return QString::fromUtf8(refusal.what());
+        }
+    }));
+}
+
+bool ProjectViewModel::propagationSearchCurrent(int experiment) const {
+    if (experiment < 0 || experiment != k_search_experiment_) return false;
+    try {
+        return edi::magnetic_fit_inputs_hash(*project_, static_cast<std::size_t>(experiment)) == k_search_stamp_;
+    } catch (const std::exception&) {
+        return false;
+    }
+}
+
 void ProjectViewModel::loadScan() {
     evolution_ = new EvolutionViewModel(this);
     // The Evolution selector draws a parameter as the parameter table names it, then its full name, and searches both

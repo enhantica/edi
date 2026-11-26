@@ -34,6 +34,62 @@ AppDialog {
 
     readonly property string k: kChoice.currentIndex >= 0 && kChoice.currentIndex < presets.length ? presets[kChoice.currentIndex].k : [0, 1, 2].map(i => kFields.itemAt(i) ? (kFields.itemAt(i) as EaElements.TextField).text : "0").join(",")
 
+    // Find k from data (crysta ADR-0137 A11): the experiments a kept fit covers, its unexplained peaks and the
+    // ranked k.
+    property var dataChoices: []
+    property var peaks: []
+    property var peakTicks: []
+    property var kRows: []
+    property bool searching: false
+    property string kRefusal: ""
+
+    function setK(text) {
+        const parts = text.split(",");
+        const preset = presets.findIndex(p => p.k === text);
+        if (preset >= 0) {
+            kChoice.currentIndex = preset;
+        } else {
+            kChoice.currentIndex = presets.length;
+            for (let i = 0; i < 3; ++i)
+                (kFields.itemAt(i) as EaElements.TextField).text = parts[i];
+        }
+        find();
+    }
+    function loadPeaks() {
+        kRows = [];
+        kRefusal = "";
+        peaks = [];
+        peakTicks = [];
+        if (dataChoice.currentIndex < 0 || dataChoice.currentIndex >= dataChoices.length)
+            return;
+        const choice = dataChoices[dataChoice.currentIndex];
+        if (!choice.eligible) {
+            kRefusal = choice.reason;
+            return;
+        }
+        peaks = project.magneticPeaks(structureIndex, choice.index);
+        if (peaks.length === 0)
+            kRefusal = project.lastError !== "" ? project.lastError : qsTr("the fit leaves no peak unexplained");
+        peakTicks = peaks.map(() => true);
+    }
+    function searchK() {
+        kRows = [];
+        kRefusal = "";
+        const ticked = [];
+        for (let i = 0; i < peakTicks.length; ++i)
+            if (peakTicks[i])
+                ticked.push(i);
+        searching = true;
+        project.findPropagationVectors(structureIndex, dataChoices[dataChoice.currentIndex].index, ticked);
+    }
+    function chooseRow(row) {
+        if (!project.propagationSearchCurrent(dataChoices[dataChoice.currentIndex].index)) {
+            kRefusal = qsTr("the data or the peaks changed; search again");
+            return;
+        }
+        setK(row.k);
+    }
+
     function tickedSites() {
         const out = [];
         for (let i = 0; i < siteRepeater.count; ++i) {
@@ -58,6 +114,7 @@ AppDialog {
 
     Component.onCompleted: {
         presets = project.magneticPresets(structureIndex);
+        dataChoices = project.magneticDataChoices(structureIndex);
         sites = project.magneticSites(structureIndex);
         Qt.callLater(find);
     }
@@ -71,6 +128,16 @@ AppDialog {
         function onMagneticGroupsRefused(message) {
             popup.busy = false;
             popup.refusal = message;
+        }
+        function onPropagationVectorsFound(rows) {
+            popup.searching = false;
+            popup.kRows = rows;
+            if (rows.length === 0)
+                popup.kRefusal = qsTr("No k explains the ticked peaks (not found by this search).");
+        }
+        function onPropagationVectorsRefused(message) {
+            popup.searching = false;
+            popup.kRefusal = message;
         }
     }
 
@@ -111,6 +178,103 @@ AppDialog {
                 text: popup.found ? qsTr("Magnetic cell: %1").arg(popup.found.cell.replace(";0,0,0", "").split(",").join(", ")) : ""
             }
         }
+        // Find k from data.
+        Row {
+            spacing: EaStyle.Sizes.fontPixelSize * 0.6
+            visible: popup.dataChoices.length > 0
+            EaElements.Button {
+                id: findK
+                objectName: "magnetic.findK"
+                checkable: true
+                text: qsTr("Find k from data")
+                onToggled: if (checked)
+                    popup.loadPeaks()
+            }
+            EaElements.Label {
+                anchors.verticalCenter: parent.verticalCenter
+                visible: findK.checked
+                text: qsTr("Data")
+            }
+            EaElements.ComboBox {
+                id: dataChoice
+                objectName: "magnetic.data"
+                visible: findK.checked
+                width: EaStyle.Sizes.fontPixelSize * 14
+                model: popup.dataChoices.map(c => c.eligible ? c.name : `${c.name} (${c.reason})`)
+                currentIndex: {
+                    const eligible = popup.dataChoices.filter(c => c.eligible);
+                    return eligible.length === 1 ? popup.dataChoices.indexOf(eligible[0]) : 0;
+                }
+                onActivated: popup.loadPeaks()
+            }
+            EaElements.Button {
+                objectName: "magnetic.searchK"
+                visible: findK.checked
+                enabled: popup.peaks.length > 0 && !popup.searching
+                text: popup.searching ? qsTr("Searching…") : qsTr("Search")
+                onClicked: popup.searchK()
+            }
+        }
+        Flow {
+            width: parent.width
+            visible: findK.checked && popup.peaks.length > 0
+            spacing: EaStyle.Sizes.fontPixelSize * 0.4
+            EaElements.Label {
+                text: qsTr("Unexplained peaks")
+            }
+            Repeater {
+                model: popup.peaks
+                delegate: EaElements.CheckBox {
+                    required property var modelData
+                    required property int index
+                    objectName: `magnetic.peak.${index}`
+                    text: `${modelData.x.toFixed(3)} (d ${modelData.d.toFixed(4)} Å)`
+                    checked: popup.peakTicks[index] ?? true
+                    onToggled: {
+                        const next = popup.peakTicks.slice();
+                        next[index] = checked;
+                        popup.peakTicks = next;
+                        popup.kRows = [];
+                    }
+                }
+            }
+        }
+        EaElements.Label {
+            width: parent.width
+            wrapMode: Text.Wrap
+            visible: findK.checked && text !== ""
+            color: EaStyle.Colors.red
+            text: popup.kRefusal
+        }
+        ListView {
+            id: kList
+            objectName: "magnetic.kRows"
+            visible: findK.checked && popup.kRows.length > 0
+            width: parent.width
+            height: Math.min(contentHeight, EaStyle.Sizes.fontPixelSize * 9)
+            clip: true
+            model: popup.kRows
+            delegate: EaElements.Label {
+                id: kRow
+                required property var modelData
+                required property int index
+                readonly property bool choosable: modelData.verdict === "buildable"
+                width: kList.width
+                enabled: choosable
+                text: {
+                    const r = modelData;
+                    const name = r.label === "" ? `(${r.k})` : `${r.label} (${r.k})`;
+                    const state = r.verdict === "buildable" ? "" : r.verdict === "over the limit" ? qsTr(" · needs %1 parent cells: not built").arg(r.parentCells) : r.verdict === "underdetermined" ? qsTr(" · underdetermined in %1 directions").arg(r.undetermined) : qsTr(" · incommensurate at this resolution");
+                    return `${name} · ${qsTr("%1 peaks explained").arg(r.explained)} · ${qsTr("worst misfit %1").arg(r.misfit.toFixed(2))}${r.equallyGood ? qsTr(" · equally good") : ""}${state}`;
+                }
+                MouseArea {
+                    anchors.fill: parent
+                    enabled: kRow.choosable
+                    onClicked: popup.chooseRow(kRow.modelData)
+                }
+            }
+        }
+
         // 2. The magnetic sites; 3. starting moments; the zero-moment switch.
         Flow {
             width: parent.width

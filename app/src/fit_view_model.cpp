@@ -1328,6 +1328,7 @@ void FitViewModel::ended(const edi::FitReport& report) {
     if (auto accepted = std::exchange(pending_accept_, nullptr); accepted && !failure && !stop_rollback_ && visible && !owner_.retired_) {
         accepted_fit_ = std::make_shared<const edi::Project>(project_);
         accepted_history_depth_ = owner_.undo_history_.size();
+        owner_.recordFitAdoption();  // Find k reads which experiments this kept fit covers (edi ADR-0078)
         candidate_ = stop_rollback_ = manual_since_accepted_ = false;
         trial_files_.clear();
     }

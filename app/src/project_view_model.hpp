@@ -562,6 +562,19 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     Q_INVOKABLE QString magneticGroupMoments(int node);
     // Adds found groups `nodes` as structures, one undoable step; false and `refused` on a refusal, nothing changed.
     Q_INVOKABLE bool addMagneticCandidates(int index, const QList<int>& nodes, bool startMoments);
+    // Find k from data: each experiment linking structure `index`, {index, name, eligible, reason}; eligible while a
+    // kept fit's inputs still match (recordFitAdoption).
+    Q_INVOKABLE QVariantList magneticDataChoices(int index) const;
+    // The peaks experiment `experiment`'s kept fit leaves unexplained, {x, d, tolerance, significance}; empty and
+    // `refused` on a refusal.
+    Q_INVOKABLE QVariantList magneticPeaks(int index, int experiment);
+    // Ranks propagation vectors for the ticked peaks off the GUI thread; propagationVectorsFound or
+    // propagationVectorsRefused answers.
+    Q_INVOKABLE void findPropagationVectors(int index, int experiment, const QList<int>& ticked);
+    // Whether the data and the peaks are still those the last search ran on.
+    Q_INVOKABLE bool propagationSearchCurrent(int experiment) const;
+    // Called when a fit is kept: the inputs of every experiment it calculated.
+    void recordFitAdoption();
     // The parameter table's "free" header: free or fix every one of `parameters` (the rows the filters show) that can
     // be fitted, as one edit with one Undo step (the owner, 2026-10-11).
     Q_INVOKABLE bool setParametersFree(const QList<ParameterItem*>& parameters, bool free);
@@ -881,6 +894,8 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     void refused(const QString& message);
     void magneticGroupsFound(const QVariantMap& graph);
     void magneticGroupsRefused(const QString& message);
+    void propagationVectorsFound(const QVariantList& rows);
+    void propagationVectorsRefused(const QString& message);
     // A grouping previewSeriesGroups worked out: what it found, and whether the files make a series.
     void seriesGroupsPreviewed(int request, const QString& text, bool valid);
     // A message for the status bar's Messages (Session lists it): a load's account, a removal's links.
@@ -931,6 +946,12 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     std::optional<edi::MagneticCandidateGraph> magnetic_graph_;
     int magnetic_graph_structure_ = -1;
     unsigned magnetic_search_ = 0;
+    // Find k: the inputs hash of each experiment at its last kept fit, by name, and the last search's snapshot.
+    std::map<std::string, std::uint64_t> fit_stamps_;
+    std::vector<edi::MagneticPeak> magnetic_peaks_;
+    std::uint64_t k_search_stamp_ = 0;
+    int k_search_experiment_ = -1;
+    unsigned k_search_ = 0;
     // The information entry for an estimate with the calculated peaks set to auto (none for another setting).
     void postAutoModelReason(const std::string& experiment, const std::string& reason);
     void publish(bool structural);
