@@ -98,7 +98,10 @@ def observe_fallible_core(prefix, output, core_observed, probe_defined):
                 role = ''
                 if spelling == 'load_project' and '15ProjectLoadModeE' in symbol:
                     signature = demangle(prefix, symbol).strip()
-                    callback = signature.partition('std::function<void (')[2]
+                    # libc++ (macOS) spells it std::__1::function, libstdc++ std::function.
+                    callback = re.split(
+                        r'std::(?:__\w+::)?function<void \(', signature, maxsplit=1
+                    )[-1]
                     role = '_sourced_mode' if ' const&, ' in callback else '_mode'
                 alias = (
                     ('_' if sys.platform == 'darwin' else '')
