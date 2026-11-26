@@ -14,7 +14,7 @@
     <name>QInstaller::IntroductionPage</name>
     <message><source>Welcome to the %1 Setup.</source><translation>Welcome to the %1 Installer.</translation></message>
     <message><source>&amp;Add or remove components</source><translation>Change components</translation></message>
-    <message><source>&amp;Update components</source><translation>Update EasyDiffraction</translation></message>
+    <message><source>&amp;Update components</source><translation>Update</translation></message>
     <message><source>&amp;Remove all components</source><translation>Uninstall</translation></message>
     <message><source>&amp;Quit</source><translation>Quit</translation></message>
     <message><source>Maintenance Actions</source><translation>What to do</translation></message>

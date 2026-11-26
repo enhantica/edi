@@ -60,10 +60,11 @@ QPushButton:default, QPushButton:focus {
     border-color: rgba(128, 128, 128, 0.25);
 }
 
+/* Hovered or pressed, the border takes the text's accent. */
 QPushButton:hover, QPushButton:pressed, QPushButton:checked {
     color: @ACCENT@;
     background-color: rgba(255, 255, 255, 0.12);
-    border-color: transparent;
+    border-color: @ACCENT@;
 }
 
 QPushButton:disabled {
@@ -71,8 +72,94 @@ QPushButton:disabled {
     border-color: transparent;
 }
 
+/* The Framework's questions and warnings ("Do you want to quit", "already exists") as the pages read: the pages'
+   text at its normal weight (Qt makes it bold on macOS), and no large icon. Those that warn or refuse (the
+   Framework's warning and critical ones) take the app's small warning sign (render_images.qml); a question or a
+   note takes none (owner point 35). Matched by the icon the Framework gave the pop-up. */
+QMessageBox[icon="Question"], QMessageBox[icon="Information"], QMessageBox[icon="4"], QMessageBox[icon="1"] {
+    qproperty-icon: NoIcon;
+}
+
+QMessageBox[icon="Warning"], QMessageBox[icon="Critical"], QMessageBox[icon="2"], QMessageBox[icon="3"] {
+    qproperty-iconPixmap: url(:/metadata/edi/warning.png);
+}
+
+/* The wizard buttons' icons, as the app's buttons carry them: the buttons are the Framework's, one per role, so each
+   role has one icon whatever the page names the button (Next is also Install and Try again, the commit button Update,
+   Uninstall and Restart). The Maintenance Tool's last page finishes with its Cancel button, made the default there:
+   as default it takes the done icon. A disabled Back or commit button takes no room (below) and shows no icon. */
+/* A button's width is reckoned from its text alone, without the icon a stylesheet gives it, and the icon and text
+   are drawn inside that width: so a wizard button's inside is at least as wide as the icon (14), the 4 px beside it
+   and its longest text ("Try again", about 64 px at the 14 px text), with room to spare: 90 px. */
+QPushButton#__qt__passive_wizardbutton0, QPushButton#__qt__passive_wizardbutton1, QPushButton#qt_wizard_commit,
+QPushButton#qt_wizard_finish, QPushButton#qt_wizard_cancel {
+    min-width: 90px;
+}
+
+QPushButton#__qt__passive_wizardbutton0 {
+    icon: url(:/metadata/edi/button-back.png);
+    icon-size: 14px;
+}
+
+QPushButton#__qt__passive_wizardbutton1 {
+    icon: url(:/metadata/edi/button-next.png);
+    icon-size: 14px;
+}
+
+QPushButton#qt_wizard_commit, QPushButton#qt_wizard_finish, QPushButton#qt_wizard_cancel:default {
+    icon: url(:/metadata/edi/button-done.png);
+    icon-size: 14px;
+}
+
+QPushButton#qt_wizard_cancel {
+    icon: url(:/metadata/edi/button-cancel.png);
+    icon-size: 14px;
+}
+
+/* The commit button outlined (Restart beside Finish on the Maintenance Tool's last page) takes the outlined grey. */
+QPushButton#qt_wizard_commit:!default {
+    icon: url(:/metadata/edi/button-done-plain.png);
+}
+
+QPushButton#__qt__passive_wizardbutton0:disabled, QPushButton#qt_wizard_commit:disabled {
+    icon: url(none);
+}
+
+/* A pop-up in one colour, the window's own (the window behind it is darkened), with a faint border near that colour
+   and room around its text. Without a window frame (a window manager may draw none) it still reads as a dialog, not
+   as text on the page. */
+QMessageBox {
+    background-color: palette(window);
+    border: 1px solid rgba(128, 128, 128, 0.2);
+}
+
+/* Everything inside it on the panel's colour (on macOS the message label otherwise draws the window's grey). */
+QMessageBox QWidget, QMessageBox QLabel#qt_msgbox_label {
+    background-color: transparent;
+}
+
+/* Room around the message inside the panel: Qt lays it in a grid whose margins a stylesheet cannot reach (padding
+   on the box itself is ignored), so the label carries it, 12 px above the text and 24 px between the text and the
+   buttons, and 20 px on its right, which with the grid's margin matches the space left of the text (32 px). A label
+   given padding would also indent its text by half an "x": none. */
+QMessageBox QLabel#qt_msgbox_label {
+    padding: 12px 20px 24px 0;
+    qproperty-indent: 0;
+}
+
 QMessageBox QLabel {
     color: palette(window-text);
+    font-weight: normal;
+}
+
+/* Their buttons without icons (Linux styles give Yes, No and OK one), as every other button. */
+QDialogButtonBox {
+    dialogbuttonbox-buttons-have-icons: 0;
+}
+
+QMessageBox QLabel#qt_msgboxex_icon_label {
+    margin: 14px 0 0 0;
+    padding: 0;
 }
 
 /* The main action (Install, Update, Finish: the default button) filled with the app's accent; the others quiet. */
@@ -86,6 +173,20 @@ QPushButton:default:hover, QPushButton:default:pressed {
     color: white;
     background-color: #0091cb;
     border-color: #0091cb;
+}
+
+/* In a pop-up no button is filled: which one is the default (what Enter presses) is the platform's choice for the
+   Framework's own pop-ups (Yes on Linux, No on macOS for the quit question), so they look alike everywhere. */
+QMessageBox QPushButton:default {
+    color: palette(window-text);
+    background-color: transparent;
+    border-color: rgba(128, 128, 128, 0.25);
+}
+
+QMessageBox QPushButton:default:hover, QMessageBox QPushButton:default:pressed {
+    color: @ACCENT@;
+    background-color: rgba(255, 255, 255, 0.12);
+    border-color: @ACCENT@;
 }
 
 /* The page's frame takes the window's colour (Qt may fill it with the base colour, a white card). */

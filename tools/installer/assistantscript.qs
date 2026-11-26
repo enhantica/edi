@@ -31,7 +31,10 @@ function Component() {
     function part(name) { return gui.findChild(form, name); }
     var box = part("AssistantCheckBox");
     if (installer.isInstaller()) {
-        // Ticked from the start (owner's choice); the command line still installs it only when named.
+        // Ticked from the start (owner's choice); the command line still installs it only when named. Under
+        // EasyDiffraction, which is always installed (ticked, fixed), each with its size (Installer.qs).
+        part("AppBox").visible = true;
+        box.text = "AI assistant";
         box.checked = true;
         // The folder field of our own (Installer.qs keeps the Framework's in step with it).
         part("FolderBox").visible = true;
@@ -43,8 +46,8 @@ function Component() {
         part("AppBox").visible = true;
         box.text = "AI assistant";
         box.checked = component.installed;
-        // The licence, shortcut and space belong to installing, not to this choice.
-        ["LicenseBox", "ShortcutBox", "NoticeBox", "SpaceBox"].forEach(function (name) {
+        // The licence and shortcut belong to installing, not to this choice; the space line stays (Installer.qs).
+        ["LicenseBox", "ShortcutBox", "NoticeBox"].forEach(function (name) {
             part(name).visible = false;
         });
         if (installer.isUpdater() && !component.installed) {

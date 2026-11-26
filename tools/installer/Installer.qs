@@ -68,8 +68,15 @@ var installerWalked = false;
 var maintenanceMode = installer.environmentVariable("EDI_INSTALLER_MAINTENANCE_MODE") || "remove";
 var maintenanceAction = maintenanceMode.indexOf("update") === 0 ? "update" : maintenanceMode;
 
+// The installer's other captured states (EDI_INSTALLER_CAPTURE_STATE), each a walk of its own that stops on its
+// state: installed (run again over an installation, Install pressed, the page stays), quit (Cancel pressed) and
+// locked (started while another installer holds the lock). capture_pages.py ends those walks once their picture is
+// taken.
+var captureState = installer.environmentVariable("EDI_INSTALLER_CAPTURE_STATE");
+
 function pageId(name) {
-    var mode = installer.isInstaller() ? "installer" : "maintenance-" + maintenanceMode;
+    var mode = installer.isInstaller() ? "installer" + (captureState ? "-" + captureState : "")
+        : "maintenance-" + maintenanceMode;
     return mode + "-" + name + "-" + (darkTheme() ? "dark" : "light");
 }
 
@@ -103,15 +110,35 @@ function capture(name) {
         return;
     notePage(name);
     // The progress page is gone within a second for the small marker installer; the first page needs the window up.
-    var delay = name === "PerformInstallation" ? "0.2" : name === "Introduction" ? "2" : "1";
+    // A hovered button waits for the pointer capture_pages.py moves onto it.
+    var delay = name === "PerformInstallation" ? "0.2" : name === "Introduction" || name === "CancelHover" ? "2" : "1";
     var file = captureFolder + "/" + pageId(name) + ".png";
     if (systemInfo.kernelType === "winnt") {
         // A process started here cannot take a screenshot; capture_pages.py takes them on Windows.
     } else if (systemInfo.kernelType === "darwin") {
-        installer.executeDetached("/bin/sh", ["-c", "sleep " + delay + "; /usr/sbin/screencapture -x '" + file + "'"]);
+        // This process's front window (the page, or a pop-up over it), without its shadow; the whole screen if none.
+        var grab = "sleep " + delay + '; id=$(/usr/bin/osascript -l JavaScript -e "$1");'
+            + ' if [ -n "$id" ]; then /usr/sbin/screencapture -x -o -l"$id" "$2";'
+            + ' else /usr/sbin/screencapture -x "$2"; fi';
+        installer.executeDetached("/bin/sh", ["-c", grab, "sh", frontWindowScript(), file]);
     } else {
-        installer.executeDetached("/bin/sh", ["-c", "sleep " + delay + "; import -window root '" + file + "'"]);
+        // The screen around the window is black: trimmed away, leaving the window (and a pop-up over it).
+        installer.executeDetached("/bin/sh", ["-c", "sleep " + delay + "; import -window root -trim +repage '" + file
+            + "'"]);
     }
+}
+
+// macOS: the window number of this process's front window, for screencapture -l. The front-most window of a process
+// is listed first; layer 0 leaves out its menu bar.
+var ownPid = "";
+
+function frontWindowScript() {
+    if (ownPid === "")
+        ownPid = String(installer.execute("/bin/sh", ["-c", "echo $PPID"])[0]).trim();
+    return "ObjC.import('CoreGraphics');"
+        + " var w = ObjC.deepUnwrap(ObjC.castRefToObject($.CGWindowListCopyWindowInfo(1, 0))).filter(function (x) {"
+        + " return x.kCGWindowOwnerPID == " + ownPid + " && x.kCGWindowLayer == 0; });"
+        + " w.length ? String(w[0].kCGWindowNumber) : ''";
 }
 
 function advance(name, page) {
@@ -131,6 +158,21 @@ function advance(name, page) {
     // The summary page commits by itself (installPage below).
     if (name === "ReadyForInstallation" && installer.isInstaller())
         return;
+    // The pop-ups: noted and grabbed as they open, then left open. Install over an installation opens none: its
+    // picture shows the page staying.
+    var popup = {installed: ["InstallPressed", buttons.NextButton], quit: ["Quit", buttons.CancelButton]}[captureState];
+    if (name === "TargetDirectory" && popup) {
+        // Where the capture can move the pointer (EDI_INSTALLER_CAPTURE_HOVER), Cancel is first shown hovered: the
+        // page is noted, capture_pages.py puts the pointer on Cancel, and the picture follows.
+        var hover = captureState === "quit" && installer.environmentVariable("EDI_INSTALLER_CAPTURE_HOVER") !== "";
+        if (hover)
+            later(1500, function () { capture("CancelHover"); });
+        later(hover ? 4000 : 2500, function () {
+            capture(popup[0]);
+            gui.clickButton(popup[1], 100);
+        });
+        return;
+    }
     if (name === "PerformInstallation") {
         // The Framework moves on when it is done (its details are closed on this page, below); this is the backstop.
         var next = function () { proceed("PerformInstallation", buttons.NextButton, 1500); };
@@ -163,6 +205,11 @@ function Controller() {
             start.subTitle = "";
         }
     });
+    // Install over an installation already in the folder is refused by the Framework with a pop-up of its own. The
+    // page already says so above "Install to" (INSTALLED_HERE), so the refusal is answered silently and Install leaves
+    // the page as it is. A script cannot disable the button there: tried with an emptied folder field, the page's
+    // completeness and the Framework's refusal line, the Framework keeps Install enabled.
+    installer.setMessageBoxAutomaticAnswer("TargetDirectoryInUse", QMessageBox.Ok);
     // No Settings button: the system proxy is used by default, and nobody needs to edit repositories here.
     gui.showSettingsButton(false);
     // The licence was accepted when installing; the maintenance tool does not ask again.
@@ -192,6 +239,49 @@ function Controller() {
     });
     installer.installationFinished.connect(clearQuarantine);
     installer.updateFinished.connect(clearQuarantine);
+    // When the work is done the Framework moves on to the last page by itself; should it stay on the progress page,
+    // Next is pressed for it, so the tool always ends by saying what it did.
+    if (captureFolder === "") {
+        var finished = function () {
+            var perform = gui.pageWidgetByObjectName("PerformInstallationPage");
+            if (perform && perform.visible)
+                gui.clickButton(buttons.NextButton, 0);
+        };
+        [installer.installationFinished, installer.updateFinished, installer.uninstallationFinished].forEach(
+            function (done) { done.connect(function () { later(1500, finished); }); });
+    }
+    // Finish opens the program when its box is ticked: the installer's Finish button, and the maintenance tool's,
+    // which is its relabelled Cancel button and so ends it as cancelled once the work is done.
+    if (installer.finishButtonClicked)
+        installer.finishButtonClicked.connect(openProgram);
+    installer.statusChanged.connect(function (status) {
+        if (status === QInstaller.Canceled)
+            openProgram();
+    });
+}
+
+// "Open EasyDiffraction now" (DoneForm.ui), offered on a successful last page. The program is started from here, not
+// through the Framework's RunProgram: that ran from its own hidden box and did not open the app on macOS (edi
+// #188). Asked only once the last page was shown, and once. The window is closing by then, so the box's own
+// visibility says nothing; whether it was offered is kept.
+var openOffered = false;
+var openStarted = false;
+
+function openProgram() {
+    if (!openOffered || openStarted || captureFolder !== "")
+        return;
+    var page = gui.pageWidgetByObjectName("FinishedPage");
+    var open = page ? gui.findChild(page, "OpenCheckBox") : null;
+    if (!open || !open.checked)
+        return;
+    openStarted = true;
+    var target = String(installer.value("TargetDir"));
+    if (systemInfo.kernelType === "darwin")
+        installer.executeDetached("/usr/bin/open", [target + "/EasyDiffraction.app"]);
+    else if (systemInfo.kernelType === "winnt")
+        installer.executeDetached(target + "/bin/EasyDiffraction.exe", [], target);
+    else
+        installer.executeDetached(target + "/bin/EasyDiffraction", [], target);
 }
 
 // edi's light and dark themes for the pages (Installer.qss, filled in by package.py). Scripts can reach the pages but
@@ -206,10 +296,22 @@ function themePage(page) {
     templatePage(page);
 }
 
-// The one layout every page follows: the logo first, one step (16) under it (logo()), then the heading, then the
+// The one layout every page follows: the logo first, 32 under it (logo()), then the heading, then the
 // rows, each 8 under the one above and all on one left edge. The Framework's own layouts have no names (ours all
 // have one), so a script finds them as the page's unnamed children; each that has a spacing gets the row gap.
 var rowGap = 8;
+// Between the groups of a page (what it is, where it goes, the choices, the notes under them) three row gaps, as
+// between the sections of a book: a group's rows read together.
+var groupGap = 3 * rowGap;
+// The logo, and the space under it: four row gaps, twice the gap between groups, so the logo stands apart from the
+// page it heads.
+var logoHeight = 44;
+var logoStep = 4 * rowGap;
+// The page's content stands this far in from the logo's left edge, and as far from the right: the logo starts with a
+// circle (radius 22), whose edge reads as standing where its outline is at 45 degrees, 22 * (1 - cos 45) = 6.4 px in
+// from its leftmost point. Text and rows lined up with the leftmost point looked shifted left of the circle. The
+// widgets take it as a stylesheet margin (Installer.qss), the text as a paragraph margin.
+var sideIndent = 6;
 //
 // The page's own layout (its first unnamed layout; on the summary and progress pages the Framework names it
 // BaseLayout) gets the window padding every page shares: the Framework's default, read from the last page's layout.
@@ -221,7 +323,7 @@ function isLayout(object) {
 }
 
 // Our own layouts (the forms') are named so; every other layout is the Framework's.
-var ownLayout = /^(AssistantLayout|DoneLayout|ProgressColumn|ProgressLayout|[A-Za-z]*Row)$/;
+var ownLayout = /^(AssistantLayout|DoneLayout|ProgressColumn|[A-Za-z]*Row)$/;
 
 function layoutsOf(page) {
     var found = [];
@@ -322,7 +424,7 @@ function orderChoices(page) {
     if (!choices.update || !choices.add)
         return;
     if (!choicesHooked) {
-        choices.update.text = "Update EasyDiffraction";
+        choices.update.text = "Update";
         choices.add.text = "Change components";
         [choices.update, choices.add].forEach(function (choice) {
             choice.toggled.connect(function () { setChosenMode(page); });
@@ -371,6 +473,140 @@ function settleChoices(page, column, choices) {
     later(100, function () { logLayout(page, "settled"); });
 }
 
+// Next on the maintenance tool's first page asks the repository first (the choices are disabled meanwhile). When that
+// finds nothing to do or fails, the Framework stays on the page and writes why in a label of its own, which showed
+// nothing here: the tool looked as if it had done nothing. The choices are watched while the page shows; once they
+// are enabled again on the same page, its reason is said above the question.
+var choicesWatched = false;
+
+function watchChoices(page) {
+    if (choicesWatched)
+        return;
+    choicesWatched = true;
+    var busy = false;
+    function look() {
+        if (!page.visible) {
+            choicesWatched = false;
+            return;
+        }
+        var remove = maintenanceChoices(page).remove;
+        if (remove && !remove.enabled) {
+            busy = true;
+            sayWhyStayed(page, "");
+        } else if (busy) {
+            busy = false;
+            sayWhyStayed(page, stayReason(page));
+        }
+        later(250, look);
+    }
+    later(250, look);
+}
+
+// The Framework's words for staying (its error label, or any other text it wrote on the page), in plain text; empty
+// when it wrote none. `raw` gives them as they are and clears them, so the next failure is told apart from this one.
+function stayReason(page, raw) {
+    function plain(label) { return String(label.text).replace(/<[^>]*>/g, "").trim(); }
+    var labels = gui.findChildren(page, null).filter(function (item) {
+        return item && typeof item.text === "string" && typeof item.wordWrap === "boolean"
+            && item.objectName !== "MessageLabel" && plain(item) !== "";
+    });
+    // The error label by name; else a text that reads as a failure (not the "Retrieving information" line).
+    var source = labels.filter(function (label) { return label.objectName === "ErrorLabel"; })[0]
+        || labels.filter(function (label) {
+            var failure = /cannot|could not|error|fail|lock|no updates|unavailable|repositor(y|ies) required/i;
+            return failure.test(plain(label)) && !/^Retrieving/.test(plain(label));
+        })[0];
+    var words = source ? plain(source) : "";
+    if (source) {
+        source.visible = false;  // said in our own words instead
+        if (raw)
+            source.text = "";
+    }
+    if (raw)
+        return words;
+    if (/no updates available/i.test(words))
+        return "EasyDiffraction is up to date: there is no update to install.";
+    if (/lock/i.test(words))
+        return "Another EasyDiffraction installer seems to be running. Close it and try again.";
+    return words !== "" ? words : "Nothing was changed. Check your internet connection and try again.";
+}
+
+// The app's warning sign (exclamation-triangle in its orange, render_images.qml), before a line that says something
+// is wrong or needs attention: never before neutral information or a question (owner point 35).
+// Its picture carries the 4 px a button leaves between its icon and its text, so the gap is the same everywhere.
+function warningSign() {
+    return '<img style="vertical-align: middle" src=":/metadata/edi/'
+        + (darkTheme() ? "warning-line-dark" : "warning-line") + '.png" width="20" height="14">';
+}
+
+// The reason between the logo and the question, after the warning sign unless all is well; empty clears it.
+function sayWhyStayed(page, reason) {
+    var ask = gui.findChild(page, "MessageLabel");
+    if (!ask)
+        return;
+    var question = "What would you like to do?</p>";
+    var text = logo() + PARA + question;
+    if (reason !== "") {
+        // In the text's colour: the warning sign alone marks a problem (owner point 36).
+        text = logo() + PARA + (/up to date/.test(reason) ? "" : warningSign()) + reason + "</p>" + GROUP + question;
+    }
+    if (String(ask.text) !== text)
+        ask.text = text;
+}
+
+// The installer's first page passes by itself, unless asking the repository fails there: most often because another
+// installer holds the download cache's lock. The Framework then stays on that page with its own long message (a
+// lock file's path) under a bare welcome, and leaves Next disabled, so closing the other installer changed nothing.
+// The page is watched while it shows; on a failure it says what to do in the design of the other pages, and its Next
+// becomes Try again, which asks the repository once more (the cache's lock is taken anew on each try).
+var welcomeWatched = false;
+var LOCKED = "Another EasyDiffraction installer seems to be running. Close it and press Try again.";
+
+function watchWelcome(page) {
+    if (welcomeWatched)
+        return;
+    welcomeWatched = true;
+    function look() {
+        if (!page.visible) {
+            welcomeWatched = false;
+            gui.setWizardPageButtonText(QInstaller.Introduction, buttons.NextButton, "Next");
+            return;
+        }
+        var reason = stayReason(page, true);
+        if (reason !== "")
+            sayRetry(page, /lock/i.test(reason) ? LOCKED : reason + " Press Try again.");
+        later(250, look);
+    }
+    later(250, look);
+}
+
+var lockedCaptured = false;
+
+function sayRetry(page, text) {
+    if (captureState === "locked" && !lockedCaptured) {
+        lockedCaptured = true;
+        later(0, function () { capture("Introduction"); });
+    }
+    var message = gui.findChild(page, "MessageLabel");
+    if (message) {
+        message.textFormat = 1;  // Qt.RichText
+        message.alignment = 0x0001 | 0x0020;  // Qt.AlignLeft | Qt.AlignTop, as every page
+        message.wordWrap = true;
+        message.text = logo() + PARA + warningSign() + text + "</p>";
+    }
+    gui.setWizardPageButtonText(QInstaller.Introduction, buttons.NextButton, "Try again");
+    // The Framework left the page incomplete when the try failed; Try again must be pressable.
+    [page, typeof gui.pageById === "function" ? gui.pageById(QInstaller.Introduction) : null].forEach(function (p) {
+        if (!p)
+            return;
+        try {
+            p.complete = true;
+        } catch (error) {
+            console.log("edi retry not enabled: " + error);
+        }
+    });
+}
+
 // The assistant's own page in the maintenance tool (assistantscript.qs).
 Controller.prototype.DynamicAssistantFormCallback = function () {
     var page = gui.pageWidgetByObjectName("DynamicAssistantForm");
@@ -379,28 +615,94 @@ Controller.prototype.DynamicAssistantFormCallback = function () {
     templatePage(gui.pageByObjectName("DynamicAssistantForm"));
     page.title = "";
     page.subTitle = "";
+    // The logo and the page's heading, as the summary after it: what the choice is for.
     var mark = gui.findChild(page, "FormLogo");
     if (mark) {
         mark.textFormat = 1;  // Qt.RichText
-        mark.text = headerWordmark();
+        mark.text = logo() + '<p style="margin: 0 ' + sideIndent + 'px">'
+            + (installer.isUpdater() ? "Update" : "Change components") + "</p>";
         gui.findChild(page, "LogoBox").visible = true;
     }
-    // Adding components in capture mode turns the assistant over (added if absent, removed if there), so the mode
-    // always has work to do and its progress page shows.
-    var box = captureFolder !== "" ? gui.findChild(page, "AssistantCheckBox") : null;
-    if (box && maintenanceMode === "add")
-        box.checked = !box.checked;
-    if (box && maintenanceMode === "updatekept")
-        box.checked = false;
+    choiceSizes(page);
+    var box = gui.findChild(page, "AssistantCheckBox");
+    if (box && !choiceHooked) {
+        box.toggled.connect(function () { choiceSpace(page); });
+        choiceHooked = true;
+    }
+    choiceSpace(page);
     settleSoon(page);
     capture("AssistantForm");
+    // Adding components in capture mode turns the assistant over (added if absent, removed if there), so the mode
+    // always has work to do and its progress page shows; updatekept updates without it. Done once the picture is
+    // taken, so it shows the page as it opens.
+    if (captureFolder !== "" && box && (maintenanceMode === "add" || maintenanceMode === "updatekept"))
+        later(1600, function () { box.checked = maintenanceMode === "add" ? !box.checked : false; });
     advance("AssistantForm", page);
 };
+
+var choiceHooked = false;
+
+// The choice page's space line, as the install page's: what the change needs (and what the disk has), or frees.
+// Updating takes everything ticked anew; changing components adds or removes the assistant.
+function choiceSpace(page) {
+    var label = gui.findChild(page, "SpaceLabel");
+    var row = gui.findChild(page, "SpaceBox");
+    var box = gui.findChild(page, "AssistantCheckBox");
+    if (!label || !row || !box)
+        return;
+    var sizes = choiceSizes(page);
+    var all = installer.components();
+    var installed = false;
+    for (var i = 0; i < all.length; ++i) {
+        if (all[i].name === assistantComponent)
+            installed = all[i].installed;
+    }
+    var free = freeSpace(String(installer.value("TargetDir")));
+    var available = isNaN(free) ? "" : " · " + sizeText(free) + " available";
+    var text = "";
+    if (installer.isUpdater())
+        text = sizeText(sizes.app + sizes.maintenance + (box.checked ? sizes.assistant : 0)) + " needed" + available;
+    else if (box.checked && !installed)
+        text = sizeText(sizes.assistant) + " needed" + available;
+    else if (!box.checked && installed)
+        text = sizeText(sizes.assistant) + " freed";
+    label.text = text;
+    row.visible = text !== "";
+    settleSoon(page);
+}
 
 // The assistant checkbox on the folder page decides the component, applied when that page is left and again before
 // the summary counts what is installed: a selection made while the component scripts load does not last.
 var assistantComponent = "org.easydiffraction.app.assistant";
 var appComponent = "org.easydiffraction.app";
+// The maintenance tool is a hidden (virtual) component, installed and updated with the rest. The pages show it as a
+// row of its own, ticked and fixed as EasyDiffraction, between it and the AI assistant (owner, 2026-11-26).
+var maintenanceComponent = "org.easydiffraction.app.maintenancetool";
+// The tool's size: on Linux its component has no payload (the Framework writes the tool from its own binary), so
+// package.py gives the size of that binary.
+var toolBytes = Number("@TOOL_BYTES@") || 0;
+
+function componentBytes(c) {
+    return Number(c.value("UncompressedSize") || 0) || (c.name === maintenanceComponent ? toolBytes : 0);
+}
+
+// Whether a summary counts the component: what is installed, updated or removed. The maintenance tool's component
+// carries the app version (ADR-0091), so an update takes it whenever it changes anything else; the Framework does not
+// mark a virtual component for it, so that is decided here.
+function requested(c, removing) {
+    if (removing)
+        return c.uninstallationRequested();
+    if (c.name === maintenanceComponent && installer.isUpdater()) {
+        var all = installer.components();
+        for (var i = 0; i < all.length; ++i) {
+            if (all[i].name !== maintenanceComponent && listed(all[i]) && all[i].installationRequested())
+                return true;
+        }
+        return false;
+    }
+    return c.installationRequested();
+}
+
 var assistantHooked = false;
 
 function assistantChosen() {
@@ -455,38 +757,72 @@ function frameworkBytes(figure) {
 }
 
 // `total`, where given, is what the whole change takes by the Framework's count, which includes parts the list does
-// not name (the maintenance tool itself): EasyDiffraction's row carries them, so the rows add up to the line below.
-function summaryRows(removing, total) {
-    var named = total ? summaryBytes(removing) : 0;
+// not name (the maintenance tool itself): EasyDiffraction's row carries them, so the rows add up to the space line.
+// `boxed` shows each name as the choice page shows it: a ticked check box that cannot be changed here (drawn disabled),
+// its name in the normal text colour, the box at the heading's edge and the rows one row gap apart. The box is 16 px,
+// the check box's outside at the 14 px text (Installer.qss). `first` is the gap above the first row, where it follows
+// the space line.
+function summaryRows(removing, total, boxed, first) {
+    var entries = summaryEntries(removing);
+    var named = 0;
+    entries.forEach(function (entry) { named += entry.bytes; });
     var rows = "";
+    entries.forEach(function (entry) {
+        var gap = rows === "" && first ? first : boxed ? rowGap : 2;
+        var name = boxed
+            ? '<td width="' + (16 + sideIndent) + '" style="padding: ' + gap + 'px 0 0 ' + sideIndent
+              + 'px"><img style="vertical-align: middle" src='
+              + '":/metadata/edi/' + (darkTheme() ? "checked-disabled-dark" : "checked-disabled")
+              + '.png" width="16" height="16"></td>'
+              + '<td valign="middle" style="padding: ' + gap + 'px 0 0 7px">' + entry.name + "</td>"
+            : '<td style="padding: ' + gap + 'px 0 2px ' + (4 + sideIndent) + 'px">' + entry.name + "</td>";
+        rows += "<tr>" + name + '<td align="right"' + (boxed ? ' valign="middle"' : "") + ' style="padding: '
+            + gap + "px " + sideIndent + 'px 0 0">' + sizeText(entry.bytes
+                       + (entry.app && total ? Math.max(0, total - named) : 0)) + "</td></tr>";
+    });
+    return rows;
+}
+
+// What a summary lists, in the pages' order: EasyDiffraction, the maintenance tool, the AI assistant. The Framework
+// leaves its virtual components out of the list a script reads, so the tool is added here whenever EasyDiffraction is
+// installed or updated (it is installed with it and taken by every update, ADR-0091).
+function summaryEntries(removing) {
+    var entries = [];
+    var tool = false;
     var all = installer.components();
     for (var i = 0; i < all.length; ++i) {
         var c = all[i];
-        if (c.value("Virtual") === "true")
+        if (!listed(c) || !requested(c, removing))
             continue;
-        var counted = removing ? c.uninstallationRequested() : c.installationRequested();
-        if (!counted)
-            continue;
-        rows += '<tr><td style="padding: 2px 0 2px 4px">' + c.value("DisplayName") + '</td><td align="right">'
-            + sizeText(Number(c.value("UncompressedSize") || 0)
-                       + (c.name === appComponent ? Math.max(0, (total || 0) - named) : 0)) + '</td></tr>';
+        tool = tool || c.name === maintenanceComponent;
+        entries.push({name: displayName(c), bytes: componentBytes(c), app: c.name === appComponent,
+                      order: c.name === appComponent ? 0 : c.name === maintenanceComponent ? 1 : 2});
     }
-    return rows;
+    var app = entries.some(function (entry) { return entry.app; });
+    if (!removing && app && !tool && !installer.isPackageManager())
+        entries.push({name: "Maintenance Tool", bytes: toolBytes, app: false, order: 1});
+    entries.sort(function (a, b) { return a.order - b.order; });
+    return entries;
+}
+
+// A component the summary lists: every one users see, and the maintenance tool.
+function listed(c) {
+    return c.value("Virtual") !== "true" || c.name === maintenanceComponent;
+}
+
+function displayName(c) {
+    return c.name === maintenanceComponent ? "Maintenance Tool" : c.value("DisplayName");
 }
 
 // The bytes the components to be installed (or removed) take.
 function summaryBytes(removing) {
     var bytes = 0;
-    var all = installer.components();
-    for (var i = 0; i < all.length; ++i) {
-        var c = all[i];
-        if (c.value("Virtual") !== "true" && (removing ? c.uninstallationRequested() : c.installationRequested()))
-            bytes += Number(c.value("UncompressedSize") || 0);
-    }
+    summaryEntries(removing).forEach(function (entry) { bytes += entry.bytes; });
     return bytes;
 }
 
-// A list under its heading, its items 4 px in from the heading's edge (each name's cell padding).
+// A list under its heading, its items 4 px in from the heading's edge (each name's cell padding), or with their boxes
+// at that edge (summaryRows).
 function summaryTable(rows) {
     return '<table width="100%" cellspacing="0" cellpadding="0">' + rows + "</table>";
 }
@@ -509,7 +845,8 @@ function writeSummary(page) {
     var heading = installer.isInstaller() ? "Ready to install" : installer.isUpdater() ? "Ready to update"
         : removing ? "Ready to remove" : "Ready to apply your changes";
     var target = installer.value("TargetDir");
-    var text = logo() + PARA + "<b>" + heading + "</b></p>";
+    // The heading in the text's weight, as every page's first line.
+    var text = logo() + PARA + heading + "</p>";
     // "Space required: X" and "Space available: Y" from the Framework's space line, the only place that has them.
     var space = gui.findChild(page, "SpaceItem");
     var needed = "", available = "", warned = false;
@@ -525,55 +862,56 @@ function writeSummary(page) {
             warned = true;
     }
     var neededBytes = installer.isUpdater() ? frameworkBytes(needed) : 0;
-    var adding = summaryRows(false, neededBytes);
-    var dropping = removing ? summaryRows(true) : (installer.isPackageManager() ? summaryRows(true) : "");
-    if (adding !== "")
-        text += summaryTable(adding);
-    if (dropping !== "")
-        text += (removing ? "" : PARA + "Removed:</p>") + summaryTable(dropping);
-    if (removing) {
-        text += '<p style="margin: 8px 0 0 0; color: ' + warning() + '">Everything in ' + breakablePath(target)
-            + " will be removed.</p>";
-    } else if (installer.isInstaller()) {
-        text += PARA + "Install to " + breakablePath(target) + "</p>";
-    }
-    // Adding or removing components: what the change needs or frees, and nothing when it changes no files.
+    // The space line right under the heading, as under the install page's folder; the lists one group gap below it.
+    // Adding or removing components says what the change needs or frees, and nothing when it changes no files.
+    var spaceLine = "";
     if (installer.isPackageManager()) {
         var added = summaryBytes(false);
         var freed = summaryBytes(true);
         if (added > 0)
-            text += PARA + sizeText(added) + " needed</p>";
+            spaceLine = sizeText(added) + " needed";
         else if (freed > 0)
-            text += PARA + sizeText(freed) + " freed</p>";
+            spaceLine = sizeText(freed) + " freed";
         if (space)
             space.visible = false;
     } else if (space && !removing) {
         // A change that needs no space (a figure of 0) says nothing about space.
         if (needed !== "" && parseFloat(needed) > 0)
-            text += PARA + (neededBytes > 0 ? sizeText(neededBytes) : needed) + " needed · " + available
-                + " available</p>";
+            spaceLine = (neededBytes > 0 ? sizeText(neededBytes) : needed) + " needed · " + available + " available";
         space.visible = warned;  // a shortage stays said as the Framework says it
     }
+    if (spaceLine !== "")
+        text += PARA + spaceLine + "</p>";
+    var first = spaceLine !== "" ? groupGap : 0;
+    // Updating lists what is updated as the choice page before it showed it: ticked boxes.
+    var adding = summaryRows(false, neededBytes, installer.isUpdater(), first);
+    var dropping = removing ? summaryRows(true, 0, false, first)
+        : (installer.isPackageManager() ? summaryRows(true) : "");
+    if (adding !== "")
+        text += summaryTable(adding);
+    if (dropping !== "")
+        text += (removing ? "" : GROUP + "Removed:</p>") + summaryTable(dropping);
+    // The lines under the lists are a group of their own: the first one group gap under the lists.
+    var closing = [];
+    if (removing) {
+        closing.push({text: warningSign() + "Everything in " + breakablePath(target) + " will be removed."});
+    } else if (installer.isInstaller()) {
+        closing.push({text: "Install to " + breakablePath(target)});
+    }
+    closing.forEach(function (line, index) {
+        text += '<p style="margin: ' + (index === 0 ? groupGap : rowGap) + "px " + sideIndent + "px 0 "
+            + sideIndent + 'px">' + line.text + "</p>";
+    });
     summary.textFormat = 1;  // Qt.RichText
     summary.text = text;
     summary.visible = true;
 }
 
-// The install page: what EasyDiffraction is, where it goes, the choices, and the space it needs.
+// The install page: where it goes, the choices, and the space it needs. What EasyDiffraction is, as easydiffraction.org's
+// home page says it, is not on it (the shortcut, the desktop entry and the component say it: installscript.qs,
+// package.py).
+var DESCRIPTION = "Calculate diffraction patterns and fit a structural model to your data.";
 var licenseUrl = "https://www.gnu.org/licenses/gpl-3.0.html";
-
-function warning() {
-    return darkTheme() ? "@DARK_WARNING@" : "@LIGHT_WARNING@";
-}
-
-// The small check before a done sentence: a character of the text, in the app's success green.
-function checkMark() {
-    return '<span style="color: ' + success() + '">\u2713</span>';
-}
-
-function success() {
-    return darkTheme() ? "@DARK_SUCCESS@" : "@LIGHT_SUCCESS@";
-}
 
 var openHooked = false;
 
@@ -628,15 +966,17 @@ function freeSpace(folder) {
 }
 
 function neededSpace() {
-    var bytes = 0;
+    var bytes = 0, tool = false;
     var all = installer.components();
     for (var i = 0; i < all.length; ++i) {
         var name = all[i].name;
         if (name === assistantComponent && !assistantChosen())
             continue;
-        bytes += Number(all[i].value("UncompressedSize") || 0);
+        tool = tool || name === maintenanceComponent;
+        bytes += componentBytes(all[i]);
     }
-    return bytes;
+    // The maintenance tool, which a script does not see among the components (summaryEntries).
+    return bytes + (tool ? 0 : toolBytes);
 }
 
 function updateSpace() {
@@ -644,17 +984,45 @@ function updateSpace() {
     var folder = folderField();
     if (!label || !folder)
         return;
-    var free = freeSpace(String(folder.text));
+    var free = freeSpace(folderValue());
     label.text = sizeText(neededSpace()) + " needed" + (isNaN(free) ? "" : " · " + sizeText(free) + " available");
+    choiceSizes(gui.pageWidgetByObjectName("TargetDirectoryPage"));
+}
+
+// Each choice's size on its right, as the update summary shows them: EasyDiffraction's carries everything that is
+// neither the assistant nor the maintenance tool, so the rows add up to the space line when all are ticked.
+function choiceSizes(page) {
+    if (!page)
+        return;
+    var sizes = {app: 0, assistant: 0, maintenance: 0};
+    var all = installer.components();
+    for (var i = 0; i < all.length; ++i) {
+        var bytes = componentBytes(all[i]);
+        var part = all[i].name === assistantComponent ? "assistant"
+            : all[i].name === maintenanceComponent ? "maintenance" : "app";
+        sizes[part] += bytes;
+    }
+    // The maintenance tool, which a script does not see among the components (summaryEntries).
+    if (sizes.maintenance === 0)
+        sizes.maintenance = toolBytes;
+    [["App", sizes.app], ["Assistant", sizes.assistant], ["Maintenance", sizes.maintenance]].forEach(function (row) {
+        var size = gui.findChild(page, row[0] + "SizeLabel");
+        if (size) {
+            size.text = sizeText(row[1]);
+            size.visible = true;
+        }
+    });
+    // The tool's row is shown before the rows are spaced (settleSoon), so its gaps are measured too.
+    var box = gui.findChild(page, "MaintenanceBox");
+    if (box && !box.visible) {
+        box.visible = true;
+        settleSoon(page);
+    }
+    return sizes;
 }
 
 function setupInstallPage(page) {
-    var intro = gui.findChild(page, "MessageLabel");
-    if (intro) {
-        intro.textFormat = 1;  // Qt.RichText
-        intro.text = logo() + PARA + "EasyDiffraction calculates diffraction patterns from a structural model and "
-            + "fits its parameters to experimental data.</p>" + PARA + "Install to</p>";
-    }
+    showIntro();
     var link = gui.findChild(page, "LicenseLink");
     if (link) {
         link.textFormat = 1;
@@ -677,8 +1045,8 @@ function setupInstallPage(page) {
     if (ownField) {
         theirs.visible = false;
         theirBrowse.visible = false;
-        if (String(folder.text) !== String(theirs.text))
-            folder.text = theirs.text;
+        if (String(folder.text) !== folderValue())
+            folder.text = folderValue();
     }
     if (!installPageReady) {
         if (license)
@@ -695,12 +1063,23 @@ function setupInstallPage(page) {
         if (folder) {
             folder.editingFinished.connect(refreshInstallPage);
             folder.textChanged.connect(function () {
-                if (!folder.focus)
+                if (!folder.focus && !showingShort)
                     refreshInstallPage();
             });
         }
         if (ownField) {
+            // Shortened again when its editing ends, and shown whole once it is clicked into.
+            folder.editingFinished.connect(shortenFolder);
+            folder.cursorPositionChanged.connect(function () {
+                if (folder.focus && String(folder.text) !== folderValue()) {
+                    showingShort = true;
+                    folder.text = folderValue();
+                    showingShort = false;
+                }
+            });
             folder.textChanged.connect(function () {
+                if (showingShort)
+                    return;
                 if (String(theirs.text) !== String(folder.text))
                     theirs.text = folder.text;
                 // The Framework judges the folder 200 ms after a change; its refusal is shown under ours then.
@@ -713,22 +1092,71 @@ function setupInstallPage(page) {
                     folder.text = theirs.text;
                 // The field can keep the keyboard focus through Browse, and then refreshes nothing by itself.
                 refreshInstallPage();
+                shortenFolder();
             });
         }
         installPageReady = true;
     }
     refreshInstallPage();
+    // Once the page is laid out, so the field's width is known. The field gives up the keyboard focus the window
+    // hands it as the page opens (macOS does), so it shows shortened, without a caret, until clicked into.
+    if (ownField)
+        [0, 150].forEach(function (delay) {
+            later(delay, function () {
+                if (folder.focus)
+                    page.setFocus();
+                shortenFolder();
+            });
+        });
+}
+
+// A folder too long for its field is shown shortened in the middle, its start and end kept, whole in its
+// tooltip and while it is edited. The Framework's own field, hidden, keeps it whole: that is what is installed to and
+// what the page checks (folderValue).
+var showingShort = false;
+
+function folderValue() {
+    var theirs = installPageField("TargetDirectoryLineEdit");
+    var field = installPageField("FolderLineEdit") && theirs ? theirs : folderField();
+    return field ? String(field.text) : "";
+}
+
+function shortenFolder() {
+    var folder = installPageField("FolderLineEdit");
+    var theirs = installPageField("TargetDirectoryLineEdit");
+    if (!folder || !theirs || folder.focus)
+        return;
+    var full = folderValue();
+    // About 8 px a character at the pages' 14 px text (a little more than a path's average, so it fits), inside
+    // the field's padding.
+    var fit = Math.floor((folder.width - 20) / 8);
+    var head = Math.ceil((fit - 1) / 2), tail = Math.floor((fit - 1) / 2);
+    var text = full.length > fit && fit > 8 ? full.substr(0, head) + "\u2026" + full.substr(full.length - tail) : full;
+    folder.toolTip = full;
+    if (String(folder.text) !== text) {
+        showingShort = true;
+        folder.text = text;
+        showingShort = false;
+    }
 }
 
 // What the chosen folder says: an installation already in it is updated by its maintenance tool, not installed
 // twice. A licence refusal stays said until Install is pressed again.
 var licenseRefused = false;
 
-// The form's rows stand one row gap apart (the logo one step above them), measured once the page shows: each gap
-// widget above a row (AssistantForm.ui) takes what the drawn frames need. A row with nothing shown has no gap.
-var formRows = [["Logo", ["FormLogo"]], ["Folder", ["FolderLineEdit", "FolderBrowseButton"]], ["App", ["AppCheckBox"]],
-                ["Assistant", ["AssistantCheckBox"]], ["License", ["LicenseCheckBox", "LicenseLink"]],
-                ["Shortcut", ["ShortcutCheckBox"]], ["Notice", ["NoticeLabel"]], ["Space", ["SpaceLabel"]]];
+// The form's rows stand one row gap apart and its groups one group gap (the logo one step above them), measured once
+// the page shows: each gap widget above a row (AssistantForm.ui) takes what the drawn frames need. A row with nothing
+// shown has no gap.
+// The third field is the row's group: the first row shown of a group stands one group gap under the group before.
+// On the install page: the folder with the space it needs right under it, then what is installed, then the licence
+// and the shortcut, then any notice.
+var formRows = [["Logo", ["FormLogo"], 0], ["Folder", ["FolderLineEdit", "FolderBrowseButton"], 1],
+                ["Space", ["SpaceLabel"], 1],
+                ["App", ["AppCheckBox", "AppSizeLabel"], 2],
+                ["Maintenance", ["MaintenanceCheckBox", "MaintenanceSizeLabel"], 2],
+                ["Assistant", ["AssistantCheckBox", "AssistantSizeLabel"], 2],
+                ["License", ["LicenseCheckBox", "LicenseLink"], 3], ["Shortcut", ["ShortcutCheckBox"], 3],
+                ["Notice", ["NoticeLabel"], 4]];
 
 // As soon as the page is laid out, so nobody sees it move, and once more when the styles have reached every widget.
 function settleSoon(page) {
@@ -772,7 +1200,9 @@ function settleForm(page, round) {
             var bottom = box.y + Math.max.apply(null, shown.map(function (widget) { return widget.y + widget.height; }));
             var gap = gui.findChild(page, row[0] + "RowGap");
             if (above && gap) {
-                var wanted = above.name === "Logo" ? 2 * rowGap : rowGap;
+                // A logo carrying the page's heading (the maintenance tool's choice page) has its step inside.
+                var wanted = above.name === "Logo" ? (installer.isInstaller() ? logoStep : rowGap)
+                    : above.group !== row[2] ? groupGap : rowGap;
                 // What lies between the rows besides the gap widget, all read from the page as it is laid out.
                 var besides = (gap.y - above.bottom) + (top - (gap.y + gap.height));
                 var height = bounded(wanted - besides, wanted);
@@ -783,7 +1213,7 @@ function settleForm(page, round) {
                 gap.minimumHeight = height;
                 gap.maximumHeight = height;
             }
-            above = {name: row[0], bottom: bottom};
+            above = {name: row[0], bottom: bottom, group: row[2]};
         });
         // On the installer's page the form's first row (our folder) stands one row gap under the page's text: the
         // page's spacing, that page's only gap, takes up where the row's frame sits.
@@ -800,46 +1230,61 @@ function settleForm(page, round) {
     });
 }
 
-// The removal's progress, in the Framework's own label: the logo, one line and the bar with its percentage, as the other
-// progress page has them. The Framework's bar comes before its label and cannot be put after it, so the bar is drawn in
-// the text and the real one hidden. The Framework writes the label for every step; ours is put back on each sign of
-// that, so its words can show for a moment.
-var removalHooked = false;
-
-function showRemoval(page, bar, label) {
-    function put() {
-        var share = bar.maximum > bar.minimum
-            ? Math.max(0, Math.min(100, Math.round(100 * (bar.value - bar.minimum) / (bar.maximum - bar.minimum)))) : 0;
-        var cell = function (width, colour) {
-            // A cell is as high as its text (Qt takes no height for it): this size gives the 8 px of the other bar.
-            return width > 0 ? '<td width="' + width + '%" bgcolor="' + colour
-                + '" style="font-size: 6px">&nbsp;</td>' : "";
-        };
-        var text = logo() + PARA + "Removing EasyDiffraction… " + share + "%</p>"
-            + '<table width="100%" cellspacing="0" cellpadding="0" style="margin-top: 8px"><tr>'
-            // The track: the accent at 17 % on the window (ACCENT_TRACK), as a plain colour.
-            + cell(share, accent()) + cell(100 - share, darkTheme() ? "#2e424a" : "#c4e0ea") + "</tr></table>";
-        if (String(label.text) !== text)
-            label.text = text;
-    }
-    bar.visible = false;
-    label.textFormat = 1;  // Qt.RichText
-    label.alignment = 0x0001 | 0x0020;  // Qt.AlignLeft | Qt.AlignTop, as every page
-    label.wordWrap = true;
-    label.visible = true;
-    put();
-    if (removalHooked)
-        return;
-    removalHooked = true;
-    bar.valueChanged.connect(put);
-    var details = gui.findChild(page, "DetailsBrowser");
-    if (details)
-        details.textChanged.connect(function () { put(); Qt.callLater(put); });
-    installer.uninstallationFinished.connect(function () { put(); later(100, put); });
+// One plain status line for the progress page: the Framework's changes per step and says little.
+function progressStatus() {
+    return installer.isInstaller() ? "Installing EasyDiffraction…"
+        : installer.isUninstaller() ? "Removing EasyDiffraction…" : "Updating EasyDiffraction…";
 }
 
-// The done page's box one row gap under its sentence: on macOS a box's frame sits below where its row starts, so the
-// page's spacing (that page's only gap) takes up the difference once shown.
+// The removal's progress: the logo and one status line, then the bar with its percentage inside, laid out as the
+// installing and updating page (ProgressForm.ui). Removing loads no component, so there is no form of ours, and the
+// Framework's layout puts its bar first and its picture area further down; a script cannot reorder a layout. So the
+// bar keeps its place but draws itself a margin lower, and the picture area, holding the logo and the line, is moved
+// into that margin each time the page could have been laid out again.
+var removalShown = false;
+var removalPlaced = false;
+
+function showRemoval(page, bar, label) {
+    var area = gui.findChild(page, "ProductImagesScrollArea");
+    var header = gui.findChild(page, "ProductImagesLabel");
+    if (!area || !header)
+        return;
+    header.textFormat = 1;  // Qt.RichText
+    header.alignment = 0x0001 | 0x0020;  // Qt.AlignLeft | Qt.AlignTop, as every page
+    header.wordWrap = false;
+    header.text = logo() + '<p style="margin: 0 ' + sideIndent + 'px">' + progressStatus() + "</p>";
+    area.verticalScrollBarPolicy = 1;  // Qt.ScrollBarAlwaysOff
+    area.horizontalScrollBarPolicy = 1;
+    bar.textVisible = true;
+    bar.format = "%p%";
+    bar.visible = true;
+    area.visible = true;
+    header.visible = true;
+    removalShown = true;
+    // The Framework's step text says little and changes per step.
+    label.visible = false;
+    // The logo, its step and one line (17 px, the status line of the installing page on Linux), then the row gap
+    // above the bar, as on the installing page. The track is drawn inside the padding only; the percentage centres in
+    // the whole bar, so the same padding below keeps it in the track.
+    var head = logoHeight + logoStep + 17;
+    area.minimumHeight = head;
+    area.maximumHeight = head;
+    var pad = head + rowGap;
+    bar.styleSheet = "QProgressBar { padding-top: " + pad + "px; padding-bottom: " + pad
+        + "px; background-clip: content; }";
+    // Moved again on every step: the page lays itself out again only as it opens, before its first step. A timer of
+    // ours (later) would lay it out again itself, as it opens and closes the details.
+    if (!removalPlaced) {
+        bar.valueChanged.connect(function () {
+            if (page.visible)
+                area.pos = bar.pos;
+        });
+        removalPlaced = true;
+    }
+}
+
+// The done page's box one group gap under its sentence (what was done, then what to do next): on macOS a box's frame
+// sits below where its row starts, so the page's spacing (that page's only gap) takes up the difference once shown.
 function settleDone(page) {
     var text = gui.findChild(page, "MessageLabel");
     var form = gui.findChild(page, "DoneForm");
@@ -847,14 +1292,30 @@ function settleDone(page) {
     var column = firstLayout(page);
     if (!page.visible || !text || !form || !open || !open.visible || !column)
         return;
-    column.spacing = bounded(rowGap - open.y, 2 * rowGap);
+    column.spacing = bounded(groupGap - open.y, groupGap);
     if (captureFolder !== "")
         later(100, function () { logLayout(page, "settled"); });
 }
 
-// The notice line: the licence refusal, the Framework's refusal of the folder (its warning line, which decides
-// whether Install is allowed) and an installation already there. Composed whole each time, so nothing stale stays.
+// The notice line: the licence refusal and the Framework's refusal of the folder (its warning line, which decides
+// whether Install is allowed). Composed whole each time, so nothing stale stays.
 var installedHere = false;
+
+// The page's text: the logo and "Install to" over the folder. An installation already in the folder is said as a
+// warning right above "Install to", from the moment the page opens with that folder.
+var INSTALLED_HERE = "EasyDiffraction is already installed here. To update it, open its Maintenance Tool and choose "
+    + "Update.";
+
+function showIntro() {
+    var intro = installPageField("MessageLabel");
+    if (!intro)
+        return;
+    var text = logo() + (installedHere ? PARA + warningSign() + INSTALLED_HERE + "</p>" + GROUP : PARA)
+        + "Install to</p>";
+    intro.textFormat = 1;  // Qt.RichText
+    if (String(intro.text) !== text)
+        intro.text = text;
+}
 
 function showNotice() {
     var notice = installPageField("NoticeLabel");
@@ -866,11 +1327,10 @@ function showNotice() {
         lines.push("Accept the license to install EasyDiffraction.");
     if (refusal && String(refusal.text) !== "")
         lines.push(String(refusal.text));
-    if (installedHere)
-        lines.push("EasyDiffraction is already installed here. To update it, open its Maintenance Tool and choose "
-            + "Update.");
-    notice.text = lines.join(" ");
-    installPageField("NoticeBox").visible = notice.text !== "";
+    showIntro();
+    notice.textFormat = 1;  // Qt.RichText
+    notice.text = lines.length > 0 ? warningSign() + lines.join(" ") : "";
+    installPageField("NoticeBox").visible = lines.length > 0;
     settleSoon(gui.pageWidgetByObjectName("TargetDirectoryPage"));
 }
 
@@ -881,7 +1341,7 @@ function folderField() {
 
 function refreshInstallPage() {
     var folder = folderField();
-    var target = folder ? String(folder.text) : installer.value("TargetDir");
+    var target = folder ? folderValue() : installer.value("TargetDir");
     var tool = target + (systemInfo.kernelType === "darwin" ? "/MaintenanceTool.app"
                          : systemInfo.kernelType === "winnt" ? "/MaintenanceTool.exe" : "/MaintenanceTool");
     installedHere = target !== "" && installer.fileExists(tool);
@@ -920,7 +1380,7 @@ function later(delay, then) {
                 closingDetails = false;
                 var images = gui.findChild(perform, "ProductImagesScrollArea");
                 if (images)
-                    images.visible = false;
+                    images.visible = removalShown;
             }
             laterCalls.sort(function (a, b) { return a.due - b.due; });
             var call = laterCalls.shift();
@@ -951,18 +1411,22 @@ function keepUntitled(page) {
 // A paragraph of a page's text: one row gap above it and none below, so the label ends where its last line does
 // (Qt's own paragraph margins would leave space the frame counts but nobody sees as a gap). Under the logo the logo's
 // step wins: Qt takes the larger of two touching margins.
-var PARA = '<p style="margin: 8px 0 0 0">';
+var PARA = '<p style="margin: ' + rowGap + 'px ' + sideIndent + 'px 0 ' + sideIndent + 'px">';
+// The first paragraph of a new group: one group gap above it.
+var GROUP = '<p style="margin: ' + groupGap + 'px ' + sideIndent + 'px 0 ' + sideIndent + 'px">';
 
-// The logo heading a page's text, one step (16) above what follows it (templatePage).
+// The logo heading a page's text, logoStep above what follows it (templatePage).
+
 function logo() {
-    return '<p style="margin-bottom: 16px">' + headerWordmark() + "</p>";
+    return '<p style="margin-bottom: ' + logoStep + 'px">' + headerWordmark() + "</p>";
 }
 
+// The logo drawn from app/web's SVG at the size shown, 2x and 3x (render_images.qml): the Framework's Qt has no SVG
+// image plugin, and Qt picks the @2x or @3x file for a sharper screen by itself.
 function headerWordmark() {
-    if (wordmark === "") {
-        var image = darkTheme() ? "@DARK_WORDMARK@" : "@WORDMARK@";
-        wordmark = '<img src="data:image/png;base64,' + image + '" width="140" height="44">';
-    }
+    if (wordmark === "")
+        wordmark = '<img src=":/metadata/edi/' + (darkTheme() ? "logo-dark" : "logo") + '.png" width="140" height="'
+            + logoHeight + '">';
     return wordmark;
 }
 
@@ -975,6 +1439,9 @@ function headerWordmark() {
         if (!page)
             return;
         themePage(page);
+        // A maintenance tool restarted from its last page offers nothing to open until it is there again.
+        if (name !== "Finished")
+            openOffered = false;
         // No title, so no header: the logo heads the page's own content. Cleared first, as some pages leave early.
         keepUntitled(page);
         // The first page is shown after its callback, and showing the window gives every page without a subtitle a
@@ -1003,6 +1470,7 @@ function headerWordmark() {
                 ask.text = logo() + PARA + "What would you like to do?</p>";
             }
             orderChoices(page);
+            watchChoices(page);
             if (!introductionHooked) {
                 page.left.connect(nameSummaryStep);
                 introductionHooked = true;
@@ -1035,12 +1503,16 @@ function headerWordmark() {
         // The welcome page passes by itself (online, it fetches the component list meanwhile).
         // The welcome page passes by itself, in captures too: the design has no welcome page.
         if (name === "Introduction" && installer.isInstaller()) {
+            watchWelcome(page);
             if (captureFolder === "")
                 gui.clickButton(buttons.NextButton, 50);
             else if (installerWalked)
                 gui.clickButton(buttons.NextButton, 50);
             else {
-                notePage(name);
+                // Next fetches the components; a locked walk's page is noted and captured once it says why it
+                // stays (sayRetry).
+                if (captureState !== "locked")
+                    notePage(name);
                 proceed(name, buttons.NextButton, 3000);
             }
             return;
@@ -1051,8 +1523,7 @@ function headerWordmark() {
             // Top-aligned, level with the step list; a label centres its text in its minimum height.
             welcome.alignment = 0x0001 | 0x0020;  // Qt.AlignLeft | Qt.AlignTop
             welcome.text = "<p>Welcome to the EasyDiffraction Installer.</p>"
-                + "<p>EasyDiffraction calculates diffraction patterns from a structural model "
-                + "and refines its parameters against experimental data.</p>"
+                + "<p>" + DESCRIPTION + "</p>"
                 + '<p>Learn more at <a style="color: ' + (darkTheme() ? "#4ec1ef" : "#00a3e3")
                 + '; text-decoration: none" href="https://easydiffraction.org">easydiffraction.org</a>.</p>';
         }
@@ -1088,6 +1559,12 @@ function headerWordmark() {
             // with their own button, which turns that back on, and the button and download count are hidden.
             var detailsBrowser = gui.findChild(page, "DetailsBrowser");
             var detailsButton = gui.findChild(page, "DetailsButton");
+            // Our timer (later) opens and closes the details for a moment; with their own minimum height they made
+            // the page ask for more room, and on macOS the window grew for the rest of the walk (8 px on updating).
+            if (detailsBrowser) {
+                detailsBrowser.minimumHeight = 0;
+                detailsBrowser.maximumHeight = 0;
+            }
             var closeDetails = function () {
                 if (detailsBrowser && detailsBrowser.visible && detailsButton) {
                     closingDetails = true;
@@ -1096,38 +1573,35 @@ function headerWordmark() {
                 }
             };
             closeDetails();
-            // The product-images area is invisible but takes the page's height, which left our bar far below.
+            // The product-images area is invisible but takes the page's height, which left our bar far below (the
+            // removal uses it for its logo, showRemoval).
             ["DetailsButton", "DownloadStatus", "ProductImagesScrollArea", "ProductImagesLabel"].forEach(function (hidden) {
                 var widget = gui.findChild(page, hidden);
                 if (widget)
                     widget.visible = false;
             });
-            // Our bar with its percentage beside it (ProgressForm.ui), fed from the Framework's bar, which is
-            // hidden; where our form is missing (no assistant component loaded), the Framework's bar stays.
+            // Our bar with its percentage inside (ProgressForm.ui), fed from the Framework's bar, which is hidden;
+            // where our form is missing (no assistant component loaded), the Framework's bar stays, styled the same.
             var bar = gui.findChild(page, "ProgressBar");
             var label = gui.findChild(page, "ProgressLabel");
             var ours = gui.findChild(page, "EdiProgressBar");
-            var percent = gui.findChild(page, "EdiProgressPercent");
             var status = gui.findChild(page, "EdiProgressStatus");
             var mark = gui.findChild(page, "EdiProgressLogo");
             // Removing loads no component, so there is no form of ours to show.
             if (bar && label && !ours)
                 showRemoval(page, bar, label);
-            if (bar && label && ours && percent && status && !progressHooked) {
+            if (bar && label && ours && status && !progressHooked) {
                 bar.visible = false;
                 label.visible = false;
                 if (mark) {
                     mark.textFormat = 1;  // Qt.RichText
                     mark.text = headerWordmark();
                 }
-                // One plain status line of our own: the Framework's changes per step and says little.
-                status.text = installer.isInstaller() ? "Installing EasyDiffraction…"
-                    : installer.isUninstaller() ? "Removing EasyDiffraction…" : "Updating EasyDiffraction…";
+                status.text = progressStatus();
                 bar.valueChanged.connect(function (value) {
                     var share = bar.maximum > bar.minimum
                         ? Math.round(100 * (value - bar.minimum) / (bar.maximum - bar.minimum)) : 0;
                     ours.value = share;
-                    percent.text = share + "%";
                 });
                 progressHooked = true;
             }
@@ -1151,10 +1625,9 @@ function headerWordmark() {
                 : systemInfo.kernelType === "darwin" ? (applications ? "in your Applications folder" : "in the folder you chose")
                     : (shortcut ? "in your applications menu and on your desktop" : "in your applications menu");
             if (done && installer.isInstaller() && installer.status === QInstaller.Success) {
-                // A check mark in the app's success green, a character of the text so it has the text's height.
                 done.textFormat = 1;  // Qt.RichText
                 done.alignment = 0x0001 | 0x0020;  // Qt.AlignLeft | Qt.AlignTop, as every page
-                done.text = logo() + PARA + checkMark() + " EasyDiffraction is installed. You'll find it " + where
+                done.text = logo() + PARA + "EasyDiffraction is installed. You'll find it " + where
                     + ".</p>";
             }
             // The maintenance tool says what it did the same way, in one line; a failure keeps the Framework's words.
@@ -1163,39 +1636,39 @@ function headerWordmark() {
                 done.alignment = 0x0001 | 0x0020;  // Qt.AlignLeft | Qt.AlignTop
                 var said = installer.isUninstaller() ? "EasyDiffraction is removed."
                     : installer.isUpdater() ? "EasyDiffraction is updated." : "Your changes are made.";
-                done.text = logo() + PARA + (installer.status === QInstaller.Success ? checkMark() + " " + said
-                    : done.text) + "</p>";
+                done.text = logo() + PARA + (installer.status === QInstaller.Success ? said
+                    : warningSign() + done.text) + "</p>";
             }
             ["LocationLabel", "FinishText"].forEach(function (hidden) {
                 var widget = gui.findChild(page, hidden);
                 if (widget)
                     widget.visible = false;
             });
-            // Ticked; captures keep it ticked and clear what it would open, as the marker installer has no program.
+            // Our own box in a row of its own (DoneForm.ui), ticked, after a successful installation or change; the
+            // Framework's box has no program to run and stays hidden. Captures keep it ticked and open nothing.
             var run = gui.findChild(page, "RunItCheckBox");
             if (run)
-                run.checked = true;
-            // Our own box in a row of its own (DoneForm.ui) stands in for the Framework's, which stays hidden and
-            // follows it; shown only where the Framework would show its box.
+                run.visible = false;
             var open = gui.findChild(page, "OpenCheckBox");
             later(0, function () { settleDone(page); });
             later(150, function () { settleDone(page); });
-            if (run && open) {
-                open.visible = run.visible;
-                open.checked = run.checked;
-                run.visible = false;
+            if (open) {
+                openOffered = installer.status === QInstaller.Success && !installer.isUninstaller();
+                open.visible = openOffered;
                 if (!openHooked) {
-                    open.toggled.connect(function (on) { run.checked = on; });
+                    open.checked = true;
                     openHooked = true;
                 }
             }
-            if (captureFolder !== "")
-                installer.setValue("RunProgram", "");
         }
 
         // No title, so no header: the logo heads the page's own content.
         keepUntitled(page);
-        capture(name);
+        // The quit walk pictures only its question.
+        if (captureState === "quit")
+            notePage(name);
+        else
+            capture(name);
         advance(name, page);
     };
 });
