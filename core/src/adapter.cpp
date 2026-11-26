@@ -51,6 +51,7 @@
 #include "crysta/magnetic.hpp"
 #include "crysta/adp.hpp"
 #include "crysta/analysis.hpp"
+#include "crysta/results_publication.hpp"
 #include "crysta/background_estimate.hpp"
 #include "crysta/constraints.hpp"
 #include "crysta/cell_metric.hpp"
@@ -3388,6 +3389,10 @@ ScanResultIndex index_scan_rows(const Project& project, const ScanDatasets& data
 
 }  // namespace
 
+void recover_scan_publication(const std::string& directory) {
+    crysta::recover_publication(std::filesystem::path(directory) / "analysis");
+}
+
 ScanResultIndex index_scan_results(const Project& project, const ScanDatasets& datasets, bool writing) {
     return index_scan_results(project, datasets, scan_places(datasets), writing);
 }
@@ -3496,6 +3501,13 @@ void check_series_bank_rows(const Project& project, const ScanDatasets& datasets
 
 ScanResultIndex index_scan_results(const Project& project, const ScanDatasets& datasets, const ScanPlaces& places,
                                    bool writing) {
+    // The rows and notes are read under the publication lock, so a parametric fit's swap of the set is never seen
+    // half done (crysta ADR-0136). A folder that cannot hold the lock file is read as it is.
+    std::optional<crysta::PublicationReadLock> reading;
+    try {
+        reading.emplace(scan_results_path(project).parent_path());
+    } catch (const std::exception&) {  // NOLINT(bugprone-empty-catch)
+    }
     ScanResultIndex index = index_scan_rows(project, datasets, places, writing);
     if (index.error.empty()) {
         try {
@@ -8264,13 +8276,32 @@ FitResultBase Project::fit_parametric(const IterationCallback& on_iteration,
                                      const ScanStartCallback& on_scan_start,
                                      const FileCompleteCallback& on_file_complete,
                                      const CancelCallback& should_cancel,
-                                     const FileFittedCallback& on_file_fitted) {
+                                     const FileFittedCallback& on_file_fitted,
+                                     const ParametricIterateCallback& on_iterate) {
     begin_fit_messages();
     refresh_background_estimates(*this);
     if (fitting_mode != "parametric") {
         throw std::invalid_argument("edi fit_parametric: _fitting_mode.type is '" + fitting_mode +
                                     "' - this entry point serves exactly the 'parametric' mode");
     }
+    crysta::ParametricIterateCallback forward;
+    if (on_iterate) {
+        forward = [&on_iterate](const crysta::ParametricIterate& iterate) {
+            ParametricIterate out;
+            out.iteration = iterate.iteration;
+            out.reduced_chi_square = iterate.reduced_chi_square;
+            out.points.reserve(iterate.points.size());
+            for (const crysta::ParametricIterate::Point& point : iterate.points) {
+                ParametricIterate::IteratePoint copy{point.name, {}, point.grid, point.calculated};
+                for (std::size_t i = 0; i < point.parameters.size() && i < point.values.size(); ++i) {
+                    if (!point.parameters[i].empty()) copy.values[point.parameters[i]] = point.values[i];
+                }
+                out.points.push_back(std::move(copy));
+            }
+            on_iterate(out);
+        };
+    }
+    const crysta::ParametricIterateScope scope(std::move(forward));
     return fit_scan(on_iteration, on_start, on_scan_start, on_file_complete, should_cancel, on_file_fitted);
 }
 

@@ -135,6 +135,9 @@ class FitViewModel : public QObject {
     Q_PROPERTY(bool scanMode READ scanMode NOTIFY scanModeChanged)
     // A scan is running: Follow is enabled. `following`: the pattern tab shows the file being fitted.
     Q_PROPERTY(bool scanning READ scanning NOTIFY scanningChanged)
+    // A scan fitted in the parametric mode (ADR-0107): one fit of every pattern, shown as a joint fit is, by its
+    // iterations and χ², not by files.
+    Q_PROPERTY(bool parametric READ parametric NOTIFY parametricChanged)
     Q_PROPERTY(bool following READ following WRITE setFollowing NOTIFY followingChanged)
     // How often a followed scan redraws the pattern (edi ADR-0029), saved per machine: 0 every pattern with the fit
     // waiting for each to be drawn, 1 about once a second, 2 adaptive (the default: the newest finished file whenever
@@ -196,6 +199,7 @@ class FitViewModel : public QObject {
     bool canReset() const { return can_reset_; }
     bool scanMode() const { return scan_mode_; }
     bool scanning() const { return scanning_; }
+    bool parametric() const { return parametric_; }
     // The completed files (fitted or skipped) of all the scan's files.
     double scanProgress() const {
         return scan_.files > 0 ? static_cast<double>(scan_.processed()) / scan_.files : 0.0;
@@ -325,6 +329,7 @@ class FitViewModel : public QObject {
     void continuableChanged();
     void canResetChanged();
     void scanModeChanged();
+    void parametricChanged();
     void scanningChanged();
     void followingChanged();
     void patternUpdatesChanged();
@@ -361,6 +366,8 @@ class FitViewModel : public QObject {
     void automaticResultsRequested();
     // A fit was refused or failed; the project is unchanged.
     void refused(const QString& message);
+    // The fit ran, and the results it wrote could not be read back (the index refused them).
+    void resultsUnreadable(const QString& message);
     void waitingForDataChanged();
 
    private:
@@ -489,6 +496,7 @@ class FitViewModel : public QObject {
     bool can_reset_ = false;
     bool scan_mode_ = false;
     bool scanning_ = false, continuable_ = false, out_of_date_ = false, scan_last_ = true;
+    bool parametric_ = false;
     // The running scan: the files already fitted when it started (a continued scan), for its pace.
     int scan_resumed_ = 0;
     bool scan_index_refused_ = false;  // this run's index refused and the refusal was shown

@@ -1461,6 +1461,9 @@ EaComponents.ApplicationWindow {
         function onRefused(message) {
             ApplicationInfo.windowFailure(3, message);
         }
+        function onResultsUnreadable(message) {
+            ApplicationInfo.windowFailure(4, message);
+        }
     }
 
     // ADR-0031: the window's size and position, in logical pixels, in the store's Window group. Restored at start, after

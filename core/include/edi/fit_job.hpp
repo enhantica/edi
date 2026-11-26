@@ -72,6 +72,9 @@ class FitJob {
         // its `file_completed`, in place of the frames a single fit draws. Nothing is calculated for it. The job
         // sends the next only after `frame_shown`, with the next file it fits (edi ADR-0029).
         std::function<void(const std::string& file, const FitFrame&)> file_frame;
+        // A parametric fit: the latest accepted iteration's every point, at most every 250 ms and always the last
+        // (ADR-0107). Empty: no iterate is built.
+        std::function<void(const ParametricIterate&)> parametric_iterate;
     };
     // Test instrumentation: production constructs a FitJob without it.
     struct Seams {

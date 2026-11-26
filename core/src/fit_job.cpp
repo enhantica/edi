@@ -76,7 +76,8 @@ struct Outcome {
 // Worker thread: the project's own fit entry for its mode, as the CLI's fit takes it (edi.Analysis.fit).
 FitResultBase fit_by_mode(Project& project, const IterationCallback& on_iteration, const PreambleCallback& on_start,
                           const CancelCallback& should_cancel, const ScanStartCallback& on_scan_start,
-                          const FileCompleteCallback& on_file_complete, const FileFittedCallback& on_file_fitted) {
+                          const FileCompleteCallback& on_file_complete, const FileFittedCallback& on_file_fitted,
+                          const ParametricIterateCallback& on_iterate) {
     const std::string mode = effective_fitting_mode(project);
     if (mode == "single") {
         return project.fit(on_iteration, on_start, should_cancel);
@@ -94,7 +95,8 @@ FitResultBase fit_by_mode(Project& project, const IterationCallback& on_iteratio
         return project.fit_independent({}, {}, on_scan_start, on_file_complete, should_cancel, on_file_fitted);
     }
     if (mode == "parametric") {
-        return project.fit_parametric({}, {}, on_scan_start, on_file_complete, should_cancel, on_file_fitted);
+        return project.fit_parametric(on_iteration, {}, on_scan_start, on_file_complete, should_cancel, on_file_fitted,
+                                      on_iterate);
     }
     throw std::invalid_argument("Start fitting runs the single, joint, sequential and independent fitting modes; this "
                                 "project's is '" + mode + "'");
@@ -330,9 +332,37 @@ bool FitJob::start(const Project* scan_template) {
                 }
                 return token.cancelled() || (self->checkpoint && self->checkpoint());
             };
+            // A parametric fit's iterates reach the owner at most every 250 ms; the one held back is sent at the end, so
+            // the last is always shown (ADR-0107).
+            std::optional<ParametricIterate> held_iterate;
+            auto sent_at = std::chrono::steady_clock::time_point{};
+            const auto send_iterate = [&self, &emit](ParametricIterate iterate) {
+                // NOLINTNEXTLINE(bugprone-exception-escape): only libc++'s container growth past max_size() raises length_error here
+                emit([self, iterate = std::move(iterate)] {
+                    if (self->open && self->hooks.parametric_iterate) {
+                        self->hooks.parametric_iterate(iterate);
+                    }
+                });
+            };
+            ParametricIterateCallback on_iterate;
+            if (self->hooks.parametric_iterate) {
+                on_iterate = [&held_iterate, &sent_at, &send_iterate](const ParametricIterate& iterate) {
+                    const auto now = std::chrono::steady_clock::now();
+                    if (now - sent_at >= std::chrono::milliseconds(250)) {
+                        sent_at = now;
+                        held_iterate.reset();
+                        send_iterate(iterate);
+                    } else {
+                        held_iterate = iterate;
+                    }
+                };
+            }
             try {
                 outcome->result = fit_by_mode(snapshot->project, on_iteration, on_start, should_cancel, on_scan_start,
-                                              on_file_complete, on_file_fitted);
+                                              on_file_complete, on_file_fitted, on_iterate);
+                if (held_iterate && !token.cancelled()) {  // a cancelled fit's views return to the published results
+                    send_iterate(std::move(*held_iterate));
+                }
                 outcome->fitted = std::shared_ptr<Project>(snapshot, &snapshot->project);
             } catch (const std::exception& refusal) {
                 outcome->refusal = refusal.what();

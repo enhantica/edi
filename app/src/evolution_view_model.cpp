@@ -92,6 +92,37 @@ void EvolutionViewModel::finishRow() {
     }
 }
 
+void EvolutionViewModel::showIterate(const edi::ParametricIterate& iterate) {
+    if (session_ == nullptr || per_experiment_ || current_ < 0 || current_ >= names_.size()) {
+        return;
+    }
+    const std::string name = names_[current_].toStdString();
+    std::vector<Point> live;
+    for (const edi::ParametricIterate::IteratePoint& each : iterate.points) {
+        const auto value = each.values.find(name);
+        const int dataset = session_->place(each.name);
+        if (value == each.values.end() || dataset < 0) {
+            continue;
+        }
+        Point point;
+        point.dataset = dataset;
+        point.error = std::numeric_limits<double>::quiet_NaN();
+        point.y = edi::scan_display_value(name, value->second);
+        const std::optional<double> x = xOf(dataset, session_->extracted(dataset));
+        if (!x || !drawable(*x, point.y, point.error)) {
+            continue;
+        }
+        point.x = *x;
+        live.push_back(point);
+    }
+    if (live.empty()) {
+        return;
+    }
+    template_point_.reset();
+    points_ = std::move(live);
+    finishRow();
+}
+
 void EvolutionViewModel::setScan(const ScanSession* session, const edi::Project* project,
                                  const QString& extracted_title) {
     session_ = session;

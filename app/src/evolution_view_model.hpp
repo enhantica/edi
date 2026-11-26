@@ -85,6 +85,9 @@ class EvolutionViewModel : public QObject {
     // The scan's results (the session's index and the project they belong to) and its first extract rule's title,
     // after a load or a refresh: the chart reads the selected parameter's column from the file. Neither is copied.
     void setScan(const ScanSession* session, const edi::Project* project, const QString& extracted_title);
+    // A parametric fit's latest iterate (ADR-0107): the chosen parameter's every point redrawn from it, without s.u.
+    // A parameter the iterate does not carry keeps its points. The fit's end or cancel rebuilds from the files.
+    void showIterate(const edi::ParametricIterate& iterate);
     // A row a run just appended: its point joins the chart without reading the file again.
     void addRow(int dataset, const std::vector<std::string>& cells);
     // After an edit: a parameter freed or fixed joins or leaves the selector.

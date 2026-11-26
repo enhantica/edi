@@ -5809,6 +5809,10 @@ void DemoDriver::timed_fit_then(const std::function<void()>& next, int files, in
         *refusal = reason.isEmpty() ? QStringLiteral("the fit was refused") : reason;
         finish();
     }));
+    connections->push_back(connect(fit, &FitViewModel::resultsUnreadable, this, [refusal, finish](const QString& reason) {
+        *refusal = QStringLiteral("the fit ran but its results could not be read: ") + reason;
+        finish();
+    }));
     if (stop_after >= 0) {
         connections->push_back(connect(fit, &FitViewModel::scanFittedChanged, this, [fit, stop_after] {
             if (fit->running() && fit->scanFitted() >= stop_after) {

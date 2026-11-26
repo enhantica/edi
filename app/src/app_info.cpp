@@ -8446,6 +8446,13 @@ QJSValue ApplicationInfo::statusProgressText() const {
     const auto f = panelUsageEngine(this);
     if (panelUsageTruth(assistantContextField(f, "fitArea", "scanning"))) return panelUsageRead(f, assistantContextField(f, "bar", "fit"), "scanText");
     const auto fitting = panelUsageGlobalCall(f, "qsTr", {QJSValue(QString::fromUtf8(QT_TRANSLATE_NOOP("StatusBar", "fitting")))}); QJSValue iterations(QStringLiteral(""));
+    // A parametric fit before its first iteration is reading and preparing every pattern (ADR-0107).
+    if (const auto fit = assistantContextField(f, "bar", "fit"); panelUsageTruth(fit) &&
+        panelUsageTruth(panelUsageRead(f, fit, "parametric")) &&
+        panelUsageRead(f, fit, "iterations").strictlyEquals(QJSValue(QStringLiteral("")))) {
+        const auto format = panelUsageGlobalCall(f, "qsTr", {QJSValue(QString::fromUtf8(QT_TRANSLATE_NOOP("StatusBar", "preparing %1 patterns")))});
+        return panelUsageMemberCall(f, format, "arg", {panelUsageRead(f, fit, "scanTotal")});
+    }
     if (panelUsageTruth(assistantContextField(f, "bar", "fit"))
         && !panelUsageRead(f, assistantContextField(f, "bar", "fit"), "iterations").strictlyEquals(QJSValue(QStringLiteral("")))) {
         const auto format = panelUsageGlobalCall(f, "qsTr", {QJSValue(QString::fromUtf8(QT_TRANSLATE_NOOP("StatusBar", "it %1")))});
@@ -11707,7 +11714,9 @@ void ApplicationInfo::windowWebDownloaded(const QJSValue& name, const QJSValue& 
     projectInvoke(f, "webNotice", "show", {text});
 }
 void ApplicationInfo::windowFailure(int kind, const QJSValue& message) const {
-    const auto f = panelUsageEngine(this); const char* popup = kind == 0 ? "webFilesError" : kind == 3 ? "fitError" : "refusal";
+    const auto f = panelUsageEngine(this); const char* popup = kind == 0 ? "webFilesError" : kind == 3 || kind == 4 ? "fitError" : "refusal";
+    // A fit refused before it ran, or one that ran and whose results could not be read back: the title names which.
+    if (kind == 3 || kind == 4) { const auto target = panelUsageContextRead(f, popup); assistantMemberWrite(f, target, "title", mainText(f, kind == 3 ? QT_TRANSLATE_NOOP("Main", "The fit did not run") : QT_TRANSLATE_NOOP("Main", "The fit ran, but its results could not be read"))); }
     if (kind == 1 || kind == 2) { const auto target = panelUsageContextRead(f, popup); assistantMemberWrite(f, target, "title", mainText(f, kind == 1 ? QT_TRANSLATE_NOOP("Main", "The project was not opened") : QT_TRANSLATE_NOOP("Main", "The change was not made"))); }
     projectWrite(f, popup, "message", message); projectInvoke(f, popup, "open");
 }

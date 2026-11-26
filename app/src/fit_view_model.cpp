@@ -424,6 +424,8 @@ FitViewModel::FitViewModel(edi::Project& project, edi::work::Worker& worker, Pro
     hooks.scan_started = [this](const edi::ScanPreamble& preamble) { scanStarted(preamble); };
     hooks.file_completed = [this](const edi::ScanFileRecord& record) { fileCompleted(record); };
     hooks.file_frame = [this](const std::string& file, const edi::FitFrame& shown) { scanFrame(file, shown); };
+    // ADR-0107: a parametric fit redraws from its latest iterate (the job sends at most four a second, and the last).
+    hooks.parametric_iterate = [this](const edi::ParametricIterate& iterate) { owner_.showParametricIterate(iterate); };
     job_ = std::make_unique<edi::FitJob>(project_, worker, std::move(hooks));
     job_->wait_for_patterns(waitsForView(pattern_updates_));
     job_->send_every_pattern(pattern_updates_ == kCatchUp);
@@ -471,7 +473,12 @@ void FitViewModel::showScan(const ScanSummary& summary, bool scan_last) {
         results_->setScan(scan_);
         return;
     }
-    setProgress(QString(), chi_range(scan_), outcome_word(scan_.outcome), scan_.outcome);
+    // A parametric fit is one fit: its last iteration and joint χ² stay, with its one outcome.
+    if (parametric_ && !iterations_.isEmpty()) {
+        setProgress(iterations_, goodness_of_fit_, outcome_word(scan_.outcome), scan_.outcome);
+    } else {
+        setProgress(QString(), chi_range(scan_), outcome_word(scan_.outcome), scan_.outcome);
+    }
     setElapsed(scan_.seconds >= 0.0 ? duration(scan_.seconds) : QString());
     results_->setScan(scan_);
 }
@@ -846,6 +853,10 @@ void FitViewModel::sync() {
         scan_mode_ = scan;
         emit scanModeChanged();
     }
+    if (const bool parametric = scan && mode == QLatin1String("parametric"); parametric != parametric_) {
+        parametric_ = parametric;
+        emit parametricChanged();
+    }
     const bool measured = has_measured_data(project_);
     if (measured != measured_) {
         measured_ = measured;
@@ -859,7 +870,9 @@ void FitViewModel::sync() {
     } else if (scan) {
         reason = owner_.scanRefusal();
         // Outdated results can always be fitted again (Refit; the owner, 2026-10-26).
-        if (reason.isEmpty() && !running_ && !out_of_date_ && scan_.files > 0 && scan_.processed() >= scan_.files) {
+        // A parametric fit fits every pattern again each time, so a complete run never blocks the next.
+        if (reason.isEmpty() && !parametric_ && !running_ && !out_of_date_ && scan_.files > 0 &&
+            scan_.processed() >= scan_.files) {
             reason = tr("Every dataset is fitted or skipped: Reset fits to fit them again");
         }
     } else if (mode == QLatin1String("joint") && declared) {
@@ -901,8 +914,11 @@ void FitViewModel::iterated(const edi::IterationRecord& record) {
     if (owner_.retired_) return;
     if (!scanning_) setElapsed(duration(record.elapsed_ms / 1000.0));
     if (owner_.retired_) return;
+    // A parametric fit shows its joint χ² (it has no pre-fit record to start the arrow from).
     setProgress(QString::number(record.iteration),
-                QStringLiteral("%1 → %2").arg(chi(chi_before_), chi(record.reduced_chi_square)), tr("Running"));
+                parametric_ ? chi(record.reduced_chi_square)
+                            : QStringLiteral("%1 → %2").arg(chi(chi_before_), chi(record.reduced_chi_square)),
+                tr("Running"));
 }
 
 void FitViewModel::frame(const edi::FitFrame& shown) {
@@ -964,8 +980,8 @@ void FitViewModel::fileCompleted(const edi::ScanFileRecord& record) {
         // when the run returns), and the refusal is shown once.
         if (!scan_index_refused_) {
             scan_index_refused_ = true;
-            emit refused(session->index().error.empty() ? tr("The row just written could not be indexed")
-                                                         : QString::fromStdString(session->index().error));
+            emit resultsUnreadable(session->index().error.empty() ? tr("The row just written could not be indexed")
+                                                                   : QString::fromStdString(session->index().error));
         }
         return;
     }
@@ -978,6 +994,11 @@ void FitViewModel::fileCompleted(const edi::ScanFileRecord& record) {
         ++counts.fitted;
     }
     setScanCounts(counts, QString::fromStdString(record.file_name));
+    // A parametric fit writes every file's row at its end: its progress stays the fit's last iteration and the
+    // selection stays where the user put it (ADR-0107).
+    if (parametric_) {
+        return;
+    }
     setProgress(QString(), chi(record.reduced_chi_square), tr("Running"));
     latest_file_ = record.file_name;
     if (following() && pattern_updates_ != kCatchUp && (owner_.patternShown() || !owner_.scanViewShown())) {
@@ -989,6 +1010,12 @@ void FitViewModel::fileCompleted(const edi::ScanFileRecord& record) {
 
 void FitViewModel::scanFrame(const std::string& file, const edi::FitFrame& frame) {
     frame_requested_ = false;
+    // A parametric fit's files are written at its end: their patterns are not followed, and each is acknowledged at
+    // once so the job never waits for one (ADR-0107).
+    if (parametric_) {
+        if (job_) job_->frame_shown();
+        return;
+    }
     // Only at the end: the first file's pattern, which the job sends unasked, is not drawn either.
     if (!following() || pattern_updates_ == kAtEnd) {
         return;

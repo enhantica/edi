@@ -290,9 +290,11 @@ EaElements.StatusBar {
         visible: !bar.opening && bar.fit !== null && (AppState.analysisPageEnabled || running || bar.fit.outcome !== "")
 
         readonly property bool running: bar.fit !== null && bar.fit.running
-        readonly property bool scanning: bar.fit !== null && bar.fit.scanning
+        // A parametric fit runs as one fit of every pattern, so it shows iterations and χ² as a joint fit does.
+        readonly property bool scanning: bar.fit !== null && bar.fit.scanning && !bar.fit.parametric
         readonly property bool summary: bar.fit !== null && !running
-        readonly property bool scanSummary: summary && bar.fit.scanSummary
+        // A parametric fit has one outcome, shown once: never files fitted, converged or failed (ADR-0107).
+        readonly property bool scanSummary: summary && bar.fit.scanSummary && !bar.fit.parametric
         // The pattern-update mode, the patterns a scan has drawn and the file drawn last (the browser checks read
         // them).
         readonly property int patternUpdates: bar.fit !== null ? bar.fit.patternUpdates : -1
@@ -437,8 +439,8 @@ EaElements.StatusBar {
             height: statusItem.frameHeight
             anchors.verticalCenter: parent.verticalCenter
             // A scan fills the bar by its files (S3); a single fit, whose length is unknown, with stripes.
-            indeterminate: bar.fit === null || !bar.fit.scanning
-            fraction: bar.fit !== null && bar.fit.scanning && bar.fit.scanTotal > 0 ? bar.fit.scanProcessed / bar.fit.scanTotal : 0
+            indeterminate: !fitArea.scanning
+            fraction: fitArea.scanning && bar.fit.scanTotal > 0 ? bar.fit.scanProcessed / bar.fit.scanTotal : 0
             fontFamily: EaStyle.Fonts.ptMono.name
             text: ApplicationInfo.statusProgressText()
         }

@@ -4032,6 +4032,12 @@ static Project load_project_folder(const std::string& directory, const WarningSi
                                    ProjectLoadPolicy policy=ProjectLoadPolicy::Complete, bool assistant_result=false,
                                    const std::string& data_root = {}) {
     const bool whole=policy==ProjectLoadPolicy::Complete;
+    // A parametric fit's publication a crash interrupted is settled before the results are read; a folder that
+    // cannot be written is read as it is.
+    try {
+        recover_scan_publication(directory);
+    } catch (const std::exception&) {  // NOLINT(bugprone-empty-catch)
+    }
     // The project file being read, for a sourced sink (relative to the project; empty between files).
     std::string source;
     // One exit for the loader's warnings — the sourced sink while a file's text is applied, else the sink when given,

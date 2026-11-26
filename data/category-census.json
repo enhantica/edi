@@ -5499,6 +5499,41 @@
       "not_storage": "a fit report"
     },
     {
+      "member": "ParametricIterate::iteration",
+      "type": "int",
+      "not_storage": "a fit report"
+    },
+    {
+      "member": "ParametricIterate::reduced_chi_square",
+      "type": "double",
+      "not_storage": "a fit report"
+    },
+    {
+      "member": "ParametricIterate::points",
+      "type": "std::vector<IteratePoint>",
+      "not_storage": "a fit report"
+    },
+    {
+      "member": "IteratePoint::name",
+      "type": "std::string",
+      "not_storage": "one point of a parametric fit report"
+    },
+    {
+      "member": "IteratePoint::values",
+      "type": "std::map<std::string, double>",
+      "not_storage": "one point of a parametric fit report"
+    },
+    {
+      "member": "IteratePoint::grid",
+      "type": "std::vector<double>",
+      "not_storage": "one point of a parametric fit report"
+    },
+    {
+      "member": "IteratePoint::calculated",
+      "type": "std::vector<double>",
+      "not_storage": "one point of a parametric fit report"
+    },
+    {
       "member": "FitPreamble::joint",
       "type": "bool",
       "not_storage": "a fit report"

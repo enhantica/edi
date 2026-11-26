@@ -4558,6 +4558,22 @@ struct IterationRecord {
 };
 
 
+// ADR-0107: one accepted iteration of a parametric fit, for live charts. Per point: its data file, its free
+// parameters' values by unique name, and its calculated pattern on its fitted grid.
+struct ParametricIterate {
+    struct IteratePoint {
+        std::string name;
+        std::map<std::string, double> values;
+        std::vector<double> grid;
+        std::vector<double> calculated;
+    };
+    int iteration = 0;
+    double reduced_chi_square = 0.0;
+    std::vector<IteratePoint> points;
+};
+// Building an iterate costs one pattern per point; with no subscriber none is built.
+using ParametricIterateCallback = std::function<void(const ParametricIterate&)>;
+
 // Optional per-iteration progress subscriber. Passing none costs nothing: with no subscriber there
 // is no host crossing at all, while the history below is populated either way.
 using IterationCallback = std::function<void(const IterationRecord&)>;
@@ -5438,7 +5454,8 @@ class Project : public detail::ProjectAnchor {
                                  const ScanStartCallback& on_scan_start = {},
                                  const FileCompleteCallback& on_file_complete = {},
                                  const CancelCallback& should_cancel = {},
-                                 const FileFittedCallback& on_file_fitted = {});
+                                 const FileFittedCallback& on_file_fitted = {},
+                                 const ParametricIterateCallback& on_iterate = {});
     // The shared scan implementation both public scan entries delegate to AFTER each has
     // proved its own exact mode token. It is deliberately not bound to Python — making the
     // public entries aliases of one another is exactly what let an `independent` project

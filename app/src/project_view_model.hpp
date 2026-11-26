@@ -786,6 +786,8 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // A followed file with its pattern as the fit left it: shown like followScanFile, its pattern not calculated
     // again (edi ADR-0029).
     void followScanFrame(const std::string& file, const edi::FitFrame& frame, std::uint64_t token);
+    // A parametric fit's latest iterate (ADR-0107), drawn as one snapshot; the selection stays where it is.
+    void showParametricIterate(const edi::ParametricIterate& iterate);
     // Every pattern with no pattern chart shown (the Stacked or the Map view): the file is presented by becoming the
     // current dataset, counted once a frame is synchronised with it.
     void followScanSelection(const std::string& file, std::uint64_t token);
@@ -1289,6 +1291,8 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     bool view_reading_ = false;  // a read is in flight
     // A followed file's pattern from the scan's fit (its dataset and the frame), until its dataset is shown.
     std::optional<std::pair<int, edi::FitFrame>> follow_frame_;
+    // A running parametric fit's latest iterate (ADR-0107): the shown dataset is drawn with its point's values.
+    std::optional<edi::ParametricIterate> live_iterate_;
     // A followed file handed over while a scan runs, its dataset and name, until the chart is drawn with it: once
     // its dataset is applied, the main window's first frame synchronised after that, which draws it; or never, when
     // the read or the application fails, or the read or the drawing takes longer than kRenderWaitMs (edi ADR-0029).

@@ -4884,6 +4884,27 @@ void ProjectViewModel::startViewRead() {
         }
         values = datasetValues(scan_session_->row(*project_, index), scanTemplateOrModel(), scan_session_->index(),
                                scan_session_->row(*project_, start), start != kStartUnknown);
+        // A running parametric fit: the point's latest iterate values over its row's (ADR-0107), without s.u.
+        if (live_iterate_ && (fit_ == nullptr || !fit_->running())) {
+            live_iterate_.reset();
+        }
+        const auto& files = scan_session_->datasets().files;
+        if (live_iterate_ && index >= 0 && index < static_cast<int>(files.size())) {
+            for (const edi::ParametricIterate::IteratePoint& point : live_iterate_->points) {
+                if (point.name != files[static_cast<std::size_t>(index)]) continue;
+                for (const auto& [name, value] : point.values) {
+                    bool found = false;
+                    for (edi::Edit::ScanValue& each : values) {
+                        if (each.unique_name == name) {
+                            each.value = value;
+                            each.uncertainty.reset();
+                            found = true;
+                        }
+                    }
+                    if (!found) values.push_back({name, value, std::nullopt, std::nullopt});
+                }
+            }
+        }
     } catch (const std::exception& refusal) {
         view_applied_ = request;
         const QString error = QString::fromUtf8(refusal.what());
@@ -5433,6 +5454,26 @@ void ProjectViewModel::followScanFile(const std::string& file, std::uint64_t tok
         follow_issuing_ = false;
     } else if (fit_ != nullptr) {
         fit_->followRendered(token, file, false);
+    }
+}
+
+void ProjectViewModel::showParametricIterate(const edi::ParametricIterate& iterate) {
+    if (evolution_ != nullptr) {
+        evolution_->showIterate(iterate);
+    }
+    live_iterate_ = iterate;
+    // The selection stays where it is: the shown dataset is drawn again with its point's values from this iterate.
+    if (scan_session_ != nullptr && current_dataset_ >= 0 && patternShown()) {
+        const auto& files = scan_session_->datasets().files;
+        if (current_dataset_ < static_cast<int>(files.size())) {
+            const std::string& file = files[static_cast<std::size_t>(current_dataset_)];
+            for (const edi::ParametricIterate::IteratePoint& point : iterate.points) {
+                if (point.name == file) {
+                    viewDataset(current_dataset_, true);
+                    break;
+                }
+            }
+        }
     }
 }
 
