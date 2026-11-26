@@ -2,7 +2,6 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
-import QtQuick.Controls
 import QtGraphs
 
 import EasyApplication.Gui.Style as EaStyle
@@ -47,26 +46,11 @@ Item {
     // The theme's colours, or the light ones a PDF's copy is drawn in.
     property FigureColors colors: FigureColors {}
     readonly property EvolutionViewModel evolution: project && !fromReport ? project.evolution : null
-    onEvolutionChanged: if (evolution)
-        evolution.compareLayer = compareLayer
     // The tab is the one the window shows; the points are drawn once it is.
     property bool shown: true
 
     // The banks whose curves the legend hid, by name; all shown again with a new series.
     property var hiddenBanks: []
-    // Above this many banks only a chosen subset is drawn as curves (edi ADR-0089 point 3), the first ones by default.
-    readonly property int curveLimit: 10
-    readonly property bool manyBanks: evolution !== null && evolution.experiments.length > curveLimit
-    // More than 10 banks open as a map (edi ADR-0089 point 3); "Curves" draws the chosen subset instead.
-    property bool curvesForMany: false
-    readonly property bool mapShown: !fromReport && manyBanks && evolution.perExperiment && evolution.currentExperiment < 0 && !curvesForMany
-    function setBankShown(name, shown) {
-        const hidden = hiddenBanks.filter(bank => bank !== name);
-        if (!shown)
-            hidden.push(name);
-        hiddenBanks = hidden;
-        bankLegend.refill();
-    }
     readonly property real em: EaStyle.Sizes.fontPixelSize
     // The main area's margin (AppSizes.mainAreaMargin), as the pattern chart's; a report figure has it on all four sides,
     // to the letters of its titles, whose lines reach past them (the owner, 2026-11-24).
@@ -163,8 +147,8 @@ Item {
             // As wide as its widest entry, so the row stays where it is as the scope changes (the owner, 2026-11-24).
             toolbarGroup: "series"
             visible: !chart.fromReport && chart.evolution !== null && chart.evolution.series
-            toolTip: qsTr("Parameters shared by the banks, or each bank's own")
-            readonly property var entries: [qsTr("Shared"), qsTr("Per bank")]
+            toolTip: qsTr("Parameters common to all experiments, or each experiment's own")
+            readonly property var entries: [qsTr("Common"), qsTr("Per experiment")]
             model: entries
             shownIndex: chart.evolution !== null && chart.evolution.perExperiment ? 1 : 0
             onActivated: index => {
@@ -181,10 +165,10 @@ Item {
             fitShown: true
             toolbarGroup: "series"
             visible: !chart.fromReport && chart.evolution !== null && chart.evolution.series && chart.evolution.perExperiment
-            toolTip: qsTr("Every bank's curve, or one bank's")
+            toolTip: qsTr("Every experiment's curve, or one experiment's")
             // Each bank with the experiment icon in its curve's colour, as the legend and the Bank selector show it;
             // All banks with the neutral icon (the owner, 2026-11-17). The base box draws $ICONS_FAMILY and $ICON_COLOR.
-            readonly property var plain: chart.evolution !== null ? [qsTr("All banks")].concat(chart.evolution.experiments) : []
+            readonly property var plain: chart.evolution !== null ? [qsTr("All experiments")].concat(chart.evolution.experiments) : []
             readonly property var entries: plain.map((name, i) => {
                 const colour = i === 0 ? "$ICON_COLOR" : String(AppColors.experiment(i - 1, chart.colors.isDarkPalette));
                 return `<font face="$ICONS_FAMILY" color="${colour}">microscope</font>&nbsp;&nbsp;${name}`;
@@ -229,48 +213,6 @@ Item {
                 text: chart.evolution ? chart.evolution.yTitle : ""
                 requested: parameterHover.hovered
             }
-        }
-
-        // More than 10 banks: which banks are drawn as curves, picked from a searchable list (edi ADR-0089 point 3).
-        ChartToolButton {
-            objectName: "evolution.toolbar.map"
-            readonly property bool toolbarUnits: true
-            visible: !chart.fromReport && chart.manyBanks && chart.evolution.perExperiment && chart.evolution.currentExperiment < 0
-            fontIcon: "th"
-            toolTip: chart.curvesForMany ? qsTr("Show every bank as a map") : qsTr("Show chosen banks as curves")
-            checked: !chart.curvesForMany
-            onClicked: chart.curvesForMany = !chart.curvesForMany
-        }
-        ChartToolButton {
-            id: banksButton
-
-            objectName: "evolution.toolbar.banks"
-            readonly property bool toolbarUnits: true
-            visible: !chart.fromReport && chart.manyBanks && chart.evolution.perExperiment && chart.evolution.currentExperiment < 0 && chart.curvesForMany
-            fontIcon: "list"
-            toolTip: qsTr("Banks drawn: %1 of %2").arg(chart.evolution ? chart.evolution.experiments.length - chart.hiddenBanks.length : 0).arg(chart.evolution ? chart.evolution.experiments.length : 0)
-            onClicked: banksPopup.open()
-        }
-
-        // "Compare with" (edi ADR-0089 point 2): a second parameter of the same section, drawn against a right axis.
-        ToolbarComboBox {
-            id: compareBox
-
-            objectName: "evolution.toolbar.compare"
-            fitShown: true
-            toolbarGroup: "series"
-            visible: !chart.fromReport && chart.evolution !== null && chart.evolution.fitted
-            toolTip: qsTr("Compare with a second parameter, on a right axis")
-            readonly property var plain: {
-                const names = [qsTr("Compare with: none")];
-                const list = chart.evolution ? chart.evolution.parameters : null;
-                for (let i = 0; list && i < list.count; ++i)
-                    names.push(list.text(i, "label") || list.text(i, "name"));
-                return names;
-            }
-            model: plain
-            shownIndex: chart.evolution !== null ? chart.evolution.compareParameter + 1 : 0
-            onActivated: index => chart.evolution.compareParameter = index - 1
         }
 
         // The project's two view settings, as on the pattern chart's toolbar (the owner, 2026-11-03): the error bars, and
@@ -330,8 +272,7 @@ Item {
         marginLeft: chart.sideMargin + (!chart.fromReport ? chart.titleGutter : chart.widestTick > 0 && chart.axisRoom > 0 ? chart.widestTick + chart.tickGap - chart.axisRoom : 0)
         onPlotAreaChanged: if (chart.fromReport)
             chart.axisRoom = plotArea.x - marginLeft
-        // Room for the right axis's labels and title while a second parameter is compared.
-        marginRight: chart.sideMargin + (chart.comparing ? chart.em * 5.5 : 0)
+        marginRight: chart.sideMargin
         marginTop: 0
         marginBottom: 0
         theme: ChartTheme {
@@ -372,8 +313,6 @@ Item {
             tickInterval: chart.niceStep(max - min, chart.yTicks)
             tickAnchor: 0
             lineVisible: false
-            // A map's rows are banks, named in the plot; its values are on the colour scale.
-            labelsVisible: !chart.mapShown
             labelDelegate: Item {
                 id: yTick
 
@@ -401,50 +340,6 @@ Item {
         // Qt Graphs draws nothing without a series.
         LineSeries {
             visible: false
-        }
-    }
-
-    // The right axis of the compared parameter (edi ADR-0089 point 2): its labels at round values of its own range, and
-    // its title, in the compared points' colour.
-    readonly property bool comparing: !fromReport && evolution !== null && evolution.compareParameter >= 0 && fitted
-    readonly property color compareColor: AppColors.experiment(3, colors.isDarkPalette)
-    Item {
-        id: rightAxis
-
-        visible: chart.comparing
-        x: plot.x + plot.width + chart.em * 0.4
-        y: plot.y
-        width: chart.em * 4
-        height: plot.height
-        readonly property real low: chart.evolution ? chart.evolution.compareYMin : 0
-        readonly property real high: chart.evolution ? chart.evolution.compareYMax : 1
-        readonly property real step: chart.niceStep(high - low, chart.yTicks)
-        readonly property var values: {
-            const out = [];
-            if (!(step > 0) || !(high > low))
-                return out;
-            for (let v = Math.ceil(low / step) * step; v <= high && out.length < 20; v += step)
-                out.push(v);
-            return out;
-        }
-        Repeater {
-            model: rightAxis.values
-            delegate: EaElements.Label {
-                required property real modelData
-                objectName: "evolution.rightTick"
-                y: Math.round((1 - (modelData - rightAxis.low) / (rightAxis.high - rightAxis.low)) * rightAxis.height - height / 2)
-                color: chart.compareColor
-                text: NumberText.compact(String(Number(modelData.toPrecision(6))))
-            }
-        }
-        EaElements.Label {
-            objectName: "evolution.rightTitle"
-            x: rightAxis.width - height
-            y: rightAxis.height / 2
-            transformOrigin: Item.TopLeft
-            rotation: -90
-            color: chart.compareColor
-            text: chart.evolution ? chart.evolution.compareLabel : ""
         }
     }
 
@@ -495,108 +390,6 @@ Item {
             yMin: axisY.min
             yMax: axisY.max
         }
-        // Every bank as a map (edi ADR-0089 point 3): x along the chart, one row per bank, the colour the value from the
-        // lowest to the highest shown, the bank's name at its row's left. Redrawn with the points.
-        Canvas {
-            id: bankMapCanvas
-
-            objectName: "evolution.bankMap"
-            anchors.fill: parent
-            visible: chart.mapShown
-            readonly property var stops: ApplicationInfo.scanColourStops(ApplicationInfo.scanColourMaps[0], chart.colors.isDarkPalette, false, 24)
-            property var cells: []
-            property real low: 0
-            property real high: 1
-            function refresh() {
-                cells = chart.evolution ? chart.evolution.bankMap() : [];
-                let lo = Infinity, hi = -Infinity;
-                for (const cell of cells) {
-                    lo = Math.min(lo, cell[2]);
-                    hi = Math.max(hi, cell[2]);
-                }
-                low = isFinite(lo) ? lo : 0;
-                high = isFinite(hi) && hi > lo ? hi : low + 1;
-                requestPaint();
-            }
-            Connections {
-                target: chart.evolution
-                function onDrawn() {
-                    bankMapCanvas.refresh();
-                }
-            }
-            onVisibleChanged: if (visible)
-                refresh()
-            onPaint: {
-                const ctx = getContext("2d");
-                ctx.reset();
-                const rows = chart.evolution ? chart.evolution.experiments.length : 0;
-                if (rows === 0 || cells.length === 0)
-                    return;
-                const rowHeight = height / rows;
-                const perBank = Math.max(1, cells.length / rows);
-                const cellWidth = Math.max(2, width / perBank);
-                for (const cell of cells) {
-                    const share = (cell[2] - low) / (high - low);
-                    ctx.fillStyle = stops[Math.max(0, Math.min(stops.length - 1, Math.round(share * (stops.length - 1))))];
-                    const x = (cell[0] - axisX.min) / (axisX.max - axisX.min) * width - cellWidth / 2;
-                    ctx.fillRect(x, cell[1] * rowHeight, cellWidth, Math.max(1, rowHeight));
-                }
-            }
-        }
-        Repeater {
-            model: chart.mapShown ? chart.evolution.experiments : []
-            delegate: EaElements.Label {
-                required property string modelData
-                required property int index
-                x: chart.em * 0.3
-                y: (index + 0.5) * plot.height / Math.max(1, chart.evolution.experiments.length) - height / 2
-                // On rows shorter than a line, every n-th bank is named, so the names never overlap.
-                readonly property real rowHeight: plot.height / Math.max(1, chart.evolution.experiments.length)
-                readonly property int every: Math.max(1, Math.ceil(height / Math.max(1, rowHeight)))
-                visible: index % every === 0
-                color: chart.colors.chartLabels
-                text: modelData
-            }
-        }
-        Row {
-            objectName: "evolution.bankMap.scale"
-            visible: chart.mapShown
-            anchors.right: parent.right
-            anchors.top: parent.top
-            anchors.margins: chart.em * 0.5
-            spacing: chart.em * 0.3
-            EaElements.Label {
-                color: chart.colors.chartLabels
-                text: NumberText.compact(String(Number(bankMapCanvas.low.toPrecision(5))))
-            }
-            ColourMapBar {
-                map: ApplicationInfo.scanColourMaps[0]
-                dark: chart.colors.isDarkPalette
-                barWidth: chart.em * 6
-                barHeight: chart.em * 0.7
-                anchors.verticalCenter: parent.verticalCenter
-            }
-            EaElements.Label {
-                color: chart.colors.chartLabels
-                text: NumberText.compact(String(Number(bankMapCanvas.high.toPrecision(5))))
-            }
-        }
-        // The compared parameter, in a second colour, against its own range (the right axis).
-        MeasuredLayer {
-            id: compareLayer
-
-            objectName: "evolution.compare"
-            anchors.fill: parent
-            visible: chart.evolution !== null && chart.evolution.compareParameter >= 0
-            color: AppColors.experiment(3, chart.colors.isDarkPalette)
-            markerSize: 6
-            xMin: axisX.min
-            xMax: axisX.max
-            yMin: chart.evolution ? chart.evolution.compareYMin : 0
-            yMax: chart.evolution ? chart.evolution.compareYMax : 1
-            Component.onCompleted: if (chart.evolution)
-                chart.evolution.compareLayer = compareLayer
-        }
         // Every bank's own curve, in the bank's colour, when a per-bank parameter shows them all.
         Repeater {
             model: chart.evolution !== null && !chart.fromReport ? chart.evolution.experiments.length : 0
@@ -606,7 +399,7 @@ Item {
                 objectName: `evolution.points.bank.${bankLayer.index}`
                 anchors.fill: parent
                 color: AppColors.experiment(bankLayer.index, chart.colors.isDarkPalette)
-                visible: !chart.mapShown && !chart.hiddenBanks.includes(chart.evolution.experiments[bankLayer.index] ?? "")
+                visible: !chart.hiddenBanks.includes(chart.evolution.experiments[bankLayer.index] ?? "")
                 markerSize: 6
                 xMin: axisX.min
                 xMax: axisX.max
@@ -648,9 +441,8 @@ Item {
             function refill() {
                 bankLegendRows.setRows(banks, banks.map((name, i) => String(AppColors.experiment(i, dark))), -1, chart.hiddenBanks);
             }
-            // More than 10 banks (edi ADR-0089 point 3): curves for the first 10, the rest chosen in the Banks list.
             onBanksChanged: {
-                chart.hiddenBanks = banks.length > chart.curveLimit ? banks.slice(chart.curveLimit) : [];
+                chart.hiddenBanks = [];
                 refill();
             }
             onDarkChanged: refill()
@@ -821,41 +613,4 @@ Item {
         text: qsTr("No fitted results yet")
     }
 
-    // The searchable list of banks drawn as curves (edi ADR-0089 point 3).
-    Popup {
-        id: banksPopup
-
-        objectName: "evolution.banksPopup"
-        parent: Overlay.overlay
-        anchors.centerIn: Overlay.overlay
-        width: chart.em * 22
-        height: chart.em * 26
-        padding: chart.em * 0.75
-
-        Column {
-            anchors.fill: parent
-            spacing: chart.em * 0.5
-
-            EaElements.TextField {
-                id: bankSearch
-                objectName: "evolution.banksPopup.search"
-                width: parent.width
-                placeholderText: qsTr("Find a bank")
-            }
-            ListView {
-                width: parent.width
-                height: parent.height - bankSearch.height - parent.spacing
-                clip: true
-                model: chart.evolution ? chart.evolution.experiments.filter(name => name.toLowerCase().includes(bankSearch.text.toLowerCase())) : []
-                delegate: EaElements.CheckBox {
-                    required property string modelData
-                    required property int index
-                    objectName: `evolution.banksPopup.bank.${index}`
-                    text: modelData
-                    checked: !chart.hiddenBanks.includes(modelData)
-                    onToggled: chart.setBankShown(modelData, checked)
-                }
-            }
-        }
-    }
 }
