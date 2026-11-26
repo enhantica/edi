@@ -20,6 +20,9 @@ import zipfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / 'tools/release'))
+import versions  # noqa: E402
+
 SYSTEM = {'Linux': 'linux', 'Darwin': 'macos', 'Windows': 'windows'}[platform.system()]
 APP_COMPONENT = 'org.easydiffraction.app'
 ASSISTANT_COMPONENT = 'org.easydiffraction.app.assistant'
@@ -46,8 +49,7 @@ MACOS_INSTALLER_NAME = 'EasyDiffraction Installer'
 
 def installer_stem(version: str, kind: str) -> str:
     """The download's name without its suffix; the online installer is the default one."""
-    offline = '-Offline' if kind == 'offline' else ''
-    return f'EasyDiffraction-Installer{offline}-{version}-{INSTALLER_PLATFORM}'
+    return versions.installer_stem(version, INSTALLER_PLATFORM, kind)
 
 
 def read_release_plan(directory: Path, source_commit: str | None = None) -> dict:
@@ -62,10 +64,7 @@ def read_release_plan(directory: Path, source_commit: str | None = None) -> dict
         documents[name] for name in ['plan.json', 'release.json', 'release-history.json']
     )
     version = plan['version']
-    if (
-        not re.fullmatch(r'[0-9]{4}\.(0[1-9]|1[0-2])\.(0|[1-9][0-9]*)', version)
-        or int(version[:4]) < 2000
-    ):
+    if not versions.is_version(version):
         raise RuntimeError('Prepared release requires a calendar identity')
     if plan.get('reused'):
         raise RuntimeError('This release already exists; reuse its published artifacts')
@@ -1120,6 +1119,45 @@ def deliver_installer(installer: Path, runtime: Path | None, *, ad_hoc: bool = T
     return archive
 
 
+def write_repository(tools: Path, packages: Path, repository: Path, environment: dict) -> None:
+    """The online repository, every component with its content checksum (edi ADR-0106).
+
+    repogen takes the argument after --sha-update as the components to checksum: every package of
+    this platform's repository, by its id.
+    """
+    names = sorted(path.name for path in packages.iterdir() if path.is_dir())
+    run(
+        [
+            tools / ('bin/repogen' + SUFFIX),
+            '--verbose',
+            '--sha-update',
+            ','.join(names),
+            '--component-metadata',
+            '--compression',
+            '5',
+            '-p',
+            packages,
+            repository,
+        ],
+        env=environment,
+    )
+    require_content_checksums(repository / 'Updates.xml', names)
+
+
+def require_content_checksums(updates: Path, packages: list) -> None:
+    """Every component of the repository carries its content checksum (repogen --sha-update)."""
+    root = ET.parse(updates).getroot()  # noqa: S314 - repogen's own output
+    found = {
+        package.findtext('Name'): (package.findtext('ContentSha1') or '').strip()
+        for package in root.findall('PackageUpdate')
+    }
+    missing = sorted(name for name in packages if not found.get(name))
+    if sorted(found) != packages or missing:
+        raise RuntimeError(
+            f'The update repository lacks content checksums for {missing or sorted(found)}'
+        )
+
+
 def installerbase_bytes(tools: Path) -> int:
     """The Framework's installerbase, which the installation writes as its maintenance tool."""
     base = tools / 'bin' / ('installerbase.exe' if SYSTEM == 'windows' else 'installerbase')
@@ -1222,19 +1260,12 @@ def package_app(
         else None
     )
     if repository_url:
-        run(
-            [
-                tools / ('bin/repogen' + SUFFIX),
-                '--verbose',
-                '--component-metadata',
-                '--compression',
-                '5',
-                '-p',
-                source / 'packages',
-                output / 'repository',
-            ],
-            env=tool_environment,
-        )
+        # --sha-update writes each component's content checksum into the feed, and the Maintenance
+        # Tool then offers a component whose checksum differs from the installed one instead of
+        # one with a higher version. That is how 2026.11.x installs take 26.17, a lower number
+        # (edi ADR-0106). So a component with the same content in two releases is not offered,
+        # one rebuilt with other bytes but the same content is, and Version is only shown.
+        write_repository(tools, source / 'packages', output / 'repository', tool_environment)
     kind = 'online' if repository_url else 'offline'
     name = installer_stem(version, kind)
     installer = output / (
@@ -1547,9 +1578,7 @@ def verify_installed_payload(target: Path, *, with_assistant: bool) -> None:
 
 def verify_installed_identity(metadata: dict, receipt: dict) -> None:
     version = metadata.get('version', '')
-    if re.fullmatch(r'[0-9]{4}\.(0[1-9]|1[0-2])\.(0|[1-9][0-9]*)', version) and (
-        receipt.get('app_version') != version
-    ):
+    if versions.is_version(version) and receipt.get('app_version') != version:
         raise RuntimeError('Installed application and installer calendar versions differ')
     history = metadata.get('release_history_sha256')
     if history and receipt.get('release_history_sha256') != history:

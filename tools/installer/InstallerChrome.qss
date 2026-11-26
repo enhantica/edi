@@ -67,9 +67,10 @@ QPushButton:hover, QPushButton:pressed, QPushButton:checked {
     border-color: @ACCENT@;
 }
 
+/* Disabled (Cancel while removing, Next while loading): the same outline, grey text. */
 QPushButton:disabled {
     color: #888888;  /* the app's dark minor grey, readable on the light window too */
-    border-color: transparent;
+    border-color: rgba(128, 128, 128, 0.25);
 }
 
 /* The Framework's questions and warnings ("Do you want to quit", "already exists") as the pages read: the pages'

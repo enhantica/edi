@@ -368,11 +368,11 @@ def marker_installer(tools: Path, work: Path) -> Path:
     stage = marker_stage(work)
     repository = (work / 'online/repository').as_uri() + '/'
     with patch('package.repository_urls', return_value=(repository,)):
-        package_app(stage, tools, work / 'offline', '2026.11.0')
+        package_app(stage, tools, work / 'offline', '26.17')
     app = stage / APP_MARKER
     app.write_text('updated marker\n')
     (stage / ASSISTANT_RUNTIME / 'assistant.txt').write_text('updated assistant marker\n')
-    package_app(stage, tools, work / 'online', '2026.11.1', repository)
+    package_app(stage, tools, work / 'online', '26.18', repository)
     metadata = (work / 'offline/installer.json').read_text()
     return work / 'offline' / json.loads(metadata)['download']
 

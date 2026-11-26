@@ -44,10 +44,12 @@ def check(tools: Path, output: Path) -> None:
     assistant_marker.write_text('optional assistant marker\n')
     repository = (output / 'online/repository').as_uri() + '/'
     # Substitute only the endpoint; install and maintenance use the real embedded configuration.
+    # The update goes from the last old-form version to the first YY.N, which sorts lower by its
+    # numbers: the repository offers it by content checksum (edi ADR-0106).
     with patch('package.repository_urls', return_value=(repository,)):
-        offline = package_app(stage, tools, output / 'offline', '2026.11.0')
+        offline = package_app(stage, tools, output / 'offline', '2026.11.31')
     marker.write_text('second marker\n')
-    online = package_app(stage, tools, output / 'online', '2026.11.1', repository)
+    online = package_app(stage, tools, output / 'online', '26.17', repository)
     (output / 'isolated home').mkdir()
     for kind, bootstrap in [('offline', offline), ('online', online)]:
         exercise(
@@ -116,6 +118,10 @@ def exercise(
                 )
                 if installed.read_text() != 'second marker\n':
                     raise RuntimeError('Maintenance tool did not apply the component update')
+                # The update brings the newer release's signed tool along (edi ADR-0106).
+                verify_installed_maintenance_tool(
+                    target, json.loads((output / 'online/installer.json').read_text())
+                )
                 if user_file.read_text() != 'keep the project\n':
                     raise RuntimeError('In-place update changed an unrelated user file')
             maintenance_args = [

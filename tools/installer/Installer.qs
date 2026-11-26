@@ -194,6 +194,20 @@ function advance(name, page) {
     proceed(name, name === "Finished" ? finish : buttons.NextButton, 2500);
 }
 
+// One window height on every page: the height of the first page shown, held, so a page without a button row (macOS
+// hides Cancel while installing) or with a status line does not grow the window.
+var windowHeight = 0;
+
+function fixWindowHeight() {
+    if (windowHeight === 0) {
+        if (!(gui.height > 0))
+            return;
+        windowHeight = gui.height;
+    }
+    gui.minimumHeight = windowHeight;
+    gui.maximumHeight = windowHeight;
+}
+
 function Controller() {
     // No component tree: macOS accessibility clients crash the Framework's Qt on it (edi #150); the one choice it
     // offered, the AI assistant, is a checkbox (assistantscript.qs).
@@ -691,14 +705,10 @@ function componentBytes(c) {
 function requested(c, removing) {
     if (removing)
         return c.uninstallationRequested();
-    if (c.name === maintenanceComponent && installer.isUpdater()) {
-        var all = installer.components();
-        for (var i = 0; i < all.length; ++i) {
-            if (all[i].name !== maintenanceComponent && listed(all[i]) && all[i].installationRequested())
-                return true;
-        }
-        return false;
-    }
+    // On update the tool follows its own state: with checksum updates it can be unchanged while the app changes, or be
+    // the only change.
+    if (c.name === maintenanceComponent && installer.isUpdater())
+        return c.installationRequested() || c.updateRequested();
     return c.installationRequested();
 }
 
@@ -761,7 +771,7 @@ function frameworkBytes(figure) {
 // its name in the normal text colour, the box at the heading's edge and the rows one row gap apart. The box is 16 px,
 // the check box's outside at the 14 px text (Installer.qss). `first` is the gap above the first row, where it follows
 // the space line.
-function summaryRows(removing, total, boxed, first) {
+function summaryRows(removing, total, boxed, first, unticked) {
     var entries = summaryEntries(removing);
     var named = 0;
     entries.forEach(function (entry) { named += entry.bytes; });
@@ -771,7 +781,7 @@ function summaryRows(removing, total, boxed, first) {
         var name = boxed
             ? '<td width="' + (16 + sideIndent) + '" style="padding: ' + gap + 'px 0 0 ' + sideIndent
               + 'px"><img style="vertical-align: middle" src='
-              + '":/metadata/edi/' + (darkTheme() ? "checked-disabled-dark" : "checked-disabled")
+              + '":/metadata/edi/' + (unticked ? "unchecked-disabled" : "checked-disabled") + (darkTheme() ? "-dark" : "")
               + '.png" width="16" height="16"></td>'
               + '<td valign="middle" style="padding: ' + gap + 'px 0 0 7px">' + entry.name + "</td>"
             : '<td style="padding: ' + gap + 'px 0 2px ' + (4 + sideIndent) + 'px">' + entry.name + "</td>";
@@ -798,8 +808,15 @@ function summaryEntries(removing) {
                       order: c.name === appComponent ? 0 : c.name === maintenanceComponent ? 1 : 2});
     }
     var app = entries.some(function (entry) { return entry.app; });
-    if (!removing && app && !tool && !installer.isPackageManager())
+    if (!removing && !tool && installer.isUpdater()) {
+        // The Framework may leave the virtual tool out of components(); asked by name, it says whether it changes.
+        var held = installer.componentByName(maintenanceComponent);
+        if (held && requested(held, false))
+            entries.push({name: "Maintenance Tool", bytes: componentBytes(held) || toolBytes, app: false, order: 1});
+    } else if (!removing && app && !tool && installer.isInstaller()) {
+        // A fresh installation makes its own tool, which no package holds: its size is the Framework's.
         entries.push({name: "Maintenance Tool", bytes: toolBytes, app: false, order: 1});
+    }
     entries.sort(function (a, b) { return a.order - b.order; });
     return entries;
 }
@@ -883,13 +900,20 @@ function writeSummary(page) {
         text += PARA + spaceLine + "</p>";
     var first = spaceLine !== "" ? groupGap : 0;
     // Updating lists what is updated as the choice page before it showed it: ticked boxes.
-    var adding = summaryRows(false, neededBytes, installer.isUpdater(), first);
+    // A change of components lists every changed one as Ready to update does: ticked what is added, unticked what is
+    // removed, in one list.
+    var changing = installer.isPackageManager();
+    var adding = summaryRows(false, neededBytes, installer.isUpdater() || changing, first);
     var dropping = removing ? summaryRows(true, 0, false, first)
-        : (installer.isPackageManager() ? summaryRows(true) : "");
-    if (adding !== "")
-        text += summaryTable(adding);
-    if (dropping !== "")
-        text += (removing ? "" : GROUP + "Removed:</p>") + summaryTable(dropping);
+        : (changing ? summaryRows(true, 0, true, adding === "" ? first : 0, true) : "");
+    if (changing && adding + dropping !== "")
+        text += summaryTable(adding + dropping);
+    else {
+        if (adding !== "")
+            text += summaryTable(adding);
+        if (dropping !== "")
+            text += summaryTable(dropping);
+    }
     // The lines under the lists are a group of their own: the first one group gap under the lists.
     var closing = [];
     if (removing) {
@@ -1432,6 +1456,7 @@ function headerWordmark() {
         if (!page)
             return;
         themePage(page);
+        fixWindowHeight();
         // A maintenance tool restarted from its last page offers nothing to open until it is there again.
         if (name !== "Finished")
             openOffered = false;
@@ -1472,8 +1497,12 @@ function headerWordmark() {
 
         // The summary without the Framework's component trees: a tree view is what macOS accessibility clients
         // crashed (edi #150), so none may show. One plain sentence says what happens.
-        if (name === "ReadyForInstallation")
+        if (name === "ReadyForInstallation") {
             writeSummary(page);
+            // A change of components is applied, not an update.
+            if (installer.isPackageManager())
+                gui.setWizardPageButtonText(QInstaller.ReadyForInstallation, buttons.CommitButton, "Apply");
+        }
         // The installer has no summary page of its own: Install on the first page commits, unless the licence box
         // was cleared, which brings the first page back saying why.
         if (name === "ReadyForInstallation" && installer.isInstaller()) {
@@ -1548,6 +1577,12 @@ function headerWordmark() {
 
         // Installing: the bar and one status line, no details.
         if (name === "PerformInstallation") {
+            // Cancel is never the page's main action, even as its only button (the style fills a default button).
+            var cancel = gui.findChild(gui, "qt_wizard_cancel");
+            if (cancel) {
+                cancel.autoDefault = false;
+                cancel["default"] = false;
+            }
             // --verbose opens the details, which stops the Framework moving on by itself when done: they are closed
             // with their own button, which turns that back on, and the button and download count are hidden.
             var detailsBrowser = gui.findChild(page, "DetailsBrowser");
