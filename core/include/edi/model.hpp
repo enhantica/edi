@@ -5412,6 +5412,14 @@ class Project : public detail::ProjectAnchor {
                                      const FileCompleteCallback& on_file_complete = {},
                                      const CancelCallback& should_cancel = {},
                                      const FileFittedCallback& on_file_fitted = {});
+    // The `parametric` scan mode's entry point (ADR-0107): the whole scan as one fit, the shared parameters one value
+    // for every file. Same driver and refusals; the mode must be exactly `parametric`.
+    FitResultBase fit_parametric(const IterationCallback& on_iteration = {},
+                                 const PreambleCallback& on_start = {},
+                                 const ScanStartCallback& on_scan_start = {},
+                                 const FileCompleteCallback& on_file_complete = {},
+                                 const CancelCallback& should_cancel = {},
+                                 const FileFittedCallback& on_file_fitted = {});
     // The shared scan implementation both public scan entries delegate to AFTER each has
     // proved its own exact mode token. It is deliberately not bound to Python — making the
     // public entries aliases of one another is exactly what let an `independent` project

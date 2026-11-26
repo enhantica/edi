@@ -672,7 +672,13 @@ class Analysis:
                 should_cancel=should_cancel,
             )
         if self._project.fitting_mode == 'parametric':
-            raise ValueError('The parametric fit is not available yet.')
+            return self._project.fit_parametric(
+                on_iteration=on_iteration,
+                on_start=on_start,
+                on_scan_start=on_scan_start,
+                on_file_complete=on_file_complete,
+                should_cancel=should_cancel,
+            )
         if on_scan_start is not None or on_file_complete is not None:
             raise ValueError(
                 'on_scan_start/on_file_complete are scan-mode subscribers - this project '

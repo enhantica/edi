@@ -94,7 +94,7 @@ FitResultBase fit_by_mode(Project& project, const IterationCallback& on_iteratio
         return project.fit_independent({}, {}, on_scan_start, on_file_complete, should_cancel, on_file_fitted);
     }
     if (mode == "parametric") {
-        throw std::invalid_argument("The parametric fit is not available yet.");
+        return project.fit_parametric({}, {}, on_scan_start, on_file_complete, should_cancel, on_file_fitted);
     }
     throw std::invalid_argument("Start fitting runs the single, joint, sequential and independent fitting modes; this "
                                 "project's is '" + mode + "'");

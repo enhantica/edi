@@ -5586,6 +5586,29 @@ NB_MODULE(_edi, m) {
             "Carries the same scan-event subscribers as `fit_sequential`. `should_cancel` is polled between iterations; true, or a "
             "KeyboardInterrupt raised in any callback, stops the fit cleanly with a CANCELLED "
             "result.")
+        .def(
+            "fit_parametric",
+            [](edi::Project& self, const std::optional<nb::callable>& on_iteration,
+               const std::optional<nb::callable>& on_start,
+               const std::optional<nb::callable>& on_scan_start,
+               const std::optional<nb::callable>& on_file_complete,
+               const std::optional<nb::callable>& should_cancel) {
+                warn_dependents(self);
+                return fit_with_scan_callbacks(
+                    on_iteration, on_start, on_scan_start, on_file_complete, should_cancel,
+                    [&](const edi::IterationCallback& cb, const edi::PreambleCallback& pre,
+                        const edi::ScanStartCallback& scan_start,
+                        const edi::FileCompleteCallback& file_complete,
+                        const edi::CancelCallback& cancel) {
+                        return self.fit_parametric(cb, pre, scan_start, file_complete, cancel);
+                    });
+            },
+            "on_iteration"_a = nb::none(), "on_start"_a = nb::none(),
+            "on_scan_start"_a = nb::none(), "on_file_complete"_a = nb::none(),
+            "should_cancel"_a = nb::none(),
+            "Parametric scan refinement: every file of the scan in one fit, the shared parameters "
+            "(Parameter.shared) one value for all files. Rows are written as the 'independent' mode "
+            "writes them. Raises ValueError unless the fitting mode is exactly 'parametric'.")
         // The stop rules are model state too, as crysta reads them; the setter validates the list.
         .def_prop_rw(
             "stop_rules",

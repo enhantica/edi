@@ -8211,6 +8211,21 @@ FitResultBase Project::fit_independent(const IterationCallback& on_iteration,
     return fit_scan(on_iteration, on_start, on_scan_start, on_file_complete, should_cancel, on_file_fitted);
 }
 
+FitResultBase Project::fit_parametric(const IterationCallback& on_iteration,
+                                     const PreambleCallback& on_start,
+                                     const ScanStartCallback& on_scan_start,
+                                     const FileCompleteCallback& on_file_complete,
+                                     const CancelCallback& should_cancel,
+                                     const FileFittedCallback& on_file_fitted) {
+    begin_fit_messages();
+    refresh_background_estimates(*this);
+    if (fitting_mode != "parametric") {
+        throw std::invalid_argument("edi fit_parametric: _fitting_mode.type is '" + fitting_mode +
+                                    "' - this entry point serves exactly the 'parametric' mode");
+    }
+    return fit_scan(on_iteration, on_start, on_scan_start, on_file_complete, should_cancel, on_file_fitted);
+}
+
 FitResultBase Project::fit_sequential(const IterationCallback& on_iteration,
                                          const PreambleCallback& on_start,
                                          const ScanStartCallback& on_scan_start,

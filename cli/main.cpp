@@ -214,6 +214,9 @@ void fit(const std::string& source, const std::string& output, bool dry,
         if (project.fitting_mode == "independent" && !project.sequential_fit.declared()) {
             return project.fit_independent(on_iteration, on_start);  // each experiment alone (ADR-0081)
         }
+        if (project.fitting_mode == "parametric") {
+            return project.fit_parametric(on_iteration, {}, on_scan_start, on_file_complete);
+        }
         if (project.fitting_mode == "independent") {
             return project.fit_independent(on_iteration, {}, on_scan_start, on_file_complete);
         }

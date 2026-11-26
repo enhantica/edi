@@ -1245,7 +1245,7 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
         if (name == "fit_trial") {
             if (trial->report) refuse("invalid_argument", "This trial has already been fitted");
             const auto mode = effective_fitting_mode(*trial->project);
-            if (mode == "sequential" || mode == "independent")
+            if (is_scan_fitting_mode(mode))
                 refuse("out_of_scope", "Assistant scan trials require the pending checked result-artifact unit");
             const auto max_iterations = static_cast<int>(active_plan.max_iterations);
             const auto job_id = id("job"); preflight(success(O{{"job_id", job_id}}), true);
