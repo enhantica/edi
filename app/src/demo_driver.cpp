@@ -1976,6 +1976,18 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
         steps_.push_back({"evolutionshared-3-shared-list", {"evolution.parameters"}});
         steps_.push_back({"evolutionshared-5-per-bank", {"key:Escape", "evolution.toolbar.scope", "choose:Per experiment"}});
     }
+    // Shared in the bundled taurine joint fit as shipped: a structure parameter cannot be shared (one value for all
+    // experiments already), and ticking Shared on a copy that constraints tie to the first experiment's shares it in
+    // every experiment. Run only when asked (`--demo-only jointtied-`).
+    if (only.startsWith(QLatin1String("jointtied-"))) {
+        steps_.push_back({"jointtied-1-structure",
+                          QStringList{"resize:1480x900", "theme:light"} + start
+                              + open_cli_project("sc-neut-tof_taurine-senju")
+                              + QStringList{analysis, basic, "parameters.nameFilter", "type:beta",
+                                            "hover:parameters.shared.0"}});
+        steps_.push_back({"jointtied-2-tied-before", {"parameters.nameFilter", "key:Ctrl+A", "type:coefficient_11"}});
+        steps_.push_back({"jointtied-3-tied-shared", {"parameters.shared.1"}});
+    }
     // Shared in a joint fit: the project EDI_DEMO_JOINT_PROJECT names (the taurine example with its extinction shared
     // instead of tied by constraints), its coefficients, one Free flag per shared group, the Shared menu, then saved and
     // opened again. Run only when asked (`--demo-only jointshared-`).
