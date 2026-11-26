@@ -41,8 +41,9 @@ first installation, so a tool once installed was never replaced.
    releases is not offered; one rebuilt with other bytes but the same content is offered again, so packaging stays
    as reproducible as it is; the feed's version fields are shown, never compared.
 5. **An update replaces the Maintenance Tool** on macOS and Windows. The component that carries the signed tool
-   unpacks it on an update too, and its script calls `installer.setInstallerBaseBinary` from its operations, which
-   run only for a component being updated; the framework swaps the tool at the end (on Windows after it quits). An
+   unpacks it on an update too, from operations that run only for a component being updated. On Windows its script
+   calls `installer.setInstallerBaseBinary` and the framework swaps the tool once it quits; on macOS the framework
+   leaves the staged bundle in place on an update, so an operation of the component moves it over the old one. An
    update that leaves the component alone keeps the installed tool. Linux has no separate tool and is unchanged. The
    installer protocol check updates a 2026.11.31 install from a 26.17 repository and checks the tool's checksum
    afterwards.
