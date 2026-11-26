@@ -6657,11 +6657,16 @@ void DemoDriver::check_layout(const QString& frame) {
                     for (qsizetype c = 0; c < kinds.size(); ++c) {
                         const QString kind = kinds[c].toString();
                         if (kind == QLatin1String("index")) index = widths[c].toDouble() > 0.5;
-                        // The filler holds the table's spare after its content (T4): its reserved width is the rest.
-                        if (c == filler) continue;
                         if (kind != QLatin1String("value") && kind != QLatin1String("uncertainty") && kind != QLatin1String("change") &&
                             kind != QLatin1String("displacement") && kind != QLatin1String("number"))
                             continue;
+                        // The filler holds the table's spare after its content (T4), so it is not compared with its peers
+                        // here (below, against its kind, where it has peers); drawn at no width it is missing all the same,
+                        // peers or not (a table's only uncertainty column can be its filler).
+                        if (c == filler) {
+                            if (widths[c].toDouble() < 0.5) missing << QStringLiteral("%1 filler column %2").arg(kind).arg(c);
+                            continue;
+                        }
                         if (item->property("kindFloors").isValid() && !item->property("kindFloors").toBool())
                             continue;
                         // A column declared by its kind but drawn at no width was squeezed out, not compared: a failure.
