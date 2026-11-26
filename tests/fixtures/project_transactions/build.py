@@ -28,6 +28,12 @@ def run(command, **kwargs):
     return subprocess.check_output(command, text=True, **kwargs)
 
 
+def demangle(prefix, symbol):
+    """The readable signature; Mach-O names carry an extra leading underscore, stripped first."""
+    strip = ['--strip-underscore'] if sys.platform == 'darwin' else []
+    return run([str(prefix / 'bin/llvm-cxxfilt'), *strip, symbol])
+
+
 def global_function_symbols(defined, scope, spelling, *, kind='T'):
     """Select the public namespace/name, excluding nested helpers and cold fragments."""
     encoded = ''.join(str(len(part)) + part for part in scope.split('::'))
@@ -91,7 +97,7 @@ def observe_fallible_core(prefix, output, core_observed, probe_defined):
             for symbol in matches:
                 role = ''
                 if spelling == 'load_project' and '15ProjectLoadModeE' in symbol:
-                    signature = run([str(prefix / 'bin/llvm-cxxfilt'), symbol]).strip()
+                    signature = demangle(prefix, symbol).strip()
                     callback = signature.partition('std::function<void (')[2]
                     role = '_sourced_mode' if ' const&, ' in callback else '_mode'
                 alias = (
@@ -346,8 +352,8 @@ def observe_fit_constructor(prefix, observed, probe_defined):
             'Fit observation requires one actual app constructor import and typed delegate'
         )
     original, target = next(iter(originals)), next(iter(targets))
-    actual = run([str(prefix / 'bin/llvm-cxxfilt'), original]).strip()
-    wrapper = run([str(prefix / 'bin/llvm-cxxfilt'), target]).strip()
+    actual = demangle(prefix, original).strip()
+    wrapper = demangle(prefix, target).strip()
     actual_args = actual.partition('(')[2]
     wrapper_args = wrapper.partition('(')[2]
     receiver = 'edi::FitJob*, '
@@ -414,10 +420,8 @@ def observe_browser_boundaries(prefix, output, observed, observer_object, probe_
                 raise RuntimeError(
                     'Every browser boundary requires one compiled method and observer'
                 )
-            signature = (
-                run([str(prefix / 'bin/llvm-cxxfilt'), actual[0]]).strip().partition('(')[2]
-            )
-            wrapper = run([str(prefix / 'bin/llvm-cxxfilt'), targets[0]]).strip().partition('(')[2]
+            signature = demangle(prefix, actual[0]).strip().partition('(')[2]
+            wrapper = demangle(prefix, targets[0]).strip().partition('(')[2]
             if scope == 'edi_app::WebStorage':
                 receiver = scope + '*, '
                 if not wrapper.startswith(receiver):
