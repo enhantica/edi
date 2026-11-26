@@ -109,6 +109,11 @@ without computing any of them itself.
   the first enabled, keeps the parent's link disabled, and carries a March-Dollase texture row with its axis in the
   child's basis. A texture axis component above 1000, a child that cannot be built, or a link to a single-crystal
   experiment refuses the whole Add, naming the reason.
+- **Find k from data.** Beside the k list, Find k from data offers each powder experiment linking the parent whose
+  kept fit still matches its inputs (recorded when a fit is kept, compared again before a row is chosen; Calculate
+  records nothing). It lists the peaks the fit leaves unexplained, ticked by default, and ranks propagation vectors
+  for the ticked ones by crysta's search (crysta ADR-0137 A11). Only a buildable row can be chosen; it sets k. A row
+  that needs more than 24 parent cells, is underdetermined or incommensurate at this resolution says so.
 - **Picking a BNS group in place.** The Number BNS and Name BNS fields of a Magnetic structure take another group
   only within the structure's cell, its propagation vectors and its atoms (crysta's `admit_magnetic_space_group`);
   otherwise the refusal points to Crystal → Magnetic.
