@@ -146,7 +146,8 @@ def observe_fallible_core(prefix, output, core_observed, probe_defined):
 
 def observe_file_writes(prefix, observed, observer):
     """Bind each Qt call to the actual relocation made by its compiled typed delegate."""
-    undefined = run([str(prefix / 'bin/llvm-nm'), '--undefined-only', str(observed)])
+    # Without --undefined-only: for Mach-O it prints bare names, with no 'U' column to select on.
+    undefined = run([str(prefix / 'bin/llvm-nm'), str(observed)])
     actual = set()
     for scope, name in [
         ('QFile', 'open'),
