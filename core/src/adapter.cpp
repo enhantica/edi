@@ -6284,7 +6284,8 @@ void mark_dependents(Project& model, const crysta::RelationGraph& relations, con
     }
     for (const crysta::Relation& relation : relations.relations()) {
         const auto found = by_name.find(relation.target_name);
-        if (found == by_name.end()) {
+        // ADR-0107: a shared group's generated tie leaves its member independent, its free flag the group's.
+        if (found == by_name.end() || relation.constraint_id.rfind("shared_tie_", 0) == 0) {
             continue;
         }
         Parameter& target = *found->second;
