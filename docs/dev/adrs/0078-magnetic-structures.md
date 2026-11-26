@@ -97,6 +97,21 @@ without computing any of them itself.
   fittable, no Wyckoff letter (the site table shows none, and the multiplicity is the operators' orbit), and an
   anisotropic site refused, with the reason, at load, at the type change and at the group selector, which then keeps
   the prior model.
+- **The magnetic popup** (2026-11-26). Crystal → Magnetic on an atom-based Crystal structure opens a popup instead of
+  setting the grey group; Cancel changes nothing. It takes a propagation vector (crysta's presets, k = 0 first, or
+  three exact fractions), the magnetic sites (ticked by default where the element has a magnetic form factor), and
+  whether to add non-zero starting moments. crysta finds the magnetic groups k allows (crysta ADR-0137) off the GUI
+  thread; the popup draws them as rows of maximal groups and their subgroups with the covering edges, each node with
+  its BNS symbol and number, `#n` for a second embedding, its type, FM when a net moment is allowed, and the allowed
+  moment components of each split site. Greyed nodes (groups without moments, unidentified classes) cannot be
+  selected. **Add** makes one structure per selected group, named `<parent>_<BNS>` (a second embedding `_2`), and, as
+  one undoable change, links each to every powder experiment linking the parent at scale S/N² (N parent cells), only
+  the first enabled, keeps the parent's link disabled, and carries a March-Dollase texture row with its axis in the
+  child's basis. A texture axis component above 1000, a child that cannot be built, or a link to a single-crystal
+  experiment refuses the whole Add, naming the reason.
+- **Picking a BNS group in place.** The Number BNS and Name BNS fields of a Magnetic structure take another group
+  only within the structure's cell, its propagation vectors and its atoms (crysta's `admit_magnetic_space_group`);
+  otherwise the refusal points to Crystal → Magnetic.
 - **Identity.** The magnetic description and the moments are inputs of the structure's geometry and of every
   calculation it takes part in; a structure without them keeps its identity and its saved bytes.
 
