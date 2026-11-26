@@ -73,9 +73,6 @@ WorkflowPage {
                 project: page.project
                 pageShown: page.basicShown
             }
-            SetDifferencesGroup {
-                project: page.project
-            }
             Repeater {
                 // One list following the current experiment's categories, so a next experiment keeps the groups
                 // (ADR-0102 rule 2).
