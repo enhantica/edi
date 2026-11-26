@@ -1977,8 +1977,8 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
         steps_.push_back({"evolutionshared-5-per-bank", {"key:Escape", "evolution.toolbar.scope", "choose:Per experiment"}});
     }
     // Shared in the bundled taurine joint fit: a structure parameter cannot be shared (one value for all experiments
-    // already); then, in EDI_DEMO_TIED_PROJECT (the example as it was, its copies tied by constraints), ticking Shared on
-    // one copy replaces the ties and shares it in every experiment. Run only when asked (`--demo-only jointtied-`).
+    // already); then, in EDI_DEMO_TIED_PROJECT (the example as it was, its copies tied by constraints), Shared is
+    // disabled on every copy and names the constraint. Run only when asked (`--demo-only jointtied-`).
     if (only.startsWith(QLatin1String("jointtied-"))) {
         steps_.push_back({"jointtied-1-structure",
                           QStringList{"resize:1480x900", "theme:light"} + start
@@ -1987,7 +1987,7 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
                                             "hover:parameters.shared.0"}});
         steps_.push_back({"jointtied-2-tied-before", {"open-project:" + qEnvironmentVariable("EDI_DEMO_TIED_PROJECT"), analysis,
                                                       basic, "parameters.nameFilter", "type:coefficient_11"}});
-        steps_.push_back({"jointtied-3-tied-shared", {"parameters.shared.1"}});
+        steps_.push_back({"jointtied-3-tied-refused", {"hover:parameters.shared.1"}});
     }
     // Shared in a joint fit: the project EDI_DEMO_JOINT_PROJECT names (the taurine example with its extinction shared
     // instead of tied by constraints), its coefficients, one Free flag per shared group, the Shared menu, then saved and
