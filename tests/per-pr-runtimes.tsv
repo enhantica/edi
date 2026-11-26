@@ -10,9 +10,9 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-26T21:55:31Z
+# measured_utc = 2026-11-26T22:02:23Z
 #
-# Recorded from: measured test run (963 node(s) measured once, 187628 banked, 0 stale row(s) dropped)
+# Recorded from: measured test run (2 node(s) measured once, 187630 banked, 0 stale row(s) dropped)
 # Collected tests: 268839; with a reported duration: 86323
 # Module-scoped fixture costs recorded: 220
 #
@@ -31,8 +31,8 @@
 # measurement nobody took and which passes every tier threshold.
 # inventory_python = 268839
 # inventory_cpp = 0
-# inventory_measured = 187630
-# inventory_unmeasured = 81209
+# inventory_measured = 187631
+# inventory_unmeasured = 81208
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
 # inventory_pr_python = 92968
 
@@ -666,7 +666,7 @@ UNMEASURED:failed-in-this-run	tests/integration/app/test_scan_axis_sync.py::test
 0.004	tests/integration/app/test_scan_view_content.py::test_scan_view_content[test_current_row_tracks_async_coordinates:stacked]
 0.000	tests/integration/app/test_scan_view_content.py::test_scan_view_content[test_every_pattern_is_drawn:map]
 0.000	tests/integration/app/test_scan_view_content.py::test_scan_view_content[test_every_pattern_is_drawn:stacked]
-UNMEASURED:failed-in-this-run	tests/integration/app/test_scan_view_content.py::test_scan_view_content[test_evolution_agreement_percent_and_dimensionless_chi_square]
+0.000	tests/integration/app/test_scan_view_content.py::test_scan_view_content[test_evolution_agreement_percent_and_dimensionless_chi_square]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_scan_view_content.py::test_scan_view_content[test_evolution_error_bars_and_range_survive_reload]
 0.000	tests/integration/app/test_scan_view_content.py::test_scan_view_content[test_independent_axis_type_buttons:map-x]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_scan_view_content.py::test_scan_view_content[test_independent_axis_type_buttons:map-y]
@@ -268908,7 +268908,7 @@ UNMEASURED:not-completed-in-this-run	tests/unit/py/test_web_science_identity.py:
 # module-cost: 0.258	tests/integration/app/test_phase_scan_state.py
 # module-cost: 34.721	tests/integration/app/test_report_deferred_save.py
 # module-cost: 4.282	tests/integration/app/test_scan_axis_sync.py
-# module-cost: 3.439	tests/integration/app/test_scan_view_content.py
+# module-cost: 3.350	tests/integration/app/test_scan_view_content.py
 # module-cost: 0.426	tests/integration/app/test_selector_callers.py
 # module-cost: 20.078	tests/integration/app/test_sequential_pattern_drawing.py
 # module-cost: 0.789	tests/integration/app/test_shared_controls.py
@@ -269053,7 +269053,7 @@ UNMEASURED:not-completed-in-this-run	tests/unit/py/test_web_science_identity.py:
 # module-cost: 1.016	tests/system/py/test_scan_lazy_input.py
 # module-cost: 1.968	tests/system/py/test_scan_native_boundary.py
 # module-cost: 0.318	tests/system/py/test_scan_output_aliases.py
-# module-cost: 6.738	tests/system/py/test_scan_owner_additions.py
+# module-cost: 18.033	tests/system/py/test_scan_owner_additions.py
 # module-cost: 0.058	tests/system/py/test_scan_screen.py
 # module-cost: 241.876	tests/system/py/test_scan_update_modes.py
 # module-cost: 2.935	tests/system/py/test_sealed_publication_contract.py

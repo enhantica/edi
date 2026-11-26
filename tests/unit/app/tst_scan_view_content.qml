@@ -1927,6 +1927,10 @@ Rectangle {
             verify(waitForPolish(applicationWindow), "The actual application lays out its scan-view tabs");
             applicationWindow.update();
             verify(waitForRendering(applicationWindow.contentItem), "The actual page has a completed frame before scan-tab input");
+            if (pageName === "experiment") {
+                const shownSections = Render.descendants(page).filter(item => item.visible && typeof item.title === "string");
+                verify(!shownSections.some(item => item.title === "Differences from the template"), "The real Experiment page omits the retired template differences group");
+            }
             const tab = Array.from(page.mainTabs).find(item => item.text === (mode === "map" ? "Map" : "Stacked"));
             verify(tab !== undefined && tab.enabled, "Experiment and Analysis both offer enabled Stacked/Map tabs for scans and every joint fit");
             if (!tab.checked)
@@ -2202,6 +2206,13 @@ Rectangle {
             const csv = rows.join("\n") + "\n";
             verify(SettingsProof.write(root, "analysis/results.csv", csv),
                    "The saved scan contains independent agreement fractions and chi-square values");
+            const analysis = SettingsProof.text(root, "analysis/analysis.edi");
+            const shared = "bank.background.P1.intensity";
+            verify(rows[0].split(",").includes(shared), "The authored CSV includes the parameter that will be excluded from Evolution");
+            verify(SettingsProof.write(root, "analysis/analysis.edi",
+                analysis.replace("_fitting_mode.type sequential", "_fitting_mode.type parametric") +
+                "\nloop_\n_parametric_fit_shared.parameter_unique_name\n" + shared + "\n"),
+                "The private fitted scan declares a series-shared parameter");
             verify(Session.openProject(root), "The saved fitted scan opens through the real app");
             chart = evolutionFactory.createObject(surface, {
                 project: Session.project,
@@ -2233,6 +2244,9 @@ Rectangle {
                 evolution.currentParameter = index;
                 tryCompare(evolution, "yTitle", name, 3000, "The requested recorded column is drawn");
             }
+            select("bank.background.P2.intensity");
+            verify(!Array.from({length: evolution.parameters.count}, (_, i) => evolution.parameters.text(i, "name")).includes(shared),
+                "A series-shared result is absent from Evolution while its local neighbour remains available");
             select(column);
             verify(evolution.yLabel.includes("%"), "The agreement axis identifies its percent unit");
             tryCompare(layer, "count", 2, 3000, "The unplottable agreement value is excluded");
