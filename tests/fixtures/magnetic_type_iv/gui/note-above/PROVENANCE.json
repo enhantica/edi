@@ -1,0 +1,16 @@
+{
+  "source": "Closed form perpendicular projection at the sole line 001",
+  "ratio": 2e-12,
+  "occupancy": 1,
+  "seeded_unit_axis_moment": [
+    1.0695024399907112,
+    1.0634790586439171,
+    1.1057810906993826
+  ],
+  "cell_angles_degrees": [
+    90.52987987863298,
+    91.1492494439817,
+    170
+  ],
+  "c_unit_normal_component": 0.9857519889715681
+}

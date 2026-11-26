@@ -9,6 +9,7 @@ import "NativeTurn.js" as Turn
 import "UiInteraction.js" as Ui
 import "RenderedTable.js" as Render
 import "../../fixtures/magnetic_type_iv/graph_oracle.js" as Oracle
+import "../../fixtures/magnetic_type_iv/source_text.js" as Source
 
 TestCase {
     id: test
@@ -515,5 +516,165 @@ TestCase {
         press(top);
         compare(popup().k, before, "A late row choice cannot change k after its data stamp expires");
         verify(/changed.*search again/i.test(Ui.text(popup().contentItem)), "The stale result refusal visibly asks the user to search again");
+    }
+    function noteNodes(name, forms) {
+        openPopup(name);
+        wave("0,0,0");
+        const nodes = shownNodes();
+        const selected = [];
+        for (const form of forms) {
+            const node = nodes.find(item => form.test(Ui.text(item).replace(/\s/g, "")));
+            verify(node !== undefined, "The independent point-group moment form is selectable");
+            selected.push(node);
+            press(node);
+        }
+        verify(pcontrol("magnetic.startMoments").checked, "Nonzero starting moments are on by default");
+        press(pcontrol("magnetic.add"));
+        tryVerify(() => !popup(), 1000, "The note witness is added through the live popup");
+        tryCompare(Session.project, "calculating", false, 3000, "The note witness completes its observed reflection calculation");
+        return Probe.rows(Session.loadWarnings).map(row => row.message).join("\n") + Ui.text(app.contentItem);
+    }
+    function test_start_longitudinal_note() {
+        const text = noteNodes("note-longitudinal", [/0,0,[Mm]z/]);
+        verify(/no magnetic intensity/i.test(text), "A moment parallel to the sole 001 scattering vector shows the zero-intensity note");
+    }
+    function test_start_uniform_dilution_has_no_note() {
+        const text = noteNodes("note-diluted", [/[Mm]x,0,0/]);
+        verify(!/no magnetic intensity/i.test(text), "Uniform dilution leaves the transverse intensity-to-bound ratio equal to one");
+    }
+    function test_start_below_cancellation_cutoff() {
+        const text = noteNodes("note-below", [/[Mm]x,[Mm]y,[Mm]z/]);
+        verify(/no magnetic intensity/i.test(text), "The independently constructed ratio below one trillionth shows the note");
+    }
+    function test_start_above_cancellation_cutoff() {
+        const text = noteNodes("note-above", [/[Mm]x,[Mm]y,[Mm]z/]);
+        verify(!/no magnetic intensity/i.test(text), "The independently constructed ratio above one trillionth retains its positive signal");
+    }
+    function test_start_unlinked_has_no_note() {
+        const text = noteNodes("note-unlinked", [/[Mm]x,[Mm]y,[Mm]z/]);
+        verify(!/no magnetic intensity/i.test(text), "An unlinked parent supplies no experiment on which to claim zero magnetic intensity");
+    }
+    function test_start_batch_notes_are_per_candidate() {
+        const text = noteNodes("note-longitudinal", [/0,0,[Mm]z/, /[Mm]x,0,0/]);
+        const warnings = Probe.rows(Session.loadWarnings).filter(row => /no magnetic intensity/i.test(row.message));
+        compare(warnings.length, 1, "A mixed longitudinal and transverse batch reports only the candidate with zero perpendicular intensity");
+        verify(/set.*moments.*hand/i.test(text), "The zero-intensity note tells the user how to supply the starting moments");
+    }
+    function test_candidate_toggle_preserves_profile_and_free_set() {
+        openPopup();
+        const bank = Probe.rows(Session.project.experiments).find(row => row.name === "first").experiment;
+        const profile = bank.measCalcPoints().calc.slice();
+        selectTwo();
+        press(pcontrol("magnetic.add"));
+        tryVerify(() => !popup(), 1000, "The normal candidate toggle starts from a committed Add");
+        tryCompare(Session.project, "calculating", false, 3000, "The candidate Add completes its calculation");
+        const links = Probe.rows(bank.linkedStructures);
+        const candidates = links.map((row, index) => ({
+                    row: row,
+                    index: index
+                })).filter(item => item.row.structureId.startsWith("parent_"));
+        compare(candidates.length, 2, "Both added links are present before a normal candidate switch");
+        verify(bank.linkedStructures.setEnabled(candidates[0].index, false), "The normal linked-structure edit disables the first candidate");
+        verify(bank.linkedStructures.setEnabled(candidates[1].index, true), "The normal linked-structure edit enables the second candidate");
+        tryCompare(Session.project, "calculating", false, 3000, "The normal candidate switch publishes its own calculation");
+        compareProfile(bank.measCalcPoints().calc, profile);
+        const texture = Probe.rows(bank.preferredOrientation).find(row => row.structureId === candidates[1].row.structureId);
+        verify(texture.marchR.fittable && texture.marchR.free, "The enabled candidate's inherited March parameter remains eligible and free");
+        const inactive = Probe.rows(bank.preferredOrientation).find(row => row.structureId === candidates[0].row.structureId);
+        verify(!inactive.marchR.fittable, "The disabled candidate's texture does not enter the live fit vector");
+        const free = Probe.rows(Session.project.parameters).filter(row => row.parameter.free && row.parameter.fittable);
+        verify(free.some(row => row.parameter === texture.marchR), "The Analysis free set contains the enabled texture parameter");
+        verify(!free.some(row => row.parameter === inactive.marchR), "The Analysis free set excludes the disabled texture parameter");
+        verify(Session.save(), "The switched candidate state saves normally");
+        Session.closeProject();
+        verify(Session.openProject(inputUrl), "The switched candidate state reopens normally");
+        tryCompare(Session.project, "calculating", false, 3000, "The switched state recalculates after reopen");
+        const reopened = Probe.rows(Session.project.experiments).find(row => row.name === "first").experiment;
+        compareProfile(reopened.measCalcPoints().calc, profile);
+        compare(Probe.rows(reopened.linkedStructures).find(row => row.enabled && row.structureId.startsWith("parent_")).structureId, candidates[1].row.structureId, "Reopen retains the normally selected second candidate");
+    }
+    function test_three_candidate_texture_failure_is_atomic() {
+        openPopup("overflow");
+        const before = snapshot();
+        wave("1/2,0,0");
+        const nodes = shownNodes().filter(item => item.opacity > .9);
+        verify(nodes.length >= 3, "The whole-change witness selects three identified candidates");
+        for (const node of nodes.slice(0, 3))
+            press(node);
+        press(pcontrol("magnetic.add"));
+        verify(!!popup(), "An invalid disabled member refuses the three-candidate batch");
+        compare(snapshot(), before, "Validation of every disabled candidate precedes every live mutation");
+    }
+    function test_type_iv_adp_cell_and_new_atom_edits_complete() {
+        openInput("type-iv");
+        const structure = Session.project.currentStructure;
+        structure.atomSiteAdps.setType(0, "Uani");
+        tryCompare(Session.project, "calculating", false, 3000, "The type IV ADP edit publishes its calculation");
+        compare(Probe.rows(structure.atomSiteAdps)[0].adpType, "Uani", "A type IV site admits anisotropic displacement through the live edit path");
+        compare(Probe.rows(structure.atomSites)[0].wyckoffLetter, "d", "Changing ADP type preserves the independently known mirror letter");
+        structure.cell.lengthA.value = 6.3;
+        tryCompare(Session.project, "calculating", false, 3000, "A legal cell edit completes before inspecting its site");
+        compare(structure.cell.lengthA.value, 6.3, "The type IV orthorhombic a length stays independently editable");
+        compare(Probe.rows(structure.atomSites)[0].fractY.value, .25, "Cell editing retains the completed site mirror");
+        structure.atomSites.append();
+        compare(Probe.rows(structure.atomSites).length, 2, "The normal new-atom action adds one completed type IV site");
+        const added = Probe.rows(structure.atomSites)[1];
+        verify(/[abcde]/.test(added.wyckoffLetter), "A new type IV atom receives a derived magnetic-table letter");
+        verify(Session.save(), "The edited type IV structure saves normally");
+        Session.closeProject();
+        verify(Session.openProject(inputUrl), "The edited type IV structure reopens normally");
+        compare(Probe.rows(Session.project.currentStructure.atomSites)[0].wyckoffLetter, "d", "Reopen retains the completed original mirror letter");
+    }
+    function renderedBnsRefusal(byName) {
+        openInput("type-iv");
+        const owner = group("space_group_magn");
+        const number = field(owner, ".number_bns", "Number BNS");
+        const name = field(owner, ".name_bns", "Name BNS");
+        const control = byName ? name : number;
+        const structure = Session.project.currentStructure;
+        const index = structure.magneticGroupNumbersBns.indexOf("62.442");
+        verify(index >= 0, "The real linked BNS controls include the independent grey Pnma entry");
+        const before = snapshot();
+        choose(control, control.textAt(index));
+        compare(snapshot(), before, "Either rendered BNS field refuses a different translation character without changing the project");
+        verify(/popup|Crystal.*Magnetic|candidate/i.test(structure.magneticGroupRefusal), "Either BNS field directs a cell-changing edit to the popup");
+        verify(/62\.452/.test(value(number)), "A refused BNS name edit leaves the linked BNS number unchanged");
+    }
+    function test_rendered_bns_number_refusal() {
+        renderedBnsRefusal(false);
+    }
+    function test_rendered_bns_name_refusal() {
+        renderedBnsRefusal(true);
+    }
+    function test_equivalent_signed_rows_retain_derived_identity() {
+        openInput("type-iv");
+        const structure = Session.project.currentStructure;
+        const before = Source.typeIv;
+        const changed = before.replace(/\bx\s*,\s*y\s*,\s*z\s*,\s*\+?1\b/, "x+1,y,z,+1");
+        verify(changed !== before, "The equivalent signed-row edit actually changes an identity representative by an integral translation");
+        compare(Session.project.applyText(structure.text.file, changed), "", "The live Text edit accepts an equivalent signed decomposition");
+        const after = Session.project.currentStructure;
+        compare(after.magneticGroup.number_bns, "62.452", "A verified type IV equivalent signed-row edit retains its BNS identity");
+        compare(Probe.rows(after.atomSites)[0].wyckoffLetter, "d", "The equivalent signed-row edit republishes the independent mirror letter");
+        compare(Probe.rows(after.atomSites)[0].fractY.value, .25, "The equivalent signed-row edit completes the same exact mirror");
+        verify(Session.save(), "The equivalent signed representation saves through the normal writer");
+        Session.closeProject();
+        verify(Session.openProject(inputUrl), "The equivalent signed representation reopens through the normal loader");
+        compare(Session.project.currentStructure.magneticGroup.number_bns, "62.452", "Reopen verifies the signed set instead of comparing operator spellings");
+    }
+    function test_legacy_grey_fields_obey_current_cell_admission() {
+        openInput("unlinked");
+        const structure = Session.project.currentStructure;
+        verify(structure.setMagnetic(true), "The legacy core kind-switch route constructs the parent's grey group");
+        compare(structure.magneticGroup.number_bns, "62.442", "The legacy Pnma grey group retains its established BNS identity");
+        const before = snapshot();
+        structure.propagationVectors.append();
+        const afterAppend = snapshot();
+        verify(!structure.propagationVectors.setVector(0, "0,0,1/2"), "A legacy grey structure cannot acquire a half-period k in its existing cell");
+        compare(snapshot(), afterAppend, "The grey k refusal preserves the model and its existing Undo history");
+        const idx = structure.magneticGroupNumbersBns.indexOf("62.452");
+        verify(!structure.setMagneticGroup(idx), "The legacy grey structure cannot gain a doubled magnetic atom set from its BNS field");
+        verify(/popup|candidate|Crystal.*Magnetic/i.test(structure.magneticGroupRefusal), "The grey BNS refusal also points to the parent popup");
+        verify(before.length > 0, "The legacy grey control observes a serialized model before attempted edits");
     }
 }

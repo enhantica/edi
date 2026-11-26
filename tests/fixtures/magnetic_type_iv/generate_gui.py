@@ -1,5 +1,6 @@
 """Build invented public inputs for the native magnetic workflows."""
 
+import json
 from pathlib import Path
 
 ROOT = Path(__file__).parent
@@ -31,6 +32,11 @@ Co1 Co . .13 .25 .31 1 .17 Biso
 
 def main():
     source = ROOT.parent / 'adp_site_symmetry/gui/cubic'
+    (ROOT / 'source_text.js').write_text(
+        '.pragma library\nvar typeIv = '
+        + json.dumps((ROOT / 'pnma-d.edi').read_text().replace('data_type_iv', 'data_parent'))
+        + ';\n'
+    )
     for name in [
         'popup',
         'unlinked',
