@@ -49,7 +49,8 @@ TestCase {
     function openInput(name, controls = true) {
         inputUrl = SettingsProof.copyProject(Qt.resolvedUrl("../../fixtures/magnetic_type_iv/gui/" + name));
         verify(Session.openProject(inputUrl), "The app opens the independently authored " + name + " input");
-        if (!controls) return;
+        if (!controls)
+            return;
         tryVerify(() => app.pagesWanted > 0 && app.pagesBuilt === app.pagesWanted, 10000, "The magnetic input's real workflow pages finish preparing");
         tryCompare(Session.project, "calculating", false, 15000, "The magnetic input calculation finishes before editing");
         Ui.click(test, Probe, app, "appBar.tab.structure");
@@ -143,15 +144,22 @@ TestCase {
     }
     function wave(vector) {
         const combo = pcontrol("magnetic.k");
-        const label = Array.from({length: combo.count}, (_, i) => combo.textAt(i)).find(text => text.replace(/\s/g, "").includes("(" + vector + ")"));
-        if (label !== undefined) choose(combo, label);
+        const label = Array.from({
+            length: combo.count
+        }, (_, i) => combo.textAt(i)).find(text => text.replace(/\s/g, "").includes("(" + vector + ")"));
+        if (label !== undefined)
+            choose(combo, label);
         else {
             choose(combo, "Other…");
             const fields = Render.descendants(popup().contentItem).filter(item => ["k₁", "k₂", "k₃"].includes(item.placeholderText));
             compare(fields.length, 3, "Typed k has three visible reciprocal-basis components");
-            fields.sort((a,b) => a.placeholderText.localeCompare(b.placeholderText));
+            fields.sort((a, b) => a.placeholderText.localeCompare(b.placeholderText));
             vector.split(",").forEach((value, i) => {
-                press(fields[i]); keyClick(Qt.Key_A, Qt.ControlModifier); for (const character of value) keyClick(character.charCodeAt(0)); keyClick(Qt.Key_Return);
+                press(fields[i]);
+                keyClick(Qt.Key_A, Qt.ControlModifier);
+                for (const character of value)
+                    keyClick(character.charCodeAt(0));
+                keyClick(Qt.Key_Return);
             });
         }
         tryVerify(() => !popup().busy && popup().found !== null, 3000, "The selected k produces its bounded magnetic graph");
@@ -169,20 +177,25 @@ TestCase {
     function test_f_cubic_presets() {
         openPopup("f-cubic");
         const combo = pcontrol("magnetic.k");
-        const texts = Array.from({length: combo.count}, (_, i) => combo.textAt(i).replace(/\s/g, ""));
+        const texts = Array.from({
+            length: combo.count
+        }, (_, i) => combo.textAt(i).replace(/\s/g, ""));
         for (const expected of ["(0,0,0)", "X(0,1,0)", "L(1/2,1/2,1/2)", "W(1/2,1,0)", "K(3/4,3/4,0)"])
             verify(texts.some(text => text.includes(expected)), "The rendered F-centred presets use the independent reciprocal-lattice convention: " + expected);
     }
     function test_a_setting_presets() {
         openPopup("a-setting");
         const combo = pcontrol("magnetic.k");
-        const texts = Array.from({length: combo.count}, (_, i) => combo.textAt(i).replace(/\s/g, ""));
+        const texts = Array.from({
+            length: combo.count
+        }, (_, i) => combo.textAt(i).replace(/\s/g, ""));
         verify(texts.some(text => text.includes("Y(0,0,1)")), "The A-setting Y point follows the independent axis permutation");
     }
     function graph(kind, vector) {
         openPopup();
         const zero = pcontrol("magnetic.zeroMoment");
-        if (!zero.checked) press(zero);
+        if (!zero.checked)
+            press(zero);
         wave(vector);
         const expected = Oracle.expected[kind].nodes;
         const nodes = shownNodes();
@@ -191,10 +204,15 @@ TestCase {
             const text = Ui.text(item);
             const identity = text.match(/(\d+\.\d+)#(\d+)/);
             verify(identity !== null, "Every rendered node carries its BNS and embedding identity");
-            return {bns: identity[1], embedding: Number(identity[2]), fm: /\bFM\b/.test(text), y: item.y};
+            return {
+                bns: identity[1],
+                embedding: Number(identity[2]),
+                fm: /\bFM\b/.test(text),
+                y: item.y
+            };
         });
-        const heights = Array.from(new Set(actual.map(node => node.y))).sort((a,b) => a-b);
-        const actualRows = actual.map(node => [node.bns, heights.indexOf(node.y)+1, node.fm].join("|")).sort();
+        const heights = Array.from(new Set(actual.map(node => node.y))).sort((a, b) => a - b);
+        const actualRows = actual.map(node => [node.bns, heights.indexOf(node.y) + 1, node.fm].join("|")).sort();
         const expectedRows = expected.map(node => [node.bns, node.row, node.fm].join("|")).sort();
         compare(actualRows.join(";"), expectedRows.join(";"), "Rendered rows and FM marks equal the independent signed census");
         verify(/1[′']/.test(Ui.text(popup().contentItem)), "The rendered graph has its unselectable parent grey-group header");
@@ -205,15 +223,21 @@ TestCase {
             verify(actual.some(node => edge.objectName.includes(node.bns + "#" + node.embedding)), "Every edge endpoint names a rendered candidate identity");
         verify(nodes.some(node => /Co1/.test(Ui.text(node)) && /M[x-z]|m[x-z]/.test(Ui.text(node))), "The actual graph renders the per-split-site moment components");
     }
-    function test_half_graph() { graph("half", "1/2,0,0"); }
-    function test_third_graph() { graph("third", "1/3,0,0"); }
+    function test_half_graph() {
+        graph("half", "1/2,0,0");
+    }
+    function test_third_graph() {
+        graph("third", "1/3,0,0");
+    }
     function selectTwo() {
         wave("1/2,0,0");
         const nodes = shownNodes().filter(item => item.opacity > .9);
         verify(nodes.length >= 2, "The synthetic parent offers multiple selectable candidates");
-        press(nodes[0]); press(nodes[1]);
+        press(nodes[0]);
+        press(nodes[1]);
         const starts = pcontrol("magnetic.startMoments");
-        if (starts.checked) press(starts);
+        if (starts.checked)
+            press(starts);
     }
     function test_add_links_and_undo() {
         openPopup();
@@ -222,7 +246,8 @@ TestCase {
         const originalProfile = originalBank.measCalcPoints().calc.slice();
         const originalWeight = Probe.rows(originalBank.linkedStructures).find(row => row.structureId === "parent").weightFraction.value;
         verify(originalProfile.length > 0, "The nuclear control has a calculated profile before Add");
-        selectTwo(); press(pcontrol("magnetic.add"));
+        selectTwo();
+        press(pcontrol("magnetic.add"));
         tryVerify(() => !popup(), 1000, "Successful Add closes the popup");
         tryCompare(Session.project, "calculating", false, 3000, "Added candidates publish their live calculations");
         const structures = Probe.rows(Session.project.structures);
@@ -249,7 +274,7 @@ TestCase {
         const changedBank = Probe.rows(Session.project.experiments).find(row => row.name === "first").experiment;
         const active = Probe.rows(changedBank.linkedStructures).find(row => row.enabled && row.structureId.startsWith("parent_"));
         compareProfile(changedBank.measCalcPoints().calc, originalProfile);
-        verify(Math.abs(active.weightFraction.value-originalWeight) < 1e-10, "S divided by N squared also preserves the parent weight fraction");
+        verify(Math.abs(active.weightFraction.value - originalWeight) < 1e-10, "S divided by N squared also preserves the parent weight fraction");
         for (const child of children)
             for (const row of Probe.rows(child.structure.atomSiteMoments))
                 for (const axis of ["mx", "my", "mz"])
@@ -259,12 +284,17 @@ TestCase {
         compare(snapshot(), before, "Undo restores all saved structures, links, texture rows and prior history");
     }
     function test_add_unlinked() {
-        openPopup("unlinked"); selectTwo(); press(pcontrol("magnetic.add"));
+        openPopup("unlinked");
+        selectTwo();
+        press(pcontrol("magnetic.add"));
         tryVerify(() => !popup(), 1000, "An unlinked parent can add candidates");
         compare(Probe.rows(Session.project.experiments).length, 0, "Add invents no experiment or link for an unlinked parent");
     }
     function test_texture_overflow_is_atomic() {
-        openPopup("overflow"); const before = snapshot(); selectTwo(); press(pcontrol("magnetic.add"));
+        openPopup("overflow");
+        const before = snapshot();
+        selectTwo();
+        press(pcontrol("magnetic.add"));
         verify(!!popup(), "An invalid mapped texture axis keeps the popup open");
         verify(/1002/.test(Ui.text(popup().contentItem)) && /1000/.test(Ui.text(popup().contentItem)), "The refusal names the mapped texture axis and its bound");
         compare(snapshot(), before, "A failed candidate batch changes neither the project nor Undo history");
@@ -273,7 +303,9 @@ TestCase {
         openPopup();
         const button = Render.descendants(popup().contentItem).find(item => /Find k from data/i.test(String(item.text)));
         verify(button !== undefined, "The popup exposes Find k from data beside its Data list");
-        verify(!button.enabled, "A fresh Calculate without an adopted fit does not make a bank eligible");
+        if (button.enabled)
+            press(button);
+        verify(!pcontrol("magnetic.searchK").enabled, "A fresh Calculate without an adopted fit does not make a bank eligible");
         verify(/fit.*keep|keep.*fit/i.test(Ui.text(popup().contentItem)), "The ineligible Data list explains that an adopted fit is required");
     }
     function test_type_iv_letters_and_coordinate_edit() {
@@ -290,9 +322,11 @@ TestCase {
         const editor = Ui.parameterValue(test, cell, dialog);
         Ui.focusParameter(test, editor);
         keyClick(Qt.Key_A, Qt.ControlModifier);
-        for (const character of "0.173") keyClick(character.charCodeAt(0));
-        keyClick(Qt.Key_Return); dialog.close();
-        tryVerify(() => Math.abs(Probe.rows(structure.atomSites)[0].fractX.value-.173) < 1e-10, 1000, "The legal coordinate edit reaches the live type IV site");
+        for (const character of "0.173")
+            keyClick(character.charCodeAt(0));
+        keyClick(Qt.Key_Return);
+        dialog.close();
+        tryVerify(() => Math.abs(Probe.rows(structure.atomSites)[0].fractX.value - .173) < 1e-10, 1000, "The legal coordinate edit reaches the live type IV site");
         row = Probe.rows(structure.atomSites)[0];
         compare(row.fractY.value, .25, "A legal coordinate edit preserves the exact mirror tie");
         compare(row.wyckoffLetter, "d", "A coordinate edit on the orbit preserves its derived letter");
@@ -330,22 +364,31 @@ TestCase {
         compare(actual.length, expected.length, "The child and parent profiles share the observed grid");
         let norm = 0, error = 0;
         for (let i = 0; i < expected.length; ++i) {
-            norm += expected[i]*expected[i];
-            error += (actual[i]-expected[i])*(actual[i]-expected[i]);
+            norm += expected[i] * expected[i];
+            error += (actual[i] - expected[i]) * (actual[i] - expected[i]);
         }
         verify(norm > 0, "The nuclear profile control observes nonzero intensity");
-        verify(Math.sqrt(error/norm) < 1e-8, "Moments Off with S divided by N squared and the mapped texture preserves the nuclear profile");
+        verify(Math.sqrt(error / norm) < 1e-8, "Moments Off with S divided by N squared and the mapped texture preserves the nuclear profile");
     }
     function mixed(name) {
-        openPopup(name); const before = snapshot(); selectTwo(); press(pcontrol("magnetic.add"));
+        openPopup(name);
+        const before = snapshot();
+        selectTwo();
+        press(pcontrol("magnetic.add"));
         verify(!!popup(), "A linked single-crystal experiment refuses the whole candidate Add");
         verify(/single.crystal/i.test(Ui.text(popup().contentItem)), "The refusal names the parent-indexed single-crystal reflections");
         compare(snapshot(), before, "A mixed-project refusal preserves structures, links, texture and Undo history");
     }
-    function test_single_crystal_enabled_refuses() { mixed("mixed-enabled"); }
-    function test_single_crystal_disabled_refuses() { mixed("mixed-disabled"); }
+    function test_single_crystal_enabled_refuses() {
+        mixed("mixed-enabled");
+    }
+    function test_single_crystal_disabled_refuses() {
+        mixed("mixed-disabled");
+    }
     function test_added_children_reopen() {
-        openPopup(); selectTwo(); press(pcontrol("magnetic.add"));
+        openPopup();
+        selectTwo();
+        press(pcontrol("magnetic.add"));
         tryVerify(() => !popup(), 1000, "The candidate batch is added before saving");
         tryCompare(Session.project, "calculating", false, 3000, "The added children finish their live calculation");
         const bank = Probe.rows(Session.project.experiments).find(row => row.name === "first").experiment;
@@ -357,5 +400,120 @@ TestCase {
         tryCompare(Session.project, "calculating", false, 3000, "Reopened candidates publish a current calculation");
         compare(Probe.rows(Session.project.experiments).map(row => row.experiment.text.text).join("\n"), before, "Reopen preserves all candidate links, scales and texture rows");
         compareProfile(Probe.rows(Session.project.experiments).find(row => row.name === "first").experiment.measCalcPoints().calc, profile);
+    }
+
+    function keptSearchFit() {
+        openPopup("find-k");
+        popup().close();
+        const project = Session.project;
+        project.currentExperimentIndex = project.experimentIndex("first");
+        project.analysis.fittingMode = "single";
+        verify(Probe.rows(project.currentStructure.atomSites).every(row => !row.fractX.free && !row.fractY.free && !row.fractZ.free), "The eligibility witness keeps the whole nuclear parent fixed");
+        verify(project.fit.available, "The synthetic observed bank permits its real constant-background fit");
+        project.fit.start();
+        tryVerify(() => !project.fit.running && project.fit.canUndo, 3000, "The real fitted background is adopted before search eligibility is tested");
+        tryCompare(project, "calculating", false, 1000, "The kept fit publishes its current calculated pattern");
+        choose(typeChoice(), "Magnetic");
+        tryVerify(() => !!popup(), 1000, "The kept-fit parent opens the same candidate popup");
+    }
+    function dataChoice(name) {
+        const choices = Session.project.magneticDataChoices(Session.project.structureIndex("parent"));
+        const found = choices.find(row => row.name === name);
+        verify(found !== undefined, "The Data list contains the linked bank " + name);
+        return found;
+    }
+    function runSearch() {
+        const button = pcontrol("magnetic.findK");
+        if (!button.checked)
+            press(button);
+        const data = pcontrol("magnetic.data");
+        const text = Array.from({
+            length: data.count
+        }, (_, i) => data.textAt(i)).find(value => value === "first");
+        verify(text !== undefined, "The kept first bank is visibly eligible in the Data list");
+        choose(data, text);
+        const ticks = Render.descendants(popup().contentItem).filter(item => /^magnetic\.peak\./.test(item.objectName));
+        verify(ticks.length >= 12 && ticks.every(item => item.checked), "The independently separated observed maxima appear as ticked search peaks");
+        press(pcontrol("magnetic.searchK"));
+        tryVerify(() => !popup().searching, 3000, "The bounded search finishes before a result can be chosen");
+        const list = pcontrol("magnetic.kRows");
+        verify(list.count > 0, "The independent half-period satellites yield a real ranked list");
+        list.forceLayout();
+        return list;
+    }
+    function test_find_k_fixed_parent_is_eligible() {
+        keptSearchFit();
+        verify(dataChoice("first").eligible, "An adopted fit is eligible even when the nuclear parent itself was fixed");
+        verify(!dataChoice("second").eligible, "A different bank has no adoption merely because the first bank was fitted");
+    }
+    function staleSearchEdit(kind) {
+        keptSearchFit();
+        verify(dataChoice("first").eligible, "The stale-stamp witness starts from a genuinely adopted fit");
+        const project = Session.project, bank = project.currentExperiment;
+        if (kind === "coordinate")
+            Probe.rows(project.currentStructure.atomSites)[0].fractX.value = .173;
+        else if (kind === "zero") {
+            const zero = Probe.rows(bank.instrument).find(row => row.parameter && row.parameter.name === "calib_twotheta_offset");
+            verify(zero !== undefined, "The calibration-only witness reaches the real CW zero parameter");
+            zero.parameter.value = .1;
+        } else if (kind === "mask") {
+            bank.excludedRegions.append();
+            const n = Probe.rows(bank.excludedRegions).length - 1;
+            verify(bank.excludedRegions.setStart(n, 20) && bank.excludedRegions.setEnd(n, 21), "The mask witness changes a real observed-data inclusion interval");
+        } else if (kind === "disabled")
+            verify(bank.linkedStructures.setEnabled(0, false), "The parent link can be disabled through the normal recorded action");
+        else
+            Probe.rows(bank.peak)[2].parameter.value = .09;
+        tryCompare(project, "calculating", false, 1000, "The edit's subsequent Calculate completes");
+        verify(project.fit.canUndo, "The earlier fit record remains available while its adoption is stale");
+        verify(!dataChoice("first").eligible, "Editing and calculating cannot refresh the kept-fit adoption stamp");
+        compare(project.magneticPeaks(project.structureIndex("parent"), project.experimentIndex("first")).length, 0, "A stale or disabled parent refuses peak extraction");
+    }
+    function test_find_k_coordinate_edit_stales_fit() {
+        staleSearchEdit("coordinate");
+    }
+    function test_find_k_calibration_edit_stales_fit() {
+        staleSearchEdit("zero");
+    }
+    function test_find_k_mask_edit_stales_fit() {
+        staleSearchEdit("mask");
+    }
+    function test_find_k_disabled_parent_refuses() {
+        staleSearchEdit("disabled");
+    }
+    function test_find_k_profile_edit_stales_fit() {
+        staleSearchEdit("profile");
+    }
+    function test_find_k_data_ticks_and_choice_reach_graph() {
+        keptSearchFit();
+        const list = runSearch();
+        const top = list.itemAtIndex(0);
+        verify(top && top.enabled, "The synthetic half-period best row is buildable");
+        verify(/1\/2,0,0/.test(Ui.text(top)), "The real result row shows the independently known half-period vector");
+        press(top);
+        tryVerify(() => !popup().busy && popup().found !== null, 3000, "Choosing the ranked k computes its subgroup graph");
+        compare(popup().k, "1/2,0,0", "Choosing a search result sets the graph's exact k");
+        verify(shownNodes().length > 0, "The selected search result reaches the rendered magnetic candidate graph");
+    }
+    function test_find_k_unticking_changes_search_snapshot() {
+        keptSearchFit();
+        runSearch();
+        const tick = pcontrol("magnetic.peak.0");
+        press(tick);
+        verify(!tick.checked, "The actual unexplained peak tick changes by pointer input");
+        verify(!Session.project.propagationSearchCurrent(Session.project.experimentIndex("first")), "Changing a peak tick invalidates the previous search snapshot");
+        compare(pcontrol("magnetic.kRows").count, 0, "Stale result rows disappear after peak selection changes");
+    }
+    function test_find_k_late_choice_after_calibration_edit_refuses() {
+        keptSearchFit();
+        const list = runSearch();
+        const top = list.itemAtIndex(0), before = popup().k;
+        const zero = Probe.rows(Session.project.currentExperiment.instrument).find(row => row.parameter && row.parameter.name === "calib_twotheta_offset");
+        verify(zero !== undefined, "The late-choice witness addresses the real calibration parameter");
+        zero.parameter.value = .1;
+        tryCompare(Session.project, "calculating", false, 1000, "Calculate after the late calibration edit completes");
+        press(top);
+        compare(popup().k, before, "A late row choice cannot change k after its data stamp expires");
+        verify(/changed.*search again/i.test(Ui.text(popup().contentItem)), "The stale result refusal visibly asks the user to search again");
     }
 }

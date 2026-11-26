@@ -20,6 +20,15 @@ CASES = sorted([
     'single_crystal_enabled_refuses',
     'single_crystal_disabled_refuses',
     'added_children_reopen',
+    'find_k_fixed_parent_is_eligible',
+    'find_k_coordinate_edit_stales_fit',
+    'find_k_calibration_edit_stales_fit',
+    'find_k_mask_edit_stales_fit',
+    'find_k_disabled_parent_refuses',
+    'find_k_profile_edit_stales_fit',
+    'find_k_data_ticks_and_choice_reach_graph',
+    'find_k_unticking_changes_search_snapshot',
+    'find_k_late_choice_after_calibration_edit_refuses',
 ])
 
 NATIVE_FILE = 'tst_magnetic_operator_workflow.qml'

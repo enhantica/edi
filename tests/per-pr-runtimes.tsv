@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-26T22:32:38Z
+# measured_utc = 2026-11-26T23:00:37Z
 #
-# Recorded from: measured test run (16 node(s) measured once, 187623 banked, 1 stale row(s) dropped)
-# Collected tests: 267540; with a reported duration: 86318
+# Recorded from: measured test run (10 node(s) measured once, 187625 banked, 0 stale row(s) dropped)
+# Collected tests: 267549; with a reported duration: 86318
 # Module-scoped fixture costs recorded: 221
 #
 # Breaches are decided PER TIER against the table
@@ -29,12 +29,12 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 267540
+# inventory_python = 267549
 # inventory_cpp = 4
 # inventory_measured = 187625
-# inventory_unmeasured = 79919
+# inventory_unmeasured = 79928
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
-# inventory_pr_python = 92629
+# inventory_pr_python = 92638
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -187231,6 +187231,15 @@ UNMEASURED:failed-in-this-run	tests/system/app/test_magnetic_operator_workflow.p
 1.130	tests/system/app/test_magnetic_operator_workflow.py::test_magnetic_workflow_in_the_real_qt_application[bns_field_refusal_is_atomic]
 UNMEASURED:failed-in-this-run	tests/system/app/test_magnetic_operator_workflow.py::test_magnetic_workflow_in_the_real_qt_application[calculate_does_not_enable_find_k]
 UNMEASURED:failed-in-this-run	tests/system/app/test_magnetic_operator_workflow.py::test_magnetic_workflow_in_the_real_qt_application[f_cubic_presets]
+UNMEASURED:failed-in-this-run	tests/system/app/test_magnetic_operator_workflow.py::test_magnetic_workflow_in_the_real_qt_application[find_k_calibration_edit_stales_fit]
+UNMEASURED:failed-in-this-run	tests/system/app/test_magnetic_operator_workflow.py::test_magnetic_workflow_in_the_real_qt_application[find_k_coordinate_edit_stales_fit]
+UNMEASURED:failed-in-this-run	tests/system/app/test_magnetic_operator_workflow.py::test_magnetic_workflow_in_the_real_qt_application[find_k_data_ticks_and_choice_reach_graph]
+UNMEASURED:failed-in-this-run	tests/system/app/test_magnetic_operator_workflow.py::test_magnetic_workflow_in_the_real_qt_application[find_k_disabled_parent_refuses]
+UNMEASURED:failed-in-this-run	tests/system/app/test_magnetic_operator_workflow.py::test_magnetic_workflow_in_the_real_qt_application[find_k_fixed_parent_is_eligible]
+UNMEASURED:failed-in-this-run	tests/system/app/test_magnetic_operator_workflow.py::test_magnetic_workflow_in_the_real_qt_application[find_k_late_choice_after_calibration_edit_refuses]
+UNMEASURED:failed-in-this-run	tests/system/app/test_magnetic_operator_workflow.py::test_magnetic_workflow_in_the_real_qt_application[find_k_mask_edit_stales_fit]
+UNMEASURED:failed-in-this-run	tests/system/app/test_magnetic_operator_workflow.py::test_magnetic_workflow_in_the_real_qt_application[find_k_profile_edit_stales_fit]
+UNMEASURED:failed-in-this-run	tests/system/app/test_magnetic_operator_workflow.py::test_magnetic_workflow_in_the_real_qt_application[find_k_unticking_changes_search_snapshot]
 UNMEASURED:failed-in-this-run	tests/system/app/test_magnetic_operator_workflow.py::test_magnetic_workflow_in_the_real_qt_application[half_graph]
 1.190	tests/system/app/test_magnetic_operator_workflow.py::test_magnetic_workflow_in_the_real_qt_application[k_field_refusal_is_atomic]
 UNMEASURED:failed-in-this-run	tests/system/app/test_magnetic_operator_workflow.py::test_magnetic_workflow_in_the_real_qt_application[single_crystal_disabled_refuses]
@@ -267646,7 +267655,7 @@ UNMEASURED:not-completed-in-this-run	tests/unit/py/test_web_science_identity.py:
 # module-cost: 6.489	tests/integration/py/test_tutorial_strategy.py
 # module-cost: 2.933	tests/integration/py/test_weight_fraction_app.py
 # module-cost: 0.951	tests/system/app/test_likes_feedback.py
-# module-cost: 1.493	tests/system/app/test_magnetic_operator_workflow.py
+# module-cost: 2.447	tests/system/app/test_magnetic_operator_workflow.py
 # module-cost: 1.325	tests/system/app/test_magnetic_structure_type_native.py
 # module-cost: 12.650	tests/system/app/test_rendered_caption_capitalisation.py
 # module-cost: 84.777	tests/system/app/test_replaced_data_drawn.py
