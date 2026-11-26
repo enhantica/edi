@@ -52,10 +52,10 @@ SideBarGroup {
     readonly property color freeTitleColor: !measured ? EaStyle.Colors.themeForegroundMinor : freeTitleHovered ? EaStyle.Colors.themeAccent : EaStyle.Colors.themeForeground
     // A cell's margin on the left, so "Max" and "Free" are an em apart (T1).
     readonly property real freeColumnWidth: Math.ceil(AppSizes.tableCellMargin + freeTitleText.advanceWidth + freeGap + freeArrowText.advanceWidth + freeInset)
-    // Shared (edi ADR-0107): in the parametric fit, a parameter free with one value for every dataset of the scan.
+    // Shared (edi ADR-0107): one value for every dataset of the scan (parametric fit) or for every experiment (joint fit).
     // Shown in that mode only, beside Free, and independent of it: a shared parameter has one value for every dataset,
     // fixed or free (owner, 2026-11-26).
-    readonly property bool sharedShown: measured && project !== null && project.analysis !== null && project.analysis.fittingMode === "parametric"
+    readonly property bool sharedShown: measured && project !== null && project.analysis !== null && (project.analysis.fittingMode === "parametric" || project.analysis.fittingMode === "joint")
     readonly property real sharedColumnWidth: sharedShown ? Math.ceil(sharedTitleText.advanceWidth) + AppSizes.tableCellMargin * 2 + EaStyle.Sizes.fontPixelSize : 0
     // Read again whenever the relation rows change.
     readonly property int relationRows: project && project.analysis ? project.analysis.constraints.count + project.analysis.aliases.count : 0
@@ -64,7 +64,7 @@ SideBarGroup {
         id: sharedTitleText
         font.family: EaStyle.Fonts.fontFamily
         font.pixelSize: EaStyle.Sizes.fontPixelSize
-        text: qsTr("Shared")
+        text: qsTr("Shared") + " ▾"
     }
 
     TextMetrics {
@@ -784,12 +784,32 @@ SideBarGroup {
                         filter: parameterFilter
                     }
                 }
+                // A click opens the Shared menu: share or unshare the shown rows at once (edi ADR-0107).
                 EaComponents.ListViewLabel {
+                    id: sharedTitle
                     elide: Text.ElideRight
                     objectName: "parameters.sharedHeader"
                     visible: group.sharedShown
                     horizontalAlignment: Text.AlignHCenter
-                    text: qsTr("Shared")
+                    text: qsTr("Shared") + " ▾"
+
+                    MouseArea {
+                        id: sharedArea
+                        parent: sharedTitle.parent ? sharedTitle.parent.parent : sharedTitle
+                        z: 1
+                        x: sharedTitle.parent ? sharedTitle.parent.x + sharedTitle.x : 0
+                        y: sharedTitle.y
+                        width: sharedTitle.width
+                        height: sharedTitle.height
+                        enabled: group.sharedShown
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: sharedMenu.open()
+                    }
+                    SharedHeaderMenu {
+                        id: sharedMenu
+                        project: group.project
+                        filter: parameterFilter
+                    }
                 }
             }
 

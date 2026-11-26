@@ -3969,6 +3969,39 @@ void ProjectViewModel::postAutoModelReason(const std::string& experiment, const 
                               QString::number(100.0 * edi::kAutoModelBelowShare)));
 }
 
+QVariantList ProjectViewModel::setDifferences() const {
+    QVariantList rows;
+    for (const edi::SetDifference& difference : edi::set_differences(*project_)) {
+        rows.append(QVariantMap{{QStringLiteral("set"), QString::fromStdString(difference.set)},
+                                {QStringLiteral("member"), QString::fromStdString(difference.member)},
+                                {QStringLiteral("path"), QString::fromStdString(difference.path)},
+                                {QStringLiteral("value"), difference.value},
+                                {QStringLiteral("template"), difference.template_value}});
+    }
+    return rows;
+}
+
+bool ProjectViewModel::setParametersShared(const QList<ParameterItem*>& parameters, bool shared) {
+    const PublicationScope publication(*this);
+    if (const QString refusal = free_refusal(); !refusal.isEmpty()) {
+        announceRefused(refusal);
+        return false;
+    }
+    std::map<const edi::Parameter*, std::string> names;
+    for (const edi::NamedSlot& slot : edi::named_slots(*project_)) {
+        names.emplace(slot.parameter, slot.unique_name);
+    }
+    std::vector<std::string> changed;
+    for (const ParameterItem* item : parameters) {
+        if (item == nullptr || !item->isRefinable() || item->isShared() == shared) continue;
+        if (const auto found = names.find(item->parameter()); found != names.end()) changed.push_back(found->second);
+    }
+    if (changed.empty()) return true;
+    const EditOutcome result = applyRecordedEdit(edi::Edit::parameters_shared(*project_, std::move(changed), shared), false);
+    if (!retired_ && !result.applied) announceRefused(result.message);
+    return result.applied;
+}
+
 bool ProjectViewModel::setParametersFree(const QList<ParameterItem*>& parameters, bool free) {
     const PublicationScope publication(*this);
     const QPointer<ProjectViewModel> self(this);
@@ -5906,7 +5939,7 @@ QString ProjectViewModel::assign_parameter_value(edi::Parameter& parameter, doub
         // Equal values outside the admissible range must still reach the original refusal.
         if (parameter.value.get() == value && (!parameter.spec ||
             !(value < parameter.spec->range.min || value > parameter.spec->range.max))) return {};
-        const EditOutcome result = applyRecordedEdit(edi::Edit::value(parameter, value), false);
+        const EditOutcome result = applyRecordedEdit(edi::shared_group(*project_, parameter).size() > 1 ? edi::Edit::group_value(*project_, parameter, value) : edi::Edit::value(parameter, value), false);
         if (!retired_ && !result.applied) setLastError(result.message);
         return result.applied ? QString{} : result.message;
     }
@@ -5916,7 +5949,7 @@ QString ProjectViewModel::assign_parameter_value(edi::Parameter& parameter, doub
     widget_input_executing_ = true;
     const QPointer<ProjectViewModel> self(this);
     const auto release = qScopeGuard([self] { if (self) self->widget_input_executing_ = false; });
-    input->outcome = applyRecordedEdit(edi::Edit::value(parameter, value), false);
+    input->outcome = applyRecordedEdit(edi::shared_group(*project_, parameter).size() > 1 ? edi::Edit::group_value(*project_, parameter, value) : edi::Edit::value(parameter, value), false);
     return input->outcome.applied ? QString{} : input->outcome.message;
 }
 QString ProjectViewModel::assign_parameter_free(edi::Parameter& parameter, bool free) {
@@ -5931,7 +5964,7 @@ QString ProjectViewModel::assign_parameter_free(edi::Parameter& parameter, bool 
             return pending;
         }
         if (parameter.free.get() == free) return {};
-        const EditOutcome result = applyRecordedEdit(edi::Edit::assign(parameter.free, free), false);
+        const EditOutcome result = applyRecordedEdit(edi::shared_group(*project_, parameter).size() > 1 ? edi::Edit::group_free(*project_, parameter, free) : edi::Edit::assign(parameter.free, free), false);
         if (!retired_ && !result.applied) setLastError(result.message);
         return result.applied ? QString{} : result.message;
     }
@@ -5941,7 +5974,7 @@ QString ProjectViewModel::assign_parameter_free(edi::Parameter& parameter, bool 
     widget_input_executing_ = true;
     const QPointer<ProjectViewModel> self(this);
     const auto release = qScopeGuard([self] { if (self) self->widget_input_executing_ = false; });
-    input->outcome = applyRecordedEdit(edi::Edit::assign(parameter.free, free), false);
+    input->outcome = applyRecordedEdit(edi::shared_group(*project_, parameter).size() > 1 ? edi::Edit::group_free(*project_, parameter, free) : edi::Edit::assign(parameter.free, free), false);
     return input->outcome.applied ? QString{} : input->outcome.message;
 }
 

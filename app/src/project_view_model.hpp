@@ -553,6 +553,12 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // The parameter table's "free" header: free or fix every one of `parameters` (the rows the filters show) that can
     // be fitted, as one edit with one Undo step (the owner, 2026-10-11).
     Q_INVOKABLE bool setParametersFree(const QList<ParameterItem*>& parameters, bool free);
+    // ADR-0107: share or unshare the given rows (the Shared header menu), one undo step; dependents are left out.
+    Q_INVOKABLE bool setParametersShared(const QList<ParameterItem*>& parameters, bool shared);
+    // edi ADR-0087 point 2: each experiment set member's values that differ from its template, computed when asked:
+    // a list of {set, member, path, value, template}.
+    Q_INVOKABLE QVariantList setDifferences() const;
+    Q_INVOKABLE int experimentSetCount() const { return static_cast<int>(project_->experiment_sets.size()); }
     struct EditOutcome {
         bool applied = false;
         bool published = false;
