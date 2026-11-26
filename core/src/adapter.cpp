@@ -4329,6 +4329,11 @@ void append_shared_ties(const Project& model, crysta::Project& converted) {
             const std::string alias = "shared_tie_" + std::to_string(group) + "_" + std::to_string(member++);
             converted.aliases.push_back({alias, name});
             converted.constraints.push_back({alias, alias + " = " + leader_alias, true});
+            // The member follows the leader in this fit; its own free flag (the group's) stays in edi's model.
+            try {
+                crysta::resolve_unique_name(converted, name).set_free(false);
+            } catch (const std::invalid_argument&) {
+            }
         }
         ++group;
     }
