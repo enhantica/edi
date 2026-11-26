@@ -31,5 +31,5 @@ NATIVE_SELECTORS = {
 
 
 @pytest.mark.parametrize('case', CASES)
-def test_magnetic_workflow_in_the_real_qt_application(case, streamed_actor):
+def test_magnetic_workflow_in_the_real_qt_application(case, streamed_actor):  # noqa: F811
     streamed_actor.run('MagneticOperatorWorkflow::test_' + case)
