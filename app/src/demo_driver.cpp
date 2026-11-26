@@ -6686,6 +6686,11 @@ void DemoDriver::check_layout(const QString& frame) {
                         if (std::abs(reserves[filler].toDouble() - first.value(kind)) > 0.5)
                             out << frame << "\tT5:filler\t" << item_path(item) << '\t' << kind << " filler column " << filler << " reserves " << reserves[filler].toDouble()
                                 << " px, the other " << kind << " columns " << first.value(kind) << " px\n";
+                        // What it is drawn at counts too: a filler squeezed below its kind's width (the spare gone negative) shows
+                        // a cut value whatever it reserves.
+                        if (filler < widths.size() && widths[filler].toDouble() < first.value(kind) - 0.5)
+                            out << frame << "\tT5:filler\t" << item_path(item) << '\t' << kind << " filler column " << filler << " drawn at "
+                                << widths[filler].toDouble() << " px, the other " << kind << " columns " << first.value(kind) << " px\n";
                     }
                     if (!missing.isEmpty() && !awaiting_owner(item))
                         out << frame << "\tT5:missing\t" << item_path(item) << '\t' << missing.join(QStringLiteral(", ")) << " drawn at no width\n";
