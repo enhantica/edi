@@ -51,7 +51,23 @@ EaElements.Menu {
     width: layout.implicitWidth
     verticalPadding: 0
 
+    // Every row as wide as the longest text, measured, so none is cut when the counts change after the menu opens.
+    TextMetrics {
+        id: notSharedText
+        font.family: EaStyle.Fonts.fontFamily
+        font.pixelSize: EaStyle.Sizes.fontPixelSize
+        text: qsTr("Not shared · all %1").arg(menu.shown.length)
+    }
+    TextMetrics {
+        id: mixedText
+        font.family: EaStyle.Fonts.fontFamily
+        font.pixelSize: EaStyle.Sizes.fontPixelSize
+        text: qsTr("Mixed · %1 shared · %2 not shared").arg(menu.sharedCount).arg(menu.notSharedCount)
+    }
+    readonly property real rowWidth: Math.ceil(Math.max(notSharedText.advanceWidth, mixedText.advanceWidth)) + EaStyle.Sizes.fontPixelSize * 2.5
+
     component StateRow: EaElements.RadioButton {
+        width: menu.rowWidth
         property bool choosable: true
         property bool selected: false
         property bool active: true
