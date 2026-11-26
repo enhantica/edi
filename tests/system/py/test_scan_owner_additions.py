@@ -41,6 +41,7 @@ CASES = (
     'test_owner_indicator:map-dark',
     'test_owner_indicator:evolution-light',
     'test_owner_indicator:evolution-dark',
+    'test_parametric_fit_reports_one_outcome',
     'test_joint_tab_availability:scan',
     'test_joint_tab_availability:joint',
     'test_joint_tab_availability:single-multi',

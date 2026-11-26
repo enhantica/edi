@@ -271,6 +271,8 @@ def boundary_contracts(recipe):  # noqa: PLR0912, PLR0914, PLR0915 - finite docs
                 step['id'] == 'data-from-file' for step in recipe['plan']['steps']
             ),
         }
+        if 'shared_parameters' in recipe:
+            state['shared_parameters'] = recipe['shared_parameters']
         boundaries.append(state)
         # Pre-fit resets are obligations; fitted values are not correctness pins.
         values = {key: value for key, value in values.items() if key.endswith('.occupancy')}
@@ -305,6 +307,13 @@ def state_errors(expected, actual):  # noqa: PLR0912, PLR0915 - finite independe
     }
     if constraints != expected['constraints']:
         errors.append('relation expressions')
+    if 'shared_parameters' in expected:
+        shared = sorted(
+            gemmi.cif.as_string(row[0])
+            for row in analysis.find(['_parametric_fit_shared.parameter_unique_name'])
+        )
+        if shared != expected['shared_parameters']:
+            errors.append('shared parameter declarations')
     if actual['targets'].count('background.estimate') != expected['estimate_calls']:
         errors.append('background estimate action count')
     if actual.get('applied_estimates', 0) != expected['estimate_calls']:

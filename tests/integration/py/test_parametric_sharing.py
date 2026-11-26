@@ -105,20 +105,20 @@ def test_user_dependent_is_excluded_before_leader_selection(tmp_path):
         ['dependent = source * 2'],
     )
     project = engine.Project.load(root)
-    project.experiments['third'].peak.broad_gauss_w.shared = True
-    assert not project.experiments['zeta'].peak.broad_gauss_w.shared, (
-        'A user-dependent member keeps its own relation'
+    project.save_as(tmp_path / 'before')
+    analysis = 'analysis/analysis.edi'
+    baseline = (tmp_path / 'before' / analysis).read_bytes()
+    for bank in cases.BANKS:
+        with pytest.raises((ValueError, RuntimeError), match=r'constraint.*dependent'):
+            project.experiments[bank].peak.broad_gauss_w.shared = True
+        assert all(
+            not project.experiments[member].peak.broad_gauss_w.shared for member in cases.BANKS
+        ), 'A dependent member prevents sharing the entire group from any member'
+
+    project.save_as(tmp_path / 'after')
+    assert (tmp_path / 'after' / analysis).read_bytes() == baseline, (
+        'A refused Shared edit leaves the aliases, user expression and sharing state intact'
     )
-    assert project.experiments['alpha'].peak.broad_gauss_w.shared, (
-        'The first eligible independent member becomes the leader'
-    )
-    project.save_as(tmp_path / 'saved')
-    text = (tmp_path / 'saved/analysis/analysis.edi').read_text()
-    assert 'alpha.peak.broad_gauss_w' in text.split(cases.SHARED_TAG)[1], (
-        'The serialized leader excludes earlier user-dependent paths'
-    )
-    with pytest.raises((ValueError, RuntimeError)):
-        project.experiments['zeta'].peak.broad_gauss_w.shared = True
 
 
 @pytest.mark.parametrize('fixed', [False, True])

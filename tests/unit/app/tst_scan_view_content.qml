@@ -1498,6 +1498,28 @@ Rectangle {
             verify(data.kind !== "scan" || follow !== null, "The scan status bar supplies its Follow control");
             verify(data.kind === "scan" ? follow.visible : follow === null || !follow.visible && !follow.clickable && !follow.checked, "Follow is usable only for scans and cannot be activated for single or joint fits");
         }
+        function test_parametric_fit_reports_one_outcome() {
+            const root = SettingsProof.copyProject(Probe.repoUrl("tests/fixtures/scan_template/project"));
+            verify(Session.openProject(root), "The status test opens an actual multi-file scan");
+            const project = Session.project;
+            project.analysis.fittingMode = "parametric";
+            project.analysis.maxIterations = 1;
+            applicationWindow = applicationFactory.createObject(null);
+            verify(applicationWindow !== null && waitForRendering(applicationWindow.contentItem), "The actual application renders the fit status");
+            const fit = project.fit;
+            fit.start();
+            tryVerify(() => !fit.running && fit.scanFitted > 1, 15000, "The forced stop still publishes multiple fitted files");
+            compare(fit.outcome, "maxIterations", "One parametric solve reports its iteration limit");
+            const values = findChild(applicationWindow, "statusBar.fit.values");
+            verify(values !== null, "The real status bar supplies the displayed fit metrics");
+            verify(!values.children.some(item => item.shown && item.keyText === "Failed"), "A joint stop never appears as a tally of failed files");
+
+            const dialog = findChild(applicationWindow, "fit.error");
+            verify(dialog !== null && !dialog.opened, "A completed scan with readable results raises no fit error");
+            fit.resultsUnreadable("results read-back failed");
+            tryCompare(dialog, "opened", true, 2000, "The real results-read failure signal opens the error dialog");
+            compare(dialog.title, "The fit ran, but its results could not be read", "The dialog distinguishes read-back failure from a refused fit");
+        }
         function test_joint_labels_outside_axis_data() {
             const rows = [];
             for (const mode of ["stacked", "map"])
@@ -2187,6 +2209,13 @@ Rectangle {
                 height: Math.min(760, surface.Window.window.height)
             });
             verify(chart !== null, "The production Evolution chart opens");
+            const scope = findChild(chart, "evolution.toolbar.scope");
+            const experiments = findChild(chart, "evolution.toolbar.bank");
+            verify(scope && experiments, "Evolution retains the two experiment scope controls");
+            compare(scope.entries, ["Common", "Per experiment"], "The scope names common and per-experiment parameters");
+            compare(experiments.plain[0], "All experiments", "The experiment filter names its all-experiments choice");
+            for (const name of ["evolution.toolbar.compare", "evolution.rightTitle", "evolution.toolbar.map", "evolution.toolbar.banks"])
+                verify(findChild(chart, name) === null, "Evolution omits the retired control " + name);
             const evolution = Session.project.evolution;
             evolution.xMode = 0;
             Session.project.currentExperimentIndex = 0;

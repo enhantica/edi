@@ -1,5 +1,7 @@
 """Background-only observations have a closed-form block-arrow fit and covariance."""
 
+from pathlib import Path
+
 import edi as engine
 import numpy as np
 import pytest
@@ -158,7 +160,29 @@ def test_iteration_delivery_has_one_series_record_per_round(tmp_path):
                 'An iterate observer can only see a whole published generation'
             )
 
-    project.analysis.fit(on_iteration=observe)
+    published = []
+
+    def read_back(record):
+        rows = cases.rows(root)
+        assert [Path(row['file_path']).name for row in rows] == ['p0.xy', 'p1.xy', 'p2.xy'], (
+            'The first completion already exposes the complete published generation'
+        )
+        row = rows[len(published)]
+        assert Path(record.file_name).name == Path(row['file_path']).name, (
+            'The reported completion identifies its own row in the published CSV'
+        )
+        assert record.iterations == int(row['fit_result.iterations']), (
+            'The completion retains its published iteration count'
+        )
+        assert record.reduced_chi_square == pytest.approx(
+            float(row['fit_result.reduced_chi_square'])
+        ), 'The completion retains its published agreement'
+        published.append(Path(record.file_name).name)
+
+    project.analysis.fit(on_iteration=observe, on_file_complete=read_back)
+    assert published == ['p0.xy', 'p1.xy', 'p2.xy'], (
+        'A subscriber receives every published row in scan order'
+    )
     assert iterations, 'The real parametric driver delivers iteration progress'
     assert iterations == sorted(set(iterations)), (
         'Independent blocks deliver one increasing series iteration each round'
