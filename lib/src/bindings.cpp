@@ -2495,6 +2495,26 @@ NB_MODULE(_edi, m) {
                     }
                 }
             })
+        // ADR-0107: whether the parametric fit gives this parameter one value for every point, fixed or free. It is
+        // independent of `free`.
+        .def_prop_rw(
+            "shared",
+            [](const edi::Parameter& p) {
+                const edi::Project* project = project_of(p);
+                return project != nullptr && edi::parametric_shared(*project, p);
+            },
+            [](edi::Parameter& p, bool shared) {
+                refuse_detached(p);
+                edi::Project* project = project_of(p);
+                if (project == nullptr) {
+                    if (shared) {
+                        throw std::invalid_argument(parameter_name(p) + " belongs to no project and cannot be shared");
+                    }
+                    return;
+                }
+                (void)dependence_now(p);
+                edi::set_parametric_shared(*project, p, shared);
+            })
         // Whether a declared constraint or the space group sets this parameter (diffraction-lib
         // GenericParameter.user_constrained / .symmetry_constrained), from crysta's relation graph.
         .def_prop_ro("user_constrained",
