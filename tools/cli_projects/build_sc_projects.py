@@ -723,7 +723,8 @@ CASES = {
             '0.20300, O1 y 0.23701 for 0.24201, N1 z 0.33658 for 0.33158, C1 x 0.33574 for '
             '0.34074), every beta tensor 0, its scales Sc1-Sc6 and its extinction model 4 '
             '(anisotropic Larson) with x11, x22 and x33 0, x12, x13 and x23 0 and fixed. '
-            "Experiments 2-6 take experiment 1's extinction through constraints. Free: "
+            "Experiments 2-6 share experiment 1's three extinction terms (one value for all). "
+            'Free: '
             'every position and beta, the six scales and the three extinction terms (135 '
             'parameters). As FullProf (Rmub 3.0), the fit uses only reflections with '
             'F² > 3 su(F²).'
@@ -791,47 +792,16 @@ SINGLE_RADIUS = (
 
 
 def shared_extinction(runs: list[str], items: tuple[str, ...]) -> str:
-    """The aliases and constraints that give every experiment the first one's extinction items.
+    """The shared parameters giving every experiment one value of each extinction item.
 
-    An alias is FullProf's short name with the experiment's number, x11_2 for the second
-    experiment's coefficient_11, and a constraint's id is its left-hand alias.
+    A joint fit's shared group is listed once, under the first experiment (edi ADR-0107); sharing
+    never adds a constraint.
     """
     if not items or len(runs) < 2:
         return ''
-
-    def alias(number: int, item: str) -> str:
-        return f'{item.replace("coefficient_", "x")}_{number}'
-
-    aliases = [
-        f'{alias(number, item)} {run}.extinction.{item}'
-        for number, run in enumerate(runs, 1)
-        for item in items
-    ]
-    constraints = [
-        f'{alias(number, item)} "{alias(number, item)} = {alias(1, item)}"'
-        for number in range(2, len(runs) + 1)
-        for item in items
-    ]
-    return (
-        '\nloop_\n_alias.id\n_alias.parameter_unique_name\n'
-        + ''.join(line + '\n' for line in aliases)
-        + '\nloop_\n_constraint.id\n_constraint.expression\n'
-        + ''.join(line + '\n' for line in constraints)
+    return '\nloop_\n_parametric_fit_shared.parameter_unique_name\n' + ''.join(
+        f'{runs[0]}.extinction.{item}\n' for item in items
     )
-
-
-def tied_extinction(spec: dict) -> tuple | dict | None:
-    """A later experiment's extinction: the items it takes from the first written without "()".
-
-    A constrained parameter is dependent, so marking it free only draws a warning at load.
-    """
-    extinction, shared = spec['extinction'], spec.get('shared_extinction', ())
-    if not isinstance(extinction, dict):
-        return extinction
-    return {
-        item: value.removesuffix('()') if item in shared else value
-        for item, value in extinction.items()
-    }
 
 
 def write_case_pages(root: Path, pid: str, spec: dict) -> None:
@@ -1097,9 +1067,8 @@ def write_project(root: Path, pid: str, spec: dict) -> None:  # noqa: PLR0914 �
         ]
     (project / 'structures' / f'{name}.edi').write_text('\n'.join(text) + '\n', encoding='utf-8')
     beam_mode = 'time-of-flight' if spec.get('tof') else 'constant wavelength'
-    for index, (run, scale, run_rows) in enumerate(runs):
-        run_spec = spec if index == 0 else {**spec, 'extinction': tied_extinction(spec)}
-        write_experiment(project, run_spec, (run, name, scale), run_rows, (beam_mode, wavelength))
+    for run, scale, run_rows in runs:
+        write_experiment(project, spec, (run, name, scale), run_rows, (beam_mode, wavelength))
 
 
 def write_experiment(

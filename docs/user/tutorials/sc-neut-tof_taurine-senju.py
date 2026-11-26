@@ -148,45 +148,13 @@ senju_6.instrument.facility = 'J-PARC'
 senju_6.linked_structures.create(structure_id='taurine', scale=2.936)
 
 # %% [markdown]
-# The constraints the fit keeps, each between two named parameters (aliases).
+# Bank 1's three extinction terms are shared: each has one value for all six banks, refined
+# against every bank's reflections. Sharing adds no constraint.
 
 # %%
-project.analysis.aliases.create(id='x11_1', param=senju_1.extinction.coefficient_11)
-project.analysis.aliases.create(id='x22_1', param=senju_1.extinction.coefficient_22)
-project.analysis.aliases.create(id='x33_1', param=senju_1.extinction.coefficient_33)
-project.analysis.aliases.create(id='x11_2', param=senju_2.extinction.coefficient_11)
-project.analysis.aliases.create(id='x22_2', param=senju_2.extinction.coefficient_22)
-project.analysis.aliases.create(id='x33_2', param=senju_2.extinction.coefficient_33)
-project.analysis.aliases.create(id='x11_3', param=senju_3.extinction.coefficient_11)
-project.analysis.aliases.create(id='x22_3', param=senju_3.extinction.coefficient_22)
-project.analysis.aliases.create(id='x33_3', param=senju_3.extinction.coefficient_33)
-project.analysis.aliases.create(id='x11_4', param=senju_4.extinction.coefficient_11)
-project.analysis.aliases.create(id='x22_4', param=senju_4.extinction.coefficient_22)
-project.analysis.aliases.create(id='x33_4', param=senju_4.extinction.coefficient_33)
-project.analysis.aliases.create(id='x11_5', param=senju_5.extinction.coefficient_11)
-project.analysis.aliases.create(id='x22_5', param=senju_5.extinction.coefficient_22)
-project.analysis.aliases.create(id='x33_5', param=senju_5.extinction.coefficient_33)
-project.analysis.aliases.create(id='x11_6', param=senju_6.extinction.coefficient_11)
-project.analysis.aliases.create(id='x22_6', param=senju_6.extinction.coefficient_22)
-project.analysis.aliases.create(id='x33_6', param=senju_6.extinction.coefficient_33)
-project.analysis.constraints.create(id='x11_2', expression='x11_2 = x11_1')
-project.analysis.constraints.create(id='x22_2', expression='x22_2 = x22_1')
-project.analysis.constraints.create(id='x33_2', expression='x33_2 = x33_1')
-project.analysis.constraints.create(id='x11_3', expression='x11_3 = x11_1')
-project.analysis.constraints.create(id='x22_3', expression='x22_3 = x22_1')
-project.analysis.constraints.create(id='x33_3', expression='x33_3 = x33_1')
-project.analysis.constraints.create(id='x11_4', expression='x11_4 = x11_1')
-project.analysis.constraints.create(id='x22_4', expression='x22_4 = x22_1')
-project.analysis.constraints.create(id='x33_4', expression='x33_4 = x33_1')
-project.analysis.constraints.create(id='x11_5', expression='x11_5 = x11_1')
-project.analysis.constraints.create(id='x22_5', expression='x22_5 = x22_1')
-project.analysis.constraints.create(id='x33_5', expression='x33_5 = x33_1')
-project.analysis.constraints.create(id='x11_6', expression='x11_6 = x11_1')
-project.analysis.constraints.create(id='x22_6', expression='x22_6 = x22_1')
-project.analysis.constraints.create(id='x33_6', expression='x33_6 = x33_1')
-
-# %%
-project.display.constraints()
+senju_1.extinction.coefficient_11.shared = True
+senju_1.extinction.coefficient_22.shared = True
+senju_1.extinction.coefficient_33.shared = True
 
 # %%
 project.display.pattern('senju_1')
