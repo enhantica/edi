@@ -232,7 +232,7 @@ Row {
         spacing: 0
         enabled: row.blockIndex > 0
         fontIcon: "arrow-circle-up"
-        ToolTip.text: row.blockKind === "experiment" ? qsTr("Previous experiment") : row.blockKind === "parameter" ? qsTr("Previous parameter") : row.blockKind === "run" ? qsTr("Previous run") : row.blockKind === "bank" ? qsTr("Previous bank") : qsTr("Previous structure")
+        ToolTip.text: row.blockKind === "experiment" ? qsTr("Previous experiment") : row.blockKind === "parameter" ? qsTr("Previous parameter") : row.blockKind === "run" ? qsTr("Previous run") : row.blockKind === "bank" ? qsTr("Previous experiment") : qsTr("Previous structure")
         autoRepeat: true
         autoRepeatDelay: 300
         autoRepeatInterval: 50
@@ -248,7 +248,7 @@ Row {
         spacing: 0
         enabled: row.blockIndex >= 0 && row.blockIndex < selector.count - 1
         fontIcon: "arrow-circle-down"
-        ToolTip.text: row.blockKind === "experiment" ? qsTr("Next experiment") : row.blockKind === "parameter" ? qsTr("Next parameter") : row.blockKind === "run" ? qsTr("Next run") : row.blockKind === "bank" ? qsTr("Next bank") : qsTr("Next structure")
+        ToolTip.text: row.blockKind === "experiment" ? qsTr("Next experiment") : row.blockKind === "parameter" ? qsTr("Next parameter") : row.blockKind === "run" ? qsTr("Next run") : row.blockKind === "bank" ? qsTr("Next experiment") : qsTr("Next structure")
         autoRepeat: true
         autoRepeatDelay: 300
         autoRepeatInterval: 50

@@ -997,18 +997,18 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
         steps_.push_back({"included-1-stacked-byrun-q-off", {"resize:1480x800", open, analysis, basic, "mainArea.tab.stacked",
                                                              "scanView.stacked.toolbar.xaxis", "choose:x: Q"}});
         steps_.push_back({"included-2-stacked-byrun-q-on", {"scanView.stacked.toolbar.includedRange"}});
-        steps_.push_back({"included-3-stacked-bybank-q", {"scanView.stacked.toolbar.rows", "choose:Bank"}});
+        steps_.push_back({"included-3-stacked-bybank-q", {"scanView.stacked.toolbar.rows", "choose:Experiment"}});
         steps_.push_back({"included-5-stacked-byrun-d", {"scanView.stacked.toolbar.rows", "choose:File",
                                                           "scanView.stacked.toolbar.xaxis", "choose:x: d-spacing"}});
         steps_.push_back({"included-6-map-byrun-q", {"mainArea.tab.map", "scanView.map.toolbar.xaxis", "choose:x: Q"}});
-        steps_.push_back({"included-7-map-bybank-q", {"scanView.map.toolbar.rows", "choose:Bank"}});
+        steps_.push_back({"included-7-map-bybank-q", {"scanView.map.toolbar.rows", "choose:Experiment"}});
     }
     if (only.startsWith(QLatin1String("review-"))) {
         const QString experimentTab = QStringLiteral("appBar.tab.experiment");
         // Before the fit: the Map on Q by bank (the owner's empty map, 2026-11-16), then back to d.
         steps_.push_back({"review-00a-prefit-map-bybank-q",
                           {"resize:1480x800", "open-project:" + qEnvironmentVariable("EDI_DEMO_SCAN_PROJECT"),
-                           experimentTab, basic, "mainArea.tab.map", "scanView.map.toolbar.rows", "choose:Bank",
+                           experimentTab, basic, "mainArea.tab.map", "scanView.map.toolbar.rows", "choose:Experiment",
                            "scanView.map.toolbar.xaxis", "choose:x: Q"}});
         steps_.push_back({"review-00-fitted",
                           {"scanView.map.toolbar.xaxis", "choose:x: d-spacing", "scanView.map.toolbar.rows", "choose:File",
@@ -1016,13 +1016,13 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
         steps_.push_back({"review-01-experiment-pattern", {experimentTab, basic, "mainArea.tab.pattern"}});
         steps_.push_back({"review-02-experiment-meascalc", {"mainArea.tab.measCalc"}});
         steps_.push_back({"review-03-experiment-stacked-byrun", {"mainArea.tab.stacked"}});
-        steps_.push_back({"review-04-experiment-stacked-bybank", {"scanView.stacked.toolbar.rows", "choose:Bank"}});
+        steps_.push_back({"review-04-experiment-stacked-bybank", {"scanView.stacked.toolbar.rows", "choose:Experiment"}});
         steps_.push_back({"review-05-experiment-map-bybank", {"mainArea.tab.map"}});
         steps_.push_back({"review-05m-experiment-map-more", {"scanView.map.toolbar.more"}});
         steps_.push_back({"review-05n-experiment-map-more-closed", {"scanView.map.toolbar.more"}});
         steps_.push_back({"review-06-experiment-map-byrun", {"scanView.map.toolbar.rows", "choose:File"}});
         steps_.push_back({"review-06b-experiment-map-byrun-q", {"scanView.map.toolbar.xaxis", "choose:x: Q"}});
-        steps_.push_back({"review-06c-experiment-map-bybank-q", {"scanView.map.toolbar.rows", "choose:Bank"}});
+        steps_.push_back({"review-06c-experiment-map-bybank-q", {"scanView.map.toolbar.rows", "choose:Experiment"}});
         steps_.push_back({"review-06d-experiment-stacked-bybank-q", {"mainArea.tab.stacked"}});
         steps_.push_back({"review-06e-back-to-d", {"scanView.stacked.toolbar.xaxis", "choose:x: d-spacing",
                                                    "scanView.stacked.toolbar.rows", "choose:File"}});
@@ -1030,7 +1030,7 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
         steps_.push_back({"review-08-analysis-meascalc", {"mainArea.tab.measCalc"}});
         steps_.push_back({"review-09-analysis-structure", {"mainArea.tab.structure"}});
         steps_.push_back({"review-10-analysis-evolution-shared", {"mainArea.tab.evolution"}});
-        steps_.push_back({"review-11-analysis-evolution-perbank", {"evolution.toolbar.scope", "choose:Per bank"}});
+        steps_.push_back({"review-11-analysis-evolution-perbank", {"evolution.toolbar.scope", "choose:Per experiment"}});
         steps_.push_back({"review-11a-perbank-picker", {"evolution.parameters.box"}});
         steps_.push_back({"review-11b-bank-filter", {"key:Escape", "evolution.toolbar.bank"}});
         steps_.push_back({"review-11c-bank-selector", {"key:Escape", "mainArea.series.bank.box"}});
@@ -1960,24 +1960,21 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
         steps_.push_back({"parametric-4-table", {"parameters.nameFilter", "key:Ctrl+A", "key:Backspace"}});
         steps_.push_back({"parametric-5-reopened", {"save-as:parametric", "open-project:parametric", analysis, basic,
                                                     "parameters.nameFilter", "type:broad_gauss"}});
-        steps_.push_back({"parametric-6-shared-menu", {"parameters.nameFilter", "key:Ctrl+A", "key:Backspace",
-                                                       "parameters.sharedHeader"}});
+        steps_.push_back({"parametric-6-free-menu", {"parameters.nameFilter", "key:Ctrl+A", "key:Backspace",
+                                                     "parameters.freeHeader"}});
+        steps_.push_back({"parametric-7-shared-menu", {"key:Escape", "parameters.sharedHeader"}});
     }
-    // The Evolution follow-ups on a series of joint fits, EDI_DEMO_WISH_PROJECT (a bank parameter tied the same for all
-    // banks, and an experiment set): the set's Differences on the Experiment page, the fit, the Shared section listing
-    // the tied parameter, a second parameter on a right axis, and every bank's curves. Run only when asked
+    // The Evolution additions on a series of joint fits, EDI_DEMO_WISH_PROJECT (a bank parameter tied the same for all
+    // banks): the fit, the Shared section listing the tied parameter, and every bank's curves. Run only when asked
     // (`--demo-only evolutionshared-`).
     if (only.startsWith(QLatin1String("evolutionshared-"))) {
-        steps_.push_back({"evolutionshared-1-differences",
+        steps_.push_back({"evolutionshared-2-fitted",
                           QStringList{"resize:1480x900", "theme:light"} + start
-                              + QStringList{"open-project:" + qEnvironmentVariable("EDI_DEMO_WISH_PROJECT"), experiment,
-                                            basic, "expand:group.setDifferences"}});
-        steps_.push_back({"evolutionshared-2-fitted", {analysis, basic, "statusBar.fit.button", "wait-fit", "choose:OK",
-                                                       "mainArea.tab.evolution"}});
+                              + QStringList{"open-project:" + qEnvironmentVariable("EDI_DEMO_WISH_PROJECT"), analysis,
+                                            basic, "statusBar.fit.button", "wait-fit", "choose:OK",
+                                            "mainArea.tab.evolution"}});
         steps_.push_back({"evolutionshared-3-shared-list", {"evolution.parameters"}});
-        steps_.push_back({"evolutionshared-4-compare", {"key:Escape", "evolution.toolbar.compare", "key:Down", "key:Down",
-                                                        "key:Return"}});
-        steps_.push_back({"evolutionshared-5-per-bank", {"evolution.toolbar.scope", "choose:Per bank"}});
+        steps_.push_back({"evolutionshared-5-per-bank", {"key:Escape", "evolution.toolbar.scope", "choose:Per experiment"}});
     }
     // Shared in a joint fit: the project EDI_DEMO_JOINT_PROJECT names (the taurine example with its extinction shared
     // instead of tied by constraints), its coefficients, one Free flag per shared group, the Shared menu, then saved and
