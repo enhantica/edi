@@ -550,7 +550,10 @@ Item {
                 required property int index
                 x: chart.em * 0.3
                 y: (index + 0.5) * plot.height / Math.max(1, chart.evolution.experiments.length) - height / 2
-                visible: plot.height / Math.max(1, chart.evolution.experiments.length) >= height
+                // On rows shorter than a line, every n-th bank is named, so the names never overlap.
+                readonly property real rowHeight: plot.height / Math.max(1, chart.evolution.experiments.length)
+                readonly property int every: Math.max(1, Math.ceil(height / Math.max(1, rowHeight)))
+                visible: index % every === 0
                 color: chart.colors.chartLabels
                 text: modelData
             }

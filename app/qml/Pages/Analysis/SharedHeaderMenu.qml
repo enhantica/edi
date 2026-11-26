@@ -46,7 +46,14 @@ EaElements.Menu {
 
     parent: Overlay.overlay
     anchors.centerIn: Overlay.overlay
-    width: layout.implicitWidth
+    // As wide as its longest entry, measured: the counts change after it opens, so its own implicit width lags them.
+    width: Math.ceil(longest.advanceWidth) + AppSizes.listItemPadding * 2 + EaStyle.Sizes.fontPixelSize * 2.5
+    TextMetrics {
+        id: longest
+        font.family: EaStyle.Fonts.fontFamily
+        font.pixelSize: EaStyle.Sizes.fontPixelSize
+        text: qsTr("Profile and instrument → shared · %1").arg(Math.max(menu.profileCount, menu.shown.length, 999))
+    }
     verticalPadding: 0
 
     component ChoiceRow: EaElements.RadioButton {
