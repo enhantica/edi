@@ -27,9 +27,9 @@ points there are, and how many points' files changed after they were fitted.
 
 In a series every experiment starts as an ordinary experiment with its own parameters. Two switches tie them:
 
-- **Same for all**, a column of the Parameters table on the Analysis page: switched on for one experiment's parameter,
-  every other experiment of the set follows the template's value through a constraint. The constraints show in the
-  Constraints group like any other; switching off removes them.
+- **Shared**, a column of the Parameters table on the Analysis page in the Joint mode: switched on for one
+  experiment's parameter, every experiment's copy has one value. It never changes a constraint; see
+  [Shared parameters and the parametric fit](shared-parameters-and-the-parametric-fit.md).
 - **Phase ratios shared**, in the Linked structures group of a multi-phase experiment: the other experiments keep their
   own overall scale and follow this experiment's ratios between the phases.
 
@@ -52,8 +52,8 @@ A series writes two results files in `analysis/`:
 The **Stacked** and **Map** tabs draw one row per point, on the d axis, so that patterns from different banks line up.
 The **Rows** choice shows every experiment of a point merged, each divided by its fitted scale, or one experiment.
 
-The **Evolution** tab follows a parameter across the points. Choose **Shared** for the parameters in `results.csv`,
-or an experiment's name for its own parameters in `results_experiments.csv`. Derived values such as weight fractions
+The **Evolution** tab follows a parameter across the points. Choose **Common** for the parameters in `results.csv`, or
+**Per experiment** for each experiment's own parameters in `results_experiments.csv`. Derived values such as weight fractions
 and moment angles are listed with the fitted ones.
 
 ## Saving

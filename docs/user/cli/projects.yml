@@ -222,6 +222,9 @@ projects:
     executing: true
     offline: true
     user-facing: true
+  - id: pd-neut-cwl_cosio-d20_parametric
+    # The 213f scan fitted as one with U, V and W shared; executing once its expected.json is measured.
+    executing: false
   - id: pd-neut-tof_ncaf-wish-5bank_synthetic-100p
     # The six-point five-bank series at 100 points, to look at a long series in the app; too slow to execute in CI.
     executing: false

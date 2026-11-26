@@ -138,6 +138,7 @@ nav:
           - "ADR-0101 Issue labels for the agent flow": dev/adrs/0101-issue-labels.md
           - "ADR-0102 The UI update rule": dev/adrs/0102-the-ui-update-rule.md
           - "ADR-0103 Adaptive layout by window width": dev/adrs/0103-adaptive-layout-by-window-width.md
+          - "ADR-0107 Shared parameters and the parametric mode": dev/adrs/0107-shared-parameters-and-the-parametric-mode.md
           - dev/adrs/template.md
       - Design:
           - dev/design/api-types.md
@@ -212,6 +213,7 @@ nav:
           - user/guides/reading-cif-files.md
           - user/guides/sequential-fitting-in-the-app.md
           - user/guides/series-of-joint-fits.md
+          - "Shared parameters": user/guides/shared-parameters-and-the-parametric-fit.md
           - "Project from scratch": user/guides/projects-from-scratch-in-the-app.md
           - user/guides/the-report.md
           - user/guides/background-estimate.md
