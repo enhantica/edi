@@ -86,8 +86,9 @@ QMessageBox[icon="Warning"], QMessageBox[icon="Critical"], QMessageBox[icon="2"]
 
 /* The wizard buttons' icons, as the app's buttons carry them: the buttons are the Framework's, one per role, so each
    role has one icon whatever the page names the button (Next is also Install and Try again, the commit button Update,
-   Uninstall and Restart). The Maintenance Tool's last page finishes with its Cancel button, made the default there:
-   as default it takes the done icon. A disabled Back or commit button takes no room (below) and shows no icon. */
+   Uninstall and Make more changes). The Maintenance Tool's last page finishes with its Cancel button, made the
+   default there: as default it takes the done icon. A disabled Back or commit button takes no room (below) and shows
+   no icon. */
 /* A button's width is reckoned from its text alone, without the icon a stylesheet gives it, and the icon and text
    are drawn inside that width: so a wizard button's inside is at least as wide as the icon (14), the 4 px beside it
    and its longest text ("Try again", about 64 px at the 14 px text), with room to spare: 90 px. */
@@ -116,7 +117,8 @@ QPushButton#qt_wizard_cancel {
     icon-size: 14px;
 }
 
-/* The commit button outlined (Restart beside Finish on the Maintenance Tool's last page) takes the outlined grey. */
+/* The commit button outlined (Make more changes beside Finish on the Maintenance Tool's last page) takes the outlined
+   grey. */
 QPushButton#qt_wizard_commit:!default {
     icon: url(:/metadata/edi/button-done-plain.png);
 }
@@ -175,19 +177,9 @@ QPushButton:default:hover, QPushButton:default:pressed {
     border-color: #0091cb;
 }
 
-/* In a pop-up no button is filled: which one is the default (what Enter presses) is the platform's choice for the
-   Framework's own pop-ups (Yes on Linux, No on macOS for the quit question), so they look alike everywhere. */
-QMessageBox QPushButton:default {
-    color: palette(window-text);
-    background-color: transparent;
-    border-color: rgba(128, 128, 128, 0.25);
-}
-
-QMessageBox QPushButton:default:hover, QMessageBox QPushButton:default:pressed {
-    color: @ACCENT@;
-    background-color: rgba(255, 255, 255, 0.12);
-    border-color: @ACCENT@;
-}
+/* In a pop-up the button Enter presses is the filled one, as everywhere: that is the platform's choice for the
+   Framework's own pop-ups (for the quit question No on macOS, Yes on Linux and Windows), which a script cannot change,
+   so the fill shows what Enter does rather than which answer is safe. */
 
 /* The page's frame takes the window's colour (Qt may fill it with the base colour, a white card). */
 QWizard > QWidget > QFrame {

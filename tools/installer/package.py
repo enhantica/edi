@@ -204,7 +204,9 @@ INSTALLER_THEMES = {
         'FOREGROUND_DISABLED': '#666666',
         'ACCENT': '#4ec1ef',
         'ACCENT_TRACK': 'rgba(78, 193, 239, 0.17)',
-        'BORDER': '#2c2c2c',  # appBarComboBoxBorder: darker(themeBackground, 1.1)
+        # Lighter than the app's appBarComboBoxBorder (#2c2c2c, 1.1 to 1 against a field), so
+        # fields, buttons and boxes stand out from the dark window (1.4 to 1.5 to 1).
+        'BORDER': '#4a4a4a',
         'FIELD_BACKGROUND': 'rgba(102, 102, 102, 0.06)',  # appBarComboBoxBackground #10666666
         'CHECK_BACKGROUND': '#3a3a3a',
         'WARNING': '#FFAB91',  # red
@@ -953,10 +955,10 @@ def macos_installer_template(tools: Path, output: Path) -> Path:
 
 
 # The disk image window in points: its content 400 wide and 250 high under a 28-point title bar,
-# centred on a 1440 by 900 screen, and the installer's icon centred under the background's
-# "Double-click to install" (disk_image_background.qml), its label below.
+# centred on a 1440 by 900 screen, and the installer's icon in the window's middle, under the
+# background's "Double-click to install" (disk_image_background.qml), its label below.
 DISK_IMAGE_WINDOW = ((520, 311), (400, 278))
-DISK_IMAGE_ICON = (200, 130)
+DISK_IMAGE_ICON = (200, 125)
 
 
 def build_disk_image(image: Path, app: Path) -> None:
@@ -995,6 +997,8 @@ def build_disk_image(image: Path, app: Path) -> None:
         'label_pos': 'bottom',
         'grid_spacing': 100,
         'icon_locations': {app.name: DISK_IMAGE_ICON},
+        # Finder's label reads "EasyDiffraction Installer", without ".app".
+        'hide_extension': [app.name],
     }
     # dmgbuild reads its settings as a Python file; it is in the macOS packaging environment only.
     script = Path(tempfile.mkdtemp()) / 'dmg_settings.py'

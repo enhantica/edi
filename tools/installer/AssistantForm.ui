@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- SPDX-License-Identifier: BSD-3-Clause -->
 <!-- The folder field and the choices on the installer's one page (assistantscript.qs, Installer.qs): the folder
-     with the space the installation needs under it, EasyDiffraction and the AI assistant with their sizes, then the
-     licence and a desktop shortcut on Windows and Linux. Also the
-     maintenance tool's choice page when adding, removing or updating: the logo, EasyDiffraction (always kept, so
-     ticked and fixed) and the AI assistant; it has no window title, so that page
-     has no header. -->
+     with the space the installation needs under it, then one group of EasyDiffraction, the Maintenance Tool (both
+     ticked and fixed) and the AI assistant with their sizes, then the licence and a desktop shortcut on Windows and
+     Linux. Also the maintenance tool's choice page when adding, removing or updating: the logo and heading, the space
+     line and the same three rows; it has no window title, so that page has no header. The Maintenance Tool's row
+     and the sizes are there from the start, so the rows are spaced once, with every row in place. -->
 <ui version="4.0">
  <class>AssistantForm</class>
  <widget class="QWidget" name="AssistantForm">
@@ -225,11 +225,7 @@
        </spacer>
       </item>
       <item>
-       <widget class="QLabel" name="AppSizeLabel">
-        <property name="visible">
-         <bool>false</bool>
-        </property>
-       </widget>
+       <widget class="QLabel" name="AppSizeLabel"/>
       </item>
      </layout>
     </widget>
@@ -252,9 +248,6 @@
    </item>
    <item>
     <widget class="QWidget" name="MaintenanceBox">
-     <property name="visible">
-      <bool>false</bool>
-     </property>
      <layout class="QHBoxLayout" name="MaintenanceRow">
       <property name="spacing">
        <number>8</number>
@@ -295,11 +288,7 @@
        </spacer>
       </item>
       <item>
-       <widget class="QLabel" name="MaintenanceSizeLabel">
-        <property name="visible">
-         <bool>false</bool>
-        </property>
-       </widget>
+       <widget class="QLabel" name="MaintenanceSizeLabel"/>
       </item>
      </layout>
     </widget>
@@ -353,11 +342,7 @@
        </spacer>
       </item>
       <item>
-       <widget class="QLabel" name="AssistantSizeLabel">
-        <property name="visible">
-         <bool>false</bool>
-        </property>
-       </widget>
+       <widget class="QLabel" name="AssistantSizeLabel"/>
       </item>
      </layout>
     </widget>

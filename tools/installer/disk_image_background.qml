@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: BSD-3-Clause
-// The disk image window's background (edi ADR-0071): a neutral grey, the website's network in two corners with a few
-// blue charges running along its lines, and "Double-click to install" in white above the installer's icon. Finder
-// shows one fixed picture in light and dark mode, so it reads the same in both. package.py places the icon under
-// the text (DISK_IMAGE_ICON); keep the two in step. Writes DiskImageBackground.png and its @2x copy:
+// The disk image window's background (edi ADR-0071): white as the website, its network in two corners in a light grey
+// with three blue charges running along its lines, "Double-click to install" in the dark text colour above the
+// installer's icon in the window's middle. Finder shows the picture as it is in light and dark mode (it shows even a
+// transparent picture white, and the icon's label black), so it is drawn for that. package.py places the icon in the
+// middle (DISK_IMAGE_ICON); keep the two in step. Writes DiskImageBackground.png and its @2x copy:
 //   QML_XHR_ALLOW_FILE_READ=1 qml -platform offscreen disk_image_background.qml -- <PTSans-Regular.ttf> <folder>
 // PT Sans comes with the pinned gui-components (Gui/Resources/Fonts/PT_Sans); the network is the website's
 // (website/surfaces/overrides/partials/network.svg).
@@ -44,7 +45,7 @@ Window {
 
         width: window.pointWidth * window.scale
         height: window.pointHeight * window.scale
-        color: "#626264" // a neutral grey, readable under white text in light and dark mode
+        color: "white"
 
         Canvas {
             id: network
@@ -54,9 +55,11 @@ Window {
                 const context = getContext("2d");
                 const s = window.scale;
                 context.reset();
-                context.lineWidth = 0.625 * s; // the website's 1.25 at half its size
+                context.lineWidth = 0.8 * s; // the website's 1.25 at half its size, a little thicker
                 for (const line of window.lines) {
-                    context.strokeStyle = Qt.rgba(0.86, 0.86, 0.87, line.opacity);
+                    // The website's light-theme grey (#777777) at twice its opacity, a little stronger, but at most 0.4:
+                    // the strongest lines (up to 0.55) stood out too much, the faint ones keep theirs.
+                    context.strokeStyle = Qt.rgba(0.467, 0.467, 0.467, Math.min(0.4, 2 * line.opacity));
                     context.beginPath();
                     context.moveTo(line.x1 * s, line.y1 * s);
                     context.lineTo(line.x2 * s, line.y2 * s);
@@ -80,10 +83,12 @@ Window {
 
         Text {
             anchors.horizontalCenter: parent.horizontalCenter
-            // The text's middle 48 points down, the icon's 130 (DISK_IMAGE_ICON).
-            y: 48 * window.scale - height / 2
+            // The text's middle 43 points down, the icon's 125, the middle of the window's 250 (DISK_IMAGE_ICON).
+            y: 43 * window.scale - height / 2
             text: "Double-click to install"
-            color: "white"
+            // On Finder's window the website's blue darkened to #0887b6, which stands 4.1 to 1 against both Finder's
+            // light window (white) and its dark one (#1e1e1e); the website's own #0aa5de reads only 2.8 to 1 on white.
+            color: "#333333" // the app's light text colour
             font.family: ptSans.name
             font.pixelSize: 20 * window.scale
         }
@@ -130,29 +135,40 @@ Window {
 
     // Three charges, kept away from the text and the icon (owner, 2026-11-26): two in the upper bank, one in the lower,
     // on the longest lines that lie wholly in view and clear of both, each on a line of its own that shares no point
-    // with another charge's.
+    // with another charge's, the two upper ones crossing at about a right angle.
     function charges() {
         function clear(line) {
             const inView = [line.x1, line.x2].every(x => x > 4 && x < 396) && [line.y1, line.y2].every(y => y > 4 && y < 246);
             const midX = (line.x1 + line.x2) / 2, midY = (line.y1 + line.y2) / 2;
             const nearText = midY < 80 && midX > 90 && midX < 310;
-            const nearIcon = Math.hypot(midX - 200, midY - 130) < 95;
+            const nearIcon = Math.hypot(midX - 200, midY - 125) < 95;
             return inView && !nearText && !nearIcon;
         }
         const length = line => Math.hypot(line.x2 - line.x1, line.y2 - line.y1);
+        const cosine = (a, b) => ((a.x2 - a.x1) * (b.x2 - b.x1) + (a.y2 - a.y1) * (b.y2 - b.y1)) / (length(a) * length(b));
         const longest = bank => window.lines.filter(line => line.bank === bank && clear(line)).sort((a, b) => length(b) - length(a));
         const ends = line => [line.x1.toFixed(2) + "," + line.y1.toFixed(2), line.x2.toFixed(2) + "," + line.y2.toFixed(2)];
         const chosen = [];
+        const sharesWith = (line, other) => ends(other).some(end => ends(line).indexOf(end) >= 0);
+        // One charge: the bank's longest free line. Two: of its twelve longest free lines, the longest pair that
+        // shares no point and crosses at about a right angle (within 17 degrees), never running alongside.
         const take = (bank, count) => {
-            for (const line of longest(bank)) {
-                if (count === 0)
-                    break;
-                const shared = chosen.some(other => ends(other).some(end => ends(line).indexOf(end) >= 0));
-                if (!shared) {
-                    chosen.push(line);
-                    count -= 1;
-                }
+            const free = longest(bank).filter(line => !chosen.some(other => sharesWith(line, other))).slice(0, 12);
+            if (count === 1 && free.length > 0) {
+                chosen.push(free[0]);
+                return;
             }
+            let best = null;
+            for (let i = 0; i < free.length; ++i)
+                for (let j = i + 1; j < free.length; ++j) {
+                    const a = free[i], b = free[j];
+                    if (sharesWith(a, b) || Math.abs(cosine(a, b)) > 0.3)
+                        continue;
+                    if (!best || length(a) + length(b) > length(best[0]) + length(best[1]))
+                        best = [a, b];
+                }
+            if (best)
+                chosen.push(best[0], best[1]);
         };
         take("upper-bank", 2);
         take("lower-bank", 1);

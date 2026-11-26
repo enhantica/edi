@@ -425,12 +425,9 @@ def capture(tools: Path, output: Path) -> None:
         # Updating both, turning the assistant over (so removing it here), removing everything.
         for mode in ('update', 'add', 'remove'):
             walk_maintenance(mode, target, env, output, pages, theme)
-        # Updating with the assistant unticked, and updating where it is not installed: each on an
-        # installation of its own, made from the command line.
-        for mode, components in (
-            ('updatekept', ['org.easydiffraction.app', 'org.easydiffraction.app.assistant']),
-            ('updatewithout', []),
-        ):
+        # Updating where the assistant is not installed, on an installation of its own made from
+        # the command line.
+        for mode, components in (('updatewithout', []),):
             target = home / mode
             subprocess.run(
                 [
@@ -597,7 +594,6 @@ LEFT = {
     'update': ('updated marker', 'updated assistant marker'),
     'add': ('updated marker', None),
     'remove': (None, None),
-    'updatekept': ('updated marker', 'optional assistant marker'),
     'updatewithout': ('updated marker', None),
 }
 
@@ -652,6 +648,8 @@ def purge(target: Path, env: dict) -> None:
 
 # Every page each walk shows, in order. The installer passes its welcome and summary pages by
 # itself and takes no picture of them; every other page has one.
+# Updating goes straight to its summary; changing components asks about the assistant first.
+UPDATING = ['Introduction', 'ReadyForInstallation', 'PerformInstallation', 'Finished']
 CHANGING = [
     'Introduction',
     'AssistantForm',
@@ -670,7 +668,7 @@ WALKS = {
     # Over the installation: its warning, then the page staying when Install is pressed (the walk
     # stops there).
     'installer-installed': ['Introduction', 'TargetDirectory', 'InstallPressed'],
-    'maintenance-update': CHANGING,
+    'maintenance-update': UPDATING,
     'maintenance-add': CHANGING,
     'maintenance-remove': [
         'Introduction',
@@ -678,8 +676,7 @@ WALKS = {
         'PerformInstallation',
         'Finished',
     ],
-    'maintenance-updatekept': CHANGING,
-    'maintenance-updatewithout': CHANGING,
+    'maintenance-updatewithout': UPDATING,
     # Cancel asks whether to quit (a pop-up) and the walk stops there, holding its lock while a
     # second installer starts and stays on its first page saying so.
     'installer-quit': [

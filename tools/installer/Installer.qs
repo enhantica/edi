@@ -63,8 +63,8 @@ var maintenanceWalked = false;
 var installerWalked = false;
 // The maintenance tool's mode in capture mode (EDI_INSTALLER_MAINTENANCE_MODE): add (add or remove components),
 // update, or remove (everything, the default).
-// Updating comes in three: update (as the page opens), updatekept (the assistant unticked) and updatewithout (the
-// assistant not installed); their pages are named after them.
+// Updating comes in two: update (everything installed) and updatewithout (the assistant not installed); their pages
+// are named after them.
 var maintenanceMode = installer.environmentVariable("EDI_INSTALLER_MAINTENANCE_MODE") || "remove";
 var maintenanceAction = maintenanceMode.indexOf("update") === 0 ? "update" : maintenanceMode;
 
@@ -110,8 +110,10 @@ function capture(name) {
         return;
     notePage(name);
     // The progress page is gone within a second for the small marker installer; the first page needs the window up.
-    // A hovered button waits for the pointer capture_pages.py moves onto it.
-    var delay = name === "PerformInstallation" ? "0.2" : name === "Introduction" || name === "CancelHover" ? "2" : "1";
+    // A hovered button waits for the pointer capture_pages.py moves onto it; the install page waits for its rows to be
+    // spaced, which takes up to a second and a half on a software-drawn display.
+    var delay = name === "PerformInstallation" ? "0.2"
+        : name === "Introduction" || name === "CancelHover" || name === "TargetDirectory" ? "2" : "1";
     var file = captureFolder + "/" + pageId(name) + ".png";
     if (systemInfo.kernelType === "winnt") {
         // A process started here cannot take a screenshot; capture_pages.py takes them on Windows.
@@ -536,7 +538,7 @@ function stayReason(page, raw) {
 // Its picture carries the 4 px a button leaves between its icon and its text, so the gap is the same everywhere.
 function warningSign() {
     return '<img style="vertical-align: middle" src=":/metadata/edi/'
-        + (darkTheme() ? "warning-line-dark" : "warning-line") + '.png" width="20" height="14">';
+        + (darkTheme() ? "warning-line-dark" : "warning-line") + '.png" width="20" height="16">';
 }
 
 // The reason between the logo and the question, after the warning sign unless all is well; empty clears it.
@@ -619,8 +621,7 @@ Controller.prototype.DynamicAssistantFormCallback = function () {
     var mark = gui.findChild(page, "FormLogo");
     if (mark) {
         mark.textFormat = 1;  // Qt.RichText
-        mark.text = logo() + '<p style="margin: 0 ' + sideIndent + 'px">'
-            + (installer.isUpdater() ? "Update" : "Change components") + "</p>";
+        mark.text = logo() + '<p style="margin: 0 ' + sideIndent + 'px">Change components</p>';
         gui.findChild(page, "LogoBox").visible = true;
     }
     choiceSizes(page);
@@ -633,17 +634,17 @@ Controller.prototype.DynamicAssistantFormCallback = function () {
     settleSoon(page);
     capture("AssistantForm");
     // Adding components in capture mode turns the assistant over (added if absent, removed if there), so the mode
-    // always has work to do and its progress page shows; updatekept updates without it. Done once the picture is
-    // taken, so it shows the page as it opens.
-    if (captureFolder !== "" && box && (maintenanceMode === "add" || maintenanceMode === "updatekept"))
-        later(1600, function () { box.checked = maintenanceMode === "add" ? !box.checked : false; });
+    // always has work to do and its progress page shows. Done once the picture is taken, so it shows the page as it
+    // opens.
+    if (captureFolder !== "" && box && maintenanceMode === "add")
+        later(1600, function () { box.checked = !box.checked; });
     advance("AssistantForm", page);
 };
 
 var choiceHooked = false;
 
-// The choice page's space line, as the install page's: what the change needs (and what the disk has), or frees.
-// Updating takes everything ticked anew; changing components adds or removes the assistant.
+// The choice page's space line, as the install page's: what adding the assistant needs (and what the disk has), or
+// what removing it frees.
 function choiceSpace(page) {
     var label = gui.findChild(page, "SpaceLabel");
     var row = gui.findChild(page, "SpaceBox");
@@ -660,9 +661,7 @@ function choiceSpace(page) {
     var free = freeSpace(String(installer.value("TargetDir")));
     var available = isNaN(free) ? "" : " · " + sizeText(free) + " available";
     var text = "";
-    if (installer.isUpdater())
-        text = sizeText(sizes.app + sizes.maintenance + (box.checked ? sizes.assistant : 0)) + " needed" + available;
-    else if (box.checked && !installed)
+    if (box.checked && !installed)
         text = sizeText(sizes.assistant) + " needed" + available;
     else if (!box.checked && installed)
         text = sizeText(sizes.assistant) + " freed";
@@ -1007,17 +1006,9 @@ function choiceSizes(page) {
         sizes.maintenance = toolBytes;
     [["App", sizes.app], ["Assistant", sizes.assistant], ["Maintenance", sizes.maintenance]].forEach(function (row) {
         var size = gui.findChild(page, row[0] + "SizeLabel");
-        if (size) {
+        if (size)
             size.text = sizeText(row[1]);
-            size.visible = true;
-        }
     });
-    // The tool's row is shown before the rows are spaced (settleSoon), so its gaps are measured too.
-    var box = gui.findChild(page, "MaintenanceBox");
-    if (box && !box.visible) {
-        box.visible = true;
-        settleSoon(page);
-    }
     return sizes;
 }
 
@@ -1149,19 +1140,19 @@ var licenseRefused = false;
 // shown has no gap.
 // The third field is the row's group: the first row shown of a group stands one group gap under the group before.
 // On the install page: the folder with the space it needs right under it, then what is installed, then the licence
-// and the shortcut, then any notice.
+// and the shortcut, then any notice. A component row is measured by its box alone: the size beside it is no taller,
+// and its text arrives as the page opens, which moved it while the rows were being measured.
 var formRows = [["Logo", ["FormLogo"], 0], ["Folder", ["FolderLineEdit", "FolderBrowseButton"], 1],
                 ["Space", ["SpaceLabel"], 1],
-                ["App", ["AppCheckBox", "AppSizeLabel"], 2],
-                ["Maintenance", ["MaintenanceCheckBox", "MaintenanceSizeLabel"], 2],
-                ["Assistant", ["AssistantCheckBox", "AssistantSizeLabel"], 2],
+                ["App", ["AppCheckBox"], 2], ["Maintenance", ["MaintenanceCheckBox"], 2],
+                ["Assistant", ["AssistantCheckBox"], 2],
                 ["License", ["LicenseCheckBox", "LicenseLink"], 3], ["Shortcut", ["ShortcutCheckBox"], 3],
                 ["Notice", ["NoticeLabel"], 4]];
 
-// As soon as the page is laid out, so nobody sees it move, and once more when the styles have reached every widget.
+// As soon as the page is laid out, so nobody sees it move, once more when the styles have reached every widget, and
+// a last time once a page whose text changed as it opened (the warning over an installation) has laid itself out.
 function settleSoon(page) {
-    later(0, function () { settleForm(page); });
-    later(150, function () { settleForm(page); });
+    [0, 150, 400].forEach(function (delay) { later(delay, function () { settleForm(page); }); });
 }
 
 // Repeated until the page is laid out as last asked for and asks for nothing more (bounded), so the last word is always
@@ -1203,8 +1194,10 @@ function settleForm(page, round) {
                 // A logo carrying the page's heading (the maintenance tool's choice page) has its step inside.
                 var wanted = above.name === "Logo" ? (installer.isInstaller() ? logoStep : rowGap)
                     : above.group !== row[2] ? groupGap : rowGap;
-                // What lies between the rows besides the gap widget, all read from the page as it is laid out.
-                var besides = (gap.y - above.bottom) + (top - (gap.y + gap.height));
+                // What lies between the rows besides the gap widget, all read from the page as it is laid out: a few
+                // pixels where a native frame sits off its cell (2 on macOS). A reading taken while the page is still
+                // moving can be far off, and is held to that range, so it never closes or doubles a gap.
+                var besides = Math.max(-4, Math.min(4, (gap.y - above.bottom) + (top - (gap.y + gap.height))));
                 var height = bounded(wanted - besides, wanted);
                 if (captureFolder !== "")
                     console.log("edi-gap " + row[0] + " round " + (round || 0) + " above " + above.bottom + " gap " + gap.y + "+"
@@ -1580,6 +1573,16 @@ function headerWordmark() {
                 if (widget)
                     widget.visible = false;
             });
+            // The Framework shows its download line again once a maintenance tool downloads (updating, changing
+            // components), and the page then asked for its height: on macOS the window grew 8 px for the rest of the
+            // walk. Kept without height, it changes nothing however often it is shown.
+            ["DownloadStatus", "ProgressLabel"].forEach(function (name) {
+                var widget = gui.findChild(page, name);
+                if (widget) {
+                    widget.minimumHeight = 0;
+                    widget.maximumHeight = 0;
+                }
+            });
             // Our bar with its percentage inside (ProgressForm.ui), fed from the Framework's bar, which is hidden;
             // where our form is missing (no assistant component loaded), the Framework's bar stays, styled the same.
             var bar = gui.findChild(page, "ProgressBar");
@@ -1609,6 +1612,9 @@ function headerWordmark() {
 
         // Done: where to find it, and the program opened directly if wanted. No folder path.
         if (name === "Finished") {
+            // The Maintenance Tool's last page offers to start it again for another change (the Framework's Restart).
+            if (!installer.isInstaller())
+                gui.setWizardPageButtonText(QInstaller.InstallationFinished, buttons.CommitButton, "Make more changes");
             var done = gui.findChild(page, "MessageLabel");
             // Where it really is: the shortcuts made, and the folder when it is not the usual one.
             var shortcut = installer.value("EdiDesktopShortcut") !== "false";

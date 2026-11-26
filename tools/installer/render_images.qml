@@ -14,26 +14,9 @@ Window {
     readonly property string fontFile: Qt.application.arguments[Qt.application.arguments.length - 1]
     readonly property string out: Qt.resolvedUrl("icons/").toString().replace("file://", "")
     // name, kind (svg or glyph), source (file or Font Awesome name), width, height, colour, and for a glyph whether it
-    // stands at the left (its picture then carries the gap to the text after it) instead of in the middle
-    readonly property var jobs: [
-        ["logo", "svg", "../../app/web/logo.svg", 140, 44, ""],
-        ["logo-dark", "svg", "../../app/web/logo-dark.svg", 140, 44, ""],
-        // The app's warning: exclamation-triangle in its orange (gui-components Colors.qml), 16 px wide at 14 px
-        // (Font Awesome draws it 1.125 em wide). The pop-ups take it alone; a line of text takes it with the 4 px a
-        // button leaves between its icon and its text.
-        ["warning", "glyph", "exclamation-triangle", 16, 14, "#FF9800"],
-        ["warning-dark", "glyph", "exclamation-triangle", 16, 14, "#FFCC80"],
-        ["warning-line", "glyph", "exclamation-triangle", 20, 14, "#FF9800", true],
-        ["warning-line-dark", "glyph", "exclamation-triangle", 20, 14, "#FFCC80", true],
-        // The wizard buttons' icons. The window around the pages follows the system palette and its stylesheet is
-        // one for light and dark (InstallerChrome.qss), so the outlined buttons' icons take the grey that reads on
-        // both, and the filled ones (the accent) white.
-        ["button-back", "glyph", "arrow-left", 14, 14, "#888888"],
-        ["button-cancel", "glyph", "times", 14, 14, "#888888"],
-        ["button-next", "glyph", "arrow-right", 14, 14, "#ffffff"],
-        ["button-done", "glyph", "check", 14, 14, "#ffffff"],
-        ["button-done-plain", "glyph", "check", 14, 14, "#888888"]
-    ]
+    // stands at the left (its picture then carries the gap to the text after it) instead of in the middle, and the
+    // glyph's size where it is smaller than the picture (it then stands at the picture's top)
+    readonly property var jobs: jobList()
     property int next: 0
 
     width: 600
@@ -64,13 +47,37 @@ Window {
         }
         Text {
             x: canvas.job[6] ? 0 : (parent.width - width) / 2
-            y: (parent.height - height) / 2
+            y: ((canvas.job[7] || canvas.job[4]) * canvas.scale - height) / 2
             visible: canvas.job[1] === "glyph"
             font.family: awesome.name
-            font.pixelSize: canvas.job[4] * canvas.scale
+            font.pixelSize: (canvas.job[7] || canvas.job[4]) * canvas.scale
             color: canvas.job[5] || "black"
             text: canvas.job[1] === "glyph" ? canvas.job[2] : ""
         }
+    }
+
+    function jobList() {
+        const list = [];
+        list.push(["logo", "svg", "../../app/web/logo.svg", 140, 44, ""]);
+        list.push(["logo-dark", "svg", "../../app/web/logo-dark.svg", 140, 44, ""]);
+        // The app's warning: exclamation-triangle in its orange (gui-components Colors.qml), 16 px wide at 14 px
+        // (Font Awesome draws it 1.125 em wide). The pop-ups take it alone; a line of text takes it with the 4 px a
+        // button leaves between its icon and its text.
+        list.push(["warning", "glyph", "exclamation-triangle", 16, 14, "#FF9800"]);
+        list.push(["warning-dark", "glyph", "exclamation-triangle", 16, 14, "#FFCC80"]);
+        // In a line of text the picture is centred on the line, which leaves the sign about 1 px under the
+        // capitals' middle (measured on Linux and macOS captures): it stands at the top of a picture 2 px taller.
+        list.push(["warning-line", "glyph", "exclamation-triangle", 20, 16, "#FF9800", true, 14]);
+        list.push(["warning-line-dark", "glyph", "exclamation-triangle", 20, 16, "#FFCC80", true, 14]);
+        // The wizard buttons' icons. The window around the pages follows the system palette and its stylesheet is
+        // one for light and dark (InstallerChrome.qss), so the outlined buttons' icons take the grey that reads on
+        // both, and the filled ones (the accent) white.
+        list.push(["button-back", "glyph", "arrow-left", 14, 14, "#888888"]);
+        list.push(["button-cancel", "glyph", "times", 14, 14, "#888888"]);
+        list.push(["button-next", "glyph", "arrow-right", 14, 14, "#ffffff"]);
+        list.push(["button-done", "glyph", "check", 14, 14, "#ffffff"]);
+        list.push(["button-done-plain", "glyph", "check", 14, 14, "#888888"]);
+        return list;
     }
 
     function step() {
@@ -94,6 +101,9 @@ Window {
         if (awesome.status === FontLoader.Ready)
             step();
         else
-            awesome.statusChanged.connect(function () { if (awesome.status === FontLoader.Ready) step(); });
+            awesome.statusChanged.connect(function () {
+                if (awesome.status === FontLoader.Ready)
+                    step();
+            });
     }
 }

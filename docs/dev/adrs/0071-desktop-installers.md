@@ -318,8 +318,9 @@ tool's tooltip "Updates and uninstalls EasyDiffraction"), each with its size on 
 update summary lists them; then the licence and, on Windows and Linux, the desktop shortcut boxes.
 Every page and list orders the components EasyDiffraction, Maintenance Tool, AI assistant (their
 sorting priorities 200, 150, 100). The tool's component has no payload on Linux, so its row shows
-the size of the Framework's binary the installation writes as the tool. In Maintenance Tool's add or remove flow it is a page
-of its own whose box shows whether the assistant is installed. The Framework's component tree page
+the size of the Framework's binary the installation writes as the tool. In Maintenance Tool's Change components flow
+it is a page of its own whose box shows whether the assistant is installed; Update has no such page and goes straight
+to Ready to update, updating everything installed (owner, 2026-11-26). The Framework's component tree page
 is hidden. With macOS accessibility on, a client asking the tree for its selected children crashed
 the installer (edi #150): the Qt inside Installer Framework 4.11.0, the newest release, frees table
 cells that its accessibility cache still holds, fixed upstream in qtbase after that release. One
@@ -338,14 +339,15 @@ beside its runtime libraries. The website still finds the older names on release
 change. The disk image's volume is `EasyDiffraction Installer` and holds only `EasyDiffraction
 Installer.app`; the branding licence the installer's icon asks for (BSD, its notice with the binaries) is
 `Contents/Resources/BRANDING-LICENSE.txt` inside the app. `dmgbuild` writes its Finder window into the image: 400 by
-250 points of content on a background reading "Double-click to install" in white PT Sans on a neutral grey
-(`#626264`), the website's network (its two banks, at 0.42 of their size) in the top-right and bottom-left corners
-with three blue charges along its lines (`DiskImageBackground.png` and its `@2x` copy, written by
-`disk_image_background.qml` from the website's `network.svg` and joined into one TIFF), the 96-point installer icon
-centred under the text. It is the same in light and dark mode: Finder shows a window's background as one fixed
-picture (the window's settings name one image; the TIFF's two pictures are its resolutions, not appearances). The
-label under the icon is Finder's own: the window's settings hold its size and place but no colour, and cannot hide
-it;
+250 points of content on a white background, as the website's, reading "Double-click to install" in the app's dark
+text colour (PT Sans, `#333333`), the website's network (its two banks, at 0.42 of their size, in its light grey a
+little stronger) in the top-right and bottom-left corners with three blue charges along its lines, two crossing in
+the top-right and one in the bottom-left (`DiskImageBackground.png` and its `@2x` copy, written by
+`disk_image_background.qml` from the website's `network.svg` and joined into one TIFF, which Finder needs to show the
+sharper picture on a Retina screen), and the 96-point installer icon in the window's middle under the text. Finder
+shows the picture the same in light and dark mode: it has no dark variant of a background, shows even a transparent
+picture white (a macOS capture, 2026-11-26), and draws the icon's label black, which the window's settings can neither
+recolour nor hide; a light background is what reads in both,
 every bar off (toolbar, status, path, sidebar and tab bar), and the installer's icon as the volume icon.
 A Finder whose tab bar the user turned on shows it in this window too: the window setting cannot override
 it, so the icon sits high enough to keep its label in view under a tab bar. The volume icon is
