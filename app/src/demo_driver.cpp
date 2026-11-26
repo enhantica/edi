@@ -6651,6 +6651,7 @@ void DemoDriver::check_layout(const QString& frame) {
                     QHash<QString, double> first;
                     int compared = 0;
                     QStringList unequal;
+                    QStringList missing;
                     bool index = false;
                     const int filler = item->property("fillerIndex").isValid() ? item->property("fillerIndex").toInt() : -1;
                     for (qsizetype c = 0; c < kinds.size(); ++c) {
@@ -6661,8 +6662,14 @@ void DemoDriver::check_layout(const QString& frame) {
                         if (kind != QLatin1String("value") && kind != QLatin1String("uncertainty") && kind != QLatin1String("change") &&
                             kind != QLatin1String("displacement") && kind != QLatin1String("number"))
                             continue;
-                        if (widths[c].toDouble() < 0.5 || (item->property("kindFloors").isValid() && !item->property("kindFloors").toBool()))
+                        if (item->property("kindFloors").isValid() && !item->property("kindFloors").toBool())
                             continue;
+                        // A column declared by its kind but drawn at no width was squeezed out, not compared: a failure.
+                        // (A column hidden on purpose is declared by a number, not a kind.)
+                        if (widths[c].toDouble() < 0.5) {
+                            missing << QStringLiteral("%1 column %2").arg(kind).arg(c);
+                            continue;
+                        }
                         ++compared;
                         if (!first.contains(kind))
                             first.insert(kind, widths[c].toDouble());
@@ -6680,6 +6687,8 @@ void DemoDriver::check_layout(const QString& frame) {
                             out << frame << "\tT5:filler\t" << item_path(item) << '\t' << kind << " filler column " << filler << " reserves " << reserves[filler].toDouble()
                                 << " px, the other " << kind << " columns " << first.value(kind) << " px\n";
                     }
+                    if (!missing.isEmpty() && !awaiting_owner(item))
+                        out << frame << "\tT5:missing\t" << item_path(item) << '\t' << missing.join(QStringLiteral(", ")) << " drawn at no width\n";
                     // A table with no sized number column has nothing for T5 to compare: say so rather than pass it.
                     if (first.isEmpty())
                         out << frame << "\tT5:inapplicable\t" << item_path(item) << '\t'
