@@ -42,8 +42,8 @@ bool parametric_shared(const Project& project, const Parameter& parameter);
 
 /// ADR-0107: why `parameter` cannot be shared, empty when it can. In a joint fit (no scan declared) a parameter with no
 /// copy in another experiment (a structure's, or one only one experiment holds) is already one value for all
-/// experiments. A parameter set by a relation cannot be shared, except a copy that an equality constraint ties to the
-/// same parameter of another experiment: sharing it replaces those ties.
+/// experiments. Sharing never changes a user constraint: a parameter any of whose copies a constraint sets cannot be
+/// shared, and the reason names that constraint.
 std::string share_refusal(const Project& project, const Parameter& parameter);
 
 /// ADR-0107: shares or unshares `parameter` in the parametric fit: one value for every point, fixed or free. The free

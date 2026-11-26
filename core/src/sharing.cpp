@@ -486,51 +486,30 @@ std::size_t holders_of(const Project& project, const std::string& path) {
     return experiments.size();
 }
 
-bool tied_across_experiments(const Project& project, const std::string& path) {
-    for (const auto& [tied, leader] : experiment_shared_paths(project)) {
-        if (tied == path) return true;
-    }
-    return false;
-}
-
-// Removes the equality constraints that tie `path` across experiments, and the aliases they leave unused.
-void untie_across_experiments(Project& project, const std::string& path) {
-    const auto aliased = [&project](const std::string& id) -> std::optional<std::string> {
-        for (const auto& alias : project.aliases) {
-            if (alias->id.value() == id) return alias->parameter_unique_name.value();
-        }
-        return std::nullopt;
-    };
+// The id of the user constraint that sets `name` (its left-hand alias names it), or empty.
+std::string constraint_setting(const Project& project, const std::string& name) {
     const auto trimmed = [](std::string text) {
         const auto first = text.find_first_not_of(" \t");
         const auto last = text.find_last_not_of(" \t");
         return first == std::string::npos ? std::string() : text.substr(first, last - first + 1);
     };
-    std::set<std::string> released;
-    for (std::size_t i = project.constraints.size(); i-- > 0;) {
-        const std::string text = project.constraints[i]->expression.value();
+    for (const auto& constraint : project.constraints) {
+        if (!constraint->enabled.get()) continue;
+        const std::string& text = constraint->expression.value();
         const auto equals = text.find('=');
         if (equals == std::string::npos) continue;
-        const std::string lhs = trimmed(text.substr(0, equals)), rhs = trimmed(text.substr(equals + 1));
-        const auto left = aliased(lhs), right = aliased(rhs);
-        if (!left || !right) continue;
-        const auto a = experiment_part(project, *left), b = experiment_part(project, *right);
-        if (a && b && a->first != b->first && a->second == path && b->second == path) {
-            released.insert(lhs);
-            released.insert(rhs);
-            project.constraints.erase_at(i);
+        const std::string lhs = trimmed(text.substr(0, equals));
+        for (const auto& alias : project.aliases) {
+            if (alias->id.value() == lhs && alias->parameter_unique_name.value() == name) return constraint->id.value();
         }
     }
-    for (std::size_t i = project.aliases.size(); i-- > 0;) {
-        const std::string id = project.aliases[i]->id.value();
-        if (!released.contains(id)) continue;
-        bool used = false;
-        for (const auto& constraint : project.constraints) {
-            used = used || constraint->expression.value().find(id) != std::string::npos;
-        }
-        if (!used) project.aliases.erase_at(i);
-    }
-    refresh_relations(project);
+    return {};
+}
+
+// Why a dependent cannot be shared: the constraint that sets it, or symmetry.
+std::string dependent_reason(const Project& project, const std::string& name) {
+    const std::string id = constraint_setting(project, name);
+    return id.empty() ? "set by symmetry" : "set by the constraint '" + id + "'";
 }
 
 }  // namespace
@@ -539,13 +518,14 @@ std::string share_refusal(const Project& project, const Parameter& parameter) {
     const std::optional<std::string> name = any_name_of(project, parameter);
     if (!name) return "only a parameter a fit can vary can be shared";
     if (project.sequential_fit.declared()) {
-        return parameter.dependence == Dependence::Independent ? std::string()
-                                                               : "set by a constraint or by symmetry";
+        return parameter.dependence == Dependence::Independent ? std::string() : dependent_reason(project, *name);
     }
     const auto part = experiment_part(project, *name);
     if (!part || holders_of(project, part->second) < 2) return "already one value for all experiments";
-    if (parameter.dependence != Dependence::Independent && !tied_across_experiments(project, part->second)) {
-        return "set by a constraint or by symmetry";
+    // Shared never changes a user constraint (owner, 2026-11-26): a copy any of them sets keeps the whole group out.
+    for (const NamedParameter& dependent : named_dependents(project)) {
+        const auto other = experiment_part(project, dependent.unique_name);
+        if (other && other->second == part->second) return dependent_reason(project, dependent.unique_name);
     }
     return {};
 }
@@ -577,19 +557,10 @@ std::vector<Parameter*> shared_group(Project& project, Parameter& parameter) {
 }
 
 void set_parametric_shared(Project& project, Parameter& parameter, bool shared) {
-    bool was_follower = false;
     if (shared) {
-        was_follower = parameter.dependence != Dependence::Independent;
         if (const std::string refusal = share_refusal(project, parameter); !refusal.empty()) {
             const std::optional<std::string> any = any_name_of(project, parameter);
             throw std::invalid_argument((any ? *any : std::string("parameter")) + " cannot be shared: " + refusal);
-        }
-        // A copy tied by equality constraints to the same parameter of the other experiments: the ties give way to
-        // the shared group, so every experiment shows the same Shared state.
-        if (const auto any = any_name_of(project, parameter); any && !project.sequential_fit.declared()) {
-            if (const auto part = experiment_part(project, *any); part && tied_across_experiments(project, part->second)) {
-                untie_across_experiments(project, part->second);
-            }
         }
     }
     const std::optional<std::string> name = unique_name_of(project, parameter);
@@ -611,9 +582,9 @@ void set_parametric_shared(Project& project, Parameter& parameter, bool shared) 
         row.parameter_unique_name = key;
         project.sequential_fit.shared.push_back(std::move(row));
     }
-    // One value and one free flag for the group: the shown row's, or its leader's when the row was a tied copy.
+    // One value and one free flag for the group: the shown row's.
     const std::vector<Parameter*> members = group_members(project, key);
-    const Parameter& source = was_follower && !members.empty() ? *members.front() : parameter;
+    const Parameter& source = parameter;
     const double value = source.value.get();
     const bool free = source.free.get();
     for (Parameter* member : members) {

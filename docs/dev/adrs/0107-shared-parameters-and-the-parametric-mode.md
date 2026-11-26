@@ -34,12 +34,9 @@ equality (TOPAS, GSAS-II, FullProf, Jana); general fitting tools put a Share col
    - In a joint fit, a parameter with no copy in another experiment (every structure parameter, or one only one
      experiment holds) is already one value for all experiments: its Shared box is disabled and says so. In a scan every
      point has its own copy, so structure parameters keep the box.
-   - A parameter set by a constraint or by symmetry cannot be shared, with one exception: a copy that an equality
-     constraint ties to the same parameter of another experiment (`<copy> = <other copy>`, as "Same for all
-     experiments" or a hand-written file writes it). Checking Shared on any of those copies replaces the ties: the
-     equality constraints of that parameter across experiments and the aliases they leave unused are removed, the
-     group takes the first experiment's value and Free flag, and every experiment then shows Shared checked. One undo
-     step puts the constraints back.
+   - Shared never adds, changes or removes a user constraint. A parameter any of whose copies a user constraint sets
+     (a dependent) cannot be shared: its Shared box is disabled and its tooltip names the constraint, as Free does for
+     a parameter it cannot free. To share it, the user removes the constraint first.
 5. **Values.** Checking Shared sets every member to the value shown. Unchecking leaves each member that value as its
    own.
 6. **File.** `analysis.edi` keeps the shared names in one `_parametric_fit_shared` loop, written in every mode when not
