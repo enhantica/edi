@@ -4318,9 +4318,9 @@ void append_shared_ties(const Project& model, crysta::Project& converted) {
         if (path.empty()) {
             continue;
         }
-        const std::string leader_alias = "shared_tie_" + std::to_string(group) + "_leader";
+        const std::string leader_alias = "shared_tie_" + std::to_string(group) + "_0";
         converted.aliases.push_back({leader_alias, leader});
-        std::size_t member = 0;
+        std::size_t member = 1;
         for (const auto& experiment : model.experiments) {
             const std::string name = experiment->name + "." + path;
             if (name == leader || !held.contains(name)) {
