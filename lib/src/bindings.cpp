@@ -2481,7 +2481,8 @@ NB_MODULE(_edi, m) {
                 if (const std::string refusal = edi::free_refusal(p); free && !refusal.empty()) {
                     throw std::invalid_argument(parameter_name(p) + " " + refusal);
                 }
-                if (!edi::set_free(p, free)) {
+                edi::Project* owner = project_of(p);  // a shared group has one free flag (ADR-0107)
+                if (!(owner != nullptr ? edi::set_group_free(*owner, p, free) : edi::set_free(p, free))) {
                     const std::string name = p.spec != nullptr ? p.spec->name : std::string("parameter");
                     const std::string message =
                         "crysta.domain.dependent_free_ignored: parameter '" + name + "' is " +
