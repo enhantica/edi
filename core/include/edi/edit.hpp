@@ -752,6 +752,26 @@ class Edit {
     static Edit parameter_shared(Project& project, Parameter& parameter, bool shared) {
         return Edit([&project, &parameter, shared] { set_parametric_shared(project, parameter, shared); });
     }
+    // ADR-0107: share or unshare several parameters, by unique name, in one edit (the Shared header menu).
+    static Edit parameters_shared(Project& project, std::vector<std::string> names, bool shared) {
+        return Edit([&project, names = std::move(names), shared] {
+            for (const std::string& name : names) {
+                for (const NamedSlot& slot : named_slots(project)) {
+                    if (slot.unique_name == name) {
+                        set_parametric_shared(project, *slot.parameter, shared);
+                        break;
+                    }
+                }
+            }
+        });
+    }
+    // ADR-0107: a shared group's free flag and value, set on every member in one edit.
+    static Edit group_free(Project& project, Parameter& parameter, bool free) {
+        return Edit([&project, &parameter, free] { (void)set_group_free(project, parameter, free); });
+    }
+    static Edit group_value(Project& project, Parameter& parameter, double value) {
+        return Edit([&project, &parameter, value] { set_group_value(project, parameter, value); });
+    }
     static Edit descent(Project& project, std::string id) {
         return Edit([&project, id = std::move(id)] { set_descent(project, id); });
     }

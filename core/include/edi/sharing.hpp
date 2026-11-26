@@ -44,6 +44,33 @@ bool parametric_shared(const Project& project, const Parameter& parameter);
 /// flag is left as it is. Refuses (std::invalid_argument) a dependent and a parameter the project does not name.
 void set_parametric_shared(Project& project, Parameter& parameter, bool shared);
 
+/// ADR-0107: the parameters sharing one value with `parameter`: in a joint fit (no scan declared) the same path in every
+/// experiment, when shared; otherwise the parameter alone.
+std::vector<Parameter*> shared_group(Project& project, Parameter& parameter);
+
+/// ADR-0107: one free flag per shared group: sets it on every member. Returns false when a member is a dependent.
+bool set_group_free(Project& project, Parameter& parameter, bool free);
+
+/// ADR-0107: one value per shared group: writes it to every member, each under its range.
+void set_group_value(Project& project, Parameter& parameter, double value);
+
+/// ADR-0089 point 1: the experiment parameters an enabled equality constraint ties across experiments (`<member alias> =
+/// <leader alias>`, both aliases naming the same path, as "Same for all experiments" writes them), each once: its path
+/// without the datablock and the leader's place in `project.experiments`.
+std::vector<std::pair<std::string, std::size_t>> experiment_shared_paths(const Project& project);
+
+/// ADR-0087 point 2: one value of a set member that differs from its set's template, by the parameter's path without
+/// the datablock.
+struct SetDifference {
+    std::string set;
+    std::string member;
+    std::string path;
+    double value = 0.0;
+    double template_value = 0.0;
+};
+/// Every member value of every experiment set that differs from the template's, computed now and never stored.
+std::vector<SetDifference> set_differences(const Project& project);
+
 /// ADR-0107, at load: a name the project does not hold, or a dependent's, is dropped; a listed parameter keeps the free
 /// flag its value's spelling gives. Returns a note for each dropped name.
 std::vector<std::string> settle_parametric_shared(Project& project);

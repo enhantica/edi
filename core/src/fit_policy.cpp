@@ -681,6 +681,10 @@ FitResultBase Project::fit() { return fit(IterationCallback{}); }
 FitResultBase Project::fit_joint(const IterationCallback& on_iteration,
                                  const PreambleCallback& on_start,
                                  const CancelCallback& should_cancel) {
+    if (!sequential_fit.shared.empty()) {
+        // ADR-0107: the engine does not tie shared parameters yet; fitting them apart would be a different fit.
+        throw std::invalid_argument("A joint fit with shared parameters is not available yet.");
+    }
     refresh_background_estimates(*this);  // ADR-0040: auto background mode re-estimates first
     // Review-1 F4: the third native entry point gets the same refusal as fit(). A scan
     // project reaching fit_joint() would fit the template's banks once and write no
