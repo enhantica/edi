@@ -33,8 +33,11 @@ Component.prototype.createOperations = function () {
     if (!installer.isUpdater() || stagedTool() === "")
         return;
     if (systemInfo.kernelType === "darwin") {
-        component.addOperation("Execute", "/bin/sh", "-c", SWAP_SCRIPT, "sh", "@TargetDir@",
-                               "UNDOEXECUTE", "/bin/sh", "-c", RESTORE_SCRIPT, "sh", "@TargetDir@");
+        // One token for this operation: its undo puts back only the backup this operation kept, never one an earlier
+        // update left behind.
+        var token = String(Date.now()) + "-" + String(Math.floor(Math.random() * 1e9));
+        component.addOperation("Execute", "/bin/sh", "-c", SWAP_SCRIPT, "sh", "@TargetDir@", token,
+                               "UNDOEXECUTE", "/bin/sh", "-c", RESTORE_SCRIPT, "sh", "@TargetDir@", token);
         return;
     }
     installer.setInstallerBaseBinary(stagedTool());
