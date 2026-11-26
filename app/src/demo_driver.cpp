@@ -1960,6 +1960,39 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
         steps_.push_back({"parametric-4-table", {"parameters.nameFilter", "key:Ctrl+A", "key:Backspace"}});
         steps_.push_back({"parametric-5-reopened", {"save-as:parametric", "open-project:parametric", analysis, basic,
                                                     "parameters.nameFilter", "type:broad_gauss"}});
+        steps_.push_back({"parametric-6-shared-menu", {"parameters.nameFilter", "key:Ctrl+A", "key:Backspace",
+                                                       "parameters.sharedHeader"}});
+    }
+    // The Evolution follow-ups on a series of joint fits, EDI_DEMO_WISH_PROJECT (a bank parameter tied the same for all
+    // banks, and an experiment set): the set's Differences on the Experiment page, the fit, the Shared section listing
+    // the tied parameter, a second parameter on a right axis, and every bank's curves. Run only when asked
+    // (`--demo-only evolutionshared-`).
+    if (only.startsWith(QLatin1String("evolutionshared-"))) {
+        steps_.push_back({"evolutionshared-1-differences",
+                          QStringList{"resize:1480x900", "theme:light"} + start
+                              + QStringList{"open-project:" + qEnvironmentVariable("EDI_DEMO_WISH_PROJECT"), experiment,
+                                            basic, "expand:group.setDifferences"}});
+        steps_.push_back({"evolutionshared-2-fitted", {analysis, basic, "statusBar.fit.button", "wait-fit", "choose:OK",
+                                                       "mainArea.tab.evolution"}});
+        steps_.push_back({"evolutionshared-3-shared-list", {"evolution.parameters"}});
+        steps_.push_back({"evolutionshared-4-compare", {"key:Escape", "evolution.toolbar.compare", "key:Down", "key:Down",
+                                                        "key:Return"}});
+        steps_.push_back({"evolutionshared-5-per-bank", {"evolution.toolbar.scope", "choose:Per bank"}});
+    }
+    // Shared in a joint fit: the project EDI_DEMO_JOINT_PROJECT names (the taurine example with its extinction shared
+    // instead of tied by constraints), its coefficients, one Free flag per shared group, the Shared menu, then saved and
+    // opened again. Run only when asked (`--demo-only jointshared-`).
+    if (only.startsWith(QLatin1String("jointshared-"))) {
+        steps_.push_back({"jointshared-1-opened",
+                          QStringList{"resize:1480x900", "theme:light"} + start
+                              + QStringList{"open-project:" + qEnvironmentVariable("EDI_DEMO_JOINT_PROJECT"), analysis,
+                                            basic, "parameters.nameFilter", "type:coefficient"}});
+        steps_.push_back({"jointshared-2-free-group", {"parameters.free.7"}});
+        steps_.push_back({"jointshared-3-unshared", {"parameters.free.7", "parameters.shared.2"}});
+        steps_.push_back({"jointshared-4-menu", {"parameters.sharedHeader"}});
+        steps_.push_back({"jointshared-5-reopened", {"key:Escape", "parameters.shared.2", "save-as:jointshared",
+                                                     "open-project:jointshared", analysis, basic,
+                                                     "parameters.nameFilter", "type:coefficient"}});
     }
     // The Evolution tab of a scan before and after its fit, with the parameter list open. Run only when asked
     // (`--demo-only evolution-`).
