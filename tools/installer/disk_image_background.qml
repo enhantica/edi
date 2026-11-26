@@ -57,9 +57,9 @@ Window {
                 context.reset();
                 context.lineWidth = 0.8 * s; // the website's 1.25 at half its size, a little thicker
                 for (const line of window.lines) {
-                    // The website's light-theme grey (#777777) at twice its opacity, a little stronger, but at most 0.4:
-                    // the strongest lines (up to 0.55) stood out too much, the faint ones keep theirs.
-                    context.strokeStyle = Qt.rgba(0.467, 0.467, 0.467, Math.min(0.4, 2 * line.opacity));
+                    // The website's light-theme grey (#777777) at twice its opacity, at most 0.4, and all of it at 60 %
+                    // of that darkness (owner, 2026-11-26): every line lighter, the faint ones as much as the strong.
+                    context.strokeStyle = Qt.rgba(0.467, 0.467, 0.467, 0.6 * Math.min(0.4, 2 * line.opacity));
                     context.beginPath();
                     context.moveTo(line.x1 * s, line.y1 * s);
                     context.lineTo(line.x2 * s, line.y2 * s);
