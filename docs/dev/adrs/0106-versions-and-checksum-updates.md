@@ -46,8 +46,9 @@ first installation, so a tool once installed was never replaced.
    leaves the staged bundle in place on an update, so an operation of the component runs `maintenance_swap.sh`: it
    can run again after any failure, never leaves the tool's place empty except between two renames, keeps the
    installed bundle as `MaintenanceTool.app.old`, and puts it back if it fails; its undo (`maintenance_restore.sh`)
-   puts it back after a rollback. The control script removes the kept bundle once the update has succeeded with the
-   new tool in place. An update that leaves the component alone keeps the installed tool. Linux has no separate tool and is unchanged. The
+   puts it back after a rollback, and only a bundle that same operation kept (its token beside it): a backup an
+   earlier update left, as one run by an older control script does, is dropped by the next swap and never restored.
+   The control script removes the kept bundle once the update has succeeded with the new tool in place. An update that leaves the component alone keeps the installed tool. Linux has no separate tool and is unchanged. The
    installer protocol check updates a 2026.11.31 install from a 26.17 repository and checks the tool's checksum
    afterwards.
 

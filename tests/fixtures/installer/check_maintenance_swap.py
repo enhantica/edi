@@ -9,6 +9,7 @@ puts the kept bundle back.
 import importlib.util
 import re
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -17,6 +18,10 @@ ROOT = Path(__file__).resolve().parents[3]
 FOLDER = ROOT / 'tools/installer'
 SWAP = FOLDER / 'maintenance_swap.sh'
 RESTORE = FOLDER / 'maintenance_restore.sh'
+OPERATION = 'this-update'  # the swap operation's own mark
+
+# The swap is macOS's; its shell runs on any POSIX system, never on Windows.
+pytestmark = pytest.mark.skipif(sys.platform == 'win32', reason='a POSIX shell script')
 
 
 def bundle(path: Path, text: str) -> None:
@@ -30,8 +35,9 @@ def tool(path: Path) -> str | None:
     return executable.read_text() if executable.exists() else None
 
 
-def run(script: Path, target: Path, env: dict | None = None) -> int:
-    return subprocess.run(['/bin/sh', str(script), str(target)], env=env, check=False).returncode
+def run(script: Path, target: Path, env: dict | None = None, token: str = OPERATION) -> int:
+    command = ['/bin/sh', str(script), str(target), token]
+    return subprocess.run(command, env=env, check=False).returncode
 
 
 @pytest.fixture
@@ -68,6 +74,7 @@ def test_a_rerun_after_the_new_tool_was_moved_aside_finishes_the_swap(installed:
 
 def test_a_rerun_keeps_the_backup_an_earlier_attempt_left(tmp_path: Path) -> None:
     bundle(tmp_path / 'MaintenanceTool.app.old', 'installed')
+    (tmp_path / 'MaintenanceTool.app.old-token').write_text(f'{OPERATION}\n')
     bundle(tmp_path / 'MaintenanceTool.app', 'half written')
     bundle(tmp_path / 'maintenancetool/MaintenanceTool.app', 'new')
     assert run(SWAP, tmp_path) == 0
@@ -88,6 +95,26 @@ def test_a_failed_last_rename_puts_the_installed_tool_back(
     env = {'PATH': f'{shims}:/usr/bin:/bin'}
     assert run(SWAP, installed, env) == 1
     assert tool(installed / 'MaintenanceTool.app') == 'installed', 'never left without a tool'
+
+
+def test_a_backup_an_earlier_update_left_is_dropped_not_restored(installed: Path) -> None:
+    # An update run by an older control script never removed its backup.
+    bundle(installed / 'MaintenanceTool.app.old', 'two updates ago')
+    (installed / 'MaintenanceTool.app.old-token').write_text('earlier-update\n')
+    bundle(installed / 'maintenancetool/MaintenanceTool.app', 'new')
+    assert run(SWAP, installed) == 0
+    assert tool(installed / 'MaintenanceTool.app.old') == 'installed', (
+        'the stale backup is replaced'
+    )
+    assert run(RESTORE, installed) == 0
+    assert tool(installed / 'MaintenanceTool.app') == 'installed'
+
+
+def test_an_undo_never_restores_a_backup_it_did_not_keep(installed: Path) -> None:
+    bundle(installed / 'MaintenanceTool.app.old', 'two updates ago')
+    (installed / 'MaintenanceTool.app.old-token').write_text('earlier-update\n')
+    assert run(RESTORE, installed) == 0
+    assert tool(installed / 'MaintenanceTool.app') == 'installed'
 
 
 def test_nothing_staged_changes_nothing(installed: Path) -> None:
