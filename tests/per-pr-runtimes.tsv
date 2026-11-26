@@ -10,11 +10,9 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-25T16:21:43Z
+# measured_utc = 2026-11-26T20:45:20Z
 #
-# Recorded from: measured test run (3 node(s) measured once, 187620 banked, 0 stale row(s) dropped)
-# Collected tests: 267525; with a reported duration: 86316
-# Module-scoped fixture costs recorded: 219
+# Recorded from: native red-first edi-focused.log on 49990937; four failed cases recorded as holes
 #
 # Breaches are decided PER TIER against the table
 # below, which the loader validates against the code constants - a manifest must state
@@ -30,9 +28,9 @@
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
 # inventory_python = 267525
-# inventory_cpp = 0
+# inventory_cpp = 4
 # inventory_measured = 187623
-# inventory_unmeasured = 79902
+# inventory_unmeasured = 79906
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
 # inventory_pr_python = 92614
 
@@ -1346,6 +1344,10 @@ UNMEASURED:failed-in-this-run	tests/integration/app/test_web_control_geometry.py
 UNMEASURED:failed-in-this-run	tests/integration/app/test_web_control_geometry.py::test_transformed_control_extent_is_independent_of_ink_and_clip[populated]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_web_control_geometry.py::test_transformed_control_extent_is_independent_of_ink_and_clip[unclipped]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_web_control_geometry.py::test_visual_children_remain_discoverable_without_qobject_parentage
+UNMEASURED:failed-in-this-run	tests/integration/cpp/test_type_iv_site_symmetry.cpp::The native structure page accepts verified type IV Wyckoff letters
+UNMEASURED:failed-in-this-run	tests/integration/cpp/test_type_iv_site_symmetry.cpp::The native type IV anisotropic input reaches the structure page
+UNMEASURED:failed-in-this-run	tests/integration/cpp/test_type_iv_site_symmetry.cpp::The native type IV mirror exposes its two free coordinates
+UNMEASURED:failed-in-this-run	tests/integration/cpp/test_type_iv_site_symmetry.cpp::The native type IV mirror projects a near-special imported coordinate
 UNMEASURED:failed-in-this-run	tests/integration/py/test_adp_exact_zeros.py::test_isotropic_tensor_preserves_exact_zeros_and_oblique_values[change-Bani-cubic]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_adp_exact_zeros.py::test_isotropic_tensor_preserves_exact_zeros_and_oblique_values[change-Bani-hexagonal]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_adp_exact_zeros.py::test_isotropic_tensor_preserves_exact_zeros_and_oblique_values[change-Bani-monoclinic]
