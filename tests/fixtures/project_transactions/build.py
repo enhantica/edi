@@ -187,7 +187,13 @@ def observe_file_writes(prefix, observed, observer):
         if symbol in actual:
             names[symbol] = alias
     if not actual or set(names) != actual:
-        raise RuntimeError('Every app file-call overload requires a complete typed observer')
+        missing = sorted(actual - set(names))
+        extra = sorted(set(names) - actual)
+        raise RuntimeError(
+            'Every app file-call overload requires a complete typed observer; '
+            f'imported without one: {missing or "none"}; '
+            f'observer without an import: {extra or "none"}'
+        )
     subprocess.run(
         [
             str(prefix / 'bin/llvm-objcopy'),

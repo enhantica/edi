@@ -59,6 +59,13 @@ EaElements.Dialog {
         const folder = projectLocationField.text.trim();
         return folder === "" ? "" : joinedPath(folder, projectName);
     }
+    // An empty form for another project; the folder chosen for new projects is remembered.
+    function startOver() {
+        for (const field of [projectNameField, projectTitleField, projectAuthorsField, projectDescriptionField])
+            field.text = "";
+        projectLocationField.text = Qt.binding(projectLocationField.parentFolder);
+        projectLocation = "";
+    }
     function tryAccept() {
         const location = chosenLocation();
         if (showsLocation && !replaceExisting && location !== "" && Session.locationExists(location)) {
@@ -197,7 +204,10 @@ EaElements.Dialog {
                 horizontalAlignment: TextInput.AlignLeft
 
                 placeholderText: qsTr("The folder in which the project folder is created")
-                text: dialog.projectParentDirectory ? EaLogic.Utils.urlToLocalFile(dialog.projectParentDirectory) : dialog.defaultProjectParentDirectory
+                function parentFolder() {
+                    return dialog.projectParentDirectory ? EaLogic.Utils.urlToLocalFile(dialog.projectParentDirectory) : dialog.defaultProjectParentDirectory;
+                }
+                text: parentFolder()
 
                 Keys.onReturnPressed: dialog.tryAccept()
                 Keys.onEnterPressed: dialog.tryAccept()

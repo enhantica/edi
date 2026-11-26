@@ -9,7 +9,6 @@
 #include <QJsonObject>
 #include <QProcess>
 #include <QQuickWindow>
-#include <QRegularExpression>
 #include <QSvgRenderer>
 #include <QTemporaryDir>
 #include <QTimer>
@@ -30,9 +29,7 @@ void start_installer_smoke(QQuickWindow& window, const QString& output) {
                 throw std::runtime_error("Cannot create smoke output directory");
             const auto version = QString::fromUtf8(edi_app::app_version());
             report.insert("app_version", version);
-            static const QRegularExpression calendar(
-                QStringLiteral(R"(\A[0-9]{4}\.(0[1-9]|1[0-2])\.(0|[1-9][0-9]*)\z)"));
-            if (calendar.match(version).hasMatch()) {
+            if (edi_app::release_version_key(version)) {
                 QFile history(QStringLiteral(":/edi/releases.json"));
                 if (!history.open(QIODevice::ReadOnly))
                     throw std::runtime_error("Bundled release history is missing");

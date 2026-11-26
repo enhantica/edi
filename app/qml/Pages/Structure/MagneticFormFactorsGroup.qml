@@ -36,7 +36,7 @@ Column {
         sourceModel: group.formFactors
 
         // Its columns by kind (the shared column model, DataTable.columnKinds; ADR-0103 decision 4).
-        columnKinds: ["index", "short", "short", "text", "number", "number", "number"]
+        columnKinds: ["index", "short", "short", "text", "value", "value", "value"]
         // Widths from column types, not rows (ADR-0103 rule 4): the approximation is a text.
 
         header: EaComponents.ListViewHeader {
@@ -47,17 +47,17 @@ Column {
             HeaderLabel {
                 horizontalAlignment: Text.AlignLeft
                 uid: "magnetic_form_factor.type_symbol"
-                text: qsTr("Type")
+                longText: qsTr("Type")
             }
             HeaderLabel {
                 horizontalAlignment: Text.AlignLeft
                 uid: "magnetic_form_factor.ion"
-                text: qsTr("Ion")
+                longText: qsTr("Ion")
             }
             HeaderLabel {
                 horizontalAlignment: Text.AlignLeft
                 uid: "magnetic_form_factor.approximation"
-                text: qsTr("Approximation")
+                longText: qsTr("Approximation")
             }
             HeaderLabel {
                 horizontalAlignment: Text.AlignHCenter

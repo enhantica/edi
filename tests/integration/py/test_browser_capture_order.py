@@ -108,7 +108,7 @@ def test_capture_uses_two_fresh_projects_and_never_carries_historical_settings_i
 @pytest.mark.parametrize('capture_exit', [0, 23])
 def test_shared_capture_keeps_success_and_clears_failed_output(tmp_path, capture_exit):
     script = (ROOT / 'tools/ci/wasm-check.sh').read_text()
-    start = script.index('status=0\nREFERENCE="$(mktemp -d')
+    start = script.index('\nstatus=0\n') + 1
     provider = tmp_path / 'tools/ci/wasm-written-reference.sh'
     provider.parent.mkdir(parents=True)
     provider.write_text(
@@ -124,6 +124,7 @@ def test_shared_capture_keeps_success_and_clears_failed_output(tmp_path, capture
         'SITE': 'site',
         'DRIVER': 'driver',
         'CHROME': 'chrome',
+        'ZIP': 'site.zip',
     }
     env.pop('EDI_WASM_WRITTEN_REFERENCE', None)
     consumers = (
@@ -131,10 +132,17 @@ def test_shared_capture_keeps_success_and_clears_failed_output(tmp_path, capture
         '|| return 71; '
         'echo "python:$EDI_WASM_WRITTEN_REFERENCE" >> "$OUT/consumers"; }\n'
         'node() { [[ "$(declare -p EDI_WASM_WRITTEN_REFERENCE)" == "declare -x"* ]] || return 72; '
+        '[[ "$7" == "--written-reference=$EDI_WASM_WRITTEN_REFERENCE" ]] || return 73; '
         'echo "node:$4:$EDI_WASM_WRITTEN_REFERENCE" >> "$OUT/consumers"; }\n'
     )
     run = subprocess.run(
-        [environment_bash(), '-c', 'set -euo pipefail\n' + consumers + script[start:]],
+        [
+            environment_bash(),
+            '-c',
+            'set -euo pipefail\n' + consumers + script[start:],
+            'wasm-check',
+            'checks.py',
+        ],
         env=env,
         text=True,
         capture_output=True,

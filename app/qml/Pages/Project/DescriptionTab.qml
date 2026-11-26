@@ -18,7 +18,19 @@ Rectangle {
     property ProjectViewModel project: null
 
     color: "transparent"
-    onProjectChanged: nameInput.refusal = ""
+    onProjectChanged: {
+        nameInput.refusal = "";
+        descriptionView.contentY = 0;
+        // No edit of one project goes on into the next: a field in use gives up the focus.
+        if (project === null) {
+            for (let item = Window.activeFocusItem; item; item = item.parent) {
+                if (item === tab) {
+                    tab.forceActiveFocus();
+                    break;
+                }
+            }
+        }
+    }
 
     Flickable {
         id: descriptionView

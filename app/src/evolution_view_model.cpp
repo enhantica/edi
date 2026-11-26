@@ -12,6 +12,7 @@
 #include <limits>
 #include <optional>
 #include <map>
+#include <tuple>
 
 #include "background.hpp"
 #include "edi/categories.hpp"
@@ -51,13 +52,13 @@ double padded(double value, double pad) {
 
 }  // namespace
 
-EvolutionParameterListModel::EvolutionParameterListModel(QObject* parent) : RowTableModel({"name", "label"}, parent) {}
+EvolutionParameterListModel::EvolutionParameterListModel(QObject* parent) : RowTableModel({"name", "label", "group"}, parent) {}
 
-void EvolutionParameterListModel::setNames(const QStringList& names, const QStringList& labels) {
+void EvolutionParameterListModel::setNames(const QStringList& names, const QStringList& labels, const QStringList& groups) {
     QList<Row> rows;
     for (int i = 0; i < names.size(); ++i) {
         const QString label = i < labels.size() && !labels[i].isEmpty() ? labels[i] : names[i];
-        rows.append({reinterpret_cast<const void*>(static_cast<std::uintptr_t>(i + 1)), {names[i], label}});
+        rows.append({reinterpret_cast<const void*>(static_cast<std::uintptr_t>(i + 1)), {names[i], label, groups.value(i)}});
     }
     setTableRows(rows);
 }
@@ -96,6 +97,7 @@ void EvolutionViewModel::setScan(const ScanSession* session, const edi::Project*
     project_ = project;
     if (extracted_title != extracted_title_) {
         extracted_title_ = extracted_title;
+        emit xModesChanged();
         emit xTitleChanged();
     }
     syncNames();
@@ -173,6 +175,7 @@ void EvolutionViewModel::syncExperiments() {
         emit experimentsChanged();
         emit perExperimentChanged();
         emit currentExperimentChanged();
+        emit xModesChanged();
         emit xTitleChanged();  // a series that records nothing is placed by its runs
     }
 }
@@ -193,31 +196,78 @@ void EvolutionViewModel::setCurrentExperiment(int index) {
     if (per_experiment_) rebuild();
 }
 
+QStringList EvolutionViewModel::ordered(const QStringList& columns, QStringList& groups) const {
+    enum Kind { Parameter, Derived, Quality };
+    struct Entry {
+        QString name, group;
+        Kind kind = Parameter;
+        int block = std::numeric_limits<int>::max(), row = 0;
+    };
+    const std::vector<Place> places = placer_ ? placer_(columns, per_experiment_) : std::vector<Place>{};
+    std::vector<Entry> entries;
+    entries.reserve(static_cast<std::size_t>(columns.size()));
+    std::map<QString, int> blocks;  // each datablock's first row in the Analysis table
+    for (qsizetype i = 0; i < columns.size(); ++i) {
+        Entry entry{columns[i], {}};
+        if (columns[i].startsWith(QLatin1String("fit_result."))) {
+            entry.kind = Quality;
+            entry.group = tr("Fit quality");
+        } else if (edi::scan_derived_column(columns[i].toStdString())) {
+            entry.kind = Derived;
+            entry.group = tr("Derived values");
+        } else {
+            const Place place = static_cast<std::size_t>(i) < places.size() ? places[static_cast<std::size_t>(i)] : Place{};
+            // A bank's own columns are every bank's: they name no datablock.
+            entry.group = per_experiment_ ? tr("Each bank") : place.block;
+            entry.row = place.row;
+            const auto [found, added] = blocks.emplace(entry.group, place.row);
+            if (!added) found->second = std::min(found->second, place.row);
+        }
+        entries.push_back(std::move(entry));
+    }
+    for (Entry& entry : entries) {
+        if (entry.kind == Parameter) entry.block = blocks.at(entry.group);
+    }
+    std::stable_sort(entries.begin(), entries.end(), [](const Entry& a, const Entry& b) {
+        return std::tie(a.kind, a.block, a.group, a.row) < std::tie(b.kind, b.block, b.group, b.row);
+    });
+    QStringList names;
+    groups.clear();
+    for (const Entry& entry : entries) {
+        names.append(entry.name);
+        groups.append(entry.group);
+    }
+    return names;
+}
+
 bool EvolutionViewModel::syncNames() {
     syncExperiments();
     // The core's list (edi::evolution_parameters), the report's too: every free parameter, listed before any dataset
-    // is fitted, then the ones results.csv records that are no longer free; the shown one kept, else the first. Per
-    // experiment, the columns results_experiments.csv records (edi::evolution_experiment_parameters).
-    QStringList names;
+    // is fitted, then the ones results.csv records that are no longer free; in groups here (ordered), the shown one
+    // kept, else the first. Per experiment, the columns results_experiments.csv records
+    // (edi::evolution_experiment_parameters).
+    QStringList columns;
     if (project_ != nullptr && per_experiment_) {
         for (const std::string& name : edi::evolution_experiment_parameters(*project_)) {
-            names.append(QString::fromStdString(name));
+            columns.append(QString::fromStdString(name));
         }
     } else if (project_ != nullptr) {
         static const edi::ScanResultIndex kNoResults;
         for (const std::string& name :
              edi::evolution_parameters(*project_, session_ != nullptr ? session_->index() : kNoResults)) {
-            names.append(QString::fromStdString(name));
+            columns.append(QString::fromStdString(name));
         }
     }
     const QString shown = current_ >= 0 && current_ < names_.size() ? names_[current_] : QString();
-    const bool changed = names != names_;
+    const bool changed = columns != columns_;
     if (changed) {
-        names_ = names;
+        columns_ = columns;
+        QStringList groups;
+        names_ = ordered(columns_, groups);
         QStringList labels;
         for (const QString& name : names_) labels.append(labeller_ ? labeller_(name, per_experiment_) : QString());
         labels_ = labels;
-        parameters_->setNames(names_, labels);
+        parameters_->setNames(names_, labels, groups);
     }
     const int current = names_.isEmpty() ? -1 : std::max(0, static_cast<int>(names_.indexOf(shown)));
     if (current != current_ || changed) {

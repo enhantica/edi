@@ -28,7 +28,7 @@ Column {
         id: version
         objectName: block.versionObjectName
         anchors.horizontalCenter: parent.horizontalCenter
-        text: qsTr("Version %1 (%2)").arg(ApplicationInfo.version).arg(ApplicationInfo.releaseDate)
+        text: qsTr("Version %1 · %2").arg(ApplicationInfo.version).arg(ApplicationInfo.releaseDate)
     }
 
     FontMetrics {

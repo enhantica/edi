@@ -27,6 +27,12 @@ Column {
 
         // Its columns by kind (the shared column model, DataTable.columnKinds; ADR-0103 decision 4).
         columnKinds: ["index", "short", "number", "control"]
+        columnTexts: ["",
+            {
+                "role": "typeSymbol",
+                "edited": true
+            }
+        ]
         // Widths from column types, not rows (ADR-0103 rule 4): an element or isotope, then its length.
 
         header: EaComponents.ListViewHeader {

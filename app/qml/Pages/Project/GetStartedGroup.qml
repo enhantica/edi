@@ -308,6 +308,36 @@ SideBarGroup {
     property var createOperation: null
     property var assistantCreate: null
     Component.onDestruction: createLife.alive = false
+    // Another project: what names or would write the old one closes; what a create had under way and what its form
+    // held go once the call that replaces the project is over (edi ADR-0052). The Load menu stays open.
+    Connections {
+        target: Session
+        function onProjectAboutToChange() {
+            saveMenu.close();
+            replaceProject.close();
+            exportFolder.close();
+            exportFolder.sourceProject = null;
+            if (createDialog.visible) {
+                createDialog.untitledId = 0;
+                EaGlobals.Vars.showProjectDescriptionDialog = false;
+            }
+        }
+        function onProjectChanged() {
+            Qt.callLater(group.dropCreate);
+        }
+    }
+    function dropCreate() {
+        createLife.alive = false;
+        createLife = {
+            alive: true
+        };
+        createIntent = null;
+        createOperation = null;
+        assistantCreate = null;
+        untitledOrigin = "manual-create";
+        untitledRequest = 0;
+        createDialog.startOver();
+    }
     function prepareAssistantCreate(id) {
         return ApplicationInfo.assistantBuilt ? ApplicationInfo.prepareAssistantCreate(id) : null;
     }
@@ -509,7 +539,7 @@ SideBarGroup {
         title: qsTr("Choose where to create the %1 project folder").arg(program)
         currentFolder: DialogFolders.folder("exportProject", "")
         onAccepted: {
-            if (sourceProject === Session.project) {
+            if (sourceProject && sourceProject === Session.project) {
                 DialogFolders.remember("exportProject", selectedFolder);
                 Session.exportProjectCopy(program, selectedFolder);
             }

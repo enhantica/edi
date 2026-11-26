@@ -19,6 +19,19 @@ def test_public_entries_cannot_appear_outside_the_ownership_inventory(name):
     assert actual == Counter({
         entry: row['overloads'] for entry, row in group['entries'].items()
     }), 'Every public entry and same-name overload requires an explicit ownership disposition'
+    if name == 'Session':
+        assert re.search(r'Q_INVOKABLE\s+ShownLabel\s+labelForms\s*\(', source), (
+            'The label query exposes the typed display forms to QML'
+        )
+    if name == 'ProjectViewModel':
+        assert re.search(
+            r'Q_PROPERTY\(QStringList scanColumns READ scanColumns NOTIFY ', source
+        ), 'The scan column headings are a read-only QML property'
+        private = source.split('private:', 1)[1]
+        for helper in ('declareDataFolder', 'wavelengthRefusal'):
+            assert re.search(rf'\b{helper}\s*\(', private), (
+                f'{helper} stays private behind the tracked public edit routes'
+            )
     for entry in group['entries'].values():
         assert entry['domain'], 'An enumerated public entry must name its ownership domain'
         if entry['proof']:

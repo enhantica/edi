@@ -299,8 +299,7 @@ namespace {
 QString shown_version() {
     static const QString version = [] {
         QString release = qEnvironmentVariable("EDI_RELEASE_VERSION");
-        static const QRegularExpression calendar(QStringLiteral(R"(\A[0-9]{4}\.(0[1-9]|1[0-2])\.(0|[1-9][0-9]*)\z)"));
-        if (calendar.match(release).hasMatch() &&
+        if (edi_app::release_version_key(release) &&
             qEnvironmentVariable("EDI_RELEASE_COMMIT") == QString::fromLatin1(edi::build_commit())) {
             return release;
         }
@@ -3279,13 +3278,23 @@ QV4::ReturnedValue QV4::ApplicationProjectCallback::virtualCall(const FunctionOb
     return QJSValuePrivate::convertToReturnedValue(frame.vm(), result);
 }
 
-void ApplicationInfo::afterProjectChanges(const QJSValue& action, const QJSValue& abandoned, bool creating) const {
+namespace {
+bool projectHasContent(const QJSValue& project) {
+    auto* const open = qobject_cast<edi_app::ProjectViewModel*>(project.toQObject());
+    return open != nullptr && !edi::empty_for_population(*open->assistantProject());
+}
+bool tutorialHoldsProject(const PanelUsageFrame& frame) {
+    return panelUsageTruth(assistantContextField(frame, "AppState", "tutorialRunning")) ||
+           panelUsageTruth(assistantContextField(frame, "Session", "hasProjectSetAside"));
+}
+}  // namespace
+void ApplicationInfo::afterProjectChanges(const QJSValue& action, const QJSValue& abandoned, bool creating, const QString& closing) const {
     const auto frame = panelUsageEngine(this);
     // A Text tab's unapplied edit is settled first; settled, the changes are dealt with again.
     const auto edit = panelUsageContextRead(frame, "textEdit");
     if (!panelUsageReady(frame)) return;
     if (!edit.isNull() && !edit.isUndefined()) {
-        panelUsageMemberCall(frame, edit, "settleEdit", {panelUsageClosure(frame, 390, {action, abandoned, QJSValue(creating)}, 0), abandoned});
+        panelUsageMemberCall(frame, edit, "settleEdit", {panelUsageClosure(frame, 390, {action, abandoned, QJSValue(creating), QJSValue(closing)}, 0), abandoned});
         return;
     }
     // A tutorial's project is never what an open, a new project, a close or a quit leaves behind (edi ADR-0064).
@@ -3313,8 +3322,14 @@ void ApplicationInfo::afterProjectChanges(const QJSValue& action, const QJSValue
     const auto project = assistantContextField(frame, "Session", "project");
     if (!panelUsageReady(frame)) return;
     if (!project.isNull()) {
-        const auto modified = assistantContextField(frame, "Session", "project");
-        if (panelUsageTruth(panelUsageRead(frame, modified, "modified"))) {
+        const auto current = assistantContextField(frame, "Session", "project");
+        const bool modified = panelUsageTruth(panelUsageRead(frame, current, "modified"));
+        // The assistant closes a project only on the user's answer, a saved one too.
+        if (!closing.isEmpty() && (modified || projectHasContent(current))) {
+            panelUsageGlobalCall(frame, "closeQuestion", {action, abandoned, QJSValue(closing)});
+            return;
+        }
+        if (modified) {
             panelUsageGlobalCall(frame, "changesQuestion", {action, abandoned});
             return;
         }
@@ -3398,9 +3413,13 @@ void ApplicationInfo::projectWindowClosing(const QJSValue& close) const {
     assistantMemberWrite(frame, close, "accepted", QJSValue(false));
     projectInvoke(frame, "AppState", "afterChanges", {projectGuardedClosure(frame, 23)});
 }
-void ApplicationInfo::projectChangesQuestion(const QJSValue& action, const QJSValue& abandoned, bool setAside) const {
+void ApplicationInfo::projectChangesQuestion(const QJSValue& action, const QJSValue& abandoned, bool setAside, const QString& closing) const {
     const auto frame = panelUsageEngine(this);
+    const auto asked = assistantContextField(frame, "Session", "project");
+    const bool saved = !closing.isEmpty() && !asked.isNull() && !panelUsageTruth(panelUsageRead(frame, asked, "modified"));
     projectWrite(frame, "unsavedChanges", "setAside", QJSValue(setAside));
+    projectWrite(frame, "unsavedChanges", "closing", QJSValue(closing));
+    projectWrite(frame, "unsavedChanges", "saved", QJSValue(saved));
     const auto previous = assistantContextField(frame, "unsavedChanges", "abandoned");
     projectWrite(frame, "unsavedChanges", "abandoned", consentNull());
     if (panelUsageTruth(previous)) projectCall(frame, previous);
@@ -3422,9 +3441,7 @@ void ApplicationInfo::unsavedProjectOpened() const {
     const auto actualOwner = panelUsageRead(frame, token, "assistant");
     const auto intent = panelUsageRead(frame, token, "intent");
     const auto dialog = panelUsageContextRead(frame, "unsavedChanges");
-    const auto save = assistantContextField(frame, "Dialog", "Save");
-    const auto button = panelUsageGlobalCall(frame, "standardButton", {save});
-    panelUsageMemberCall(frame, actualOwner, "nativeProjectCreateSaveChoice", {intent, dialog, button});
+    panelUsageMemberCall(frame, actualOwner, "nativeProjectCreateAsked", {intent, dialog});
 }
 void ApplicationInfo::abandonUnsavedProjectAction() const {
     const auto frame = panelUsageEngine(this);
@@ -3443,6 +3460,14 @@ void ApplicationInfo::acceptUnsavedProject() const {
     }
     const auto original = panelUsageContextRead(frame, "nativeCreation");
     const auto waiting = panelUsageContextRead(frame, "action");
+    // The user lets a saved project close: nothing to write, unless it changed while the question was open.
+    if (panelUsageTruth(panelUsageContextRead(frame, "saved"))) {
+        const auto abandoned = panelUsageContextRead(frame, "abandoned");
+        panelUsageContextWrite(frame, "action", consentNull());
+        panelUsageContextWrite(frame, "abandoned", consentNull());
+        projectInvoke(frame, "AppState", "afterChanges", {waiting, abandoned});
+        return;
+    }
     // Untitled work is named and saved by an untitled operation (ADR-0100): the waiting action is kept with its id and
     // runs only once that operation is saved; any other end abandons it.
     if (panelUsageTruth(assistantContextField(frame, "Session", "untitled"))) {
@@ -3566,9 +3591,14 @@ void ApplicationInfo::projectUntitledSettled(const QJSValue& id, const QJSValue&
 void ApplicationInfo::discardUnsavedProject() const {
     const auto frame = panelUsageEngine(this);
     const auto waiting = panelUsageContextRead(frame, "action");
+    const auto native = panelUsageContextRead(frame, "nativeCreation");
     panelUsageContextWrite(frame, "action", consentNull());
     panelUsageContextWrite(frame, "abandoned", consentNull());
     panelUsageGlobalCall(frame, "close", {});
+    if (!native.isNull()) {  // the assistant's Create goes on over the changes the user discards
+        const auto owner = panelUsageRead(frame, native, "assistant");
+        if (consentQtObject(frame, owner)) panelUsageMemberCall(frame, owner, "nativeProjectCreateDiscard", {panelUsageRead(frame, native, "intent")});
+    }
     if (panelUsageTruth(panelUsageContextRead(frame, "setAside"))) {  // the set-aside project comes back, then is discarded
         panelUsageContextWrite(frame, "setAside", QJSValue(false));
         panelUsageCallLater(frame, panelUsageClosure(frame, 398, {waiting}, 0));
@@ -3677,7 +3707,7 @@ bool ApplicationInfo::prepareProjectCreation(const QJSValue& intent) const {
     const auto original = assistantContextField(frame, "Session", "assistant");
     const auto before = assistantContextField(frame, "Session", "project");
     if (!panelUsageTruth(panelUsageMemberCall(frame, original, "nativeProjectCreateCurrent", {intent}))
-        || !panelUsageContextRead(frame, "assistantCreateGuard").isNull() || !panelUsageReady(frame)) return false;
+        || !panelUsageContextRead(frame, "assistantCreateGuard").isNull() || tutorialHoldsProject(frame) || !panelUsageReady(frame)) return false;
     const auto literal = panelUsageLiteral(frame);
     panelUsageWrite(frame, literal.value, "assistant", original);
     panelUsageWrite(frame, literal.value, "project", before);
@@ -3689,33 +3719,7 @@ bool ApplicationInfo::prepareProjectCreation(const QJSValue& intent) const {
     panelUsageContextWrite(frame, "assistantCreateGuard", token);
     const auto actualAction = panelUsageRead(frame, token, "action");
     const auto abandon = panelUsageClosure(frame, 22, {original, before, intent, token});
-    projectInvoke(frame, "AppState", "afterChanges", {actualAction, abandon});
-    return true;
-}
-bool ApplicationInfo::projectCreationSaveCurrent(const QJSValue& intent, const QJSValue& control) const {
-    const auto frame = panelUsageEngine(this);
-    const auto token = panelUsageContextRead(frame, "assistantCreateGuard");
-    if (token.isNull() || !consentFieldEquals(frame, token, "intent", intent)
-        || !projectFieldIs(frame, "unsavedChanges", "nativeCreation", token)) return false;
-    auto owner = panelUsageRead(frame, token, "assistant");
-    if (!consentQtObject(frame, owner)) return false;
-    const auto assistant = assistantContextField(frame, "Session", "assistant");
-    if (!consentFieldEquals(frame, token, "assistant", assistant)) return false;
-    const auto project = assistantContextField(frame, "Session", "project");
-    if (!consentFieldEquals(frame, token, "project", project)) return false;
-    owner = panelUsageRead(frame, token, "assistant");
-    if (!panelUsageTruth(panelUsageMemberCall(frame, owner, "nativeProjectCreateCurrent", {intent}))
-        || !panelUsageTruth(assistantContextField(frame, "unsavedChanges", "visible"))
-        || !panelUsageTruth(assistantContextField(frame, "unsavedChanges", "opened")) || !panelUsageReady(frame)) return false;
-    const auto dialog = panelUsageContextRead(frame, "unsavedChanges");
-    const auto save = assistantContextField(frame, "Dialog", "Save");
-    const auto button = panelUsageMemberCall(frame, dialog, "standardButton", {save});
-    return panelUsageReady(frame) && button.strictlyEquals(control);
-}
-bool ApplicationInfo::chooseProjectCreationSave(const QJSValue& intent, const QJSValue& control) const {
-    const auto frame = panelUsageEngine(this);
-    if (!panelUsageTruth(panelUsageGlobalCall(frame, "nativeProjectCreateSaveCurrent", {intent, control}))) return false;
-    panelUsageMemberCall(frame, control, "click");
+    projectInvoke(frame, "AppState", "afterChanges", {actualAction, abandon, QJSValue(false), QJSValue(QStringLiteral("create"))});
     return true;
 }
 void ApplicationInfo::finishProjectCreationGuard(const QJSValue& intent) const {
@@ -3739,7 +3743,8 @@ QJSValue ApplicationInfo::createProjectFromIntent(const QJSValue& values, const 
         const auto project = assistantContextField(frame, "Session", "project");
         if (!project.isNull()) {
             const auto actual = assistantContextField(frame, "Session", "project");
-            blocked = panelUsageTruth(panelUsageRead(frame, actual, "modified"));
+            blocked = panelUsageTruth(panelUsageRead(frame, actual, "modified"))
+                && !panelUsageTruth(panelUsageMemberCall(frame, owner, "nativeProjectCreateDiscards", {intent}));
         }
     }
     if (!panelUsageReady(frame)) return {};
@@ -3765,10 +3770,15 @@ void ApplicationInfo::restoreSessionProject(const QJSValue& thread, const QJSVal
     const auto frame = panelUsageEngine(this);
     const auto original = assistantContextField(frame, "panel", "assistant");
     const auto before = assistantContextField(frame, "Session", "project");
+    if (tutorialHoldsProject(frame)) {  // its project would close, and the tutorial with it
+        if (consentQtObject(frame, original))
+            panelUsageMemberCall(frame, original, "failSessionProjectOpen", {intent, QJSValue(tr("A tutorial is running. Finish or stop it first."))});
+        return;
+    }
     const QJSValueList captures{original, before, intent, location, thread};
     const auto abandon = panelUsageClosure(frame, 26, captures);
     const auto action = panelUsageClosure(frame, 25, captures);
-    projectInvoke(frame, "AppState", "afterChanges", {action, abandon});
+    projectInvoke(frame, "AppState", "afterChanges", {action, abandon, QJSValue(false), QJSValue(QStringLiteral("conversation"))});
 }
 void ApplicationInfo::resetProjectAfterChanges() const {
     const auto frame = panelUsageEngine(this);
@@ -6967,7 +6977,7 @@ namespace {
 // A data table keeps every column at every width (ADR-0103 decision 4): a row wider than its table narrows its number
 // columns together, down to half their type's width, and their cells show fewer digits, then ×10ⁿ (the owner,
 // 2026-11-22). The Analysis parameter table drops columns instead and never comes here.
-void tighten_numbers(std::vector<double>& widths, const std::vector<bool>& numbers, double room, const std::vector<double>& floors) {
+void tighten_numbers(std::vector<double>& widths, const std::vector<bool>& numbers, double room, const std::vector<double>& floors, int filler = -1) {
     double used = 0, pool = 0;
     for (std::size_t index = 0; index < widths.size(); ++index) {
         used += std::max(0.0, widths[index]);
@@ -6989,6 +6999,9 @@ void tighten_numbers(std::vector<double>& widths, const std::vector<bool>& numbe
             used += std::max(0.0, widths[index]);
         }
     }
+    // Whole pixels leave a remainder: the filler takes it, so the row reaches the table's edge and its control sits there (T3).
+    if (filler >= 0 && static_cast<std::size_t>(filler) < widths.size() && widths[static_cast<std::size_t>(filler)] > 0.5)
+        widths[static_cast<std::size_t>(filler)] += std::max(0.0, room - used);
 }
 }  // namespace
 QJSValue ApplicationInfo::tableColumnWidths() const {
@@ -7178,7 +7191,7 @@ QJSValue ApplicationInfo::tableColumnWidths() const {
         widths[static_cast<std::size_t>(fillerIndex)] += spare;
     }
     // A flexible column at its floor beside fixed numbers too wide for the row: the numbers narrow first.
-    tighten_numbers(widths, numberColumns, width - spacing * gaps - rowPadding * 2, numberFloors);
+    tighten_numbers(widths, numberColumns, width - spacing * gaps - rowPadding * 2, numberFloors, fillerIndex);
     return asArray(widths);
 }
 // Styles the cells of `rows` (or of the rows the view made) and returns the widths `rows` need, at least `from` (a part
@@ -7457,13 +7470,15 @@ void ApplicationInfo::tableCombineWidths() const {
         QHash<int, QString> kindOf;
         for (int index = 0; index < count && index < kindCount; ++index) {
             const QString kind = textIndex(f, kinds, QJSValue(index)).toString();
+            const bool unit = kind == QLatin1String("unit");
             if (kind != QLatin1String("value") && kind != QLatin1String("uncertainty") && kind != QLatin1String("change") &&
-                kind != QLatin1String("displacement") && kind != QLatin1String("number"))
+                kind != QLatin1String("displacement") && kind != QLatin1String("number") && !unit)
                 continue;
-            // A plain number (a data point, a region's start) reserves a sign, five digits and two decimals.
+            // A plain number (a data point, a region's start) reserves a sign, five digits and two decimals; a unit its
+            // widest, left-aligned with a full margin on both sides.
             const QString kindSample = kind == QLatin1String("number") ? QStringLiteral("-00000.00") : tableTypeSample(kind);
             const double sample = projectInvoke(f, "metrics", "advanceWidth", {QJSValue(kindSample)}).toNumber();
-            const double width = std::max(index < headings.size() ? headings[index] : 0.0, std::ceil(sample) + 2 * margin - 1);
+            const double width = std::max(index < headings.size() ? headings[index] : 0.0, std::ceil(sample) + 2 * margin - (unit ? 0 : 1));
             kindOf.insert(index, kind);
             widest[kind] = std::max(widest.value(kind), width);
         }
@@ -7532,6 +7547,88 @@ bool tableMeasurable(const PanelUsageFrame& f) {
     if (panelUsageTruth(panelUsageContextRead(f, "onScreen"))) return true;
     return assistantRelation(f, panelUsageContextRead(f, "count"), panelUsageContextRead(f, "measuredAtOnce"), 3);  // count <= measuredAtOnce
 }
+// The kinds whose width comes from the kind and the fonts alone (tableCombineWidths): no text of the rows is read.
+bool tableKindReserved(const QJSValue& kind) {
+    static const QSet<QString> kReserved{QStringLiteral("index"), QStringLiteral("control"), QStringLiteral("mark"), QStringLiteral("number"),
+                                         QStringLiteral("value"), QStringLiteral("uncertainty"), QStringLiteral("change"),
+                                         QStringLiteral("displacement"), QStringLiteral("unit")};
+    return kind.isNumber() || (kind.isString() && kReserved.contains(kind.toString()));
+}
+// The widest text of one role of the table's model, in the plain font, or as an input draws it while edited: bold, with
+// a character's room for the caret. Read from the model itself, so no row is made. A model over 1000 rows is read
+// for its first `atOnce` rows, as tableTextColumnWidth reads it.
+double tableRoleWidth(const QJSValue& model, const QString& role, bool edited, int atOnce, QObject* metrics, QObject* bold) {
+    QStringList texts;
+    if (auto* items = qobject_cast<QAbstractItemModel*>(model.toQObject())) {
+        const int roleId = items->roleNames().key(role.toUtf8(), -1);
+        const int count = items->rowCount();
+        const int limit = count > 1000 ? std::min(count, atOnce) : count;
+        for (int row = 0; roleId >= 0 && row < limit; ++row) texts.append(items->data(items->index(row, 0), roleId).toString());
+    } else if (model.isArray()) {
+        const int count = model.property(QStringLiteral("length")).toInt();
+        const int limit = count > 1000 ? std::min(count, atOnce) : count;
+        for (int row = 0; row < limit; ++row) {
+            const auto entry = model.property(static_cast<quint32>(row));
+            texts.append(entry.isObject() ? entry.property(role).toString() : entry.toString());
+        }
+    }
+    QObject* font = edited && bold != nullptr ? bold : metrics;
+    double widest = 0;
+    for (const auto& text : texts) {
+        qreal width = 0;
+        if (font != nullptr) QMetaObject::invokeMethod(font, "advanceWidth", Q_RETURN_ARG(qreal, width), Q_ARG(QString, text));
+        widest = std::max(widest, double(width));
+    }
+    if (edited && bold != nullptr && !texts.isEmpty()) widest += bold->property("averageCharacterWidth").toReal();
+    return widest;
+}
+// A column's declared text: a role's name, or {role, edited} for a column of inputs; an empty role when none.
+QString tableTextRole(const QJSValue& text) {
+    const auto role = text.isObject() ? text.property(QStringLiteral("role")) : text;
+    return role.isString() ? role.toString() : QString();
+}
+// Whether every column of a kind table takes its width from its kind or a declared role, so none is measured from
+// its rows.
+// Read through the `table` id from an object inside it (a Connections).
+bool tableDeclared(const PanelUsageFrame& f) {
+    if (!panelUsageTruth(assistantContextField(f, "table", "kindFloors"))) return false;
+    const auto kinds = assistantContextField(f, "table", "columnKinds");
+    const auto texts = assistantContextField(f, "table", "columnTexts");
+    if (!panelUsageReady(f)) return false;
+    const int count = kinds.property(QStringLiteral("length")).toInt();
+    for (int index = 0; index < count; ++index)
+        if (!tableKindReserved(kinds.property(static_cast<quint32>(index))) && tableTextRole(texts.property(static_cast<quint32>(index))).isEmpty())
+            return false;
+    return count > 0;
+}
+// Every column's content width in a kind table, before any row is made: 0 for a column its kind sizes
+// (tableCombineWidths gives it its kind's width and its title's), and for a text column its role's widest value with a
+// cell's margins (DataTable.columnTexts). Empty when a text column names no role: that table is measured from its rows.
+std::optional<std::vector<double>> tableDeclaredContent(const PanelUsageFrame& f) {
+    if (!panelUsageTruth(panelUsageContextRead(f, "kindFloors"))) return std::nullopt;
+    const auto kinds = panelUsageContextRead(f, "columnKinds");
+    const auto texts = panelUsageContextRead(f, "columnTexts");
+    const auto model = panelUsageContextRead(f, "sourceModel");
+    const int atOnce = panelUsageContextRead(f, "measuredAtOnce").toInt();
+    const double margin = assistantContextField(f, "AppSizes", "tableCellMargin").toNumber();
+    QObject* metrics = panelUsageContextRead(f, "metrics").toQObject();
+    QObject* bold = panelUsageContextRead(f, "boldMetrics").toQObject();
+    if (!panelUsageReady(f)) return std::nullopt;
+    const int count = kinds.property(QStringLiteral("length")).toInt();
+    if (count <= 0) return std::nullopt;
+    std::vector<double> widths(static_cast<std::size_t>(count), 0.0);
+    for (int index = 0; index < count; ++index) {
+        const auto kind = kinds.property(static_cast<quint32>(index));
+        if (tableKindReserved(kind)) continue;
+        const auto text = texts.property(static_cast<quint32>(index));
+        const QString role = tableTextRole(text);
+        if (role.isEmpty()) return std::nullopt;
+        const bool edited = text.isObject() && text.property(QStringLiteral("edited")).toBool();
+        const double widest = tableRoleWidth(model, role, edited, atOnce, metrics, bold);
+        widths[static_cast<std::size_t>(index)] = widest > 0 ? std::ceil(widest) + 2 * margin : 0.0;
+    }
+    return widths;
+}
 }  // namespace
 // Every row of the model is made beside the view, measured with the header, and dropped: the columns fit the widest
 // row wherever it is, and scrolling changes no width. A table not shown waits until it is.
@@ -7568,6 +7665,23 @@ void ApplicationInfo::tableFitWholeModel() const {
         panelUsageGlobalCall(f, "styleCells", {});
         return;
     }
+    // A kind table whose text columns name their roles (DataTable.columnTexts) has every width from its kinds, its
+    // titles and its model's texts: no row is made, so it is known while the table is hidden or its group folded, and a
+    // first unfold measures nothing (edi ADR-0105).
+    if (kindModel) {
+        if (const auto declared = tableDeclaredContent(f)) {
+            auto widths = f->newArray(static_cast<uint>(declared->size()));
+            for (std::size_t index = 0; index < declared->size(); ++index) widths.setProperty(static_cast<quint32>(index), QJSValue((*declared)[index]));
+            panelUsageContextWrite(f, "liveRefit", QJSValue(false)); if (!editorLife(f, life)) return;
+            panelUsageContextWrite(f, "measureRunning", QJSValue(false)); if (!editorLife(f, life)) return;
+            panelUsageContextWrite(f, "unfitted", QJSValue(false)); if (!editorLife(f, life)) return;
+            panelUsageContextWrite(f, "refitting", QJSValue(false)); if (!editorLife(f, life)) return;
+            panelUsageContextWrite(f, "contentWidths", widths); if (!editorLife(f, life)) return;
+            panelUsageGlobalCall(f, "combineWidths", {}); if (!editorLife(f, life)) return;
+            panelUsageGlobalCall(f, "styleCells", {});
+            return;
+        }
+    }
     if (!tableMeasurable(f)) {
         panelUsageContextWrite(f, "refitting", QJSValue(false));
         if (editorLife(f, life)) panelUsageContextWrite(f, "unfitted", QJSValue(true));
@@ -7600,29 +7714,6 @@ void ApplicationInfo::tableFitWholeModel() const {
     panelUsageContextWrite(f, "measuredWidths", consentNull()); if (!editorLife(f, life)) return;
     const int run = panelUsageContextRead(f, "measureRun").toInt() + 1;
     panelUsageContextWrite(f, "measureRun", QJSValue(run)); if (!editorLife(f, life)) return;
-    // A table whose columns are all reserved by kind or fixed has its widths from the kinds and the titles alone
-    // (tableCombineWidths): no row is made to measure it.
-    if (panelUsageTruth(panelUsageContextRead(f, "kindFloors"))) {
-        const auto kinds = panelUsageContextRead(f, "columnKinds");
-        const int count = panelUsageRead(f, kinds, "length").toInt();
-        bool reserved = count > 0;
-        for (int index = 0; panelUsageReady(f) && reserved && index < count; ++index) {
-            const auto kind = textIndex(f, kinds, QJSValue(index));
-            static const QSet<QString> kReserved{QStringLiteral("index"), QStringLiteral("control"), QStringLiteral("mark"), QStringLiteral("number"),
-                                                 QStringLiteral("value"), QStringLiteral("uncertainty"), QStringLiteral("change"), QStringLiteral("displacement")};
-            reserved = kind.isNumber() || kReserved.contains(kind.toString());
-        }
-        if (reserved) {
-            auto none = f->newArray(static_cast<uint>(count));
-            for (int index = 0; index < count; ++index) none.setProperty(static_cast<quint32>(index), QJSValue(0));
-            panelUsageContextWrite(f, "measureRunning", QJSValue(false)); if (!editorLife(f, life)) return;
-            panelUsageContextWrite(f, "refitting", QJSValue(false)); if (!editorLife(f, life)) return;
-            panelUsageContextWrite(f, "contentWidths", none); if (!editorLife(f, life)) return;
-            panelUsageGlobalCall(f, "combineWidths", {}); if (!editorLife(f, life)) return;
-            panelUsageGlobalCall(f, "styleCells", {});
-            return;
-        }
-    }
     panelUsageContextWrite(f, "measureSince", QJSValue(static_cast<double>(QDateTime::currentMSecsSinceEpoch()))); if (!editorLife(f, life)) return;
     panelUsageContextWrite(f, "measureRunning", QJSValue(true)); if (!editorLife(f, life)) return;
     panelUsageContextWrite(f, "measureAgain", QJSValue(false)); if (!editorLife(f, life)) return;
@@ -7894,6 +7985,12 @@ void ApplicationInfo::tableDataChanged(const QJSValue& topLeft, const QJSValue& 
     const bool kindModel = panelUsageRead(f, assistantContextField(f, "table", "columnKinds"), "length").toInt() > 0;
     if (!kindModel && ((panelUsageTruth(types) && panelUsageRead(f, types, "length").toInt() > 0)
                        || !assistantContextField(f, "table", "defaultColumnType").toString().isEmpty())) return;
+    // A table of declared columns reads only its model's texts, no row: its widths stay known while it is folded or
+    // hidden.
+    if (kindModel && tableDeclared(f)) {
+        projectInvoke(f, "table", "refit");
+        return;
+    }
     // Changed rows fit the columns again, number columns included (their widths come from the measured rows), but a
     // table that cannot be seen is only marked unfitted and measured once it is (tableOnScreenChanged): a refit of a
     // series' 100 runs at each fitted run, off screen, was most of the GUI thread's stalls during a fit.
@@ -11146,7 +11243,11 @@ void ApplicationInfo::searchPlacePopup(const QJSValue& opening) const {
     const auto header = searchHeaderItem(f, popup); const auto style = panelUsageContextRead(f, "EaStyle"), pixels = panelUsageRead(f, panelUsageRead(f, style, "Sizes"), "comboBoxHeight");
     const auto rows = viewArithmetic(f, QJSValue(entries), pixels, 1), headerHeight = panelUsageTruth(header) ? panelUsageRead(f, header, "height") : QJSValue(0);
     const auto first = panelUsageAdd(f, rows, headerHeight), padded = panelUsageAdd(f, first, panelUsageRead(f, popup, "topPadding")); const auto wanted = panelUsageAdd(f, padded, panelUsageRead(f, popup, "bottomPadding"));
-    if (assistantRelation(f, below, wanted, 2) || assistantRelation(f, below, above, 2)) {
+    // A search shortens the list on the side it opened on: the field being typed into does not cross the box.
+    const bool searching = !panelUsageRead(f, component, "filter").strictlyEquals(QJSValue(QString()));
+    const bool under = searching ? assistantRelation(f, panelUsageRead(f, popup, "y"), QJSValue(0), 2)
+                                 : assistantRelation(f, below, wanted, 2) || assistantRelation(f, below, above, 2);
+    if (under) {
         assistantMemberWrite(f, popup, "height", numberMath(f, "min", [&] { return QJSValueList{wanted, below}; })); if (!current()) return; assistantMemberWrite(f, popup, "y", panelUsageRead(f, component, "height"));
     } else {
         assistantMemberWrite(f, popup, "height", numberMath(f, "min", [&] { return QJSValueList{wanted, above}; })); if (!current()) return; assistantMemberWrite(f, popup, "y", numberNegate(f, panelUsageRead(f, popup, "height")));
@@ -11158,17 +11259,20 @@ QJSValue ApplicationInfo::searchMatches(const QJSValue& text) const {
     return panelUsageDeferredMemberCall(f, folded, "includes", [&] { return QJSValueList{panelUsageContextRead(f, "filter")}; });
 }
 QJSValue ApplicationInfo::searchPickedIndex() const {
-    const auto f = panelUsageEngine(this); double first = -1;
+    const auto f = panelUsageEngine(this); double first = -1, starting = -1;
     for (int i = 0; panelUsageReady(f) && assistantRelation(f, QJSValue(double(i)), panelUsageContextRead(f, "count"), 0); ++i) {
         const auto text = panelUsageGlobalCall(f, "textAt", {QJSValue(double(i))}), folded = panelUsageMemberCall(f, panelUsageContextRead(f, "control"), "folded", {text});
         if (folded.strictlyEquals(panelUsageContextRead(f, "filter"))) return QJSValue(double(i));
+        if (starting < 0 && panelUsageTruth(panelUsageDeferredMemberCall(f, folded, "startsWith", [&] { return QJSValueList{panelUsageContextRead(f, "filter")}; }))) starting = i;
         if (first < 0 && panelUsageTruth(panelUsageGlobalCall(f, "matches", {text}))) first = i;
     }
-    return QJSValue(first);
+    return QJSValue(starting >= 0 ? starting : first);
 }
 void ApplicationInfo::searchAccepted() const {
     const auto f = panelUsageEngine(this); const auto index = projectInvoke(f, "control", "pickedIndex"); if (assistantRelation(f, index, QJSValue(0), 0)) return;
-    projectWrite(f, "control", "currentIndex", index); projectInvoke(f, "control", "activated", {index}); panelUsageMemberCall(f, assistantContextField(f, "control", "popup"), "close");
+    // Written as the box's own click writes it, so a binding on the index stays.
+    if (auto* box = panelUsageContextRead(f, "control").toQObject()) box->setProperty("currentIndex", index.toInt());
+    projectInvoke(f, "control", "activated", {index}); panelUsageMemberCall(f, assistantContextField(f, "control", "popup"), "close");
 }
 void ApplicationInfo::searchCompleted(const QJSValue& alignBinding, const QJSValue& modelBinding, const QJSValue& focusBinding, const QJSValue& indicatorBinding) const {
     const auto f = panelUsageEngine(this);
@@ -11611,7 +11715,7 @@ QJSValue lifecycleCallback(const PanelUsageFrame& f, uint op,
         if (!panelUsageTruth(panelUsageContextRead(f, "box"))) return {};
         return projectCall(f, saved(0));
     }
-    if (op == 390) return panelUsageGlobalCall(f, "afterChanges", {saved(0), saved(1), saved(2)});
+    if (op == 390) return panelUsageGlobalCall(f, "afterChanges", {saved(0), saved(1), saved(2), saved(3)});
     if (op == 397 || op == 398) {
         projectInvoke(f, "Session", "restoreProjectSetAside");
         projectInvoke(f, "AppState", "tutorialEnded");
@@ -11783,6 +11887,11 @@ void ApplicationInfo::createProjectClicked() const {
     const auto f = panelUsageEngine(this); const auto original = createGroupField(f, "assistantCreate"), state = panelUsageContextRead(f, "AppState");
     // Create on the untitled project names and saves it, its work kept: nothing to ask about first.
     if (panelUsageTruth(assistantContextField(f, "Session", "untitled"))) { projectInvoke(f, "group", "chooseCreate"); return; }
+    // The assistant's Create over changes the user chose to discard: the question was answered.
+    if (!original.isNull() && panelUsageTruth(panelUsageMemberCall(f, assistantContextField(f, "Session", "assistant"), "nativeProjectCreateDiscards", {panelUsageRead(f, original, "id")}))) {
+        panelUsageCallLater(f, panelUsageClosure(f, 384, {original}));
+        return;
+    }
     panelUsageMemberCall(f, state, "afterChanges", {panelUsageClosure(f, 384, {original}), panelUsageClosure(f, 385, {original}), QJSValue(true)});
 }
 void ApplicationInfo::createProjectDialogEvent(int kind) const {
@@ -11818,7 +11927,16 @@ QJSValue ApplicationInfo::windowUnsavedText() const {
     const auto f = panelUsageEngine(this);
     if (panelUsageTruth(assistantContextField(f, "unsavedChanges", "setAside")))
         return mainText(f, QT_TRANSLATE_NOOP("Main", "Your own project, set aside for the tutorial, has unsaved changes."));
-    const auto text = mainText(f, QT_TRANSLATE_NOOP("Main", "The current project <b>%1</b> has unsaved changes."));
+    const auto closing = assistantContextField(f, "unsavedChanges", "closing").toString();
+    const bool saved = panelUsageTruth(assistantContextField(f, "unsavedChanges", "saved"));
+    const char* line = QT_TRANSLATE_NOOP("Main", "The current project <b>%1</b> has unsaved changes.");
+    if (closing == QLatin1String("create"))
+        line = saved ? QT_TRANSLATE_NOOP("Main", "The AI assistant asks to create a new project.<br>The current project <b>%1</b> closes.")
+                     : QT_TRANSLATE_NOOP("Main", "The AI assistant asks to create a new project.<br>The current project <b>%1</b> has unsaved changes.");
+    else if (!closing.isEmpty())
+        line = saved ? QT_TRANSLATE_NOOP("Main", "The conversation opens its own project.<br>The current project <b>%1</b> closes.")
+                     : QT_TRANSLATE_NOOP("Main", "The conversation opens its own project.<br>The current project <b>%1</b> has unsaved changes.");
+    const auto text = mainText(f, line);
     return panelUsageDeferredMemberCall(f, text, "arg", [&] {
         QJSValue name(QStringLiteral("")); if (!assistantContextField(f, "Session", "project").isNull()) {
             const auto first = panelUsageMemberCall(f, panelUsageRead(f, assistantContextField(f, "Session", "project"), "name"), "replace", {panelRegex(f, QStringLiteral("&"), QV4::CompiledData::RegExp::RegExp_Global), QJSValue(QStringLiteral("&amp;"))});

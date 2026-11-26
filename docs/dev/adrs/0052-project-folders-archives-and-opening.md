@@ -55,7 +55,8 @@ not the project being read (measured with the app's software renderer, as on the
    read-only folder. The web app shows *In this browser only*, or the disk's folder or `.zip` by its name (decision 9).
 
 1. **Unsaved changes and temporary folders.** Opening, creating or closing a project, or quitting, while the project
-   has unsaved changes first asks to save or discard them (a project with nowhere to write yet opens Save as). Each
+   has unsaved changes first asks to save or discard them (a project with nowhere to write yet opens Save as). When the assistant would
+   close a project that is not empty, the same question asks even with nothing unsaved (ADR-0057). Each
    temporary folder (an unpacked archive, a zip-saved project's working folder, a copy on its way into an archive)
    carries its process's id. The app releases a project's folder when the project is replaced, saved elsewhere or
    closed; a process removes the rest of its own when it ends; and each start of the app removes those a crashed
@@ -87,7 +88,17 @@ not the project being read (measured with the app's software renderer, as on the
    after a second, against 8.6 to 9.5 s with Qt's own controller; 12 ms slices took about half as long again. Each app-bar tab stays disabled until its page is built, with the tooltip *Preparing
    this page…*; while pages build, the status bar shows *Opening project… N of M pages* with a progress bar in the fit
    area's place, gone once every page is built. A page past Project that was shown when another project opened gives
-   way to the Project page. Opening another project meanwhile drops the pages being built, and the replaced project's
+   way to the Project page. Once made, the Project page is the one that stays when another project replaces the open one
+   (2026-11-25): a press on it and its open Load menu went with a page let go, so in the browser a click in the first
+   seconds after opening a project was lost. The replaced project's preview stops
+   first; then the page lets go of it, before the next is published and the old one destroyed: its description, Extra
+   and Text are empty until the next is there, a description field in use gives up the focus, and the Save as menu, the
+   Create project and Replace dialogs and the export's folder dialog close. A project the assistant makes itself is put
+   in place in one step, without this: the description then shows the next project directly, and the Create form is
+   already closing. With the next project the page starts as a page made for it would: Main, scrolled to its top, with
+   Get started open and the other groups folded, no create under way, and an empty Create form, whose folder for new
+   projects is remembered. The Load menu and the window's own dialogs are left as they are. Opening another project meanwhile drops the
+   pages being built, and the replaced project's
    worker is gone with it, so nothing of the first reaches the second. Quitting stops the pages being built and starts
    none: closing the window during a tutorial brings the user's project back just before the quit, and its pages were
    still building when the QML engine went. A Save while pages or the first calculation are pending runs the save
@@ -116,6 +127,14 @@ not the project being read (measured with the app's software renderer, as on the
    after its last edit, so after a reload or a closed tab Recent projects offers *Continue where you left off* with
    those changes, until a Save or a discard drops them. The page writes the browser's storage from a worker with
    synchronous file handles, which Firefox and Safari have where they lack writable streams.
+
+   With a screen reader on, Qt lays an accessible element over each item, those of the pages beside the shown one
+   included, and focuses it from script. The browser then scrolled Qt's window, 1600 pixels in one measured case, and
+   the drawn app with it. The page therefore clips Qt's windows (`overflow: clip` in Qt's shadow root), whether
+   accessibility is on or off: they cannot be scrolled, and the app's own scrolling is drawn, not the browser's
+   (2026-11-25). Chrome and Edge know it from 90, Firefox from 81 and Safari from 16; an older one keeps Qt's
+   `overflow: hidden`. The rule is added once, to the screen Qt makes at its start. A screen Qt made later on the same
+   page would not have it; the app does not make one.
 
 ## Consequences
 
