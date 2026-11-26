@@ -71,7 +71,12 @@ SideBarGroup {
                 text: "caret-down"
             }
             ToolTip.text: qsTr("Open an EasyDiffraction project or import one from another program")
-            onClicked: loadMenu.open()
+            // Closed first: a menu the page kept across a replacement could still count itself open, and open() would then do
+            // nothing.
+            onClicked: {
+                loadMenu.close();
+                loadMenu.open();
+            }
 
             EaElements.Menu {
                 id: loadMenu
@@ -317,10 +322,10 @@ SideBarGroup {
             replaceProject.close();
             exportFolder.close();
             exportFolder.sourceProject = null;
-            if (createDialog.visible) {
+            // The replaced project's Create dialog goes before the new project is published, never after its name shows.
+            if (createDialog.visible)
                 createDialog.untitledId = 0;
-                EaGlobals.Vars.showProjectDescriptionDialog = false;
-            }
+            EaGlobals.Vars.showProjectDescriptionDialog = false;
         }
         // At the new project's publication nothing of the replaced one's page stays open, also what was opened while it
         // was being opened: the Create dialog among them.
