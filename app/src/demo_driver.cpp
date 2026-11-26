@@ -1946,6 +1946,21 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
                               + QStringList{analysis, basic, "statusBar.fit.button", "wait-fit", "choose:OK",
                                             "mainArea.tab.evolution"}});
     }
+    // The parametric fit's Shared column on the 213-file scan: the fitting mode selector open, Parametric chosen, U, V
+    // and W shared, the whole table, then saved and opened again. Run only when asked (`--demo-only parametric-`).
+    if (only.startsWith(QLatin1String("parametric-"))) {
+        steps_.push_back({"parametric-1-selector",
+                          QStringList{"resize:1480x900", "theme:light"} + start
+                              + open_cli_project("pd-neut-cwl_cosio-d20_scan-213f")
+                              + QStringList{analysis, extras, "expand:group.fitting_mode", "reveal:fittingMode.type",
+                                            "fittingMode.type"}});
+        steps_.push_back({"parametric-2-chosen", {"choose:Parametric: all as one fit", basic}});
+        steps_.push_back({"parametric-3-uvw-shared", {"parameters.nameFilter", "type:broad_gauss", "parameters.shared.0",
+                                                      "parameters.shared.1", "parameters.shared.2"}});
+        steps_.push_back({"parametric-4-table", {"parameters.nameFilter", "key:Ctrl+A", "key:Backspace"}});
+        steps_.push_back({"parametric-5-reopened", {"save-as:parametric", "open-project:parametric", analysis, basic,
+                                                    "parameters.nameFilter", "type:broad_gauss"}});
+    }
     // The Evolution tab of a scan before and after its fit, with the parameter list open. Run only when asked
     // (`--demo-only evolution-`).
     if (only.startsWith(QLatin1String("evolution-"))) {
