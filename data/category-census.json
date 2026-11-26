@@ -815,6 +815,43 @@
       "row": "ParametricSharedParameter"
     },
     {
+      "name": "_parametric_fit_start",
+      "form": "loop",
+      "columns": [
+        {
+          "member": "ParametricFitStart::point",
+          "type": "detail::WrittenText",
+          "items": [
+            "point"
+          ],
+          "storage": [
+            "crysta::Column<std::string>"
+          ]
+        },
+        {
+          "member": "ParametricFitStart::parameter_unique_name",
+          "type": "detail::WrittenText",
+          "items": [
+            "parameter_unique_name"
+          ],
+          "storage": [
+            "crysta::Column<std::string>"
+          ]
+        },
+        {
+          "member": "ParametricFitStart::value",
+          "type": "detail::Written<double>",
+          "items": [
+            "value"
+          ],
+          "storage": [
+            "crysta::Column<double>"
+          ]
+        }
+      ],
+      "row": "ParametricFitStart"
+    },
+    {
       "name": "_experiment_set",
       "form": "loop",
       "columns": [
@@ -5902,6 +5939,21 @@
       "category": "_parametric_fit_shared"
     },
     {
+      "member": "ParametricFitStart::point",
+      "type": "detail::WrittenText",
+      "category": "_parametric_fit_start"
+    },
+    {
+      "member": "ParametricFitStart::parameter_unique_name",
+      "type": "detail::WrittenText",
+      "category": "_parametric_fit_start"
+    },
+    {
+      "member": "ParametricFitStart::value",
+      "type": "detail::Written<double>",
+      "category": "_parametric_fit_start"
+    },
+    {
       "member": "ExperimentSet::id",
       "type": "ItemKey",
       "category": "_experiment_set"
@@ -6010,6 +6062,13 @@
       "type": "ItemVec<ParametricSharedParameter>",
       "holds": [
         "_parametric_fit_shared"
+      ]
+    },
+    {
+      "member": "SequentialFitConfig::starts",
+      "type": "ItemVec<ParametricFitStart>",
+      "holds": [
+        "_parametric_fit_start"
       ]
     },
     {
@@ -6314,7 +6373,8 @@
         "_sequential_fit",
         "_sequential_fit_extract",
         "_sequential_fit_experiment",
-        "_parametric_fit_shared"
+        "_parametric_fit_shared",
+        "_parametric_fit_start"
       ]
     },
     {
@@ -6519,6 +6579,9 @@
     ],
     "_parametric_fit_shared": [
       "_parametric_fit_shared"
+    ],
+    "_parametric_fit_start": [
+      "_parametric_fit_start"
     ],
     "_parent_propagation_vector": [
       "_parent_propagation_vector"

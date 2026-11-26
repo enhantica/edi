@@ -4978,6 +4978,15 @@ struct KeyTraits<ParametricSharedParameter> {
     static const char* category() { return "shared parameter"; }
 };
 
+// ADR-0107: one point's own start for one parameter of a parametric fit, where it differs from the template's. The
+// point is its data file relative to the scan folder, or the text the `*` matches in a series of joint fits. Unkeyed:
+// the load refuses a (point, name) given twice.
+struct ParametricFitStart {
+    detail::WrittenText point;
+    detail::WrittenText parameter_unique_name;
+    detail::Written<double> value{0.0};
+};
+
 // ADR-0087: an experiment set, a template experiment and its members, each an ordinary experiment.
 struct ExperimentSet {
     ItemKey id;
@@ -5028,6 +5037,14 @@ struct RowSchema<edi::ParametricSharedParameter> {
     static constexpr const char* name = "_parametric_fit_shared";
     static constexpr auto fields = std::tuple{&edi::ParametricSharedParameter::parameter_unique_name};
     static constexpr std::array items{"parameter_unique_name"};
+};
+template <>
+struct RowSchema<edi::ParametricFitStart> {
+    static constexpr const char* name = "_parametric_fit_start";
+    static constexpr auto fields = std::tuple{&edi::ParametricFitStart::point,
+                                              &edi::ParametricFitStart::parameter_unique_name,
+                                              &edi::ParametricFitStart::value};
+    static constexpr std::array items{"point", "parameter_unique_name", "value"};
 };
 template <>
 struct RowSchema<edi::ExperimentSet> {
@@ -5150,6 +5167,8 @@ struct SequentialFitConfig {
     // ADR-0107: the `_parametric_fit_shared` names, the parameters a parametric fit gives one value for every
     // point (each also free). Kept in every mode; only `parametric` reads them.
     ItemVec<ParametricSharedParameter> shared;
+    // ADR-0107: the parametric fit's sparse per-point starts (`_parametric_fit_start`).
+    ItemVec<ParametricFitStart> starts;
     bool declared() const { return !data_dir.empty(); }
     bool joint() const { return !experiments.empty(); }
     // ADR-0018: the row of this object's non-loop categories.

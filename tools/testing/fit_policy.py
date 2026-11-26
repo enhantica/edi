@@ -86,7 +86,13 @@ _ENTRY_POINTS = _project_fit_entry_points()
 # The derived set TODAY, pinned as a fail-loud drift ALARM — the derivation above stays the
 # wrapping authority. added fit_sequential to the retired hand tuple; a future surface move
 # fails here by name so the pin is moved deliberately, never silently.
-_EXPECTED_ENTRY_POINTS = ('fit', 'fit_independent', 'fit_joint', 'fit_sequential')
+_EXPECTED_ENTRY_POINTS = (
+    'fit',
+    'fit_independent',
+    'fit_joint',
+    'fit_parametric',
+    'fit_sequential',
+)
 if _ENTRY_POINTS != _EXPECTED_ENTRY_POINTS:
     raise RuntimeError(
         f'fit_policy: the public fit surface moved - derived {_ENTRY_POINTS}, pinned '

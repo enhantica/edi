@@ -420,6 +420,12 @@ std::optional<std::pair<std::string, std::string>> experiment_part(const Project
     return std::nullopt;
 }
 
+// ADR-0107: the shared names take effect in the parametric fit of a scan and in a joint fit; in every other mode they
+// are kept and do nothing.
+bool active(const Project& project) {
+    return project.sequential_fit.declared() ? project.fitting_mode == "parametric" : project.fitting_mode == "joint";
+}
+
 // ADR-0107: in a scan a name is its own group (the points repeat it); in a joint fit the group is the same path in every
 // experiment, kept under the first experiment in project order holding it as an independent parameter.
 std::string group_key(const Project& project, const std::vector<NamedParameter>& named, const std::string& name) {
@@ -429,6 +435,18 @@ std::string group_key(const Project& project, const std::vector<NamedParameter>&
     const auto part = experiment_part(project, name);
     if (!part) {
         return name;
+    }
+    // Where sharing takes no effect, a group keeps the name it is listed under while that copy can lead it, so an
+    // inactive declaration is saved as written whatever order the experiments come back in.
+    if (!active(project)) {
+        for (const auto& row : project.sequential_fit.shared) {
+            const std::string& listed = row->parameter_unique_name.value();
+            const auto other = experiment_part(project, listed);
+            if (!other || other->second != part->second) continue;
+            for (const NamedParameter& each : named) {
+                if (each.unique_name == listed) return listed;
+            }
+        }
     }
     for (const auto& experiment : project.experiments) {
         const std::string candidate = experiment->name + "." + part->second;
@@ -548,7 +566,7 @@ std::vector<Parameter*> shared_group(Project& project, Parameter& parameter) {
     for (const NamedParameter& each : named) {
         if (each.parameter == &parameter) {
             const std::string key = group_key(project, named, each.unique_name);
-            if (shared_row(project, key)) {
+            if (active(project) && shared_row(project, key)) {
                 return group_members(project, key);
             }
         }
@@ -582,7 +600,10 @@ void set_parametric_shared(Project& project, Parameter& parameter, bool shared) 
         row.parameter_unique_name = key;
         project.sequential_fit.shared.push_back(std::move(row));
     }
-    // One value and one free flag for the group: the shown row's.
+    // One value and one free flag for the group: the shown row's (only where sharing takes effect).
+    if (!active(project)) {
+        return;
+    }
     const std::vector<Parameter*> members = group_members(project, key);
     const Parameter& source = parameter;
     const double value = source.value.get();
@@ -638,9 +659,9 @@ std::vector<std::string> settle_parametric_shared(Project& project) {
         ParametricSharedParameter row;
         row.parameter_unique_name = key;
         project.sequential_fit.shared.push_back(std::move(row));
-        // The group has the leader's free flag (one flag per group).
+        // The group has the leader's free flag (one flag per group), where sharing takes effect.
         const std::vector<Parameter*> members = group_members(project, key);
-        if (members.size() > 1) {
+        if (active(project) && members.size() > 1) {
             const bool free = members.front()->free.get();
             for (Parameter* member : members) {
                 if (member->free.get() != free) {
@@ -651,6 +672,22 @@ std::vector<std::string> settle_parametric_shared(Project& project) {
             for (Parameter* member : members) {
                 member->free = free;
             }
+        }
+    }
+    // ADR-0107: a start for a name the project does not hold, a dependent's or a shared parameter's is dropped (a shared
+    // parameter's one value is the template's).
+    for (std::size_t i = project.sequential_fit.starts.size(); i-- > 0;) {
+        const std::string name = project.sequential_fit.starts[i]->parameter_unique_name.value();
+        bool held = false;
+        for (const NamedParameter& each : named) held = held || each.unique_name == name;
+        const char* why = !held ? "is not in the project or is set by a relation"
+                          : shared_row(project, group_key(project, named, name)) ? "is shared, so its one value is the "
+                                                                                    "template's"
+                                                                                  : nullptr;
+        if (why != nullptr) {
+            notes.push_back("start for '" + name + "' at point '" + project.sequential_fit.starts[i]->point.value() +
+                            "' dropped: it " + why);
+            project.sequential_fit.starts.erase_at(i);
         }
     }
     return notes;

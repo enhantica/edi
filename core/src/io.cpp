@@ -4427,6 +4427,24 @@ static Project load_project_folder(const std::string& directory, const WarningSi
                 project.sequential_fit.shared.push_back(std::move(parameter));
             }
         }
+        // ADR-0107: the parametric fit's sparse per-point starts; a (point, name) given twice is refused.
+        if (const Loop* starts = block.loop_with("_parametric_fit_start.point")) {
+            std::set<std::pair<std::string, std::string>> seen;
+            for (const auto& row : starts->rows) {
+                ParametricFitStart start;
+                start.point = loop_cell(*starts, row, "_parametric_fit_start.point", analysis_file.string());
+                start.parameter_unique_name =
+                    loop_cell(*starts, row, "_parametric_fit_start.parameter_unique_name", analysis_file.string());
+                start.value = to_double(loop_cell(*starts, row, "_parametric_fit_start.value", analysis_file.string()),
+                                        "_parametric_fit_start.value");
+                if (!seen.emplace(start.point.value(), start.parameter_unique_name.value()).second) {
+                    throw std::invalid_argument("_parametric_fit_start: point '" + start.point.value() + "' gives '" +
+                                                start.parameter_unique_name.value() + "' twice: " +
+                                                analysis_file.string());
+                }
+                project.sequential_fit.starts.push_back(std::move(start));
+            }
+        }
         if (const Loop* sets = block.loop_with("_experiment_set.id")) {
             for (const auto& row : sets->rows) {
                 ExperimentSet set;
@@ -4503,8 +4521,9 @@ static Project load_project_folder(const std::string& directory, const WarningSi
                 project.constraints.push_back(constraint);
             }
         }
-        // edi ADR-0081: independent without a scan fits each experiment alone; only sequential needs one.
-        if (project.fitting_mode == "sequential" && !project.sequential_fit.declared()) {
+        // edi ADR-0081: independent without a scan fits each experiment alone; sequential and parametric need one.
+        if ((project.fitting_mode == "sequential" || project.fitting_mode == "parametric") &&
+            !project.sequential_fit.declared()) {
             throw IoError("_fitting_mode.type is '" + project.fitting_mode +
                           "' but no _sequential_fit.data_dir is declared - a scan fit needs the "
                           "scan directory: " +
@@ -5131,6 +5150,22 @@ static Project load_project_folder(const std::string& directory, const WarningSi
     // ADR-0107: a shared parameter counts as free; a name that cannot be shared is dropped.
     for (const std::string& note : settle_parametric_shared(project)) {
         warn("crysta.domain.shared_ignored: " + note);
+    }
+    // ADR-0107: a start for a point the scan does not list is dropped (an unreadable folder checks nothing here).
+    if (project.sequential_fit.declared() && !project.sequential_fit.starts.empty()) {
+        try {
+            const ScanDatasets datasets = scan_datasets(project);
+            const std::set<std::string> points(datasets.files.begin(), datasets.files.end());
+            for (std::size_t i = project.sequential_fit.starts.size(); i-- > 0;) {
+                const std::string point = project.sequential_fit.starts[i]->point.value();
+                if (!points.contains(point)) {
+                    warn("crysta.domain.shared_ignored: start at point '" + point +
+                         "' dropped: the scan lists no such point");
+                    project.sequential_fit.starts.erase_at(i);
+                }
+            }
+        } catch (const std::exception&) {  // NOLINT(bugprone-empty-catch)
+        }
     }
     rename_for_saving(project, on_warning);
     return project;

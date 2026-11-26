@@ -2448,6 +2448,12 @@ NB_MODULE(_edi, m) {
                     throw;
                 }
                 complete_tensors_of(p.category.get());
+                // ADR-0107: a shared group has one value.
+                if (edi::Project* owner = project_of(p); owner != nullptr) {
+                    for (edi::Parameter* member : edi::shared_group(*owner, p)) {
+                        if (member != &p) member->value = value;
+                    }
+                }
             })
         .def_prop_rw(
             "uncertainty", [](const edi::Parameter& p) { return p.uncertainty.get(); },
