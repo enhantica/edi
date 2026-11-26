@@ -26,6 +26,8 @@ class ParameterItem : public QObject {
     Q_PROPERTY(double uncertainty READ uncertainty NOTIFY uncertaintyChanged)
     Q_PROPERTY(bool hasUncertainty READ hasUncertainty NOTIFY hasUncertaintyChanged)
     Q_PROPERTY(bool free READ isFree WRITE setFree NOTIFY freeChanged)
+    // ADR-0107: whether the parametric fit gives this parameter one value for every point; checking it also frees it.
+    Q_PROPERTY(bool shared READ isShared WRITE setShared NOTIFY sharedChanged)
     // False while the space group fixes the parameter or ties it to another (edi ADR-0019), and for a
     // descriptor that is no parameter: a page shows it disabled, with the value symmetry implies.
     Q_PROPERTY(bool refinable READ isRefinable NOTIFY refinableChanged)
@@ -91,7 +93,7 @@ class ParameterItem : public QObject {
     Q_PROPERTY(QString toolTip READ toolTip NOTIFY toolTipChanged)
 
    public:
-    enum Field { ValueField = 1, UncertaintyField = 2, FreeField = 4 };
+    enum Field { ValueField = 1, UncertaintyField = 2, FreeField = 4, SharedField = 8 };
     // The Analysis table's groups of rows no fit can vary, by crysta's reason (the owner, 2026-10-26): a value no fitted
     // experiment measures or crysta cannot vary yet, one symmetry fixes, one a constraint sets, a descriptor.
     enum FitGroup { NoGroup = 0, NotMeasured = 1, BySymmetry = 2, ByConstraint = 3, FixedSetting = 4 };
@@ -107,6 +109,8 @@ class ParameterItem : public QObject {
     bool hasUncertainty() const { return uncertainty_.has_value(); }
     bool isFree() const { return free_; }
     void setFree(bool free);
+    bool isShared() const { return shared_; }
+    void setShared(bool shared);
     bool isRefinable() const { return refinable_; }
     bool isFittable() const { return fittable_; }
     QString fitReason() const { return fit_reason_; }
@@ -203,6 +207,7 @@ class ParameterItem : public QObject {
     void uncertaintyChanged();
     void hasUncertaintyChanged();
     void freeChanged();
+    void sharedChanged();
     void refinableChanged();
     void fittableChanged();
     void fitReasonChanged();
@@ -237,6 +242,7 @@ class ParameterItem : public QObject {
     double value_;
     std::optional<double> uncertainty_;
     bool free_;
+    bool shared_ = false;
     bool refinable_;
     bool fittable_ = true;
     QString fit_reason_;

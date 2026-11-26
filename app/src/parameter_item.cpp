@@ -346,6 +346,16 @@ void ParameterItem::setFree(bool free) {
     setLastError(editor_.assign_parameter_free(*parameter, free));
 }
 
+void ParameterItem::setShared(bool shared) {
+    // Shared and Free are independent; a parameter symmetry sets follows its source instead.
+    if (shared && !refinable_) {
+        setLastError(symmetry_refusal());
+        return;
+    }
+    edi::Parameter* parameter = parameter_;
+    setLastError(editor_.assign_parameter_shared(*parameter, shared));
+}
+
 int ParameterItem::publish(bool formatted) {
     int changed = 0;
     const bool was_outside = outsideRange();
@@ -362,6 +372,10 @@ int ParameterItem::publish(bool formatted) {
         free_ = parameter_->free;
         changed |= FreeField;
     }
+    if (const bool shared = own_ == nullptr && editor_.parameter_shared(*parameter_); shared != shared_) {
+        shared_ = shared;
+        changed |= SharedField;
+    }
     if ((changed & ValueField) != 0) {
         emit valueChanged();
         emit sliderStepChanged();
@@ -377,6 +391,9 @@ int ParameterItem::publish(bool formatted) {
     }
     if ((changed & FreeField) != 0) {
         emit freeChanged();
+    }
+    if ((changed & SharedField) != 0) {
+        emit sharedChanged();
     }
     // A symmetry change alters how a value is written without changing it, so the text is read again each time.
     if (formatted) refreshFileText();

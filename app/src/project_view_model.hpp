@@ -742,6 +742,8 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     QString apply(const edi::Edit& change, bool structural) override;
     QString assign_parameter_value(edi::Parameter& parameter, double value) override;
     QString assign_parameter_free(edi::Parameter& parameter, bool free) override;
+    bool parameter_shared(const edi::Parameter& parameter) const override;
+    QString assign_parameter_shared(edi::Parameter& parameter, bool shared) override;
     QString apply_relation_edit(const edi::Edit& change) override;
     QString apply_relation_control(const edi::Edit& change, const ProjectEditor::RelationAction& action) override;
     RelationOutcome append_constraint(edi::Project&, edi::ParameterConstraint&&, const ProjectEditor::RelationAction&) override;

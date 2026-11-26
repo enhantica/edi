@@ -52,19 +52,19 @@ SideBarGroup {
     readonly property color freeTitleColor: !measured ? EaStyle.Colors.themeForegroundMinor : freeTitleHovered ? EaStyle.Colors.themeAccent : EaStyle.Colors.themeForeground
     // A cell's margin on the left, so "Max" and "Free" are an em apart (T1).
     readonly property real freeColumnWidth: Math.ceil(AppSizes.tableCellMargin + freeTitleText.advanceWidth + freeGap + freeArrowText.advanceWidth + freeInset)
-    // "Same for all" (edi ADR-0087 point 3): a switch on each experiment parameter tying it in every other experiment of
-    // its set to the template's, through alias and constraint rows. Not shown for now: the parametric fit will offer it
-    // through the Free box (ADR-0087, amended 2026-11-17).
-    readonly property bool sameShown: false
-    readonly property real sameColumnWidth: sameShown ? Math.ceil(sameTitleText.advanceWidth) + AppSizes.tableCellMargin * 2 + EaStyle.Sizes.fontPixelSize : 0
+    // Shared (edi ADR-0107): in the parametric fit, a parameter free with one value for every dataset of the scan.
+    // Shown in that mode only, beside Free, and independent of it: a shared parameter has one value for every dataset,
+    // fixed or free (owner, 2026-11-26).
+    readonly property bool sharedShown: measured && project !== null && project.analysis !== null && project.analysis.fittingMode === "parametric"
+    readonly property real sharedColumnWidth: sharedShown ? Math.ceil(sharedTitleText.advanceWidth) + AppSizes.tableCellMargin * 2 + EaStyle.Sizes.fontPixelSize : 0
     // Read again whenever the relation rows change.
     readonly property int relationRows: project && project.analysis ? project.analysis.constraints.count + project.analysis.aliases.count : 0
 
     TextMetrics {
-        id: sameTitleText
+        id: sharedTitleText
         font.family: EaStyle.Fonts.fontFamily
         font.pixelSize: EaStyle.Sizes.fontPixelSize
-        text: qsTr("Same for all")
+        text: qsTr("Shared")
     }
 
     TextMetrics {
@@ -420,7 +420,7 @@ SideBarGroup {
             // bounds, which are short (0, 1, inf). A fitted run changes values, never a column, so a fit measures no row.
             // Its columns by kind, measured from their content (DataTable.columnKinds); the widths are this table's
             // own rule below, which drops columns in a narrow sidebar.
-            columnKinds: ["index", "name", "value", "value", "unit", "uncertainty", "change", "number", "number"].concat(group.measured ? ["control", "control"] : []).concat(group.sameShown ? ["control"] : [])
+            columnKinds: ["index", "name", "value", "value", "unit", "uncertainty", "change", "number", "number"].concat(group.measured ? ["control", "control"] : []).concat(group.sharedShown ? ["control"] : [])
             onRowActivated: row => group.selected = parameterFilter.parameterAt(row)
 
             // A layout of its own (the owner, 2026-10-27): every column as wide as its type (ADR-0103 decision 4), the
@@ -480,8 +480,8 @@ SideBarGroup {
             // A dropped column takes no width and no spacing: only the shown columns' gaps are counted, so their
             // width goes to the name rather than to empty space (the owner, 2026-11-22).
             function roomAt(tableWidth: real, dropped: var): real {
-                const shown = (dropped.includes(0) ? 0 : 1) + 1 + fittedColumns.filter(column => !dropped.includes(column)).length + (group.measured ? 1 : 0) + (group.sameShown ? 1 : 0);
-                return tableWidth - rowPadding * 2 - EaStyle.Sizes.borderThickness * 2 - EaStyle.Sizes.tableColumnSpacing * (shown - 1) - (dropped.includes(0) ? 0 : numberColumnWidth) - freeWidth - group.sameColumnWidth - nameMinimum;
+                const shown = (dropped.includes(0) ? 0 : 1) + 1 + fittedColumns.filter(column => !dropped.includes(column)).length + (group.measured ? 1 : 0) + (group.sharedShown ? 1 : 0);
+                return tableWidth - rowPadding * 2 - EaStyle.Sizes.borderThickness * 2 - EaStyle.Sizes.tableColumnSpacing * (shown - 1) - (dropped.includes(0) ? 0 : numberColumnWidth) - freeWidth - group.sharedColumnWidth - nameMinimum;
             }
             readonly property real fittedRoom: roomAt(width, droppedColumns)
             function droppedAt(tableWidth: real): var {
@@ -580,7 +580,7 @@ SideBarGroup {
             // the sidebar takes from about 1280 px up (AppSizes.sideBarFullWidth; the owner, 2026-11-22), noted with the
             // sidebar's own insets. (With the table's full margin on every column it came to about 950 px, leaving the
             // main view less than its tab bar at 1280.)
-            readonly property real allColumnsWidth: rowPadding * 2 + EaStyle.Sizes.borderThickness * 2 + EaStyle.Sizes.tableColumnSpacing * (9 + (group.sameShown ? 1 : 0)) + numberColumnWidth + freeWidth + group.sameColumnWidth + nameContent + fittedColumns.reduce((sum, column) => sum + contentOf(column), 0)
+            readonly property real allColumnsWidth: rowPadding * 2 + EaStyle.Sizes.borderThickness * 2 + EaStyle.Sizes.tableColumnSpacing * (9 + (group.sharedShown ? 1 : 0)) + numberColumnWidth + freeWidth + group.sharedColumnWidth + nameContent + fittedColumns.reduce((sum, column) => sum + contentOf(column), 0)
             // The sidebar's own insets around this table.
             readonly property real sideBarInsets: EaStyle.Sizes.groupBoxSpacing + EaStyle.Sizes.sideBarPadding
             // The table width that shows exactly the columns left after `dropped` (each at its fixed width, the name at
@@ -633,7 +633,7 @@ SideBarGroup {
             // Past one column spacing the spare is an empty column before Free (or the row's right end without it);
             // up to one spacing the name holds it (the owner, 2026-11-23: at most one spacing past the widest name).
             // The row without the spare: the name at the smaller of its content and its room.
-            readonly property var baseColumns: [shows(0) ? numberColumnWidth : 0, Math.min(nameRoom, Math.ceil(nameContent))].concat(fittedColumns.map(column => fittedColumn(column))).concat(group.measured ? [freeWidth] : []).concat(group.sameShown ? [group.sameColumnWidth] : [])
+            readonly property var baseColumns: [shows(0) ? numberColumnWidth : 0, Math.min(nameRoom, Math.ceil(nameContent))].concat(fittedColumns.map(column => fittedColumn(column))).concat(group.measured ? [freeWidth] : []).concat(group.sharedShown ? [group.sharedColumnWidth] : [])
             // What the row leaves of the table's inner width, its spacings counted between the columns that take width.
             readonly property real leftOver: {
                 const taking = baseColumns.filter(column => column > 0.5);
@@ -649,7 +649,7 @@ SideBarGroup {
             readonly property bool spares: afterName > EaStyle.Sizes.tableColumnSpacing + 1
             readonly property real spareWidth: group.measured && spares ? afterName - EaStyle.Sizes.tableColumnSpacing : 0
             readonly property real nameWidth: baseColumns[1] + nameGrow + (spares ? 0 : Math.max(0, afterName))
-            readonly property var wantedColumns: [shows(0) ? numberColumnWidth : 0, nameWidth].concat(fittedColumns.map(column => fittedColumn(column))).concat(group.measured ? [spareWidth, freeWidth] : []).concat(group.sameShown ? [group.sameColumnWidth] : [])
+            readonly property var wantedColumns: [shows(0) ? numberColumnWidth : 0, nameWidth].concat(fittedColumns.map(column => fittedColumn(column))).concat(group.measured ? [spareWidth, freeWidth] : []).concat(group.sharedShown ? [group.sharedColumnWidth] : [])
             // Applied a moment later: new widths remake rows and measure them again, which would otherwise feed back
             // into the widths while they are being worked out.
             function applyColumns() {
@@ -786,10 +786,10 @@ SideBarGroup {
                 }
                 EaComponents.ListViewLabel {
                     elide: Text.ElideRight
-                    objectName: "parameters.sameHeader"
-                    visible: group.sameShown
+                    objectName: "parameters.sharedHeader"
+                    visible: group.sharedShown
                     horizontalAlignment: Text.AlignHCenter
-                    text: qsTr("Same for all")
+                    text: qsTr("Shared")
                 }
             }
 
@@ -981,22 +981,23 @@ SideBarGroup {
                 }
                 Item {
                     property int horizontalAlignment: Text.AlignHCenter
-                    visible: group.sameShown
+                    visible: group.sharedShown
                     height: parent.height
 
+                    // Enabled wherever Free is; checking it never changes Free (owner, 2026-11-26).
                     EaComponents.ListViewCheckBox {
-                        id: sameBox
+                        id: sharedBox
                         anchors.fill: parent
                         horizontalAlignment: Text.AlignHCenter
-                        objectName: `parameters.same.${row.index}`
-                        readonly property bool applies: group.sameShown && group.relationRows >= 0 && group.project.sameForAllApplies(row.parameter)
-                        visible: applies
-                        checked: applies && group.relationRows >= 0 && group.project.sameForAll(row.parameter)
+                        objectName: `parameters.shared.${row.index}`
+                        enabled: group.measured && row.parameter !== null && (row.parameter.fittable || row.parameter.shared)
+                        checked: row.parameter ? row.parameter.shared : false
                         onToggled: {
-                            group.project.setSameForAll(row.parameter, checked);
-                            checked = Qt.binding(() => sameBox.applies && group.relationRows >= 0 && group.project.sameForAll(row.parameter));
+                            row.parameter.shared = checked;
+                            checked = Qt.binding(() => row.parameter ? row.parameter.shared : false);
                         }
-                        ToolTip.text: qsTr("The same value in every experiment of the set, through a constraint each")
+                        ToolTip.text: row.parameter && !row.parameter.fittable ? qsTr("Cannot be fitted: %1").arg(row.parameter.fitReason)
+                                                                                : qsTr("One value for every dataset of the scan")
                     }
                 }
             }

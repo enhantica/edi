@@ -5945,6 +5945,25 @@ QString ProjectViewModel::assign_parameter_free(edi::Parameter& parameter, bool 
     return input->outcome.applied ? QString{} : input->outcome.message;
 }
 
+bool ProjectViewModel::parameter_shared(const edi::Parameter& parameter) const {
+    return edi::parametric_shared(*project_, parameter);
+}
+
+QString ProjectViewModel::assign_parameter_shared(edi::Parameter& parameter, bool shared) {
+    if (const auto refusal = free_refusal(); !refusal.isEmpty()) return refusal;
+    const PublicationScope publication(*this);
+    if (edi::parametric_shared(*project_, parameter) == shared) return {};
+    QString pending = fit_ != nullptr && fit_->running() ? tr("The project cannot be edited while a fit is running")
+                                                         : editReadinessRefusal(false);
+    if (!pending.isEmpty()) {
+        if (!retired_) setLastError(pending);
+        return pending;
+    }
+    const EditOutcome result = applyRecordedEdit(edi::Edit::parameter_shared(*project_, parameter, shared), false);
+    if (!retired_ && !result.applied) setLastError(result.message);
+    return result.applied ? QString{} : result.message;
+}
+
 QString ProjectViewModel::apply(const edi::Edit& change, bool structural) {
     const PublicationScope publication(*this);
     const EditOutcome result = applyEdit(change, structural);
