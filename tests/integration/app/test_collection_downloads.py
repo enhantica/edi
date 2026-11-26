@@ -438,6 +438,19 @@ def test_an_archive_member_outside_the_name_grammar_refuses(tmp_path, member):
     )
 
 
+def test_a_project_archive_accepts_the_renamed_second_experiment(tmp_path):
+    member = 'experiments/second.edi'
+    fixture = Path(__file__).resolve().parents[2] / 'fixtures/fit_quality/gui' / member
+    experiment = fixture.read_text(encoding='utf-8')
+    collection = project_collection(
+        tmp_path, [('project.edi', 'data_project\n'), (member, experiment)]
+    )
+    project = Path(edi.download_data('lbco-project', tmp_path / 'out', source=collection))
+    assert (project / member).read_text(encoding='utf-8') == experiment, (
+        'The project archive retains the renamed experiment under its portable path'
+    )
+
+
 @pytest.mark.parametrize('field', ['id', 'path'])
 def test_a_device_name_in_the_index_refuses(tmp_path, field):
     collection = tmp_path / 'collection'

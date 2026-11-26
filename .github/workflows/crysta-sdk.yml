@@ -1,9 +1,9 @@
 name: Build crysta
 
 # The crysta SDK edi builds against (edi ADR-0083): pixi.toml's CRYSTA_COMMIT, built here once per commit and
-# platform and kept in the cache under that commit, with crysta's source at the same commit. Every edi job and
-# product takes it from there (.github/actions/crysta-sdk). Only this workflow reads crysta, with the app's
-# read-only token.
+# platform and kept in the cache under that commit. Every edi job and product takes it from there
+# (.github/actions/crysta-sdk). A job that needs crysta's source fetches it itself with the app's read-only token
+# (.github/actions/crysta-source); none stores or prints it.
 
 on:
   workflow_dispatch:
@@ -32,7 +32,7 @@ jobs:
           import hashlib, os
           from pathlib import Path
           digest = hashlib.sha256()
-          for name in ['.github/workflows/crysta-sdk.yml', 'tools/ci/crysta_source_receipt.py', 'tools/ci/crysta_source_archive.py', 'tools/ci/crysta_sdk.py', '.github/actions/setup-pixi/action.yml']:
+          for name in ['.github/workflows/crysta-sdk.yml', 'tools/ci/crysta_sdk.py', '.github/actions/setup-pixi/action.yml']:
               digest.update(name.encode() + b'\0' + Path(name).read_bytes() + b'\0')
           with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
               output.write(f'sha={digest.hexdigest()}\n')
@@ -56,17 +56,16 @@ jobs:
     runs-on: ${{ matrix.runner }}
     defaults:
       run:
-        shell: bash
+        shell: python3 tools/ci/public_log.py {0}
     concurrency:
       group: crysta-sdk-${{ matrix.platform }}-${{ needs.resolve.outputs.sha }}-${{ needs.resolve.outputs.recipe }}
       cancel-in-progress: false
       queue: max
     steps:
-      - name: Enable Windows-compatible Git index paths
+      - name: Enable long paths on Windows
         if: runner.os == 'Windows'
-        run: |
-          git config --global core.longpaths true
-          git config --global core.protectNTFS false
+        shell: bash
+        run: git config --global core.longpaths true
       - uses: actions/checkout@v5
         with:
           sparse-checkout-cone-mode: false
@@ -81,43 +80,31 @@ jobs:
         with:
           toolset: '14.44'
       - id: pin
+        shell: bash
         run: bash tools/ci/crysta-source.sh
       - name: Confirm the resolved engine identity
+        shell: bash
         env:
           RESOLVED_SHA: ${{ needs.resolve.outputs.sha }}
           CHECKED_OUT_SHA: ${{ steps.pin.outputs.sha }}
         run: test "$RESOLVED_SHA" = "$CHECKED_OUT_SHA"
       - id: cache
-        uses: actions/cache@v4
+        uses: actions/cache/restore@v4
         with:
           path: crysta-sdk-archives
-          key: crysta-sdk-v3-${{ matrix.platform }}-${{ needs.resolve.outputs.sha }}-${{ needs.resolve.outputs.recipe }}
-      - name: Mint a crysta read token
-        if: steps.cache.outputs.cache-hit != 'true'
-        id: token
-        uses: actions/create-github-app-token@v2
-        with:
-          app-id: ${{ vars.ENHANTICA_APP_ID }}
-          private-key: ${{ secrets.ENHANTICA_APP_KEY }}
-          owner: enhantica
-          repositories: crysta
-          permission-contents: read
-      - name: Check out crysta at the pinned commit
-        if: steps.cache.outputs.cache-hit != 'true'
-        env:
-          TOKEN: ${{ steps.token.outputs.token }}
-          SHA: ${{ steps.pin.outputs.sha }}
-        run: |
-          git init -q "$RUNNER_TEMP/crysta"
-          git -C "$RUNNER_TEMP/crysta" fetch -q --depth 1 "https://x-access-token:$TOKEN@github.com/enhantica/crysta" "$SHA"
-          git -C "$RUNNER_TEMP/crysta" checkout -q --detach "$SHA"
+          key: crysta-sdk-v4-${{ matrix.platform }}-${{ needs.resolve.outputs.sha }}-${{ needs.resolve.outputs.recipe }}
       - name: Set up Python for SDK metadata checks
-        if: steps.cache.outputs.cache-hit != 'true'
         id: sdk-python
         uses: actions/setup-python@v6
         with:
           python-version: '3.14'
           update-environment: false
+      - name: crysta's source, whose lines no later step prints or stores
+        uses: ./.github/actions/crysta-source
+        with:
+          sha: ${{ needs.resolve.outputs.sha }}
+          app-id: ${{ vars.ENHANTICA_APP_ID }}
+          private-key: ${{ secrets.ENHANTICA_APP_KEY }}
       - name: Check SDK and consumer ABI package locks before compilation
         if: steps.cache.outputs.cache-hit != 'true'
         run: |
@@ -156,10 +143,10 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: ${{ runner.temp }}/crysta-ccache
-          key: crysta-objects-v1-${{ matrix.platform }}-${{ steps.compiler-inputs.outputs.lock }}-${{ needs.resolve.outputs.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          key: ccache2-crysta-sdk-${{ matrix.platform }}-${{ steps.compiler-inputs.outputs.lock }}-${{ needs.resolve.outputs.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: |
-            crysta-objects-v1-${{ matrix.platform }}-${{ steps.compiler-inputs.outputs.lock }}-
-            crysta-objects-v1-${{ matrix.platform }}-
+            ccache2-crysta-sdk-${{ matrix.platform }}-${{ steps.compiler-inputs.outputs.lock }}-
+            ccache2-crysta-sdk-${{ matrix.platform }}-
       - name: Set up pixi for crysta
         if: steps.cache.outputs.cache-hit != 'true'
         uses: ./.github/actions/setup-pixi
@@ -169,7 +156,7 @@ jobs:
           # SDK archives and compiler objects provide the useful warm paths.
           # Whole builder environments crowd out consumer/WASM caches.
           cache: false
-      - name: Build, test and pack the SDK, and archive the source
+      - name: Build, test and pack the SDK
         if: steps.cache.outputs.cache-hit != 'true'
         env:
           SHA: ${{ steps.pin.outputs.sha }}
@@ -181,26 +168,27 @@ jobs:
           (cd "$RUNNER_TEMP/crysta" && pixi run -e cpp-ci sdk-pack "$SHA" "${{ matrix.platform }}" "$out") || sdk_status=$?
           (cd "$RUNNER_TEMP/crysta" && pixi run -e cpp-ci --skip-deps ccache --show-stats)
           [ "$sdk_status" -eq 0 ] || exit "$sdk_status"
-          # The source with the receipt of its Git objects, which crysta's web observer builders read from an
-          # export that has no .git.
-          git -C "$RUNNER_TEMP/crysta" archive --format=tar -o "$RUNNER_TEMP/crysta-src.tar" "$SHA"
-          python3 tools/ci/crysta_source_receipt.py "$RUNNER_TEMP/crysta" "$SHA" "$RUNNER_TEMP/runner-source-objects.json"
-          python3 tools/ci/crysta_source_archive.py append "$RUNNER_TEMP/crysta-src.tar" "$RUNNER_TEMP/runner-source-objects.json"
-          gzip -n -c "$RUNNER_TEMP/crysta-src.tar" >"$out/crysta-src-$SHA.tar.gz"
           ls -l "$out"
+      # crysta's tracked record holds its review history too; the SDK carries the public names alone.
+      - name: Put the generated interface record into the SDK
+        if: steps.cache.outputs.cache-hit != 'true'
+        env:
+          SHA: ${{ needs.resolve.outputs.sha }}
+        run: python3 tools/ci/crysta_sdk.py surface --source "$CRYSTA_SRC" --commit "$SHA" "crysta-sdk-archives/crysta-sdk-$SHA-${{ matrix.platform }}.tar.gz"
       - name: Save the SDK compiler cache
         if: ${{ !cancelled() && steps.compiler-inputs.outcome == 'success' && steps.compiler-cache.outcome == 'success' && steps.cache.outputs.cache-hit != 'true' }}
-        uses: actions/cache/save@v4
+        uses: ./.github/actions/store
         with:
+          ccache: pixi run --manifest-path "$RUNNER_TEMP/crysta/pixi.toml" -e cpp-ci --skip-deps python
           path: ${{ runner.temp }}/crysta-ccache
-          key: crysta-objects-v1-${{ matrix.platform }}-${{ steps.compiler-inputs.outputs.lock }}-${{ needs.resolve.outputs.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
-      - name: Require the complete SDK and source archives
+          key: ccache2-crysta-sdk-${{ matrix.platform }}-${{ steps.compiler-inputs.outputs.lock }}-${{ needs.resolve.outputs.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+      - name: Require the complete SDK archive
         env:
           SHA: ${{ needs.resolve.outputs.sha }}
           CRYSTA_SDK_PLATFORM: ${{ matrix.platform }}
         run: |
           cd crysta-sdk-archives
-          for file in "crysta-sdk-$SHA-$CRYSTA_SDK_PLATFORM.tar.gz" "crysta-sdk-$SHA-$CRYSTA_SDK_PLATFORM.tar.gz.sha256" "crysta-src-$SHA.tar.gz"; do
+          for file in "crysta-sdk-$SHA-$CRYSTA_SDK_PLATFORM.tar.gz" "crysta-sdk-$SHA-$CRYSTA_SDK_PLATFORM.tar.gz.sha256"; do
             test -s "$file" || { echo "Missing SDK producer output: $file" >&2; exit 1; }
           done
           python3 - <<'PYTHON'
@@ -215,17 +203,29 @@ jobs:
           if checksum != f'{digest.hexdigest()}  {archive.name}\n':
               raise RuntimeError(f'SDK checksum does not bind the requested archive: {archive}')
           PYTHON
-      - uses: actions/upload-artifact@v4
+      - name: Keep the SDK for the next run
+        if: steps.cache.outputs.cache-hit != 'true'
+        uses: ./.github/actions/store
         with:
-          name: crysta-sdk-${{ matrix.platform }}
+          key: ${{ steps.cache.outputs.cache-primary-key }}
+          path: crysta-sdk-archives
+      - uses: ./.github/actions/store
+        with:
+          artifact: crysta-sdk-${{ matrix.platform }}
           path: crysta-sdk-archives
           retention-days: 30
           if-no-files-found: error
+      # The reports themselves hold the compared expressions; the summary names the cases and lines.
+      - name: Say which SDK tests failed
+        if: ${{ failure() && !cancelled() }}
+        env:
+          SHA: ${{ needs.resolve.outputs.sha }}
+        run: python3 tools/ci/sdk_red_summary.py "$RUNNER_TEMP/crysta/build/sdk-pack-red/$SHA" "$RUNNER_TEMP/sdk-red/summary.json"
       - name: Retain failed SDK native observations
         if: ${{ failure() && !cancelled() }}
-        uses: actions/upload-artifact@v4
+        uses: ./.github/actions/store
         with:
-          name: crysta-sdk-red-${{ matrix.platform }}-${{ needs.resolve.outputs.sha }}
-          path: ${{ runner.temp }}/crysta/build/sdk-pack-red/${{ needs.resolve.outputs.sha }}
+          artifact: crysta-sdk-red-${{ matrix.platform }}-${{ needs.resolve.outputs.sha }}
+          path: ${{ runner.temp }}/sdk-red/summary.json
           retention-days: 7
           if-no-files-found: ignore

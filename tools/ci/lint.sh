@@ -14,6 +14,19 @@ case "${1:-all}" in
 esac
 status=0
 failed=()
+# What CI may store and print of crysta's source, read from the workflows with any Python that has PyYAML.
+if [ "${1:-all}" != style ]; then
+    if ! python3 tools/ci/portable_paths.py; then
+        status=1
+        failed+=(portable-paths)
+    fi
+    with=(python3)
+    python3 -c 'import yaml' 2>/dev/null || with=(pixi run python)
+    if ! "${with[@]}" tools/ci/source_publishers.py; then
+        status=1
+        failed+=(source-publishers)
+    fi
+fi
 for task in "${tasks[@]}"; do
     if ! pixi run "$task"; then
         status=1

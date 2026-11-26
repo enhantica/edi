@@ -1,0 +1,45 @@
+name: crysta source
+description: >-
+  Put crysta's source at one commit on the runner with the lists its output checks read (edi ADR-0083). Every step
+  after it runs under tools/ci/public_log.py.
+inputs:
+  sha:
+    description: The full crysta commit
+    required: true
+  app-id:
+    description: The GitHub App that reads crysta
+    required: true
+  private-key:
+    description: That app's key
+    required: true
+  history:
+    description: List every commit edi's history has pinned as well, for a job that publishes what another run made
+    default: 'false'
+  receipts:
+    description: A folder of receipts, whose commits are listed as well
+    default: ''
+  site:
+    description: A site that keeps earlier content, whose commits are listed as well and recorded in it
+    default: ''
+runs:
+  using: composite
+  steps:
+    - name: Mint a crysta read token
+      id: token
+      uses: actions/create-github-app-token@v2
+      with:
+        app-id: ${{ inputs.app-id }}
+        private-key: ${{ inputs.private-key }}
+        owner: enhantica
+        repositories: crysta
+        permission-contents: read
+    - name: Fetch, list and prove the output filter
+      shell: bash
+      env:
+        TOKEN: ${{ steps.token.outputs.token }}
+        SHA: ${{ inputs.sha }}
+        HISTORY: ${{ inputs.history == 'true' && '--history' || '' }}
+        RECEIPTS: ${{ inputs.receipts }}
+        SITE: ${{ inputs.site }}
+      run: >-
+        python3 tools/ci/crysta_fetch.py "$SHA" $HISTORY ${RECEIPTS:+--receipts "$RECEIPTS"} ${SITE:+--site "$SITE"}

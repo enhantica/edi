@@ -6,13 +6,12 @@ import json
 import os
 import re
 import shlex
-import subprocess
 import sys
 import tomllib
 
 import yaml
 
-from tests.fixtures.native_process import environment_bash
+from tests.fixtures.fast_ci.workflow import run_shell
 from tests.system.py.ci_execution_contract import (
     contexts,
     prerequisites_ready,
@@ -69,29 +68,20 @@ def invoke_step(tmp_path, workflow, job, step, ctx, *, failure=''):
         newline='\n',
     )
     program.chmod(0o755)
-    _shell, env = run_settings(workflow, job, step, ctx)
-    result = subprocess.run(
-        [
-            environment_bash(),
-            '--noprofile',
-            '--norc',
-            '-e',
-            '-o',
-            'pipefail',
-            '-c',
-            render(step['run'], ctx),
-        ],
-        cwd=directory,
-        env={
+    shell, env = run_settings(workflow, job, step, ctx)
+    script = directory / 'step.sh'
+    script.write_text(render(step['run'], ctx), encoding='utf-8')
+    result = run_shell(
+        shell or 'bash',
+        script,
+        directory,
+        {
             **os.environ,
             **env,
             'PATH': str(directory) + ':/usr/bin:/bin',
             'CADENCE_CALLS': str(calls),
             'CADENCE_FAILURE': failure,
         },
-        capture_output=True,
-        text=True,
-        check=False,
         timeout=3,
     )
     observed = (

@@ -10,7 +10,7 @@
     ],
     "id": "05-project-text",
     "image": "05-project-text.webp",
-    "image_sha256": "21aafd96dcd0ba5ac9cfdb03803db6bcd7cdbb65d19914c282f1fd69ae5e9d75",
+    "image_sha256": "54299104f3a09c98ae11b0b5d510a9afce400c3fca3fafb48f0953c2e50810c3",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -336,7 +336,7 @@
             "bounds": [
                 183.4,
                 253.70000000000002,
-                567,
+                596,
                 19
             ],
             "enabled": true,
@@ -344,7 +344,7 @@
             "visible_bounds": [
                 183.4,
                 253.70000000000002,
-                567,
+                596,
                 19.00000000000003
             ]
         },
@@ -352,7 +352,7 @@
             "bounds": [
                 183.4,
                 284.6,
-                567,
+                596,
                 20
             ],
             "enabled": true,
@@ -360,7 +360,7 @@
             "visible_bounds": [
                 183.4,
                 284.6,
-                567,
+                596,
                 20
             ]
         },
@@ -368,15 +368,15 @@
             "bounds": [
                 183.4,
                 329.40000000000003,
-                567,
+                596,
                 19
             ],
             "enabled": true,
-            "label": "/tmp/EasyDiffraction-OOcPva/pd-neut-cwl_y2o3-spodi",
+            "label": "/tmp/EasyDiffraction-oJHgIq/pd-neut-cwl_y2o3-spodi/pd-neut-cwl_y2o3-spodi",
             "visible_bounds": [
                 183.4,
                 329.40000000000003,
-                567,
+                596,
                 19
             ]
         },
@@ -384,7 +384,7 @@
             "bounds": [
                 31.5,
                 140,
-                463.109375,
+                736,
                 58
             ],
             "enabled": true,
@@ -392,7 +392,7 @@
             "visible_bounds": [
                 31.5,
                 140,
-                463.109375,
+                736,
                 58
             ]
         },
@@ -400,7 +400,7 @@
             "bounds": [
                 183.4,
                 222.8,
-                567,
+                596,
                 19
             ],
             "enabled": true,
@@ -408,13 +408,13 @@
             "visible_bounds": [
                 183.4,
                 222.8,
-                567,
+                596,
                 19
             ]
         },
         "sideBar.tab.basic": {
             "bounds": [
-                770,
+                799,
                 77,
                 43.40625,
                 42
@@ -422,7 +422,7 @@
             "enabled": true,
             "label": "Main",
             "visible_bounds": [
-                770,
+                799,
                 77,
                 43.40625,
                 42
@@ -430,7 +430,7 @@
         },
         "sideBar.tab.extras": {
             "bounds": [
-                813.40625,
+                842.40625,
                 77,
                 45.125,
                 42
@@ -438,7 +438,7 @@
             "enabled": true,
             "label": "Extra",
             "visible_bounds": [
-                813.40625,
+                842.40625,
                 77,
                 45.125,
                 42
@@ -446,7 +446,7 @@
         },
         "sideBar.tab.settings": {
             "bounds": [
-                897.703125,
+                926.703125,
                 77,
                 62.8125,
                 42
@@ -454,7 +454,7 @@
             "enabled": true,
             "label": "Settings",
             "visible_bounds": [
-                897.703125,
+                926.703125,
                 77,
                 62.8125,
                 42
@@ -462,7 +462,7 @@
         },
         "sideBar.tab.text": {
             "bounds": [
-                858.53125,
+                887.53125,
                 77,
                 39.171875,
                 42
@@ -470,10 +470,26 @@
             "enabled": true,
             "label": "Text",
             "visible_bounds": [
-                858.53125,
+                887.53125,
                 77,
                 39.171875,
                 42
+            ]
+        },
+        "sideBar.width": {
+            "bounds": [
+                1445,
+                84,
+                21,
+                28
+            ],
+            "enabled": true,
+            "label": "arrows-alt-h",
+            "visible_bounds": [
+                1445,
+                84,
+                21,
+                28
             ]
         },
         "statusBar": {
@@ -649,7 +665,7 @@
         },
         "text.view": {
             "bounds": [
-                784,
+                813,
                 133,
                 588.34375,
                 180
@@ -657,7 +673,7 @@
             "enabled": true,
             "label": "_metadata.name             pd-neut-cwl_y2o3-spodi\n_metadata.title            \"Y₂O₃ [Ia-3] - SPODI @ FRM II\"\n_metadata.description\n;\nAnisotropic β tensors tied by site symmetry · Coordinates, profile and\nbackground\n;\n_metadata.authors          \"EasyDiffract",
             "visible_bounds": [
-                784,
+                813,
                 133,
                 588.34375,
                 180
@@ -681,17 +697,17 @@
         },
         "workflow.home.sidebarHost": {
             "bounds": [
-                770,
+                799,
                 77,
-                710,
+                681,
                 681
             ],
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                770,
+                799,
                 77,
-                710,
+                681,
                 681
             ]
         },
@@ -699,7 +715,7 @@
             "bounds": [
                 0,
                 77,
-                770,
+                799,
                 681
             ],
             "enabled": true,
@@ -707,39 +723,39 @@
             "visible_bounds": [
                 0,
                 77,
-                770,
+                799,
                 681
             ]
         },
         "workflow.project.manualSidebar": {
             "bounds": [
-                770,
+                799,
                 77,
-                710,
+                681,
                 681
             ],
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                770,
+                799,
                 77,
-                710,
+                681,
                 681
             ]
         },
         "workflow.project.sidebarHost": {
             "bounds": [
-                770,
+                799,
                 77,
-                710,
+                681,
                 681
             ],
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                770,
+                799,
                 77,
-                710,
+                681,
                 681
             ]
         }
@@ -754,8 +770,8 @@
     ],
     "qt_version": "6.11.2",
     "schema": 1,
-    "script_sha256": "a0cd8f7d599e386e3db4cf752e3ae7050f99ce60356dedf20f4c9a1fbb3ecee3",
-    "source_revision": "66250b0826244790ae402c00384ea8fca62ae552",
+    "script_sha256": "3a344097f44704ca246ad665209bd5da89b1884c7e896cbd5981e2dcf5ec2bba",
+    "source_revision": "1bbb542a5be8bc99e889b80989c28c7404fbc7e3",
     "state": {
         "experiments": 0,
         "fit_outcome": "",

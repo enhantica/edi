@@ -49,7 +49,8 @@ def app_result():
         cwd=ROOT,
         env=environment,
         capture_output=True,
-        text=True,
+        encoding='utf-8',
+        errors='backslashreplace',
         check=False,
         timeout=600,
     )

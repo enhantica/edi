@@ -12,8 +12,8 @@ from pathlib import Path
 import pytest
 
 from tests.fixtures.native_process import environment_bash
+from tests.fixtures.native_transport import SOURCE_BYTES, SOURCE_MEMBER, world
 from tests.fixtures.native_transport import run as native
-from tests.fixtures.native_transport import world
 from tests.integration.py.test_e09_t75_native_workflow import ROSTER
 
 
@@ -102,13 +102,15 @@ def test_intermediate_native_producer_packs_the_branch_sdk_without_repinning(
 def test_every_native_consumer_restores_the_branch_build_and_rechecks_bytes(
     tmp_path, consumer, platform, event
 ):
-    context = world(tmp_path, platform, event)
+    context = world(tmp_path, platform, event, export_source=True)
     folder, _ = independent_artifact(context)
     shutil.rmtree(context.root / 'build/ci')
     context.env |= {'EDI_NATIVE_ARTIFACT': '1', 'GITHUB_JOB': consumer}
+    exported = context.root / 'build/crysta-src' / SOURCE_MEMBER
     for attempt in range(2):
         if attempt:
             (context.root / 'build/ci/cli/easydiffraction').write_text('overwritten cache bytes\n')
+            exported.write_bytes(b'wrong source with the same recorded pin')
         dependency = subprocess.run(
             [environment_bash(), 'tools/ci/core-build.sh'],
             cwd=context.root,
@@ -122,6 +124,9 @@ def test_every_native_consumer_restores_the_branch_build_and_rechecks_bytes(
             'Every actual core dependency restores and rechecks native transport: '
             + dependency.stdout
             + dependency.stderr
+        )
+        assert exported.read_bytes() == SOURCE_BYTES, (
+            'The pinned checkout export restores the SDK tree even after local source bytes change'
         )
         for relative, payload in context.payloads.items():
             assert (context.root / relative).read_bytes() == payload, (

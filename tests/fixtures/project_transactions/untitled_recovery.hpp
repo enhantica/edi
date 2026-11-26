@@ -118,13 +118,13 @@ QJsonObject untitledPublication(const QString& mode) {
     const auto decision = publication.check();
     need(decision.outcome == QLatin1String("go"), "The unmodified staged snapshot enters the actual precommit check");
     const bool commit = mode != QLatin1String("refused");
-    const QString durable = temp.filePath("committed");
-    if (commit) copy(publication.folder, durable);
-    const bool file = QFileInfo::exists(durable + "/project.edi");
+    const QString committedFolder = temp.filePath("committed");
+    if (commit) copy(publication.folder, committedFolder);
+    const bool file = QFileInfo::exists(committedFolder + "/project.edi");
     QString title;
     if (file)
         title = QString::fromStdString(
-            edi::load_project(durable.toStdString(), edi::ProjectLoadMode::Construction).metadata.title);
+            edi::load_project(committedFolder.toStdString(), edi::ProjectLoadMode::Construction).metadata.title);
     WebStorageAnswer answer;
     answer.ok = commit;
     answer.outcome = commit ? QStringLiteral("published") : QStringLiteral("rejected");

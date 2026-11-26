@@ -1,6 +1,6 @@
 name: crysta SDK
 description: >-
-  Download this run's qualified SDK and source from .github/workflows/crysta-sdk.yml
+  Download this run's qualified SDK from .github/workflows/crysta-sdk.yml
   (edi ADR-0083), and point the build at them. A job using it needs the crysta-sdk job.
 inputs:
   platform:

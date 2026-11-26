@@ -55,8 +55,12 @@ inline void ui_trace(const char*, QJsonObject = {}) {}
 inline void ui_trace_group(const std::vector<std::pair<const char*, QJsonObject>>&) {}
 inline qint64 ui_trace_next_frame() { return 0; }
 inline qint64 ui_trace_frame_synced() { return 0; }
-#define EDI_UI_TRACE(...) \
-    do {                  \
+// Compiled but never run, so what only a trace reads is not an unused variable.
+#define EDI_UI_TRACE(...)                     \
+    do {                                      \
+        if constexpr (false) {                \
+            ::edi_app::ui_trace(__VA_ARGS__); \
+        }                                     \
     } while (false)
 #endif
 

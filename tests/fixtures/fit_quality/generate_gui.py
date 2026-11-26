@@ -6,8 +6,8 @@ from pathlib import Path
 root = Path(__file__).resolve().parent
 shutil.copytree(root.parent / 'e04_t1/editable-project', root / 'gui', dirs_exist_ok=True)
 experiment = root / 'gui/experiments/hrpt.edi'
-(root / 'gui/experiments/aux.edi').write_text(
-    experiment.read_text().replace('data_hrpt', 'data_aux')
+(root / 'gui/experiments/second.edi').write_text(
+    experiment.read_text().replace('data_hrpt', 'data_second')
 )
 analysis = root / 'gui/analysis/analysis.edi'
 analysis.write_text(
@@ -17,7 +17,7 @@ loop_
 _joint_fit.experiment_id
 _joint_fit.weight
 hrpt 1
-aux 1
+second 1
 _fit_result.result_kind deterministic
 _fit_result.success true
 _fit_result.iterations 17
@@ -37,14 +37,14 @@ _fit_result_bank.prof_cr_factor
 _fit_result_bank.prof_cwr_factor
 _fit_result_bank.chi_square
 hrpt 123 0.1234 0.0876 0.0654 0.1876 0.2234 3.56
-aux 123 0.3123 0.2154 0.0987 0.4156 0.5123 7.89
+second 123 0.3123 0.2154 0.0987 0.4156 0.5123 7.89
 loop_
 _fit_result_phase.experiment_id
 _fit_result_phase.structure_id
 _fit_result_phase.bragg_r_factor
 _fit_result_phase.f_r_factor
 hrpt lbco 0.0432 0.0210
-aux lbco 0.1432 0.1210
+second lbco 0.1432 0.1210
 """
 )
 

@@ -46,6 +46,14 @@ void MeasuredLayer::setFillColor(const QColor& color) {
     }
 }
 
+bool MeasuredLayer::holds(const QList<QPointF>& points, const QList<double>& low, const QList<double>& high) const {
+    const auto same = [](double a, double b) { return a == b || (std::isnan(a) && std::isnan(b)); };
+    return std::equal(points_.begin(), points_.end(), points.begin(), points.end(),
+                      [&same](const QPointF& a, const QPointF& b) { return same(a.x(), b.x()) && same(a.y(), b.y()); }) &&
+           std::equal(low_.begin(), low_.end(), low.begin(), low.end(), same) &&
+           std::equal(high_.begin(), high_.end(), high.begin(), high.end(), same);
+}
+
 void MeasuredLayer::setData(const QList<QPointF>& points, const QList<double>& low, const QList<double>& high) {
     const bool resized = points.size() != points_.size();
     points_ = points;

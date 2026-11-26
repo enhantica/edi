@@ -17,6 +17,7 @@ import os
 import re
 import runpy
 import shlex
+import shutil
 import struct
 import subprocess
 import sys
@@ -32,7 +33,9 @@ import pytest
 import yaml
 from compression import zstd
 
-from tests.fixtures.e09_t75_workflow import active
+from tests.fixtures.e09_t75_workflow import STORE_ACTION, active, artifact_options
+from tests.fixtures.fast_ci.workflow import run_shell
+from tests.integration.py import test_crysta_source_archive as source_archive
 
 ROOT = Path(__file__).resolve().parents[3]
 ORACLE = json.loads((ROOT / 'tests/fixtures/e04_t12_public_release/oracle.json').read_text())
@@ -46,6 +49,7 @@ PRIVATE = re.compile(
 # Exact npm release files and upstream members pinned in the dependency notice.
 VENDOR = json.loads((ROOT / 'tests/fixtures/report_transport/vendor.json').read_text())
 SCRIPTS = ROOT / 'tools/public-release'
+publication_engine = source_archive.engine
 SECRET = re.compile(
     r'\bgh[pousr]_[A-Za-z0-9]{36,}\b|\bgithub_pat_[A-Za-z0-9_]{60,}\b'
     r'|\b(?:AKIA|ASIA)[0-9A-Z]{16}\b|\bxox[abposr]-[A-Za-z0-9-]{10,}\b'
@@ -200,23 +204,66 @@ def publication_texts():
     return tuple(tracked_texts())
 
 
-def test_test_and_tool_identity_is_independent_of_checkout_name():
+# A direct attribute base can have closing parentheses, comments or line continuations.
+# Only the AST decides whether a candidate is a checkout-derived attribute.
+CHECKOUT_ATTRIBUTE = re.compile(
+    r'\b(?:ROOT|REPO)(?:[)\s]|\\\n|#[^\n]*)*\.(?:\s|\\\n|#[^\n]*)*(?:name|stem)\b'
+)
+
+
+def checkout_identity_findings(root):
+    # These names contain generated environments or build outputs, never test/tool sources.
+    build_trees = {'.git', '.pixi', '.venv', '__pycache__', '_build', 'build'}
     findings = []
-    for directory in ('tests', 'tools'):
-        for path in sorted((ROOT / directory).rglob('*.py')):
-            tree = ast.parse(path.read_text(encoding='utf-8'))
-            findings.extend(
-                f'{path.relative_to(ROOT)}:{node.lineno}'
-                for node in ast.walk(tree)
-                if isinstance(node, ast.Attribute)
-                and node.attr in {'name', 'stem'}
-                and isinstance(node.value, ast.Name)
-                and node.value.id in {'ROOT', 'REPO'}
-            )
+    for subtree in ('tests', 'tools'):
+        for directory, folders, files in os.walk(root / subtree):
+            folders[:] = sorted(name for name in folders if name not in build_trees)
+            for name in sorted(files):
+                if not name.endswith('.py'):
+                    continue
+                path = Path(directory) / name
+                relative = path.relative_to(root).as_posix()
+                source = path.read_text(encoding='utf-8')
+                if source.isascii() and not CHECKOUT_ATTRIBUTE.search(source):
+                    continue  # A non-ASCII spelling still needs Python identifier normalization.
+                findings.extend(
+                    f'{relative}:{node.lineno}'
+                    for node in ast.walk(ast.parse(source, filename=relative))
+                    if isinstance(node, ast.Attribute)
+                    and node.attr in {'name', 'stem'}
+                    and isinstance(node.value, ast.Name)
+                    and node.value.id in {'ROOT', 'REPO'}
+                )
+    return findings
+
+
+def test_test_and_tool_identity_is_independent_of_checkout_name():
+    findings = checkout_identity_findings(ROOT)
     assert not findings, (
         'Public tests and tools must use declared product identities rather than the '
         'checkout root basename: ' + ', '.join(findings)
     )
+
+
+def test_checkout_identity_includes_generated_sources_and_skips_build_trees(tmp_path):
+    for relative, source in {
+        'tests/generated/test_dynamic.py': 'label = ROOT.name',
+        'tests/generated/test_parenthesized.py': 'label = (ROOT  # comment\n).\\\n    stem\n',
+        'tools/output/generated.py': 'label = REPO.stem',
+        # Fullwidth letters normalize to ROOT in Python identifiers.
+        'tools/output/generated_unicode.py': 'label = \uff32\uff2f\uff2f\uff34.name',
+        'tools/installer/.pixi/vendor.py': 'label = ROOT.name',
+        'tests/build/parser.py': 'lazy from typing import IO',
+    }.items():
+        path = tmp_path / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(source, encoding='utf-8')
+    assert set(checkout_identity_findings(tmp_path)) == {
+        'tests/generated/test_dynamic.py:1',
+        'tests/generated/test_parenthesized.py:1',
+        'tools/output/generated.py:1',
+        'tools/output/generated_unicode.py:1',
+    }, 'On-disk test and tool sources are checked even if generated and outside a Git index'
 
 
 def private_findings(entries):
@@ -526,6 +573,14 @@ def test_public_ci_uses_hosted_runners_and_guards_private_tokens():
     )
 
 
+def private_credential_step(step):
+    return (
+        step.get('uses') == './.github/actions/crysta-source'
+        or 'create-github-app-token' in json.dumps(step)
+        or bool(re.search(r'secrets\.(?!GITHUB_TOKEN\b)\w+', json.dumps(step)))
+    )
+
+
 def public_token_findings(documents):
     findings = []
     for filename, doc in documents:
@@ -551,10 +606,7 @@ def public_token_findings(documents):
             if not hosted and not dispatch:
                 findings.append(filename + ':' + name + ':fork-reachable private runner')
             for step in job.get('steps', []):
-                serialized = json.dumps(step)
-                private = 'create-github-app-token' in serialized or bool(
-                    re.search(r'secrets\.(?!GITHUB_TOKEN\b)\w+', serialized)
-                )
+                private = private_credential_step(step)
                 disabled = job.get('if') is False or job.get('if') == 'false'
                 if private and not (
                     disabled or nonfork(job.get('if', '')) or nonfork(step.get('if', ''))
@@ -620,7 +672,7 @@ def test_private_token_guard_is_required_in_every_job_even_off_pr(event):
         for filename, doc in documents
         for name, job in doc['jobs'].items()
         for index, step in enumerate(job.get('steps', []))
-        if 'create-github-app-token' in str(step.get('uses', ''))
+        if private_credential_step(step)
     ]
     assert sites, 'The credential control must reach the actual token-minting steps'
     for filename, name, index in sites:
@@ -651,7 +703,12 @@ def required_artifact_programs(job):
     resolved = True
     for candidate in job.get('steps', []):
         try:
-            enabled = active(candidate, 'pull_request', outputs=outcomes)
+            enabled = active(
+                candidate,
+                'pull_request',
+                outputs=outcomes,
+                bindings={'steps.wasm-cache.outputs.toolchain-hit': 'false'},
+            )
         except AssertionError:
             resolved = False
             enabled = False
@@ -660,6 +717,17 @@ def required_artifact_programs(job):
         if 'id' in candidate:
             outcomes[candidate['id'], 'outcome'] = 'success' if enabled else 'skipped'
     return '\n'.join(programs), resolved
+
+
+WASM_ARTIFACTS = {
+    'edi-webapp': {'build/wasm/site'},
+    'edi-webapp-checks': {'${{ runner.temp }}/edi-webapp-checks'},
+    'edi-wasm-cli': {
+        'build/wasm/multithread/crysta-prefix/bin/crysta*',
+        'build/wasm/multithread/crysta-prefix/.edi-wasm-key',
+        'build/wasm/multithread/app/app/CRYSTA_SOURCE_SHA',
+    },
+}
 
 
 def public_artifact_findings(documents):
@@ -674,9 +742,9 @@ def public_artifact_findings(documents):
                 if not resolved:
                     findings.append(filename + ':' + name + ':unresolved producer condition')
             for step in job.get('steps', []):
-                if 'upload-artifact' not in step.get('uses', ''):
+                options = artifact_options(step)
+                if not options:
                     continue
-                options = step.get('with', {})
                 artifact, paths = options.get('name', ''), options.get('path', '')
                 reviewed = reviewed_delivery(filename, name, job, step)
                 if 'runner.name' in artifact or ('edi-native' in artifact and not reviewed):
@@ -684,13 +752,8 @@ def public_artifact_findings(documents):
                 webapp = (
                     filename == 'ci.yml'
                     and name == 'app-wasm'
-                    and (
-                        (artifact == 'edi-webapp' and paths == 'build/wasm/site')
-                        or (
-                            artifact == 'edi-webapp-checks'
-                            and paths == '${{ runner.temp }}/edi-webapp-checks'
-                        )
-                    )
+                    and artifact in WASM_ARTIFACTS
+                    and set(paths.splitlines()) == WASM_ARTIFACTS[artifact]
                     and 'wasm-build' in required_programs
                     and 'wasm-check' in required_programs
                     and 'e04_t11_wasm_delivery.py' in required_programs
@@ -725,21 +788,23 @@ def public_artifact_findings(documents):
 def test_webapp_artifact_allowance_refuses_native_object_escapes(defect):
     import copy  # noqa: PLC0415
 
-    doc = yaml.safe_load((ROOT / '.github/workflows/ci.yml').read_text())
+    original = yaml.safe_load((ROOT / '.github/workflows/ci.yml').read_text())
+    doc = {'jobs': {'app-wasm': original['jobs']['app-wasm']}}
     assert not public_artifact_findings([('ci.yml', doc)]), (
-        'the prescribed webapp and evidence uploads must pass before each native escape'
+        'The real dedicated WebAssembly uploads pass before each native escape'
     )
     damaged = copy.deepcopy(doc)
     job = damaged['jobs']['app-wasm']
-    upload = next(s for s in job['steps'] if s.get('with', {}).get('name') == 'edi-webapp')
+    upload = next(s for s in job['steps'] if artifact_options(s).get('name') == 'edi-webapp')
+    assert upload.get('uses') == STORE_ACTION, 'The control targets the checked app artifact'
     if defect == 'native-path':
         upload['with']['path'] = 'build/ci'
     elif defect == 'native-name':
-        upload['with']['name'] = 'edi-native-linux-64'
+        upload['with']['artifact'] = 'edi-native-linux-64'
     elif defect == 'runner-name':
-        upload['with']['name'] = '${{ runner.name }}'
+        upload['with']['artifact'] = '${{ runner.name }}'
     elif defect == 'other-job':
-        damaged['jobs']['native']['steps'].append(copy.deepcopy(upload))
+        damaged['jobs']['other'] = {'steps': [copy.deepcopy(upload)]}
     elif defect in {'disabled-check', 'optional-check'}:
         check = next(s for s in job['steps'] if 'wasm-check' in s.get('run', ''))
         check['if' if defect == 'disabled-check' else 'continue-on-error'] = (
@@ -773,8 +838,9 @@ def pages_operation(steps, token, *, condition=None):
     return index, step
 
 
-def publication_shell_operation(steps, script):
-    index, step = pages_operation(steps, script)
+def publication_shell_operation(steps, script, *, arguments=()):
+    token = ' '.join((script, *arguments))
+    index, step = pages_operation(steps, token)
     commands = [
         (line, shlex.split(command))
         for line, command in enumerate(step['run'].splitlines())
@@ -786,6 +852,7 @@ def publication_shell_operation(steps, script):
         if len(command) >= 2
         and command[0] in {'bash', 'python', 'python3', 'gh'}
         and command[1] == script
+        and (not arguments or command[2:] == list(arguments))
     ]
     assert len(commands) == 1, (
         'Publication executes its actual helper, not a quoted or missing call'
@@ -804,7 +871,33 @@ def publication_option(command, name):
     return command[command.index(name) + 1]
 
 
-def public_site_boundary(publish, component, incoming, artifact_index):
+def checked_publication_source(job, source_path, *, receipt=None):
+    steps = job['steps']
+    source_index, source = pages_operation(steps, './.github/actions/crysta-source')
+    arguments = (['--receipt', receipt] if receipt else []) + source_path
+    (check_index, _), check, command = publication_shell_operation(
+        steps, 'tools/ci/stored_source.py', arguments=arguments
+    )
+    assert job['defaults']['run']['shell'] == 'python3 tools/ci/public_log.py {0}' and (
+        'shell' not in check
+    ), 'Publication checks execute in the source-aware shell'
+    assert source['with'].get('history') == 'true' and source['with'].get('receipts') == receipt, (
+        'Publication scans admit historical pins and the exact producer receipt directory'
+    )
+    if receipt:
+        assert publication_option(command, '--receipt') == receipt, (
+            'The bytes published consume the producer check receipts'
+        )
+    assert command[2:] == ((['--receipt', receipt] if receipt else []) + source_path), (
+        'The checker consumes exactly the paths that the route publishes'
+    )
+    assert source_index < check_index, (
+        'The private source lists exist before the publication check'
+    )
+    return source_index, check_index, source
+
+
+def public_site_boundary(publish, component, incoming, artifact_index):  # noqa: PLR0914 - ordered publication evidence
     assert (
         publish['concurrency']['group'] == 'pages-publication'
         and str(publish['concurrency']['cancel-in-progress']).lower() == 'false'
@@ -833,13 +926,24 @@ def public_site_boundary(publish, component, incoming, artifact_index):
         and publication_option(assembly_command, '--base') == fetch_command[3]
     ), 'Actual assembly overlays the addressed component onto the fetched public counterpart'
     site = publication_option(assembly_command, '--site')
+    receipt = 'source-checks' if component == 'installers' else None
+    source_index, check_index, source = checked_publication_source(
+        publish, [site], receipt=receipt
+    )
+    assert source['with'].get('site') == site and 'shell' not in push, (
+        'The exact assembled site supplies prior pins and the final push stays under the filter'
+    )
+    assert not active(push, 'push', states={'source-check': 'failure'}), (
+        'A failed content check must prevent publication of the assembled site'
+    )
     assert len(push_command) == 4 and push_command[2:] == [site, 'deploy-docs'], (
         'Publication pushes exactly the assembled site to the intended public documentation branch'
     )
     assert (
         artifact_index < fetch_position[0]
         and token_index < fetch_position[0]
-        and fetch_position < assembly_position < push_position
+        and fetch_position < assembly_position
+        and assembly_position[0] < source_index < check_index < push_position[0]
     ), (
         'Each publisher receives its component, fetches its counterpart, assembles '
         'and publishes in order'
@@ -890,11 +994,22 @@ def pages_component_boundary(doc, component, producer, artifact, incoming):
         else ('wasm-toolchain', 'wasm-build')
     )
     positions = [pages_operation(steps, operation)[0] for operation in operations]
-    upload_index, upload = pages_operation(steps, 'actions/upload-artifact@')
+    uploads = [
+        (index, step)
+        for index, step in enumerate(steps)
+        if step.get('uses') == './.github/actions/store' and step.get('with', {}).get('artifact')
+    ]
+    assert len(uploads) == 1 and not any(
+        step.get('uses', '').startswith('actions/upload-artifact@') for step in steps
+    ), 'The built public component is published through exactly one checked store action'
+    upload_index, upload = uploads[0]
     assert positions == sorted(positions) and positions[-1] < upload_index, (
         'Actual docs or wasm inputs are checked and built before their artifact is uploaded'
     )
-    assert upload['with']['name'] == artifact, (
+    assert active(upload, 'push') and not upload.get('continue-on-error'), (
+        'The artifact step runs on the required route and preserves upload failure'
+    )
+    assert upload['with']['artifact'] == artifact, (
         'Each public component uploads its exact addressed artifact'
     )
     assert upload['with']['path'] == ('site' if component == 'docs' else 'build/wasm/site'), (
@@ -968,19 +1083,30 @@ def installers_publication_boundary(doc):
 def released_publication_boundary(doc):
     publish = doc['jobs']['publish']
     steps = publish['steps']
+    _, check_index, _ = checked_publication_source(
+        publish, ['publication', 'copies'], receipt='source-checks'
+    )
     finalize_index, finalize = pages_operation(steps, '--finalize')
     assert 'tools/release/publish_assets.py' in finalize['run'], (
         'The published tag follows actual verified release finalization'
     )
-    push_position, _push, command = publication_shell_operation(
+    push_position, push, command = publication_shell_operation(
         steps, 'tools/ci/push_deploy_branch.sh'
     )
     assert command[2:] == ['released-webapp/webapp', 'deploy-app'], (
         'The released web app reaches the released-app public branch, separate from main previews'
     )
-    assert finalize_index < push_position[0], (
-        'The released app is published only after the verified release assets are finalized'
+    web_check, _, _ = publication_shell_operation(
+        steps, 'tools/ci/stored_source.py', arguments=('released-webapp',)
     )
+    assert check_index < finalize_index < web_check[0] < push_position[0], (
+        'The reviewed releases and extracted web app are checked before the public app push'
+    )
+    assert all(
+        'shell' not in step
+        and not active(step, 'workflow_dispatch', states={'source-check': 'failure'})
+        for step in (finalize, push)
+    ), 'Release and app publishers stay under the filter and stop if their prior checks fail'
     downloads = doc['jobs']['publish-downloads']
     assert downloads['needs'] in ('publish', ['publish']), (
         'Download repositories are requested only after successful release publication'
@@ -1025,6 +1151,113 @@ def published_tag_boundary(publish, finalize_index):
         and 'tag=v$(' in tag['run']
         and '$GITHUB_OUTPUT' in tag['run']
     ), 'The actual output tag comes from the finalized immutable release metadata'
+
+
+def stage_documentation_publication(root, runner, carried_pins, steps):
+    deployed = runner / 'deployed'
+    (deployed / 'webapp').mkdir(parents=True)
+    (deployed / 'index.html').write_text('old documentation', encoding='utf-8')
+    (deployed / 'webapp/index.html').write_text('retained web app', encoding='utf-8')
+    (deployed / 'crysta-commits.json').write_text(json.dumps(carried_pins), encoding='utf-8')
+    (root / 'documentation').mkdir()
+    (root / 'documentation/index.html').write_text('new documentation', encoding='utf-8')
+
+    _, _, assembly = publication_shell_operation(steps, 'tools/ci/pages_update.py')
+    arguments = [
+        part.replace('$RUNNER_TEMP', str(runner)).replace('$GITHUB_REPOSITORY', 'enhantica/edi')
+        for part in assembly[1:]
+    ]
+    result = run(sys.executable, *arguments, cwd=root, timeout=8)
+    require_success(result, 'the actual publish-docs assembly accepts its deployed counterpart')
+    assert (root / 'site/index.html').read_text(encoding='utf-8') == 'new documentation' and (
+        root / 'site/webapp/index.html'
+    ).read_text(encoding='utf-8') == 'retained web app', (
+        'The docs workflow replaces documentation and preserves the deployed counterpart'
+    )
+
+
+def fetch_documentation_publication_pins(root, runner, remote, pin, steps):
+    _, source = pages_operation(steps, './.github/actions/crysta-source')
+    assert (
+        source['with']['history'] == 'true'
+        and source['with']['site'] == 'site'
+        and source['with']['sha'] == '${{ steps.crysta.outputs.sha }}'
+    ), 'The real docs publisher gives the source action its assembled site and history'
+    action = yaml.safe_load((ROOT / '.github/actions/crysta-source/action.yml').read_text())
+    (fetch,) = [
+        step
+        for step in action['runs']['steps']
+        if 'tools/ci/crysta_fetch.py' in step.get('run', '')
+    ]
+    script = root / 'source-step.sh'
+    script.write_text(fetch['run'], encoding='utf-8')
+    output = runner / 'github-env'
+    result = run_shell(
+        fetch['shell'],
+        script,
+        root,
+        {
+            **os.environ,
+            'GITHUB_SERVER_URL': remote.as_uri(),
+            'RUNNER_TEMP': str(runner),
+            'GITHUB_ENV': str(output),
+            'TOKEN': 'local-fixture-token',
+            'SHA': pin,
+            'HISTORY': '--history',
+            'RECEIPTS': '',
+            'SITE': source['with']['site'],
+        },
+        timeout=8,
+    )
+    require_success(result, 'the actual source action writes the docs record using local Git')
+    return dict(line.split('=', 1) for line in output.read_text(encoding='utf-8').splitlines())
+
+
+def test_docs_publish_retains_deployed_crysta_pins(tmp_path, publication_engine):
+    engine, older = publication_engine
+    git = source_archive.git
+    previous = git(engine, 'rev-parse', 'HEAD').decode()
+    identity = ['-c', 'user.name=Source fixture', '-c', 'user.email=fixture@example.invalid']
+    git(
+        engine,
+        *identity,
+        'commit',
+        '-qm',
+        'Current documentation pin',
+        '--allow-empty',
+        '--no-gpg-sign',
+    )
+    current = git(engine, 'rev-parse', 'HEAD').decode()
+
+    root = tmp_path / 'edi'
+    scripts = root / 'tools/ci'
+    scripts.mkdir(parents=True)
+    for name in (
+        'pages_update.py',
+        'crysta_fetch.py',
+        'public_log.py',
+        'source_lists.py',
+        'portable_paths.py',
+    ):
+        shutil.copyfile(ROOT / 'tools/ci' / name, scripts / name)
+    (root / 'pixi.toml').write_text(f'CRYSTA_COMMIT = "{current}"\n', encoding='utf-8')
+    git(root, 'init', '-q')
+    git(root, 'add', '--', 'pixi.toml')
+    git(root, *identity, 'commit', '-qm', 'History knows only the new pin', '--no-gpg-sign')
+
+    runner = tmp_path / 'runner'
+    workflow = yaml.safe_load((ROOT / '.github/workflows/pages.yml').read_text())
+    steps = workflow['jobs']['publish-docs']['steps']
+    stage_documentation_publication(root, runner, (older, previous), steps)
+    fields = fetch_documentation_publication_pins(root, runner, engine.parents[1], current, steps)
+    record = root / 'site/crysta-commits.json'
+    assert json.loads(record.read_text(encoding='utf-8')) == sorted({older, previous, current}), (
+        'Publishing new documentation retains both deployed pins and adds the current pin'
+    )
+    lines = Path(fields['CRYSTA_SOURCE_LINE_LIST']).read_text(encoding='ascii').splitlines()
+    assert hashlib.sha256(source_archive.PRIVATE).hexdigest() in lines, (
+        'A private line reachable only from a carried pin enters the next publication filter'
+    )
 
 
 def test_pages_builds_docs_and_publishes_the_linked_webapp():
@@ -1154,13 +1387,27 @@ def pages_route_boundary(doc, route, tmp_path):
     assert environment == 'public-site', (
         'Stable-tag and configured-preview routes reach the reviewed public-site environment'
     )
-    outcomes = {}
-    for step in [*build['steps'], *publish['steps']]:
-        assert active(step, event, ref, outputs=outcomes, component=component) and not step.get(
-            'continue-on-error'
-        ), 'Build, artifact, token, assembly and push steps execute on the actual publication ref'
-        if 'id' in step:
-            outcomes[step['id'], 'outcome'] = 'success'
+    for toolchain_hit in ('false', 'true') if component == 'wasm' else ('false',):
+        results = {}
+        for step in [*build['steps'], *publish['steps']]:
+            is_toolchain_save = (
+                step.get('uses') == 'actions/cache/save@v4'
+                and step.get('with', {}).get('key') == '${{ steps.wasm-cache.outputs.toolchain }}'
+            )
+            enabled = active(
+                step,
+                event,
+                ref,
+                outputs=results,
+                component=component,
+                bindings={'steps.wasm-cache.outputs.toolchain-hit': toolchain_hit},
+            )
+            expected = not is_toolchain_save or toolchain_hit == 'false'
+            assert enabled == expected and not step.get('continue-on-error'), (
+                'All publication steps execute on the actual ref; only a warm toolchain save skips'
+            )
+            if 'id' in step:
+                results[step['id'], 'outcome'] = 'success'
     pages_component_boundary(
         doc,
         component,
@@ -1992,7 +2239,7 @@ def test_reviewed_delivery_artifacts_reject_identity_and_qualification_escapes(d
     for (filename, producer, artifact), (_paths, proofs) in ROUTES.items():
         job = documents[filename]['jobs'][producer]
         upload = next(
-            step for step in job['steps'] if step.get('with', {}).get('name') == artifact
+            step for step in job['steps'] if artifact_options(step).get('name') == artifact
         )
         assert reviewed_delivery(filename, producer, job, upload), (
             'Each published or shared artifact first proves its exact producer and prerequisites: '
@@ -2002,11 +2249,12 @@ def test_reviewed_delivery_artifacts_reject_identity_and_qualification_escapes(d
         )
         changed = copy.deepcopy(job)
         target = next(
-            step for step in changed['steps'] if step.get('with', {}).get('name') == artifact
+            step for step in changed['steps'] if artifact_options(step).get('name') == artifact
         )
         selected_producer = producer
         if damage in {'name', 'path'}:
-            target['with'][damage] = 'unreviewed-binary-output'
+            key = 'artifact' if damage == 'name' and target.get('uses') == STORE_ACTION else damage
+            target['with'][key] = 'unreviewed-binary-output'
         elif damage == 'producer':
             selected_producer = 'unreviewed-producer'
         elif damage == 'upload-first':

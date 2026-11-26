@@ -1,6 +1,7 @@
 """CI app reuse, opt-in observer isolation and measured shard-time boundaries."""
 
 import copy
+import hashlib
 import importlib
 import json
 import os
@@ -11,10 +12,17 @@ from pathlib import Path
 import pytest
 import yaml
 
+from tests.fixtures.e09_t75_workflow import active
+from tests.fixtures.fast_chart_redraws.rendering import native_arguments
 from tests.fixtures.fast_ci.generate import run_record
 from tests.fixtures.fast_ci.policy import app_build_sites
 from tests.fixtures.fast_ci.processes import process_guard, stop_observer_tree
-from tests.fixtures.fast_ci.workflow import APP_CACHE_PATHS, artifact_routes, timing_route
+from tests.fixtures.fast_ci.workflow import (
+    APP_CACHE_PATHS,
+    artifact_routes,
+    cache_save,
+    timing_route,
+)
 from tests.system.py.test_latest_fit_uncertainty import vehicle
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -166,6 +174,20 @@ def test_normal_app_observer_switch_is_off_by_default_and_requires_test_context(
         )
 
 
+def qualified_screen_executable(receipt, normal):
+    executable = Path(receipt.get('executable', '')).resolve()
+    delivered = Path(receipt.get('delivered_executable', '')).resolve()
+    snapshot = Path(native_arguments([normal])[0]).resolve()
+    if delivered != normal or executable not in {normal, snapshot}:
+        raise RuntimeError('The factory attempted to run a cached private app executable')
+    if (
+        hashlib.sha256(executable.read_bytes()).digest()
+        != hashlib.sha256(normal.read_bytes()).digest()
+    ):
+        raise RuntimeError('The factory app snapshot bytes differ from the delivered build')
+    return executable
+
+
 def observe_factory(family, scratch, normal, monkeypatch):
     if family == 'scan-app':
         harness = importlib.import_module('tests.fixtures.scan_app.harness').Harness(scratch)
@@ -175,7 +197,9 @@ def observe_factory(family, scratch, normal, monkeypatch):
 
     def qualified_capture(receipt, *args, **kwargs):
         executable = Path(receipt.get('executable', '')).resolve()
-        if executable != normal:
+        if family == 'scan-screen':
+            executable = qualified_screen_executable(receipt, normal)
+        elif executable != normal:
             raise RuntimeError('The factory attempted to run a cached private app executable')
         try:
             return original(receipt, *args, **kwargs)
@@ -187,7 +211,7 @@ def observe_factory(family, scratch, normal, monkeypatch):
             assert completed['returncode'] == 0, (
                 'The bounded reuse request must finish in the real native app'
             )
-            assert Path(completed['argv'][0]).resolve() == normal, (
+            assert Path(completed['argv'][0]).resolve() == executable, (
                 'The completed child request must bind the delivered app identity'
             )
             assert completed['argv'][1:] == ['--test-observer', 'scan-screen'], (
@@ -263,7 +287,7 @@ def test_normal_app_cache_reuse_refuses_cross_run_and_unenforced_transfers(tmp_p
     producer = next(
         s
         for s in damaged['jobs']['app']['steps']
-        if 'cache/save' in s.get('uses', '') and 'edi_app' in str(s.get('with', {}))
+        if cache_save(s) and s.get('with', {}).get('key', '').startswith('edi-app-')
     )
     consumer = next(
         s
@@ -288,13 +312,13 @@ def test_normal_app_cache_reuse_refuses_cross_run_and_unenforced_transfers(tmp_p
         artifact_routes(damaged, tmp_path / 'damaged')
 
 
-def app_cache_step(workflow, role):
-    job, action = ('app', 'cache/save') if role == 'producer' else ('system', 'cache/restore')
+def app_cache_step(workflow, role, family='edi-app'):
+    job = 'app' if role == 'producer' else 'system'
     return next(
         step
         for step in workflow['jobs'][job]['steps']
-        if action in step.get('uses', '')
-        and 'edi-app-' in str(step.get('with', {}).get('key', ''))
+        if (cache_save(step) if role == 'producer' else 'cache/restore' in step.get('uses', ''))
+        and step.get('with', {}).get('key', '').startswith(family + '-')
     )
 
 
@@ -323,9 +347,7 @@ def test_app_cache_payload_rejects_missing_duplicate_extra_or_malformed_paths(
         'missing-runner': [
             '\n'.join(path for path in paths if path != 'build/app/app/edi_app_tests')
         ],
-        'missing-observer': [
-            '\n'.join(path for path in paths if path != 'build/tutorial-transactions')
-        ],
+        'missing-observer': [''],
         'extra-file': ['\n'.join([*paths, 'build/app/app/edi_imgdiff'])],
         'duplicate': ['\n'.join([*paths, path]) for path in paths],
         'empty': [''],
@@ -334,7 +356,8 @@ def test_app_cache_payload_rejects_missing_duplicate_extra_or_malformed_paths(
     }[defect]
     for index, payload in enumerate(payloads):
         damaged = copy.deepcopy(workflow)
-        options = app_cache_step(damaged, role)['with']
+        family = 'edi-observer' if defect == 'missing-observer' else 'edi-app'
+        options = app_cache_step(damaged, role, family)['with']
         if payload is None:
             options.pop('path')
         else:
@@ -486,14 +509,17 @@ def test_shard_time_gate_refuses_unprovable_evidence(tmp_path, mutation):
 
 
 def test_timing_gate_is_wired_after_system_shards_on_pull_requests(tmp_path):
-    """Keep the timing job off and replay the shipped push route offline."""
+    """Nightly comparison stays advisory and does not run on PR or push."""
     workflow = yaml.safe_load((ROOT / '.github/workflows/ci.yml').read_text())
     job = workflow['jobs']['system-time']
-    assert job.get('if') is False, (
-        'The advisory timing job stays disabled while system shards run off push'
+    for event in ('pull_request', 'push'):
+        assert not active(job, event, states={'system': 'success'}), (
+            'The comparison never runs on a pull request or push'
+        )
+    assert not active(job, 'schedule', states={'system': 'failure'}), (
+        'An incomplete nightly shard result cannot produce a comparison'
     )
-    job['if'] = "github.event_name == 'push'"
-    timing_route(workflow, tmp_path)
+    timing_route(workflow, tmp_path, advisory=True)
 
 
 @pytest.mark.parametrize(
@@ -568,20 +594,20 @@ def migrated_screen_reuse(tmp_path_factory):
 
 def test_migrated_screen_factory_binds_the_normal_delivered_executable(migrated_screen_reuse):
     record, normal, _ = migrated_screen_reuse
-    assert Path(record['executable']).resolve() == normal, (
-        'The migrated desktop factory must bind the delivered app, '
-        'independently of nightly companion placement'
+    assert qualified_screen_executable(record, normal) == Path(record['executable']).resolve(), (
+        'The migrated desktop factory binds the delivered binary or its verified native snapshot'
     )
 
 
 def test_migrated_screen_factory_executes_its_actual_child_request(migrated_screen_reuse):
     record, normal, state = migrated_screen_reuse
+    executable = qualified_screen_executable(record, normal)
     assert record['reuse_completed']['returncode'] == 0, (
         'The real migrated request must complete successfully'
     )
     assert any(
         bool(words)
-        and Path(words[0]).resolve() == normal
+        and Path(words[0]).resolve() == executable
         and '--test-observer' in words
         and 'scan-screen' in words
         for words in state['launched']

@@ -7,7 +7,7 @@
     ],
     "id": "15-project-examples",
     "image": "15-project-examples.webp",
-    "image_sha256": "2b2503f0c125f59091276feb2ae458f1a68b478f031daed0cf479e3c7728586a",
+    "image_sha256": "54fe20203c9b95420dc04fa813ed6b4d9e383297b68060c90af9df9e2aaab82b",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -59,18 +59,18 @@
         },
         "SideBarGroup": {
             "bounds": [
-                784,
+                813,
                 210,
-                682,
-                626.5
+                653,
+                420
             ],
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                784,
+                813,
                 210,
-                682,
-                534
+                653,
+                420
             ]
         },
         "appBar": {
@@ -345,227 +345,195 @@
         },
         "examples.filter.beamMode": {
             "bounds": [
-                784,
+                813,
                 287,
-                339.25,
+                324.75,
                 35
             ],
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                784,
+                813,
                 287,
-                339.25,
+                324.75,
                 35
             ]
         },
         "examples.filter.fittingMode": {
             "bounds": [
-                1126.75,
+                1141.25,
                 210,
-                339.25,
+                324.75,
                 35
             ],
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                1126.75,
+                1141.25,
                 210,
-                339.25,
+                324.75,
                 35
             ]
         },
         "examples.filter.probe": {
             "bounds": [
-                1126.75,
+                1141.25,
                 248.5,
-                339.25,
+                324.75,
                 35
             ],
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                1126.75,
+                1141.25,
                 248.5,
-                339.25,
+                324.75,
                 35
             ]
         },
         "examples.filter.purpose": {
             "bounds": [
-                784,
+                813,
                 210,
-                339.25,
+                324.75,
                 35
             ],
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                784,
+                813,
                 210,
-                339.25,
+                324.75,
                 35
             ]
         },
         "examples.filter.sampleForm": {
             "bounds": [
-                784,
+                813,
                 248.5,
-                339.25,
+                324.75,
                 35
             ],
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                784,
+                813,
                 248.5,
-                339.25,
+                324.75,
                 35
             ]
         },
         "examples.list": {
             "bounds": [
-                784,
+                813,
                 336,
-                682,
-                500.5
+                653,
+                294
             ],
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                784,
+                813,
                 336,
-                682,
-                408
-            ]
-        },
-        "examples.open.pd-neut-cwl_cosio-d20": {
-            "bounds": [
-                784,
-                644,
-                682,
-                77
-            ],
-            "enabled": true,
-            "label": "",
-            "visible_bounds": [
-                784,
-                644,
-                682,
-                77
-            ]
-        },
-        "examples.open.pd-neut-cwl_cosio-d20_2k": {
-            "bounds": [
-                784,
-                721,
-                682,
-                77
-            ],
-            "enabled": true,
-            "label": "",
-            "visible_bounds": [
-                784,
-                721,
-                682,
-                23
+                653,
+                294
             ]
         },
         "examples.open.pd-neut-cwl_hs-hrpt": {
             "bounds": [
-                784,
-                567,
-                682,
-                77
+                813,
+                588,
+                653,
+                84
             ],
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                784,
-                567,
-                682,
-                77
+                813,
+                588,
+                653,
+                42
             ]
         },
         "examples.open.pd-neut-cwl_lbco-hrpt": {
             "bounds": [
-                784,
-                490,
-                682,
-                77
+                813,
+                504,
+                653,
+                84
             ],
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                784,
-                490,
-                682,
-                77
+                813,
+                504,
+                653,
+                84
             ]
         },
         "examples.open.pd-neut-cwl_lbco_simulation": {
             "bounds": [
-                784,
+                813,
                 336,
-                682,
-                77
+                653,
+                84
             ],
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                784,
+                813,
                 336,
-                682,
-                77
+                653,
+                84
             ]
         },
         "examples.open.sc-neut-cwl_tb2ti2o7-heidi_simulation": {
             "bounds": [
-                784,
-                413,
-                682,
-                77
+                813,
+                420,
+                653,
+                84
             ],
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                784,
-                413,
-                682,
-                77
+                813,
+                420,
+                653,
+                84
             ]
         },
         "examples.search": {
             "bounds": [
-                1126.75,
+                1141.25,
                 287,
-                300.75,
+                286.25,
                 35
             ],
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                1126.75,
+                1141.25,
                 287,
-                300.75,
+                286.25,
                 35
             ]
         },
         "group.examples": {
             "bounds": [
-                770,
+                799,
                 161,
-                710,
-                689.5
+                681,
+                483
             ],
             "enabled": true,
             "icon": "database",
             "label": "Examples",
             "visible_bounds": [
-                770,
+                799,
                 161,
-                710,
-                583
+                681,
+                483
             ]
         },
         "group.examples.pin": {
@@ -586,18 +554,18 @@
         },
         "group.getStarted": {
             "bounds": [
-                770,
+                799,
                 119,
-                710,
+                681,
                 42
             ],
             "enabled": true,
             "icon": "rocket",
             "label": "Get started",
             "visible_bounds": [
-                770,
+                799,
                 119,
-                710,
+                681,
                 42
             ]
         },
@@ -613,6 +581,39 @@
             "visible_bounds": [
                 1433.2261363926236,
                 119,
+                44.54772721475251,
+                42
+            ]
+        },
+        "group.recentProjects": {
+            "bounds": [
+                799,
+                644,
+                681,
+                42
+            ],
+            "enabled": true,
+            "icon": "archive",
+            "label": "Recent projects",
+            "visible_bounds": [
+                799,
+                644,
+                681,
+                42
+            ]
+        },
+        "group.recentProjects.pin": {
+            "bounds": [
+                1433.2261363926236,
+                642.7261363926237,
+                44.54772721475251,
+                44.54772721475251
+            ],
+            "enabled": true,
+            "label": "thumbtack",
+            "visible_bounds": [
+                1433.2261363926236,
+                644,
                 44.54772721475251,
                 42
             ]
@@ -640,7 +641,7 @@
             "bounds": [
                 183.4,
                 253.70000000000002,
-                567,
+                596,
                 19
             ],
             "enabled": true,
@@ -648,7 +649,7 @@
             "visible_bounds": [
                 183.4,
                 253.70000000000002,
-                567,
+                596,
                 19.00000000000003
             ]
         },
@@ -656,7 +657,7 @@
             "bounds": [
                 183.4,
                 284.6,
-                567,
+                596,
                 20
             ],
             "enabled": true,
@@ -664,7 +665,7 @@
             "visible_bounds": [
                 183.4,
                 284.6,
-                567,
+                596,
                 20
             ]
         },
@@ -672,7 +673,7 @@
             "bounds": [
                 183.4,
                 391.20000000000005,
-                567,
+                596,
                 18.109375
             ],
             "enabled": true,
@@ -680,7 +681,7 @@
             "visible_bounds": [
                 183.4,
                 391.20000000000005,
-                567,
+                596,
                 18.109375
             ]
         },
@@ -688,15 +689,15 @@
             "bounds": [
                 183.4,
                 329.40000000000003,
-                567,
+                596,
                 19
             ],
             "enabled": true,
-            "label": "",
+            "label": "/var/tmp/captures/y2o3-light/checkpoints/refined",
             "visible_bounds": [
                 183.4,
                 329.40000000000003,
-                567,
+                596,
                 19
             ]
         },
@@ -704,7 +705,7 @@
             "bounds": [
                 31.5,
                 140,
-                463.109375,
+                736,
                 58
             ],
             "enabled": true,
@@ -712,7 +713,7 @@
             "visible_bounds": [
                 31.5,
                 140,
-                463.109375,
+                736,
                 58
             ]
         },
@@ -720,7 +721,7 @@
             "bounds": [
                 183.4,
                 360.30000000000007,
-                567,
+                596,
                 18.109375
             ],
             "enabled": true,
@@ -728,7 +729,7 @@
             "visible_bounds": [
                 183.4,
                 360.30000000000007,
-                567,
+                596,
                 18.109375
             ]
         },
@@ -736,7 +737,7 @@
             "bounds": [
                 183.4,
                 222.8,
-                567,
+                596,
                 19
             ],
             "enabled": true,
@@ -744,13 +745,13 @@
             "visible_bounds": [
                 183.4,
                 222.8,
-                567,
+                596,
                 19
             ]
         },
         "sideBar.tab.basic": {
             "bounds": [
-                770,
+                799,
                 77,
                 43.515625,
                 42
@@ -758,7 +759,7 @@
             "enabled": true,
             "label": "Main",
             "visible_bounds": [
-                770,
+                799,
                 77,
                 43.515625,
                 42
@@ -766,7 +767,7 @@
         },
         "sideBar.tab.extras": {
             "bounds": [
-                813.515625,
+                842.515625,
                 77,
                 45.125,
                 42
@@ -774,7 +775,7 @@
             "enabled": true,
             "label": "Extra",
             "visible_bounds": [
-                813.515625,
+                842.515625,
                 77,
                 45.125,
                 42
@@ -782,7 +783,7 @@
         },
         "sideBar.tab.settings": {
             "bounds": [
-                897.328125,
+                926.328125,
                 77,
                 62.8125,
                 42
@@ -790,7 +791,7 @@
             "enabled": true,
             "label": "Settings",
             "visible_bounds": [
-                897.328125,
+                926.328125,
                 77,
                 62.8125,
                 42
@@ -798,7 +799,7 @@
         },
         "sideBar.tab.text": {
             "bounds": [
-                858.640625,
+                887.640625,
                 77,
                 38.6875,
                 42
@@ -806,10 +807,26 @@
             "enabled": true,
             "label": "Text",
             "visible_bounds": [
-                858.640625,
+                887.640625,
                 77,
                 38.6875,
                 42
+            ]
+        },
+        "sideBar.width": {
+            "bounds": [
+                1445,
+                84,
+                21,
+                28
+            ],
+            "enabled": true,
+            "label": "arrows-alt-h",
+            "visible_bounds": [
+                1445,
+                84,
+                21,
+                28
             ]
         },
         "statusBar": {
@@ -939,7 +956,7 @@
                 18.109375
             ],
             "enabled": true,
-            "label": "1 0.088s 2.46→1.34",
+            "label": "1 0.099s 2.46→1.34",
             "visible_bounds": [
                 1185,
                 770,
@@ -968,7 +985,7 @@
             "bounds": [
                 479.34687500000007,
                 772,
-                144.859375,
+                201.78125,
                 14
             ],
             "enabled": true,
@@ -977,7 +994,7 @@
             "visible_bounds": [
                 479.34687500000007,
                 772,
-                144.859375,
+                201.78125,
                 14
             ]
         },
@@ -1053,17 +1070,17 @@
         },
         "workflow.home.sidebarHost": {
             "bounds": [
-                770,
+                799,
                 77,
-                710,
+                681,
                 681
             ],
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                770,
+                799,
                 77,
-                710,
+                681,
                 681
             ]
         },
@@ -1071,7 +1088,7 @@
             "bounds": [
                 0,
                 77,
-                770,
+                799,
                 681
             ],
             "enabled": true,
@@ -1079,39 +1096,39 @@
             "visible_bounds": [
                 0,
                 77,
-                770,
+                799,
                 681
             ]
         },
         "workflow.project.manualSidebar": {
             "bounds": [
-                770,
+                799,
                 77,
-                710,
+                681,
                 681
             ],
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                770,
+                799,
                 77,
-                710,
+                681,
                 681
             ]
         },
         "workflow.project.sidebarHost": {
             "bounds": [
-                770,
+                799,
                 77,
-                710,
+                681,
                 681
             ],
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                770,
+                799,
                 77,
-                710,
+                681,
                 681
             ]
         }
@@ -1126,8 +1143,8 @@
     ],
     "qt_version": "6.11.2",
     "schema": 1,
-    "script_sha256": "a0cd8f7d599e386e3db4cf752e3ae7050f99ce60356dedf20f4c9a1fbb3ecee3",
-    "source_revision": "66250b0826244790ae402c00384ea8fca62ae552",
+    "script_sha256": "3a344097f44704ca246ad665209bd5da89b1884c7e896cbd5981e2dcf5ec2bba",
+    "source_revision": "1bbb542a5be8bc99e889b80989c28c7404fbc7e3",
     "state": {
         "experiments": 1,
         "fit_outcome": "success",

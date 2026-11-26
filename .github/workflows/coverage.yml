@@ -22,7 +22,7 @@ jobs:
     runs-on: ubuntu-24.04
     defaults:
       run:
-        shell: bash
+        shell: python3 tools/ci/public_log.py {0}
     steps:
       - uses: actions/checkout@v5
         with:
@@ -31,14 +31,21 @@ jobs:
       - uses: ./.github/actions/crysta-sdk
         with:
           platform: ${{ runner.os == 'macOS' && 'osx-arm64' || 'linux-64' }}
+      - name: crysta's source, whose lines no later step prints or stores
+        uses: ./.github/actions/crysta-source
+        with:
+          sha: ${{ needs.crysta-sdk.outputs.sha }}
+          app-id: ${{ vars.ENHANTICA_APP_ID }}
+          private-key: ${{ secrets.ENHANTICA_APP_KEY }}
       - name: C++ unit coverage (clang -O0 + LLVM source-based)
         run: pixi run cpp-coverage-unit
       - name: Python coverage (pytest-cov over lib/edi, unit tier)
         run: pixi run py-cov-unit | tee build/py-coverage-report.txt
       - name: Upload both reports
-        uses: actions/upload-artifact@v4
+        uses: ./.github/actions/store
         with:
-          name: unit-coverage
+          artifact: unit-coverage
+          withhold: 'true'
           path: |
             build/coverage-unit/coverage-report.txt
             build/py-coverage-report.txt

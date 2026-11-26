@@ -8,6 +8,42 @@ from pathlib import Path
 
 import yaml
 
+STORE_ACTION = './.github/actions/store'
+
+
+def load_workflow(path):
+    text = path.read_text(encoding='utf-8')
+    if hasattr(yaml, 'CSafeLoader'):
+        return yaml.load(text, Loader=yaml.CSafeLoader)
+    return yaml.safe_load(text)
+
+
+def artifact_options(step):
+    """The upload name and caller inputs, including uploads through checked store."""
+    action = step.get('uses', '')
+    inputs = step.get('with', {})
+    if action.startswith('actions/upload-artifact@'):
+        return inputs
+    if action == STORE_ACTION and inputs.get('artifact'):
+        return {**inputs, 'name': inputs['artifact']}
+    return {}
+
+
+def local_action_steps(steps, root, parents=()):
+    """Walk the workflow's actual local composite calls as well as its direct steps."""
+    for step in steps:
+        yield step
+        action = step.get('uses', '')
+        if not action.startswith('./'):
+            continue
+        assert action not in parents, 'Local composite actions cannot call themselves'
+        paths = [root / action / name for name in ('action.yml', 'action.yaml')]
+        path = next((path for path in paths if path.is_file()), None)
+        assert path, f'The workflow must resolve the local action {action}'
+        runs = load_workflow(path)['runs']
+        if runs['using'] == 'composite':
+            yield from local_action_steps(runs['steps'], root, (*parents, action))
+
 
 def event_ref(event):
     return 'refs/pull/75/merge' if event == 'pull_request' else 'refs/heads/main'
@@ -210,7 +246,7 @@ def expanded_jobs(document, root, stack=()):
         assert reference not in stack, 'A cyclic reusable workflow cannot prove its boundary'
         target = Path(root) / path
         assert target.is_file(), 'A reusable workflow must exist before its boundary is observed'
-        child = yaml.safe_load(target.read_text())
+        child = load_workflow(target)
         result.extend(
             (name + '/' + key, value)
             for key, value in expanded_jobs(child, root, (*stack, reference))

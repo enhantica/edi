@@ -720,6 +720,17 @@ Item {
     // removed (the owner's Mac, 2026-10-21), so none is.
     // A chart made while the curves are on has its colours before this handler is connected: it counts them once made.
     property int structureCurveSlots: 0
+    onStructureCurveSlotsChanged: {
+        while (structureSlots.count < structureCurveSlots)
+            structureSlots.append({
+                "slot": structureSlots.count
+            });
+    }
+    // A row each, not a number: a changed number makes every area again, and those before stay drawn for one layout,
+    // out of the controller's hands.
+    ListModel {
+        id: structureSlots
+    }
     Connections {
         target: controller
         function onStructureCurveColorsChanged() {
@@ -728,7 +739,7 @@ Item {
         Component.onCompleted: onStructureCurveColorsChanged()
     }
     Instantiator {
-        model: chart.structureCurveSlots
+        model: structureSlots
         delegate: AreaSeries {
             id: area
 

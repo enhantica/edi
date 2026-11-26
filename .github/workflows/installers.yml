@@ -135,6 +135,9 @@ jobs:
         && github.event_name == 'workflow_dispatch'
         && (inputs.release_plan_run != '' || inputs.prepare_preview_release)
         && '1' || '' }}
+    defaults:
+      run:
+        shell: python3 tools/ci/public_log.py {0}
     steps:
       - name: Apply the prerelease version
         if: inputs.prepare_preview_release
@@ -156,35 +159,13 @@ jobs:
         run: |
           echo "Windows diagnostics cannot publish or qualify a release."
           exit 1
-      - name: Enable long source paths on Windows
+      - name: Enable long paths on Windows
         if: runner.os == 'Windows'
-        run: |
-          git config --global core.longpaths true
-          git config --global core.protectNTFS false
+        shell: bash
+        run: git config --global core.longpaths true
       - uses: actions/checkout@v5
-        if: runner.os != 'Windows'
         with:
           fetch-depth: 0
-      - name: Check out Windows-compatible source paths
-        if: runner.os == 'Windows'
-        uses: actions/checkout@v5
-        with:
-          fetch-depth: 0
-          sparse-checkout-cone-mode: false
-          sparse-checkout: |
-            /*
-            !**/[aA][uU][xX]
-            !**/[aA][uU][xX].*
-            !**/[cC][oO][nN]
-            !**/[cC][oO][nN].*
-            !**/[pP][rR][nN]
-            !**/[pP][rR][nN].*
-            !**/[nN][uU][lL]
-            !**/[nN][uU][lL].*
-            !**/[cC][oO][mM][1-9]
-            !**/[cC][oO][mM][1-9].*
-            !**/[lL][pP][tT][1-9]
-            !**/[lL][pP][tT][1-9].*
       - name: Set up the locked packaging environment
         uses: ./.github/actions/setup-pixi
         with:
@@ -211,10 +192,10 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: ${{ runner.temp }}/edi-ccache
-          key: ccache-installer-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('tools/installer/pixi.lock') }}-${{ github.run_id }}-${{ github.run_attempt }}
+          key: ccache2-installer-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('tools/installer/pixi.lock') }}-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: |
-            ccache-installer-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('tools/installer/pixi.lock') }}-
-            ccache-installer-${{ runner.os }}-${{ runner.arch }}-
+            ccache2-installer-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('tools/installer/pixi.lock') }}-
+            ccache2-installer-${{ runner.os }}-${{ runner.arch }}-
       - name: Acquire source-bound release inputs
         if: inputs.release_plan_run != ''
         run: pixi run --manifest-path tools/installer/pixi.toml python "${{ github.workspace }}/tools/release/download_plan.py" --repo "$GITHUB_REPOSITORY" --run "$PREPARE_RUN" --output "$EDI_RELEASE_PLAN"
@@ -223,12 +204,16 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           PREPARE_RUN: ${{ inputs.release_plan_run }}
       - name: Validate calendar release policy offline
+        shell: bash
         run: pixi run --manifest-path tools/installer/pixi.toml python -m pytest "${{ github.workspace }}/tests/fixtures/releases" --noconftest -o addopts= -o python_files="check_*.py" --ignore="${{ github.workspace }}/tests/fixtures/releases/check_notebook_package_origin.py" -q
       - name: Check installer boundaries and native UTC conversion offline
+        shell: bash
         run: pixi run --manifest-path tools/installer/pixi.toml python -m pytest "${{ github.workspace }}/tests/fixtures/installer" --noconftest -o addopts= -o python_files="check_*.py" -q
       - name: Acquire the pinned Qt Installer Framework
+        shell: bash
         run: pixi run --manifest-path tools/installer/pixi.toml python "${{ github.workspace }}/tools/installer/package.py" tools --output "${{ github.workspace }}/build/installer/ifw"
       - name: Check installer transport before building the application
+        shell: bash
         run: pixi run --manifest-path tools/installer/pixi.toml python "${{ github.workspace }}/tools/installer/protocol_check.py" --tools "${{ github.workspace }}/build/installer/ifw/tools" --output "${{ github.workspace }}/build/installer/protocol"
       - name: The pinned crysta commit
         shell: bash
@@ -244,11 +229,15 @@ jobs:
       - uses: ./.github/actions/crysta-sdk
         with:
           platform: ${{ runner.os == 'Windows' && 'win-64' || runner.os == 'macOS' && 'osx-arm64' || 'linux-64' }}
+      - name: crysta's source, whose lines no later step prints or stores
+        uses: ./.github/actions/crysta-source
+        with:
+          sha: ${{ env.CRYSTA_SOURCE_COMMIT }}
+          app-id: ${{ vars.ENHANTICA_APP_ID }}
+          private-key: ${{ secrets.ENHANTICA_APP_KEY }}
       - name: Unpack the pinned crysta source
-        shell: bash
         run: |
-          mkdir -p .crysta
-          pixi run --manifest-path tools/installer/pixi.toml python tools/ci/crysta_source_archive.py extract "$CRYSTA_SDK_ARCHIVES/crysta-src-$CRYSTA_SOURCE_COMMIT.tar.gz" .crysta
+          pixi run --manifest-path tools/installer/pixi.toml python tools/ci/crysta_source_export.py "$CRYSTA_SRC" "$CRYSTA_SOURCE_COMMIT" .crysta
           printf '%s\n' "$CRYSTA_SOURCE_COMMIT" >.crysta/CRYSTA_SOURCE_SHA
       - name: Check engine compiler portability before the full build
         run: pixi run --manifest-path tools/installer/pixi.toml python "${{ github.workspace }}/tools/installer/build.py" --check-compiler --crysta-source "${{ github.workspace }}/.crysta" --work "${{ github.workspace }}/build/installer"
@@ -262,7 +251,6 @@ jobs:
           p12-password: ${{ secrets.CODESIGN_MAC_CERT_P12_PASSWORD }}
       - name: Decode the KeyLocker client certificate
         if: github.event.pull_request.head.repo.fork == false && env.EDI_CODESIGN == '1' && runner.os == 'Windows'
-        shell: bash
         env:
           P12_BASE64: ${{ secrets.CODESIGN_WIN_CERT_P12_BASE64 }}
         run: |
@@ -292,15 +280,15 @@ jobs:
           EDI_CODESIGN_WIN_KEYPAIR_ALIAS: ${{ runner.os == 'Windows' && vars.CODESIGN_WIN_KEYLOCKER_KEYPAIR_ALIAS || '' }}
       - name: Save installer compiler objects
         if: ${{ !cancelled() && steps.compiler-cache.outcome == 'success' }}
-        uses: actions/cache/save@v4
+        uses: ./.github/actions/store
         with:
+          ccache: pixi run --manifest-path tools/installer/pixi.toml python
           path: ${{ runner.temp }}/edi-ccache
-          key: ccache-installer-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('tools/installer/pixi.lock') }}-${{ github.run_id }}-${{ github.run_attempt }}
+          key: ccache2-installer-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('tools/installer/pixi.lock') }}-${{ github.run_id }}-${{ github.run_attempt }}
       - name: Compiler cache hits
         if: always()
         run: pixi run --manifest-path tools/installer/pixi.toml ccache --show-stats
       - name: Check assistant process-family shutdown on this platform
-        shell: bash
         run: |
           pixi run --manifest-path tools/installer/pixi.toml cmake --build build/installer/app --target edi_assistant_lifetime_host --parallel 4
           export EDI_LIFETIME_BIN_DIR="$(cat build/installer/app/edi-assistant-lifetime-directory.txt)"
@@ -309,7 +297,6 @@ jobs:
           QT_QPA_PLATFORM: offscreen
           QT_QUICK_BACKEND: software
       - name: Check retired project ownership before packaging
-        shell: bash
         run: |
           pixi run --manifest-path tools/installer/pixi.toml cmake --build build/installer/app --target edi_trial_lock_tests --parallel 4
           pixi run --manifest-path tools/installer/pixi.toml python - <<'PYTHON'
@@ -351,7 +338,6 @@ jobs:
           SM_CLIENT_CERT_PASSWORD: ${{ env.EDI_CODESIGN == '1' && runner.os == 'Windows' && secrets.CODESIGN_WIN_CERT_P12_PASSWORD || '' }}
           EDI_CODESIGN_WIN_KEYPAIR_ALIAS: ${{ runner.os == 'Windows' && vars.CODESIGN_WIN_KEYLOCKER_KEYPAIR_ALIAS || '' }}
       - name: Install, launch, calculate, render and uninstall
-        shell: bash
         run: |
           installer=$(cat build/installer/package/installer.json | sed -n 's/.*"download": "\([^"]*\)".*/\1/p')
           pixi run --manifest-path tools/installer/pixi.toml python "${{ github.workspace }}/tools/installer/package.py" test --installer "${{ github.workspace }}/build/installer/package/$installer" --output "${{ github.workspace }}/build/installer/test"
@@ -370,7 +356,6 @@ jobs:
           SM_CLIENT_CERT_PASSWORD: ${{ env.EDI_CODESIGN == '1' && runner.os == 'Windows' && secrets.CODESIGN_WIN_CERT_P12_PASSWORD || '' }}
           EDI_CODESIGN_WIN_KEYPAIR_ALIAS: ${{ runner.os == 'Windows' && vars.CODESIGN_WIN_KEYLOCKER_KEYPAIR_ALIAS || '' }}
       - name: Qualify the online installer with local component transport
-        shell: bash
         run: |
           pixi run --manifest-path tools/installer/pixi.toml python - <<'PYTHON'
           import json, subprocess
@@ -393,7 +378,6 @@ jobs:
           ], check=True)
           PYTHON
       - name: Prepare the tested platform repository
-        shell: bash
         run: |
           pixi run --manifest-path tools/installer/pixi.toml python - <<'PYTHON'
           import json, shutil
@@ -435,31 +419,45 @@ jobs:
           if preview_history.is_file():
               shutil.copy2(preview_history, delivery / 'preview-history.json')
           PYTHON
-      - name: Upload qualified release files
-        uses: actions/upload-artifact@v4
+      # Every store and publisher reads installers itself; only macOS opens its disk images.
+      - name: Check what the disk images hold
+        run: |
+          pixi run --manifest-path tools/installer/pixi.toml python tools/installer/packed_source.py \
+            --receipt build/installer/source-check/receipt.json build/installer/delivery build/installer/components
+      - name: Keep the receipt of that check
+        uses: ./.github/actions/store
         with:
-          name: installer-${{ runner.os }}-${{ github.run_attempt }}
+          artifact: installer-source-check-${{ runner.os }}-${{ github.run_attempt }}
+          path: build/installer/source-check/receipt.json
+          if-no-files-found: error
+          retention-days: 30
+      - name: Upload qualified release files
+        uses: ./.github/actions/store
+        with:
+          artifact: installer-${{ runner.os }}-${{ github.run_attempt }}
           path: build/installer/delivery
+          receipt: build/installer/source-check/receipt.json
           if-no-files-found: error
           compression-level: 0
           retention-days: 30  # the release publication takes the qualified files
       - name: Upload tested components
-        uses: actions/upload-artifact@v4
+        uses: ./.github/actions/store
         with:
-          name: installer-components-${{ runner.os }}-${{ github.run_attempt }}
+          artifact: installer-components-${{ runner.os }}-${{ github.run_attempt }}
           path: build/installer/components
+          receipt: build/installer/source-check/receipt.json
           if-no-files-found: error
           compression-level: 0
           retention-days: 30  # the release publication takes the tested components
       - name: Remove the KeyLocker client certificate
         if: always() && runner.os == 'Windows'
-        shell: bash
         run: rm -f "$RUNNER_TEMP/client.p12"
       - name: Upload installation diagnostics
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: ./.github/actions/store
         with:
-          name: installer-check-${{ runner.os }}-${{ github.run_attempt }}
+          withhold: 'true'
+          artifact: installer-check-${{ runner.os }}-${{ github.run_attempt }}
           path: |
             build/installer/assistant-lifetime.xml
             build/installer/project-retirement.xml
@@ -497,32 +495,10 @@ jobs:
           - runner: ${{ inputs.capture_linux_only && 'windows-2025' || 'none' }}
           - runner: ${{ inputs.capture_linux_only && 'macos-15' || 'none' }}
     steps:
-      - name: Enable long source paths on Windows
+      - name: Enable long paths on Windows
         if: runner.os == 'Windows'
-        run: |
-          git config --global core.longpaths true
-          git config --global core.protectNTFS false
+        run: git config --global core.longpaths true
       - uses: actions/checkout@v5
-        if: runner.os != 'Windows'
-      - name: Check out Windows-compatible source paths
-        if: runner.os == 'Windows'
-        uses: actions/checkout@v5
-        with:
-          sparse-checkout-cone-mode: false
-          sparse-checkout: |
-            /*
-            !**/[aA][uU][xX]
-            !**/[aA][uU][xX].*
-            !**/[cC][oO][nN]
-            !**/[cC][oO][nN].*
-            !**/[pP][rR][nN]
-            !**/[pP][rR][nN].*
-            !**/[nN][uU][lL]
-            !**/[nN][uU][lL].*
-            !**/[cC][oO][mM][1-9]
-            !**/[cC][oO][mM][1-9].*
-            !**/[lL][pP][tT][1-9]
-            !**/[lL][pP][tT][1-9].*
       - name: Set up the locked packaging environment
         uses: ./.github/actions/setup-pixi
         with:
@@ -588,9 +564,13 @@ jobs:
     permissions:
       contents: read
       actions: read
+    defaults:
+      run:
+        shell: python3 tools/ci/public_log.py {0}
     steps:
       - uses: actions/checkout@v5
         with:
+          fetch-depth: 0
           persist-credentials: false
       - if: inputs.preview_run == ''
         uses: actions/download-artifact@v4
@@ -602,9 +582,31 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           PREVIEW_RUN: ${{ inputs.preview_run }}
+        shell: bash
         run: |
           python3 tools/release/preview.py --repo "$GITHUB_REPOSITORY" --branch "$GITHUB_REF_NAME" \
             --run "$PREVIEW_RUN" --output preview-delivery --deliveries
+      - name: The pinned crysta commit
+        id: crysta
+        shell: bash
+        run: bash tools/ci/crysta-source.sh
+      - name: The receipts of the installers' checked content
+        uses: actions/download-artifact@v4
+        with:
+          pattern: installer-source-check-*
+          path: source-checks
+          run-id: ${{ inputs.preview_run || github.run_id }}
+          github-token: ${{ github.token }}
+      - name: crysta's source, whose lines no later step prints or stores
+        uses: ./.github/actions/crysta-source
+        with:
+          sha: ${{ steps.crysta.outputs.sha }}
+          app-id: ${{ vars.ENHANTICA_APP_ID }}
+          private-key: ${{ secrets.ENHANTICA_APP_KEY }}
+          history: 'true'
+          receipts: source-checks
+      - name: Check every file that is published
+        run: python3 tools/ci/stored_source.py --receipt source-checks preview-delivery
       - name: Attach qualified online installers to the draft
         if: github.event.pull_request.head.repo.fork == false
         env:
@@ -678,8 +680,13 @@ jobs:
       contents: read
       actions: read
     environment: public-site
+    defaults:
+      run:
+        shell: python3 tools/ci/public_log.py {0}
     steps:
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
       - name: Download tested platform repositories
         if: inputs.preview_run == ''
         uses: actions/download-artifact@v4
@@ -692,12 +699,14 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           PREVIEW_RUN: ${{ inputs.preview_run }}
+        shell: bash
         run: |
           python3 tools/release/preview.py --repo "$GITHUB_REPOSITORY" --branch "$GITHUB_REF_NAME" \
             --run "$PREVIEW_RUN" --output preview
           mv preview/components components
       - name: Require the selected platforms from this successful attempt
         if: inputs.preview_run == ''
+        shell: bash
         run: |
           python3 - <<'PYTHON'
           from pathlib import Path
@@ -717,6 +726,7 @@ jobs:
           path: preview-delivery
       - name: Prepare the testing update feed
         if: inputs.prepare_preview_release && inputs.preview_run == ''
+        shell: bash
         run: |
           python3 - <<'PYTHON'
           import json
@@ -745,9 +755,32 @@ jobs:
       - name: Preserve documentation, web app and previous components
         env:
           SITES_TOKEN: ${{ steps.sites-token.outputs.token }}
+        shell: bash
         run: |
           bash tools/ci/fetch_deploy_branch.sh deploy-docs "$RUNNER_TEMP/deployed"
           python3 tools/ci/pages_update.py --repo "$GITHUB_REPOSITORY" --component installers --incoming components --site site --base "$RUNNER_TEMP/deployed"
+      - name: The pinned crysta commit
+        id: crysta
+        shell: bash
+        run: bash tools/ci/crysta-source.sh
+      - name: The receipts of the installers' checked content
+        uses: actions/download-artifact@v4
+        with:
+          pattern: installer-source-check-*
+          path: source-checks
+          run-id: ${{ inputs.preview_run || github.run_id }}
+          github-token: ${{ github.token }}
+      - name: crysta's source, whose lines no later step prints or stores
+        uses: ./.github/actions/crysta-source
+        with:
+          sha: ${{ steps.crysta.outputs.sha }}
+          app-id: ${{ vars.ENHANTICA_APP_ID }}
+          private-key: ${{ secrets.ENHANTICA_APP_KEY }}
+          history: 'true'
+          site: site
+          receipts: source-checks
+      - name: Check every file that is published
+        run: python3 tools/ci/stored_source.py --receipt source-checks site
       - name: Update the deploy-docs branch
         env:
           SITES_TOKEN: ${{ steps.sites-token.outputs.token }}
