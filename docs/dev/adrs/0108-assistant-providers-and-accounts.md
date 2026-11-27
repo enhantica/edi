@@ -5,8 +5,8 @@
 - **Implementation:** ⬜ Not implemented
 - **Priority:** High
 - **Forward constraint (binding on new features):** an assistant runtime is reached only through an
-  `AssistantProvider`, which maps it onto edi's assistant protocol; a runtime other than Codex reaches edi's tools only
-  through edi's tool server. edi chooses each account's config home but never reads, copies, stores or passes the
+  `AssistantProvider`, which maps it onto edi's assistant protocol; every runtime reaches edi's tools only through edi's
+  one catalogue, guard and dispatcher, by Codex's `dynamicTools` for ChatGPT and by edi's MCP tool server for the others. edi chooses each account's config home but never reads, copies, stores or passes the
   credentials inside it.
 
 This ADR extends ADR-0055 (the provider transport behind the controller), ADR-0056 (provider connections), ADR-0057
@@ -93,7 +93,11 @@ signals:
 ```
 
 The declared methods are `CodexAgent`'s public API as it stands, so the view model's calls and connections do not
-change shape. Signals use direct connections, so every handler runs in today's order.
+change shape, and ADR-0057's synchronous hooks stay where they are: a request's before-write `prepare` callback, a
+tool reply's preparation and handoff with its `delivered` result, a question answer's `admit` predicate, the
+account-confirmation deferral, owner state, failure kind and `reject`/`resolved`. A translating provider calls each
+hook at the same point before its own write that `CodexAgent` does. Signals use direct connections, so every handler
+runs in today's order.
 
 **ChatGPT through Codex, first, with no behaviour change.** `CodexProvider` is `CodexAgent` itself, now deriving
 from `AssistantProvider`: same name, header, API and behaviour. The one Codex-only part the view model checks, the
@@ -111,7 +115,10 @@ server becomes an `item/tool/call` server request and its answer goes back to th
 sandbox escape is possible because no command or file tool exists, approval policy `never` because every permission
 request is declined, and their own model provider (`anthropic`, `github`). A provider never claims a field it cannot
 show; one it has no equivalent for is absent from both its policy and its readback, and the view model compares only
-the fields the policy names. Methods a runtime has no equivalent for (the thread browser, usage where the provider has
+the fields the policy names. The translator answers `thread/start` only after it has started its runtime with the
+settings edi chose (arguments, environment, model and effort) and edi's tool server has answered that process's
+`tools/list`, so the view model's existing policy check (`policy_current()`) and the admission order in
+`native_dispatch` stay as they are for every provider. Methods a runtime has no equivalent for (the thread browser, usage where the provider has
 none) are answered with the error states the view model already shows.
 
 **ChatGPT through the direct connection, second.** `NativeChatGptProvider` (`app/src/native_chatgpt_provider.*`)
@@ -129,7 +136,8 @@ presentation code and saved history files stay as they are for every provider.
 The neutral half of `CodexAgent` becomes `AssistantProcess` (`app/src/assistant_process.*`): start through the guard
 (`guard <appPid> <runtime> <args…>`), newline framing with the JSON size limits, operation deadlines and their
 suspension, generation fencing and `retire()`, stderr drained and never shown, and the exit-code mapping (127, 125,
-128+n). `CodexAgent` keeps its API on top of it. Copilot's ACP is JSON-RPC 2.0, so `CopilotProvider` uses the same
+128+n). `CodexAgent` keeps its API on top of it and gains one overload, `start(executable, workspace, environment)`, through
+which an added ChatGPT account gets its `CODEX_HOME` (§8); the two-argument form keeps today's environment. Copilot's ACP is JSON-RPC 2.0, so `CopilotProvider` uses the same
 request, response and server-request layer with the `jsonrpc` member added; Claude's stream-json is one JSON object per
 line, so `ClaudeProvider` uses the framing alone. The JSON size helpers move to `app/src/assistant_json_size.hpp`
 under neutral names, with the `codex_*` names kept as aliases.
@@ -148,17 +156,21 @@ starts the server as its own child, so the server is a small bridge to the app:
   group (Unix) or job (Windows) and dies with it; it exits when either side closes. It holds no tool knowledge. No new
   executable is installed, signed or hashed.
 - **App side.** `AssistantToolServer` (`app/src/assistant_tool_server.*`) listens on a `QLocalServer` with a random
-  name, owner-only. The name and a random key reach the bridge through the server entry's environment
-  (`EDI_ASSISTANT_TOOLS`, `EDI_ASSISTANT_TOOLS_KEY`) in a config file that lives in edi's prepared workspace with
-  owner-only permissions, never through arguments, which other users can read in the process list. The bridge's first
+  name, owner-only. The bridge finds it through the server entry's environment: `EDI_ASSISTANT_TOOLS` names the
+  socket and `EDI_ASSISTANT_TOOLS_FILE` an owner-only file in edi's prepared workspace holding a random key. A path
+  rather than the key itself, because runtimes scrub credential-looking variables from MCP server environments, and
+  never arguments, which other users can read in the process list. The bridge's first
   line is the key; the server accepts one connection per runtime process and binds it to that process's generation.
 - **Lifecycle.** The server answers `initialize` with the client's `protocolVersion` when edi supports it (2025-03-26
-  to 2025-11-25), otherwise 2025-11-25, and `capabilities: {tools: {listChanged: false}}`; it answers `ping`.
+  to 2025-11-25), otherwise 2025-11-25, and `capabilities: {tools: {listChanged: false}}`; it answers `ping`. Any other
+  request, before or after `initialize` (a newer client's `server/discover` probe included), gets JSON-RPC error
+  -32601 at once and the connection stays open.
 - **`tools/list`** returns the catalogue the view model builds for the thread (the `dynamicTools` of its `thread/start`
   request) as `name`, `description` and `inputSchema`, plus `request_user_input` (below). MCP requires a root
-  `type: "object"`, so the union schemas (`set_experiment_type`, `edit_structure`, `edit_atom`, `edit_relation`) are
-  flattened in this projection only: the union of their properties, `required` limited to what every branch requires,
-  the selector as one enum. The exact branch check stays in `assistant_native_arguments`, which every call already
+  `type: "object"` and Claude refuses a root `oneOf`, `anyOf` or `allOf`, so every tool whose root carries one
+  (today `set_experiment_type`, `edit_structure`, `edit_atom`, `edit_experiment`, `edit_relation`, `add_relations` and
+  `edit_background`) is flattened in this projection only: the union of the branches' properties, `required` limited to
+  what every branch requires, a selector as one enum, and no combinator left at the root. The exact branch check stays in `assistant_native_arguments`, which every call already
   passes. Each tool carries `_meta: {"anthropic/alwaysLoad": true, "anthropic/maxResultSizeChars": 500000}`, so
   Claude loads it up front and never moves a result to a file the model cannot read. ChatGPT's `dynamicTools` do not
   change.
@@ -175,8 +187,11 @@ starts the server as its own child, so the server is a small bridge to the app:
   result. edi's instructions already name the tool, so the
   same text serves every provider. The runtimes' own question tools stay off (sections 4, 5).
 - **Names.** The server is called `edi`; the models see `mcp__edi__<tool>` (Claude) and `edi-<tool>` (Copilot).
-- **Timeouts.** A fit or a question can outlast a runtime's default MCP call timeout, so each runtime's config gives
-  edi's server edi's longest native deadline (section 4: `MCP_TOOL_TIMEOUT`; section 5: the entry's `timeout`).
+- **Timeouts.** A fit or a question can outlast a runtime's default MCP call timeout. Each runtime's config gives edi's
+  server one fixed number, the largest native operation deadline edi allows plus one minute (section 4:
+  `MCP_TOOL_TIMEOUT`; section 5: the entry's `timeout`), and while native work runs the server sends
+  `notifications/progress` every 30 seconds for a call that carried a `progressToken`, so an idle window never cuts a
+  long fit.
 
 The guard, the catalogue and the dispatcher stay one implementation for all three providers.
 
@@ -190,7 +205,7 @@ claude -p --input-format stream-json --output-format stream-json --verbose --inc
   --tools "Skill" --allowedTools "mcp__edi__*,Skill"
   --setting-sources local --plugin-dir <workspace>/.edi/claude-plugin
   --model <id> [--effort <level>] (--session-id <new uuid> | --resume <uuid>)
-  --append-system-prompt-file <workspace>/.edi/instructions.md
+  --append-system-prompt-file <workspace>/.edi/instructions.md --system-prompt-snapshot off
 ```
 
 - **Tools.** `--tools "Skill"` leaves one built-in tool, the skill loader the bundled skills need; command, file,
@@ -200,18 +215,27 @@ claude -p --input-format stream-json --output-format stream-json --verbose --inc
 - **Settings.** No user or project settings load: `--setting-sources local` reads only
   `<workspace>/.claude/settings.local.json`, which edi's prepared workspace never contains (a present one refuses
   the start). So no hooks, MCP servers, `CLAUDE.md` or API-key helpers from elsewhere apply.
-- **Environment.** `CLAUDE_CONFIG_DIR=<account home>`, `DISABLE_UPDATES=1`, `MCP_TOOL_TIMEOUT=<longest native
-  deadline in ms>`. The child gets none of the inherited Anthropic credential and routing variables:
-  `ANTHROPIC_API_KEY`, `ANTHROPIC_AUTH_TOKEN`, `CLAUDE_CODE_OAUTH_TOKEN`, `ANTHROPIC_BASE_URL`, `ANTHROPIC_PROFILE`,
-  `CLAUDE_CODE_USE_BEDROCK`, `CLAUDE_CODE_USE_VERTEX`, `CLAUDE_CODE_USE_FOUNDRY` and `CLAUDECODE` are removed. A turn
-  therefore runs as the account signed in through the binary's own login in that home, and nothing else.
+- **Environment.** `CLAUDE_CONFIG_DIR=<account home>`, `DISABLE_UPDATES=1`, `MCP_TOOL_TIMEOUT` (§3),
+  `MCP_PROTOCOL_NEGOTIATION=legacy`. Removed, because they change how edi's tools and turns run: `CLAUDECODE`,
+  `CLAUDE_CODE_SUBPROCESS_ENV_SCRUB` and `CLAUDE_AUTO_BACKGROUND_TASKS`. Anthropic's conditions for shipping Claude Code
+  name the user's own API key among the methods a product may not restrict, so edi keeps the user's own credential and
+  provider variables (`ANTHROPIC_API_KEY`, `ANTHROPIC_AUTH_TOKEN`, `CLAUDE_CODE_OAUTH_TOKEN`, `ANTHROPIC_BASE_URL`,
+  the cloud-provider switches and the like) and the user's Anthropic profile folder. When one of them decides the
+  identity, the Account dialog says that Claude is using it (the readback below), and no turn runs before the
+  readback matches what the dialog shows. edi itself offers only the subscription sign-in and never asks for, stores
+  or injects a key.
 - **Sign-in and sign-out** run the binary's own `claude auth login` and `claude auth logout` with the account's
   `CLAUDE_CONFIG_DIR`, with no flag that picks or removes a method: the binary's login screen keeps every method it
-  has, and edi sets no `forceLoginMethod` or other setting that restricts one. edi shows the URL the binary prints,
-  with an Open button, and a field for the code when the binary asks for one. edi offers no API-key entry of its own.
-- **Identity readback, before any input.** `claude auth status` in the account's home (JSON output) must report a
-  signed-in `authMethod`; then the `initialize` control reply's `account` gives the e-mail and plan, which must match
-  the account's record. A mismatch or a signed-out home stops before any input, with the reason shown. edi never
+  has, and edi sets no `forceLoginMethod` or other setting that restricts one. edi opens the URL the binary prints only
+  when it is `https`, carries no user info and is on Anthropic's sign-in hosts (`claude.ai`, `claude.com`,
+  `anthropic.com` and their subdomains, checked against the pinned binary in the owner's trial), the same shape as
+  ChatGPT's check. When the binary asks for a code, edi shows a field and writes what the user types only to the
+  sign-in process's input; it never stores, logs or records it. edi offers no API-key entry of its own.
+- **Identity readback, before any input.** `claude auth status` (JSON output), run with exactly the environment of
+  the turn process before every start, must report a signed-in `authMethod` and `configDirectory` equal to the
+  account's home; then the `initialize` control reply's `account` gives the e-mail and plan. The account's record keeps
+  the method and identity the user saw; a method other than `claude.ai` (the user's own key, token or cloud provider)
+  is shown in the Account dialog as what Claude is using, and any later difference from the record stops before input. A mismatch or a signed-out home stops before any input, with the reason shown. edi never
   opens a file inside the home.
 - **Tool and skill readback, before any input.** The `initialize` reply's `commands` must list each bundled skill
   (as `edi:<id>`); the runtime must have listed edi's tools through edi's server; and the `system/init` message's
@@ -222,17 +246,23 @@ claude -p --input-format stream-json --output-format stream-json --verbose --inc
 - **Skills.** The same approved skill bytes as ADR-0058's `.agents/skills` are staged as a plugin,
   `<workspace>/.edi/claude-plugin/.claude-plugin/plugin.json` naming `edi` plus `skills/<id>/SKILL.md`. Plugin skills
   load from `--plugin-dir` independently of setting sources.
-- **Turns.** `initialize` first; a turn is one `user` message whose `uuid` is edi's client message id. A message sent
-  during a turn is a steer. Stop sends the `interrupt` control request. The turn ends at `result`; edi checks
+- **Turns.** `initialize` first; a turn is one `user` message whose `uuid` is edi's client message id. Its first text
+  block is a one-line edi header, so a user message starting with `/` reaches the model as text and never runs as one
+  of the binary's commands. A message sent during a turn is a steer. Stop sends the `interrupt` control request, with
+  `cancel_queued: true` when `system/init` lists the `interrupt_cancel_queued_v1` capability, and edi checks the receipt
+  so a steer queued before Stop does not start a new turn. The turn ends at `result`; edi checks
   `is_error` and the assistant message's `error`, not only `subtype`, because a signed-out turn reports `success`
   with `is_error: true`.
 - **Models** come from the `initialize` reply (`value`, `displayName`, `supportedEffortLevels`). A model change during
-  a thread uses `set_model`; an effort change restarts the idle process with `--resume` before the next turn. No
-  advertised default effort means the provider default (ADR-0057).
-- **Usage** comes from `rate_limit_event`: `five_hour` is the session limit and `seven_day` the weekly limit, the
-  windows ChatGPT already shows. Values are the last ones seen and marked stale between turns.
+  a thread uses `set_model`; an effort change restarts the idle process with `--resume` before the next turn. For a
+  model with no advertised default effort, an empty effort means edi passes no `--effort` (an amendment of ADR-0057,
+  §14).
+- **Usage.** `rate_limit_event` is a status signal sent when a limit's status changes, not a per-turn feed. A window
+  shows only when the event carries `rate_limit_type` and `utilization`: `five_hour` as the session limit and
+  `seven_day` as the weekly limit, the windows ChatGPT already shows; other types are ignored. A warning or refusal
+  with its reset time shows as it is, and "Unavailable" is the normal state between events.
 - **Threads.** edi chooses the session id. A resumed thread starts a new process with `--resume`; its earlier rows come
-  from edi's own history file.
+  from edi's own history file, and `--system-prompt-snapshot off` makes it read edi's current instructions and skills.
 - **Version.** One pinned release. Every pin change repeats the owner's sign-in trial.
 
 Product text says "Claude"; "Claude Code" appears only in notices and in docs that say what edi runs.
@@ -242,36 +272,47 @@ Product text says "Claude"; "Claude Code" appears only in notices and in docs th
 One process per active account, one ACP session per thread:
 
 ```
-copilot --acp --stdio --no-auto-update --disable-builtin-mcps
+copilot --acp --stdio --no-auto-update --disable-builtin-mcps --disable-mcp-server computer-use
   --excluded-tools <every built-in tool> --allow-tool edi
   --additional-mcp-config @<workspace>/.edi/copilot-mcp.json
 ```
 
-- **Tools.** Every built-in tool, shell, file, web fetch and its own question tool included, is excluded; edi's
-  server is the only MCP server and its tools are pre-allowed. edi never sets `--allow-all`, `--yolo`,
+- **Tools.** Every built-in tool, shell, file, web fetch and its own question tool included, is excluded; the
+  built-in MCP servers (GitHub's, which serves `web_search`, and `computer-use`) are off, so Copilot has no web search;
+  edi's server is the only MCP server and its tools are pre-allowed. edi never sets `--allow-all`, `--yolo`,
   `COPILOT_ALLOW_ALL` or the autopilot mode.
-- **Environment.** `COPILOT_HOME=<account home>`, `COPILOT_AUTO_UPDATE=false`,
-  `COPILOT_SKILLS_DIRS=<workspace>/.agents/skills`, and `GH_CONFIG_DIR` pointing at an empty edi-owned folder so the
-  CLI finds no `gh` login. Removed: `COPILOT_GITHUB_TOKEN`, `GH_TOKEN`, `GITHUB_TOKEN`, `GH_HOST`, `COPILOT_GH_HOST`,
-  `COPILOT_ALLOW_ALL`, `COPILOT_MODEL`, `COPILOT_PROVIDER_*` and `COPILOT_PROVIDERS_CONFIG`.
-- **edi's tools** come through `--additional-mcp-config`, whose entry sets `timeout` to edi's longest native deadline;
-  ACP's `session/new` server entry has no timeout.
+- **Environment**, built from an allow-list rather than the app's environment: the platform's basic variables (path,
+  home, temporary folder, locale, system folders) and proxy and certificate settings, plus what edi sets:
+  `COPILOT_HOME=<account home>`, `COPILOT_AUTO_UPDATE=false`, `COPILOT_SKILLS_DIRS=<workspace>/.agents/skills`,
+  `COPILOT_LARGE_OUTPUT_THRESHOLD_BYTES` at edi's outgoing result bound (the default 20 KiB would move a larger result
+  to a file the model cannot open), and `GH_CONFIG_DIR` pointing at an empty edi-owned folder so the CLI finds no `gh`
+  login. So the child never gets `COPILOT_GITHUB_TOKEN`, `GH_TOKEN`, `GITHUB_TOKEN`, `GH_HOST`, `COPILOT_GH_HOST`,
+  `COPILOT_ALLOW_ALL`, `COPILOT_MODEL`, the provider overrides or instruction folders from elsewhere. The CLI also reads
+  personal skills from `~/.agents/skills`; edi checks that the bundled skills are present and does not claim others
+  absent.
+- **edi's tools** come through `--additional-mcp-config` as `{type: "local", command, args: ["mcp"], env,
+  tools: ["*"], timeout, deferTools: "never", disableToolCache: true}`: all of edi's tools, loaded up front, from live
+  discovery rather than an earlier session's snapshot, with §3's timeout; ACP's `session/new` server entry has no
+  timeout.
 - **Protocol.** JSON-RPC 2.0 over stdio. `initialize` with `protocolVersion: 1` and client capabilities naming no
   `fs` and no `terminal`; `session/new` with the workspace as `cwd`; then `session/set_config_option` for the model,
   and for the effort when one is chosen. `session/prompt` runs a turn and `session/update` streams it; a message sent
   during a turn waits in edi's queue. Stop sends `session/cancel` and answers every open permission request
   `cancelled`. Resume uses `session/load`; its replayed updates are not shown again, because edi's history file
   holds the rows. A thread is recorded once its first turn ends, since the CLI saves no session without a turn.
-- **Permissions.** Every `session/request_permission` is answered `reject_once`, never with a JSON-RPC error. Every
+- **Permissions.** Every `session/request_permission` is answered by selecting the offered option whose `kind` is
+  `reject_once`, else `reject_always`, else with outcome `cancelled`; never a JSON-RPC error. Every
   `elicitation/create` is declined; questions come through `request_user_input`.
 - **Tool and skill readback, before any input.** ACP lists neither tools nor skills directly, so edi reads back what
   it can: the runtime must have listed edi's tools through edi's server, and the `available_commands_update` must
   list each bundled skill. During a turn, a `tool_call` update for any tool that is not one of edi's cancels the turn
   and retires the process with an error, so a built-in tool cannot act unnoticed.
 - **Instructions.** edi writes its instructions to `AGENTS.md` in the workspace, the CLI's custom instructions file.
+  Each prompt starts with the same one-line edi header as Claude's, so a message starting with `/` is never run as one
+  of the CLI's commands.
 - **Sign-in** runs `copilot login [--host https://<name>.ghe.com]` with the account's `COPILOT_HOME` and the empty
-  `GH_CONFIG_DIR`. edi shows the lines the CLI prints (the URL and the device code) with an Open button; exit code 0
-  is success. If the CLI asks to keep the token in a plain file because no system keychain exists, edi shows the
+  `GH_CONFIG_DIR`. edi shows the lines the CLI prints (the URL and the device code) with an Open button, offered only
+  for `https://github.com/login/device` or the account's own `https://<name>.ghe.com` host; exit code 0 is success. If the CLI asks to keep the token in a plain file because no system keychain exists, edi shows the
   question with Yes and No, No by default.
 - **Identity readback, before any input.** The login lives in the OS keychain, not in `COPILOT_HOME`, so edi reads
   the signed-in user and host from the runtime and compares them with the account's record before the first prompt;
@@ -279,18 +320,24 @@ copilot --acp --stdio --no-auto-update --disable-builtin-mcps
 - **No seat, organisation policy, signed out.** `-32000` on `session/new` means signed out. Any other refusal shows
   the CLI's message as it is, plus any `notice` update. A server whose `tools/list` never arrives shows that the
   organisation's policy may block edi's tools.
-- **Sign-out.** The CLI has no non-interactive logout. edi stops the process, deletes the home folder it created and
-  marks the account signed out; the dialog says the GitHub sign-in stays in the system keychain until it is removed or
-  revoked on GitHub.
+- **Sign-out.** When `available_commands_update` lists `/logout`, edi sends it in the account's own session, which
+  signs out through the CLI, then stops the process. Otherwise edi stops the process, deletes the home folder it
+  created (the one operation in which edi changes a runtime's files, since the CLI keeps a plain-text token there when
+  no keychain exists) and says the GitHub sign-in may stay in the system keychain until it is removed or revoked on
+  GitHub.
 - **Usage** is not reported (`Unsupported`, an existing state).
-- **Version.** One pinned release. Copilot on Linux needs the system's OpenSSL 3.
+- **Version.** One pinned release, 1.0.115 or newer (1.0.105 fixed skipped permission requests; 1.0.115 sends
+  questions as ACP elicitations, which edi declines in favour of `request_user_input`). Copilot on Linux needs the
+  system's OpenSSL 3.
 
 ### 6. What a runtime may do
 
 The same rule for all three: the runtime's own tools that read or write files, run commands, fetch the web or start
 agents are off; edi's tools, edi's question tool and the skill loader are on (ChatGPT's hosted `web_search` stays as
 ADR-0057 has it); every other permission request is declined; no runtime updates itself; the working folder is edi's
-prepared workspace. A runtime writes only inside its config home, its cache and the OS credential store.
+prepared workspace. A runtime writes only inside its config home, its cache and the OS credential store. The first
+ChatGPT account keeps ADR-0057's caveat: its runtime runs in the user's default Codex home and reads the user's own
+Codex configuration there, which edi does not claim to confine.
 
 ### 7. Skills per provider
 
@@ -318,17 +365,22 @@ edi keeps the account list; a runtime only says who is signed in.
   starts with today's environment, so nobody signs in again. Its record is written the first time `account/read` in the
   default home returns a ChatGPT account.
 - **Threads.** Each record names its provider and account. The thread browser lists the active account's threads:
-  ChatGPT's from the runtime as today, Claude's and Copilot's from edi's records. Opening a thread of another account
-  says "This conversation belongs to <account> (<provider>)" with Switch account and Cancel, in place of today's refusal
-  of a different e-mail. A home that reports another identity than its record is an error; edi never relabels the
-  record. The default ChatGPT login is the user's own Codex login, which can change outside edi, so its record follows
+  ChatGPT's from the runtime as today, Claude's and Copilot's from edi's records. Opening a saved thread whose record
+  names another account than the active one says "This conversation belongs to <account> (<provider>)" with Switch
+  account and Cancel, in place of the check of the saved record against the current account before anything opens.
+  ADR-0057's identity checks after that (the live account's identity, the preflight and resume comparisons) stay
+  errors with today's wording, per account home. A home that reports another identity than its record is an error;
+  edi never relabels the record. The default ChatGPT login is the user's own Codex login, which can change outside edi, so its record follows
   the identity the runtime reports. Adding an account whose user and host are already recorded is refused, and its new
   home is deleted.
 - **Switching** retires the current process as sign-out does, without logging out, advances the usage epoch every
   queued reply already checks, starts the other account's runtime and opens an empty conversation. It is refused while
   a turn or trial runs, with Clear's rule and wording.
-- **Private roots.** The file tools refuse `~/.claude`, `~/.copilot`, `$CLAUDE_CONFIG_DIR`, `$COPILOT_HOME` and
-  `<AppLocalData>/assistant/accounts` beside today's roots.
+- **Private roots.** Beside today's roots, the file tools refuse the new runtimes' credential stores: `~/.claude`,
+  `~/.claude.json`, `$CLAUDE_CONFIG_DIR`, the Anthropic profile folder (`~/.config/anthropic`, `%APPDATA%\Anthropic` or
+  `$ANTHROPIC_CONFIG_DIR`), `~/.copilot`, `$COPILOT_HOME`, and the `gh` folder (`~/.config/gh`, `$XDG_CONFIG_HOME/gh`,
+  `%APPDATA%\GitHub CLI` or `$GH_CONFIG_DIR`). The account homes under `<AppLocalData>/assistant/accounts` are already
+  covered by the app-data check.
 
 ### 9. The Account dialog
 
@@ -366,7 +418,11 @@ step is needed; the new ones are its siblings `org.easydiffraction.app.claude` a
 ChatGPT is ticked and the two new ones are not. The Maintenance Tool page lists all three and adds or removes each
 without touching the others. On macOS every runtime stays outside the signed `.app`. Offline installers bundle every
 component, as ADR-0071 says. Until enhantica has accepted Anthropic's Commercial Terms, the Claude component is built
-but not offered.
+but not offered. The release steps that name the component set (publication, the download site's trim list and
+size budget, the Windows runtime scan, the accessibility check) learn the new components. The download site refuses a
+file over 100 MB and publication caps an archive at 95 MB, so each new component's archive size is measured per
+platform at the pinned version before the installer work; an archive over the cap needs the owner's choice of host or
+packaging, recorded here.
 
 ### 12. Signing
 
@@ -394,6 +450,9 @@ providers.
   credential store is the runtime's own".
 - The comment in `app/src/codex_agent.cpp` that says never to assign `CODEX_HOME` changes in the same commit as the
   code that assigns it.
+- ADR-0057's effort rule ("Auto effort sends the model catalogue's actual supported default explicitly"): for a Claude
+  model that advertises no default, an empty effort means edi passes no effort (§4).
+- ADR-0023 §6: the web app's desktop-only message names ChatGPT, Claude and GitHub Copilot.
 - ADR-0071, "Optional assistant component": the single checkbox becomes three components (§11).
 - ADR-0091, "What is signed": the runtime helpers it signs are Codex's; the Claude and Copilot binaries are not signed
   (§12).
