@@ -3814,7 +3814,7 @@ std::optional<edi::BackgroundState> estimated_background(const edi::Project& pro
         std::vector<edi::ItemVec<edi::BraggPdExperiment>::Ptr> held;
         held.reserve(copy.experiments.size());
         for (std::size_t i = 0; i < copy.experiments.size(); ++i)
-            held.push_back(i == target ? std::make_shared<edi::BraggPdExperiment>(std::move(load.experiment))
+            held.push_back(i == target ? std::make_shared<edi::BraggPdExperiment>(load.experiment)
                                        : copy.experiments[i]);
         copy.experiments.assign(std::move(held));
         copy.adopt_experiments();
