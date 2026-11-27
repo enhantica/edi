@@ -969,11 +969,11 @@ jobs:
           path: build/static/list
           retention-days: 7
           if-no-files-found: error
-      # A manual run with static_capture also runs both checks unsplit on this build and keeps their own output and the
-      # compile databases: the record of what they took before the split.
+      # Until this platform's record of what the checks took before the split is committed (or on a manual run with
+      # static_capture), both checks also run unsplit on this build, keeping their own output and the compile databases.
       - name: moc for every app target, for the unsplit static checks
         id: capture-moc
-        if: ${{ runner.os != 'Windows' && (!cancelled() && inputs.static_capture == true && steps.inputs.outputs.run == 'true') }}
+        if: ${{ runner.os != 'Windows' && (!cancelled() && steps.inputs.outputs.run == 'true' && (inputs.static_capture == true || hashFiles(format('tests/fixtures/static_checks/{0}.txt', env.APP_PLATFORM == 'macOS' && 'macos' || 'linux')) == '')) }}
         run: pixi run -e app --skip-deps app-moc
       - name: The unsplit clang-tidy run, kept
         if: ${{ runner.os != 'Windows' && (!cancelled() && steps.capture-moc.outcome == 'success') }}
