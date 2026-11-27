@@ -25,6 +25,7 @@
 #include "online_search.hpp"
 #include "online_sources.hpp"
 #include "collection_examples.hpp"
+#include "label_registry.hpp"
 #include "project_view_model.hpp"
 #include "row_table_model.hpp"
 #include "untitled_operation.hpp"
@@ -357,6 +358,10 @@ class Session : public QObject {
     Q_INVOKABLE QString categoryTitle(const QString& id) const;
     // A category's Font Awesome icon name from crysta's dictionary; empty for an id it does not hold.
     Q_INVOKABLE QString categoryIcon(const QString& id) const;
+    // A label's forms from the label registry (app/data/labels.tsv): {long, short, icon}. An item's, a variant's, an
+    // option's and a category's long form is the dictionary's, as label(), optionLabel() and categoryTitle() give it;
+    // any other key's is the registry's. Empty for a key neither holds.
+    Q_INVOKABLE ShownLabel labelForms(const QString& key, const QString& variant = QString()) const;
     // A value of item `uid` as a save writes it, for an input field or an editable cell (edi ADR-0051).
     Q_INVOKABLE QString written(const QString& uid, double value) const;
     Q_INVOKABLE QString display(const QString& uid, double value, const QString& variant = QString()) const;
@@ -369,6 +374,8 @@ class Session : public QObject {
     Q_INVOKABLE QString suText(const QString& uid, double value, double su) const;
 
    signals:
+    // As a replacement (or a close) starts, before anything of it shows: the page's own dialogs close (edi ADR-0052).
+    void projectReplacing();
     // Just before the open project is replaced (or closed): the pages let go of it first (edi ADR-0052).
     void projectAboutToChange();
     void projectChanged();

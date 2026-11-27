@@ -261,7 +261,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     Q_PROPERTY(bool loadingData READ loadingData NOTIFY loadingDataChanged)
     Q_PROPERTY(QString readingData READ readingData NOTIFY readingDataChanged)
     Q_PROPERTY(QString pendingCollectionData READ pendingCollectionData NOTIFY pendingCollectionDataChanged)
-    Q_PROPERTY(QStringList scanColumns READ scanColumns CONSTANT)
+    Q_PROPERTY(QStringList scanColumns READ scanColumns NOTIFY scanColumnsChanged)
     // The template dataset's place among the datasets (`_sequential_fit.template_file`), or -1.
     Q_PROPERTY(int templateIndex READ templateIndex NOTIFY templateIndexChanged)
     // The Evolution tab: a fitted parameter across the scan's datasets (scan projects).
@@ -701,6 +701,9 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     QString missingDataFolder() const;
     /// Points the scan at `folder` instead, relative to the project when it can be (one undoable change).
     Q_INVOKABLE bool locateDataFolder(const QUrl& folder, const QString& missing = {});
+    /// The same change from a typed path, absolute or relative to the project; a refusal is `lastError` alone, shown at
+    /// the field.
+    Q_INVOKABLE bool setDataFolder(const QString& folder);
     /// The selected experiment's linked data file when it was not found, else empty: the Experiment
     /// page marks it "data not found" and offers Locate file….
     QString missingDataFile() const;
@@ -835,6 +838,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // Why the scan modes cannot run here (no single template experiment, no datasets), or empty.
     QString scanRefusal() const;
     QString apply_setting(const edi::Edit& change) override;
+    QString apply_extract_rules(const edi::Edit& change) override;
     void apply_follow_up(const std::function<void()>& edit) override;
     // Whether the edit being made is one the app makes of itself after another.
     bool followUpEdit() const { return follow_up_; }
@@ -914,6 +918,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     void currentBankChanged();
     void listingDatasetFolderChanged();
     void missingDataFolderChanged();
+    void scanColumnsChanged();
     void missingDataFileChanged();
     void loadingDataChanged();
     void readingDataChanged();
@@ -954,6 +959,9 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     void invalidateTexts();
     // A calculation the worker finished was published into the project (edi::LivePreview's hook).
     void published(const edi::PreviewResult& result);
+    // A wavelength the calculation would refuse to list reflections for is refused before it is written: the
+    // refusal, or empty. The second wavelength's 0 stays allowed.
+    QString wavelengthRefusal(const edi::Parameter& parameter, double value) const;
     void publishCalculating();
     void setLastError(const QString& error);
     friend class Session;
@@ -1184,6 +1192,10 @@ class ProjectViewModel : public QObject, public ProjectEditor {
         decltype(edi::FitResultRecord::scan_results) results_before;
         decltype(edi::FitResultRecord::scan_results) results_after;
     };
+    // An edit of a scan's extraction rules: the rules as they were.
+    struct ExtractRules {
+        std::vector<edi::SequentialExtractRule> before;
+    };
     // A Text tab's apply: the project as it was.
     struct AppliedText {
         std::shared_ptr<const edi::Project> before;
@@ -1192,7 +1204,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     struct EmptyPopulationUndo { std::shared_ptr<edi::EmptyProjectPopulation> prepared; };
     using UndoRecord = std::variant<std::monostate, edi::RelationsUndo, AddedExperiments, AddedExperimentsWithStructures, ScanRun, LoadedData,
                                     edi::StructuresUndo, edi::ExperimentControlsUndo, EmptyPopulationUndo, FreeFlags, PointIds, BackgroundPointUndo, BackgroundPoints, BlockName,
-                                    edi::ReportSettingsState, AppliedText>;
+                                    edi::ReportSettingsState, ExtractRules, AppliedText>;
     // An experiment replaced by Load data, a type change or their undo: the undo records follow it.
     void experimentReplaced(const edi::ExperimentBase* before, const edi::ExperimentBase* after);
     // Each experiment view's Load data… state: every experiment but a scan's.
@@ -1203,6 +1215,8 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // reference, and they are rebuilt only when the edit publishes (the owner's crash of 2026-11-19).
     void keepUntilModelGone(const edi::ExperimentBase* experiment, const std::shared_ptr<const edi::ExperimentBase>& held);
 
+    // Declares the scan's data folder, one undoable change; the refusal (also `lastError`), or empty.
+    QString declareDataFolder(const QString& folder);
     bool restoreScanRun(const ScanRun& run, bool restoring = false);
     // The results read again from disk (after a run, an undo or a load), with every view of them.
     void reloadScanResults();

@@ -245,6 +245,21 @@
         await loadScript(`${folder}/qtloader.js`);
         await loadScript(`${folder}/edi_app.js`);
         const screen = document.getElementById("screen");
+        // Qt lays an accessible element over each item, the pages beside the shown one included, and focuses it from
+        // script; the browser then scrolls Qt's window to it, and the drawn app moves out of view. A clipped box cannot
+        // be scrolled. The rule goes after Qt's own in its shadow root, which the app's start makes, once: Qt would have to
+        // replace its screen on the same page for it to be missing (edi ADR-0052).
+        // A page run without a DOM's observers (a script check in Node) has no window to clip.
+        if (typeof MutationObserver === "function")
+          new MutationObserver((changes, observer) => {
+            const root = screen.querySelector("#qt-shadow-container")?.shadowRoot;
+            if (root) {
+              observer.disconnect();
+              const clipped = document.createElement("style");
+              clipped.textContent = ".qt-window { overflow: clip; }";
+              root.append(clipped);
+            }
+          }).observe(screen, { childList: true });
         // A released web app's build.json names the release it was archived as; the app shows that version when the
         // commit is its own (ApplicationInfo::version).
         const release = folders.release && typeof folders.release.version === "string" ? folders.release : null;

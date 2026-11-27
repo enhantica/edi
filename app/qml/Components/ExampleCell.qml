@@ -3,7 +3,6 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 
-import EasyApplication.Gui.Globals as EaGlobals
 import EasyApplication.Gui.Style as EaStyle
 import EasyApplication.Gui.Elements as EaElements
 
@@ -30,8 +29,10 @@ Item {
 
     Column {
         id: content
+        // The cell margin every text cell has: the table pads only cells that are one text (T1).
+        x: AppSizes.tableCellMargin
         anchors.verticalCenter: parent.verticalCenter
-        width: parent.width
+        width: Math.max(0, parent.width - 2 * x)
         spacing: EaStyle.Sizes.fontPixelSize * 0.25
         EaElements.Label {
             id: identityLabel

@@ -54,7 +54,12 @@ remaining divergence argued in
    polarization coefficient ([0, 1]) and 2θ ([0, 180]°), a line-shift pair whose |SyCos| + |SySin| overflows, a nonpositive wavelength and a cell crysta's metric
    refuses (review-9 F13: positive lengths, angles in (0, 180)°, a positive determinant, a finite positive volume and a finite reciprocal tensor — crysta's own
    `cell_domain_message`, reached through the adapter, never a copy). Every reading entrance applies them: `load_project`, both structure readers and the
-   `from_cif_*` factories built on them. The solver keeps a trial inside them, so a fit never leaves one; the bond-cutoff settings keep their own refusal.
+   `from_cif_*` factories built on them. A wavelength typed in the app is held to the same limit: 0 or below is refused at the field (the second wavelength
+   is 0 where there is none and stays allowed). Before a wavelength is written the app asks crysta, without calculating, whether the calculation would
+   refuse a reflection list for it (crysta's `reflection_list_refusal`: too many reflections to list, or a single crystal's resolution limit or
+   reflection beyond the wavelength's reach, or an index bound no integer holds), for every bank of a copy made as the live preview's snapshot is, a
+   second wavelength of 0 included, since a relation can move another bank's cell or range; a refused value is not written, leaves no Undo step, and
+   the field shows crysta's reason. The app keeps no limit of its own. The solver keeps a trial inside them, so a fit never leaves one; the bond-cutoff settings keep their own refusal.
 4. **The path grammar is the object grammar.** Plural spellings (`structures[<id>]`,
    `experiments[<id>]`) are always valid; the singular prefixes are the ruled shortcuts, valid
    exactly as the object accessors are. Produced keys stay canonical per producer.

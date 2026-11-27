@@ -5,11 +5,15 @@ import hashlib
 import html
 import re
 import subprocess
+import sys
 from collections.abc import Callable
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'tools/release'))
+import versions
+
 WHEEL = re.compile(
-    r'easydiffraction-(?P<version>\d{4}\.\d{1,2}\.\d+)-cp312-abi3-'
+    rf'easydiffraction-(?P<version>{versions.PATTERN})-cp312-abi3-'
     r'(?:linux_x86_64|win_amd64|macosx_14_0_arm64)\.whl'
 )
 REPOSITORY = 'enhantica/edi'
@@ -59,7 +63,7 @@ def listed_wheels(pages: list[list[dict]]) -> dict[str, tuple[str, str]]:
 
 
 def version_key(name: str) -> tuple[int, ...]:
-    return tuple(int(part) for part in WHEEL.fullmatch(name)['version'].split('.'))
+    return versions.version_key(WHEEL.fullmatch(name)['version'])
 
 
 def write_package_index(output: Path, pages: list[list[dict]], fetch: Fetch = gh_download) -> None:

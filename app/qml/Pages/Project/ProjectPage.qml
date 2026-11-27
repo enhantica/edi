@@ -13,9 +13,27 @@ import edi.app
 WorkflowPage {
     id: page
 
-    readonly property ProjectViewModel project: Session.project
+    // The page stays when another project replaces the open one (edi ADR-0052): it lets go of a project before that one
+    // is retired, and shows the next as a page made for it would.
+    property bool letGo: false
+    readonly property ProjectViewModel project: letGo ? null : Session.project
     // Untitled work is not a project yet: the page looks as it does with none until it is created (edi ADR-0017 §13).
     readonly property bool created: project !== null && !Session.untitled
+
+    Connections {
+        target: Session
+        function onProjectAboutToChange() {
+            page.letGo = true;
+        }
+        function onProjectChanged() {
+            page.letGo = false;
+            page.textDirty = false;
+            page.showSidebarTab(false);
+            page.startedOver();
+        }
+    }
+    // Another project is shown: what a page made for it would start with.
+    signal startedOver
 
     pageName: "project"
     defaultInfo: created ? "" : qsTr("No project yet")
@@ -35,9 +53,26 @@ WorkflowPage {
     extrasEnabled: created
     basicItem: Component {
         EaComponents.SideBarColumn {
-            GetStartedGroup {}
-            ExamplesGroup {}
-            RecentProjectsGroup {}
+            id: basicColumn
+
+            GetStartedGroup {
+                id: getStarted
+            }
+            ExamplesGroup {
+                id: examples
+            }
+            RecentProjectsGroup {
+                id: recentProjects
+            }
+            Connections {
+                target: page
+                function onStartedOver() {
+                    getStarted.rest(false);
+                    examples.rest(true);
+                    recentProjects.rest(true);
+                    basicColumn.contentY = 0;
+                }
+            }
         }
     }
     extrasItem: Component {

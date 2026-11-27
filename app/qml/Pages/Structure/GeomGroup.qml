@@ -110,7 +110,6 @@ Column {
             HeaderLabel {
                 horizontalAlignment: Text.AlignLeft
                 uid: "geom_bond.site_symmetry_1"
-                shortText: qsTr("Sym 1")
             }
             HeaderLabel {
                 horizontalAlignment: Text.AlignLeft
@@ -119,7 +118,6 @@ Column {
             HeaderLabel {
                 horizontalAlignment: Text.AlignLeft
                 uid: "geom_bond.site_symmetry_2"
-                shortText: qsTr("Sym 2")
             }
             HeaderLabel {
                 uid: "geom_bond.distance"

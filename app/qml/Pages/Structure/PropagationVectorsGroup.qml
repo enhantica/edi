@@ -29,7 +29,17 @@ Column {
         sourceModel: group.vectors
 
         // Its columns by kind (the shared column model, DataTable.columnKinds; ADR-0103 decision 4).
-        columnKinds: ["index", "short", "text", "control"]
+        columnKinds: ["index", "name", "name", "control"]
+        columnTexts: ["",
+            {
+                "role": "id",
+                "edited": true
+            },
+            {
+                "role": "vector",
+                "edited": true
+            }
+        ]
         // Widths from column types, not rows (ADR-0103 rule 4): an id, then the vector.
 
         header: EaComponents.ListViewHeader {

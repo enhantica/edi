@@ -30,7 +30,13 @@ Column {
         // Its columns by kind (the shared column model, DataTable.columnKinds; ADR-0103 decision 4).
         // The axis column is always there, empty and without width for a powder (a hidden middle column left the header a
         // cell short of its rows).
-        columnKinds: ["index", "short", "number", "number", group.singleCrystal ? "short" : 0.001, "control"]
+        columnTexts: ["",
+            {
+                "role": "id",
+                "edited": true
+            }
+        ]
+        columnKinds: ["index", "name", "number", "number", group.singleCrystal ? "short" : 0.001, "control"]
         // Widths from column types, not rows (ADR-0103 rule 4): an id or label, then values.
         // The ID is short: every column minimal from the left, the spare width before the row's button (the owner,
         // 2026-11-22: a table without a name keeps its columns minimal).

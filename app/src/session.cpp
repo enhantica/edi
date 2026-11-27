@@ -2,6 +2,7 @@
 #include "session.hpp"
 #include "load_attempt.hpp"
 #include "label_case.hpp"
+#include "label_registry.hpp"
 #include "project_folder_lock.hpp"
 #include "assistant_result.hpp"
 #include "../../core/src/canonical_encoding.hpp"
@@ -2807,6 +2808,9 @@ bool Session::replaceProject(ProjectViewModel* project, const QStringList& warni
         setLastError(refusal);
         return false;
     }
+    // Before anything of the replacement shows (a new name included): what belongs to the open project's page closes
+    // now, in the same frame, not once the new project is published.
+    emit projectReplacing();
     const QPointer<Session> receiver(this); const QPointer<ProjectViewModel> target(project);
     const bool hasTarget=project!=nullptr;
     const QPointer<ProjectViewModel> previous(project_);
@@ -3409,6 +3413,30 @@ QString Session::categoryTitle(const QString& id) const {
 
 QString Session::categoryIcon(const QString& id) const {
     return from_bridge([&] { return edi::category_icon(id.toStdString()); });
+}
+
+ShownLabel Session::labelForms(const QString& key, const QString& variant) const {
+    const LabelForms* base = find_label_forms(key);
+    const LabelForms* own = variant.isEmpty() ? base : find_label_forms(key + QLatin1Char('@') + variant);
+    // The dictionary stays the source of an item's name (edi ADR-0051): the registry's copy only lists it.
+    const qsizetype equals = key.indexOf(QLatin1Char('='));
+    QString text;
+    if (equals > 0 && edi::has_item(key.left(equals).toStdString())) {
+        text = optionLabel(key.left(equals), key.mid(equals + 1));
+    } else if (edi::has_item(key.toStdString())) {
+        text = label(key, variant);
+    } else if (!key.contains(QLatin1Char('.')) && !edi::category_label(key.toStdString()).empty()) {
+        text = categoryTitle(key);
+    } else if (own != nullptr) {
+        text = own->long_text;
+    }
+    if (text.isEmpty()) return {};
+    // A variant without a short form or icon of its own takes its item's.
+    const auto pick = [&](QString LabelForms::* field) {
+        if (own != nullptr && !(own->*field).isEmpty()) return own->*field;
+        return base != nullptr ? base->*field : QString();
+    };
+    return {text, pick(&LabelForms::short_text), pick(&LabelForms::icon)};
 }
 
 // A number that is not finite (an excluded row's computed value, an empty range) has no spelling: it shows nothing.

@@ -11,7 +11,7 @@ from tests.integration.py.test_scan_app_contract import (
     property_value,
     source,
 )
-from tests.integration.py.test_status_columns import table_cells
+from tests.integration.py.test_status_columns import children, table_cells
 
 
 def observe(*expressions):
@@ -112,53 +112,38 @@ def test_reset_observer_detects_wrong_destination_and_unclosed_project(damage):
 def test_scan_rule_required_is_an_unlabelled_editable_icon_toggle():
     qml = source('qml/Pages/Analysis/SequentialExtractGroup.qml')
     header = block(qml, 'header:')
-    assert 'qsTr("required")' not in header, (
-        'The required toggle column must retain an empty header'
-    )
-    cells = [
-        body
-        for kind, body in table_cells(qml)
-        if kind in {'EaComponents.TableViewButton', 'IconCell'}
+    toggles = [
+        (index, body)
+        for index, (kind, body) in enumerate(table_cells(qml))
+        if kind in {'EaComponents.TableViewButton', 'EaComponents.ListViewButton', 'IconCell'}
+        and 'required' in body
     ]
-    toggles = [body for body in cells if 'required' in body]
     assert len(toggles) == 1, 'Each scan rule must have exactly one real required icon button'
-    button = toggles[0]
-    editable = 'onClicked:' in button
-    icon = property_value(button, 'fontIcon' if editable else 'icon')
-    tooltip = property_value(button, 'ToolTip.text' if editable else 'toolTip')
+    index, button = toggles[0]
+    headings = children(header, header.index('{') + 1, len(header) - 1)
+    assert index < len(headings) and not re.search(r'\b(?:text|uid):', headings[index][1]), (
+        'The header cell aligned with the required toggle is unlabelled'
+    )
+    icon = property_value(button, 'fontIcon')
+    tooltip = property_value(button, 'ToolTip.text')
     assert 'text:' not in button.replace('ToolTip.text:', ''), (
         'The required state must use icons without visible yes/no text'
     )
     assert re.search(r'fail|match', tooltip, re.IGNORECASE), (
         'The required toggle tooltip must explain that a file without a match fails'
     )
-    if editable:
-        handler = property_value(button, 'onClicked')
-        target = re.search(r'(\w+)\.(\w+)\.setRequired', handler)
-        assert target, 'An editable required button must reach its rule model write boundary'
-        root, model = target.groups()
-        context = 'const ' + root + '={' + model + ':{setRequired:(...args)=>calls.push(args)}};'
-        invoke = '(function(){' + handler + '})();'
-    else:
-        # Scan declarations currently have no GUI write route. A read-only icon
-        # is permitted only alongside the other read-only declaration cells.
-        assert 'onCommitted:' not in qml and 'setRequired' not in source(
-            'src/analysis_view_model.hpp'
-        ), 'A non-clickable required icon is allowed only while scan rules are read-only'
-        context, invoke = '', ''
+    handler = property_value(button, 'onClicked')
+    target = re.search(r'(\w+)\.(\w+)\.setRequired', handler)
+    assert target, 'The required button reaches the editable rule model'
+    root, model = target.groups()
     observed = javascript(
-        'const qsTr=x=>x;let calls=[];'
-        + context
-        + 'const row={index:3,model:{required:false}};const before=('
-        + icon
-        + ');'
-        + invoke
-        + 'row.model.required=true;const after=('
-        + icon
-        + ');'
+        'let calls=[];'
+        f'const {root}={{{model}:{{setRequired:(...args)=>calls.push(args)}}}};'
+        f'const row={{index:3,model:{{required:false}}}};'
+        f'const before=({icon});(function(){{{handler}}})();'
+        f'row.model.required=true;const after=({icon});'
         'console.log(JSON.stringify([before,after,calls]));'
     )
-    assert observed == ['toggle-off', 'toggle-on', [[3, True]] if editable else []], (
-        'The required icon must show both real rule states '
-        'and any editable action writes its own rule'
+    assert observed == ['toggle-off', 'toggle-on', [[3, True]]], (
+        'The required icon shows both real rule states and clicking writes its own rule'
     )

@@ -31,7 +31,7 @@ Column {
         sourceModel: group.aliases
 
         // Its columns by kind (the shared column model, DataTable.columnKinds; ADR-0103 decision 4).
-        columnKinds: ["index", "short", "name", "control"]
+        columnKinds: ["index", "name", "name", "control"]
         // Widths from column types, not rows (ADR-0103 rule 4): the alias, then its parameter.
 
         header: EaComponents.ListViewHeader {

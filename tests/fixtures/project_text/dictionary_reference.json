@@ -65,6 +65,15 @@
       "mark": "input"
     },
     {
+      "id": "evolution_chart",
+      "edi_name": "_evolution_chart",
+      "title": "Evolution chart",
+      "loop": false,
+      "icon": "chart-line",
+      "order": 55,
+      "mark": "input"
+    },
+    {
       "id": "space_group",
       "edi_name": "_space_group",
       "title": "Space group",
@@ -72,6 +81,64 @@
       "icon": "satellite",
       "order": 100,
       "mark": "input"
+    },
+    {
+      "id": "space_group_magn",
+      "edi_name": "_space_group_magn",
+      "title": "Magnetic space group",
+      "loop": false,
+      "icon": "magnet",
+      "order": 100,
+      "mark": "input"
+    },
+    {
+      "id": "space_group_magn_transforms",
+      "edi_name": "_space_group_magn_transforms",
+      "title": "Magnetic setting transform",
+      "loop_title": "Magnetic setting transforms",
+      "loop": true,
+      "icon": "exchange-alt",
+      "order": 100,
+      "mark": "input"
+    },
+    {
+      "id": "parent_space_group",
+      "edi_name": "_parent_space_group",
+      "title": "Parent space group",
+      "loop": false,
+      "icon": "satellite",
+      "order": 100,
+      "mark": "input"
+    },
+    {
+      "id": "parent_propagation_vector",
+      "edi_name": "_parent_propagation_vector",
+      "title": "Propagation vector",
+      "loop_title": "Propagation vectors",
+      "loop": true,
+      "icon": "long-arrow-alt-right",
+      "order": 100,
+      "mark": "input"
+    },
+    {
+      "id": "space_group_symop_magn_operation",
+      "edi_name": "_space_group_symop_magn_operation",
+      "title": "Magnetic operator",
+      "loop_title": "Magnetic operators",
+      "loop": true,
+      "icon": "sync-alt",
+      "order": 560,
+      "mark": "output"
+    },
+    {
+      "id": "space_group_symop_magn_centering",
+      "edi_name": "_space_group_symop_magn_centering",
+      "title": "Magnetic centring vector",
+      "loop_title": "Magnetic centring vectors",
+      "loop": true,
+      "icon": "arrows-alt",
+      "order": 560,
+      "mark": "output"
     },
     {
       "id": "cell",
@@ -103,6 +170,16 @@
       "mark": "input"
     },
     {
+      "id": "atom_site_moment",
+      "edi_name": "_atom_site_moment",
+      "title": "Magnetic moment",
+      "loop_title": "Magnetic moments",
+      "loop": true,
+      "icon": "location-arrow",
+      "order": 170,
+      "mark": "input"
+    },
+    {
       "id": "scattering_length",
       "edi_name": "_scattering_length",
       "title": "Scattering length",
@@ -110,6 +187,26 @@
       "loop": true,
       "icon": "ruler",
       "order": 140,
+      "mark": "input"
+    },
+    {
+      "id": "magnetic_form_factor",
+      "edi_name": "_magnetic_form_factor",
+      "title": "Magnetic form factor",
+      "loop_title": "Magnetic form factors",
+      "loop": true,
+      "icon": "atom",
+      "order": 180,
+      "mark": "input"
+    },
+    {
+      "id": "atom_type_scat",
+      "edi_name": "_atom_type_scat",
+      "title": "Magnetic form factor coefficients",
+      "loop_title": "Magnetic form factor coefficients",
+      "loop": true,
+      "icon": "atom",
+      "order": 185,
       "mark": "input"
     },
     {
@@ -148,6 +245,16 @@
       "loop": true,
       "icon": "braille",
       "order": 530,
+      "mark": "output"
+    },
+    {
+      "id": "expanded_atom_site_moment",
+      "edi_name": "_expanded_atom_site_moment",
+      "title": "Moment in the cell",
+      "loop_title": "Moments in the cell",
+      "loop": true,
+      "icon": "location-arrow",
+      "order": 570,
       "mark": "output"
     },
     {
@@ -310,6 +417,16 @@
       "mark": "input"
     },
     {
+      "id": "excluded_reflection",
+      "edi_name": "_excluded_reflection",
+      "title": "Excluded reflection",
+      "loop_title": "Excluded reflections",
+      "loop": true,
+      "icon": "eraser",
+      "order": 265,
+      "mark": "input"
+    },
+    {
       "id": "refln",
       "edi_name": "_refln",
       "title": "Reflection",
@@ -439,6 +556,36 @@
       "loop": true,
       "icon": "filter",
       "order": 470,
+      "mark": "input"
+    },
+    {
+      "id": "sequential_fit_experiment",
+      "edi_name": "_sequential_fit_experiment",
+      "title": "Scan experiment",
+      "loop_title": "Scan experiments",
+      "loop": true,
+      "icon": "list-ol",
+      "order": 475,
+      "mark": "input"
+    },
+    {
+      "id": "experiment_set",
+      "edi_name": "_experiment_set",
+      "title": "Experiment set",
+      "loop_title": "Experiment sets",
+      "loop": true,
+      "icon": "link",
+      "order": 455,
+      "mark": "input"
+    },
+    {
+      "id": "experiment_set_member",
+      "edi_name": "_experiment_set_member",
+      "title": "Experiment set member",
+      "loop_title": "Experiment set members",
+      "loop": true,
+      "icon": "link",
+      "order": 456,
       "mark": "input"
     },
     {
@@ -684,6 +831,131 @@
       "category": "atom_site_aniso",
       "display_name": "23",
       "display_units": "Å²",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "atom_site_moment.label",
+      "category": "atom_site_moment",
+      "display_name": "label",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "atom_site_moment.crystalaxis_x",
+      "category": "atom_site_moment",
+      "display_name": "Mx",
+      "display_units": "μB",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "atom_site_moment.crystalaxis_y",
+      "category": "atom_site_moment",
+      "display_name": "My",
+      "display_units": "μB",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "atom_site_moment.crystalaxis_z",
+      "category": "atom_site_moment",
+      "display_name": "Mz",
+      "display_units": "μB",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "atom_site_moment.symmform",
+      "category": "atom_site_moment",
+      "display_name": "symmetry form",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "atom_site_moment.spherical_modulus",
+      "category": "atom_site_moment",
+      "display_name": "|M|",
+      "display_units": "μB",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "atom_site_moment.spherical_polar",
+      "category": "atom_site_moment",
+      "display_name": "θ",
+      "display_units": "°",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "atom_site_moment.spherical_azimuthal",
+      "category": "atom_site_moment",
+      "display_name": "φ",
+      "display_units": "°",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "magnetic_form_factor.type_symbol",
+      "category": "magnetic_form_factor",
+      "display_name": "type",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "magnetic_form_factor.ion",
+      "category": "magnetic_form_factor",
+      "display_name": "ion",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "magnetic_form_factor.approximation",
+      "category": "magnetic_form_factor",
+      "display_name": "approximation",
+      "display_units": "",
+      "dtype": "enum",
+      "options": [
+        {
+          "token": "j0",
+          "display_name": "⟨j0⟩"
+        },
+        {
+          "token": "dipole",
+          "display_name": "Dipole ⟨j0⟩ + C₂⟨j2⟩"
+        },
+        {
+          "token": "beyond_dipole",
+          "display_name": "Beyond dipole ⟨j0⟩…⟨j6⟩"
+        }
+      ]
+    },
+    {
+      "uid": "magnetic_form_factor.j2_coefficient",
+      "category": "magnetic_form_factor",
+      "display_name": "C₂",
+      "display_units": "",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "magnetic_form_factor.j4_coefficient",
+      "category": "magnetic_form_factor",
+      "display_name": "C₄",
+      "display_units": "",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "magnetic_form_factor.j6_coefficient",
+      "category": "magnetic_form_factor",
+      "display_name": "C₆",
+      "display_units": "",
       "dtype": "float",
       "options": []
     },
@@ -1012,14 +1284,6 @@
       "category": "absorption",
       "display_name": "ABSCOR1",
       "display_units": "Å⁻¹",
-      "dtype": "float",
-      "options": []
-    },
-    {
-      "uid": "absorption.abscor2",
-      "category": "absorption",
-      "display_name": "ABSCOR2",
-      "display_units": "",
       "dtype": "float",
       "options": []
     },
@@ -1399,6 +1663,31 @@
       ]
     },
     {
+      "uid": "evolution_chart.error_bars",
+      "category": "evolution_chart",
+      "display_name": "Error bars",
+      "display_units": "",
+      "dtype": "bool",
+      "options": []
+    },
+    {
+      "uid": "evolution_chart.range",
+      "category": "evolution_chart",
+      "display_name": "Range",
+      "display_units": "",
+      "dtype": "enum",
+      "options": [
+        {
+          "token": "values",
+          "display_name": "Values"
+        },
+        {
+          "token": "values_su",
+          "display_name": "Values ± s.u."
+        }
+      ]
+    },
+    {
       "uid": "space_group.name_h_m",
       "category": "space_group",
       "display_name": "name",
@@ -1517,7 +1806,15 @@
         },
         {
           "token": "asymmetric",
-          "display_name": "Asymmetric unit"
+          "display_name": "Asymmetric unit (crystal)"
+        },
+        {
+          "token": "asymmetric_magnetic",
+          "display_name": "Asymmetric unit (magnetic)"
+        },
+        {
+          "token": "magnetic",
+          "display_name": "Magnetic atoms"
         },
         {
           "token": "none",
@@ -1547,6 +1844,138 @@
       "display_name": "axes",
       "display_units": "",
       "dtype": "bool",
+      "options": []
+    },
+    {
+      "uid": "structure_view.show_moments",
+      "category": "structure_view",
+      "display_name": "moments",
+      "display_units": "",
+      "dtype": "bool",
+      "options": []
+    },
+    {
+      "uid": "structure_view.moment_form",
+      "category": "structure_view",
+      "display_name": "moments as",
+      "display_units": "",
+      "dtype": "enum",
+      "options": [
+        {
+          "token": "crystal_axes",
+          "display_name": "Crystal axes"
+        },
+        {
+          "token": "cartesian",
+          "display_name": "Cartesian"
+        },
+        {
+          "token": "spherical",
+          "display_name": "Spherical"
+        }
+      ]
+    },
+    {
+      "uid": "structure_view.moment_scale",
+      "category": "structure_view",
+      "display_name": "moment scale",
+      "display_units": "Å/μB",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "structure_view.moment_view",
+      "category": "structure_view",
+      "display_name": "Moment view",
+      "display_units": "",
+      "dtype": "enum",
+      "options": [
+        {
+          "token": "through_atom",
+          "display_name": "through atom"
+        },
+        {
+          "token": "from_centre",
+          "display_name": "from atom centre"
+        },
+        {
+          "token": "from_surface",
+          "display_name": "from atom surface"
+        }
+      ]
+    },
+    {
+      "uid": "structure_view.polyhedra",
+      "category": "structure_view",
+      "display_name": "polyhedra",
+      "display_units": "",
+      "dtype": "bool",
+      "options": []
+    },
+    {
+      "uid": "structure_view.polyhedra_colour",
+      "category": "structure_view",
+      "display_name": "colour",
+      "display_units": "",
+      "dtype": "enum",
+      "options": [
+        {
+          "token": "atom",
+          "display_name": "Atom colour"
+        },
+        {
+          "token": "grey",
+          "display_name": "Grey"
+        }
+      ]
+    },
+    {
+      "uid": "structure_view.polyhedra_opacity",
+      "category": "structure_view",
+      "display_name": "opacity",
+      "display_units": "",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "structure_view.polyhedra_extent",
+      "category": "structure_view",
+      "display_name": "extent",
+      "display_units": "",
+      "dtype": "enum",
+      "options": [
+        {
+          "token": "cell",
+          "display_name": "Inside the cell"
+        },
+        {
+          "token": "complete",
+          "display_name": "Complete for atoms in the cell"
+        }
+      ]
+    },
+    {
+      "uid": "structure_view.polyhedra_centres",
+      "category": "structure_view",
+      "display_name": "centre atoms",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "structure_view.polyhedra_corners",
+      "category": "structure_view",
+      "display_name": "corner atoms",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "structure_view.polyhedra_max_distance",
+      "category": "structure_view",
+      "display_name": "max distance",
+      "display_units": "Å",
+      "dtype": "float",
       "options": []
     },
     {
@@ -1584,7 +2013,7 @@
     {
       "uid": "expanded_atom_site.site_symmetry",
       "category": "expanded_atom_site",
-      "display_name": "symmetry",
+      "display_name": "sym",
       "display_units": "",
       "dtype": "string",
       "options": []
@@ -1648,7 +2077,7 @@
     {
       "uid": "expanded_atom_site.u_iso",
       "category": "expanded_atom_site",
-      "display_name": "U iso",
+      "display_name": "Uiso",
       "display_units": "Å²",
       "dtype": "float",
       "options": []
@@ -1656,7 +2085,7 @@
     {
       "uid": "expanded_atom_site.cluster_id",
       "category": "expanded_atom_site",
-      "display_name": "cluster",
+      "display_name": "pos",
       "display_units": "",
       "dtype": "int",
       "options": []
@@ -1866,6 +2295,36 @@
       ]
     },
     {
+      "uid": "experiment_type.dimensionality",
+      "category": "experiment_type",
+      "display_name": "dimensionality",
+      "display_units": "",
+      "dtype": "enum",
+      "options": [
+        {
+          "token": "1d",
+          "display_name": "1D"
+        }
+      ]
+    },
+    {
+      "uid": "experiment_type.polarisation",
+      "category": "experiment_type",
+      "display_name": "polarisation",
+      "display_units": "",
+      "dtype": "enum",
+      "options": [
+        {
+          "token": "unpolarised",
+          "display_name": "Unpolarised"
+        },
+        {
+          "token": ".",
+          "display_name": "Not applicable"
+        }
+      ]
+    },
+    {
       "uid": "scattering_source.xray_form_factor",
       "category": "scattering_source",
       "display_name": "X-ray form factors",
@@ -1933,6 +2392,30 @@
       "options": []
     },
     {
+      "uid": "data_source.path",
+      "category": "data_source",
+      "display_name": "data path",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "data_source.collection_id",
+      "category": "data_source",
+      "display_name": "collection entry",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "data_source.digest",
+      "category": "data_source",
+      "display_name": "data digest",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
       "uid": "data_range.two_theta_min",
       "category": "data_range",
       "display_name": "min",
@@ -1985,6 +2468,14 @@
       "category": "data_range",
       "display_name": "step",
       "display_units": "µs",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "data_range.sin_theta_over_lambda_max",
+      "category": "data_range",
+      "display_name": "max sin θ/λ",
+      "display_units": "1/Å",
       "dtype": "float",
       "options": []
     },
@@ -2086,6 +2577,14 @@
       "options": []
     },
     {
+      "uid": "pd_calc.component_intensities_magnetic",
+      "category": "pd_calc",
+      "display_name": "structure magnetic calc",
+      "display_units": "",
+      "dtype": "float",
+      "options": []
+    },
+    {
       "uid": "pd_calc_overall.component_presentation_order",
       "category": "pd_calc_overall",
       "display_name": "structure order",
@@ -2097,6 +2596,22 @@
       "uid": "pd_block.id",
       "category": "pd_block",
       "display_name": "block",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "instrument.name",
+      "category": "instrument",
+      "display_name": "instrument",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "instrument.facility",
+      "category": "instrument",
+      "display_name": "facility",
       "display_units": "",
       "dtype": "string",
       "options": []
@@ -2432,6 +2947,44 @@
       "options": []
     },
     {
+      "uid": "reflns.merge",
+      "category": "reflns",
+      "display_name": "merge",
+      "display_units": "",
+      "dtype": "enum",
+      "options": [
+        {
+          "token": "none",
+          "display_name": "none"
+        },
+        {
+          "token": "point_group",
+          "display_name": "point group"
+        },
+        {
+          "token": "laue_class",
+          "display_name": "Laue class"
+        }
+      ]
+    },
+    {
+      "uid": "reflns.absences",
+      "category": "reflns",
+      "display_name": "absences",
+      "display_units": "",
+      "dtype": "enum",
+      "options": [
+        {
+          "token": "exclude",
+          "display_name": "exclude"
+        },
+        {
+          "token": "include",
+          "display_name": "include"
+        }
+      ]
+    },
+    {
       "uid": "refine_ls.threshold_sigma",
       "category": "refine_ls",
       "display_name": "fit reflections above (su)",
@@ -2520,6 +3073,55 @@
       "options": []
     },
     {
+      "uid": "excluded_region.axis",
+      "category": "excluded_region",
+      "display_name": "axis",
+      "display_units": "",
+      "dtype": "enum",
+      "options": [
+        {
+          "token": "d_spacing",
+          "display_name": "d"
+        },
+        {
+          "token": "sin_theta_over_lambda",
+          "display_name": "sin(θ)/λ"
+        }
+      ]
+    },
+    {
+      "uid": "excluded_reflection.id",
+      "category": "excluded_reflection",
+      "display_name": "id",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "excluded_reflection.index_h",
+      "category": "excluded_reflection",
+      "display_name": "h",
+      "display_units": "",
+      "dtype": "int",
+      "options": []
+    },
+    {
+      "uid": "excluded_reflection.index_k",
+      "category": "excluded_reflection",
+      "display_name": "k",
+      "display_units": "",
+      "dtype": "int",
+      "options": []
+    },
+    {
+      "uid": "excluded_reflection.index_l",
+      "category": "excluded_reflection",
+      "display_name": "l",
+      "display_units": "",
+      "dtype": "int",
+      "options": []
+    },
+    {
       "uid": "refln.structure_id",
       "category": "refln",
       "display_name": "structure",
@@ -2587,6 +3189,22 @@
       "uid": "refln.f_squared_calc",
       "category": "refln",
       "display_name": "F² calc",
+      "display_units": "",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "refln.f_m_perp_squared_calc",
+      "category": "refln",
+      "display_name": "|F_M⊥|² calc",
+      "display_units": "",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "refln.f_squared_total_calc",
+      "category": "refln",
+      "display_name": "F² total calc",
       "display_units": "",
       "dtype": "float",
       "options": []
@@ -2701,6 +3319,10 @@
       "dtype": "enum",
       "options": [
         {
+          "token": "auto",
+          "display_name": "Auto"
+        },
+        {
           "token": "ladder",
           "display_name": "Ladder"
         },
@@ -2709,26 +3331,51 @@
           "display_name": "Fast descent"
         },
         {
-          "token": "fast_descent_linear_snap",
-          "display_name": "Fast descent with linear snap"
-        },
-        {
-          "token": "fast_descent_guarded_linear_snap",
-          "display_name": "Fast descent with guarded linear snap"
-        },
-        {
-          "token": "multistart_prune",
-          "display_name": "Multi-start with pruning"
+          "token": "fast_descent_and_ladder",
+          "display_name": "Fast descent and ladder"
         }
       ]
     },
     {
       "uid": "minimizer.chi_square_tolerance",
       "category": "minimizer",
-      "display_name": "tolerance",
+      "display_name": "χ² change tolerance",
       "display_units": "",
       "dtype": "float",
       "options": []
+    },
+    {
+      "uid": "minimizer.stop_rules",
+      "category": "minimizer",
+      "display_name": "stop rules",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "minimizer.shift_tolerance",
+      "category": "minimizer",
+      "display_name": "Shift/s.u. tolerance",
+      "display_units": "",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "minimizer.moments_near_zero",
+      "category": "minimizer",
+      "display_name": "magnetic moments near zero",
+      "display_units": "",
+      "dtype": "enum",
+      "options": [
+        {
+          "token": "try_exact_zero",
+          "display_name": "Try exact zero"
+        },
+        {
+          "token": "keep_free",
+          "display_name": "Keep free"
+        }
+      ]
     },
     {
       "uid": "alias.id",
@@ -2979,6 +3626,30 @@
       "options": []
     },
     {
+      "uid": "fit_result.stopping_rule",
+      "category": "fit_result",
+      "display_name": "stopped by",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "fit_result.stopping_value",
+      "category": "fit_result",
+      "display_name": "stopping value",
+      "display_units": "",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "fit_result.last_shift_su",
+      "category": "fit_result",
+      "display_name": "last largest shift/s.u.",
+      "display_units": "",
+      "dtype": "float",
+      "options": []
+    },
+    {
       "uid": "fit_result_bank.n_data_points",
       "category": "fit_result_bank",
       "display_name": "points",
@@ -3029,7 +3700,31 @@
     {
       "uid": "fit_result_bank.chi_square",
       "category": "fit_result_bank",
-      "display_name": "reduced χ²",
+      "display_name": "χ²",
+      "display_units": "",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "fit_result_bank.r_int",
+      "category": "fit_result_bank",
+      "display_name": "Rint",
+      "display_units": "%",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "fit_result_bank.r_sigma",
+      "category": "fit_result_bank",
+      "display_name": "R-sigma",
+      "display_units": "%",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "fit_result_bank.absent_mean_i_over_su",
+      "category": "fit_result_bank",
+      "display_name": "absent mean I/su",
       "display_units": "",
       "dtype": "float",
       "options": []
@@ -3046,6 +3741,14 @@
       "uid": "fit_result_phase.f_r_factor",
       "category": "fit_result_phase",
       "display_name": "R F",
+      "display_units": "%",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "fit_result_phase.magnetic_r_factor",
+      "category": "fit_result_phase",
+      "display_name": "R mag",
       "display_units": "%",
       "dtype": "float",
       "options": []
@@ -3163,6 +3866,54 @@
       "options": []
     },
     {
+      "uid": "sequential_fit_experiment.experiment_id",
+      "category": "sequential_fit_experiment",
+      "display_name": "experiment",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "sequential_fit_experiment.file_pattern",
+      "category": "sequential_fit_experiment",
+      "display_name": "file pattern",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "experiment_set.id",
+      "category": "experiment_set",
+      "display_name": "set",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "experiment_set.template_experiment_id",
+      "category": "experiment_set",
+      "display_name": "template",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "experiment_set_member.experiment_id",
+      "category": "experiment_set_member",
+      "display_name": "experiment",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "experiment_set_member.set_id",
+      "category": "experiment_set_member",
+      "display_name": "set",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
       "uid": "calculator.type",
       "category": "calculator",
       "display_name": "calculator",
@@ -3174,11 +3925,499 @@
           "display_name": "crysta"
         }
       ]
+    },
+    {
+      "uid": "space_group_magn.number_bns",
+      "category": "space_group_magn",
+      "display_name": "BNS number",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "space_group_magn.name_bns",
+      "category": "space_group_magn",
+      "display_name": "BNS symbol",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "space_group_magn.name_uni",
+      "category": "space_group_magn",
+      "display_name": "UNI symbol",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "space_group_magn.number_og",
+      "category": "space_group_magn",
+      "display_name": "OG number",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "space_group_magn.name_og",
+      "category": "space_group_magn",
+      "display_name": "OG symbol",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "space_group_magn.point_group_name_uni",
+      "category": "space_group_magn",
+      "display_name": "point group",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "space_group_magn.point_group_number_litvin",
+      "category": "space_group_magn",
+      "display_name": "point group number",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "space_group_magn_transforms.id",
+      "category": "space_group_magn_transforms",
+      "display_name": "id",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "space_group_magn_transforms.pp_abc",
+      "category": "space_group_magn_transforms",
+      "display_name": "transform",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "space_group_magn_transforms.source",
+      "category": "space_group_magn_transforms",
+      "display_name": "setting",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "parent_space_group.name_h_m_alt",
+      "category": "parent_space_group",
+      "display_name": "name",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "parent_space_group.it_number",
+      "category": "parent_space_group",
+      "display_name": "number",
+      "display_units": "",
+      "dtype": "int",
+      "options": []
+    },
+    {
+      "uid": "parent_space_group.transform_pp_abc",
+      "category": "parent_space_group",
+      "display_name": "to standard",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "parent_space_group.child_transform_pp_abc",
+      "category": "parent_space_group",
+      "display_name": "to magnetic cell",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "parent_space_group.reference_setting",
+      "category": "parent_space_group",
+      "display_name": "reference setting",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "parent_space_group.derived",
+      "category": "parent_space_group",
+      "display_name": "derived",
+      "display_units": "",
+      "dtype": "bool",
+      "options": []
+    },
+    {
+      "uid": "parent_propagation_vector.id",
+      "category": "parent_propagation_vector",
+      "display_name": "id",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "parent_propagation_vector.kxkykz",
+      "category": "parent_propagation_vector",
+      "display_name": "k",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "atom_type_scat.symbol",
+      "category": "atom_type_scat",
+      "display_name": "type",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "atom_type_scat.neutron_magnetic_j0_a1",
+      "category": "atom_type_scat",
+      "display_name": "j0 A1",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "atom_type_scat.neutron_magnetic_j0_a2",
+      "category": "atom_type_scat",
+      "display_name": "j0 a2",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "atom_type_scat.neutron_magnetic_j0_b1",
+      "category": "atom_type_scat",
+      "display_name": "j0 B1",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "atom_type_scat.neutron_magnetic_j0_b2",
+      "category": "atom_type_scat",
+      "display_name": "j0 b2",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "atom_type_scat.neutron_magnetic_j0_c1",
+      "category": "atom_type_scat",
+      "display_name": "j0 C1",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "atom_type_scat.neutron_magnetic_j0_c2",
+      "category": "atom_type_scat",
+      "display_name": "j0 c2",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "atom_type_scat.neutron_magnetic_j0_d",
+      "category": "atom_type_scat",
+      "display_name": "j0 D",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "atom_type_scat.neutron_magnetic_j0_e",
+      "category": "atom_type_scat",
+      "display_name": "j0 e",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "atom_type_scat.neutron_magnetic_j2_a1",
+      "category": "atom_type_scat",
+      "display_name": "j2 A1",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "atom_type_scat.neutron_magnetic_j2_a2",
+      "category": "atom_type_scat",
+      "display_name": "j2 a2",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "atom_type_scat.neutron_magnetic_j2_b1",
+      "category": "atom_type_scat",
+      "display_name": "j2 B1",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "atom_type_scat.neutron_magnetic_j2_b2",
+      "category": "atom_type_scat",
+      "display_name": "j2 b2",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "atom_type_scat.neutron_magnetic_j2_c1",
+      "category": "atom_type_scat",
+      "display_name": "j2 C1",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "atom_type_scat.neutron_magnetic_j2_c2",
+      "category": "atom_type_scat",
+      "display_name": "j2 c2",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "atom_type_scat.neutron_magnetic_j2_d",
+      "category": "atom_type_scat",
+      "display_name": "j2 D",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "atom_type_scat.neutron_magnetic_j2_e",
+      "category": "atom_type_scat",
+      "display_name": "j2 e",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "atom_type_scat.neutron_magnetic_j4_a1",
+      "category": "atom_type_scat",
+      "display_name": "j4 A1",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "atom_type_scat.neutron_magnetic_j4_a2",
+      "category": "atom_type_scat",
+      "display_name": "j4 a2",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "atom_type_scat.neutron_magnetic_j4_b1",
+      "category": "atom_type_scat",
+      "display_name": "j4 B1",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "atom_type_scat.neutron_magnetic_j4_b2",
+      "category": "atom_type_scat",
+      "display_name": "j4 b2",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "atom_type_scat.neutron_magnetic_j4_c1",
+      "category": "atom_type_scat",
+      "display_name": "j4 C1",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "atom_type_scat.neutron_magnetic_j4_c2",
+      "category": "atom_type_scat",
+      "display_name": "j4 c2",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "atom_type_scat.neutron_magnetic_j4_d",
+      "category": "atom_type_scat",
+      "display_name": "j4 D",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "atom_type_scat.neutron_magnetic_j4_e",
+      "category": "atom_type_scat",
+      "display_name": "j4 e",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "atom_type_scat.neutron_magnetic_j6_a1",
+      "category": "atom_type_scat",
+      "display_name": "j6 A1",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "atom_type_scat.neutron_magnetic_j6_a2",
+      "category": "atom_type_scat",
+      "display_name": "j6 a2",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "atom_type_scat.neutron_magnetic_j6_b1",
+      "category": "atom_type_scat",
+      "display_name": "j6 B1",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "atom_type_scat.neutron_magnetic_j6_b2",
+      "category": "atom_type_scat",
+      "display_name": "j6 b2",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "atom_type_scat.neutron_magnetic_j6_c1",
+      "category": "atom_type_scat",
+      "display_name": "j6 C1",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "atom_type_scat.neutron_magnetic_j6_c2",
+      "category": "atom_type_scat",
+      "display_name": "j6 c2",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "atom_type_scat.neutron_magnetic_j6_d",
+      "category": "atom_type_scat",
+      "display_name": "j6 D",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "atom_type_scat.neutron_magnetic_j6_e",
+      "category": "atom_type_scat",
+      "display_name": "j6 e",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "atom_type_scat.neutron_magnetic_source",
+      "category": "atom_type_scat",
+      "display_name": "source",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "space_group_symop_magn_operation.id",
+      "category": "space_group_symop_magn_operation",
+      "display_name": "id",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "space_group_symop_magn_operation.xyz",
+      "category": "space_group_symop_magn_operation",
+      "display_name": "operation",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "space_group_symop_magn_centering.id",
+      "category": "space_group_symop_magn_centering",
+      "display_name": "id",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "space_group_symop_magn_centering.xyz",
+      "category": "space_group_symop_magn_centering",
+      "display_name": "operation",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "expanded_atom_site_moment.atom_site_id",
+      "category": "expanded_atom_site_moment",
+      "display_name": "site",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "expanded_atom_site_moment.site_symmetry",
+      "category": "expanded_atom_site_moment",
+      "display_name": "sym",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "expanded_atom_site_moment.crystalaxis_x",
+      "category": "expanded_atom_site_moment",
+      "display_name": "Mx",
+      "display_units": "μB",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "expanded_atom_site_moment.crystalaxis_y",
+      "category": "expanded_atom_site_moment",
+      "display_name": "My",
+      "display_units": "μB",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "expanded_atom_site_moment.crystalaxis_z",
+      "category": "expanded_atom_site_moment",
+      "display_name": "Mz",
+      "display_units": "μB",
+      "dtype": "float",
+      "options": []
     }
   ],
   "source": {
-    "revision": "2518a263eca73b7aa73599a86997e68f142f1431",
+    "revision": "4b418f93622ad41bc2fba26ff5f8f531ed9ed884",
     "path": "data/dictionary/parameters.yaml",
-    "sha256": "b0005ad92f4ba79be1ec9872122786ab2d3d28edd88ec36777bb0277d1d81840"
+    "sha256": "3aaa7bc9309f910435664248688aee90b1ec751772129a33281bf1918b5b6e2f"
   }
 }

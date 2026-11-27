@@ -66,7 +66,7 @@ See [ADR-0071](adrs/0071-desktop-installers.md) for the deployment and qualifica
 
 Each platform first qualifies the offline bundle, then generates an online-only bootstrap and tests
 its ZIP against a local file repository. The final installer artifacts contain only that online ZIP.
-Development component versions use `0.0.RUN.ATTEMPT`; published calendar releases use their single
+Development component versions use `0.0.RUN.ATTEMPT`; published releases use their single
 release-plan identity instead. Offline candidates remain local qualification inputs.
 
 For a testing prerelease, manually run **Desktop installers** with
@@ -108,7 +108,10 @@ CLI ZIPs are separate GitHub assets and require no Pages component repository.
 
 ## Calendar release and update notes
 
-The version is `YYYY.MM.SEQUENCE`, starting at zero each month. Merged PR titles describe the user
+The version is `YY.N`, the year's last two digits and a counter within the year (26.17, then 27.1),
+ordered after the old `YYYY.MM.SEQUENCE` releases (ADR-0106). The component repositories are built with
+`repogen --sha-update`, so the Maintenance Tool offers a component whose content changed, whatever its version,
+and an update also replaces the Maintenance Tool on macOS and Windows. Merged PR titles describe the user
 outcome and become the release notes. Exactly one existing scope label groups a PR into Added,
 Fixed or Changed; the label does not select a semantic-version increment.
 

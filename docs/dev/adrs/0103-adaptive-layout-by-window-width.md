@@ -92,7 +92,7 @@ built from it was accepted on 2026-11-21.
 
 4. **Tables (rules T1-T12).** Every sidebar table declares its columns' kinds (`DataTable.columnKinds`): the row
    number, a mark, a name, short or long text, a number (value, s.u., displacement, change), a unit, a control, or a
-   fixed width.
+   fixed width; a user's id or label is a name, a fitted parameter a value.
 
    - **T1** The gap between neighbouring columns' content is 1 em ± 1 px.
    - **T2** A unit starts one space after its value ± 1 px, in the value's size and never bold.
@@ -100,8 +100,9 @@ built from it was accepted on 2026-11-21.
      after them.
    - **T4** Spare width, if any, is one block directly before the trailing controls.
    - **T5** A column's width comes from its kind and parameter type, the full typical value reserved, never from the
-     values shown; a name, ID or file column from its text. Columns of one kind are equal to the pixel (ADP 11 = 22 =
-     33 = 12 = 13 = 23).
+     values shown; a name, ID or file column from its text, the widest of the model role it declares
+     (`DataTable.columnTexts`), read from the model, never from made rows (edi ADR-0105). Columns of one
+     kind are equal to the pixel (ADP 11 = 22 = 33 = 12 = 13 = 23).
    - **T6** Column positions and widths do not change (± 0 px) across an edit, a type change (Biso to Uani), a fit, a
      load of the same project, a page switch and back, and every frame of a fast scroll.
    - **T7** A sidebar table takes the room that keeps the whole sidebar in view (the owner, 2026-11-24): the sidebar's
@@ -146,16 +147,18 @@ built from it was accepted on 2026-11-21.
      its longest option (T5), so its content ends at its column's margin, whichever option is chosen. A text drawn
      transparent, an input under its shortened label, draws nothing. A unit's content is its widest, deg² (T5). The
      parameter table's name ends at its budget (W5) and may hold up to one column spacing more, which is spare.
-   - T4: only check boxes and buttons are trailing controls. A mark is content: the spare is after it. The
-     parameter table's name is measured against its budget (W5), and Min and Max, one kind, against the wider of their
-     two titles (T5): those widths are reserved, not spare.
+     A table whose rows are still to be measured has no cell margins yet and is not read.
+   - T4: only check boxes and buttons are trailing controls. A mark is content, the spare after it, but a mark right
+     before the controls (the recent projects' status) stands with them, the spare before it. The parameter table's
+     name is measured against its budget (W5), and Min and Max, one kind, against the wider of their two titles (T5):
+     those widths are reserved, not spare.
    - T8, T9 and N1 count the glyphs' ink, not their box: a line gap or an unused descent cut off takes nothing seen.
      Nor is ink cut by a scrolling view's own edge, in a direction that view scrolls: it is half scrolled out and shows
      whole when scrolled to. Any other clip that cuts it, inside the view or around it, is a violation.
    - T9's capital letter does not apply to a symbol written as science writes it, from this list only, its unit in
-     brackets aside: b, d, h, k, l, x, y, z, h k l, s.u., θ, φ, ϕ, λ, χ², sin θ/λ, cRp and cRwp; nor to a title that
-     is one of the project's structure names: that is text the user gave, shown as written. Both still show whole and
-     align as their content.
+     brackets aside: b, d, h, k, l, r, x, y, z, h k l, f rand, s.u., θ, φ, ϕ, λ, χ², sin θ/λ, cRp and cRwp; nor to a
+     title that is one of the project's structure names: that is text the user gave, shown as written. Both still show
+     whole and align as their content.
    - T10 applies to text the project holds as given by the user (a datablock, row or alias name, an expression, a file
      name, the project's title, a recent project's folder), wherever it shows; its ten characters are counted in the
      text as drawn. Any other text, in a table too, is a fixed label and never cut (N1); a table's title never is (T9).
@@ -174,8 +177,44 @@ built from it was accepted on 2026-11-21.
    same); windows of 1280 × 800, 1496 × 900 and 1920 × 1080 at the side and 900 × 1000 and 700 × 900 at the bottom;
    `pd-neut-cwl_cosio-d20_2k` before and after a fit, `pd-neut-tof_ncaf-wish` fitted and the 213-file scan; a site
    switched to Uani, a 24-character structure name, a fast scroll, every frame of a group unfold and the first second
-   after a page switch. The layout check in the demo driver runs one test per rule, named by its number, over all of
-   them.
+   after a page switch; W7 also for a scan with three Bragg rows. The layout check in the demo driver runs one test
+   per rule, named by its number, over all of them.
+
+   **Where a rule is asserted.** Each check below writes a finding named `<rule>:<kind>` that fails its state in
+   `tools/dev/gui_contract_report.py`, against the numbers above, never against the app's own; a number this ADR does
+   not give is measured on a build and kept as a named constant in the demo driver.
+
+   - W3: at 913 px the sidebar is at the side, at most half the window, with Name, Value and s.u., and at 912 px at
+     the bottom (`series-point` in `e58-contract`, `W3:switch`).
+   - W4: Start, Min, Max and Change join in that order, Auto is at most 681 px with all of them and never shrinks as
+     the window grows (`series-point`, `W4:order`, `W4:stop`, `W4:shrink`).
+   - W5: in Auto a sidebar at 681 px shows every column (`W5:stop`); no shown name is wider than the name budget
+     (`W5:name`); at the stop the name column is the budget plus at most one column spacing (`W5:name-spare`). The
+     budget is measured as the widest drawn name of the bundled examples (`e58-names`, each with the layout check).
+   - W6: in Compact each of the three pickers draws its default text whole (`W6:picker`), read from the box.
+   - T5: the filler's reserve, the part before its spare, is as wide as the other columns of its kind (`T5:filler`).
+   - T6: a table's column widths hold across a type change, an edit, a page switch and back, a fit and a load of the
+     same project (`e58-columns`, `T6:columns-moved`), and in every frame for 1.2 s after a page switch or an unfold
+     (`e58-stable`, `T6:moved`).
+   - T7: no table is drawn before its columns are measured (`e58-stable`, `T7:first-draw`).
+   - T8: a table's number shows at most six significant digits, and when digits drop never fewer than two
+     (`T8:digits-most`, `T8:digits-least`).
+   - T11: the row-number column holds its widest row number, bold, inside its margins (`T11:narrow`).
+   - C1: a legend label up to 20 characters is never cut (`C1:legend-cut`); a longer datablock name is the only piece
+     cut, in its middle, with a tooltip holding the whole name (`C1:legend-name`).
+   - C2: with every legend entry off, no line, scatter or filled series draws (`e58-legend`, `C2:legend-hidden-drawn`),
+     the structure curves and a time-of-flight pattern included; an area's two edge lines are judged with the area.
+   - D1: a dialog is at most its content's width plus 2 em (`e58-dialogs`, the fit's results at 1000 and 1496 px,
+     `D1:dialog-wide`); its rows and values are read as every text is (N1, T8); a tooltip has at most 12 lines inside
+     the window (`D1:tooltip-tall`).
+   - The states: the report fails when a state above was reached by no run, each project state (the 2k example
+     before and after a fit and with a 24-character structure name, the time-of-flight joint fit after its fit, the
+     213-file scan) in each mode at each of the five windows, Project without one at each window, and the scenarios of
+     the variant states (`e58-columns`, `e58-scroll`, `e58-stable`, `e58-bottomchart`). The sweep reaches the
+     unfitted projects and `e58-states` the others.
+   - The T5, T8 and T11 checks and the first-draw check leave out the two layouts that wait for the owner's decision
+     on columns that do not fit: a scan's row with six extract columns in Compact and the expanded atom sites in
+     Compact and Fit values.
 
 5. **Charts take the remaining space.** The main area keeps the chart toolbar and selector row on one line, with
    their own priority overflow, and the chart's frame (panes and axes, ADR "the UI update rule" rule 5) scales with
