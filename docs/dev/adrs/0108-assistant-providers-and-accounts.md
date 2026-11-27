@@ -228,14 +228,15 @@ claude -p --input-format stream-json --output-format stream-json --verbose --inc
 - **Managed settings.** An organisation's managed Claude settings (a managed settings file, a device-management
   policy, or settings Anthropic's servers deliver to an organisation's accounts) always apply and edi does not disable
   them; their hooks are the organisation's own controls, chosen by its administrator for every Claude session on the
-  computer, and run outside edi's tool boundary by that choice. edi makes them visible and asks before they can act
-  on edi's behalf: before the first start of each account it looks for a managed settings file or policy at the
-  documented locations and, when one exists, the consent dialog says that the organisation's Claude settings, which
-  can run commands at session start and before each message, apply. Settings delivered by Anthropic's servers cannot
-  be seen beforehand; the `hook_started` events the stream sends before `system/init` show them, and when any hook
-  ran, the account shows that the organisation's hooks are active and Send waits for the user's acknowledgement,
-  once per account, before the first message. Hooks cannot be prevented while managed policy is respected; whether
-  this disclosure suffices is open question 3 below.
+  computer, and run outside edi's tool boundary by that choice. They cannot be prevented while managed policy is
+  respected, and settings delivered by Anthropic's servers cannot be seen before a launch, so edi asks before any
+  launch rather than after an observation: the consent the user gives before Claude's first sign-in, which every later
+  start and resume of that account relies on, says that an organisation managing Claude can run its own commands when
+  Claude starts and before each message, outside edi's tools. That consent covers policy edi has not seen and policy
+  that changes later. On top of it, when a managed settings file or policy is visible at the documented locations,
+  or the stream's `hook_started` events before `system/init` show a hook ran, the account says so and Send waits for
+  the user's acknowledgement, once per account. Whether this consent is enough to cover managed effects is open
+  question 3; until the owner answers, it is what edi does.
 - **Environment.** `CLAUDE_CONFIG_DIR=<account home>`, `DISABLE_UPDATES=1`, `MCP_TOOL_TIMEOUT` (§3),
   `MCP_PROTOCOL_NEGOTIATION=legacy`. Removed, because they change how edi's tools and turns run: `CLAUDECODE`,
   `CLAUDE_CODE_SUBPROCESS_ENV_SCRUB` and `CLAUDE_AUTO_BACKGROUND_TASKS`. Anthropic's conditions for shipping Claude Code
@@ -258,8 +259,9 @@ claude -p --input-format stream-json --output-format stream-json --verbose --inc
   folder and config home, only decides whether to offer sign-in (`authMethod: none`) and checks `configDirectory`
   against the account's home. The account record keeps the non-secret principal the user saw: provider `anthropic`,
   the method and source (`claude.ai` login, `ANTHROPIC_API_KEY`, a token, a cloud provider) and the e-mail and
-  organisation when the runtime gives them. A credential for which the runtime names no e-mail and no organisation
-  (a bare key or token) is an **unidentified credential**: the dialog says that Claude is using a key from the
+  organisation when the runtime gives them. Only an e-mail names the person; an organisation, a method or a key's
+  source does not, since many credentials share them. A credential for which the runtime names no e-mail (a key or
+  token, with or without an organisation) is an **unidentified credential**: the dialog says that Claude is using a key from the
   environment, without showing it, and the account is never matched to a verified record. Conversations started under
   it are kept as history but never resumed in a later process, because nothing proves the same credential is back; a
   new process starts a new conversation, and a verified account's thread never runs under it. Every process start repeats the readback before its first input; a missing field the record holds, or a
@@ -357,26 +359,23 @@ copilot --acp --stdio --no-auto-update --disable-builtin-mcps --disable-mcp-serv
   home does not choose which keychain identity the CLI uses. The provider observation is the CLI's account command,
   `/user` ("Manage signed-in accounts"): when `available_commands_update` advertises it, edi selects the record's
   login with `/user switch <login>` in the session that will receive the input and reads it back with `/user show` in
-  that same session, before its first prompt and again after every process start and `session/load`; a failed switch,
-  an absent, unreadable or different answer stops Send with the reason shown. The pinned CLI (1.0.116) documents
-  `/user` for its interactive interface but does not promise it over ACP, and an unauthenticated session does not
-  show the advertised commands, so whether it qualifies is checked in the owner's trial. Without an advertised
-  `/user` there is no selection and no identity proof, and Copilot sessions never receive input or resume on that
-  route (open question 1 below).
+  that same session, before its first prompt and again after every process start and `session/load`. Send and resume
+  require a positive match of both the login and the host (`github.com`, or the account's `<name>.ghe.com`); a failed
+  switch, an absent, unreadable or different login or host stops Send with the reason shown. The pinned CLI (1.0.116)
+  documents `/user` for its interactive interface but does not promise it over ACP, and an unauthenticated session
+  does not show the advertised commands, so whether it qualifies is checked in the owner's trial. Without an
+  advertised `/user` there is no selection and no identity proof, and Copilot sessions never receive input or resume.
 - **No seat, organisation policy, signed out.** `-32000` on `session/new` means signed out. Any other refusal shows
   the CLI's message as it is, plus any `notice` update. A server whose `tools/list` never arrives shows that the
   organisation's policy may block edi's tools.
-- **Sign-out.** The pinned CLI advertises ACP's own sign-out operation (`agentCapabilities.auth.logout` in its
-  `initialize` reply); its interactive `/logout` is documented to "sign out of an account you added with /login or
-  `copilot login` and delete its saved credentials: the token in the system keychain, or in config.json under the
-  active Copilot home". edi sends the sign-out in the account's own process after `/user switch` and `/user show` have
-  confirmed that the process uses the account, and the sign-out is confirmed when a following `session/new` answers
-  ACP's `auth_required` error (`-32000`, the code ACP defines for it; the pinned CLI answers it with "Authentication
-  required"). Without the selection, or without that confirmation, edi offers "Remove from edi" instead of Sign out:
-  it stops the process and deletes the home folder it created (the one operation in which edi changes a runtime's
-  files, since the CLI keeps a plain-text token there when no keychain exists), and the dialog says plainly that the
-  GitHub sign-in stays in the system keychain until it is removed or revoked on GitHub. The two outcomes are shown
-  differently and never reported as each other.
+- **Sign-out.** ACP's `logout` (advertised by the pinned CLI in `agentCapabilities.auth.logout`) takes no account and
+  ends the process's current authentication; it does not by itself prove that the selected keychain identity is gone
+  while another stays. So edi does not offer Sign out for Copilot until a pinned CLI is qualified in the owner's trial:
+  with two accounts on one host, signing one out leaves it signed out after a fresh start and leaves the other
+  available. Until then the action is "Remove from edi": edi stops the process and deletes the home folder it created
+  (the one operation in which edi changes a runtime's files, since the CLI keeps a plain-text token there when no
+  keychain exists), drops the account's record, and says plainly that the GitHub sign-in stays in the system keychain
+  until it is removed there or revoked on GitHub.
 - **Usage** is not reported (`Unsupported`, an existing state).
 - **Version.** One pinned release, 1.0.115 or newer (1.0.105 fixed skipped permission requests; 1.0.115 sends
   questions as ACP elicitations, which edi declines in favour of `request_user_input`). Copilot on Linux needs the
@@ -538,16 +537,20 @@ with a token in the environment; voice input; new tools; Copilot's bring-your-ow
 The vendors' current runtimes cannot supply three observations this design asks for; each question names the route it
 holds closed until it is answered, and the course this ADR recommends.
 
-1. **GitHub Copilot.** Neither ACP nor the pinned CLI documents a readback of a session's effective tool set or a way
-   to select one of several GitHub accounts over ACP that the owner's trial has confirmed. Until answered, Copilot
-   sessions receive no input. Recommended: accept for Copilot the documented server-start filter (`--available-tools`,
-   "the session can use only the listed tools"), with permission denial and the foreign-tool stop, as its tool
-   control, and offer several Copilot accounts only on a pin whose trial shows `/user switch` and `/user show` over
-   ACP, one account per host otherwise.
+1. **GitHub Copilot's tools.** Neither ACP nor the pinned CLI documents a readback of a session's effective tool
+   set. Until answered (a committed decision accepting a substitute, or dropping the Copilot route from the packet),
+   Copilot sessions receive no input; the code holds this in one constant (`assistant_copilot_input_open`).
+   Recommended: accept for Copilot the documented server-start filter (`--available-tools`, "the session can use only
+   the listed tools"), with permission denial, as its tool control. Accounts are not part of the question: Send and resume always need the positive login-and-host match
+   above, and a pin without `/user` over ACP offers no Copilot input at all. A `tool_call` outside the closed list is
+   detection, not a veto, since ACP notifications cannot stop a call.
 2. **Claude credentials kept only in settings** (`apiKeyHelper`). Recommended: unsupported in edi; the user's own key
    works through the environment.
 3. **Claude managed hooks.** An organisation's managed hooks cannot be prevented while managed policy is respected.
-   Recommended: the disclosure and per-account acknowledgement in §4.
+   Recommended: the consent before the first sign-in plus the per-account acknowledgement in §4.
+
+Copilot's Sign out is not an owner question but a pin qualification (§5): until the owner's trial shows a selected
+account stays signed out after a fresh start while another stays available, only "Remove from edi" is offered.
 
 ## Consequences
 
