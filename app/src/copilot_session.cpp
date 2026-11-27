@@ -472,10 +472,11 @@ CopilotSession::User CopilotSession::parseUser(const QString& text) {
     return user;
 }
 
-void CopilotSession::readUser(const QString& session, std::function<void(const QJsonObject&, const QString&)> done) {
+void CopilotSession::runCommand(const QString& session, const QString& command,
+                                std::function<void(const QJsonObject&, const QString&)> done) {
     identity_text_.insert(session, {});
     request(QStringLiteral("session/prompt"),
-            {{"sessionId", session}, {"prompt", QJsonArray{QJsonObject{{"type", "text"}, {"text", "/user show"}}}}},
+            {{"sessionId", session}, {"prompt", QJsonArray{QJsonObject{{"type", "text"}, {"text", command}}}}},
             [this, session, done](const QJsonObject&, const QJsonObject& error) {
                 const auto text = identity_text_.take(session).join(QString());
                 done(error, text);
@@ -484,8 +485,9 @@ void CopilotSession::readUser(const QString& session, std::function<void(const Q
 
 void CopilotSession::checkIdentity(const QString& session, std::function<void(const QString&)> pass,
                                    std::function<void(const QString&, bool)> refused) {
-    // The login lives in the system keychain and the home does not choose it, so the CLI's own account command is
-    // the evidence. Without `/user` over ACP accounts cannot be told apart, and the caller keeps one per host.
+    // The login lives in the system keychain and the home does not choose it, so the CLI's own account command
+    // selects the record's login and reads it back in the session that takes the input. Without `/user` over ACP
+    // there is no proof, and `ready` says so; the caller sends no input on that route.
     if (!commands_.contains(QStringLiteral("user"))) {
         pass({});
         return;
@@ -499,7 +501,7 @@ void CopilotSession::checkIdentity(const QString& session, std::function<void(co
     }
     const auto expected = normalizedHost(launch_.account.host);
     const auto email = launch_.account.email;
-    readUser(session, [pass, refused, expected, email](const QJsonObject& error, const QString& text) {
+    const auto compare = [pass, refused, expected, email](const QJsonObject& error, const QString& text) {
         if (!error.isEmpty()) {
             const bool signedOut = error.value(QStringLiteral("code")).toInt() == auth_required;
             const auto message = errorText(error);
@@ -528,7 +530,30 @@ void CopilotSession::checkIdentity(const QString& session, std::function<void(co
             return;
         }
         pass(user.login);
-    });
+    };
+    const auto show = [this, session, compare] { runCommand(session, QStringLiteral("/user show"), compare); };
+    // A record without a login is a first sign-in: there is nothing to select yet, and the readback names it.
+    if (email.isEmpty()) {
+        show();
+        return;
+    }
+    static const QRegularExpression loginShape(QStringLiteral("^[A-Za-z0-9][A-Za-z0-9-]{0,38}$"));
+    if (!loginShape.match(email).hasMatch()) {
+        refused(QStringLiteral("The saved GitHub login is not valid: %1").arg(email), false);
+        return;
+    }
+    runCommand(session, QStringLiteral("/user switch ") + email,
+               [refused, show, email](const QJsonObject& error, const QString&) {
+                   if (!error.isEmpty()) {
+                       const auto message = errorText(error);
+                       refused(message.isEmpty()
+                                   ? QStringLiteral("GitHub Copilot could not switch to %1.").arg(email)
+                                   : message,
+                               error.value(QStringLiteral("code")).toInt() == auth_required);
+                       return;
+                   }
+                   show();
+               });
 }
 
 void CopilotSession::finishStart(const QString& login) {
@@ -545,7 +570,8 @@ void CopilotSession::finishStart(const QString& login) {
                            {"plan", ""},
                            {"host", normalizedHost(launch_.account.host)},
                            {"login", login},
-                           {"accountsDistinguishable", distinguishable}},
+                           {"accountsDistinguishable", distinguishable},
+                           {"identityProven", distinguishable && !login.isEmpty()}},
                QStringList{}, launch_.skills);
 }
 
@@ -1096,7 +1122,7 @@ void CopilotSession::confirmSignOut(const QString& session) {
         emit signedOut();
     };
     if (commands_.contains(QStringLiteral("user"))) {
-        readUser(session, [done](const QJsonObject& error, const QString& text) {
+        runCommand(session, QStringLiteral("/user show"), [done](const QJsonObject& error, const QString& text) {
             const auto user = parseUser(text);
             done((error.isEmpty() && user.signedOut && user.login.isEmpty()) ||
                  error.value(QStringLiteral("code")).toInt() == auth_required);
