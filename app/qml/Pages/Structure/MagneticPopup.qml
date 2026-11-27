@@ -266,9 +266,9 @@ AppDialog {
                 spacing: 0
                 // Each site's name, from the first group's moments (`Co1 0,0,0 · Co2 Mx,0,Mz`).
                 readonly property var sites: popup.nodes.length > 0 ? String(popup.nodes[0].moments).split(" · ").map(m => m.split(" ")[0]) : []
-                readonly property var widths: [0.2, 0.11, 0.07, 0.1, 0.05]
+                readonly property var widths: [0.18, 0.1, 0.06, 0.1, 0.1]
                 function siteWidth() {
-                    return sites.length > 0 ? 0.47 / sites.length : 0;
+                    return sites.length > 0 ? 0.46 / sites.length : 0;
                 }
                 function columns(n) {
                     // A site split in a subgroup (`Co1_1`, `Co1_2`) goes under its parent site's column, its
@@ -288,7 +288,7 @@ AppDialog {
                 Row {
                     Layout.fillWidth: true
                     Repeater {
-                        model: [qsTr("Group"), qsTr("BNS"), qsTr("Type"), qsTr("Level"), ""].concat(listPane.sites)
+                        model: [qsTr("Group"), qsTr("BNS"), qsTr("Type"), qsTr("Level"), qsTr("Net moment")].concat(listPane.sites)
                         delegate: EaElements.Label {
                             required property var modelData
                             required property int index
