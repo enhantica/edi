@@ -615,6 +615,21 @@ function(edi_bundle_runtime runtime)
     endif()
 endfunction()
 
+# The ChatGPT runtime under its original name and variables, which existing builds and checks call.
+function(edi_bundle_assistant_runtime)
+    edi_bundle_runtime(codex)
+    foreach(name IN ITEMS EDI_CODEX_INSTALL_DESTINATION EDI_CODEX_RUNTIME_INSTALL_CHECK EDI_CODEX_RUNTIME_INSTALL_ROOT)
+        set(${name} "${${name}}" PARENT_SCOPE)
+    endforeach()
+    set(EDI_ASSISTANT_RUNTIME_INSTALL_CHECK "${EDI_CODEX_RUNTIME_INSTALL_CHECK}" PARENT_SCOPE)
+    set(EDI_ASSISTANT_RUNTIME_INSTALL_ROOT "${EDI_CODEX_RUNTIME_INSTALL_ROOT}" PARENT_SCOPE)
+endfunction()
+
+function(edi_install_assistant_runtime check root)
+    install(CODE "${check}" COMPONENT desktop)
+    install(DIRECTORY "${root}/" DESTINATION "${EDI_CODEX_INSTALL_DESTINATION}" USE_SOURCE_PERMISSIONS COMPONENT desktop)
+endfunction()
+
 # Called by edi_bundle_runtime, or after Qt's deployment when EDI_DEPLOY_APP is on. A runtime that was not
 # provisioned installs nothing.
 function(edi_install_runtime runtime)
