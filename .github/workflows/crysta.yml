@@ -259,6 +259,19 @@ jobs:
       - name: warnings-as-errors build
         if: ${{ needs.plan.outputs.skip != 'true' && (!cancelled()) }}
         run: cd "$RUNNER_TEMP/crysta" && pixi run -e cpp-ci cpp-werror
+      # On macOS crysta's clang-tidy and cppcheck are steps of this job, as in crysta's own CI, which
+      # saves macOS runners; Linux runs them as jobs of their own.
+      - name: clang-tidy
+        if: ${{ needs.plan.outputs.skip != 'true' && (!cancelled() && matrix.platform == 'macOS') }}
+        run: |
+          cd "$RUNNER_TEMP/crysta"
+          python3 "$GITHUB_WORKSPACE/tools/ci/crysta_findings.py" --root "$RUNNER_TEMP/crysta" run clang-tidy "$RUNNER_TEMP/findings/tidy.log" -- \
+            pixi run -e lint python "$GITHUB_WORKSPACE/tools/ci/crysta_tidy_part.py" 1/1 .
+      - name: cppcheck
+        if: ${{ needs.plan.outputs.skip != 'true' && (!cancelled() && matrix.platform == 'macOS' && contains(fromJSON(needs.plan.outputs.rows), 'cppcheck')) }}
+        run: |
+          cd "$RUNNER_TEMP/crysta"
+          python3 "$GITHUB_WORKSPACE/tools/ci/crysta_findings.py" --root "$RUNNER_TEMP/crysta" run cppcheck "$RUNNER_TEMP/findings/cppcheck.log" -- pixi run -e cpp-ci cpp-cppcheck
       - name: clang-format
         if: ${{ needs.plan.outputs.skip != 'true' && (!cancelled()) }}
         run: cd "$RUNNER_TEMP/crysta" && pixi run -e lint cpp-format-check
@@ -316,26 +329,19 @@ jobs:
   tidy:
     needs: plan
     if: github.repository == 'enhantica/edi' && github.event.pull_request.head.repo.fork == false && contains(fromJSON(needs.plan.outputs.rows), 'tidy')
-    name: tidy · ${{ matrix.platform }} · ${{ matrix.part }}
+    name: tidy · Linux · ${{ matrix.part }}
     environment: crysta-sdk
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - {platform: Linux, runner: ubuntu-24.04, part: 1/4}
-          - {platform: Linux, runner: ubuntu-24.04, part: 2/4}
-          - {platform: Linux, runner: ubuntu-24.04, part: 3/4}
-          - {platform: Linux, runner: ubuntu-24.04, part: 4/4}
-          - {platform: macOS, runner: macos-15, part: 1/2}
-          - {platform: macOS, runner: macos-15, part: 2/2}
-    runs-on: ${{ matrix.runner }}
+        part: [1/4, 2/4, 3/4, 4/4]
+    runs-on: ubuntu-24.04
     timeout-minutes: 120
     defaults:
       run:
         shell: python3 tools/ci/public_log.py {0}
     env:
       CRYSTA_SHA: ${{ inputs.crysta-sha }}
-      CMAKE_GENERATOR: ${{ matrix.platform == 'macOS' && 'Ninja' || 'Unix Makefiles' }}
     steps:
       - *marker
       - *checkout
@@ -594,8 +600,14 @@ jobs:
   full-macos:
     needs: plan
     if: github.repository == 'enhantica/edi' && github.event.pull_request.head.repo.fork == false && contains(fromJSON(needs.plan.outputs.rows), 'full-macos')
-    name: full · macOS
+    name: full · macOS · ${{ matrix.part }}
     environment: crysta-sdk
+    strategy:
+      fail-fast: false
+      # Part 1 runs the C++ tier in full, part 2 the LTO build and the seeded series; each runs half
+      # of the Python test files.
+      matrix:
+        part: [1/2, 2/2]
     runs-on: macos-15
     timeout-minutes: 240
     defaults:
@@ -619,38 +631,35 @@ jobs:
           SKBUILD_CMAKE_DEFINE: CRYSTA_REQUIRE_SIMD=ON
         run: cd "$RUNNER_TEMP/crysta" && pixi run -e cpp-ci cpp-build
       - name: Hidden numerical suite (cpp surface)
-        if: needs.plan.outputs.skip != 'true'
+        if: ${{ needs.plan.outputs.skip != 'true' && matrix.part == '1/2' }}
+        run: |
+          cd "$RUNNER_TEMP/crysta"
+          python3 "$GITHUB_WORKSPACE/tools/ci/crysta_findings.py" run doctest "$RUNNER_TEMP/crysta/build" -- pixi run -e cpp-ci cpp-test-merge
+      - name: Hidden numerical suite with coverage (Python tiers)
+        if: ${{ needs.plan.outputs.skip != 'true' && (!cancelled()) }}
         env:
           COVERAGE_CORE: sysmon
+          CRYSTA_PYTEST_PART: ${{ matrix.part }}
           CRYSTA_PYTEST_RECORD: ${{ runner.temp }}/findings/pytest.jsonl
           # A failed test's message and traceback can quote crysta's tests or corpus.
           PYTEST_ADDOPTS: -p crysta_pytest --tb=no -rN --disable-warnings
         run: |
           cd "$RUNNER_TEMP/crysta"
           export PYTHONPATH="$GITHUB_WORKSPACE/tools/ci${PYTHONPATH:+:$PYTHONPATH}"
-          status=0
-          python3 "$GITHUB_WORKSPACE/tools/ci/crysta_findings.py" run doctest "$RUNNER_TEMP/crysta/build" -- pixi run -e cpp-ci group-full || status=$?
-          python3 "$GITHUB_WORKSPACE/tools/ci/crysta_findings.py" show pytest "$CRYSTA_PYTEST_RECORD"
-          exit "$status"
+          python3 "$GITHUB_WORKSPACE/tools/ci/crysta_findings.py" run pytest "$CRYSTA_PYTEST_RECORD" -- pixi run -e cpp-ci suite-coverage
       - name: LTO correctness (-DCRYSTA_LTO=ON byte-identical build + parity)
-        if: ${{ needs.plan.outputs.skip != 'true' && (!cancelled()) }}
+        if: ${{ needs.plan.outputs.skip != 'true' && (!cancelled() && matrix.part == '2/2') }}
         run: cd "$RUNNER_TEMP/crysta" && pixi run -e cpp-ci bash tools/ci/_lto_correctness.sh
       - name: Seeded series (slow cadence)
-        if: ${{ needs.plan.outputs.skip != 'true' && (!cancelled() && contains(fromJSON(needs.plan.outputs.rows), 'seeded')) }}
+        if: ${{ needs.plan.outputs.skip != 'true' && (!cancelled() && matrix.part == '2/2' && contains(fromJSON(needs.plan.outputs.rows), 'seeded')) }}
         run: cd "$RUNNER_TEMP/crysta" && pixi run -e cpp-ci --skip-deps slow-seeded-series
 
   cppcheck:
     needs: plan
     if: github.repository == 'enhantica/edi' && github.event.pull_request.head.repo.fork == false && contains(fromJSON(needs.plan.outputs.rows), 'cppcheck')
-    name: cppcheck · ${{ matrix.platform }}
+    name: cppcheck · Linux
     environment: crysta-sdk
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - {platform: Linux, runner: ubuntu-24.04}
-          - {platform: macOS, runner: macos-15}
-    runs-on: ${{ matrix.runner }}
+    runs-on: ubuntu-24.04
     timeout-minutes: 120
     defaults:
       run:
