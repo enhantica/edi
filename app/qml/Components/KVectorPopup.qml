@@ -108,6 +108,8 @@ AppDialog {
             Layout.fillHeight: true
             clip: true
             marksCurrentRow: true
+            // The marker draws the base's currentRow: the row a click or the keys made current.
+            currentRow: currentIndex
             sourceModel: popup.rows
             defaultInfoText: popup.searching ? qsTr("Searching…") : qsTr("No propagation vector")
             columnKinds: ["index", "short", "text", "number", "number", "text"]
