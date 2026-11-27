@@ -4,6 +4,7 @@
 import argparse
 import json
 import os
+import re
 import subprocess
 import time
 from itertools import combinations
@@ -13,10 +14,13 @@ from unittest.mock import patch
 from package import (
     ASSISTANT_COMPONENT,
     ASSISTANT_RUNTIME,
+    CLAUDE_COMPONENT,
+    COPILOT_COMPONENT,
     SUFFIX,
     SYSTEM,
     build_maintenance_tool,
     clean_environment,
+    distributed_assistants,
     installer_from_download,
     package_app,
     run,
@@ -26,8 +30,8 @@ from package import (
 
 ASSISTANT_MARKERS = {
     ASSISTANT_COMPONENT: ASSISTANT_RUNTIME / 'chatgpt.txt',
-    'org.easydiffraction.app.claude': Path('libexec/edi/claude/claude.txt'),
-    'org.easydiffraction.app.copilot': Path('libexec/edi/copilot/copilot.txt'),
+    CLAUDE_COMPONENT: Path('libexec/edi/claude/claude.txt'),
+    COPILOT_COMPONENT: Path('libexec/edi/copilot/copilot.txt'),
 }
 
 
@@ -58,8 +62,24 @@ def check(tools: Path, output: Path) -> None:
     # Substitute only the endpoint; install and maintenance use the real embedded configuration.
     # The update goes from the last old-form version to the first YY.N, which sorts lower by its
     # numbers: the repository offers it by content checksum (edi ADR-0106).
+    # The marker installers are internal builds, so they exercise Claude before its distribution is
+    # public; a public build of the same stage carries only the distributed assistants.
     with patch('package.repository_urls', return_value=(repository,)):
-        offline = package_app(stage, tools, output / 'offline', '2026.11.31')
+        offline = package_app(stage, tools, output / 'offline', '2026.11.31', internal=True)
+        public = package_app(stage, tools, output / 'public', '2026.11.31')
+    public_metadata = json.loads((public.parent / 'installer.json').read_text())
+    public_offer = offered(
+        installer_command(
+            installer_from_download(
+                public.parent / public_metadata['download'], output / 'public/unpacked'
+            )
+        ),
+        clean_environment(output / 'public/home'),
+    )
+    if public_metadata['internal'] or public_offer & set(ASSISTANT_MARKERS) != set(
+        distributed_assistants()
+    ):
+        raise RuntimeError('A public installer carries an assistant that is not distributed')
     marker.write_text('second marker\n')
     # The new release's tool gets other bytes, so the update has a tool to replace. On Linux the
     # update leaves the tool alone (edi ADR-0091), so only macOS and Windows build one.
@@ -68,13 +88,23 @@ def check(tools: Path, output: Path) -> None:
         if SYSTEM in {'macos', 'windows'}
         else None
     )
-    online = package_app(stage, tools, output / 'online', '26.17', repository, (), new_tool)
+    online = package_app(
+        stage, tools, output / 'online', '26.17', repository, (), new_tool, internal=True
+    )
     (output / 'isolated home').mkdir()
     for kind, bootstrap in [('offline', offline), ('online', online)]:
         exercise(kind, bootstrap, output, marker.relative_to(stage))
     (output / 'passed.json').write_text(
         json.dumps({'passed': True, 'transport': 'file', 'application_test': False}) + '\n'
     )
+
+
+def offered(executable: Path, env: dict) -> set[str]:
+    """The components an installer offers, as its search command lists them."""
+    result = subprocess.run(
+        [executable, 'search'], env=env, capture_output=True, text=True, timeout=60, check=True
+    )
+    return set(re.findall(r'<package name="([^"]+)"', result.stdout + result.stderr))
 
 
 def check_assistants(target: Path, expected: set[str]) -> None:
