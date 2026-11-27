@@ -74,6 +74,6 @@ _parametric_fit_start.value
 Without a row a pattern starts from the template's value. A row for a shared parameter, for a pattern the scan does not
 list or for a parameter the project does not have is dropped when the project is opened, with a warning.
 
-The [Co₂SiO₄ D20 parametric example](../cli/pd-neut-cwl_cosio-d20_parametric/index.md) fits 213 patterns with U, V
-and W shared. In Python, `parameter.shared = True` shares a parameter and `project.analysis.fit()` runs the fit of the
+The Co₂SiO₄ D20 parametric example, `pd-neut-cwl_cosio-d20_parametric`, fits 213 patterns with U, V and W
+shared. In Python, `parameter.shared = True` shares a parameter and `project.analysis.fit()` runs the fit of the
 project's mode.
