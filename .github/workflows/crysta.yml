@@ -647,7 +647,14 @@ jobs:
       CMAKE_GENERATOR: ${{ matrix.platform == 'macOS' && 'Ninja' || 'Unix Makefiles' }}
     steps:
       - *checkout
-      - *source
+      # The A/B compares with crysta main, whose head the source step lists and checks out beside.
+      - name: crysta's source, whose lines no later step prints or stores
+        uses: ./.github/actions/crysta-source
+        with:
+          sha: ${{ inputs.crysta-sha }}
+          app-id: ${{ vars.ENHANTICA_APP_ID }}
+          private-key: ${{ secrets.ENHANTICA_APP_KEY }}
+          base: ${{ matrix.part == '' && 'main' || '' }}
       - *subject
       - *pixi-cpp
       - *ccache-env
@@ -671,13 +678,19 @@ jobs:
             pixi run -e cpp-ci python tools/bench/ab_perf.py --dev-bin "$work/dev-crysta" --release-bin "$work/release-crysta" --release-tree "$RUNNER_TEMP/crysta" || status=1
           done
           exit "$status"
-      # The A/B against crysta main needs a second crysta commit on the runner, which the source
-      # action does not fetch yet.
+      # The base is built under its own manifest, with this commit's link script, as crysta did.
       - name: A/B against crysta main
         if: matrix.part == ''
         run: |
-          echo "The A/B against crysta main is not wired yet: the source action fetches one commit." >&2
-          exit 1
+          cd "$RUNNER_TEMP/crysta"
+          work="$RUNNER_TEMP/ab"
+          mkdir -p "$work"
+          cp build/crysta "$work/dev-crysta"
+          echo "base: crysta main at $CRYSTA_BASE_SHA"
+          (cd "$CRYSTA_BASE_SRC" && pixi run -e cpp-ci cpp-build \
+            && pixi run -e cpp-ci python "$CRYSTA_SRC/tools/build/link_crysta.py" \
+            && cp build/crysta "$work/release-crysta")
+          pixi run -e cpp-ci python tools/bench/ab_perf.py --dev-bin "$work/dev-crysta" --release-bin "$work/release-crysta" --release-tree "$CRYSTA_BASE_SRC"
 
   coverage:
     needs: plan
