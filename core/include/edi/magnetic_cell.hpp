@@ -94,6 +94,8 @@ struct PreparedMagneticCandidates {
         std::string structure;
         double scale = 1.0;
         bool enabled = false;
+        // The parent link's free scale, carried to the first (enabled) child only (owner, 2026-11-27).
+        bool scale_free = false;
     };
     std::vector<Link> links;
     struct Texture {

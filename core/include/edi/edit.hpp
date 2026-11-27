@@ -1306,7 +1306,9 @@ class Edit {
         });
     }
     // The magnetic popup's Add (edi ADR-0078): the prepared candidate structures, each powder experiment's links to
-    // them with only the first enabled, its parent's link disabled, and the carried texture rows, all or none.
+    // them with only the first enabled, its parent's link disabled, and the carried texture rows, all or none. The
+    // parent link's free scale and texture move to the first child: free there, fixed on the parent (owner,
+    // 2026-11-27), and Undo restores both.
     static Edit add_magnetic_candidates(Project& project, std::shared_ptr<const PreparedMagneticCandidates> prepared) {
         return Edit([&project, prepared = std::move(prepared)] {
             check_magnetic_candidates(project, *prepared);  // the whole batch, before any of it lands
@@ -1319,7 +1321,10 @@ class Edit {
                 auto& kept_links = links.emplace_back();
                 for (const auto& link : experiment->linked_structures) {
                     auto row = std::make_shared<LinkedStructure>(*link);
-                    if (row->structure_id.value() == prepared->parent) row->enabled = false;
+                    if (row->structure_id.value() == prepared->parent) {
+                        row->enabled = false;
+                        row->scale.free = false;
+                    }
                     kept_links.push_back(std::move(row));
                 }
                 for (const auto& add : prepared->links) {
@@ -1327,11 +1332,19 @@ class Edit {
                     auto row = std::make_shared<LinkedStructure>();
                     row->structure_id = add.structure;
                     row->scale.value = add.scale;
+                    row->scale.free = add.scale_free;
                     row->enabled = add.enabled;
                     kept_links.push_back(std::move(row));
                 }
-                auto& kept_texture = texture.emplace_back(experiment->preferred_orientation.begin(),
-                                                          experiment->preferred_orientation.end());
+                auto& kept_texture = texture.emplace_back();
+                for (const auto& held : experiment->preferred_orientation) {
+                    auto row = std::make_shared<PrefOrient>(*held);
+                    if (row->structure_id.value() == prepared->parent) {
+                        row->march_r.free = false;
+                        row->march_random_fract.free = false;
+                    }
+                    kept_texture.push_back(std::move(row));
+                }
                 for (const auto& add : prepared->textures) {
                     if (add.experiment != e) continue;
                     auto row = std::make_shared<PrefOrient>();

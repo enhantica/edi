@@ -10348,6 +10348,9 @@ std::optional<std::uint64_t> bank_inputs(const Project& project, std::size_t exp
 }
 }  // namespace
 
+// The parent's free flags on a candidate child (defined below, with its helpers).
+void carry_free_flags(const Structure& parent, Structure& child);
+
 std::shared_ptr<const PreparedMagneticCandidates> prepare_magnetic_candidates(
     const Project& project, std::size_t parent_index, const MagneticCandidateGraph& candidates,
     const std::vector<std::size_t>& nodes, bool start_moments) {
@@ -10390,6 +10393,12 @@ std::shared_ptr<const PreparedMagneticCandidates> prepare_magnetic_candidates(
             }
         }
     }
+    const Structure* parent_found = nullptr;
+    for (const auto& s : project.structures) {
+        if (s->name.value() == parent_name) parent_found = s.get();
+    }
+    if (parent_found == nullptr) throw std::invalid_argument("the parent structure is no longer in the project");
+    const Structure& parent_structure = *parent_found;
     const crysta::Structure& engine = candidates.engine->parent;
     const crysta::MagneticSubgroupGraph& graph = candidates.engine->graph;
     const std::vector<std::string>& sites = candidates.sites;
@@ -10413,14 +10422,20 @@ std::shared_ptr<const PreparedMagneticCandidates> prepare_magnetic_candidates(
         names.insert(name);
         const std::string text =
             crysta::magnetic_child_text(engine, graph, nodes[i], sites, start_moments, name);
-        prepared->add(structure_from_edi_text(text, name));
+        Structure child = structure_from_edi_text(text, name);
+        // The first child, the enabled one, takes the parent's free flags where its parameters are the parent's: each
+        // site's occupancy and ADPs, and the cell when it is the parent's. The parent's link is disabled and its
+        // parameters leave the fit, so without them the child started fixed (owner, 2026-11-27).
+        if (i == 0) carry_free_flags(parent_structure, child);
+        prepared->add(child);
         for (std::size_t e = 0; e < project.experiments.size(); ++e) {
             const auto& experiment = project.experiments[e];
             for (const auto& link : experiment->linked_structures) {
                 if (link->structure_id.value() != parent_name) {
                     continue;
                 }
-                prepared->links.push_back({e, name, link->scale.value.get() / (n * n), i == 0});
+                prepared->links.push_back({e, name, link->scale.value.get() / (n * n), i == 0,
+                                           i == 0 && link->scale.free.get()});
             }
             for (const auto& row : experiment->preferred_orientation) {
                 if (row->structure_id.value() != parent_name) {
@@ -10442,9 +10457,10 @@ std::shared_ptr<const PreparedMagneticCandidates> prepare_magnetic_candidates(
                             std::to_string(h[2]) + ") in the magnetic cell, beyond the 1000 limit");
                     }
                 }
+                // Its free flags go to the first child, the enabled one, and to no other (owner, 2026-11-27).
                 prepared->textures.push_back({e, name, row->march_r.value.get(),
-                                              row->march_random_fract.value.get(), row->march_r.free.get(),
-                                              row->march_random_fract.free.get(),
+                                              row->march_random_fract.value.get(), i == 0 && row->march_r.free.get(),
+                                              i == 0 && row->march_random_fract.free.get(),
                                               {static_cast<int>(h[0]), static_cast<int>(h[1]),
                                                static_cast<int>(h[2])}});
             }
@@ -10704,6 +10720,59 @@ std::vector<std::string> magnetic_candidates_without_intensity(const Project& pr
         if (none) out.push_back(candidate->name.value());
     }
     return out;
+}
+
+namespace {
+// A child row's parent site: the same id, else the id before its `_<n>` orbit suffix (magnetic_child_text).
+const AtomSite* parent_site_of(const Structure& parent, const std::string& id) {
+    for (const auto& site : parent.atom_sites) {
+        if (site->id.value() == id) return site.get();
+    }
+    const std::size_t cut = id.rfind('_');
+    if (cut == std::string::npos) return nullptr;
+    for (const auto& site : parent.atom_sites) {
+        if (site->id.value() == id.substr(0, cut)) return site.get();
+    }
+    return nullptr;
+}
+const AtomSiteAniso* parent_aniso_of(const Structure& parent, const std::string& site) {
+    for (const auto& row : parent.atom_site_aniso) {
+        if (row->id.value() == site) return row.get();
+    }
+    return nullptr;
+}
+}  // namespace
+
+void carry_free_flags(const Structure& parent, Structure& child) {
+    for (auto& site : child.atom_sites) {
+        const AtomSite* from = parent_site_of(parent, site->id.value());
+        if (from == nullptr) continue;
+        site->occupancy.free = from->occupancy.free.get();
+        site->adp_iso.free = from->adp_iso.free.get();
+        const AtomSiteAniso* tensor = parent_aniso_of(parent, from->id.value());
+        if (tensor == nullptr) continue;
+        for (auto& row : child.atom_site_aniso) {
+            if (row->id.value() != site->id.value()) continue;
+            row->adp_11.free = tensor->adp_11.free.get();
+            row->adp_22.free = tensor->adp_22.free.get();
+            row->adp_33.free = tensor->adp_33.free.get();
+            row->adp_12.free = tensor->adp_12.free.get();
+            row->adp_13.free = tensor->adp_13.free.get();
+            row->adp_23.free = tensor->adp_23.free.get();
+        }
+    }
+    const Cell& a = parent.cell;
+    Cell& b = child.cell;
+    const auto same = [](const Parameter& x, const Parameter& y) { return std::abs(x.value.get() - y.value.get()) <= 1e-9; };
+    if (same(a.length_a, b.length_a) && same(a.length_b, b.length_b) && same(a.length_c, b.length_c) &&
+        same(a.angle_alpha, b.angle_alpha) && same(a.angle_beta, b.angle_beta) && same(a.angle_gamma, b.angle_gamma)) {
+        b.length_a.free = a.length_a.free.get();
+        b.length_b.free = a.length_b.free.get();
+        b.length_c.free = a.length_c.free.get();
+        b.angle_alpha.free = a.angle_alpha.free.get();
+        b.angle_beta.free = a.angle_beta.free.get();
+        b.angle_gamma.free = a.angle_gamma.free.get();
+    }
 }
 
 std::vector<MagneticPeak> magnetic_mark_candidates(const Project& project, std::size_t experiment, std::size_t parent) {
