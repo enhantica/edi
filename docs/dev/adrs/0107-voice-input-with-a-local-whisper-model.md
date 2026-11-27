@@ -35,10 +35,10 @@ assistant runtime, and shows its choices as rows on the folder page instead of a
    `ggerganov/whisper.cpp`, its size and its hash; `tools/deps/voice/fetch.py` downloads it over HTTPS into a cache and
    refuses a file whose size or hash differs. Packaging downloads it; the app never downloads anything, and the model
    is never committed. Tests use the tiny q5_1 model (32 152 673 bytes) pinned in the same file.
-3. **Optional component.** The installer component `org.easydiffraction.app.voice`, "Voice input", holds the model and a
-   small manifest (`voice-model.json`: file name, size, SHA-256) under `share/edi/voice/`; on macOS this is beside the
-   signed application bundle, like the assistant runtime. It is unticked by default and depends on EasyDiffraction. Its
-   row on the folder page comes below the AI assistant rows, with its one-line description and its size; its sorting
+3. **Optional component.** The installer component `org.easydiffraction.app.voice`, "Voice input for AI assistant",
+   holds the model and a small manifest (`voice-model.json`: file name, size, SHA-256) under `share/edi/voice/`; on
+   macOS this is beside the signed application bundle, like the assistant runtime. It is unticked by default and
+   depends on EasyDiffraction. Its row on the folder page comes below the AI assistant rows, with its size; its sorting
    priority is 90, after the assistant's 100. Maintenance Tool's Change components page adds or removes it. The engine
    itself is part of the app on every desktop system, a few megabytes; without the component the app has no model, and
    with no model it shows no microphone button. At start the app checks that the manifest exists and that the model file
@@ -71,8 +71,10 @@ assistant runtime, and shows its choices as rows on the folder page instead of a
    message box and is never sent by itself; the user edits it and sends it as typed text. A recording belongs to the
    message box that started it: hiding the assistant, switching or clearing the conversation, or a disconnect cancels
    it, and a late result for another owner is dropped.
-7. **Language.** By default Whisper detects the language. The assistant preferences may fix it; the list of languages
-   comes from whisper.cpp itself, so it cannot disagree with the model.
+7. **Language.** English is the default for new settings: with detection on, the multilingual model wrote English
+   speech in Cyrillic (the owner, 2026-11-27). The assistant preferences offer Detect first, then every language
+   whisper.cpp lists, so the list cannot disagree with the model; it is the searchable combo box every long list uses
+   (ADR-0017 §7). A saved choice keeps its value, and the bundled model stays multilingual.
 8. **Composer button.** A round microphone button, the same component and size as the stop and send buttons, sits to
    their left. While listening it takes the accent colour and a cancel button appears beside it; Escape anywhere in
    the message box also cancels.
@@ -92,12 +94,14 @@ whisper.cpp, repeated to 15 s:
 | small q5_1 | 4 | English | 5.0 s | 7.6 s |
 | small q5_1 | 8 | English | 2.8 s | 5.0 s |
 | tiny q5_1 | 4 | detected | | 2.0 to 2.1 s (three runs) |
+| small q5_1 on Apple silicon (below) | 2 | detected | | 9.7 s for 14 s of audio |
 
 Loading the small model takes 0.2 to 0.3 s and 470 MB of memory, so the app loads it for each recording and frees it
 after. Detecting the language costs a second encoder pass; a fixed language in the preferences takes it away. A
 shorter encoder window (`audio_ctx`) halved the encoder time but made the model repeat the phrase, so it is not used.
-Laptop processors run each thread faster than this virtual machine; a measurement on an Apple silicon laptop is still
-to be added here. CI never asserts a time.
+On a GitHub-hosted Apple silicon runner (macos-15-arm64, 3 cores, so 2 threads; run 46043396853, 2026-11-27) the
+app's own route recognised the 14 s recording of `tests/fixtures/assistant_voice/inaugural.wav` in 9.7 s with language
+detection, loading the model included; a laptop with more cores uses more threads. CI never asserts a time.
 
 ## Licences
 

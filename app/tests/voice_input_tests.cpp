@@ -14,6 +14,7 @@
 #include <QThreadPool>
 #include <QtTest/QtTest>
 
+#include <algorithm>
 #include <memory>
 #include <utility>
 #include <vector>
@@ -102,6 +103,26 @@ private slots:
         QFile reference(kFixtures + QStringLiteral("/inaugural.txt"));
         QVERIFY(reference.open(QIODevice::ReadOnly));
         reference_ = words(QString::fromUtf8(reference.readAll()));
+    }
+
+    // A new setting is English, as the preferences' default; Detect stays the list's first choice and can be set.
+    void languageDefaultsToEnglish() {
+        auto voice = voiceOn(tinyModel());
+        QCOMPARE(voice.input->language(), QStringLiteral("en"));
+        const auto languages = voice.input->languages();
+        QVERIFY(languages.size() > 1);
+        QCOMPARE(languages.first().code, QStringLiteral("detect"));
+        QCOMPARE(languages.first().name, QStringLiteral("Detect"));
+        const auto english = std::find_if(languages.begin(), languages.end(),
+                                          [](const SpeechLanguage& language) { return language.code == QStringLiteral("en"); });
+        QVERIFY(english != languages.end());
+        QCOMPARE(english->name, QStringLiteral("English"));
+        for (const auto& language : languages)
+            QVERIFY2(!language.name.isEmpty() && language.name.front().isUpper(), qPrintable(language.code));
+        QSignalSpy changed(voice.input.get(), &VoiceInput::languageChanged);
+        voice.input->setLanguage(QStringLiteral("detect"));
+        QCOMPARE(voice.input->language(), QStringLiteral("detect"));
+        QCOMPARE(changed.count(), 1);
     }
 
     // A model installed under a folder named outside ASCII loads and recognises; the text arrives while its owner is

@@ -50,7 +50,10 @@ class VoiceInput : public QObject {
     Q_PROPERTY(QObject* owner READ owner NOTIFY ownerChanged)
     /// Why the last recording gave no text, in plain words; empty otherwise.
     Q_PROPERTY(QString message READ message NOTIFY messageChanged)
-    /// "detect", or a language code from `languages`.
+    /// How loud the microphone is while listening, 0 to 1 on a decibel scale, for the message box's level meter; 0
+    /// otherwise.
+    Q_PROPERTY(double level READ level NOTIFY levelChanged)
+    /// "detect", or a language code from `languages`; English ("en") until set, as in the preferences (ADR-0107).
     Q_PROPERTY(QString language READ language WRITE setLanguage NOTIFY languageChanged)
     /// The choices for the language setting, "detect" first.
     Q_PROPERTY(QList<edi_app::SpeechLanguage> languages READ languages CONSTANT)
@@ -61,6 +64,7 @@ public:
 
     static constexpr int max_seconds = 120;
     static constexpr int silence_seconds = 2;
+    static constexpr int level_ms = 40;
 
     /// The app's voice input: the default microphone and the installed model.
     explicit VoiceInput(QObject* parent = nullptr);
@@ -72,6 +76,7 @@ public:
     State state() const { return state_; }
     QObject* owner() const { return owner_; }
     QString message() const { return message_; }
+    double level() const { return level_; }
     QString language() const { return language_; }
     void setLanguage(const QString& language);
     QList<SpeechLanguage> languages() const;
@@ -99,6 +104,7 @@ signals:
     void stateChanged();
     void ownerChanged();
     void messageChanged();
+    void levelChanged();
     void languageChanged();
     /// The recognised text, to insert at the cursor in the message box. It is never sent by itself.
     void textRecognised(const QString& text);
@@ -110,6 +116,7 @@ private:
     void finish(int generation, const QString& text, const QString& error, bool cancelled);
     void setState(State state);
     void setMessage(const QString& message);
+    void setLevel(double level);
     void dropRecording();
     void dropOwner();
 
@@ -120,11 +127,14 @@ private:
     QMetaObject::Connection ownerGone_;  // the owner's destroyed() to cancel()
     bool owned_ = false;                 // owner_ was set; it reads null once the owner is being destroyed
     QString message_;
-    QString language_ = QStringLiteral("detect");
+    QString language_ = QStringLiteral("en");
     std::vector<float> recording_;
     std::size_t analysed_ = 0;  // samples of recording_ the silence check has read
     std::size_t silent_ = 0;    // samples of silence since the last speech
     bool heard_ = false;        // speech has been heard in this recording
+    double level_ = 0.0;
+    double loudest_ = 0.0;      // the loudest block since `level` last changed
+    QElapsedTimer levelShown_;  // `level` changes at most every level_ms, as the meter needs no more
     int generation_ = 0;        // a cancel or a new recording makes an earlier recognition's result stale
     std::shared_ptr<RecognitionJob> job_;  // the recognition in flight, until it finishes or is cancelled
     QElapsedTimer recognising_;            // how long the recognition took, for the run log

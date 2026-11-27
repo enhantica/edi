@@ -25,8 +25,9 @@ QtObject {
     property bool assistantShown: false
     property bool assistantCopyTechnicalDetails: false
     property real assistantWidth: AppSizes.assistantDefaultWidth
-    // The language voice input recognises: "detect", or a code from VoiceInput.languages (edi ADR-0107).
-    property string assistantSpeechLanguage: "detect"
+    // The language voice input recognises: "detect", or a code from VoiceInput.languages (edi ADR-0107). English
+    // until set: detection heard English as another language. A saved choice keeps its value.
+    property string assistantSpeechLanguage: "en"
 
     // Tooltips: the level, "All", "Important" or "Off", and how long the pointer rests on a control before one opens, in
     // ms, read from the settings file once it is loaded. With no level stored, the on/off flag stored before levels

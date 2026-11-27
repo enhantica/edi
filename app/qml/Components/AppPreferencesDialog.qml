@@ -1020,8 +1020,11 @@ AppDialog {
                     visible: aiPage.voiceAvailable
                     Field {
                         label: qsTr("Speech language")
-                        FieldBox {
+                        // A hundred languages: the searchable box every long list uses (edi ADR-0017 §7).
+                        SearchableComboBox {
                             objectName: "preferences.speechLanguage"
+                            width: dialog.columnWidth
+                            elide: Text.ElideRight
                             model: aiPage.speechLanguages
                             textRole: "name"
                             currentIndex: Math.max(0, aiPage.speechLanguages.findIndex(language => language.code === Preferences.assistantSpeechLanguage))

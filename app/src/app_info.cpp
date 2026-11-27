@@ -4982,7 +4982,7 @@ void ApplicationInfo::resetPreferences() const {
         {"scanStackedReversed", QJSValue(false)}, {"scanStackedLegendShown", QJSValue(false)}, {"chartIncludedOnly", QJSValue(false)},
         {"chartSubtractBackground", QJSValue(false)}, {"singleCrystalQuantity", QJSValue(QStringLiteral("f_squared"))}, {"singleCrystalXAxis", QJSValue(QStringLiteral("q"))}, {"singleCrystalPatternQuantity", QJSValue(QStringLiteral("f_squared"))}, {"singleCrystalThinBars", QJSValue(false)}, {"singleCrystalMeasuredStyle", QJSValue(QStringLiteral("bars"))},
         {"chartHighlightSelected", QJSValue(true)}, {"chartHiddenRange", QJSValue(QStringLiteral("keep"))}, {"textShow", QJSValue(QStringLiteral("editable"))},
-        {"assistantSpeechLanguage", QJSValue(QStringLiteral("detect"))}
+        {"assistantSpeechLanguage", QJSValue(QStringLiteral("en"))}
     };
     for (const auto& [name, value] : defaults) projectWrite(f, "preferences", name, value);
 }
