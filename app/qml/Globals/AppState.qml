@@ -166,4 +166,24 @@ QtObject {
     function reset() {
         ApplicationInfo.resetWorkflow();
     }
+
+    // Closes a popup of the project being replaced before the next project shows (edi ADR-0052). `close` is what
+    // closes it, when more than its close() is needed. Both run with no exit transition, so Qt hides the popup within
+    // this call; every other close still animates.
+    function retirePopup(popup, close = null) {
+        const exit = popup.exit;
+        popup.exit = null;
+        if (close !== null)
+            close();
+        popup.close();
+        popup.exit = exit;
+        // Still visible: an exit that started earlier (an Escape just before) is running, and Qt starts no second one.
+        // Its item, the content's parent, leaves the overlay now, as it would at the exit's end: the overlay then passes
+        // it no press, hover or touch, and it loses the focus. The next opening puts it back.
+        const item = popup.visible && popup.contentItem !== null ? popup.contentItem.parent : null;
+        if (item !== null) {
+            item.visible = false;
+            item.parent = null;
+        }
+    }
 }
