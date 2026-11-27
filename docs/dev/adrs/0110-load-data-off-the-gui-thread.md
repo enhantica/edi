@@ -49,7 +49,10 @@ view's data.
    the pattern; one route was the Background group working out its derived values (the method, width and smoothness an
    estimate would take, and how many points or terms it places) on the GUI thread whenever the data changed. The
    experiment's view-model now works them out on a copy of the experiment in a background job, newest request wins,
-   and announces them when ready; the declared settings still change at once.
+   and announces them when ready; the declared settings still change at once. The other route was the estimate the
+   load's own edit runs for an experiment whose background is estimated automatically (ADR-0040): Load data into an
+   existing experiment now runs that refresh in its job on a copy of the project, and the second phase takes the result
+   only while the experiment would otherwise still be due, so anything changed meanwhile is estimated as before.
 
 ## Consequences
 

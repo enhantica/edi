@@ -1435,9 +1435,16 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // Load data in two phases (edi ADR-0089 point 7): the route's checks, then one background job reads every file it
     // needs (a copied scan's files copied first), then the route's own code runs again here with those reads.
     struct DataReadOrder {
+        DataReadOrder(std::string reader_path, std::string source_path, edi::DataKind read_kind)
+            : reader(std::move(reader_path)), source(std::move(source_path)), kind(read_kind) {}
         std::string reader;  // the file read, the key the second phase asks for
         std::string source;  // the user's file, for its name
         edi::DataKind kind;
+        // An experiment whose background is estimated automatically: the project as the load started and the
+        // experiment's row in it, so the job also runs the estimate the edit would otherwise run on the GUI thread.
+        std::shared_ptr<const edi::Project> context;
+        std::size_t target = 0;
+        bool take_file_name = false;
     };
     struct PreparedScan {  // a copied scan's folder, made by the first phase and filled by the job
         QString directory;
@@ -1463,6 +1470,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     struct ReadOutcome {
         std::optional<edi::DataFileRead> read;
         QString error;
+        std::optional<edi::BackgroundState> background;  // the estimate the job ran, if it ran one
     };
     bool startDataLoad(DataLoadOrder order);
     void finishDataLoad(int id, std::map<std::string, ReadOutcome> outcomes, const QString& copy_error);

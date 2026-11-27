@@ -3801,6 +3801,30 @@ bool ProjectViewModel::loadDataInto(ExperimentViewModel* experiment, const QUrl&
 }
 
 namespace {
+// The automatic background estimate of a load, run in its job (edi ADR-0110): the experiment at `target` of a copy of
+// `project` given the read rows, then the refresh every calculation runs first (ADR-0040). Nothing when the experiment
+// does not need one or the engine refuses it; the edit then refreshes as before.
+std::optional<edi::BackgroundState> estimated_background(const edi::Project& project, std::size_t target,
+                                                         const edi::DataFileRead& read, bool take_file_name) {
+    try {
+        edi::Project copy(project);
+        edi::PlainDataLoad load =
+            edi::experiment_with_read(*copy.experiments[target], edi::DataFileRead(read), take_file_name);
+        if (!edi::background_estimate_due(load.experiment)) return std::nullopt;
+        std::vector<edi::ItemVec<edi::BraggPdExperiment>::Ptr> held;
+        held.reserve(copy.experiments.size());
+        for (std::size_t i = 0; i < copy.experiments.size(); ++i)
+            held.push_back(i == target ? std::make_shared<edi::BraggPdExperiment>(std::move(load.experiment))
+                                       : copy.experiments[i]);
+        copy.experiments.assign(std::move(held));
+        copy.adopt_experiments();
+        edi::refresh_background_estimates(copy);
+        return edi::capture_background(*copy.experiments[target]);
+    } catch (const std::exception&) {
+        return std::nullopt;
+    }
+}
+
 // What the Experiments group says while files are read: the file, or how many, and their size.
 QString reading_text(const QStringList& files) {
     qint64 bytes = 0;
@@ -3822,7 +3846,17 @@ bool ProjectViewModel::loadData(int index, const QUrl& file) {
     DataLoadOrder order;
     order.target = experiment_models_.at(index);
     order.files = {file.toLocalFile()};
-    order.reads.push_back({path, path, edi::data_kind(*project_->experiments[static_cast<std::size_t>(index)])});
+    const edi::BraggPdExperiment& experiment = *project_->experiments[static_cast<std::size_t>(index)];
+    DataReadOrder read{path, path, edi::data_kind(experiment)};
+    if (edi::background_estimate_mode(experiment) == "auto") {
+        // The automatic estimate of the new data runs in the job too (edi ADR-0110), on a copy of the project.
+        read.context = std::make_shared<const edi::Project>(*project_);
+        read.target = static_cast<std::size_t>(index);
+        const std::string& name = experiment.name.value();
+        read.take_file_name = name.size() > 10 && name.starts_with("experiment") &&
+                              std::all_of(name.begin() + 10, name.end(), [](char c) { return c >= '0' && c <= '9'; });
+    }
+    order.reads.push_back(std::move(read));
     order.second = [this, target = order.target, file] {
         const int at = target ? static_cast<int>(experiment_models_.indexOf(target)) : -1;
         if (at < 0) {
@@ -3988,6 +4022,11 @@ bool ProjectViewModel::startDataLoad(DataLoadOrder order) {
             } catch (const std::exception& refusal) {
                 outcome.error = QString::fromUtf8(refusal.what());
             }
+            if (outcome.read && wanted.context && wanted.target < wanted.context->experiments.size() &&
+                !cancelled->load()) {
+                outcome.background = estimated_background(*wanted.context, wanted.target, *outcome.read,
+                                                          wanted.take_file_name);
+            }
             outcomes[wanted.reader] = std::move(outcome);
         }
         QMetaObject::invokeMethod(
@@ -4101,7 +4140,13 @@ edi::PlainDataLoad ProjectViewModel::readDataFile(const edi::BraggPdExperiment& 
                                .arg(QFileInfo(QString::fromStdString(source)).fileName(),
                                     QString::fromStdString(experiment.name.value()))
                                .toStdString());
-    return edi::experiment_with_read(experiment, std::move(*outcome.read), take_file_name);
+    edi::PlainDataLoad load = edi::experiment_with_read(experiment, std::move(*outcome.read), take_file_name);
+    // The automatic estimate the job ran on the same data and settings: taken, so the edit's refresh finds nothing
+    // due. Anything that changed meanwhile leaves it due, and the refresh estimates as before.
+    if (outcome.background && edi::background_estimate_due(load.experiment)) {
+        edi::restore_background(load.experiment, *outcome.background);
+    }
+    return load;
 }
 
 bool ProjectViewModel::createStructure() {
