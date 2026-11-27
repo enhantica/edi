@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-26T23:36:50Z
+# measured_utc = 2026-11-27T00:33:52Z
 #
-# Recorded from: /home/andrewsazonov/runs/c18-t3-tests-seq1/edi-legacy.log
-# Collected tests: 267571; with a reported duration: 86320
+# Recorded from: measured test run (1 node(s) measured once, 187627 banked, 0 stale row(s) dropped)
+# Collected tests: 267563; with a reported duration: 86320
 # Module-scoped fixture costs recorded: 221
 #
 # Breaches are decided PER TIER against the table
@@ -29,12 +29,12 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 267562
+# inventory_python = 267563
 # inventory_cpp = 9
 # inventory_measured = 187627
-# inventory_unmeasured = 79944
+# inventory_unmeasured = 79945
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
-# inventory_pr_python = 92651
+# inventory_pr_python = 92652
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -187258,6 +187258,7 @@ UNMEASURED:failed-in-this-run	tests/system/app/test_magnetic_operator_workflow.p
 UNMEASURED:failed-in-this-run	tests/system/app/test_magnetic_operator_workflow.py::test_magnetic_workflow_in_the_real_qt_application[start_batch_notes_are_per_candidate]
 UNMEASURED:failed-in-this-run	tests/system/app/test_magnetic_operator_workflow.py::test_magnetic_workflow_in_the_real_qt_application[start_below_cancellation_cutoff]
 UNMEASURED:failed-in-this-run	tests/system/app/test_magnetic_operator_workflow.py::test_magnetic_workflow_in_the_real_qt_application[start_longitudinal_note]
+UNMEASURED:failed-in-this-run	tests/system/app/test_magnetic_operator_workflow.py::test_magnetic_workflow_in_the_real_qt_application[start_mn3o4_has_no_note]
 UNMEASURED:failed-in-this-run	tests/system/app/test_magnetic_operator_workflow.py::test_magnetic_workflow_in_the_real_qt_application[start_uniform_dilution_has_no_note]
 UNMEASURED:failed-in-this-run	tests/system/app/test_magnetic_operator_workflow.py::test_magnetic_workflow_in_the_real_qt_application[start_unlinked_has_no_note]
 UNMEASURED:failed-in-this-run	tests/system/app/test_magnetic_operator_workflow.py::test_magnetic_workflow_in_the_real_qt_application[texture_overflow_is_atomic]
@@ -267673,7 +267674,7 @@ UNMEASURED:not-completed-in-this-run	tests/unit/py/test_web_science_identity.py:
 # module-cost: 6.489	tests/integration/py/test_tutorial_strategy.py
 # module-cost: 2.933	tests/integration/py/test_weight_fraction_app.py
 # module-cost: 0.951	tests/system/app/test_likes_feedback.py
-# module-cost: 2.017	tests/system/app/test_magnetic_operator_workflow.py
+# module-cost: 1.376	tests/system/app/test_magnetic_operator_workflow.py
 # module-cost: 1.325	tests/system/app/test_magnetic_structure_type_native.py
 # module-cost: 12.650	tests/system/app/test_rendered_caption_capitalisation.py
 # module-cost: 84.777	tests/system/app/test_replaced_data_drawn.py

@@ -1,0 +1,9 @@
+{
+  "source": "MAGNDATA 1.1 Mn3O4; independent parent from generate_parents.py",
+  "parent_sha256": "6770c6b8905f39b586a3575350e5d4c0ea65cde2e915f5bf5f0517b176a63c56",
+  "parent_space_group": "Pbcm",
+  "k": "1/2,0,0",
+  "bns": "62.452",
+  "expected": "A nonzero seeded transverse magnetic signal in the 20 to 110 degree window",
+  "reference": "https://webbdcrista1.ehu.es/magndata/index.php?index=1.1"
+}

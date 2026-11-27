@@ -550,6 +550,23 @@ TestCase {
         const text = noteNodes("note-above", [/[Mm]x,[Mm]y,[Mm]z/]);
         verify(!/no magnetic intensity/i.test(text), "The independently constructed ratio above one trillionth retains its positive signal");
     }
+    function test_start_mn3o4_has_no_note() {
+        openPopup("note-mn3o4");
+        wave("1/2,0,0");
+        const node = shownNodes().find(item => /62\.452/.test(Ui.text(item)));
+        verify(node !== undefined, "The MAGNDATA Mn3O4 signed group is offered at the published propagation vector");
+        press(node);
+        verify(pcontrol("magnetic.startMoments").checked, "The published positive-intensity witness uses nonzero starting moments");
+        press(pcontrol("magnetic.add"));
+        tryVerify(() => !popup(), 1000, "The published candidate is added through the live popup");
+        tryCompare(Session.project, "calculating", false, 3000, "The Mn3O4 candidate finishes the linked powder calculation");
+        const children = Probe.rows(Session.project.structures).filter(row => row.name !== "parent");
+        compare(children.length, 1, "The published witness has exactly one added child");
+        const moments = Probe.rows(children[0].structure.atomSiteMoments);
+        verify(moments.some(row => ["mx", "my", "mz"].some(axis => Math.abs(row[axis].value) > 0)), "Mn3O4 retains a nonzero seeded magnetic moment");
+        const text = Probe.rows(Session.loadWarnings).map(row => row.message).join("\n") + Ui.text(app.contentItem);
+        verify(!/no magnetic intensity/i.test(text), "The linked Mn3O4 positive-signal witness does not show the zero-intensity note");
+    }
     function test_start_unlinked_has_no_note() {
         const text = noteNodes("note-unlinked", [/[Mm]x,[Mm]y,[Mm]z/]);
         verify(!/no magnetic intensity/i.test(text), "An unlinked parent supplies no experiment on which to claim zero magnetic intensity");

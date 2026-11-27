@@ -15,6 +15,7 @@ CASES = sorted([
     'start_below_cancellation_cutoff',
     'start_above_cancellation_cutoff',
     'start_unlinked_has_no_note',
+    'start_mn3o4_has_no_note',
     'start_batch_notes_are_per_candidate',
     'candidate_toggle_preserves_profile_and_free_set',
     'three_candidate_texture_failure_is_atomic',
