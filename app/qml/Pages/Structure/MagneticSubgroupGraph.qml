@@ -125,7 +125,7 @@ Flickable {
             readonly property var members: graph.levels[index]
             readonly property var choosable: members.filter(i => graph.selectable(i))
             x: graph.gap
-            y: graph.levelTops[index]
+            y: graph.levelTops[index] ?? 0
             height: graph.headerHeight
             spacing: graph.gap
             EaElements.CheckBox {
