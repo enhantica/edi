@@ -2740,6 +2740,15 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
             steps_.push_back({"about-" + theme + "-6-closed", {"key:Escape", "key:Escape"}});
         }
     }
+    // One fit timed in the app (owner, seq 62): a prepared copy of the 213-pattern scan in Independent mode
+    // (EDI_DEMO_INDEPENDENT_PROJECT) or of the Parametric example with U, V and W shared (EDI_DEMO_PARAMETRIC_PROJECT),
+    // under the Cores for fitting preference in effect. Run one at a time (`--demo-only fittime-independent`).
+    if (only.startsWith(QLatin1String("fittime-"))) {
+        steps_.push_back({"fittime-independent", {"open-project:" + qEnvironmentVariable("EDI_DEMO_INDEPENDENT_PROJECT"),
+                                                  "wait-settled", analysis, "timed-fit:213"}});
+        steps_.push_back({"fittime-parametric", {"open-project:" + qEnvironmentVariable("EDI_DEMO_PARAMETRIC_PROJECT"),
+                                                 "wait-settled", analysis, "timed-fit:213"}});
+    }
     if (only.startsWith(QLatin1String("perf-"))) {
         // EDI_DEMO_PERF_PROJECT names a prepared copy to open in place, so two builds time the same input.
         const QString prepared = qEnvironmentVariable("EDI_DEMO_PERF_PROJECT");
@@ -5980,8 +5989,9 @@ QString DemoDriver::scan_work(int files) const {
     if (scan == nullptr) {
         return QStringLiteral("no scan is open");
     }
-    if (project->analysis() == nullptr || project->analysis()->fittingMode() != QLatin1String("sequential")) {
-        return QStringLiteral("the scan does not run in its declared sequential mode");
+    const QString mode = project->analysis() != nullptr ? project->analysis()->fittingMode() : QString();
+    if (mode != QLatin1String("sequential") && mode != QLatin1String("independent") && mode != QLatin1String("parametric")) {
+        return QStringLiteral("the scan does not run in a scan mode");
     }
     if (static_cast<int>(scan->datasets().files.size()) != files ||
         static_cast<int>(scan->index().rows.size()) != files) {

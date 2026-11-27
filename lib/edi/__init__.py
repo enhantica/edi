@@ -268,6 +268,9 @@ from edi._edi import (  # noqa: E402 - the __path__ resolution above must run fi
     __build_commit__ as __build_commit__,
 )
 from edi._edi import (  # noqa: E402 - after the __path__ resolution
+    _apply_cores_for_mode as _apply_cores_for_mode,
+)
+from edi._edi import (  # noqa: E402 - after the __path__ resolution
     _calc_report as _calc_report,
 )
 from edi._edi import (  # noqa: E402 - after the __path__ resolution
@@ -655,6 +658,8 @@ class Analysis:
             return human_fit(
                 self._project, _FIT_VERBOSITY[verbosity], self._project.name, cancel=should_cancel
             )
+        # The CLI's --cores, spent by this fit's mode; nothing unless it was given.
+        _apply_cores_for_mode(self._project.fitting_mode)
         if self._project.fitting_mode == 'sequential':
             return self._project.fit_sequential(
                 on_iteration=on_iteration,

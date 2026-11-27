@@ -966,9 +966,9 @@ QString ApplicationInfo::diagnostics() const {
     // The engine's own report: which backend its parallel fill runs on, with how many threads, and SIMD.
     const edi::EngineThreading engine = edi::engine_threading();
     add(QStringLiteral("Engine backend"), QString::fromLatin1(engine.backend));
-    const int threads = edi::engine_threads_setting();
-    add(QStringLiteral("Threads per calculation (preference)"), threads > 0 ? QString::number(threads) : QStringLiteral("Auto"));
-    add(QStringLiteral("Parallel fits in a scan (preference)"), QString::number(edi::scan_workers_setting()));
+    add(QStringLiteral("Cores for fitting (in effect)"), QString::number(edi::cores_for_fitting()));
+    add(QStringLiteral("Threads per calculation (engine)"), QString::number(edi::engine_threads_setting()));
+    add(QStringLiteral("Parallel fits in a scan (engine)"), QString::number(edi::scan_workers_setting()));
     add(QStringLiteral("Engine workers"), QString::number(engine.workers));
     add(QStringLiteral("WebAssembly SIMD"), engine.wasm_simd ? QStringLiteral("on") : QStringLiteral("off"));
 #ifdef Q_OS_WASM
@@ -4991,7 +4991,6 @@ void ApplicationInfo::applyPreferences() const {
     // The app folds its sidebar groups itself, leaving pinned ones open (SideBarGroup).
     assistantMemberWrite(f, globals, "autoCollapseSideBarGroups", QJSValue(false));
     projectInvoke(f, "ApplicationInfo", "setEngineThreads", {assistantContextField(f, "preferences", "engineThreads")});
-    projectInvoke(f, "ApplicationInfo", "setScanWorkers", {assistantContextField(f, "preferences", "scanWorkersApplied")});
     globals = assistantContextField(f, "EaGlobals", "Vars");
     assistantMemberWrite(f, globals, "checkUpdateOnAppStart", QJSValue(false));
     const auto sizes = assistantContextField(f, "EaStyle", "Sizes");
@@ -12947,7 +12946,7 @@ bool ApplicationInfo::engineThreadsSelectable() const {
 
 int ApplicationInfo::engineThreadsMaximum() const { return std::clamp(2 * QThread::idealThreadCount(), 16, 64); }
 
-void ApplicationInfo::setEngineThreads(int count) const { edi::set_engine_threads(count); }
+void ApplicationInfo::setEngineThreads(int count) const { edi::set_cores_for_fitting(count); }
 
 int ApplicationInfo::scanWorkersMaximum() const { return std::max(1, QThread::idealThreadCount()); }
 

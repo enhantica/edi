@@ -148,6 +148,14 @@ def _add_performance_options(fit: argparse.ArgumentParser, calc: argparse.Argume
         help='scan files fitted together (default: 1); each uses one thread and in a sequential '
         "scan each group starts from the preceding group's result",
     )
+    fit.add_argument(
+        '--cores',
+        type=_thread_count,
+        default=None,
+        metavar='auto|N',
+        help="cores for fitting, spent as the fitting mode needs them, as the app's Cores for "
+        'fitting does (auto: every core); given, it replaces --threads and --parallel-fits',
+    )
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -1044,6 +1052,8 @@ def main(argv: list[str] | None = None) -> int:
     if args.command in {'fit', 'calc'}:
         _native._set_engine_threads(args.threads)
         _native._set_scan_workers(getattr(args, 'parallel_fits', 1))
+        if getattr(args, 'cores', None) is not None:
+            _native._set_cores_for_fitting(args.cores)
     # The commands without a fit record: an error is one stderr line beside the non-zero exit.
     plain = {'report': run_report, 'export': run_export, 'collection': run_collection}
     plain.update(

@@ -193,7 +193,6 @@ AppDialog {
                 bar.currentIndex = index;
         }
         Preferences.dialogTab = "";
-        scanWorkersBox.show();
     }
 
     title: qsTr("Preferences")
@@ -726,7 +725,7 @@ AppDialog {
         }
 
         // Performance: this computer's calculation and drawing, never saved in a project. Where the app runs
-        // single-threaded (a browser without WebAssembly threads) both counts are one and disabled.
+        // single-threaded (a browser without WebAssembly threads) the count is one and disabled.
         TabRow {
             TabColumn {
                 GroupTitle {
@@ -734,7 +733,7 @@ AppDialog {
                     text: qsTr("Calculation")
                 }
                 Field {
-                    label: qsTr("Threads per calculation")
+                    label: qsTr("Cores for fitting")
                     NotAvailable {
                         reason: ApplicationInfo.engineThreadsSelectable ? "" : qsTr("This browser runs the app on one thread")
                         FieldBox {
@@ -751,55 +750,11 @@ AppDialog {
                                 return counts;
                             }
                             currentIndex: ApplicationInfo.engineThreadsSelectable ? Math.min(Preferences.engineThreads, ApplicationInfo.engineThreadsMaximum) : 0
-                            // While several scan files are fitted at once, each of those fits runs on one thread.
-                            displayText: Preferences.scanWorkersApplied > 1 ? `${currentText} <font color="${EaStyle.Colors.themeForegroundDisabled}">· ${qsTr("1 per scan fit")}</font>` : currentText
                             onActivated: index => {
                                 if (ApplicationInfo.engineThreadsSelectable)
                                     Preferences.engineThreads = index;
                             }
-                            ToolTip.text: Preferences.scanWorkersApplied > 1 ? qsTr("Threads one calculation or one fit runs on. While several scan files are fitted at once, each of those fits runs on one thread") : qsTr("Threads one calculation or one fit runs on; Auto leaves a core or two free")
-                        }
-                    }
-                }
-                Field {
-                    label: qsTr("Parallel fits in a scan")
-                    NotAvailable {
-                        reason: ApplicationInfo.engineThreadsSelectable ? "" : qsTr("This browser runs the app on one thread")
-                        FieldBox {
-                            id: scanWorkersBox
-
-                            property int maximum: ApplicationInfo.scanWorkersMaximum
-                            signal chosen(int count)
-
-                            // The count the engine runs with, set rather than bound: the list is rebuilt when the
-                            // machine's maximum is read.
-                            function show() {
-                                currentIndex = Math.max(0, Math.min(Preferences.scanWorkersApplied, maximum) - 1);
-                            }
-
-                            // A plain list of every count up to the cores of this machine: a click opens it.
-                            objectName: "preferences.scanWorkers"
-                            enabled: ApplicationInfo.engineThreadsSelectable
-                            model: {
-                                const counts = [];
-                                for (let count = 1; count <= Math.max(1, maximum); ++count)
-                                    counts.push(String(count));
-                                return counts;
-                            }
-                            Component.onCompleted: show()
-                            onModelChanged: show()
-                            onActivated: index => chosen(index + 1)
-                            onChosen: count => {
-                                Preferences.scanWorkers = count;
-                                show();
-                            }
-                            Connections {
-                                target: Preferences
-                                function onScanWorkersAppliedChanged() {
-                                    scanWorkersBox.show();
-                                }
-                            }
-                            ToolTip.text: qsTr("How many data files of a sequential or independent scan are fitted at once, up to the %1 cores of this machine. Each file of a group starts from where the previous group ended; 1 fits them one after another, each from the previous result").arg(maximum)
+                            ToolTip.text: qsTr("Cores a calculation or a fit runs on; Auto uses every core. A single or joint fit and a sequential scan run each calculation on them; an independent scan fits that many files at once; a parametric fit fits that many patterns at once")
                         }
                     }
                 }

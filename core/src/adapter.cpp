@@ -9598,6 +9598,29 @@ void set_scan_workers(int count) noexcept { crysta::threading::set_scan_workers(
 int scan_workers_setting() noexcept { return crysta::threading::scan_workers_setting(); }
 
 namespace {
+std::atomic<int> cores_preference{-1};  // -1: never set
+}  // namespace
+
+void set_cores_for_fitting(int count) noexcept {
+    cores_preference.store(std::max(count, 0));
+    crysta::threading::set_thread_count(cores_for_fitting());
+}
+
+int cores_for_fitting() noexcept {
+    const int count = cores_preference.load();
+    if (count < 0) return 0;
+    if (count > 0) return count;
+    return crysta::threading::visible_concurrency();  // the cores this process may run on
+}
+
+void apply_cores_for_mode(const std::string& mode) noexcept {
+    const int cores = cores_for_fitting();
+    if (cores == 0) return;
+    crysta::threading::set_thread_count(cores);
+    crysta::threading::set_scan_workers(mode == "independent" || mode == "parametric" ? cores : 1);
+}
+
+namespace {
 
 static_assert(kDefaultBackgroundTolerance == crysta::kDefaultBackgroundTolerance);
 static_assert(kAutoModelBelowShare == crysta::kAutoModelBelowShare);

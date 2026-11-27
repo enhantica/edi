@@ -40,7 +40,9 @@ namespace {
 constexpr std::string_view usage =
     "Usage: edi fit PROJECT [--dry | --output DIRECTORY] "
     "[--verbosity off|compact|full] [--report human|machine] [--log-level error|warning|info|debug] "
-    "[--threads auto|N] [--parallel-fits N]\n"
+    "[--cores auto|N] [--threads auto|N] [--parallel-fits N]\n"
+    "  --cores: cores for fitting, spent as the fitting mode needs them, as the app's Cores for fitting does\n"
+    "    (auto: every core); given, it replaces --threads and --parallel-fits.\n"
     "  --threads: threads per calculation (default: auto).\n"
     "  --parallel-fits: scan files fitted together (default: 1); each uses one thread.\n"
     "    In a sequential scan, files in a group start from the preceding group's result.\n"
@@ -207,6 +209,7 @@ void fit(const std::string& source, const std::string& output, bool dry,
         };
     }
 
+    edi::apply_cores_for_mode(project.fitting_mode);  // only when --cores was given
     const auto result = [&] {
         if (project.fitting_mode == "sequential") {
             return project.fit_sequential(on_iteration, {}, on_scan_start, on_file_complete);
@@ -328,6 +331,7 @@ int main(int argc, char** argv) {
     auto verbosity = edi::VerbosityEnum::COMPACT;
     int threads = 0;
     int parallel_fits = 1;
+    std::optional<int> cores;
     try {
         if (argc < 3 || std::string_view(argv[1]) != "fit") {
             throw std::invalid_argument("expected a fit or download command");
@@ -335,7 +339,8 @@ int main(int argc, char** argv) {
         for (int i = 2; i < argc; ++i) {
             std::string_view argument = argv[i];
             std::optional<std::string_view> inline_value;
-            if (argument.starts_with("--threads=") || argument.starts_with("--parallel-fits=")) {
+            if (argument.starts_with("--threads=") || argument.starts_with("--parallel-fits=") ||
+                argument.starts_with("--cores=")) {
                 const auto separator = argument.find('=');
                 inline_value = argument.substr(separator + 1);
                 argument = argument.substr(0, separator);
@@ -343,7 +348,7 @@ int main(int argc, char** argv) {
             if (argument == "--dry") {
                 dry = true;
             } else if (argument == "--output" || argument == "--verbosity" || argument == "--report" ||
-                       argument == "--threads" || argument == "--parallel-fits") {
+                       argument == "--threads" || argument == "--parallel-fits" || argument == "--cores") {
                 if (!inline_value) {
                     ++i;
                     if (i == argc || std::string_view(argv[i]).starts_with("--")) {
@@ -351,7 +356,9 @@ int main(int argc, char** argv) {
                     }
                 }
                 const std::string_view value = inline_value ? *inline_value : argv[i];
-                if (argument == "--threads") {
+                if (argument == "--cores") {
+                    cores = value == "auto" ? 0 : positive_count(value, argument);
+                } else if (argument == "--threads") {
                     threads = value == "auto" ? 0 : positive_count(value, argument);
                 } else if (argument == "--parallel-fits") {
                     parallel_fits = positive_count(value, argument);
@@ -384,6 +391,7 @@ int main(int argc, char** argv) {
     try {
         edi::set_engine_threads(threads);
         edi::set_scan_workers(parallel_fits);
+        if (cores) edi::set_cores_for_fitting(*cores);
         fit(source, output, dry, verbosity, machine);
     } catch (const std::exception& error) {
         std::cerr << "edi fit: " << error.what() << '\n';

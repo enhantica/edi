@@ -62,7 +62,11 @@ equality (TOPAS, GSAS-II, FullProf, Jana); general fitting tools put a Share col
 10. **A running fit.** A Parametric fit redraws the selected pattern, Meas vs calc and Evolution from each iteration
     (at most four times a second, the last always); the status bar shows its iterations and joint χ², and the results
     window its one outcome, never files converged or failed.
-11. **The template and a fit again** (owner decision 2026-11-27, every scan mode). A scan fit never writes the template:
+11. **Cores** (owner decision 2026-11-27). Preferences' one Cores for fitting (Auto: every core) is spent by the fit's
+    mode: a single or Joint fit and a Sequential scan inside each calculation, an Independent scan as that many files
+    at once, a Parametric fit as that many patterns at once, its point loop on that team (crysta ADR-0136 decision 8);
+    the setting's tooltip says so.
+12. **The template and a fit again** (owner decision 2026-11-27, every scan mode). A scan fit never writes the template:
     the project keeps its values, and each shown dataset reads its own from the results files; saving after a fit
     writes the template unchanged. Fit on a scan whose every dataset is fitted or skipped fits them all again, each
     from its own latest result, as a new run; while some are not, it continues them. Reset fits clears the results,

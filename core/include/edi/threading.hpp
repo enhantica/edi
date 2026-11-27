@@ -2,6 +2,8 @@
 #ifndef EDI_THREADING_HPP
 #define EDI_THREADING_HPP
 
+#include <string>
+
 namespace edi {
 
 // Forward to the engine's shipped threading applier. The effective seam for an edi process is
@@ -37,6 +39,16 @@ int engine_threads_setting() noexcept;
 // count it can change a scan's results, so it is one value for the whole process, read when a scan starts.
 void set_scan_workers(int count) noexcept;
 int scan_workers_setting() noexcept;
+
+// The app's one "Cores for fitting" preference (owner decision 2026-11-27): 0 is Auto, every core of the machine, N >= 1
+// that many. Every calculation runs on that many threads, and each fit spends them by its mode (apply_cores_for_mode).
+// Until it is set, the two settings above are used as they are (the CLI and Python set them themselves).
+void set_cores_for_fitting(int count) noexcept;
+// The cores in effect, Auto resolved; 0 while the preference is unset.
+int cores_for_fitting() noexcept;
+// Before a fit of `mode`, once the preference is set: Independent fits that many files at once and Parametric that many
+// points (ADR-0107 decision 11); Sequential, single and Joint fit one at a time, each calculation on that many threads.
+void apply_cores_for_mode(const std::string& mode) noexcept;
 
 }  // namespace edi
 

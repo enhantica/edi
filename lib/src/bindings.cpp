@@ -2316,6 +2316,8 @@ NB_MODULE(_edi, m) {
     m.def("log_level", [] { return edi::log_level(); }, "The current message level.");
     m.def("_set_engine_threads", &edi::set_engine_threads, "count"_a);
     m.def("_set_scan_workers", &edi::set_scan_workers, "count"_a);
+    m.def("_set_cores_for_fitting", &edi::set_cores_for_fitting, "count"_a);
+    m.def("_apply_cores_for_mode", &edi::apply_cores_for_mode, "mode"_a);
     m.def("_collection_defaults", [] {
         return nb::make_tuple(edi::online::default_collection_sources(), edi::online::default_tutorials_source());
     });

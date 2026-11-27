@@ -19,6 +19,7 @@
 #include "edi/parameter_walk.hpp"
 #include "edi/scan.hpp"
 #include "edi/selectors.hpp"
+#include "edi/threading.hpp"
 
 namespace edi {
 namespace {
@@ -79,6 +80,7 @@ FitResultBase fit_by_mode(Project& project, const IterationCallback& on_iteratio
                           const FileCompleteCallback& on_file_complete, const FileFittedCallback& on_file_fitted,
                           const ParametricIterateCallback& on_iterate) {
     const std::string mode = effective_fitting_mode(project);
+    apply_cores_for_mode(mode);
     if (mode == "single") {
         return project.fit(on_iteration, on_start, should_cancel);
     }

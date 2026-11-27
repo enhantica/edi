@@ -90,7 +90,9 @@ only CLI ZIPs present in published GitHub releases.
 ## Process performance selections
 
 The standalone fit command and Python fit entry expose the existing app Performance selections as
---threads auto|N and --parallel-fits N. Python calc also accepts --threads. Both hosts forward to the
+--threads auto|N and --parallel-fits N, and as --cores auto|N, the app's one Cores for fitting (owner decision
+2026-11-27), which the fit spends by its mode and which replaces the other two when given. Python calc also accepts
+--threads. Both hosts forward to the
 existing edi/threading.hpp setters before loading/fitting/calculating; Python uses private binding
 forwards used by its real CLI, with no additional public Python settings surface. The first implementation
 is the app Preferences calculation/scan fields and the existing shared engine policy. No scheduling,

@@ -74,14 +74,13 @@ QtObject {
     // Where the workflow pages show their sidebar: "Right" (the default) or "Left" (WorkflowPage).
     property string sideBarSide: "Right"
     readonly property bool sideBarOnLeft: sideBarSide === "Left"
-    // Threads per calculation (Performance): the engine's thread count for every fill, 0 is Auto, the engine's own
-    // policy. A machine's setting, never saved in a project.
+    // Cores for fitting (Performance; owner decision 2026-11-27): 0 is Auto, every core, else that many. Every
+    // calculation runs on them, and each fit spends them by its mode (edi ADR-0107 decision 11). A machine's setting,
+    // never saved in a project; stored under the key the thread count had.
     property int engineThreads: 0
-    // Parallel fits in a scan (Performance): how many files of a scan are fitted at once, 1 one after another. A
-    // machine's setting, never saved in a project (the owner, 2026-11-04).
+    // The retired Parallel fits in a scan, read once to carry a saved count over to Cores for fitting.
     property int scanWorkers: 1
-    // What the engine runs with: one file at a time where the app runs single-threaded.
-    readonly property int scanWorkersApplied: ApplicationInfo.engineThreadsSelectable ? Math.max(1, Math.min(scanWorkers, ApplicationInfo.scanWorkersMaximum)) : 1
+    property bool coresMigrated: false
     // The message level (Advanced; edi ADR-0062, owner record 2026-11-09): "Debug", "Info", "Warning" or "Error",
     // for the run log and for crysta's and edi's messages; errors always show.
     property string loggingLevel: "Warning"
@@ -106,6 +105,11 @@ QtObject {
     property string whatsNewPreviewSeen: ""
     property bool updateNotifications: true
     Component.onCompleted: {
+        // The two retired settings become one, the larger of them; Auto, every core, is the largest.
+        if (!coresMigrated) {
+            if (engineThreads > 0 && scanWorkers > engineThreads) engineThreads = scanWorkers;
+            coresMigrated = true;
+        }
         RunLog.level = loggingLevel;
         ApplicationInfo.setMessageLevel(loggingLevel);
         loadToolTips();
@@ -228,6 +232,7 @@ QtObject {
         category: "develop"
         property alias engineThreads: preferences.engineThreads
         property alias scanWorkers: preferences.scanWorkers
+        property alias coresMigrated: preferences.coresMigrated
         property alias loggingLevel: preferences.loggingLevel
         // Stored under a key no earlier build wrote: those saved an empty address, which would outrank the default.
         property alias feedbackAddress: preferences.feedbackEndpoint
@@ -409,8 +414,6 @@ QtObject {
     onEngineThreadsChanged: ApplicationInfo.persistPreference(0)
     // Saved at once too: a restart or a new window soon after the toggle must find it, and no write is left pending
     // for the settings' own schedule when the window closes.
-    onScanWorkersAppliedChanged: ApplicationInfo.setScanWorkers(scanWorkersApplied)
-    // Saved at once, as the thread count is.
     onScanWorkersChanged: ApplicationInfo.persistPreference(4)
     // Opens the dialog on its Performance tab: what the pages' read-only Performance lines do.
     function openPerformance() {
