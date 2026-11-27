@@ -24,7 +24,7 @@ assistant runtime, and shows its choices as rows on the folder page instead of a
    CPU only, with `GGML_NATIVE` off so an installer runs on other machines than the build machine. On x86-64 it uses
    AVX2, FMA and F16C, present in Intel CPUs since 2013 and AMD since 2015; on Apple silicon ggml uses NEON and the
    Accelerate framework. No GPU backend: Metal or CUDA would add shader or driver packaging for a speed the CPU already
-   gives (§Speed). The option `EDI_APP_VOICE` builds it; it is on for the desktop app and off for WebAssembly.
+   gives (§Speed). It is built with the assistant (`EDI_APP_ASSISTANT`), so it is in the desktop app and not in WebAssembly.
 2. **Model.** The multilingual Whisper "small" model in whisper.cpp's format, quantized to q5_1:
    `ggml-small-q5_1.bin`, 190 085 487 bytes, SHA-256
    `ae85e4a935d7a567bd102fe55afc16bb595bdb618e11b2fc7591bc08120411bb`. The owner chose small as the middle size: tiny
@@ -56,7 +56,7 @@ assistant runtime, and shows its choices as rows on the folder page instead of a
    message box's place, naming what the user can do.
 6. **Recognition.** The recording is recognised in one pass after it stops, off the GUI thread through
    `run_in_background` (ADR-0020's worker is for calculations). A cancel during recognition stops whisper through its
-   abort callback. Whisper uses up to four threads. The text is inserted at the cursor in the message box and is never
+   abort callback. Whisper uses up to eight threads (§Speed). The text is inserted at the cursor in the message box and is never
    sent by itself; the user edits it and sends it as typed text.
 7. **Language.** By default Whisper detects the language. The assistant preferences may fix it; the list of languages
    comes from whisper.cpp itself, so it cannot disagree with the model.
@@ -66,13 +66,29 @@ assistant runtime, and shows its choices as rows on the folder page instead of a
 
 ## Speed
 
-To be measured with the pinned build on a laptop-class CPU and stated here. CI never asserts a time.
+Measured on 2026-11-27 with whisper.cpp `v1.9.6` built as above (AVX2, no OpenMP) and its `whisper-cli`, on a shared
+Intel Xeon (Cascade Lake) virtual machine, for a 15-second clip of the public-domain JFK sample that ships with
+whisper.cpp, repeated to 15 s:
+
+| Model | Threads | Language | Encoder | Total |
+|---|---|---|---|---|
+| small q5_1 | 4 | detected | 11.7 s (two passes) | 13.2 to 13.5 s (three runs) |
+| small q5_1 | 8 | detected | 6.4 s (two passes) | 8.9 s |
+| small q5_1 | 4 | English | 5.0 s | 7.6 s |
+| small q5_1 | 8 | English | 2.8 s | 5.0 s |
+| tiny q5_1 | 4 | detected | | 2.0 to 2.1 s (three runs) |
+
+Loading the small model takes 0.2 to 0.3 s and 470 MB of memory, so the app loads it for each recording and frees it
+after. Detecting the language costs a second encoder pass; a fixed language in the preferences takes it away. A
+shorter encoder window (`audio_ctx`) halved the encoder time but made the model repeat the phrase, so it is not used.
+Laptop processors run each thread faster than this virtual machine; a measurement on an Apple silicon laptop is still
+to be added here. CI never asserts a time.
 
 ## Licences
 
 whisper.cpp and ggml are MIT. OpenAI released the Whisper code and model weights under MIT; the converted and quantized
-files keep that licence. Qt Multimedia is GPL-3.0 in edi's build, like the rest of Qt the desktop app already uses
-(ADR-0008). All three are rows in `DEPENDENCIES.md` with their texts in `THIRD-PARTY-NOTICES`.
+files keep that licence. Qt Multimedia is LGPL-3.0 like the rest of Qt the desktop app links (ADR-0008); the app
+ships its audio input only, not its FFmpeg media plugin. All three are rows in `DEPENDENCIES.md` with their texts in `THIRD-PARTY-NOTICES`.
 
 ## Consequences
 
