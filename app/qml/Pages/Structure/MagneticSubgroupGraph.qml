@@ -54,13 +54,20 @@ Flickable {
     // as its two lines with the same margin around and between them (owner, 2026-11-27).
     readonly property real cardMargin: AppSizes.tableCellMargin
     readonly property real cardSpacing: AppSizes.tableCellMargin * 0.5
+    // The text's own room above its capitals: the visible gap at the top is the margin plus it, so the left side and
+    // the bottom (less the second line's descent) take the same visible gap (owner, 2026-11-27).
+    readonly property real capRoom: Math.max(0, nameMetrics.ascent + nameMetrics.tightBoundingRect("H").y)
+    readonly property real cardPadding: cardMargin + capRoom
+    // The width of a highlighted card's border and of the lines between cards (owner, 2026-11-27).
+    readonly property real lineWidth: 1.5
     readonly property int nodeWidth: {
         let widest = 0;
         for (const n of nodes)
             widest = Math.max(widest, nameMetrics.advanceWidth(graph.nameOf(n)), lineMetrics.advanceWidth(graph.lineOf(n)));
-        return Math.ceil(Math.max(EaStyle.Sizes.fontPixelSize * 6, widest) + 2 * cardMargin + 2);
+        return Math.ceil(Math.max(EaStyle.Sizes.fontPixelSize * 6, widest) + 2 * cardPadding + 2);
     }
-    readonly property int nodeHeight: Math.ceil(2 * cardMargin + nameMetrics.height + cardSpacing + lineMetrics.height)
+    readonly property int nodeHeight: Math.ceil(cardMargin + nameMetrics.height + cardSpacing + lineMetrics.height +
+                                                Math.max(0, cardPadding - lineMetrics.descent))
     // About twice the earlier spacing between cards.
     readonly property int gap: 20
     readonly property int headerHeight: 28
@@ -141,8 +148,37 @@ Flickable {
         const middle = to.y + nodeHeight / 2;
         return [Qt.point(from.x + nodeWidth / 2, from.y + nodeHeight), Qt.point(from.x + nodeWidth / 2, band), Qt.point(lane, band), Qt.point(lane, middle), Qt.point(to.x, middle)];
     }
+    // The shown card's whole lineage (owner, 2026-11-27): every ancestor up to the maximal level and every descendant
+    // down to the last, each as a set of node indices, the card itself in both.
+    readonly property var parentsOf: {
+        const up = nodes.map(() => []);
+        nodes.forEach((n, i) => n.subgroups.forEach(j => up[j].push(i)));
+        return up;
+    }
+    function reach(start, next) {
+        const seen = {};
+        if (start < 0)
+            return seen;
+        const queue = [start];
+        seen[start] = true;
+        while (queue.length > 0) {
+            const at = queue.shift();
+            for (const j of next(at))
+                if (!seen[j]) {
+                    seen[j] = true;
+                    queue.push(j);
+                }
+        }
+        return seen;
+    }
+    readonly property var ancestors: shownNode >= 0 && shownNode < nodes.length ? reach(shownNode, i => parentsOf[i]) : ({})
+    readonly property var descendants: shownNode >= 0 && shownNode < nodes.length ? reach(shownNode, i => nodes[i].subgroups) : ({})
     function related(i, j) {
-        return nodes[i].subgroups.indexOf(j) >= 0 || nodes[j].subgroups.indexOf(i) >= 0;
+        return ancestors[j] === true || descendants[j] === true;
+    }
+    // An edge along the lineage: both ends above the shown card, or both below it.
+    function onLineage(i, j) {
+        return (ancestors[i] === true && ancestors[j] === true) || (descendants[i] === true && descendants[j] === true);
     }
 
     clip: true
@@ -150,7 +186,7 @@ Flickable {
     contentHeight: levelTops.length > 0 ? levelTops[levelTops.length - 1] : 0
     ScrollBar.vertical: EaElements.ScrollBar {}
 
-    // Edges of the group under the pointer only, to its covering subgroups, behind every card.
+    // The edges of the shown group's lineage, between every pair of adjacent levels along it, behind every card.
     Repeater {
         model: graph.maximalOnly ? 0 : graph.nodes.length
         delegate: Item {
@@ -158,17 +194,17 @@ Flickable {
             required property int index
             z: -1
             readonly property point from: graph.positionOf(index)
-            visible: graph.shown(index) && graph.lit(index)
+            visible: graph.shown(index) && (graph.ancestors[index] === true || graph.descendants[index] === true)
             Repeater {
                 model: graph.nodes[edges.index].subgroups
                 delegate: Shape {
                     id: edge
                     required property int modelData
                     readonly property var corners: graph.route(edges.index, modelData)
-                    visible: graph.shown(modelData)
+                    visible: graph.shown(modelData) && graph.onLineage(edges.index, modelData)
                     ShapePath {
                         strokeColor: EaStyle.Colors.themeAccent
-                        strokeWidth: 1.5
+                        strokeWidth: graph.lineWidth
                         fillColor: "transparent"
                         startX: edge.corners[0].x
                         startY: edge.corners[0].y
@@ -223,14 +259,16 @@ Flickable {
             radius: 2
             readonly property color textColor: chosen ? "white" : EaStyle.Colors.themeForeground
             color: chosen ? EaStyle.Colors.themeAccent : EaStyle.Colors.chartBackground
-            border.width: near || graph.shownNode === index ? 2 : 1
+            border.width: near || graph.shownNode === index ? graph.lineWidth : 1
             border.color: near || graph.shownNode === index ? EaStyle.Colors.themeAccent : EaStyle.Colors.chartAxis
 
 
             Column {
                 anchors.fill: parent
-                // One margin around the two lines and half of it between them, both lines from the left margin.
-                anchors.margins: graph.cardMargin
+                // The same visible gap on every side, and half the margin between the two lines.
+                anchors.topMargin: graph.cardMargin
+                anchors.leftMargin: graph.cardPadding
+                anchors.rightMargin: graph.cardPadding
                 spacing: graph.cardSpacing
                 // A group that cannot be chosen reads faded, while its card stays opaque over the edges.
                 opacity: graph.selectable(node.index) ? 1.0 : 0.45
@@ -272,14 +310,17 @@ Flickable {
                     visible: on || graph.hovered === node.index
                     x: parent.width - width - graph.cardMargin * 0.5
                     y: graph.cardMargin * 0.5
-                    width: EaStyle.Sizes.fontPixelSize * 1.5
+                    width: EaStyle.Sizes.fontPixelSize * 1.25
                     height: width
                     horizontalAlignment: Text.AlignHCenter
                     verticalAlignment: Text.AlignVCenter
                     font.family: EaStyle.Fonts.iconsFamily
-                    font.pixelSize: EaStyle.Sizes.fontPixelSize
+                    font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.8
                     rotation: on ? 0 : 45
-                    color: on ? (node.chosen ? "white" : EaStyle.Colors.themeAccent) : pinArea.containsMouse ? EaStyle.Colors.themeForegroundHovered : node.textColor
+                    // On a selected (blue) card always white: faded until hovered or pinned, so it never sinks into
+                    // the fill (owner, 2026-11-27).
+                    color: node.chosen ? "white" : on ? EaStyle.Colors.themeAccent : pinArea.containsMouse ? EaStyle.Colors.themeForegroundHovered : node.textColor
+                    opacity: node.chosen && !on && !pinArea.containsMouse ? 0.6 : 1.0
                     text: "thumbtack"
                     MouseArea {
                         id: pinArea

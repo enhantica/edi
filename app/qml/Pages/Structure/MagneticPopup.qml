@@ -305,14 +305,23 @@ AppDialog {
             Layout.preferredHeight: listMode.checked ? listView.contentHeight + EaStyle.Sizes.tableRowHeight : graphView.contentHeight
             currentIndex: listMode.checked ? 1 : 0
 
-            MagneticSubgroupGraph {
-                id: graphView
-                nodes: popup.nodes
-                selected: popup.selected
-                maximalOnly: maximalOnly.checked
-                parentCell: popup.found ? popup.found.cell : ""
-                onShownNodeChanged: popup.hovered = shownNode
-                onToggled: index => popup.toggle(index)
+            // The graph's cards and level titles start one gap in, where the edges into the first column run: the
+            // graph sits that gap further left, so they line up with the controls above and those edges run in the
+            // dialog's padding (owner, 2026-11-27).
+            Item {
+                MagneticSubgroupGraph {
+                    id: graphView
+                    objectName: "magnetic.graph"
+                    x: -gap
+                    width: parent.width + gap
+                    height: parent.height
+                    nodes: popup.nodes
+                    selected: popup.selected
+                    maximalOnly: maximalOnly.checked
+                    parentCell: popup.found ? popup.found.cell : ""
+                    onShownNodeChanged: popup.hovered = shownNode
+                    onToggled: index => popup.toggle(index)
+                }
             }
 
             // The list: one row per group in the app's table (DataTable, as Excluded regions and the parameter table),
