@@ -82,11 +82,30 @@ const buttons = () => page.evaluate(() => Array.from(document.querySelectorAll('
   .filter(button => button.getClientRects().length).map(button => button.textContent));
 const first = await page.evaluate(() => ({ text: document.querySelector('dialog.ed-contact-notice p').textContent, message: window.sent[0] }));
 check(first.message.attachments.length === 5 && first.message.attachments[0].data === btoa('AAAA'), 'the files go as the app sends them');
-check(first.text === 'Your message was sent. Thank you! But a.txt, b.txt, c.txt, d.txt, e.txt were not attached.', `unconfirmed files: ${first.text}`);
+check(first.text.startsWith('Your message was sent. Thank you!') &&
+  first.text.includes('But a.txt, b.txt, c.txt, d.txt, e.txt were not attached.'), `unconfirmed files: ${first.text}`);
 check((await buttons()).join('|') === 'Close', `only Close after a success: ${(await buttons()).join('|')}`);
 const kept = await page.evaluate(() => ['name', 'email', 'message'].map(key => document.querySelector(`form.ed-contact-form [name="${key}"]`).value));
 check(kept.join('|') === 'Ada|ada@example.org|', `a sent message keeps name and e-mail, clears the text: ${kept.join('|')}`);
 check((await state()).items.length === 0, 'a sent message clears the files');
+await page.click('dialog.ed-contact-notice button:last-child');
+
+// An ordinary successful submission invites a follow-up while keeping the same form usable.
+await page.evaluate(() => (window.reply = { status: 201, body: '{"number":2}' }));
+await page.fill('textarea[name="message"]', 'I can send a smaller example');
+await page.click('form.ed-contact-form button[type="submit"]');
+await page.waitForSelector('dialog.ed-contact-notice[open]');
+const confirmed = await page.locator('dialog.ed-contact-notice p').textContent();
+check(/send another message/i.test(confirmed), `a successful submission invites another message: ${confirmed}`);
+await page.click('dialog.ed-contact-notice button:last-child');
+check(await page.inputValue('input[name="email"]') === 'ada@example.org', 'a follow-up keeps the address');
+await page.evaluate(() => (window.reply = { status: 201, body: '{"number":3}' }));
+await page.fill('textarea[name="message"]', 'The smaller example is ready');
+await page.click('form.ed-contact-form button[type="submit"]');
+await page.waitForSelector('dialog.ed-contact-notice[open]');
+check(await page.evaluate(() => window.sent.length === 3 &&
+  window.sent[2].text === 'The smaller example is ready'),
+  'a second success submits the new message from the same form');
 await page.click('dialog.ed-contact-notice button:last-child');
 
 // A refusal says why; the text and files stay.

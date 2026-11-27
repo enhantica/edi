@@ -14,6 +14,10 @@ TestCase {
     property var app
     property var savedRecent
     property string savedLast
+    SignalSpy {
+        id: settlements
+        signalName: "dataLoadSettled"
+    }
     Component { id: application; Main {} }
 
     function init() {
@@ -24,6 +28,8 @@ TestCase {
     }
 
     function cleanup() {
+        settlements.target = null;
+        settlements.clear();
         if (app)
             app.destroy();
         app = null;
@@ -102,6 +108,54 @@ TestCase {
         compare(between.file, previousFile, "The GUI event runs before the read's result reaches the experiment");
         verify(between.progress, "The window shows accessible data-loading progress during the pending read");
         verify(!loadProgress(), "The data-loading progress retires after the result reaches the window");
+    }
+
+    function test_dropped_load_reports_its_own_number_data() {
+        return [{ tag: "replacement" }, { tag: "cancel" }, { tag: "remove-experiment" }];
+    }
+
+    function test_dropped_load_reports_its_own_number(data) {
+        const input = Probe.repoUrl("tests/fixtures/loop_parameter_ids/line-segment");
+        verify(Session.openProject(SettingsProof.copyProject(input)),
+               "The data load tests start from a committed powder project");
+        const project = Session.project;
+        tryCompare(project, "calculating", false, 15000, "The starting calculation settles");
+        const original = project.currentExperiment.dataFile;
+        const firstPath = "tests/fixtures/ui_responsiveness/scan/44k_data/scan-0514_pilatus_integrated_0000.xy";
+        const secondPath = "tests/fixtures/online_sources/three_points.xye";
+        settlements.target = project;
+        verify(settlements.valid, "A started load emits a numbered settlement");
+        verify(project.loadData(0, Probe.repoUrl(firstPath)), "The first file is admitted");
+        const firstId = project.startedDataLoad();
+        verify(firstId > 0, "The first load gets a positive identifier");
+        compare(settlements.count, 0, "The first call returns before publishing a settlement");
+
+        if (data.tag === "replacement") {
+            verify(project.loadData(0, Probe.repoUrl(secondPath)), "The replacement file is admitted");
+            const secondId = project.startedDataLoad();
+            verify(secondId > 0 && secondId !== firstId, "The replacement gets a different identifier");
+            tryCompare(settlements, "count", 2, 15000, "Both load identifiers settle");
+            compare(settlements.signalArguments, [[firstId, false], [secondId, true]],
+                    "The discarded read and the applied read each get their own outcome");
+            compare(project.currentExperiment.dataFile, "three_points.xye",
+                    "Only the replacement file reaches the experiment");
+            const rows = Probe.rows(project.currentExperiment.pattern).map(
+                row => [row.x, row.intensityMeas, row.intensityMeasSu]);
+            compare(rows, [[21.5, 17.25, 0.75], [22.75, 31.75, 1.25], [25.125, 23.5, 1.5]],
+                    "Published measurements equal the replacement fixture's independent columns");
+        } else {
+            if (data.tag === "cancel")
+                project.cancelDataLoad();
+            else
+                project.removeExperiment(0);
+            tryCompare(settlements, "count", 1, 15000, "A discarded read settles once");
+            compare(settlements.signalArguments, [[firstId, false]],
+                    "The discarded identifier reports that no data was applied");
+            if (data.tag === "cancel")
+                compare(project.currentExperiment.dataFile, original, "Cancel retains the previous data file");
+            else
+                compare(project.experiments.count, 0, "Dropping the old read leaves its target removed");
+        }
     }
 
     function test_recent_paths_at_start_data() {
