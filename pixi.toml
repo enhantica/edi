@@ -25,7 +25,7 @@ PYTHONUTF8 = "1"
 # The crysta commit edi builds (edi ADR-0083): its CI packs that commit's SDK once per platform
 # (.github/workflows/crysta-sdk.yml) and every job and product uses it. `pixi run crysta-sdk-pin <sha>`
 # moves it.
-CRYSTA_COMMIT = "8ae775d54e98c9bef7d442b78a4caf34a5a814dc"
+CRYSTA_COMMIT = "051d81c7725feb92775d79d2e882346c697b0359"
 # ONE ruff cache, outside every source and test tree. Same class as crysta's: ruff writes
 # `.ruff_cache` into the directory it is invoked from, and a stray cache can keep a RETIRED
 # directory alive after its tracked files are gone, tripping a layout gate on a folder that
