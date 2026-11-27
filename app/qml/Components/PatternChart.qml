@@ -30,6 +30,17 @@ Item {
     property var peakMarks: []
     property int peakParent: -1
     property string peakNote: ""
+    // Each marked peak's role under the best-ranked k of the last search, by candidate index.
+    property var peakRoles: ({})
+    onPeakMarksChanged: peakRoles = ({})
+    // The Experiment page's chart is the one the sidebar's k search group edits.
+    Binding {
+        target: AppState
+        property: "kChart"
+        value: chart
+        when: chart.findKPage
+        restoreMode: Binding.RestoreBindingOrValue
+    }
     property string addedNote: ""
     property string addedBase: ""
     // Set while this chart's own analysis is open, so the Add it makes does not retire the marks it reads after.
@@ -643,43 +654,6 @@ Item {
             findKAvailable: chart.findKPage && !chart.report && !chart.singleCrystal && chart.axisProject !== null
             findKActive: chart.peakMode
             onFindKToggled: chart.setPeakMode(!chart.peakMode)
-        }
-        // Find k's strip, in the toolbar row while peaks are marked: the count, Find k and Clear, sized as the
-        // toolbar's own controls (owner, 2026-11-27).
-        Row {
-            objectName: "chart.findK.strip"
-            visible: chart.peakMode && chart.addedNote === ""
-            spacing: AppSizes.inputSpacing
-            EaElements.Label {
-                id: stripNote
-                anchors.verticalCenter: parent.verticalCenter
-                // A long note elides in a narrow window, so the strip's buttons stay on screen; the full note is its
-                // tooltip.
-                width: Math.min(implicitWidth, Math.max(EaStyle.Sizes.fontPixelSize * 10, chart.width * 0.4))
-                elide: Text.ElideRight
-                ToolTip.visible: truncated && noteHover.hovered
-                ToolTip.text: text
-                HoverHandler {
-                    id: noteHover
-                }
-                color: chart.peakNote !== "" ? EaStyle.Colors.red : EaStyle.Colors.themeForeground
-                text: chart.peakNote !== "" ? chart.peakNote : chart.peakMarks.length === 1 ? qsTr("1 peak marked") : qsTr("%1 peaks marked").arg(chart.peakMarks.length)
-            }
-            // Bordered icon buttons, as the rest of the toolbar (conductor seq 48).
-            ChartToolButton {
-                objectName: "chart.findK"
-                enabled: chart.peakMarks.length > 0
-                fontIcon: "search"
-                toolTip: qsTr("Find k: rank the propagation vectors the marked peaks allow")
-                onClicked: chart.openKVectors()
-            }
-            ChartToolButton {
-                objectName: "chart.findK.clear"
-                enabled: chart.peakMarks.length > 0
-                fontIcon: "times"
-                toolTip: qsTr("Clear the marked peaks")
-                onClicked: chart.peakMarks = []
-            }
         }
     }
 
@@ -1397,6 +1371,13 @@ Item {
         function onEdited() {
             if (!chart.addingCandidates && chart.addedNote === "")
                 chart.retireMarks();
+        }
+        // The roles the best-ranked k gives the peaks it was searched for, in the order they were ticked.
+        function onPropagationVectorsFound(found) {
+            const roles = {};
+            if (found.length > 0)
+                chart.peakMarks.forEach((index, at) => roles[index] = found[0].roles[at] ?? "");
+            chart.peakRoles = roles;
         }
     }
     function retireMarks() {
