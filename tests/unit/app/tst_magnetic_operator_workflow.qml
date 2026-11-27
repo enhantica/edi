@@ -486,8 +486,38 @@ TestCase {
         return chart;
     }
     function startMarking() {
-        pressChart(chartControl("chart.toolbar.findK"));
-        chartControl("chart.findK.strip");
+        if (!Ui.find(Ui.page(app), "group.k_search", true))
+            Ui.click(test, Probe, app, "sideBar.tab.basic");
+        Ui.expandGroup(test, Probe, app, "group.k_search");
+        const sidebar = Ui.find(Ui.page(app), "group.k_search", true);
+        verify(/^Propagation vector \(k\) search(?: \(\d+\))?$/.test(sidebar.title), "The Experiment sidebar names the propagation vector search group");
+        const toggle = chartControl("chart.toolbar.findK");
+        verify(toggle.checkable && !toggle.checked, "The chart toolbar offers a Mark peaks toggle initially off");
+        pressChart(toggle);
+        tryCompare(toggle, "checked", true, 2000, "The chart toolbar toggle turns peak marking on");
+        return sidebar;
+    }
+    function sidebarControl(name) {
+        const control = Ui.find(Ui.page(app), "kSearch." + name, true);
+        verify(control, "The active Experiment sidebar exposes the k search " + name + " control");
+        return control;
+    }
+    function sidebarPeak(table, index, angle, role) {
+        table.positionViewAtIndex(index, ListView.Contain);
+        let row;
+        tryVerify(() => {
+            table.forceLayout();
+            row = table.itemAtIndex(index);
+            return !!row;
+        }, 2000, "The marked peak is instantiated in the sidebar table");
+        Ui.scrollIntoView(row);
+        const cells = Render.texts(row).filter(Ui.rendered).map(label => label.text);
+        const x = Number(cells[1]);
+        const d = 1.54 / (2 * Math.sin(x * Math.PI / 360));
+        verify(Math.abs(x - angle) <= .056, "The peak row displays the independently positioned 2θ in degrees");
+        verify(Math.abs(Number(cells[2]) - d) < .005, "The same peak row displays the Bragg d-spacing in angstroms");
+        compare(cells[3], role, "The same peak row displays its expected indexing role");
+        return row;
     }
     function markedPeaks(chart) {
         return Array.from(chart.peakMarks, index => chart.peakCandidates[index]);
@@ -499,7 +529,9 @@ TestCase {
         mouseClick(layer, point, layer.height / 2);
     }
     function runSearch() {
-        pressChart(chartControl("chart.findK"));
+        const findK = sidebarControl("findK");
+        compare(findK.text, "Find k", "The Experiment group has a Find k button");
+        press(findK);
         tryVerify(() => !!openedVectors() && !openedVectors().searching, 8000, "Find k opens and completes a bounded ranked table");
         const results = openedVectors();
         verify(results.rows.length > 0 && results.rows.length <= 10, "The table offers a short list of matching vectors");
@@ -511,19 +543,40 @@ TestCase {
     function test_find_k_marks_without_kept_fit() {
         const chart = openPattern();
         verify(!Session.project.fit.canUndo, "No fit has been kept for this measured bank");
+        const before = snapshot();
         startMarking();
         const peaks = markedPeaks(chart);
-        verify(peaks.length > 0 && peaks.some(peak => Math.abs(peak.x - 13.285477100052015) < .051), "A closed-form isolated half-period satellite is pre-marked from measured data");
-        const before = snapshot();
-        const x = peaks[0].x;
+        const satellite = 13.285477100052015;
+        const index = peaks.findIndex(peak => Math.abs(peak.x - satellite) < .051);
+        verify(index >= 0, "The independently calculated half-period satellite is pre-marked from measured data");
+        const table = sidebarControl("list");
+        compare(table.count, peaks.length, "Every chart pre-mark has one sidebar row");
+        Ui.scrollIntoView(table.headerItem);
+        const headings = Render.texts(table.headerItem).filter(Ui.rendered).map(label => label.text);
+        compare(headings, ["2θ (°)", "d (Å)", "Role"], "The table identifies the observed angle, spacing and indexing role");
+        const searchControls = Render.descendants(chart.imageToolbar).filter(item => item.visible && (/findK|kSearch/i.test(item.objectName) || ["Find k", "Clear"].includes(item.text)));
+        compare(searchControls.map(item => item.objectName), ["chart.toolbar.findK"], "Only Mark peaks sits in the chart toolbar");
+        const x = peaks[index].x;
+        const rowIndex = peaks.filter(peak => peak.x < x).length;
+        const row = sidebarPeak(table, rowIndex, satellite, "pre-marked");
+        const remove = findChild(row, "kSearch.remove." + rowIndex);
+        verify(remove, "The pre-marked peak row offers its own remove button");
+        press(remove);
+        compare(table.count, peaks.length - 1, "Removing the suggested row drops exactly one sidebar entry");
+        verify(!markedPeaks(chart).some(peak => peak.x === x), "Removing the suggested row unmarks that exact peak on the chart");
         clickPeak(x);
-        compare(markedPeaks(chart).length, peaks.length - 1, "Clicking the plotted peak drops its mark");
+        compare(table.count, peaks.length, "Clicking the observed peak adds its sidebar row again");
+        sidebarPeak(table, rowIndex, satellite, "pre-marked");
         clickPeak(x);
-        compare(markedPeaks(chart).length, peaks.length, "Clicking it again manually restores its mark");
-        pressChart(chartControl("chart.findK.clear"));
+        compare(table.count, peaks.length - 1, "Clicking a marked peak drops its row from the sidebar");
+        clickPeak(x);
+        const clear = sidebarControl("clear");
+        compare(clear.text, "Clear", "The Experiment group has a Clear button");
+        press(clear);
+        compare(table.count, 0, "Clear empties the sidebar table");
         compare(markedPeaks(chart).length, 0, "Clear removes all chart marks");
         compare(snapshot(), before, "Transient marking changes neither the saved model nor Undo history");
-        verify(!chartControl("chart.findK").enabled, "Empty marks cannot start indexing");
+        verify(!sidebarControl("findK").enabled && !clear.enabled, "An empty sidebar disables Find k and Clear");
     }
     function test_find_k_mask_excludes_observed_peak() {
         const chart = openPattern();
@@ -539,19 +592,21 @@ TestCase {
     function test_find_k_disabled_parent_refuses() {
         const chart = openPattern();
         verify(Session.project.currentExperiment.linkedStructures.setEnabled(0, false), "The real edit disables the sole Crystal link");
-        startMarking();
+        const sidebar = startMarking();
         compare(markedPeaks(chart).length, 0, "A disabled parent produces no chart marks");
-        verify(/link.*enable.*crystal/i.test(Ui.text(chartControl("chart.findK.strip"))), "The strip explains that an enabled Crystal link is required");
+        Ui.scrollIntoView(sidebarControl("list"));
+        verify(/link.*enable.*crystal/i.test(Ui.text(sidebar)), "The sidebar explains that an enabled Crystal link is required");
     }
     function test_find_k_multiple_crystal_links_refuse() {
         const chart = openPattern("popup");
         const links = Probe.rows(Session.project.currentExperiment.linkedStructures);
         verify(links.some(link => link.structureId === "parent" && link.enabled) && links.some(link => link.structureId === "unrelated" && link.enabled), "The measured experiment has two enabled Crystal phases");
         const before = snapshot();
-        startMarking();
+        const sidebar = startMarking();
         compare(markedPeaks(chart).length, 0, "Link order cannot choose a Crystal target when both links are enabled");
-        verify(/several.*crystal/i.test(Ui.text(chartControl("chart.findK.strip"))), "The strip identifies the ambiguous Crystal target");
-        verify(!chartControl("chart.findK").enabled, "The ambiguous target cannot start indexing");
+        Ui.scrollIntoView(sidebarControl("list"));
+        verify(/several.*crystal/i.test(Ui.text(sidebar)), "The sidebar identifies the ambiguous Crystal target");
+        verify(!sidebarControl("findK").enabled, "The ambiguous target cannot start indexing");
         compare(snapshot(), before, "Refusing an ambiguous target leaves both links unchanged");
     }
     function test_find_k_gamma_labels_forbidden_and_allowed_marks() {
@@ -565,6 +620,9 @@ TestCase {
         clickPeak(allowedPosition);
         const allowed = markedPeaks(chart).find(peak => Math.abs(peak.x - allowedPosition) <= .051);
         verify(allowed, "Clicking the observed allowed 101 adds it manually");
+        const table = sidebarControl("list");
+        compare(table.count, 2, "The sidebar shows the forbidden suggestion and the manually added allowed peak");
+        sidebarPeak(table, 1, allowedPosition, "added by hand");
         const results = runSearch();
         const index = results.rows.findIndex(row => row.k === "0,0,0");
         verify(index >= 0, "Gamma indexes both Pnma lattice peaks");
@@ -577,9 +635,14 @@ TestCase {
             return !!row && Ui.exposed(row);
         }, 2000, "The selected k row is instantiated in the visible table");
         verify(row, "The Gamma result is visibly available");
-        const text = Ui.text(row);
-        verify(text.includes(peaks[0].x.toFixed(2) + "°: forbidden reflection"), "The table pairs 001 with the forbidden role: " + text.trim());
-        verify(text.includes(allowed.x.toFixed(2) + "°: allowed reflection"), "The table pairs 101 with the allowed role: " + text.trim());
+        pressChart(row);
+        const text = Ui.text(findChild(results.contentItem, "chart.kVectorRoles"));
+        verify(text.includes(peaks[0].x.toFixed(2) + "° forbidden reflection"), "The vector dialog pairs 001 with the forbidden role");
+        verify(text.includes(allowed.x.toFixed(2) + "° allowed reflection"), "The vector dialog pairs 101 with the allowed role");
+        pressChart(findChild(results.footer, "chart.kVectorPopup.cancel"));
+        tryVerify(() => !openedVectors(), 2000, "Closing the vector dialog reveals the updated sidebar");
+        sidebarPeak(table, 0, bragg(8), "forbidden reflection");
+        sidebarPeak(table, 1, allowedPosition, "allowed reflection");
     }
     function test_find_k_table_analyse_add_stays_on_pattern() {
         const chart = openPattern();
@@ -587,7 +650,13 @@ TestCase {
         const bank = project.currentExperiment;
         const page = Ui.page(app);
         startMarking();
+        const table = sidebarControl("list");
+        const peaks = markedPeaks(chart).sort((a, b) => a.x - b.x);
+        const satellite = 13.285477100052015;
+        const satelliteIndex = peaks.findIndex(peak => Math.abs(peak.x - satellite) < .051);
+        verify(satelliteIndex >= 0, "The observed half-period satellite has a marked sidebar row");
         const results = runSearch();
+        sidebarPeak(table, satelliteIndex, satellite, "satellite");
         const index = results.rows.findIndex(row => row.k === "1/2,0,0");
         verify(index >= 0, "The independently known half-period vector is offered");
         const list = findChild(results.contentItem, "chart.kVectors");
@@ -601,8 +670,9 @@ TestCase {
         verify(row && /1\/2,0,0/.test(Ui.text(row)), "The ranked table renders the non-default half-period vector");
         const cells = Render.texts(row).map(label => label.text);
         verify(cells.includes("2 parent cells") && cells.some(text => /^\d+\.\d{2}$/.test(text)), "The same row renders cell size and numeric misfit");
-        verify(/13\.3[0-4]°: satellite|13\.2[4-9]°: satellite/.test(Ui.text(row)), "The row identifies the independent isolated peak and its satellite role");
         pressChart(row);
+        const roles = Ui.text(findChild(results.contentItem, "chart.kVectorRoles"));
+        verify(roles.includes(peaks[satelliteIndex].x.toFixed(2) + "° satellite"), "The vector dialog identifies the isolated peak as a satellite of the selected vector");
         pressChart(findChild(results.footer, "chart.kVectorPopup.analyse"));
         tryVerify(() => !!popup() && !popup().busy && popup().found !== null, 5000, "Analyse closes the k table and builds the graph over the chart");
         verify(!openedVectors(), "The k table closes on Analyse");
@@ -628,11 +698,11 @@ TestCase {
         verify(bank.measCalcPoints().calc.some(value => Number.isFinite(value) && value > 0), "A populated calculated powder profile remains on the experiment");
         const vector = Probe.rows(child.propagationVectors)[0];
         verify(vector && /^(?:1\/2|0\.5),\s*0,\s*0$/.test(String(vector.vector)), "The active child publishes the chosen non-default propagation vector");
-        tryVerify(() => /1 magnetic structure added.*no magnetic intensity at.*13\.[23]\d°/i.test(Ui.text(chartControl("chart.findK.strip"))), 5000, "A zero-moment candidate reports the marked satellite with no magnetic intensity");
+        tryVerify(() => /1 magnetic structure added.*no magnetic intensity at.*13\.[23]\d°/i.test(Ui.text(Ui.control(Probe, app, "chart.findK.added"))), 5000, "The post-Add chart notice reports the marked satellite with no magnetic intensity");
         verify(Ui.text(chartControl("chart.findK.openStructure")).includes("Open in Structure page"), "The chart offers an explicit way to open Structure");
         verify(markedPeaks(chart).length > 0, "After Add the original marks remain available on the recalculated chart");
         pressChart(chartControl("chart.findK.openStructure"));
-        tryVerify(() => Ui.page(app) !== page, 2000, "The explicit Open in Structure action changes pages");
+        tryVerify(() => Ui.page(app) !== page && chartControl("appBar.tab.structure").checked, 2000, "The explicit Open in Structure action opens the Structure page");
     }
     function staleRowChoice(kind) {
         openPattern();
