@@ -5,6 +5,7 @@ import QtQuick
 import QtQuick.Controls
 
 import EasyApplication.Gui.Components as EaComponents
+import EasyApplication.Gui.Elements as EaElements
 
 import edi.app
 
@@ -109,9 +110,30 @@ WorkflowPage {
 
     Component {
         id: spaceGroupContent
-        SpaceGroupGroup {
-            structure: page.structure
+        Column {
+            spacing: AppSizes.inputSpacing
+            SpaceGroupGroup {
+                structure: page.structure
+            }
+            // A Crystal structure's magnetic symmetry analysis (owner, 2026-11-27): the magnetic popup over this page.
+            EaElements.Button {
+                objectName: "spaceGroup.magneticAnalysis"
+                visible: page.structure !== null && !page.structure.magnetic
+                text: qsTr("Magnetic symmetry analysis…")
+                onClicked: {
+                    const popup = magneticAnalysisComponent.createObject(Overlay.overlay, {
+                        project: page.project,
+                        structureIndex: page.project.currentStructureIndex,
+                        structure: page.structure
+                    }) as MagneticPopup;
+                    popup.open();
+                }
+            }
         }
+    }
+    Component {
+        id: magneticAnalysisComponent
+        MagneticPopup {}
     }
     Component {
         id: cellContent
