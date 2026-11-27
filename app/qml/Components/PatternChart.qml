@@ -95,11 +95,29 @@ Item {
             kRow: rank
         }) as MagneticPopup;
         analysis.added.connect(count => {
-            intensityCheck.stop();  // an earlier Add's check never writes over this one's notice
-            const base = count === 1 ? qsTr("1 magnetic structure added") : qsTr("%1 magnetic structures added").arg(count);
-            const note = chart.axisProject.lastMagneticNote();
-            chart.addedNote = note === "" ? base : base + " · " + note;
-            chart.addedBase = chart.addedNote;
+            intensityCheck.stop();  // an earlier Add's check never writes into this one's dialog
+            // Each added structure, in the order of its groups, with its BNS symbol and its note (owner, 2026-11-27).
+            const added = chart.axisProject.lastMagneticAdded();
+            const entries = added.map((a, i) => {
+                const node = analysis.nodes[analysis.selected[i]];
+                return {
+                    "name": a.name,
+                    "symbol": node ? `${node.name} ${node.bns}` : "",
+                    "note": a.note
+                };
+            });
+            const dialog = addedComponent.createObject(Overlay.overlay, {
+                entries: entries
+            }) as MagneticAddedDialog;
+            // The first added structure is already the Structure page's current one (Add selects it).
+            dialog.openStructure.connect(() => EaGlobals.Vars.appBarCurrentIndex = 2);
+            dialog.closed.connect(() => {
+                intensityCheck.stop();
+                if (chart.addedDialog === dialog)
+                    chart.addedDialog = null;
+            });
+            chart.addedDialog = dialog;
+            dialog.open();
             // Only an Add made from this Find k search has its marks to check; a k chosen by hand in the analysis has
             // none.
             if (analysis.kSnapshotId === snapshot.id) {
@@ -111,7 +129,6 @@ Item {
         analysis.open();
     }
     function togglePeakAt(x) {
-        addedNote = "";
         chart.axisProject.toggleKMarkAt(x, chart.markReach);
     }
 
@@ -195,7 +212,7 @@ Item {
     readonly property real titleGutter: Math.round(em * 1.6)
     // The toolbar ends at the plot areas' right border, one em above the main one. A report figure has no toolbar; its
     // plot starts no closer to the frame's top than to its sides (the owner, 2026-10-13).
-    readonly property real topHeight: chart.report && !chart.reportToolbar ? Math.max(sideMargin, rightMargin) + (chart.reliability !== "" ? Math.round(em * 1.5) : 0) : topMargin + toolbarLines.height + addedLine.room + belowToolbar + (chart.reliability !== "" ? Math.round(em * 1.5) : 0)
+    readonly property real topHeight: chart.report && !chart.reportToolbar ? Math.max(sideMargin, rightMargin) + (chart.reliability !== "" ? Math.round(em * 1.5) : 0) : topMargin + toolbarLines.height + belowToolbar + (chart.reliability !== "" ? Math.round(em * 1.5) : 0)
     // A report figure's reliability text (edi::reliability_text), above its main plot at the left; the app's own
     // charts show it in the page's selector line.
     readonly property string reliability: chart.report && chart.report.modelRevision >= 0 ? chart.report.reliability(chart.reportExperiment) : ""
@@ -623,63 +640,6 @@ Item {
             onResetClicked: controller.reset()
             onIncludedOnlyToggled: ApplicationInfo.chartToolbarAction(5)
             onSubtractBackgroundToggled: ApplicationInfo.chartToolbarAction(6)
-        }
-    }
-
-    // After Add, the message on a line of its own under the toolbar, wrapping, so the no-intensity note reads whole
-    // and the toolbar keeps its controls (owner, 2026-11-27).
-    Item {
-        id: addedLine
-        readonly property real room: visible ? height + chart.em * 0.5 : 0
-        objectName: "chart.findK.added"
-        visible: chart.interactive && chart.addedNote !== ""
-        x: chart.toolbarLeft
-        y: chart.topMargin + toolbarLines.height + chart.em * 0.25
-        width: chart.width - chart.toolbarRightInset - chart.toolbarLeft
-        height: Math.max(addedText.implicitHeight, openStructure.height)
-        EaElements.Label {
-            id: addedText
-            anchors.left: parent.left
-            anchors.right: openStructure.left
-            anchors.rightMargin: AppSizes.inputSpacing
-            anchors.verticalCenter: parent.verticalCenter
-            wrapMode: Text.Wrap
-            text: chart.addedNote
-        }
-        StripButton {
-            id: openStructure
-            objectName: "chart.findK.openStructure"
-            anchors.right: parent.right
-            anchors.verticalCenter: parent.verticalCenter
-            text: qsTr("Open in Structure page")
-            onClicked: {
-                chart.addedNote = "";
-                EaGlobals.Vars.appBarCurrentIndex = 2;
-            }
-        }
-    }
-
-    // A text button as the chart toolbar draws its buttons: its height, border and colours.
-    component StripButton: Rectangle {
-        id: strip
-        property string text: ""
-        signal clicked
-        width: stripLabel.implicitWidth + chart.em
-        height: AppSizes.toolbarControlSize
-        color: EaStyle.Colors.contentBackground
-        border.color: enabled ? (stripMouse.containsMouse ? EaStyle.Colors.themeAccent : EaStyle.Colors.chartAxis) : EaStyle.Colors.themeBackgroundDisabled
-        border.width: EaStyle.Sizes.borderThickness
-        EaElements.Label {
-            id: stripLabel
-            anchors.centerIn: parent
-            text: strip.text
-            color: strip.enabled ? EaStyle.Colors.themeForeground : EaStyle.Colors.themeForegroundDisabled
-        }
-        MouseArea {
-            id: stripMouse
-            anchors.fill: parent
-            hoverEnabled: true
-            onClicked: strip.clicked()
         }
     }
 
@@ -1371,26 +1331,6 @@ Item {
     }
 
 
-    // The notice describes the project the Add left and the bank it was shown on: any change after it, an edit, Undo,
-    // Redo, a structure added or removed, or another experiment or bank shown, clears it, with no attempt to keep it
-    // valid (review 20, F4).
-    Connections {
-        target: chart.axisProject
-        enabled: chart.addedNote !== ""
-        function onEdited() {
-            chart.addedNote = "";
-        }
-        function onCurrentExperimentIndexChanged() {
-            chart.addedNote = "";
-        }
-        function onCurrentBankChanged() {
-            chart.addedNote = "";
-        }
-        function onCurrentStructureIndexChanged() {
-            chart.addedNote = "";
-        }
-    }
-
     // After Add: once the recalculated pattern holds the first new structure, the marked peaks where it puts no
     // magnetic intensity are named (owner, 2026-11-27).
     Timer {
@@ -1407,9 +1347,7 @@ Item {
             }
             const found = chart.axisProject.kAddedIntensity(snapshot);
             if (found.retired === true) {
-                // The Add's child or bank is gone (Undo) or replaced: its notice goes with it.
-                stop();
-                chart.addedNote = "";
+                stop();  // the Add's child or bank is gone or replaced: nothing to report
                 return;
             }
             if (found.values === undefined)
@@ -1420,8 +1358,8 @@ Item {
             for (let i = 0; i < marks.length; ++i)
                 if (found.values[i] < Math.max(1.0, 0.01 * found.max))
                     none.push(marks[i].x.toFixed(2) + "°");
-            if (none.length > 0)
-                chart.addedNote = qsTr("%1 · %2 gives no magnetic intensity at %3").arg(chart.addedBase).arg(found.structure).arg(none.join(", "));
+            if (none.length > 0 && chart.addedDialog !== null)
+                chart.addedDialog.addNote(0, qsTr("no magnetic intensity at %1").arg(none.join(", ")));
         }
     }
 
@@ -1432,6 +1370,10 @@ Item {
     Component {
         id: analysisComponent
         MagneticPopup {}
+    }
+    Component {
+        id: addedComponent
+        MagneticAddedDialog {}
     }
 
     // (PatternChartController.hoverReadout).

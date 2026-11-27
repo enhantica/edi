@@ -618,6 +618,9 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // The last magnetic Add's A7 note (review 15, F5): each candidate without magnetic intensity at the reflections
     // of the experiments linking its parent, or empty.
     Q_INVOKABLE QString lastMagneticNote() const { return last_magnetic_note_; }
+    // The last Add's structures, in the order of its groups: each {name, note}, the note empty unless the structure
+    // gives no magnetic intensity at the experiment's reflections (the after-Add dialog, owner 2026-11-27).
+    Q_INVOKABLE QVariantList lastMagneticAdded() const { return last_magnetic_added_list_; }
     Q_INVOKABLE QVariantMap magneticIntensityAt(int experiment, const QList<double>& xs, const QList<double>& halfWidths) const;
     // The structure model at `index`, or null.
     Q_INVOKABLE edi_app::StructureViewModel* structureAt(int index) const { return structure_models_.value(index); }
@@ -1012,6 +1015,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     std::map<std::string, std::uint64_t> fit_stamps_;
     std::string last_magnetic_added_;  // the first structure the last magnetic Add made
     QString last_magnetic_note_;       // A7: the candidates of the last Add without magnetic intensity
+    QVariantList last_magnetic_added_list_;
     // Find k's inputs, fixed when the peaks are extracted (review 15, F4): the parent by row, name and content, the
     // experiment by row, name and inputs hash, and the peaks. A search, its result and the chooser all read this one
     // snapshot; a new extraction retires every search still running on an older one.

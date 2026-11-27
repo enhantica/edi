@@ -225,6 +225,7 @@ qt_add_qml_module(edi_app_module
         qml/Components/ParameterGrid.qml
         qml/Components/PaletteStrip.qml
         qml/Components/KVectorPopup.qml
+        qml/Components/MagneticAddedDialog.qml
         qml/Components/PatternChart.qml
         qml/Components/ProjectPatternChart.qml
         qml/Components/EvolutionChart.qml

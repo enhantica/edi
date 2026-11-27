@@ -4236,12 +4236,24 @@ bool ProjectViewModel::addMagneticCandidates(int graph, const QList<int>& nodes,
         prepared = edi::prepare_magnetic_candidates(project, static_cast<std::size_t>(index), *magnetic_graph_, picked,
                                                     startMoments);
         QStringList quiet;
+        QSet<QString> quietNames;
         if (startMoments) {
-            for (const std::string& name : edi::magnetic_candidates_without_intensity(project, *prepared))
+            for (const std::string& name : edi::magnetic_candidates_without_intensity(project, *prepared)) {
                 quiet.push_back(tr("%1: no magnetic intensity at the experiment's reflections; set the moments by hand")
                                     .arg(QString::fromStdString(name)));
+                quietNames.insert(QString::fromStdString(name));
+            }
         }
         last_magnetic_note_ = quiet.join(QStringLiteral(" · "));
+        last_magnetic_added_list_.clear();
+        for (std::size_t i = 0; i < prepared->size(); ++i) {
+            const QString name = QString::fromStdString(prepared->name(i));
+            last_magnetic_added_list_.push_back(QVariantMap{
+                {QStringLiteral("name"), name},
+                {QStringLiteral("note"), quietNames.contains(name)
+                                             ? tr("no magnetic intensity at the experiment's reflections; set the moments by hand")
+                                             : QString()}});
+        }
     } catch (const std::exception& refusal) {
         error = QString::fromUtf8(refusal.what());
         setLastError(error);
