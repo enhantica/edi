@@ -352,7 +352,7 @@ Item {
                 bonds: false,
                 cell: false,
                 axes: false,
-                showMoments: true,
+                showMoments: false,
                 momentScale: 1.375,
                 momentForm: "spherical",
                 momentView: "from_surface",
