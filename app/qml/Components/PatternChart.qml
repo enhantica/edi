@@ -610,9 +610,6 @@ Item {
             onResetClicked: controller.reset()
             onIncludedOnlyToggled: ApplicationInfo.chartToolbarAction(5)
             onSubtractBackgroundToggled: ApplicationInfo.chartToolbarAction(6)
-            findKAvailable: chart.findKPage && !chart.report && !chart.singleCrystal && chart.axisProject !== null
-            findKActive: chart.peakMode
-            onFindKToggled: chart.setPeakMode(!chart.peakMode)
         }
     }
 
@@ -1314,10 +1311,12 @@ Item {
                 }
             }
         }
-        MouseArea {
-            anchors.fill: parent
+        // A single click marks or drops a peak; a drag, the wheel and a double click reach the chart beneath, so zoom
+        // and pan work while marking (owner decision 2026-11-27). The handler takes only a passive grab.
+        TapHandler {
             enabled: chart.peakMode && peakLayer.native_
-            onClicked: mouse => chart.togglePeakAt(controller.xMin + mouse.x / Math.max(1, width) * (controller.xMax - controller.xMin))
+            acceptedButtons: Qt.LeftButton
+            onSingleTapped: eventPoint => chart.togglePeakAt(controller.xMin + eventPoint.position.x / Math.max(1, peakLayer.width) * (controller.xMax - controller.xMin))
         }
     }
 

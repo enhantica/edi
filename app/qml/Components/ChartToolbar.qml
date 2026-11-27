@@ -42,10 +42,6 @@ Item {
     property bool highlightAvailable: false
     property bool highlightShown: false
     property string highlightName: "chart.toolbar.highlight"
-    // Find k (owner, 2026-11-27): marking peaks on the chart for a propagation vector search.
-    property bool findKAvailable: false
-    property bool findKActive: false
-    signal findKToggled
     signal resetClicked
     signal includedOnlyToggled
     signal subtractBackgroundToggled
@@ -117,14 +113,6 @@ Item {
         toolTip: qsTr("Enable box zoom")
         checked: toolbar.pointerMode === "zoom"
         onClicked: ApplicationInfo.chartToolbarAction(4)
-    }
-    ChartToolButton {
-        objectName: "chart.toolbar.findK"
-        visible: toolbar.findKAvailable
-        fontIcon: "magnet"
-        toolTip: toolbar.findKActive ? qsTr("Stop marking peaks for k") : qsTr("Mark peaks for k")
-        checked: toolbar.findKActive
-        onClicked: toolbar.findKToggled()
     }
     ChartToolButton {
         objectName: "chart.toolbar.reset"

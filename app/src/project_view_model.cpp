@@ -4473,40 +4473,57 @@ void ProjectViewModel::setKSearchActive(bool on) {
         return;
     }
     if (k_marks_.candidates.empty()) {
-        setKNote(tr("No peak found in the measured pattern."));
+        setKNote(QString());  // nothing to suggest; the user marks peaks by hand
         return;
     }
-    // Pre-marked: the peaks at no reflection the crystal's space group allows.
+    // Pre-marked: every suggestion, a peak at a reflection the crystal's space group forbids or an excess the current
+    // calculation leaves on an allowed one (owner decision 2026-11-27).
     for (std::size_t i = 0; i < k_marks_.candidates.size(); ++i)
-        if (!k_marks_.candidates[i].on_allowed_reflection) k_marks_.marks.push_back(static_cast<int>(i));
-    setKNote(k_marks_.marks.empty() ? tr("No peak at a forbidden reflection; click peaks to mark them.") : QString());
+        if (k_marks_.candidates[i].suggested) k_marks_.marks.push_back(static_cast<int>(i));
+    setKNote(QString());
 }
 
 void ProjectViewModel::toggleKMarkAt(double x) {
-    if (!k_marks_.active) return;
-    int best = -1;
-    for (std::size_t i = 0; i < k_marks_.candidates.size(); ++i) {
-        const double gap = std::abs(k_marks_.candidates[i].x - x);
-        if (gap <= k_marks_.candidates[i].half_width &&
-            (best < 0 || gap < std::abs(k_marks_.candidates[static_cast<std::size_t>(best)].x - x)))
-            best = static_cast<int>(i);
-    }
-    if (best < 0) {
-        setKNote(tr("No candidate peak there."));
-        return;
+    // Free marking (owner decision 2026-11-27): a click on a mark drops it; anywhere else it marks the nearest observed
+    // maximum within that peak's half width, or the clicked position itself when none is near. It never refuses.
+    if (!k_marks_.active || k_marks_.parent < 0) return;
+    const auto near = [&x](const edi::MagneticPeak& p) { return std::abs(p.x - x) <= std::max(p.half_width, 1e-9); };
+    int on_mark = -1;
+    for (const int m : k_marks_.marks) {
+        const edi::MagneticPeak& p = k_marks_.candidates[static_cast<std::size_t>(m)];
+        if (near(p) && (on_mark < 0 || std::abs(p.x - x) <
+                                           std::abs(k_marks_.candidates[static_cast<std::size_t>(on_mark)].x - x)))
+            on_mark = m;
     }
     changeKMarks();
     k_marks_.roles.clear();
-    const auto at = std::find(k_marks_.marks.begin(), k_marks_.marks.end(), best);
-    if (at != k_marks_.marks.end()) {
-        k_marks_.marks.erase(at);
-    } else {
-        k_marks_.marks.push_back(best);
-        std::sort(k_marks_.marks.begin(), k_marks_.marks.end(), [this](int a, int b) {
-            return k_marks_.candidates[static_cast<std::size_t>(a)].x < k_marks_.candidates[static_cast<std::size_t>(b)].x;
-        });
+    if (on_mark >= 0) {
+        k_marks_.marks.erase(std::find(k_marks_.marks.begin(), k_marks_.marks.end(), on_mark));
+        emit kSearchChanged();
+        return;
     }
-    setKNote(QString());
+    int best = -1;
+    for (std::size_t i = 0; i < k_marks_.candidates.size(); ++i) {
+        if (near(k_marks_.candidates[i]) &&
+            (best < 0 || std::abs(k_marks_.candidates[i].x - x) <
+                             std::abs(k_marks_.candidates[static_cast<std::size_t>(best)].x - x)))
+            best = static_cast<int>(i);
+    }
+    if (best < 0) {
+        try {
+            k_marks_.candidates.push_back(edi::magnetic_peak_at(*project_, static_cast<std::size_t>(k_marks_.experiment),
+                                                                 static_cast<std::size_t>(k_marks_.parent), x));
+            best = static_cast<int>(k_marks_.candidates.size()) - 1;
+        } catch (const std::exception&) {
+            emit kSearchChanged();  // outside the calibration's range: nothing to mark there
+            return;
+        }
+    }
+    k_marks_.marks.push_back(best);
+    std::sort(k_marks_.marks.begin(), k_marks_.marks.end(), [this](int a, int b) {
+        return k_marks_.candidates[static_cast<std::size_t>(a)].x < k_marks_.candidates[static_cast<std::size_t>(b)].x;
+    });
+    emit kSearchChanged();
 }
 
 void ProjectViewModel::removeKMark(int index) {

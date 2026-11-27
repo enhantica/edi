@@ -44,12 +44,25 @@ SideBarGroup {
         width: parent ? parent.width : 0
         spacing: AppSizes.groupContentSpacing
 
+        // The group starts with this toggle alone (owner decision 2026-11-27); on, the marked peaks, Find k and Clear
+        // follow. While it is on, a click on the pattern marks a peak and a click on a mark drops it.
+        EaElements.SideBarButton {
+            objectName: "kSearch.mark"
+            fontIcon: "magnet"
+            text: group.marking ? qsTr("Stop marking peaks") : qsTr("Mark peaks")
+            checkable: true
+            checked: group.marking
+            enabled: group.chart !== null
+            onClicked: group.chart.setPeakMode(!group.marking)
+        }
+
+        // Only when marking cannot start here: several crystal structures, or none, linked to the experiment.
         EaElements.Label {
             width: parent.width
             wrapMode: Text.Wrap
-            visible: text !== ""
-            color: group.marking && group.chart.peakNote !== "" ? EaStyle.Colors.themeForegroundHighlight : EaStyle.Colors.themeForegroundMinor
-            text: !group.marking ? qsTr("Turn on Mark peaks in the pattern's toolbar, then click the peaks a magnetic structure should explain.") : group.chart.peakNote
+            visible: group.marking && text !== ""
+            color: EaStyle.Colors.themeForegroundMinor
+            text: group.marking ? group.chart.peakNote : ""
         }
 
         DataTable {
@@ -113,7 +126,11 @@ SideBarGroup {
                             "": qsTr("not indexed")
                         };
                         const role = group.chart.peakRoles[row.modelData.index];
-                        return role === undefined ? (row.modelData.peak.onAllowed ? qsTr("added by hand") : qsTr("pre-marked")) : names[role] ?? role;
+                        // Before a search: why the peak is marked, a suggestion's reason or the user's own mark.
+                        const peak = row.modelData.peak;
+                        if (role === undefined)
+                            return !peak.suggested ? qsTr("added by hand") : peak.onAllowed ? qsTr("excess on an allowed reflection") : qsTr("forbidden reflection");
+                        return names[role] ?? role;
                     }
                 }
                 EaComponents.ListViewButton {
@@ -127,6 +144,7 @@ SideBarGroup {
         }
 
         Row {
+            visible: group.marking
             spacing: EaStyle.Sizes.fontPixelSize
             EaElements.SideBarButton {
                 objectName: "kSearch.findK"
