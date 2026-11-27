@@ -44,6 +44,9 @@ Item {
     }
     property string addedNote: ""
     property string addedBase: ""
+    // The Add the notice describes; any edit after it, Undo included, retires the notice once that Add's child or bank
+    // is gone or replaced, whether or not its intensity check is still running (review 19, F4).
+    property real addedEvent: 0
     // A dismissed or replaced notice is not brought back by a late check.
     onAddedNoteChanged: if (addedNote === "")
         intensityCheck.stop()
@@ -86,9 +89,14 @@ Item {
             const note = chart.axisProject.lastMagneticNote();
             chart.addedNote = note === "" ? base : base + " · " + note;
             chart.addedBase = chart.addedNote;
-            intensityCheck.snapshot = snapshot.id;
-            intensityCheck.tries = 0;
-            intensityCheck.start();
+            chart.addedEvent = chart.axisProject.lastMagneticAddEvent();
+            // Only an Add made from this Find k search has its marks to check; a k chosen by hand in the analysis has
+            // none.
+            if (analysis.kSnapshotId === snapshot.id) {
+                intensityCheck.snapshot = snapshot.id;
+                intensityCheck.tries = 0;
+                intensityCheck.start();
+            }
         });
         analysis.open();
     }
@@ -1316,6 +1324,15 @@ Item {
         }
     }
 
+
+    Connections {
+        target: chart.axisProject
+        enabled: chart.addedNote !== ""
+        function onEdited() {
+            if (!chart.axisProject.magneticAddCurrent(chart.addedEvent))
+                chart.addedNote = "";
+        }
+    }
 
     // After Add: once the recalculated pattern holds the first new structure, the marked peaks where it puts no
     // magnetic intensity are named (owner, 2026-11-27).

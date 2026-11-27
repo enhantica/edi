@@ -4263,18 +4263,21 @@ bool ProjectViewModel::addMagneticCandidates(int index, const QList<int>& nodes,
     }
     undo_history_.emplace_back(std::move(before));
     syncUndo();
-    last_magnetic_added_ = prepared->structures.empty() ? std::string() : prepared->structures.front()->name.value();
+    last_magnetic_added_ = prepared->empty() ? std::string() : prepared->name(0);
     // The after-Add notice belongs to this Add: its snapshot and its first child, never to what is shown later.
-    k_added_.reset();
-    if (snapshot != 0) {
-        const auto& bank = project.experiments[static_cast<std::size_t>(k_snapshots_.at(snapshot)->experiment)];
+    {
         std::shared_ptr<const edi::Structure> child;
         for (const auto& held : project.structures)
             if (held->name.value() == last_magnetic_added_) child = held;
-        k_added_ = KAdded{k_snapshots_.at(snapshot), last_magnetic_added_, child, bank};
+        KAdded added{++k_add_events_, nullptr, last_magnetic_added_, child, {}};
+        if (snapshot != 0) {
+            added.snapshot = k_snapshots_.at(snapshot);
+            added.experiment = project.experiments[static_cast<std::size_t>(added.snapshot->experiment)];
+        }
+        k_added_ = std::move(added);
     }
     if (!last_magnetic_note_.isEmpty()) emit information(last_magnetic_note_);
-    if (select) setCurrentStructureIndex(static_cast<int>(structure_models_.size()) - static_cast<int>(prepared->structures.size()));
+    if (select) setCurrentStructureIndex(static_cast<int>(structure_models_.size()) - static_cast<int>(prepared->size()));
     return true;
 }
 
@@ -4590,9 +4593,23 @@ bool ProjectViewModel::kSnapshotCurrent(qint64 id) const {
     }
 }
 
+bool ProjectViewModel::magneticAddCurrent(qint64 event) const {
+    if (!k_added_ || k_added_->event != event || last_magnetic_added_ != k_added_->child) return false;
+    const std::shared_ptr<const edi::Structure> child = k_added_->child_item.lock();
+    if (!child || std::none_of(project_->structures.begin(), project_->structures.end(),
+                               [&child](const auto& s) { return s.get() == child.get(); }))
+        return false;  // undone or replaced
+    if (!k_added_->snapshot) return true;
+    const std::shared_ptr<const edi::BraggPdExperiment> bank = k_added_->experiment.lock();
+    const int experiment = k_added_->snapshot->experiment;
+    return bank && experiment >= 0 && experiment < static_cast<int>(project_->experiments.size()) &&
+           project_->experiments[static_cast<std::size_t>(experiment)].get() == bank.get();
+}
+
 QVariantMap ProjectViewModel::kAddedIntensity(qint64 id) const {
     const QVariantMap retired{{QStringLiteral("retired"), true}};
-    if (!k_added_ || k_added_->snapshot->id != id || last_magnetic_added_ != k_added_->child) return retired;
+    if (!k_added_ || !k_added_->snapshot || k_added_->snapshot->id != id || !magneticAddCurrent(k_added_->event))
+        return retired;
     const KSearchSnapshot& snapshot = *k_added_->snapshot;
     const int experiment = snapshot.experiment;
     // The Add's own bank and child, by identity, not a same-name replacement; gone or replaced retires the notice.

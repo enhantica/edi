@@ -594,6 +594,10 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // experiment ({structure, values, max}); {retired: true} once that Add's child or experiment is gone or another
     // Add followed; empty while the calculation does not hold the child yet.
     Q_INVOKABLE QVariantMap kAddedIntensity(qint64 id) const;
+    // Every magnetic Add, from either popup origin, is an event (review 19, F4): its identity, and whether it still
+    // stands, its first child and (from Find k) its bank still the ones it made and used. Undo or a replacement retires it.
+    Q_INVOKABLE qint64 lastMagneticAddEvent() const { return k_added_ ? k_added_->event : 0; }
+    Q_INVOKABLE bool magneticAddCurrent(qint64 event) const;
     // Find k from data: each experiment linking structure `index`, {index, name, eligible, reason}; eligible while a
     // kept fit's inputs still match (recordFitAdoption).
     Q_INVOKABLE QVariantList magneticDataChoices(int index) const;
@@ -1050,12 +1054,14 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     qint64 k_next_snapshot_ = 0;
     // The last Add from a Find k snapshot: the snapshot, its first child and its experiment.
     struct KAdded {
-        std::shared_ptr<const KSearchSnapshot> snapshot;
+        qint64 event = 0;
+        std::shared_ptr<const KSearchSnapshot> snapshot;  // none for an Add outside Find k
         std::string child;
         std::weak_ptr<const edi::Structure> child_item;          // the child itself, not a same-name replacement
         std::weak_ptr<const edi::BraggPdExperiment> experiment;  // the bank itself
     };
     std::optional<KAdded> k_added_;
+    qint64 k_add_events_ = 0;
     int magnetic_graph_id_ = 0;  // the request the held graph answered
     qint64 magnetic_graph_snapshot_ = 0;  // the Find k snapshot and ranked row it was searched for, if any
     int magnetic_graph_row_ = -1;

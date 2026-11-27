@@ -101,6 +101,21 @@ AppDialog {
         for (let i = 0; i < 3; ++i)
             (kFields.itemAt(i) as EaElements.TextField).text = parts[i];
     }
+    // The shown graph and selection belong to the k they were found for: switching to Other, or typing a k not yet
+    // committed, takes them away at once and ignores any answer still on its way (review 19, F4). A k other than the
+    // Find k row's leaves that search.
+    function invalidateGraph() {
+        found = null;
+        selected = [];
+        hovered = -1;
+        busy = false;
+        graphRequest = -1;
+        refusal = qsTr("Enter k and press Enter to find its magnetic groups.");
+        if (kSnapshotId !== 0 && k !== openedK) {
+            kSnapshotId = 0;
+            kRow = -1;
+        }
+    }
     function tickedSites() {
         const out = [];
         for (let i = 0; i < siteRepeater.count; ++i) {
@@ -173,8 +188,12 @@ AppDialog {
                 objectName: "magnetic.k"
                 Layout.preferredWidth: EaStyle.Sizes.fontPixelSize * 16
                 model: popup.presets.map(p => p.label === "" ? `(${p.k})` : `${p.label}  (${p.k})`).concat([qsTr("Other…")])
-                onActivated: if (currentIndex < popup.presets.length)
-                    popup.find()
+                onActivated: {
+                    if (currentIndex < popup.presets.length)
+                        popup.find();
+                    else
+                        popup.invalidateGraph();
+                }
             }
             Repeater {
                 id: kFields
@@ -185,6 +204,7 @@ AppDialog {
                     Layout.preferredWidth: EaStyle.Sizes.fontPixelSize * 5
                     placeholderText: ["k₁", "k₂", "k₃"][index]
                     text: "0"
+                    onTextEdited: popup.invalidateGraph()
                     onEditingFinished: popup.find()
                 }
             }
