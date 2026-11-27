@@ -738,6 +738,7 @@ if(NOT EMSCRIPTEN)
         src/assistant_json_rpc.hpp src/assistant_json_rpc.cpp
         src/assistant_providers.hpp src/assistant_providers.cpp
         src/assistant_accounts.hpp src/assistant_accounts.cpp
+        src/assistant_runtime_translator.hpp src/assistant_runtime_translator.cpp
         src/native_chatgpt_provider.hpp src/native_chatgpt_provider.cpp
         src/assistant_runtime_session.hpp src/claude_session.hpp src/claude_session.cpp
         src/assistant_tool_server.hpp src/assistant_tool_server.cpp
