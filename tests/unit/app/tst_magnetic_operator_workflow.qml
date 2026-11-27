@@ -22,6 +22,10 @@ TestCase {
         id: application
         Main {}
     }
+    Component {
+        id: markingSpy
+        SignalSpy {}
+    }
 
     function initTestCase() {
         RunLog.dismissCrash();
@@ -557,6 +561,11 @@ TestCase {
         const full = [axis.min, axis.max];
         const marks = () => JSON.stringify(markedPeaks(chart).map(peak => peak.x));
         const before = marks();
+        const changes = markingSpy.createObject(test, {
+            target: chart.axisProject,
+            signalName: "kSearchChanged"
+        });
+        verify(changes.valid, "The gesture control observes mark changes from the real project");
         mouseWheel(layer, layer.width * .4, layer.height * .55, 0, 120);
         tryVerify(() => axis.max - axis.min < .85 * (full[1] - full[0]), 2000, "The wheel zooms the real chart while marking");
         compare(marks(), before, "Wheel zoom changes no marks");
@@ -576,6 +585,8 @@ TestCase {
         mouseClick(layer, layer.width * .5, layer.height * .55, Qt.RightButton);
         tryVerify(() => Math.abs(axis.min - full[0]) < .01 && Math.abs(axis.max - full[1]) < .01, 2000, "The normal chart reset restores the initial range with marking enabled");
         compare(marks(), before, "Reset leaves the same marks at their measured angles");
+        compare(changes.count, 0, "Viewport gestures never emit even a transient change to the marks");
+        changes.destroy();
     }
     function runSearch() {
         const findK = sidebarControl("findK");
