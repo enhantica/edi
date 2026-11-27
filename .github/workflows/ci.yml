@@ -956,10 +956,51 @@ jobs:
       - name: Prepare the Linux app contract traces
         if: ${{ runner.os != 'Windows' && !cancelled() && env.APP_PLATFORM == 'Linux' && github.event_name != 'pull_request' && github.event_name != 'schedule' && steps.onboarding.outcome == 'success' }}
         run: pixi run -e app --skip-deps app-watchdog --prepare-only
-      # R1 reports GUI pauses on the nightly schedule and still verifies the injected controls.
+      # ADR-0102 R4: the nightly scenarios run on the owner's full scan archive, the asset 44k.zip of the release
+      # large-datasets of enhantica/edi-data (large data stays out of git), checked and cached by the SHA-256 that
+      # scan-source.json names.
+      - name: Name the nightly scan archive
+        id: scan-archive
+        if: ${{ runner.os != 'Windows' && !cancelled() && env.APP_PLATFORM == 'Linux' && github.event_name == 'schedule' && steps.apphost.outcome == 'success' }}
+        run: |
+          sha256="$(python3 -c "import json; print(json.load(open('tests/fixtures/ui_responsiveness/scan-source.json'))['archive_sha256'])")"
+          echo "sha256=$sha256" >>"$GITHUB_OUTPUT"
+      - name: Restore the nightly scan archive
+        id: scan-archive-cache
+        if: ${{ !cancelled() && steps.scan-archive.outcome == 'success' }}
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ runner.temp }}/scan-archive/44k.zip
+          key: edi-scan-archive-${{ steps.scan-archive.outputs.sha256 }}
+      - name: Fetch the nightly scan archive from edi-data
+        id: scan-archive-fetch
+        if: ${{ !cancelled() && steps.scan-archive.outcome == 'success' && steps.scan-archive-cache.outputs.cache-hit != 'true' }}
+        env:
+          ARCHIVE: ${{ runner.temp }}/scan-archive/44k.zip
+          SHA256: ${{ steps.scan-archive.outputs.sha256 }}
+          URL: https://github.com/enhantica/edi-data/releases/download/large-datasets/44k.zip
+        run: |
+          mkdir -p "$(dirname "$ARCHIVE")"
+          curl -fsSL --retry 3 -o "$ARCHIVE.part" "$URL"
+          if ! echo "$SHA256  $ARCHIVE.part" | sha256sum --check --status; then
+            rm -f "$ARCHIVE.part"
+            echo "::error::$URL is not the nightly scan archive with SHA-256 $SHA256"
+            exit 1
+          fi
+          mv "$ARCHIVE.part" "$ARCHIVE"
+      - name: Keep the nightly scan archive
+        if: ${{ !cancelled() && steps.scan-archive-fetch.outcome == 'success' }}
+        uses: ./.github/actions/store
+        with:
+          path: ${{ runner.temp }}/scan-archive/44k.zip
+          key: edi-scan-archive-${{ steps.scan-archive.outputs.sha256 }}
+      # R1 reports GUI pauses on the nightly schedule and still verifies the injected controls. Without the archive, or
+      # with another one, the step ends red before any scenario starts.
       - name: Report the nightly GUI watchdog scenarios
         if: ${{ runner.os != 'Windows' && !cancelled() && env.APP_PLATFORM == 'Linux' && github.event_name == 'schedule' && steps.apphost.outcome == 'success' }}
-        run: pixi run -e app --skip-deps app-watchdog
+        env:
+          EDI_WATCHDOG_ARCHIVE: ${{ runner.temp }}/scan-archive/44k.zip
+        run: pixi run -e app --skip-deps app-watchdog --nightly
       - name: Upload the GUI watchdog's records
         if: ${{ runner.os != 'Windows' && !cancelled() && env.APP_PLATFORM == 'Linux' && github.event_name != 'pull_request' && steps.apphost.outcome == 'success' }}
         uses: ./.github/actions/store

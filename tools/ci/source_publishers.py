@@ -82,6 +82,8 @@ APP = {
     ),
     'build/tutorial-transactions': 'edi-observer-',
 }
+# The nightly watchdog's scan archive: downloaded from edi-data, never built on the runner.
+SCAN_ARCHIVE = {'${{ runner.temp }}/scan-archive/44k.zip': 'edi-scan-archive-'}
 WASM = {'~/.cache/edi-ccache': 'ccache2-wasm-', '~/.cache/edi-wasm': 'edi-wasm2-'}
 DURATIONS = {'build/test-durations.json': 'test-durations-'}
 CACHES = {
@@ -98,7 +100,9 @@ CACHES = {
         **{path: key for path, key in APP.items() if not key.startswith('ccache2-')},
     },
     'ci.yml/system-durations': DURATIONS,
-    **dict.fromkeys([f'ci.yml/{job}' for job in ('app', 'app-macos', 'app-windows')], APP),
+    **dict.fromkeys(
+        [f'ci.yml/{job}' for job in ('app', 'app-macos', 'app-windows')], APP | SCAN_ARCHIVE
+    ),
     'ci.yml/app-wasm': WASM,
     'pages.yml/wasm': WASM,
     'crysta-sdk.yml/build': {

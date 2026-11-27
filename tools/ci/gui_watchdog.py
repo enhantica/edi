@@ -293,13 +293,14 @@ def check(
 
 
 def scenario_steps(contract: dict, scenario: str) -> list[str]:
-    """A scenario's steps, as the contract lists them.
+    """A scenario's steps, as the contract lists them, the nightly ones (ADR-0102 R4) included.
 
     A dynamic scenario (the every-tab one) takes them from the module the contract names, which
     reads them from the app's declared pages and tabs.
     """
-    if scenario in contract.get('scenarios', {}):
-        return contract['scenarios'][scenario]
+    for listed in ('scenarios', 'nightly_scenarios'):
+        if scenario in contract.get(listed, {}):
+            return contract[listed][scenario]
     module = contract.get('dynamic_scenarios', {})[scenario]
     if str(ROOT) not in sys.path:
         sys.path.insert(0, str(ROOT))
