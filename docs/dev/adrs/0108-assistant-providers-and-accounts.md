@@ -5,9 +5,9 @@
 - **Implementation:** ⬜ Not implemented
 - **Priority:** High
 - **Forward constraint (binding on new features):** an assistant runtime is reached only through an
-  `AssistantProvider`, and a runtime other than Codex reaches edi's tools only through edi's tool server; nothing
-  outside a provider names a runtime's methods or fields. edi chooses each account's config home but never reads,
-  copies, stores or passes the credentials inside it.
+  `AssistantProvider`, which maps it onto edi's assistant protocol; a runtime other than Codex reaches edi's tools only
+  through edi's tool server. edi chooses each account's config home but never reads, copies, stores or passes the
+  credentials inside it.
 
 This ADR extends ADR-0055 (the provider transport behind the controller), ADR-0056 (provider connections), ADR-0057
 (the panel, the Codex runtime and its account card), ADR-0058 (product skills), ADR-0071 (installers) and ADR-0091
@@ -53,96 +53,85 @@ provider; three installer checkboxes; desktop only.
 ### 1. One provider interface, with ChatGPT's two paths behind it
 
 ADR-0055's seam stays the only seam: the host supplies a provider transport and the controller and view model see
-normalized events. `AssistantProvider` (`app/src/assistant_provider.hpp`) is that transport's interface. It is an
-abstract `QObject` that owns one runtime (or connection) for one account and turns its protocol into edi's terms. The
-view model holds one active provider and never sees a runtime method name or field.
+normalized events. `AssistantProvider` (`app/src/assistant_provider.hpp`) is that transport's interface: an abstract
+`QObject` that owns one runtime (or connection) for one account. The view model holds exactly one active provider,
+built by a factory from the active account, and reaches the runtime only through it.
+
+**edi's assistant protocol.** The view model already speaks one message vocabulary: the app-server JSON-RPC methods,
+events, server requests and item shapes it uses with Codex (`initialize`, `account/*`, `model/list`, `skills/list`,
+`thread/*`, `turn/*`, `item/*`, `item/tool/call`, `item/tool/requestUserInput`, `account/rateLimits/*`). That
+vocabulary becomes edi's assistant protocol, the way the saved activity rows already keep Codex's item shapes. A
+runtime provider takes requests and notifications in it and emits responses, events and server requests in it:
 
 ```cpp
 enum class AssistantProviderId : unsigned char { ChatGpt, Claude, Copilot };  // settings keys chatgpt|claude|copilot
 struct AssistantAccountRef { AssistantProviderId provider; QString id, home, host; };
-struct AssistantThreadRequest { QString thread, workspace, instructions, model, effort; QJsonArray tools; };
-struct AssistantTurnRequest  { QString thread, steerTurn, clientMessageId, model, effort; QJsonArray input; };
-struct AssistantToolCall     { QJsonValue token; QString callId, tool, thread, turn; QJsonObject arguments; };
 
 class AssistantProvider : public QObject {
     Q_OBJECT
 public:
     virtual AssistantProviderId id() const = 0;
-    virtual QString executable() const = 0;            // empty when the runtime is not installed
-    virtual bool start(const AssistantAccountRef&, const QString& workspace) = 0;
-    virtual void retire() = 0;                         // stop; late output is dropped
-    virtual quint64 generation() const = 0;            // the fence every queued reply checks
-    virtual void readAccount() = 0;                    // identity readback, before any input
-    virtual void signIn() = 0;                         // the runtime's own browser or device flow
-    virtual void cancelSignIn() = 0;
-    virtual void signOut() = 0;
-    virtual void listModels() = 0;
-    virtual void selectModel(const QString& thread, const QString& model, const QString& effort) = 0;
-    virtual bool reportsUsage() const = 0;
-    virtual void refreshUsage() = 0;
-    virtual void prepareSkills(const QString& workspace) = 0;  // stage and verify the approved skills
-    virtual void openThread(const AssistantThreadRequest&) = 0;  // start, or resume when thread is set
-    virtual void sendTurn(const AssistantTurnRequest&) = 0;      // start, steer or queue
-    virtual void cancelTurn(const QString& thread, const QString& turn) = 0;
-    virtual void answerTool(const AssistantToolCall&, bool success, const QByteArray& result) = 0;
-    virtual void answerQuestion(const QJsonValue& token, const QJsonObject& answers) = 0;
+    virtual bool start(const QString& workspace) = 0;        // the account was given at construction
+    virtual void retire() = 0;
+    virtual quint64 outputGeneration() const = 0;            // the fence every queued reply checks
+    // edi's assistant protocol: CodexAgent's existing public API, unchanged.
+    virtual QString request(const QString& method, const QJsonObject& params, const std::function<bool(const QString&)>& prepare = {}) = 0;
+    virtual bool notification(const QString& method, const QJsonObject& params = {}) = 0;
+    virtual bool answer(const QJsonValue& originalId, const QJsonObject& result, …) = 0;
+    virtual bool reject(const QJsonValue& originalId) = 0;
+    // … resolved, deferServerRequest, resumeDeferredRequests, activity, the deadline controls
+    // (beginOperation, beginHumanWait, beginNativeWork and their ends), failure state.
+    virtual QJsonObject threadPolicy() const = 0;            // the readback a thread must show (below)
 signals:
     void started();
-    void failed(int kind, const QString& explanation);
-    void accountRead(const QJsonObject& identity);     // {email, plan, host}
-    void accountRefused(const QString& reason);        // no seat, organisation policy, signed out
-    void signedOut();
-    void signInOpened(const QUrl& url, const QString& code);
-    void toolsVerified(const QStringList& tools);      // the effective tool set, read back
-    void skillsVerified(const QStringList& skills);
-    void modelsListed(const QJsonArray& catalogue);
-    void usageChanged(const QJsonObject& snapshot);
-    void threadOpened(const QString& thread, const QJsonObject& settings);
-    void turnStarted(const QString& thread, const QString& turn);
-    void item(const QString& thread, const QString& turn, const QJsonObject& item, bool completed);
-    void textDelta(const QString& thread, const QString& turn, const QString& item, const QString& delta);
-    void turnFinished(const QString& thread, const QString& turn, const QString& status, const QJsonObject& error);
-    void toolCall(const AssistantToolCall&);
-    void question(const QJsonValue& token, const QJsonArray& questions);
-    void questionResolved(const QJsonValue& token);
+    void response(const QString& id, const QString& method, const QJsonObject& envelope);
+    void serverRequest(const QJsonValue& originalId, const QString& method, const QJsonObject& params);
+    void event(const QString& method, const QJsonObject& params);
+    void failed(const QString& explanation);
+    // … the optional usage signals CodexAgent has.
 };
 ```
 
-The thread browser calls (list, rename, archive, read items) and the deadline controls of `CodexAgent`
-(`beginOperation`, `beginHumanWait`, `beginNativeWork` and their ends) move onto the interface unchanged; a provider
-that has no thread browser reports that, as ADR-0057's states already allow. Signals use direct connections, so every
-handler runs in today's order. The value shapes are the ones the view model already uses: the model catalogue row,
-the usage snapshot, the prepared question.
+The declared methods are `CodexAgent`'s public API as it stands, so the view model's calls and connections do not
+change shape. Signals use direct connections, so every handler runs in today's order.
 
-**ChatGPT through Codex, first, with no behaviour change.** `CodexProvider` (`app/src/codex_provider.*`) owns an
-unchanged `CodexAgent`; `CodexAgent` keeps its name, header and public API. Every Codex payload and parser moves out
-of the view model into `CodexProvider`: `initialize`, `account/read`, `account/login/start` and its URL check,
-`skills/list`, `thread/start|read|resume`, `thread/settings/update` and the policy proofs, `turn/start|steer`, the
-event and item parsing and `codexErrorInfo` mapping, `item/tool/call` with the `dynamicToolCall` snapshot check, the
-`{success, contentItems}` reply wrapper, `requestUserInput`, `turn/interrupt`, `account/rateLimits/*`, `model/list`,
-and the `thread/list|name/set|archive|items/list` browser. What stays in the view model is edi's: consent and
-disclosure, workspace preparation, instruction text, rows, timers, queue, receipts, the work report, the question
-card, dispatch and admission. The dispatcher splits at the snapshot check: the rest of `native_dispatch` becomes
-`native_admit(const AssistantToolCall&)`, which every provider's calls enter.
+**ChatGPT through Codex, first, with no behaviour change.** `CodexProvider` is `CodexAgent` itself, now deriving
+from `AssistantProvider`: same name, header, API and behaviour. The one Codex-only part the view model checks, the
+thread policy readback (read-only sandbox, approval policy `never`, reviewer `user`, model provider `openai`, the
+`ediPolicy` proof), is what `CodexAgent::threadPolicy()` returns; the view model compares a thread's readback with the
+active provider's `threadPolicy()` in place of literals. The same fields keep the same values, so ChatGPT's checks do
+not change.
 
-**ChatGPT through the direct connection, second.** `NativeChatGptProvider` (`app/src/native_chatgpt_provider.*`) owns
-the `ChatGptConnection` the `NativeDependencies` constructors build, and does what the view model's
-`connection->…` branches do today, in the same order: `signIn` is `sign_in()`, `sendTurn` is the controller's prepared
-`send()`, `cancelTurn` is `cancel()`, `signOut` is `sign_out()`, the state readback is `state()`. Its credential
-handling stays exactly ADR-0056's; this ADR does not touch it. Thread browser, usage and skills report "not offered",
-as that path does today. The view model's `generic_mode` switches become calls on the active provider, so neither
-ChatGPT path is outside the adapter.
+**Claude and Copilot translate.** `ClaudeProvider` and `CopilotProvider` map edi's assistant protocol onto their
+runtimes (sections 4 and 5): `thread/start` opens a session, `turn/start` sends a prompt, `turn/steer` a steer,
+`turn/interrupt` a cancel; their stream becomes `turn/started`, `item/started`, `item/agentMessage/delta`,
+`item/completed` and `turn/completed` with the item shapes the view model already validates; a call to edi's tool
+server becomes an `item/tool/call` server request and its answer goes back to the tool server;
+`request_user_input` becomes `item/tool/requestUserInput`. Their `threadPolicy()` states what is true of them: no
+sandbox escape is possible because no command or file tool exists, approval policy `never` because every permission
+request is declined, and their own model provider (`anthropic`, `github`). A provider never claims a field it cannot
+show; one it has no equivalent for is absent from both its policy and its readback, and the view model compares only
+the fields the policy names. Methods a runtime has no equivalent for (the thread browser, usage where the provider has
+none) are answered with the error states the view model already shows.
 
-**Activity rows keep their shape.** Saved history rows store item payloads whose types began as Codex's
-(`agentMessage`, `reasoning`, `dynamicToolCall`, `plan`, …). That shape becomes edi's activity item schema. Claude
-and Copilot map their events into it, so presentation code and saved history files stay as they are.
+**ChatGPT through the direct connection, second.** `NativeChatGptProvider` (`app/src/native_chatgpt_provider.*`)
+owns the `ChatGptConnection` the `NativeDependencies` constructors build, with ADR-0056's credential handling
+unchanged. It offers that path's own operations through the interface (`signIn`, `send`, `cancel`, `signOut`,
+`state`, `poll`), not the runtime protocol, which it refuses. The view model's `generic_mode ? … : connection->…`
+switches become one test of what the active provider offers, followed by calls on that provider, in the same order as
+today. Neither ChatGPT path is outside the adapter, and both behave as before.
+
+**Activity rows keep their shape.** Saved history rows store the item payloads of edi's assistant protocol, so
+presentation code and saved history files stay as they are for every provider.
 
 ### 2. One process transport
 
 The neutral half of `CodexAgent` becomes `AssistantProcess` (`app/src/assistant_process.*`): start through the guard
 (`guard <appPid> <runtime> <args…>`), newline framing with the JSON size limits, operation deadlines and their
 suspension, generation fencing and `retire()`, stderr drained and never shown, and the exit-code mapping (127, 125,
-128+n). `CodexAgent` keeps its API on top of it. The JSON size helpers move to `app/src/assistant_json_size.hpp`
+128+n). `CodexAgent` keeps its API on top of it. Copilot's ACP is JSON-RPC 2.0, so `CopilotProvider` uses the same
+request, response and server-request layer with the `jsonrpc` member added; Claude's stream-json is one JSON object per
+line, so `ClaudeProvider` uses the framing alone. The JSON size helpers move to `app/src/assistant_json_size.hpp`
 under neutral names, with the `codex_*` names kept as aliases.
 
 Each provider builds its child's environment from the app's environment: it sets the account's config home and the
@@ -165,22 +154,25 @@ starts the server as its own child, so the server is a small bridge to the app:
   line is the key; the server accepts one connection per runtime process and binds it to that process's generation.
 - **Lifecycle.** The server answers `initialize` with the client's `protocolVersion` when edi supports it (2025-03-26
   to 2025-11-25), otherwise 2025-11-25, and `capabilities: {tools: {listChanged: false}}`; it answers `ping`.
-- **`tools/list`** returns the catalogue the view model builds for the thread (`AssistantThreadRequest::tools`, today's
-  `dynamicTools`) as `name`, `description` and `inputSchema`, plus `request_user_input` (below). MCP requires a root
+- **`tools/list`** returns the catalogue the view model builds for the thread (the `dynamicTools` of its `thread/start`
+  request) as `name`, `description` and `inputSchema`, plus `request_user_input` (below). MCP requires a root
   `type: "object"`, so the union schemas (`set_experiment_type`, `edit_structure`, `edit_atom`, `edit_relation`) are
   flattened in this projection only: the union of their properties, `required` limited to what every branch requires,
   the selector as one enum. The exact branch check stays in `assistant_native_arguments`, which every call already
   passes. Each tool carries `_meta: {"anthropic/alwaysLoad": true, "anthropic/maxResultSizeChars": 500000}`, so
   Claude loads it up front and never moves a result to a file the model cannot read. ChatGPT's `dynamicTools` do not
   change.
-- **`tools/call`** becomes an `AssistantToolCall` for the active turn of the process it came through and enters the
-  same `native_admit` as ChatGPT's calls. A call with no running turn, after Stop, from a retired process, or before
-  the tool set was verified (sections 4, 5) is refused. The reply is the same projected JSON ChatGPT receives, as
-  `{content: [{type: "text", text: <outgoing JSON>}], isError: !success}`. `notifications/cancelled` cancels the native
-  call through the path Codex's `serverRequest/resolved` uses.
+- **`tools/call`** reaches the provider of the process it came through, which emits it as edi's assistant protocol
+  does for Codex: a `dynamicToolCall` item for the active turn, then the `item/tool/call` server request. It enters the
+  view model's existing dispatch (`native_dispatch`, the snapshot check included) like a ChatGPT call. A call with no
+  running turn, after Stop, from a retired process, or before the tool set was verified (sections 4, 5) is refused by
+  the provider. The reply is the same projected JSON ChatGPT receives, returned as
+  `{content: [{type: "text", text: <outgoing JSON>}], isError: !success}`. `notifications/cancelled` resolves the
+  server request the way Codex's `serverRequest/resolved` does.
 - **Questions.** `request_user_input` is edi's question tool for Claude and Copilot, with the schema of Codex's tool of
-  the same name (at most three questions, options to click, a free answer). A call becomes the pending question card
-  Codex's questions use today, and its answer is the tool result. edi's instructions already name the tool, so the
+  the same name (at most three questions, options to click, a free answer). The provider emits a call as
+  `item/tool/requestUserInput`, so it becomes the question card Codex's questions use today, and the answer is the tool
+  result. edi's instructions already name the tool, so the
   same text serves every provider. The runtimes' own question tools stay off (sections 4, 5).
 - **Names.** The server is called `edi`; the models see `mcp__edi__<tool>` (Claude) and `edi-<tool>` (Copilot).
 - **Timeouts.** A fit or a question can outlast a runtime's default MCP call timeout, so each runtime's config gives
@@ -412,7 +404,8 @@ with a token in the environment; voice input; new tools; Copilot's bring-your-ow
 ## Consequences
 
 - A fourth runtime is one more `AssistantProvider`, package and component; the tools, dispatcher and history stay.
-- Codex code leaves the view model, which shrinks it, and both ChatGPT paths behave as before.
+- The view model keeps the app-server vocabulary as edi's protocol, so both ChatGPT paths behave as before, and each
+  new runtime pays for a translation that must produce the lifecycle the view model already validates.
 - Users of a Copilot-only organisation can use the assistant with their seat.
 - The offline installer grows by about 300 MB per platform, and the installed Claude and Copilot runtimes take a few
   hundred MB each.
@@ -426,6 +419,7 @@ with a token in the environment; voice input; new tools; Copilot's bring-your-ow
 | Alternative | Verdict |
 |---|---|
 | Write each new provider in the shape of `ChatGptConnection` | Rejected: it handles provider tokens itself. |
+| A new neutral protocol, with every Codex payload moved out of the view model | Rejected for now: thousands of lines of fenced, order-sensitive code moved at once, with no visible gain and a real risk to ChatGPT's behaviour. |
 | Leave `ChatGptConnection` outside the adapter | Rejected: two ways to reach a provider; the view model's per-call switches would stay. |
 | Claude's control-channel permission prompts and `AskUserQuestion` | Rejected: the stdio permission channel is not a documented CLI option; edi's own question tool serves all three. |
 | Claude's in-process SDK MCP server | Rejected: documented only through the Agent SDK; Copilot has no equivalent, so two tool paths. |
