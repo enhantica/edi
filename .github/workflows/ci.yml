@@ -759,7 +759,8 @@ jobs:
       - uses: ./.github/actions/setup-pixi
         if: runner.os != 'Windows'
       # Windows compiles the sources the Windows installer compiles, through the installer's own Qt, SDK and
-      # compiler settings (tools/ci/app-windows-build.py). It builds only; the app's tests run on Linux and macOS.
+      # compiler settings (tools/ci/app-windows-build.py). Of the app's tests it runs only the cases
+      # tests/windows-app-cases.txt lists; the rest run on Linux and macOS.
       - name: Set up the locked packaging environment
         if: runner.os == 'Windows'
         uses: ./.github/actions/setup-pixi
@@ -806,8 +807,9 @@ jobs:
           pixi run --manifest-path tools/installer/pixi.toml python tools/ci/crysta_source_export.py "$CRYSTA_SRC" "$CRYSTA_SOURCE_SHA" .crysta
           printf '%s\n' "$CRYSTA_SOURCE_SHA" >.crysta/CRYSTA_SOURCE_SHA
       - name: Build the app with MSVC, warnings as errors
+        id: windows-build
         if: runner.os == 'Windows'
-        run: pixi run --manifest-path tools/installer/pixi.toml python tools/ci/app-windows-build.py --crysta-source .crysta --work build/app-windows
+        run: pixi run --manifest-path tools/installer/pixi.toml python tools/ci/app-windows-build.py --crysta-source .crysta --work build/app-windows --tests
       - name: Save the compiler cache (Windows)
         if: ${{ always() && runner.os == 'Windows' }}
         uses: ./.github/actions/store
@@ -815,6 +817,25 @@ jobs:
           ccache: pixi run --manifest-path tools/installer/pixi.toml python
           path: ${{ runner.temp }}/edi-ccache
           key: ccache2-app-windows-${{ hashFiles('tools/installer/pixi.lock') }}-${{ github.run_id }}-${{ github.run_attempt }}
+      # Under the packaging environment, whose Qt the runner loads. A crash leaves a minidump, and each call's log
+      # names every click and step (tools/ci/windows_app_cases.py).
+      - name: App cases on Windows
+        id: windows-cases
+        if: ${{ runner.os == 'Windows' && !cancelled() && steps.windows-build.outcome == 'success' }}
+        timeout-minutes: 60
+        run: >-
+          pixi run --manifest-path tools/installer/pixi.toml python tools/ci/windows_app_cases.py
+          --runner build/app-windows/app/app/edi_app_tests.exe --cases tests/windows-app-cases.txt
+          --dumps build/app-windows/cases/dumps --logs build/app-windows/cases/logs
+      - name: Upload the Windows app cases' logs and crash dumps
+        if: ${{ runner.os == 'Windows' && !cancelled() && steps.windows-cases.outcome != 'skipped' }}
+        uses: ./.github/actions/store
+        with:
+          artifact: app-windows-cases
+          withhold: 'true'
+          path: build/app-windows/cases
+          if-no-files-found: ignore
+          retention-days: 7
       # A pull request builds and tests the app only when it changes an app input (tools/ci/app_inputs.py) or runs
       # paired with a crysta branch; main pushes, the nightly and manual runs always do (owner record 2026-11-09).
       - name: Decide whether this run builds and tests the app

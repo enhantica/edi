@@ -1,0 +1,7 @@
+# The app's Qt Quick Test cases that CI's `app · Windows` job runs on Windows
+# (tools/ci/windows_app_cases.py). The tests lane fills this list.
+#
+# One runner call a line: the arguments edi_app_tests takes, paths relative to the repository root,
+# for example
+#   -input tests/unit/app/tst_example.qml ExampleCase::test_open
+# Lines starting with # are comments. With no other line the step has nothing to run.
