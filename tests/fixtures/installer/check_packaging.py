@@ -6,6 +6,7 @@ import io
 import json
 import os
 import plistlib
+import re
 import shutil
 import subprocess
 import sys
@@ -385,12 +386,33 @@ def test_packaging_uses_acquired_licenses_when_the_original_cache_is_absent(tmp_
             )
 
 
+# Voice input links Qt Multimedia itself (ADR-0107); its QML part is still refused.
 @pytest.mark.parametrize(
-    'name', ['libQt6WebEngineCore.so.6', 'Qt6Multimedia.dll', 'QtWebEngineCore']
+    'name', ['libQt6WebEngineCore.so.6', 'Qt6MultimediaQuick.dll', 'QtWebEngineCore']
 )
 def test_bundle_audit_rejects_unrelated_native_qt_components(tmp_path, name):
     (tmp_path / name).write_bytes(b'\x7fELFunneeded module')
     with pytest.raises(RuntimeError, match='Unused Qt component'):
+        AUDIT.audit_bundle(tmp_path)
+
+
+# Qt Multimedia's FFmpeg plugin and FFmpeg's libraries are left out of every bundle (ADR-0107).
+@pytest.mark.parametrize(
+    ('name', 'magic'),
+    [
+        (
+            'EasyDiffraction.app/Contents/PlugIns/multimedia/libffmpegmediaplugin.dylib',
+            b'\xcf\xfa\xed\xfe',
+        ),
+        ('plugins/multimedia/ffmpegmediaplugin.dll', b'MZ'),
+        ('lib/libavcodec.so.61', b'\x7fELF'),
+        ('bin/avformat-61.dll', b'MZ'),
+    ],
+)
+def test_bundle_audit_rejects_deployed_ffmpeg(tmp_path, name, magic):
+    (tmp_path / name).parent.mkdir(parents=True)
+    (tmp_path / name).write_bytes(magic + b'media library')
+    with pytest.raises(RuntimeError, match=f'^FFmpeg was deployed: {re.escape(name)}$'):
         AUDIT.audit_bundle(tmp_path)
 
 
