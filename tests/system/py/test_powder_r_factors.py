@@ -1,14 +1,13 @@
 """Weighted profile identities and the complete result-file lifecycle."""
 
-import csv
 import math
 import re
 from itertools import starmap
-from pathlib import Path
 
 import numpy as np
 import pytest
 
+from tests.fixtures.project_save.reference import six_digits
 from tests.fixtures.saved_spelling.profile_bounds import (
     assert_factor_rounding,
     factor_errors,
@@ -119,27 +118,28 @@ def assert_metrics(row, prefix, expected):
         )
 
 
-def scan_template_background(project, saved, inputs, *, constrained=True):
-    # Fitted per-file parameters are inputs; the independent polynomial evaluates their pattern.
-    # The caller's model can hold another file's parameters after the scan.
-    with (saved / 'analysis/results.csv').open(newline='') as stream:
-        rows = list(csv.DictReader(stream))
-    selected = [row for row in rows if Path(row['file_path']).name == '1.dat']
-    assert len(selected) == 1, 'The scan ledger must hold exactly one fitted middle-file template'
+def scan_template_background(project, inputs, *, constrained=True, net_pattern=0):
+    # The selected file's report precedes CSV rounding and leaves the template in place.
+    # Solve the two-column fixture independently, using its declared measured weights.
     experiment = project.experiments[0]
-    values = []
-    for ordinal in (1, 2):
-        key = f'{experiment.name}.background.{ordinal}.coef'
-        values.append(
-            float(selected[0].get(key, experiment.background_terms[ordinal - 1].coef.value))
-        )
-    assert all(math.isfinite(value) for value in values), (
-        'The template background input coefficients must be finite'
-    )
+    terms = [term.coef for term in experiment.background_terms[:2]]
+    coefficients = np.asarray([term.value for term in terms], dtype=float)
+    free = np.asarray([term.free for term in terms])
     t = inputs[:, 0] / 40 - 1
-    a, b = values
-    # The scale-zero vehicle declares c = a - b; the phase vehicle fixes c = 0.
-    return a + b * t + ((a - b) * t**2 if constrained else 0)
+    if constrained:
+        # The scale-zero fixture declares c = a - b.
+        columns = np.column_stack((1 + t**2, t - t**2))
+    else:
+        columns = np.column_stack((np.ones(len(t)), t))
+    used = inputs[:, 2] > 0
+    fixed_pattern = columns[:, ~free] @ coefficients[~free]
+    expected = inputs[:, 1] - net_pattern - fixed_pattern
+    sigma = inputs[used, 2]
+    coefficients[free], _, rank, _ = np.linalg.lstsq(
+        columns[used][:, free] / sigma[:, None], expected[used] / sigma, rcond=None
+    )
+    assert rank == free.sum(), 'The fitted background oracle must have full rank'
+    return columns @ coefficients
 
 
 def saved_profile(saved, name):
@@ -262,13 +262,23 @@ def profile_checks(  # noqa: PLR0914
         assert int(row['_fit_result_bank.n_data_points']) == int(used.sum()), (
             'Only independently included observations contribute degrees of freedom'
         )
-        assert_metrics(row, '_fit_result_bank.', expected)
+        written = (
+            expected
+            if backgrounds is None
+            else {field: six_digits(value) for field, value in expected.items()}
+        )
+        assert_metrics(row, '_fit_result_bank.', written)
         pooled.append(arrays)
         bank_factors.append(expected)
     arrays = [np.concatenate([bank[index] for bank in pooled]) for index in range(4)]
     expected = factors(*arrays, sum(free_by_bank.values()))
+    written = (
+        expected
+        if backgrounds is None
+        else {field: six_digits(value) for field, value in expected.items()}
+    )
     assert_metrics(
-        scalars(text), '_fit_result.', {field: expected[field] for field in PROFILE_FIELDS}
+        scalars(text), '_fit_result.', {field: written[field] for field in PROFILE_FIELDS}
     )
     return bank_factors, expected
 
@@ -280,9 +290,7 @@ def test_every_fit_records_per_experiment_profile_factors_from_used_points(tmp_p
     text, _ = record(project, tmp_path / 'saved')
     backgrounds = None
     if mode in {'sequential', 'independent'}:
-        backgrounds = {
-            'bank': scan_template_background(project, tmp_path / 'saved', declared['bank'])
-        }
+        backgrounds = {'bank': scan_template_background(project, declared['bank'])}
     banks, pooled = profile_checks(
         project, text, declared, dict.fromkeys(declared, 2), backgrounds, saved=tmp_path / 'saved'
     )
