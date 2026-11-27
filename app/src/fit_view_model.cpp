@@ -632,7 +632,8 @@ void FitViewModel::startImpl(std::uint64_t attempt) {
     caught_up_pending_ = false;
     syncBehind();
     if (scan) {
-        const QString error = owner_.prepareScan(scan_.processed() == 0 || out_of_date_);
+        const QString error = owner_.prepareScan(scan_.processed() == 0 || out_of_date_,
+                                                 scan_.files > 0 && scan_.processed() >= scan_.files);
         if (!error.isEmpty()) {
             emit refused(error);
             if (owner_.retired_) return;
@@ -878,12 +879,7 @@ void FitViewModel::sync() {
         reason = tr("Select at least one free parameter");
     } else if (scan) {
         reason = owner_.scanRefusal();
-        // Outdated results can always be fitted again (Refit; the owner, 2026-10-26).
-        // A parametric fit fits every pattern again each time, so a complete run never blocks the next.
-        if (reason.isEmpty() && !parametric_ && !running_ && !out_of_date_ && scan_.files > 0 &&
-            scan_.processed() >= scan_.files) {
-            reason = tr("Every dataset is fitted or skipped: Reset fits to fit them again");
-        }
+        // A complete scan is fitted again from each dataset's own latest result (owner decision 2026-11-27).
     } else if (mode == QLatin1String("joint") && declared) {
         reason = tr("This project declares a scan (_sequential_fit): its datasets are fitted in the sequential or "
                     "independent mode, not jointly");
@@ -1281,7 +1277,8 @@ void FitViewModel::reset() {
 
 void FitViewModel::syncScanState() {
     // In a scan project the fit button follows the datasets' fits (owner, 2026-10-06): Start fitting while none is
-    // fitted, Continue fitting while some are not, unavailable once all are; Reset fits clears them.
+    // fitted, Continue fitting while some are not; once all are, Fit fits them again, each from its own result (owner,
+    // 2026-11-27). Reset fits clears them.
     const bool scan = edi::fits_a_scan(project_) && owner_.scan();
     setContinuable(scan && scan_.processed() > 0 && scan_.processed() < scan_.files);
     const ScanSession* session = owner_.scanSession();

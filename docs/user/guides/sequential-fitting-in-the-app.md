@@ -66,9 +66,13 @@ Preferences.
 
 The fitting button reads **Start fitting** while no file is fitted and **Continue fitting** while
 some are not, for example after **Stop fitting**, which keeps the files fitted so far. Continuing
-fits from the first unfitted file. Once every file is fitted the button is disabled. **Reset
-fits**, between the fitting button and Follow, clears every file's result so the scan can be
-fitted again; it is one Undo step. Undo after a run puts back the results the run replaced.
+fits from the first unfitted file. Once every file is fitted, fitting again fits every file anew,
+each starting from its own latest result, never from another file's. **Reset fits**, between the
+fitting button and Follow, clears every file's result, so the next fit starts every file from the
+template again; it is one Undo step. Undo after a run puts back the results the run replaced.
+
+A scan fit never changes the template: its values stay as they were, each dataset shows its own
+result, and saving after a fit writes the template unchanged.
 
 When the run ends, the results window shows its outcome, the files fitted, the converged and
 failed counts and the χ² range, with **Show evolution** to see the results as a chart.

@@ -774,7 +774,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // A scan run's owner-thread steps (FitViewModel): before a fresh run, the previous results set aside, which
     // Undo restores; each file it fits; the file it shows while followed; its end, after which the shown dataset is
     // viewed again from the rows on disk. The shown dataset stays in the model while the scan runs from the template.
-    QString prepareScan(bool fresh);
+    QString prepareScan(bool fresh, bool refit = false);
     // Reset fits (FitViewModel::reset): every dataset's fit result cleared, one Undo step; the refusal, if any.
     QString resetScan();
     // Why an edit or a single or joint fit waits: a chosen dataset is still being read, so the model still shows the

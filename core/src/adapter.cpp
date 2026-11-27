@@ -9008,9 +9008,9 @@ FitResultBase Project::fit_scan(const IterationCallback& on_iteration,
         // A cancelled scan is a partial state, not a result — crysta wrote no row for the
         // unfinished file and no value into its own caller, and edi mirrors that: the model
         // keeps its pre-scan values, and results.csv is the resume point.
+        // A scan fit never writes the template (owner decision 2026-11-27): the model keeps its values and
+        // the results are in the results files, which a shown dataset reads.
         if (!result.cancelled) {
-            detail::write_back(refined);
-            publish_fit_state(*this, cproject, refined);
             // crysta gives the R factors of the scan's template file when this call fitted it; otherwise there is
             // nothing to record, and an earlier fit's result would be stale. Each file's results are the scan's.
             if (result.scan_quality) {
@@ -9027,25 +9027,6 @@ FitResultBase Project::fit_scan(const IterationCallback& on_iteration,
                 clear_fit_result(*this);
             }
             settle_scan_results(fit_result, *scan, effective_scan_template_file(*this));
-            if (joint) {
-                // The model ends at the series' last point, so its derived values read that point's
-                // correlations, as crysta's model does.
-                std::vector<FitParameterCorrelation> rows;
-                for (const crysta::FitParameterCorrelation& pair : cproject.fit_result.correlations) {
-                    if (!pair.file_path.empty()) {
-                        continue;
-                    }
-                    FitParameterCorrelation& row = rows.emplace_back();
-                    row.source_kind = pair.source_kind.get();
-                    row.parameter_unique_name_i = pair.parameter_unique_name_i.get();
-                    row.parameter_unique_name_j = pair.parameter_unique_name_j.get();
-                    row.correlation = pair.correlation.get();
-                }
-                for (const auto& row : fit_result.correlations) {
-                    rows.push_back(*row);
-                }
-                fit_result.correlations.assign(numbered_correlations(rows));
-            }
         } else if (*completed_files > 0) {
             // Each file this run completed has its row in results.csv, so its results are kept as well; a resume
             // skips that file and could not make them again. The unfinished file has none, and the rest of the

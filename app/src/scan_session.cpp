@@ -564,6 +564,19 @@ QString kept_aside(const fs::path& aside, const std::exception& refusal) {
 
 }  // namespace
 
+QString ScanSession::copyFiles(const edi::Project& project, Files& copied) {
+    const fs::path directory = analysis_dir(project);
+    copied = {};
+    try {
+        for (int which = 0; which < kResultFileCount; ++which) {
+            *slot(copied, which) = read_file(directory / kResultFiles[which]);
+        }
+    } catch (const std::exception& refusal) {
+        return QString::fromUtf8(refusal.what());
+    }
+    return {};
+}
+
 QString ScanSession::takeFiles(const edi::Project& project, Files& taken) {
     const fs::path directory = analysis_dir(project);
     taken = {};

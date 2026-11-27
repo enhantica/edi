@@ -5222,7 +5222,7 @@ void ProjectViewModel::markTemplateChanged() {
     syncOutOfDate();
 }
 
-QString ProjectViewModel::prepareScan(bool fresh) {
+QString ProjectViewModel::prepareScan(bool fresh, bool refit) {
     const PublicationScope publication(*this);
     if (const QString critical = criticalEditRefusal(); !critical.isEmpty()) return critical;
     if (fit_ != nullptr && fit_->running()) return tr("A fit is running");
@@ -5237,12 +5237,20 @@ QString ProjectViewModel::prepareScan(bool fresh) {
     if (scan_ && !scan_template_) copyModelToTemplate();
     run_identity_ = templateIdentityOf(scanTemplateOrModel());
     previous_run_.reset();
-    if (!fresh) { previous_run_ = scan_session_->run(); return {}; }
+    // A complete scan fitted again replaces every row, from each dataset's own (owner decision 2026-11-27): a new
+    // run, not a Continue of the earlier one, whose files stay in place for the run to read and are copied for Undo.
+    if (!fresh && !refit) {
+        previous_run_ = scan_session_->run();
+        return {};
+    }
     undo_history_.reserve(undo_history_.size() + 1);
     undo_history_.emplace_back(ScanRun{});
     auto& record = std::get<ScanRun>(undo_history_.back());
     QString refusal;
-    try { refusal = scan_session_->takeFiles(*project_, record.files); }
+    try {
+        refusal = refit && !fresh ? scan_session_->copyFiles(*project_, record.files)
+                                  : scan_session_->takeFiles(*project_, record.files);
+    }
     catch (...) { undo_history_.pop_back(); throw; } // takeFiles is the existing all-or-none file door.
     if (!refusal.isEmpty()) { undo_history_.pop_back(); return refusal; }
     try {
