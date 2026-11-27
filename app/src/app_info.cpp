@@ -11120,6 +11120,7 @@ void ApplicationInfo::searchPositionPopup(const QJSValue& opening) const {
 }
 QJSValue ApplicationInfo::searchAnyMatch() const {
     const auto f = panelUsageEngine(this); if (panelUsageContextRead(f, "filter").strictlyEquals(QJSValue(QStringLiteral("")))) return QJSValue(true);
+    if (panelUsageTruth(panelUsageContextRead(f, "typedEntry"))) return QJSValue(true);  // the box takes the text as typed
     for (int i = 0; panelUsageReady(f) && assistantRelation(f, QJSValue(double(i)), panelUsageContextRead(f, "count"), 0); ++i)
         if (panelUsageTruth(panelUsageGlobalCall(f, "matches", {panelUsageGlobalCall(f, "textAt", {QJSValue(double(i))})}))) return QJSValue(true);
     return QJSValue(false);
@@ -11167,7 +11168,19 @@ QJSValue ApplicationInfo::searchPickedIndex() const {
     return QJSValue(first);
 }
 void ApplicationInfo::searchAccepted() const {
-    const auto f = panelUsageEngine(this); const auto index = projectInvoke(f, "control", "pickedIndex"); if (assistantRelation(f, index, QJSValue(0), 0)) return;
+    const auto f = panelUsageEngine(this); const auto index = projectInvoke(f, "control", "pickedIndex");
+    // Text the box takes as typed goes before an entry that only contains it (13C is not C); an entry spelled as typed
+    // still wins.
+    const auto typed = assistantContextField(f, "control", "typedEntry");
+    if (panelUsageTruth(typed)) {
+        const bool spelled = assistantRelation(f, index, QJSValue(0), 2) &&
+            panelUsageMemberCall(f, panelUsageContextRead(f, "control"), "folded", {projectInvoke(f, "control", "textAt", {index})})
+                .strictlyEquals(assistantContextField(f, "control", "filter"));
+        if (!spelled) {
+            projectInvoke(f, "control", "typedAccepted", {typed}); panelUsageMemberCall(f, assistantContextField(f, "control", "popup"), "close"); return;
+        }
+    }
+    if (assistantRelation(f, index, QJSValue(0), 0)) return;
     projectWrite(f, "control", "currentIndex", index); projectInvoke(f, "control", "activated", {index}); panelUsageMemberCall(f, assistantContextField(f, "control", "popup"), "close");
 }
 void ApplicationInfo::searchCompleted(const QJSValue& alignBinding, const QJSValue& modelBinding, const QJSValue& focusBinding, const QJSValue& indicatorBinding) const {

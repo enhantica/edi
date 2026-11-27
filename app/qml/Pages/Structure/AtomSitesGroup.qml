@@ -100,7 +100,9 @@ Column {
             }
             // The type picked from the types the linked experiments' scattering tables hold (isotopes for neutrons,
             // ions for X-rays), or typed into the list's search field (the owner, 2026-10-06); a type outside the list
-            // is shown as it is. Each entry carries its element-coloured atom icon.
+            // is shown as it is. A typed type the list does not hold but the structure computes with (13C with
+            // X-rays) is taken with Enter, as the Text tab takes it (the owner, 2026-11-25). Each entry carries its
+            // element-coloured atom icon.
             ComboCell {
                 SearchableComboBox {
                     id: typeBox
@@ -111,6 +113,8 @@ Column {
                     searchThreshold: 0
                     readonly property var types: group.structure ? group.structure.atomTypes : ApplicationInfo.elementSymbols
                     model: types
+                    typedEntry: group.structure ? group.structure.typedAtomType(searchText, types) : ""
+                    onTypedAccepted: text => group.sites.setText(row.index, "typeSymbol", text)
                     currentIndex: types.indexOf(row.typeSymbol)
                     displayText: row.typeSymbol
                     popup.width: Math.max(width, EaStyle.Sizes.fontPixelSize * 8)

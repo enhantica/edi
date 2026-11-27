@@ -763,14 +763,83 @@ const std::vector<std::string>& source_atom_types(bool xray, const std::string& 
             }
         }
     }
-    // Any isotope takes its element's form factor; only deuterium is offered, as the common one, and the Text tab
-    // accepts the rest.
+    // Any isotope takes its element's form factor; only deuterium is listed, as the common one, and the rest are
+    // taken when typed (atom_type_computes), in the Type list as in the Text tab.
     for (const char* isotope : {"D", "2H"}) {
         if (held(isotope)) {
             out.push_back(isotope);
         }
     }
     return out;
+}
+
+// The probe and source of each experiment linking `structure`: X-ray or not, and the source the experiment selects,
+// empty when it selects none. Empty when no experiment links it.
+std::vector<std::pair<bool, std::string>> linked_sources(const Project& project, const Structure& structure) {
+    std::vector<std::pair<bool, std::string>> sources;
+    for (const auto& experiment : project.experiments) {
+        const bool links = std::any_of(experiment->linked_structures.begin(), experiment->linked_structures.end(),
+                                       [&structure](const auto& link) {
+                                           return link->structure_id.value() == structure.name.value();
+                                       });
+        if (!links) {
+            continue;
+        }
+        const bool xray = experiment->experiment_type.effective_radiation_probe() == RadiationProbeEnum::XRAY;
+        const ScatteringSourceItem item =
+            xray ? ScatteringSourceItem::XRAY_FORM_FACTOR : ScatteringSourceItem::NEUTRON_SCATTERING_LENGTH;
+        sources.emplace_back(xray, scattering_source_value(*experiment, item));  // crysta takes the file's quotes
+    }
+    return sources;
+}
+
+// The source a list or a check reads for an experiment that selects `source`: that one, or its probe's default.
+std::string source_or_default(bool xray, const std::string& source) {
+    return !source.empty() ? source
+                           : supported_scattering_sources(xray ? ScatteringSourceItem::XRAY_FORM_FACTOR
+                                                               : ScatteringSourceItem::NEUTRON_SCATTERING_LENGTH)
+                                 .front();
+}
+
+// Whether one source computes with `type`: an X-ray form factor (an isotope takes its element's), or a finite neutron
+// length found as a calculation finds it. A source crysta does not know computes nothing.
+bool source_computes(bool xray, const std::string& source, const std::string& type) {
+    if (type.empty()) {
+        return false;
+    }
+    try {
+        if (xray) {
+            crysta::xray_scattering({source, "none", 0.0}, {type});
+            return true;
+        }
+        return std::isfinite(crysta::neutron_scattering(source).length(type));
+    } catch (const std::exception&) {
+        return false;
+    }
+}
+
+// What a structure no experiment links may take: computed by both default tables, as a new atom is.
+bool unlinked_type_computes(const std::string& type) {
+    return source_computes(false, supported_scattering_sources(ScatteringSourceItem::NEUTRON_SCATTERING_LENGTH).front(),
+                           type) &&
+           source_computes(true, supported_scattering_sources(ScatteringSourceItem::XRAY_FORM_FACTOR).front(), type);
+}
+
+// The Type list of a structure no experiment links: the elements a new atom may take, with D and 2H after H, as the
+// X-ray and neutron lists offer them.
+const std::vector<std::string>& unlinked_atom_types() {
+    static const std::vector<std::string> types = [] {
+        std::vector<std::string> out = new_site_elements();
+        auto at = std::find(out.begin(), out.end(), "H");
+        at = at == out.end() ? out.end() : at + 1;
+        for (const char* isotope : {"D", "2H"}) {
+            if (unlinked_type_computes(isotope)) {
+                at = out.insert(at, isotope) + 1;
+            }
+        }
+        return out;
+    }();
+    return types;
 }
 
 }  // namespace
@@ -790,39 +859,45 @@ void warm_atom_types() {
 }
 
 std::vector<std::string> atom_types(const Project& project, const Structure& structure) {
+    const auto sources = linked_sources(project, structure);
+    if (sources.empty()) {
+        return unlinked_atom_types();
+    }
     std::set<std::string> types;
-    bool linked = false;
-    for (const auto& experiment : project.experiments) {
-        const bool links = std::any_of(experiment->linked_structures.begin(), experiment->linked_structures.end(),
-                                       [&structure](const auto& link) {
-                                           return link->structure_id.value() == structure.name.value();
-                                       });
-        if (!links) {
-            continue;
-        }
-        linked = true;
-        const bool xray = experiment->experiment_type.effective_radiation_probe() == RadiationProbeEnum::XRAY;
-        const ScatteringSourceItem item =
-            xray ? ScatteringSourceItem::XRAY_FORM_FACTOR : ScatteringSourceItem::NEUTRON_SCATTERING_LENGTH;
-        std::string source = scattering_source_value(*experiment, item);  // crysta takes the file's quotes
-        if (source.empty()) {
-            source = supported_scattering_sources(item).front();
-        }
+    for (const auto& [xray, source] : sources) {
         try {
-            const std::vector<std::string>& held = source_atom_types(xray, source);
+            const std::vector<std::string>& held = source_atom_types(xray, source_or_default(xray, source));
             types.insert(held.begin(), held.end());
         } catch (const std::exception&) {
             // A source crysta does not know adds nothing: the loader has already reported it.
         }
-    }
-    if (!linked) {
-        return new_site_elements();
     }
     return {types.begin(), types.end()};
 }
 
 void check_deuterium_lengths(const std::map<std::string, double>& lengths, const std::string& where) {
     crysta::check_deuterium_lengths(lengths, where);
+}
+
+bool atom_type_computes(const Project& project, const Structure& structure, const std::string& type) {
+    const auto sources = linked_sources(project, structure);
+    if (sources.empty()) {
+        return unlinked_type_computes(type);
+    }
+    // A neutron experiment that selects no source calculates with the structure's own lengths when it declares
+    // them, as crysta does.
+    const auto& lengths = structure.scattering_lengths_fm.get();
+    return std::all_of(sources.begin(), sources.end(), [&](const auto& linked) {
+        const auto& [xray, source] = linked;
+        if (!xray && source.empty() && !lengths.empty()) {
+            try {
+                return std::isfinite(crysta::NeutronScattering(lengths).length(type));
+            } catch (const std::exception&) {
+                return false;
+            }
+        }
+        return source_computes(xray, source_or_default(xray, source), type);
+    });
 }
 
 namespace {

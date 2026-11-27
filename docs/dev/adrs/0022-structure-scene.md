@@ -103,11 +103,14 @@ generic `_geom_bond` group is not shown, so the bonds appear once.
 
 A site's type is picked from the types crysta's scattering table holds for each experiment linking the structure:
 the neutron table of its scattering-length source (elements and isotopes with a length), or the X-ray form-factor
-table of its source (elements, ions, and `D` and `2H`, which take hydrogen's form factor; another isotope is typed in
-the Text tab). With both probes linked the list is their union, sorted; with no experiment linked it is the elements a
-new atom may take. crysta lists no X-ray table, so each element and each charge from 1 to 9 is asked for once per
-source. Every entry carries its element's colour (§4). A type outside the list, as a file may state it, is kept and
-shown as it is.
+table of its source (elements, ions, and `D` and `2H`, which take hydrogen's form factor). With both probes linked the
+list is their union, sorted; with no experiment linked it is the elements a new atom may take, and `D` and `2H`. crysta
+lists no X-ray table, so each element and each charge from 1 to 9 is asked for once per source. Every entry carries its
+element's colour (§4). A type the list does not hold is taken when typed in the list's search field and Enter is
+pressed, if every linked experiment computes with it in its selected source (`atom_type_computes`): any isotope of a
+listed element with X-rays (`13C`), a type with a length in the neutron source (found as a calculation finds it, so an
+ion by its element). With no experiment linked both default tables must compute with it. An entry spelled as typed
+still wins over the typed text. A type outside the list, as a file may state it, is kept and shown as it is.
 
 ### 9. Coordination polyhedra
 
