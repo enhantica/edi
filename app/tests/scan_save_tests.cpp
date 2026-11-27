@@ -21,6 +21,7 @@
 #include "session.hpp"
 #include "edi/duration_text.hpp"
 #include "project_view_model.hpp"
+#include "load_wait.hpp"
 #include "structure_view_model.hpp"
 
 // Keeps what a retried check found, for the steps after it, without an assignment inside the check.
@@ -904,7 +905,7 @@ private slots:
         QTRY_VERIFY_WITH_TIMEOUT(!project->calculating(), 60000);
         QVERIFY2(!project->currentExperiment()->fitOutcome().isEmpty(), "the fit left its outcome on the experiment");
         QVERIFY(!project->fit()->outOfDate());
-        QVERIFY2(project->loadDataInto(project->currentExperiment(), QUrl::fromLocalFile(data)), qPrintable(project->lastError()));
+        QVERIFY2(wait_for_load(*project, project->loadDataInto(project->currentExperiment(), QUrl::fromLocalFile(data))), qPrintable(project->lastError()));
         hover();
         QTRY_VERIFY_WITH_TIMEOUT(!project->calculating(), 60000);
         hover();
@@ -926,7 +927,7 @@ private slots:
         // A second replacement, then one Undo: the data is the first replacement's, which no fit described.
         const QString second = copy.path() + QStringLiteral("/d20_second.dat");
         QVERIFY(QFile::copy(QStringLiteral(EDI_SOURCE_DIR "/docs/user/cli/pd-neut-cwl_cosio-d20_scan-162f/project/experiments/d20_scan/01_002_497p3410.dat"), second));
-        QVERIFY2(project->loadDataInto(project->currentExperiment(), QUrl::fromLocalFile(second)), qPrintable(project->lastError()));
+        QVERIFY2(wait_for_load(*project, project->loadDataInto(project->currentExperiment(), QUrl::fromLocalFile(second))), qPrintable(project->lastError()));
         QTRY_VERIFY_WITH_TIMEOUT(!project->calculating(), 60000);
         project->undo();
         QTRY_VERIFY_WITH_TIMEOUT(!project->calculating(), 60000);
@@ -947,7 +948,7 @@ private slots:
         auto& model = const_cast<edi::Project&>(project->project());
         edi::clear_fit_result(model);
         const QString data = QStringLiteral(EDI_SOURCE_DIR "/docs/user/cli/pd-neut-cwl_cosio-d20_scan-162f/project/experiments/d20_scan/01_001_497p3790.dat");
-        QVERIFY2(project->loadDataInto(project->currentExperiment(), QUrl::fromLocalFile(data)), qPrintable(project->lastError()));
+        QVERIFY2(wait_for_load(*project, project->loadDataInto(project->currentExperiment(), QUrl::fromLocalFile(data))), qPrintable(project->lastError()));
         QTRY_VERIFY_WITH_TIMEOUT(!project->calculating(), 60000);
         model.fit_result.result_kind = "single";
         model.fit_result.message = "describes only the replacement";

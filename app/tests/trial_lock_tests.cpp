@@ -22,6 +22,7 @@
 #include "fit_view_model.hpp"
 #include "parameter_item.hpp"
 #include "project_view_model.hpp"
+#include "load_wait.hpp"
 #include "session.hpp"
 
 namespace edi_app {
@@ -187,7 +188,7 @@ private slots:
         const QUrl data = QUrl::fromLocalFile(QString::fromUtf8(EDI_SOURCE_DIR) + "/app/tutorials/files/hrpt.xye");
         ProjectViewModel project(lbcoProject(std::nullopt), nullptr);  // HRPT's LBCO wavelength, 1.494 Å
         QSignalSpy notes(&project, &ProjectViewModel::information);
-        QVERIFY(project.loadData(0, data));
+        QVERIFY(wait_for_load(project, project.loadData(0, data)));
         edi::Project& model = *project.assistantProject();
         edi::ExperimentBase& experiment = *model.experiments[0];
         QVERIFY(std::abs(peakRatioOf(model) - 1.0) < 1e-6);
@@ -216,7 +217,7 @@ private slots:
         edi::Edit::restore_experiment_controls(model, std::move(before))();
         QCOMPARE(experiment.background.size(), std::size_t(0));
         QCOMPARE(experiment.linked_structures.size(), std::size_t(1));
-        QVERIFY(project.loadData(0, data));  // the same file again is still a load
+        QVERIFY(wait_for_load(project, project.loadData(0, data)));  // the same file again is still a load
         QVERIFY(std::abs(peakRatioOf(*project.assistantProject()) - 1.0) < 1e-6);
     }
     // A new project declares no minimizer settings and shows the defaults the owner chose (2026-11-17): 50 iterations,
@@ -340,7 +341,7 @@ private slots:
         }
         ProjectViewModel project(lbcoProject(std::nullopt), nullptr);
         QSignalSpy notes(&project, &ProjectViewModel::information);
-        QVERIFY(project.loadDatasets(project.experimentModels().value(0), files, false));
+        QVERIFY(wait_for_load(project, project.loadDatasets(project.experimentModels().value(0), files, false)));
         const edi::Project& model = *project.assistantProject();
         QCOMPARE(model.experiments.size(), std::size_t(3));
         int started = 0;
@@ -364,7 +365,7 @@ private slots:
         const QUrl data = QUrl::fromLocalFile(QString::fromUtf8(EDI_SOURCE_DIR) + "/app/tutorials/files/hrpt.xye");
         ProjectViewModel project(lbcoProject(1.0), nullptr);  // the 1 Å a new experiment starts at
         QSignalSpy notes(&project, &ProjectViewModel::information);
-        QVERIFY(project.loadData(0, data));
+        QVERIFY(wait_for_load(project, project.loadData(0, data)));
         QVERIFY(std::abs(peakRatioOf(*project.assistantProject()) - 1.0) < 1e-6);
         bool warned = false;
         for (const auto& note : notes) warned = warned || note.at(0).toString().contains("do not line up");

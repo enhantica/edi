@@ -318,6 +318,8 @@ ProjectViewModel::ProjectViewModel(edi::Project project, QObject* parent, const 
     // The data-not-found line names the selected experiment's linked file: it follows the selection and every change
     // the folder's line follows.
     connect(this, &ProjectViewModel::currentExperimentIndexChanged, this, &ProjectViewModel::missingDataFileChanged);
+    load_clock_.setInterval(1000);
+    connect(&load_clock_, &QTimer::timeout, this, &ProjectViewModel::readingDataChanged);
     connect(this, &ProjectViewModel::missingDataFolderChanged, this, &ProjectViewModel::missingDataFileChanged);
     connect(this, &ProjectViewModel::missingDataFileChanged, this, &ProjectViewModel::pendingCollectionDataChanged);
     connect(this, &ProjectViewModel::currentExperimentIndexChanged, this, [this] {
@@ -556,6 +558,9 @@ ProjectViewModel::~ProjectViewModel() {
         selection_store_timer_.stop();
         storeSelection();
     }
+    // A load still reading finishes in the background; its result finds this object gone and only cleans up.
+    if (pending_load_) pending_load_->cancelled->store(true);
+    pending_load_.reset();
     // No delivery after this: the fit and the preview first, then the worker, which waits for the job in flight.
     if (fit_ != nullptr) {
         fit_->close();
@@ -2779,8 +2784,8 @@ bool ProjectViewModel::loadSeriesOfJointFits(ExperimentViewModel* experiment, co
     return true;
 }
 
-bool ProjectViewModel::loadDatasets(ExperimentViewModel* experiment, const QList<QUrl>& files, bool asScan, bool copy,
-                                    const QList<CollectionOrigin>& origins) {
+bool ProjectViewModel::loadDatasetsNow(ExperimentViewModel* experiment, const QList<QUrl>& files, bool asScan,
+                                       bool copy, const QList<CollectionOrigin>& origins) {
     LoadAttempt attempt(this);  // a refusal while it lasts attaches only this load's failed file (takeRefusedFile)
     const PublicationScope publication(*this);
     const QPointer<ProjectViewModel> self(this);
@@ -2857,7 +2862,8 @@ bool ProjectViewModel::loadDatasets(ExperimentViewModel* experiment, const QList
         edi::Project next(base);
         try {
             attempt.reading(files.front().toLocalFile());
-            auto read = edi::experiment_with_plain_data(source, files.front().toLocalFile().toStdString(), false);
+            const std::string path = files.front().toLocalFile().toStdString();
+            auto read = readDataFile(source, path, path, false);
             attempt.read();
             if (const QString refusal = linkSource(read.experiment, files.front(), !read.more.empty()); !refusal.isEmpty())
                 return refuse(refusal);
@@ -2890,7 +2896,8 @@ bool ProjectViewModel::loadDatasets(ExperimentViewModel* experiment, const QList
             edi::PlainDataLoad read;
             try {
                 attempt.reading(file.toLocalFile());
-                read = edi::experiment_with_plain_data(edi::experiment_copy(base, source), file.toLocalFile().toStdString(), true);
+                const std::string path = file.toLocalFile().toStdString();
+                read = readDataFile(edi::experiment_copy(base, source), path, path, true);
                 attempt.read();
             } catch (const std::exception& problem) {
                 return refuse(tr("%1 could not be loaded: %2").arg(fileName(file), QString::fromUtf8(problem.what())));
@@ -2999,7 +3006,8 @@ bool ProjectViewModel::loadDatasets(ExperimentViewModel* experiment, const QList
         edi::Project next(base);
         try {
             attempt.reading(QDir(parent).filePath(names.front()));
-            auto read = edi::experiment_with_plain_data(source, QDir(parent).filePath(names.front()).toStdString(), false);
+            const std::string path = QDir(parent).filePath(names.front()).toStdString();
+            auto read = readDataFile(source, path, path, false);
             attempt.read();
             std::vector<edi::ItemVec<edi::BraggPdExperiment>::Ptr> kept{std::make_shared<edi::BraggPdExperiment>(std::move(read.experiment))};
             next.experiments.assign(std::move(kept));
@@ -3017,8 +3025,11 @@ bool ProjectViewModel::loadDatasets(ExperimentViewModel* experiment, const QList
         qCInfo(lcApp, "%d datasets linked as a scan in %s", static_cast<int>(files.size()), qPrintable(parent));
         return true;
     }
-    QString directory = QString::fromStdString(project.path.empty() ? project.scan_data_root : project.path);
-    QString freshRoot;
+    // The first phase of a background load made the folder and its job copied the files there (prepared_scan_).
+    const std::optional<PreparedScan> prepared = prepared_scan_;
+    QString directory = prepared ? prepared->directory
+                                 : QString::fromStdString(project.path.empty() ? project.scan_data_root : project.path);
+    QString freshRoot = prepared ? prepared->fresh_root : QString();
     if (directory.isEmpty()) {
         try {
             freshRoot = QString::fromStdString(edi::fresh_archive_directory("scan-data"));
@@ -3029,14 +3040,14 @@ bool ProjectViewModel::loadDatasets(ExperimentViewModel* experiment, const QList
     }
     if (!QFileInfo(directory).isDir()) return refuse(tr("The project's data folder is unavailable"));
     const QDir root(directory);
-    QString folder = QStringLiteral("scans/") + QString::fromStdString(source.name.value());
-    for (int n = 2; root.exists(folder); ++n) folder = QStringLiteral("scans/%1_%2").arg(QString::fromStdString(source.name.value())).arg(n);
+    QString folder = prepared ? prepared->folder : QStringLiteral("scans/") + QString::fromStdString(source.name.value());
+    for (int n = 2; !prepared && root.exists(folder); ++n) folder = QStringLiteral("scans/%1_%2").arg(QString::fromStdString(source.name.value())).arg(n);
     const QString target = root.filePath(folder);
     const auto discard = [&] {
         if (!freshRoot.isEmpty()) edi::remove_archive_directory(freshRoot.toStdString());
         else QDir(target).removeRecursively();
     };
-    if (!root.mkpath(folder)) {
+    if (!prepared && !root.mkpath(folder)) {
         discard();
         return refuse(tr("The folder %1 could not be made in the project").arg(folder));
     }
@@ -3047,7 +3058,7 @@ bool ProjectViewModel::loadDatasets(ExperimentViewModel* experiment, const QList
             discard();
             return refuse(tr("Two of the files are named %1; a scan's files need distinct names").arg(name));
         }
-        if (!QFile::copy(file.toLocalFile(), QDir(target).filePath(name))) {
+        if (!prepared && !QFile::copy(file.toLocalFile(), QDir(target).filePath(name))) {
             discard();
             return refuse(tr("%1 could not be copied into the project").arg(name));
         }
@@ -3058,7 +3069,8 @@ bool ProjectViewModel::loadDatasets(ExperimentViewModel* experiment, const QList
         // The template holds the first dataset's data; the scan lists every file of its folder, in name order. The
         // copy goes when the scan is refused, so the user's own file is the one recorded.
         attempt.reading(files.front().toLocalFile());
-        auto read = edi::experiment_with_plain_data(source, QDir(target).filePath(names.front()).toStdString(), false);
+        const std::string path = QDir(target).filePath(names.front()).toStdString();
+        auto read = readDataFile(source, path, path, false);
         attempt.read();
         std::vector<edi::ItemVec<edi::BraggPdExperiment>::Ptr> held{std::make_shared<edi::BraggPdExperiment>(std::move(read.experiment))};
         next.experiments.assign(std::move(held));
@@ -3152,8 +3164,8 @@ bool ProjectViewModel::setNewExperimentType(const QString& axis, const QString& 
     return true;
 }
 
-bool ProjectViewModel::loadDataIntoNewExperiment(const QUrl& file, const QString& sampleForm, const QString& beamMode,
-                                                 const QString& radiationProbe) {
+bool ProjectViewModel::loadDataIntoNewExperimentNow(const QUrl& file, const QString& sampleForm,
+                                                    const QString& beamMode, const QString& radiationProbe) {
     LoadAttempt attempt(this);  // a refusal while it lasts attaches only this load's failed file (takeRefusedFile)
     const PublicationScope publication(*this);
     const QPointer<ProjectViewModel> self(this);
@@ -3178,7 +3190,8 @@ bool ProjectViewModel::loadDataIntoNewExperiment(const QUrl& file, const QString
     try {
         const edi::BraggPdExperiment fresh = edi::simulation_experiment(freeExperimentName(), type, structures);
         attempt.reading(file.toLocalFile());
-        read.emplace(edi::experiment_with_plain_data(fresh, file.toLocalFile().toStdString(), true));
+        const std::string path = file.toLocalFile().toStdString();
+        read.emplace(readDataFile(fresh, path, path, true));
         attempt.read();
     } catch (const std::exception& refusal) {
         return refuse(QString::fromUtf8(refusal.what()));
@@ -3529,7 +3542,7 @@ QString ProjectViewModel::replaceData(int index, edi::BraggPdExperiment replacem
     return {};
 }
 
-bool ProjectViewModel::loadData(int index, const QUrl& file) {
+bool ProjectViewModel::loadDataNow(int index, const QUrl& file) {
     LoadAttempt attempt(this);  // a refusal while it lasts attaches only this load's failed file (takeRefusedFile)
     const PublicationScope publication(*this);
     const QPointer<ProjectViewModel> self(this);
@@ -3573,10 +3586,11 @@ bool ProjectViewModel::loadData(int index, const QUrl& file) {
         if(input) {
             if(!input->reader_path.isLocalFile())return refuse(tr("The approved data reader input is unavailable"));
             attempt.reading(file.toLocalFile());
-            read.emplace(edi::experiment_with_plain_data(experiment,input->reader_path.toLocalFile().toStdString(),file.toLocalFile().toStdString(),default_name));
+            read.emplace(readDataFile(experiment,input->reader_path.toLocalFile().toStdString(),file.toLocalFile().toStdString(),default_name));
         } else {
             attempt.reading(file.toLocalFile());
-            read.emplace(edi::experiment_with_plain_data(experiment, file.toLocalFile().toStdString(), default_name));
+            const std::string path = file.toLocalFile().toStdString();
+            read.emplace(readDataFile(experiment, path, path, default_name));
         }
         attempt.read();
     } catch (const std::exception& refusal) {
@@ -3748,9 +3762,313 @@ bool ProjectViewModel::loadDataInto(ExperimentViewModel* experiment, const QUrl&
         announceRefused(refusal);
         return false;
     }
-    // Into a scan project the file replaces the scan, whichever way it came (file, browser, web, assistant).
-    if (project_->sequential_fit.declared()) return loadDatasets(experiment, {file}, false, true);
+    // Into a scan project the file replaces the scan, whichever way it came (file, browser, web, assistant). The
+    // assistant's pre-armed input is loaded in this call, for a scan as for any other experiment.
+    const bool scan = project_->sequential_fit.declared();
+    if (widget_file_input_) return scan ? loadDatasetsNow(experiment, {file}, false, true, {}) : loadDataNow(index, file);
+    if (scan) return loadDatasets(experiment, {file}, false, true);
     return loadData(index, file);
+}
+
+namespace {
+// What the Experiments group says while files are read: the file, or how many, and their size.
+QString reading_text(const QStringList& files) {
+    qint64 bytes = 0;
+    for (const QString& file : files) bytes += QFileInfo(file).size();
+    const QString size = QString::number(static_cast<double>(bytes) / 1e6, 'f', bytes < 10'000'000 ? 1 : 0);
+    return files.size() == 1
+               ? ProjectViewModel::tr("Reading %1, %2 MB").arg(QFileInfo(files.front()).fileName(), size)
+               : ProjectViewModel::tr("Reading %1 files, %2 MB").arg(files.size()).arg(size);
+}
+}  // namespace
+
+bool ProjectViewModel::loadData(int index, const QUrl& file) {
+    // Refusals the route makes before reading, and the assistant's pre-armed input, stay in this call.
+    if (retired_ || widget_file_input_ || scan_ || index < 0 || index >= experiment_models_.size() ||
+        !file.isLocalFile())
+        return loadDataNow(index, file);
+    const std::string path = file.toLocalFile().toStdString();
+    DataLoadOrder order;
+    order.target = experiment_models_.at(index);
+    order.files = {file.toLocalFile()};
+    order.reads.push_back({path, path, edi::data_kind(*project_->experiments[static_cast<std::size_t>(index)])});
+    order.second = [this, target = order.target, file] {
+        const int at = target ? static_cast<int>(experiment_models_.indexOf(target)) : -1;
+        if (at < 0) {
+            const QString refusal = tr("The experiment the file was chosen for is no longer in the project");
+            setLastError(refusal);
+            announceRefused(refusal);
+            return false;
+        }
+        return loadDataNow(at, file);
+    };
+    return startDataLoad(std::move(order));
+}
+
+bool ProjectViewModel::loadDataIntoNewExperiment(const QUrl& file, const QString& sampleForm, const QString& beamMode,
+                                                 const QString& radiationProbe) {
+    if (retired_ || scan_ || !canCreateExperiment() || !file.isLocalFile())
+        return loadDataIntoNewExperimentNow(file, sampleForm, beamMode, radiationProbe);
+    // The new experiment's kind decides how the file is read; an impossible type refuses here, before any read.
+    edi::ExperimentTypeTokens type = new_experiment_type_;
+    if (!sampleForm.isEmpty()) type.sample_form = sampleForm.toStdString();
+    if (!beamMode.isEmpty()) type.beam_mode = beamMode.toStdString();
+    if (!radiationProbe.isEmpty()) type.radiation_probe = radiationProbe.toStdString();
+    edi::DataKind kind;
+    try {
+        kind = edi::data_kind(edi::simulation_experiment(freeExperimentName(), type, std::vector<std::string>{}));
+    } catch (const std::exception&) {
+        return loadDataIntoNewExperimentNow(file, sampleForm, beamMode, radiationProbe);
+    }
+    const std::string path = file.toLocalFile().toStdString();
+    DataLoadOrder order;
+    order.files = {file.toLocalFile()};
+    order.reads.push_back({path, path, kind});
+    order.second = [this, file, sampleForm, beamMode, radiationProbe] {
+        return loadDataIntoNewExperimentNow(file, sampleForm, beamMode, radiationProbe);
+    };
+    return startDataLoad(std::move(order));
+}
+
+bool ProjectViewModel::loadDatasets(ExperimentViewModel* experiment, const QList<QUrl>& files, bool asScan, bool copy,
+                                    const QList<CollectionOrigin>& origins) {
+    const int index = static_cast<int>(experiment_models_.indexOf(experiment));
+    const auto now = [&] { return loadDatasetsNow(experiment, files, asScan, copy, origins); };
+    // Refusals the route makes before reading stay in this call, and so does the assistant's pre-armed input.
+    if (retired_ || widget_file_input_ || index < 0 || files.isEmpty()) return now();
+    for (const QUrl& file : files)
+        if (!file.isLocalFile()) return now();
+    if (!editReadinessRefusal(false).isEmpty()) return now();
+    const edi::Project& project = *project_;
+    const edi::DataKind kind = edi::data_kind(*project.experiments[static_cast<std::size_t>(index)]);
+    DataLoadOrder order;
+    order.target = experiment;
+    for (const QUrl& file : files) order.files.append(file.toLocalFile());
+    const auto read = [&order, kind](const QString& file) {
+        const std::string path = file.toStdString();
+        order.reads.push_back({path, path, kind});
+    };
+    const bool replacing = project.sequential_fit.declared();
+    if (replacing && files.size() == 1 && !asScan) {
+        read(files.front().toLocalFile());
+    } else if (!asScan) {
+        for (const QUrl& file : files) read(file.toLocalFile());
+    } else if (project.experiments.size() != 1 || (!copy && !origins.isEmpty())) {
+        return now();
+    } else if (!copy) {
+        // A linked scan reads its first file in name order, where the files lie.
+        QStringList names;
+        for (const QUrl& file : files) names.append(QFileInfo(file.toLocalFile()).fileName());
+        names.sort();
+        read(QDir(QFileInfo(files.front().toLocalFile()).absolutePath()).filePath(names.front()));
+    } else {
+        // A copied scan: its folder is made here, the job copies every file into it, then reads the first.
+        QStringList names;
+        for (const QUrl& file : files) {
+            const QString name = QFileInfo(file.toLocalFile()).fileName();
+            if (names.contains(name)) return now();
+            names.append(name);
+        }
+        PreparedScan scan;
+        scan.directory = QString::fromStdString(project.path.empty() ? project.scan_data_root : project.path);
+        if (scan.directory.isEmpty()) {
+            try {
+                scan.fresh_root = QString::fromStdString(edi::fresh_archive_directory("scan-data"));
+            } catch (const std::exception&) {
+                return now();
+            }
+            scan.directory = scan.fresh_root;
+        }
+        const QDir root(scan.directory);
+        const QString name = QString::fromStdString(project.experiments.front()->name.value());
+        scan.folder = QStringLiteral("scans/") + name;
+        for (int n = 2; root.exists(scan.folder); ++n) scan.folder = QStringLiteral("scans/%1_%2").arg(name).arg(n);
+        if (!QFileInfo(scan.directory).isDir() || !root.mkpath(scan.folder)) {
+            if (!scan.fresh_root.isEmpty()) edi::remove_archive_directory(scan.fresh_root.toStdString());
+            return now();
+        }
+        read(QDir(root.filePath(scan.folder)).filePath(names.front()));
+        order.scan = scan;
+    }
+    const QPointer<ExperimentViewModel> target(experiment);
+    order.second = [this, target, files, asScan, copy, origins] {
+        if (!target || !experiment_models_.contains(target)) {
+            const QString refusal = tr("The experiment the data was chosen for is no longer in the project");
+            setLastError(refusal);
+            announceRefused(refusal);
+            return false;
+        }
+        return loadDatasetsNow(target, files, asScan, copy, origins);
+    };
+    return startDataLoad(std::move(order));
+}
+
+bool ProjectViewModel::startDataLoad(DataLoadOrder order) {
+    discardDataLoad();  // a newer load replaces the one still reading
+    PendingLoad pending;
+    pending.id = ++load_serial_;
+    pending.text = reading_text(order.files);
+    pending.started_ms = QDateTime::currentMSecsSinceEpoch();
+    pending.scan = order.scan;
+    pending.second = std::move(order.second);
+    pending.cancelled = std::make_shared<std::atomic<bool>>(false);
+    const quint64 id = pending.id;
+    const auto cancelled = pending.cancelled;
+    if (order.target) {
+        // Removing the experiment the files are read for drops the load.
+        pending.watch = connect(order.target.data(), &QObject::destroyed, this, [this, id] {
+            if (pending_load_ && pending_load_->id == id) {
+                discardDataLoad();
+                emit dataLoadSettled(false);
+            }
+        });
+    }
+    pending_load_ = std::move(pending);
+    load_clock_.start();
+    emit loadingDataChanged();
+    emit readingDataChanged();
+    QStringList copies;
+    QString into;
+    if (order.scan) {
+        copies = order.files;
+        into = QDir(order.scan->directory).filePath(order.scan->folder);
+    }
+    const QPointer<ProjectViewModel> self(this);
+    run_in_background([self, id, cancelled, reads = std::move(order.reads), copies, into,
+                       scan = order.scan]() mutable {
+        std::map<std::string, ReadOutcome> outcomes;
+        QString copy_error;
+        for (const QString& file : copies) {
+            if (cancelled->load()) break;
+            const QString name = QFileInfo(file).fileName();
+            if (!QFile::copy(file, QDir(into).filePath(name))) {
+                copy_error = tr("%1 could not be copied into the project").arg(name);
+                break;
+            }
+        }
+        for (const DataReadOrder& wanted : reads) {
+            if (!copy_error.isEmpty() || cancelled->load()) break;
+            ReadOutcome outcome;
+            try {
+                outcome.read = edi::read_data_file(wanted.kind, wanted.reader, wanted.source);
+            } catch (const std::exception& refusal) {
+                outcome.error = QString::fromUtf8(refusal.what());
+            }
+            outcomes[wanted.reader] = std::move(outcome);
+        }
+        QMetaObject::invokeMethod(
+            QCoreApplication::instance(),
+            [self, id, scan, outcomes = std::move(outcomes), copy_error]() mutable {
+                if (self && self->pending_load_ && self->pending_load_->id == id && !self->retired_) {
+                    self->finishDataLoad(id, std::move(outcomes), copy_error);
+                    return;
+                }
+                // Cancelled, replaced or its project gone: the folder it copied into goes, now that nothing writes it.
+                if (!scan) return;
+                if (!scan->fresh_root.isEmpty()) {
+                    try {
+                        edi::remove_archive_directory(scan->fresh_root.toStdString());
+                    } catch (...) {
+                    }
+                } else {
+                    QDir(QDir(scan->directory).filePath(scan->folder)).removeRecursively();
+                }
+            },
+            Qt::QueuedConnection);
+    });
+    return true;
+}
+
+void ProjectViewModel::finishDataLoad(quint64 id, std::map<std::string, ReadOutcome> outcomes,
+                                      const QString& copy_error) {
+    if (!pending_load_ || pending_load_->id != id) return;
+    PendingLoad pending = std::move(*pending_load_);
+    pending_load_.reset();
+    disconnect(pending.watch);
+    load_clock_.stop();
+    const QPointer<ProjectViewModel> self(this);
+    emit loadingDataChanged();
+    emit readingDataChanged();
+    if (!self || retired_) return;
+    // A copied scan's folder, when the scan did not take it.
+    const auto removeScan = [&pending]() noexcept {
+        if (!pending.scan) return;
+        try {
+            if (!pending.scan->fresh_root.isEmpty()) edi::remove_archive_directory(pending.scan->fresh_root.toStdString());
+            else QDir(QDir(pending.scan->directory).filePath(pending.scan->folder)).removeRecursively();
+        } catch (...) {
+        }
+    };
+    bool loaded = false;
+    if (!copy_error.isEmpty()) {
+        removeScan();
+        setLastError(copy_error);
+        announceRefused(copy_error);
+    } else {
+        // The route's own code again, every read taken from the job; a read it asks for that the job did not make
+        // means the project changed meanwhile, and refuses.
+        preread_ = std::move(outcomes);
+        prepared_scan_ = pending.scan;
+        second_phase_ = true;
+        const auto clear = qScopeGuard([this, self] {
+            if (!self) return;
+            preread_.clear();
+            prepared_scan_.reset();
+            second_phase_ = false;
+        });
+        try {
+            loaded = pending.second && pending.second();
+        } catch (const std::exception& refusal) {
+            if (self && !retired_) {
+                setLastError(QString::fromUtf8(refusal.what()));
+                announceRefused(last_error_);
+            }
+        }
+    }
+    if (!self) return;
+    if (!loaded) removeScan();
+    emit dataLoadSettled(loaded);
+}
+
+void ProjectViewModel::discardDataLoad() {
+    if (!pending_load_) return;
+    pending_load_->cancelled->store(true);  // the job stops between files and only cleans up
+    disconnect(pending_load_->watch);
+    pending_load_.reset();
+    load_clock_.stop();
+    emit loadingDataChanged();
+    emit readingDataChanged();
+}
+
+void ProjectViewModel::cancelDataLoad() {
+    if (!pending_load_) return;
+    discardDataLoad();
+    emit dataLoadSettled(false);
+}
+
+QString ProjectViewModel::readingData() const {
+    if (!pending_load_) return {};
+    const qint64 seconds = (QDateTime::currentMSecsSinceEpoch() - pending_load_->started_ms) / 1000;
+    return seconds < 1 ? pending_load_->text : tr("%1, %2 s").arg(pending_load_->text).arg(seconds);
+}
+
+edi::PlainDataLoad ProjectViewModel::readDataFile(const edi::BraggPdExperiment& experiment, const std::string& reader,
+                                                  const std::string& source, bool take_file_name) {
+    if (!second_phase_) return edi::experiment_with_plain_data(experiment, reader, source, take_file_name);
+    const auto found = preread_.find(reader);
+    if (found == preread_.end())
+        throw edi::IoError(tr("The project changed while the data was read, so nothing was loaded. Load it again.")
+                               .toStdString());
+    ReadOutcome outcome = std::move(found->second);
+    preread_.erase(found);
+    if (!outcome.error.isEmpty()) throw edi::IoError(outcome.error.toStdString());
+    if (!outcome.read || !edi::read_fits(*outcome.read, experiment))
+        throw edi::IoError(tr("%1 was read for the experiment as it was; '%2' changed its sample form or beam mode "
+                              "while the file was read, so nothing was loaded. Load it again.")
+                               .arg(QFileInfo(QString::fromStdString(source)).fileName(),
+                                    QString::fromStdString(experiment.name.value()))
+                               .toStdString());
+    return edi::experiment_with_read(experiment, std::move(*outcome.read), take_file_name);
 }
 
 bool ProjectViewModel::createStructure() {

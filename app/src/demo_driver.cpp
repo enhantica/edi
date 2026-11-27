@@ -62,6 +62,7 @@
 #include "parameter_table_model.hpp"
 #include "pattern_chart_controller.hpp"
 #include "project_view_model.hpp"
+#include "load_wait.hpp"
 #include "scan_session.hpp"
 #include "scan_view_model.hpp"
 #include "session.hpp"
@@ -5323,7 +5324,9 @@ bool DemoDriver::perform(const QString& action) {
         QQmlEngine* engine = qmlEngine(window_.contentItem());
         auto* session = engine ? engine->singletonInstance<Session*>("edi.app", "Session") : nullptr;
         if (!path.isEmpty() && session != nullptr && session->project() != nullptr) {
-            session->project()->loadDataInto(session->project()->currentExperiment(), QUrl::fromLocalFile(path));
+            // Read off the GUI thread (edi ADR-0110): the capture after this step shows the loaded data.
+            wait_for_load(*session->project(),
+                          session->project()->loadDataInto(session->project()->currentExperiment(), QUrl::fromLocalFile(path)));
         }
         return true;
     }

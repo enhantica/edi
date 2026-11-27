@@ -211,6 +211,18 @@ AppDialog {
 
     // A late answer is refused when its project is no longer the open one, or its measured-data target has gone.
     property string deliveryMessage: ""
+    // A data file is read after the dialog closes (edi ADR-0089 point 7): its entry counts as loaded once the load ends
+    // with the data in the project.
+    property var pendingDataEntry: null
+    Connections {
+        target: dialog.pendingDataEntry !== null ? dialog.project : null
+        function onDataLoadSettled(loaded: bool) {
+            const entry = dialog.pendingDataEntry;
+            dialog.pendingDataEntry = null;
+            if (loaded && entry !== null)
+                AppState.onlineEntryLoaded(entry.kind, entry.id);
+        }
+    }
 
     Connections {
         target: dialog.search
@@ -245,7 +257,14 @@ AppDialog {
                 done = dialog.project.loadDataIntoNewExperiment(file, type.sampleForm, type.beamMode, type.radiationProbe);
             }
             if (done) {
-                AppState.onlineEntryLoaded(kind, entry.id);
+                // A started data load ends later; a structure or an experiment file is loaded now.
+                if (kind !== "structure" && kind !== "experiment" && dialog.project.loadingData)
+                    dialog.pendingDataEntry = {
+                        kind: kind,
+                        id: entry.id
+                    };
+                else
+                    AppState.onlineEntryLoaded(kind, entry.id);
                 dialog.close();
             }
         }
