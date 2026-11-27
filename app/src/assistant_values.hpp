@@ -170,13 +170,30 @@ struct AssistantAccount {
     QML_VALUE_TYPE(assistantAccount)
     Q_PROPERTY(QString email MEMBER email CONSTANT)
     Q_PROPERTY(QString planType MEMBER planType CONSTANT)
+    Q_PROPERTY(QString credentialKind MEMBER credentialKind CONSTANT)
+    Q_PROPERTY(QString credentialSource MEMBER credentialSource CONSTANT)
 
    public:
-    QString email, planType;
+    // When the user's own credential decides the identity instead of a provider sign-in, credentialKind is "apiKey"
+    // or "token" and credentialSource is where the runtime says it came from, if it says (edi ADR-0108 §4).
+    QString email, planType, credentialKind, credentialSource;
     bool operator==(const AssistantAccount&) const = default;
 
     static AssistantAccount fromJson(const QJsonObject& source) {
-        return {source.value("email").toString(), source.value("planType").toString()};
+        const auto named = [&source](const char* field) {
+            const auto value = source.value(QLatin1StringView(field)).toString();
+            return value == QLatin1StringView("none") || value == QLatin1StringView("claude.ai") ? QString() : value;
+        };
+        AssistantAccount account{source.value("email").toString(), source.value("planType").toString(), {}, {}};
+        const auto method = named("authMethod").toLower().remove(QLatin1Char('-')).remove(QLatin1Char('_'));
+        if (const auto key = named("apiKeySource"); !key.isEmpty() || method == QLatin1StringView("apikey")) {
+            account.credentialKind = QStringLiteral("apiKey");
+            account.credentialSource = key;
+        } else if (const auto token = named("tokenSource"); !token.isEmpty()) {
+            account.credentialKind = QStringLiteral("token");
+            account.credentialSource = token;
+        }
+        return account;
     }
 };
 

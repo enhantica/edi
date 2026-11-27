@@ -842,6 +842,14 @@ Popup {
                             wrapMode: Text.WrapAnywhere
                         }
                         EaElements.Label {
+                            objectName: "assistant.accountCredential"
+                            width: parent.width
+                            visible: panel.accountData.credentialKind.length > 0
+                            text: (panel.accountData.credentialKind === "token" ? qsTr("%1 is using your own token, not a %1 sign-in.") : qsTr("%1 is using your own API key, not a %1 sign-in.")).arg(panel.assistant.activeProvider.name) + (panel.accountData.credentialSource.length > 0 ? " " + qsTr("Source: %1.").arg(panel.accountData.credentialSource) : "") + " " + qsTr("edi does not show it.")
+                            textFormat: Text.PlainText
+                            wrapMode: Text.WordWrap
+                        }
+                        EaElements.Label {
                             objectName: "assistant.accountPlan"
                             width: parent.width
                             visible: panel.accountPlanLabel.length > 0
