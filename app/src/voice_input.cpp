@@ -14,6 +14,8 @@
 #include <cmath>
 #include <filesystem>
 #include <mutex>
+#include <new>
+#include <stdexcept>
 #include <utility>
 
 #ifndef EDI_VOICE_INSTALL_RELATIVE
@@ -165,24 +167,34 @@ void VoiceInput::stop() {
     // The native path, so a model folder outside the ANSI code page still opens on Windows.
     const std::filesystem::path model = QFileInfo(model_).filesystemAbsoluteFilePath();
     const auto language = language_ == QStringLiteral("detect") ? std::string() : language_.toStdString();
+    // NOLINTNEXTLINE(bugprone-exception-escape): only libc++'s container growth past max_size() raises length_error here
     workers_.start([receiver, generation, job, model, language] {
         std::vector<float> recording;
         {
             const std::lock_guard lock(job->mutex);
             recording.swap(job->recording);
         }
-        std::string error;
         SpeechRecogniser::Result result;
-        // Cancelled before this job started, or while the model loaded: no model is opened, or no inference runs.
-        if (job->cancelled.load()) {
-            result.cancelled = true;
-        } else if (auto recogniser = SpeechRecogniser::load(model, error)) {
-            if (job->cancelled.load())
+        // The pool rethrows what a job throws, which would end the app, so a failure here becomes the message.
+        try {
+            std::string error;
+            // Cancelled before this job started, or while the model loaded: no model is opened, or no inference runs.
+            if (job->cancelled.load()) {
                 result.cancelled = true;
-            else
-                result = recogniser->recognise(recording, language, &job->cancelled);
-        } else {
-            result.error = error;
+            } else if (auto recogniser = SpeechRecogniser::load(model, error)) {
+                if (job->cancelled.load())
+                    result.cancelled = true;
+                else
+                    result = recogniser->recognise(recording, language, &job->cancelled);
+            } else {
+                result.error = error;
+            }
+        } catch (const std::bad_alloc&) {
+            result = {};
+            result.error = "There is not enough free memory to recognise the speech.";
+        } catch (const std::exception&) {
+            result = {};
+            result.error = "The speech could not be recognised.";
         }
         std::vector<float>().swap(recording);
         QMetaObject::invokeMethod(QCoreApplication::instance(), [receiver, generation, result = std::move(result)] {

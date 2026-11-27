@@ -58,13 +58,15 @@ assistant runtime, and shows its choices as rows on the folder page instead of a
    `com.apple.security.device.audio-input` entitlement. Windows reports a blocked microphone through its privacy
    settings as a failed recording. Refused permission and a missing microphone each get one plain message in the
    message box's place, naming what the user can do.
-6. **Recognition.** The recording is recognised in one pass after it stops, off the GUI thread through
-   `run_in_background` (ADR-0020's worker is for calculations). A cancel during recognition stops whisper through its
-   abort callback. Whisper uses up to eight threads (§Speed). The model path is handed to whisper as UTF-8, which it
-   turns into a wide path on Windows, so an install folder outside the code page works. The text is inserted at the
-   cursor in the message box and is never sent by itself; the user edits it and sends it as typed text. A recording
-   belongs to the message box that started it: hiding the assistant, switching or clearing the conversation, or a
-   disconnect cancels it, and a late result for another owner is dropped.
+6. **Recognition.** The recording is recognised in one pass after it stops, off the GUI thread on a thread pool of its
+   own with one thread (ADR-0020's worker is for calculations), so recordings are recognised one at a time. A cancel
+   before a job starts means its model is never opened, and the audio goes at once; a cancel during recognition stops
+   whisper through its abort callback. A failure in the job, such as too little memory for the model, becomes the
+   message. Whisper uses up to eight threads (§Speed). The model path is handed to whisper as UTF-8, which it turns into
+   a wide path on Windows, so an install folder outside the code page works. The text is inserted at the cursor in the
+   message box and is never sent by itself; the user edits it and sends it as typed text. A recording belongs to the
+   message box that started it: hiding the assistant, switching or clearing the conversation, or a disconnect cancels
+   it, and a late result for another owner is dropped.
 7. **Language.** By default Whisper detects the language. The assistant preferences may fix it; the list of languages
    comes from whisper.cpp itself, so it cannot disagree with the model.
 8. **Composer button.** A round microphone button, the same component and size as the stop and send buttons, sits to
