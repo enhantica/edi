@@ -10,7 +10,6 @@ undo must change nothing. Every script, maintenance_cleanup.sh too, runs under t
 takes before it puts a kept tool back, so neither ever sees the other half way.
 """
 
-import fcntl
 import importlib.util
 import json
 import os
@@ -25,15 +24,15 @@ from pathlib import Path
 
 import pytest
 
+# The scripts run on macOS and Linux, never on Windows, which has no fcntl.
+fcntl = pytest.importorskip('fcntl', reason='POSIX shell scripts')
+
 ROOT = Path(__file__).resolve().parents[3]
 FOLDER = ROOT / 'tools/installer'
 SWAP = FOLDER / 'maintenance_swap.sh'
 RESTORE = FOLDER / 'maintenance_restore.sh'
 CLEANUP = FOLDER / 'maintenance_cleanup.sh'
 OPERATION = 'this-update'  # the swap operation's own mark
-
-# The scripts run on macOS and Linux, never on Windows.
-pytestmark = pytest.mark.skipif(sys.platform == 'win32', reason='POSIX shell scripts')
 
 
 @dataclass(frozen=True)
