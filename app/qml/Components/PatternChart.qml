@@ -92,8 +92,7 @@ Item {
             structure: chart.axisProject.structureAt(snapshot.parent),
             initialK: k,
             kSnapshotId: snapshot.id,
-            kRow: rank,
-            selectAfterAdd: false
+            kRow: rank
         }) as MagneticPopup;
         analysis.added.connect(count => {
             intensityCheck.stop();  // an earlier Add's check never writes over this one's notice

@@ -24,8 +24,8 @@ AppDialog {
     property StructureViewModel structure: null
     // A k to start from (the k-vector popup's choice), else the first preset.
     property string initialK: ""
-    // Opened from the Structure page, the first new structure becomes the current one; from Experiment → Pattern the
-    // page stays as it is (the popup never moves the user, owner 2026-11-27).
+    // After Add the first new structure becomes the Structure page's current one, from either origin; the page shown
+    // stays as it is (owner, 2026-11-27).
     property bool selectAfterAdd: true
     // Opened from Find k: the snapshot the chosen k was found for; Add refuses once it is no longer current
     // (review 16, F4). Empty from the Structure page.
