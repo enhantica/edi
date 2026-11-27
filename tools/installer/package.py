@@ -25,6 +25,9 @@ sys.path.insert(0, str(ROOT / 'tools/deps/voice'))
 import fetch as voice_models  # noqa: E402
 import versions  # noqa: E402
 
+sys.path.insert(0, str(ROOT / 'tools/installer'))
+import maintenance_resource  # noqa: E402
+
 SYSTEM = {'Linux': 'linux', 'Darwin': 'macos', 'Windows': 'windows'}[platform.system()]
 APP_COMPONENT = 'org.easydiffraction.app'
 ASSISTANT_COMPONENT = 'org.easydiffraction.app.assistant'
@@ -720,6 +723,26 @@ def add_maintenance_tool(
     return sha256(maintenance_tool_executable(target))
 
 
+def add_maintenance_resource(source: Path, tools: Path, environment: dict | None) -> None:
+    """Ship the maintenance tool's pages with the app component, for updates to put in place."""
+    meta = source / 'packages' / APP_COMPONENT / 'meta'
+    maintenance_resource.build(
+        tools / ('bin/binarycreator' + SUFFIX),
+        qt_tool('rcc'),
+        source / 'config/config.xml',
+        source / 'config/resources/resources.qrc',
+        meta.parent / 'data' / maintenance_resource.RESOURCE_NAME,
+        environment,
+    )
+    script = meta / 'installscript.qs'
+    text = script.read_text(encoding='utf-8')
+    unnamed = 'var MAINTENANCE_RESOURCE = "";'
+    if text.count(unnamed) != 1:
+        raise RuntimeError(f'installscript.qs must hold {unnamed} once')
+    named = f'var MAINTENANCE_RESOURCE = "{maintenance_resource.RESOURCE_NAME}";'
+    script.write_text(text.replace(unnamed, named), encoding='utf-8')
+
+
 def verify_installed_maintenance_tool(target: Path, metadata: dict) -> None:
     """Before running it, require the installed tool to be the shipped one (edi ADR-0091)."""
     if SYSTEM not in {'macos', 'windows'}:
@@ -1390,6 +1413,8 @@ def package_app(
         else None
     )
     if repository_url:
+        # Every online release, Linux included: only an update can refresh the tool's pages.
+        add_maintenance_resource(source, tools, tool_environment)
         # --sha-update writes each component's content checksum into the feed, and the Maintenance
         # Tool then offers a component whose checksum differs from the installed one instead of
         # one with a higher version. That is how 2026.11.x installs take 26.17, a lower number

@@ -20,7 +20,7 @@ function dropOldTool() {
     var target = installer.value("TargetDir");
     if (target === "" || !installer.fileExists(target + "/MaintenanceTool.app/Contents/MacOS/MaintenanceTool"))
         return;
-    installer.execute("/bin/rm", ["-rf", target + "/MaintenanceTool.app.old"]);
+    installer.execute("/bin/rm", ["-rf", target + "/MaintenanceTool.app.old", target + "/MaintenanceTool.app.old-token"]);
 }
 
 // Windows: a new installation goes to %LOCALAPPDATA%\Programs\EasyDiffraction, or to
