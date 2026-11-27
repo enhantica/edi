@@ -5,6 +5,7 @@ name: Build crysta
 # crysta's source fetches it itself with the app's read-only token (.github/actions/crysta-source); none stores or
 # prints it. The caller names the commit, pixi.toml's CRYSTA_COMMIT as its first job read it, so one commit reaches
 # the source, the SDK, its cache key and every consumer of a run; this workflow reads no pin of its own.
+# Each SDK job prints the record of the build it hands on (tools/ci/crysta_sdk_record.py).
 
 on:
   workflow_call:
@@ -45,7 +46,7 @@ jobs:
           import hashlib, os
           from pathlib import Path
           digest = hashlib.sha256()
-          for name in ['.github/workflows/crysta-sdk.yml', 'tools/ci/crysta_sdk.py', 'tools/ci/crysta_subject.py', '.github/actions/setup-pixi/action.yml']:
+          for name in ['.github/workflows/crysta-sdk.yml', 'tools/ci/crysta_sdk.py', 'tools/ci/crysta_sdk_record.py', 'tools/ci/crysta_subject.py', '.github/actions/setup-pixi/action.yml']:
               digest.update(name.encode() + b'\0' + Path(name).read_bytes() + b'\0')
           with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
               output.write(f'sha={digest.hexdigest()}\n')
@@ -191,6 +192,13 @@ jobs:
         env:
           SHA: ${{ needs.resolve.outputs.sha }}
         run: python3 tools/ci/crysta_sdk.py surface --source "$CRYSTA_SRC" --commit "$SHA" "crysta-sdk-archives/crysta-sdk-$SHA-${{ matrix.platform }}.tar.gz"
+      # The archive surface left is the one the cache, the artifact, every consumer and a release take.
+      - name: Write the SDK's producer record
+        if: steps.cache.outputs.cache-hit != 'true'
+        env:
+          SHA: ${{ needs.resolve.outputs.sha }}
+          RECIPE: ${{ needs.resolve.outputs.recipe }}
+        run: python3 tools/ci/crysta_sdk_record.py write --archives crysta-sdk-archives --sha "$SHA" --platform '${{ matrix.platform }}' --recipe "$RECIPE"
       - name: Save the SDK compiler cache
         if: ${{ !cancelled() && steps.compiler-inputs.outcome == 'success' && steps.compiler-cache.outcome == 'success' && steps.cache.outputs.cache-hit != 'true' }}
         uses: ./.github/actions/store
@@ -219,6 +227,12 @@ jobs:
           if checksum != f'{digest.hexdigest()}  {archive.name}\n':
               raise RuntimeError(f'SDK checksum does not bind the requested archive: {archive}')
           PYTHON
+      # Built here or restored, the job prints the record of what it hands on, checked against the archive.
+      - name: The SDK's producer record
+        env:
+          SHA: ${{ needs.resolve.outputs.sha }}
+          RECIPE: ${{ needs.resolve.outputs.recipe }}
+        run: python3 tools/ci/crysta_sdk_record.py show --archives crysta-sdk-archives --sha "$SHA" --platform '${{ matrix.platform }}' --recipe "$RECIPE"
       - name: Keep the SDK for the next run
         if: steps.cache.outputs.cache-hit != 'true'
         uses: ./.github/actions/store
