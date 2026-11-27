@@ -838,7 +838,8 @@ def verify_installed_maintenance_tool(
             raise RuntimeError(
                 f'The update left a staged maintenance tool the app keeps: {staged}'
             )
-    elif staging.exists() and SYSTEM != 'windows':
+    # is_dir: on a case-insensitive disk the Linux tool itself answers to this name.
+    elif staging.is_dir() and SYSTEM != 'windows':
         raise RuntimeError('The installer left the shipped maintenance tool in place')
     item = maintenance_item()
     if item and any((target / (item + suffix)).exists() for suffix in ('.old', '.old-token')):

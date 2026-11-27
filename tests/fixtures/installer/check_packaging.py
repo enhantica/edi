@@ -775,6 +775,8 @@ def test_installed_linux_tool_needs_its_whole_runtime(tmp_path, monkeypatch, dam
     elif damage == 'listing':
         (runtime / 'dependencies.json').unlink()
     elif damage == 'staged':
+        if (tmp_path / 'maintenancetool').exists():
+            pytest.skip('a case-insensitive disk cannot hold the tool and its staging folder')
         (tmp_path / 'maintenancetool').mkdir()
     elif damage == 'backup':
         (tmp_path / 'installer-runtime.old').mkdir()
