@@ -170,7 +170,7 @@ Item {
             const index = Array.from({
                 length: box.count
             }, (_, i) => box.textAt(i)).indexOf(token);
-            verify(index >= 0, "The actual atom-type selector offers the independent natural, isotope or ion token");
+            verify(index >= 0, "The actual atom-type selector offers " + token);
             click(box);
             tryCompare(box.popup, "opened", true, 1000, "Actual pointer input opens the atom-type list");
             const list = box.popup.contentItem;
@@ -228,7 +228,9 @@ Item {
                 verify(editor.text !== before, "The isotope edit changes the actual atom row");
                 const apply = findChild(page, "text.apply");
                 tryCompare(apply, "enabled", true, 1000, "Changing the isotope enables the real Text Apply");
-                click(apply);
+                let point;
+                tryVerify(() => (point = Ui.clickPoint(apply)) !== null, 3000, "The real Apply button becomes exposed after the Text tab settles");
+                mouseClick(apply, point.x, point.y);
                 tryVerify(() => Probe.rows(Session.project.currentStructure.atomSites)[0].typeSymbol === symbol, 3000, "Applying Text puts the typed isotope in the atom table model");
                 compare(isotopeAppearance(symbol), colour, "Text and table deuterium edits share the hydrogen scene colour and geometry");
             }
