@@ -351,18 +351,26 @@ SideBarGroup {
     // Closes `popup` with no exit transition: Qt then hides it in this call, not at the end of the animation. Later
     // closes animate as before.
     function closeAtOnce(popup) {
-        const exit = popup.exit;
-        popup.exit = null;
-        popup.close();
-        popup.exit = exit;
+        group.retire(popup, () => popup.close());
     }
     // The same for the Create dialog. Its `visible` follows the flag, so the flag is cleared instead of calling close():
     // a flag left set would keep the next Create from opening it.
     function hideCreateDialog() {
-        const exit = createDialog.exit;
-        createDialog.exit = null;
-        EaGlobals.Vars.showProjectDescriptionDialog = false;
-        createDialog.exit = exit;
+        group.retire(createDialog, () => {
+            EaGlobals.Vars.showProjectDescriptionDialog = false;
+        });
+    }
+    function retire(popup, close) {
+        const exit = popup.exit;
+        popup.exit = null;
+        close();
+        popup.exit = exit;
+        // Still visible: an exit that started earlier (an Escape just before) is running, and Qt starts no second one.
+        // Its item, the content's parent, is hidden now and takes no more input; Qt still ends the exit as usual and
+        // shows the item again at the next opening.
+        const item = popup.visible && popup.contentItem !== null ? popup.contentItem.parent : null;
+        if (item !== null)
+            item.visible = false;
     }
     function dropCreate() {
         createLife.alive = false;
