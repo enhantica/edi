@@ -1,4 +1,8 @@
-"""Exercise the headless Edi entrance on CIF syntax and atom-site defaults found in COD."""
+"""Check CIF syntax and legacy conventions seen in the COD import audit.
+
+The miniature inputs declare the expected site values. Space-group numbers and
+settings follow the International Tables for Crystallography, volume A.
+"""
 
 import edi
 import pytest
@@ -29,8 +33,10 @@ def test_cif11_reads_a_bare_value_starting_with_a_curly_brace(formula: str) -> N
     text = STRUCTURE + f'_chemical_formula_moiety {formula}\n'
     with pytest.warns(UserWarning, match=r'crysta\.schema\.cif_items_not_read') as warnings:
         structure = edi.StructureFactory.from_cif_str(text)
-    assert any('_chemical_formula_moiety' in str(warning.message) for warning in warnings)
-    assert len(structure.atom_sites) == 2
+    assert any('_chemical_formula_moiety' in str(warning.message) for warning in warnings), (
+        'An accepted bare formula is reported under its CIF tag'
+    )
+    assert len(structure.atom_sites) == 2, 'The formula does not change the declared atom rows'
 
 
 @pytest.mark.parametrize('formula', ['[text]', ']text'])
@@ -45,13 +51,25 @@ def test_cif_import_reports_defaults_for_missing_site_values() -> None:
     with pytest.warns(UserWarning, match='taken as a default') as warnings:
         structure = edi.StructureFactory.from_cif_str(STRUCTURE)
     messages = [str(warning.message) for warning in warnings]
-    assert any("site 'Na1' occupancy = 1" in message for message in messages)
-    assert any("site 'Na1' isotropic displacement = 0" in message for message in messages)
-    assert any("site 'Na1' element = Na" in message for message in messages)
-    assert all("site 'Cl1'" not in message for message in messages)
-    assert structure.atom_sites['Na1'].occupancy.value == 1
-    assert structure.atom_sites['Na1'].adp_iso.value == 0
-    assert structure.atom_sites['Cl1'].occupancy.value == 0.75
+    assert any("site 'Na1' occupancy = 1" in message for message in messages), (
+        'The default occupancy is reported for Na1'
+    )
+    assert any("site 'Na1' isotropic displacement = 0" in message for message in messages), (
+        'The default isotropic displacement is reported for Na1'
+    )
+    assert any("site 'Na1' element = Na" in message for message in messages), (
+        'The inferred sodium type is reported for Na1'
+    )
+    assert all("site 'Cl1'" not in message for message in messages), (
+        'The explicitly complete Cl1 site receives no defaults'
+    )
+    assert structure.atom_sites['Na1'].occupancy.value == 1, 'The model supplies unit occupancy'
+    assert structure.atom_sites['Na1'].adp_iso.value == 0, (
+        'The model supplies zero isotropic displacement'
+    )
+    assert structure.atom_sites['Cl1'].occupancy.value == 0.75, (
+        'The model retains the declared chlorine occupancy'
+    )
 
 
 def _rhombohedral_structure(declarations: str) -> str:
@@ -70,8 +88,12 @@ def test_cif_accepts_matching_space_group_alias_with_one_setting_suffix(*, rever
         symbols.reverse()
     with pytest.warns(UserWarning, match=r'crysta\.schema\.cif_items_not_read'):
         structure = edi.StructureFactory.from_cif_str(_rhombohedral_structure('\n'.join(symbols)))
-    assert structure.space_group.it_number == 167
-    assert structure.space_group.coord_system_code.lower() == 'h'
+    assert structure.space_group.it_number == 167, (
+        'Both aliases identify International Tables group 167'
+    )
+    assert structure.space_group.coord_system_code.lower() == 'h', (
+        'The declarations select the hexagonal axes of the rhombohedral group'
+    )
 
 
 @pytest.mark.parametrize('other', ['R -3 c :R', 'R 3 c :H'])
@@ -92,11 +114,15 @@ def test_cif_reads_an_ambiguous_hermann_mauguin_name_with_a_hall_symbol(hall: st
     declarations = f"_space_group_name_H-M_alt 'R 3 2'\n_symmetry_space_group_name_Hall '{hall}'"
     with pytest.warns(UserWarning, match=r'crysta\.schema\.cif_items_not_read') as warnings:
         structure = edi.StructureFactory.from_cif_str(_rhombohedral_structure(declarations))
-    assert structure.space_group.it_number == 155
-    assert structure.space_group.coord_system_code.lower() == 'h'
+    assert structure.space_group.it_number == 155, (
+        'The Hall symbol identifies International Tables group 155'
+    )
+    assert structure.space_group.coord_system_code.lower() == 'h', (
+        'The declarations select the hexagonal axes of the rhombohedral group'
+    )
     assert all(
         '_symmetry_space_group_name_Hall' not in str(warning.message) for warning in warnings
-    )
+    ), 'The Hall tag is consumed as a setting selector'
 
 
 def test_cif_refuses_a_hall_symbol_inconsistent_with_the_hermann_mauguin_name() -> None:
@@ -110,8 +136,12 @@ def test_cif_reads_an_origin_only_suffix_with_an_orthorhombic_symbol(code: str) 
     text = STRUCTURE.replace("'P 1'", f"'P b a n :2'{code}")
     with pytest.warns(UserWarning, match=r'crysta\.schema\.cif_items_not_read'):
         structure = edi.StructureFactory.from_cif_str(text)
-    assert structure.space_group.it_number == 50
-    assert structure.space_group.coord_system_code == '2abc'
+    assert structure.space_group.it_number == 50, (
+        'An origin suffix preserves International Tables group 50'
+    )
+    assert structure.space_group.coord_system_code == '2abc', (
+        'The declaration selects origin choice two with the original axes'
+    )
 
 
 def test_cif_refuses_incompatible_operations_with_an_origin_only_suffix() -> None:
@@ -150,12 +180,14 @@ def _with_placeholder(flag: str, *, include_sites: bool = True) -> str:
 def test_cif_reports_and_omits_an_explicitly_marked_dummy_placeholder() -> None:
     with pytest.warns(UserWarning, match=r'crysta\.schema\.cif_items_not_read') as warnings:
         structure = edi.StructureFactory.from_cif_str(_with_placeholder('dum'))
-    assert tuple(site.id for site in structure.atom_sites) == ('Na1', 'Cl1')
+    assert tuple(site.id for site in structure.atom_sites) == ('Na1', 'Cl1'), (
+        'An explicit dummy leaves precisely the two published physical sites'
+    )
     assert any(
         '_atom_site_calc_flag of atom-site row 3' in str(warning.message)
         and 'marks a dummy site' in str(warning.message)
         for warning in warnings
-    )
+    ), 'The omitted placeholder is reported with its source row and flag'
 
 
 def test_cif_keeps_refusing_unlabelled_physical_sites() -> None:
@@ -201,12 +233,18 @@ def test_cif_reads_legacy_adp_codes_using_the_supplied_tensor(
 ) -> None:
     with pytest.warns(UserWarning, match=r'crysta\.schema\.cif_items_not_read') as warnings:
         structure = edi.StructureFactory.from_cif_str(_with_legacy_adp(legacy, tensor_form))
-    assert structure.atom_sites['Na1'].adp_type == f'{tensor_form}ani'
-    assert structure.atom_site_aniso['Na1'].adp_11.value == pytest.approx(0.015)
-    assert structure.atom_site_aniso['Na1'].adp_33.value == pytest.approx(0.040)
+    assert structure.atom_sites['Na1'].adp_type == f'{tensor_form}ani', (
+        'The model takes the anisotropic units from the published tensor'
+    )
+    assert structure.atom_site_aniso['Na1'].adp_11.value == pytest.approx(0.015), (
+        'The first diagonal tensor component retains its supplied value'
+    )
+    assert structure.atom_site_aniso['Na1'].adp_33.value == pytest.approx(0.040), (
+        'The third diagonal tensor component retains its supplied value'
+    )
     assert any(
         f"'{legacy}'" in str(w.message) and 'legacy ADP type' in str(w.message) for w in warnings
-    )
+    ), 'The import reports the original legacy displacement code'
 
 
 @pytest.mark.parametrize(
@@ -245,12 +283,14 @@ def test_cif_preserves_a_legacy_sites_published_isotropic_value_without_a_tensor
     with pytest.warns(UserWarning, match=r'crysta\.schema\.cif_items_not_read') as warnings:
         structure = edi.StructureFactory.from_cif_str(text)
     site = structure.atom_sites['Na1']
-    assert site.adp_type == f'{units}iso'
-    assert site.adp_iso.value == pytest.approx(0.12)
-    assert len(structure.atom_site_aniso) == 0
+    assert site.adp_type == f'{units}iso', 'The scalar supplies its declared isotropic units'
+    assert site.adp_iso.value == pytest.approx(0.12), (
+        'The model retains the published displacement scalar'
+    )
+    assert len(structure.atom_site_aniso) == 0, 'The scalar produces no manufactured tensor'
     assert any(
         f'published isotropic value is used as {units}iso' in str(w.message) for w in warnings
-    )
+    ), 'The import reports that it used the supplied scalar and its units'
 
 
 @pytest.mark.parametrize(('code', 'tensor_form'), [('iso', 'U'), ('iso', None), ('Uovl', None)])
@@ -276,8 +316,12 @@ def test_cif_reads_the_number_in_an_annotated_displacement_value() -> None:
     text = _with_legacy_adp('Beq', None).replace('? . Beq\n', '? 4.4* Beq\n')
     with pytest.warns(UserWarning, match='trailing asterisk is a source annotation'):
         structure = edi.StructureFactory.from_cif_str(text)
-    assert structure.atom_sites['Na1'].adp_type == 'Biso'
-    assert structure.atom_sites['Na1'].adp_iso.value == pytest.approx(4.4)
+    assert structure.atom_sites['Na1'].adp_type == 'Biso', (
+        'The annotated scalar still selects its declared B units'
+    )
+    assert structure.atom_sites['Na1'].adp_iso.value == pytest.approx(4.4), (
+        'The annotation preserves the published displacement of 4.4'
+    )
 
 
 @pytest.mark.parametrize('value', ['*', '4.4**', '4.4*3'])

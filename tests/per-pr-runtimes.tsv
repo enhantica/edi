@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-25T16:21:43Z
+# measured_utc = 2026-11-27T03:50:38Z
 #
-# Recorded from: measured test run (3 node(s) measured once, 187620 banked, 0 stale row(s) dropped)
-# Collected tests: 267525; with a reported duration: 86316
+# Recorded from: serial audit-branch replay (55 remeasured COD import cases)
+# Other banked runtimes and declared holes carried from the merged table.
 # Module-scoped fixture costs recorded: 219
 #
 # Breaches are decided PER TIER against the table
@@ -29,12 +29,12 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 267525
+# inventory_python = 267579
 # inventory_cpp = 0
-# inventory_measured = 187623
-# inventory_unmeasured = 79902
+# inventory_measured = 187678
+# inventory_unmeasured = 79901
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
-# inventory_pr_python = 92614
+# inventory_pr_python = 92668
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -177218,7 +177218,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_import_contract.py::
 0.000	tests/integration/py/test_cif_reader_regression.py::test_main_reader_model_regression_pin_changes_only_published_parameter_state[structure:tests/fixtures/single_crystal/projects/sc-neut-tof_taurine_basic/structures/structure.edi]
 0.000	tests/integration/py/test_cif_reader_regression.py::test_main_reader_model_regression_pin_changes_only_published_parameter_state[structure:tests/fixtures/table_display/structures/structure.edi]
 0.000	tests/integration/py/test_cif_reader_regression.py::test_reader_regression_pin_population_is_not_empty
-0.010	tests/integration/py/test_cod_cif_compatibility.py::test_cif11_reads_a_bare_value_starting_with_a_curly_brace[{[Co4OH].2MeCN}n]
+0.020	tests/integration/py/test_cod_cif_compatibility.py::test_cif11_reads_a_bare_value_starting_with_a_curly_brace[{[Co4OH].2MeCN}n]
 0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif11_reads_a_bare_value_starting_with_a_curly_brace[}text]
 0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif11_refuses_an_unquoted_leading_square_bracket[[text]]
 0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif11_refuses_an_unquoted_leading_square_bracket[]text]
@@ -177268,7 +177268,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_import_contract.py::
 0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif_refuses_malformed_annotated_displacement_values[*]
 0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif_refuses_malformed_annotated_displacement_values[4.4**]
 0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif_refuses_malformed_annotated_displacement_values[4.4*3]
-0.070	tests/integration/py/test_cod_cif_compatibility.py::test_cif_reports_and_omits_an_explicitly_marked_dummy_placeholder
+0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif_reports_and_omits_an_explicitly_marked_dummy_placeholder
 0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif_reports_the_row_and_column_of_an_absent_site_label
 0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif_reports_the_site_and_column_of_an_absent_fractional_coordinate[.]
 0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif_reports_the_site_and_column_of_an_absent_fractional_coordinate[?]
@@ -191654,7 +191654,7 @@ UNMEASURED:current named-title observer browser build and replay pending	tests/s
 1.100	tests/system/py/test_ci_source_workflows.py::test_full_cache_save_omits_source_diagnostics_in_new_and_untouched_restored_entries[pages-wasm]
 1.130	tests/system/py/test_ci_source_workflows.py::test_full_cache_save_omits_source_diagnostics_in_new_and_untouched_restored_entries[sdk]
 UNMEASURED:failed-in-this-run	tests/system/py/test_cif_app_import.py::test_app_load_structure_accepts_and_loads_the_published_cif
-UNMEASURED:failed-in-this-run	tests/system/py/test_cif_project_cli.py::test_cli_project_loads_a_published_cif_and_reports_its_cell_atoms_and_symmetry
+0.480	tests/system/py/test_cif_project_cli.py::test_cli_project_loads_a_published_cif_and_reports_its_cell_atoms_and_symmetry
 4.360	tests/system/py/test_cif_public_entrances.py::test_public_entrances_account_for_every_alias_and_loop_cell[_absorption.*:_absorption.*:s0:v0-column-experiment-app]
 0.250	tests/system/py/test_cif_public_entrances.py::test_public_entrances_account_for_every_alias_and_loop_cell[_absorption.*:_absorption.*:s0:v0-column-experiment-cli]
 0.650	tests/system/py/test_cif_public_entrances.py::test_public_entrances_account_for_every_alias_and_loop_cell[_absorption.*:_absorption.*:s0:v0-column-structure-app]

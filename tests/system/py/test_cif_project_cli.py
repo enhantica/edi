@@ -18,10 +18,11 @@ def test_cli_project_loads_a_published_cif_and_reports_its_cell_atoms_and_symmet
         source / 'structures/1000236.cif',
     )
     bank = source / 'experiments/bank.edi'
-    bank.write_text(
-        bank.read_text(encoding='utf-8').replace('\nphase ', '\n1000236 '),
-        encoding='utf-8',
+    bank_text = bank.read_text(encoding='utf-8')
+    assert bank_text.count('\nphase ') == 2, (
+        'The fixture has both a pattern link and a preferred-orientation row for the structure'
     )
+    bank.write_text(bank_text.replace('\nphase ', '\n1000236 '), encoding='utf-8')
     destination = tmp_path / 'report.html'
     result = subprocess.run(
         [sys.executable, '-m', 'edi', 'report', str(source), '--output', str(destination)],
