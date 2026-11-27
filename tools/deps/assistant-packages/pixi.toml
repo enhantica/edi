@@ -8,3 +8,5 @@ preview = ["pixi-build"]
 
 [dependencies]
 edi-assistant-runtime = { path = "../assistant-runtime" }
+edi-claude-runtime = { path = "../claude-runtime" }
+edi-copilot-runtime = { path = "../copilot-runtime" }

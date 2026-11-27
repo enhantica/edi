@@ -171,6 +171,8 @@ vcomp14 = { version = "==14.51.36247", build = "habf1de7_42" }
 # §6, ADR-0008).
 [feature.app.dependencies]
 edi-assistant-runtime = { path = "tools/deps/assistant-runtime" }
+edi-claude-runtime = { path = "tools/deps/claude-runtime" }
+edi-copilot-runtime = { path = "tools/deps/copilot-runtime" }
 # The app environment imports the extension the default environment builds, so it keeps that Python's minor.
 python = "3.14.*"
 # The same Qt as the web build's kits (EDI_WASM_QT, tools/ci/wasm-env.sh), which wasm-toolchain.sh checks.

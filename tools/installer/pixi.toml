@@ -25,6 +25,8 @@ libvulkan-headers = "1.4.*"
 # what the compilers produce, only whether they run again.
 ccache = "*"
 edi-assistant-runtime = { path = "../deps/assistant-runtime" }
+edi-claude-runtime = { path = "../deps/claude-runtime" }
+edi-copilot-runtime = { path = "../deps/copilot-runtime" }
 pyzmq = "==27.2.0"
 
 [pypi-dependencies]
