@@ -345,9 +345,10 @@ SideBarGroup {
     // Ends the replaced project's create at once, never on a later turn. The untitled request goes first: the
     // replacement supersedes it (edi ADR-0100), and the dialog's close would otherwise reject it. The close queues its
     // own settlement under the old life, which dropCreate then ends, as Session.projectGeneration does once the next
-    // project is published.
+    // project is published. Its folder picker goes too, so its answer cannot set the next project's location.
     function settleCreate() {
         createDialog.untitledId = 0;
+        createDialog.retirePickers();
         group.hideCreateDialog();
         group.dropCreate();
     }

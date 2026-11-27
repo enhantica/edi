@@ -222,20 +222,49 @@ EaElements.Dialog {
 
                     showBackground: false
 
-                    onClicked: projectParentDirDialog.open()
+                    objectName: "createProject.chooseLocation"
+                    onClicked: dialog.openLocationPicker()
                 }
             }
         }
+    }
+
+    // The folder picker answers only the opening that asked, while its project is still the open one: a replaced
+    // project's picker can stay open, and its answer would otherwise become the next project's location and the saved
+    // preference. One answer per opening, so a late Accepted after a Rejected changes nothing.
+    property var locationPickerOwner: null
+    function openLocationPicker() {
+        locationPickerOwner = {
+            generation: Session.projectGeneration()
+        };
+        // Starts at the field's folder, not at an answer that was dropped.
+        projectParentDirDialog.selectedFolder = projectParentDirectory;
+        projectParentDirDialog.open();
+    }
+    function takeLocationPickerAnswer() {
+        const owner = locationPickerOwner;
+        locationPickerOwner = null;
+        return owner !== null && owner.generation === Session.projectGeneration();
+    }
+    // Called when the project is replaced. The owner goes first: close() itself emits an answer.
+    function retirePickers() {
+        locationPickerOwner = null;
+        projectParentDirDialog.close();
     }
 
     // The folder in which the project folder is created
 
     FolderDialog {
         id: projectParentDirDialog
+        objectName: "createProject.locationPicker"
 
         title: qsTr("Choose the folder for the project")
         selectedFolder: dialog.projectParentDirectory
-        onAccepted: dialog.projectParentDirectory = selectedFolder
+        onAccepted: {
+            if (dialog.takeLocationPickerAnswer())
+                dialog.projectParentDirectory = selectedFolder;
+        }
+        onRejected: dialog.takeLocationPickerAnswer()
     }
 
     // Persistent settings
