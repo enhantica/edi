@@ -45,8 +45,14 @@ Row {
     // a series' run and bank selectors (the owner, 2026-11-16, 2026-11-17).
     property string numberPrefix: ""
     // An entry's line drawn by the caller, `lineFor(index, text)`, in place of the block's (a parameter picker:
-    // ParameterNames.pickerLine); such a line is cut only at its end, and the list widens to its widest line.
+    // ParameterNames.pickerLine); such a line's full name is cut at its start, where it names the block the line's icons
+    // and the group's header show already, so its row and name stay; an entry cut shows the whole on hover. The list
+    // widens to its widest line.
     property var lineFor: null
+    // The blocks' role that names the group a row belongs to; empty: no groups. A group's title is drawn over its first
+    // entry the list shows, in that entry's own item, so the list's rows stay the blocks'. A typed search ranks the
+    // entries within each group and keeps the groups in their order.
+    property string groupRole: ""
     // The width that shows the chosen entry's whole line: its line, the box's padding and arrow, and the two step buttons.
     // A row with room gives the selector this width (Evolution's parameter selector, the owner, 2026-11-17).
     readonly property real contentWidth: Math.ceil(shownLine.fullWidth + EaStyle.Sizes.fontPixelSize * 2.5 + (selector.indicator ? selector.indicator.width : 0)) + 2 * (up.width + spacing)
@@ -82,7 +88,8 @@ Row {
                 return row.lineFor(index, name);
             const line = ApplicationInfo.blockSegments(index, name, nameColor, outcome, isTemplate);
             // A name of parts ("d20 · file · Rwp 4.69 % · 497.379 K") cuts its file only: a cut through a number dropped
-            // its digits (the owner's sweep, 2026-11-22). A value with no room is left out whole, the last one kept longest.
+            // its digits (the owner's sweep, 2026-11-22). A value with no room is left out whole, the last one kept longest,
+            // before the file is cut to fewer than ten characters, half a dozen at each end and the ellipsis (T10).
             const at = line.findIndex(piece => piece.elides === true);
             const parts = at >= 0 ? String(line[at].text).split(" · ") : [];
             if (parts.length >= 3) {
@@ -90,7 +97,8 @@ Row {
                 const gap = EaStyle.Sizes.fontPixelSize * 0.5;
                 const advance = text => lineMetrics.advanceWidth(text);
                 const others = line.reduce((sum, each) => sum + (each === piece ? 0 : gap + (each.icon !== undefined ? EaStyle.Sizes.fontPixelSize * 1.25 : advance(each.text ?? ""))), 0);
-                const need = () => others + Math.min(advance(parts[1]), EaStyle.Sizes.fontPixelSize * 4) + (parts.length - 1) * (2 * gap + advance("·")) + parts.reduce((sum, part, n) => sum + (n === 1 ? 0 : advance(part)), 0);
+                const file = parts[1].length > 12 ? Math.min(advance(parts[1]), advance(parts[1].slice(0, 6) + "…" + parts[1].slice(-6))) : advance(parts[1]);
+                const need = () => others + file + (parts.length - 1) * (2 * gap + advance("·")) + parts.reduce((sum, part, n) => sum + (n === 1 ? 0 : advance(part)), 0);
                 while (parts.length > 2 && need() > room)
                     parts.splice(Math.max(2, parts.length - 2), 1);
                 // Each dot a piece, so the line's one spacing stands on both its sides, as a space does. The file is plain
@@ -121,6 +129,25 @@ Row {
             return line;
         }
 
+        // The rows whose entry carries its group's title: each shown entry that follows one of another group, or none,
+        // in the order the list draws them (a typed search reorders the list).
+        readonly property var groupOpeners: {
+            const openers = new Set();
+            if (row.groupRole === "" || row.blocks === null)
+                return openers;
+            let previous = null;
+            for (const shown of selector.shownRows()) {
+                const group = row.blocks.text(shown, row.groupRole);
+                if (group !== previous)
+                    openers.add(shown);
+                previous = group;
+            }
+            return openers;
+        }
+        // The titles the list shows, which its height is not counted from: only those of the groups the search leaves.
+        listExtra: () => selector.groupOpeners.size * EaStyle.Sizes.comboBoxHeight
+
+        groupOf: row.groupRole !== "" ? (index => row.blocks.text(index, row.groupRole)) : null
         objectName: row.objectName ? `${row.objectName}.box` : ""
         width: row.width - 2 * (up.width + row.spacing)
         topInset: 0
@@ -153,7 +180,7 @@ Row {
                 width: Math.max(0, Math.min(parent.width - x, selector.indicator && selector.indicator.visible && !selector.mirrored ? selector.indicator.x - parent.x - x - EaStyle.Sizes.fontPixelSize * 0.5 : parent.width - x))
                 maximumWidth: Math.max(1, width)
                 clip: true
-                elide: row.lineFor ? Text.ElideRight : Text.ElideMiddle
+                elide: row.lineFor ? Text.ElideLeft : Text.ElideMiddle
             }
         }
 
@@ -195,14 +222,17 @@ Row {
             // Whether the entry passes the search. One that does not is folded to no height and not drawn; its `visible`
             // is left to the list, which hides the entries of a closed one.
             readonly property bool matching: selector.matches(text)
+            readonly property string groupTitle: row.groupRole !== "" ? entry.model[row.groupRole] : ""
+            readonly property real titleHeight: matching && groupTitle !== "" && selector.groupOpeners.has(entry.index) ? EaStyle.Sizes.comboBoxHeight : 0
 
             width: entry.parent !== null ? entry.parent.width : 0
-            height: matching ? EaStyle.Sizes.comboBoxHeight : 0
+            height: matching ? EaStyle.Sizes.comboBoxHeight + titleHeight : 0
             opacity: matching ? 1 : 0
             // The base's padding of 16 on every side leaves a content area of no height in a row this tall; its
             // Label draws past that, but a clipped line would show nothing, so the line gets the row's full height
             // (edi ADR-0017 §10).
-            topPadding: 0
+            topPadding: titleHeight
+            topInset: titleHeight
             bottomPadding: 0
             highlighted: selector.highlightedIndex === entry.index
             hoverEnabled: selector.hoverEnabled
@@ -212,10 +242,43 @@ Row {
                 clip: true
 
                 IconLine {
+                    id: entryLine
                     anchors.verticalCenter: parent.verticalCenter
                     segments: selector.segments(entry.index, entry.text, EaStyle.Colors.themeForeground, row.outcomeRole !== "" ? entry.model[row.outcomeRole] : "", row.templateRole !== "" && entry.model[row.templateRole] === true, maximumWidth)
                     maximumWidth: Math.max(1, parent.width)
-                    elide: row.lineFor ? Text.ElideRight : Text.ElideMiddle
+                    elide: row.lineFor ? Text.ElideLeft : Text.ElideMiddle
+                }
+            }
+            Loader {
+                active: entry.hovered && row.lineFor !== null && entryLine.fullWidth > entryLine.maximumWidth + 0.5
+                anchors.fill: parent
+                sourceComponent: Component {
+                    EaElements.ToolTip {
+                        text: entry.text
+                        requested: entry.hovered
+                    }
+                }
+            }
+            // The title is no entry: it takes the clicks on it.
+            Loader {
+                active: entry.titleHeight > 0
+                width: entry.width
+                height: entry.titleHeight
+                sourceComponent: Component {
+                    MouseArea {
+                        EaElements.Label {
+                            objectName: row.objectName ? `${row.objectName}.group.${entry.index}` : ""
+                            x: entry.leftPadding
+                            width: parent.width - 2 * x
+                            height: parent.height
+                            verticalAlignment: Text.AlignVCenter
+                            elide: Text.ElideMiddle
+                            font.family: EaStyle.Fonts.ptSansBold.name
+                            font.styleName: "Bold"
+                            color: EaStyle.Colors.themeForegroundMinor
+                            text: entry.groupTitle
+                        }
+                    }
                 }
             }
         }

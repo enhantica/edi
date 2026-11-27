@@ -21,6 +21,7 @@ from tests.system.py.test_e11_t5_dev_native_integration import (
     _session_state,  # noqa: PLC2701 - retain original lifecycle fixture helpers
     _watch_original_project_open,  # noqa: PLC2701 - retain original lifecycle fixture helpers
     copied_estimate_project,
+    history_poll,
     native_result,
     objects,
     qml,
@@ -516,6 +517,25 @@ def test_explicit_new_project_never_reuses_current_and_preserves_original_choice
         'Å. Fit the structure and show the report.'
     )
     _session_request_with_original_disclosure(actor, task)
+    if old_choice == 'saved':
+        actor.until(
+            lambda value: (
+                (
+                    native_fixture._unique_input_control(value, 'unsavedChanges.close', fully=True)
+                    is not None
+                    and qml(actor, 'unsavedChanges.opened')
+                )
+                or bool(actor.responses())
+            ),
+            visible_progress=show_actions,
+        )
+        assert (
+            not actor.responses()
+            and Path(actor.last['ui']['project']['path']).resolve() == current_old_root.resolve()
+            and qml(actor, '(' + _scene_control_expression(marker) + ').changes') == 0
+            and not destination.exists()
+        ), 'The saved project and pending New action wait for the user to agree to close'
+        actor.command('click', name='unsavedChanges.close')
     if old_choice in {'modified_save', 'modified_cancel'}:
         actor.until(
             lambda value: any(
@@ -544,6 +564,10 @@ def test_explicit_new_project_never_reuses_current_and_preserves_original_choice
             'Only genuine input on the original standard Save or Cancel button settles the '
             'old-work choice'
         )
+    if old_choice == 'saved' and show_actions:
+        # Shown Create types the metadata before pressing OK. Use the same
+        # finite receipt budget as the other shown Create journey.
+        history_poll(lambda: len(actor.responses()) == 2, seconds=120)
     actor.until(
         lambda value: len(actor.responses()) == 2 and value['ui']['state'] == 'idle',
         visible_progress=show_actions,

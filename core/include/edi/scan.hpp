@@ -178,6 +178,10 @@ std::pair<std::size_t, ScanResultIndex::Row> scan_row_facts(const Project& proje
                                                            const ScanResultIndex& index,
                                                            const std::vector<std::string>& cells);
 
+/// Whether a results column is a value crysta derives from the fitted ones rather than fits: a moment's spherical form
+/// or a linked structure's weight fraction. Its value may be undefined in a converged row.
+bool scan_derived_column(const std::string& name);
+
 /// The cells of the row that starts at `offset`; throws when the file has no complete row there.
 std::vector<std::string> read_scan_row(const Project& project, std::int64_t offset);
 

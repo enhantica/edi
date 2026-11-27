@@ -14,7 +14,7 @@
   {% set ref = ref or nav_item %}
   {{ ref.title or nav_item.title }}
 {% endmacro %}
-{% macro render_content(nav_item, ref) %}
+{% macro render_content(nav_item, ref, level) %}
   {% set ref = ref or nav_item %}
   {% set workflow_icons = config.extra.workflow_icons %}
   {% if ref.title in config.extra.interface_icons %}
@@ -23,6 +23,8 @@
         {% include ".icons/" ~ icon ~ ".svg" %}
       {% endfor %}
     </span>
+  {% elif level == 1 and ref.title in config.extra.tab_icons %}
+    {% include ".icons/fa5/" ~ config.extra.tab_icons[ref.title] ~ ".svg" %}
   {% elif ref.title in workflow_icons %}
     {% include ".icons/fa5/" ~ workflow_icons[ref.title] ~ ".svg" %}
   {% elif ref.children and ref.title in config.extra.section_icons %}
@@ -48,15 +50,15 @@
     {{ render_status(nav_item, nav_item.meta.status) }}
   {% endif %}
 {% endmacro %}
-{% macro render_pruned(nav_item, ref, content) %}
+{% macro render_pruned(nav_item, ref, content, level) %}
   {% set ref = ref or nav_item %}
   {% set content = content or ref %}
   {% set first = content if content.is_index else nav_item.children | first %}
   {% if first and first.children %}
-    {{ render_pruned(first, ref, content) }}
+    {{ render_pruned(first, ref, content, level) }}
   {% else %}
     <a href="{{ first.url | url }}" class="md-nav__link">
-      {{ render_content(content, ref) }}
+      {{ render_content(content, ref, level) }}
       {% if not content.is_index or nav_item.children | length > 1 %}
         <span class="md-nav__icon md-icon"></span>
       {% endif %}
@@ -116,14 +118,14 @@
         {% if not index %}
           {% set tabindex = "0" if not is_section %}
           <label class="md-nav__link" for="{{ path }}" id="{{ path }}_label" tabindex="{{ tabindex }}">
-            {{ render_content(nav_item) }}
+            {{ render_content(nav_item, none, level) }}
             <span class="md-nav__icon md-icon"></span>
           </label>
         {% else %}
           {% set class = "md-nav__link--active" if index.active %}
           <div class="md-nav__link md-nav__container">
             <a href="{{ index.url | url }}" class="md-nav__link {{ class }}">
-              {{ render_content(index, nav_item) }}
+              {{ render_content(index, nav_item, level) }}
             </a>
             {% if nav_item.children | length > 1 %}
               {% set tabindex = "0" if not is_section %}
@@ -149,7 +151,7 @@
           </nav>
         {% endif %}
       {% else %}
-        {{ render_pruned(nav_item, none, index) }}
+        {{ render_pruned(nav_item, none, index, level) }}
       {% endif %}
     </li>
   {% elif nav_item.active %}
@@ -164,12 +166,12 @@
       {% endif %}
       {% if toc %}
         <label class="md-nav__link md-nav__link--active" for="__toc">
-          {{ render_content(nav_item) }}
+          {{ render_content(nav_item, none, level) }}
           <span class="md-nav__icon md-icon"></span>
         </label>
       {% endif %}
       <a href="{{ nav_item.url | url }}" class="md-nav__link md-nav__link--active">
-        {{ render_content(nav_item) }}
+        {{ render_content(nav_item, none, level) }}
       </a>
       {% if toc %}
         {% include "partials/toc.html" %}
@@ -178,7 +180,7 @@
   {% else %}
     <li class="{{ class }}">
       <a href="{{ nav_item.url | url }}" class="md-nav__link">
-        {{ render_content(nav_item) }}
+        {{ render_content(nav_item, none, level) }}
       </a>
     </li>
   {% endif %}

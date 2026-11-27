@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- SPDX-License-Identifier: BSD-3-Clause -->
-<!-- The installing page's content: the logo, one status line, and the progress bar with its percentage beside it
+<!-- The installing page's content: the logo, one status line, and the progress bar with its percentage inside
      (Installer.qs feeds them from the Framework's own label and bar, which are hidden: the Framework rewrites its
      label on every step). -->
 <ui version="4.0">
@@ -30,7 +30,7 @@
    <property name="bottomMargin">
     <number>0</number>
    </property>
-   <!-- The logo in a row of its own, one step (16) above the rows: the row gap and 8 under it. -->
+   <!-- The logo in a row of its own, 32 above the rows (Installer.qs, logoStep): the row gap and 24 under it. -->
    <item>
     <layout class="QHBoxLayout" name="ProgressLogoRow">
      <property name="leftMargin">
@@ -43,7 +43,7 @@
       <number>0</number>
      </property>
      <property name="bottomMargin">
-      <number>8</number>
+      <number>24</number>
      </property>
      <item>
       <widget class="QLabel" name="EdiProgressLogo"/>
@@ -54,37 +54,17 @@
     <widget class="QLabel" name="EdiProgressStatus"/>
    </item>
    <item>
-    <layout class="QHBoxLayout" name="ProgressLayout">
-     <property name="spacing">
-      <number>8</number>
+    <widget class="QProgressBar" name="EdiProgressBar">
+     <property name="textVisible">
+      <bool>true</bool>
      </property>
-     <item>
-      <widget class="QProgressBar" name="EdiProgressBar">
-       <property name="textVisible">
-        <bool>false</bool>
-       </property>
-       <property name="value">
-        <number>0</number>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QLabel" name="EdiProgressPercent">
-       <property name="minimumSize">
-        <size>
-         <width>44</width>
-         <height>0</height>
-        </size>
-       </property>
-       <property name="alignment">
-        <set>Qt::AlignRight|Qt::AlignVCenter</set>
-       </property>
-       <property name="text">
-        <string>0%</string>
-       </property>
-      </widget>
-     </item>
-    </layout>
+     <property name="format">
+      <string>%p%</string>
+     </property>
+     <property name="value">
+      <number>0</number>
+     </property>
+    </widget>
    </item>
    <item>
     <spacer name="ProgressSpacer">

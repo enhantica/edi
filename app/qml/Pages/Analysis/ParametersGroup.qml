@@ -608,7 +608,7 @@ SideBarGroup {
                     dropped = dropped.concat(dropOrder[step]);
                     steps.push(Math.ceil(needFor(dropped) + sideBarInsets));
                 }
-                console.info(`sidebar steps (px, all columns to the base): ${steps.join(", ")}; insets ${Math.round(sideBarInsets)}; widest name ${Math.ceil(widestName)} px (${(widestName / EaStyle.Sizes.fontPixelSize).toFixed(2)} em)`);
+                console.info(`sidebar steps (px, all columns to the base): ${steps.join(", ")}; insets ${Math.round(sideBarInsets)}; ${widestName > 0 ? `widest name ${Math.ceil(widestName)} px (${(widestName / EaStyle.Sizes.fontPixelSize).toFixed(2)} em)` : "names not measured yet"}`);
                 AppSizes.noteSideBarSteps({
                     "steps": steps,
                     "bounds": Math.ceil(needFor([6]) + sideBarInsets),

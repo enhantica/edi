@@ -126,7 +126,7 @@ Column {
         // stands clear of |M| (the owner, 2026-11-03).
         // |M| and its two angles beside the components, read only (edi ADR-0089 point 6).
         // Its columns by kind (the shared column model, DataTable.columnKinds; ADR-0103 decision 4).
-        columnKinds: ["index", "short", "short", "value", "value", "value", "value", "value", "value", "text"]
+        columnKinds: ["index", "name", "short", "value", "value", "value", "value", "value", "value", "text"]
 
         header: EaComponents.ListViewHeader {
             EaComponents.ListViewLabel {
@@ -142,7 +142,7 @@ Column {
                 horizontalAlignment: Text.AlignLeft
                 uid: "magnetic_form_factor.ion"
                 // "Ion": the group's title already says magnetic (no title repeats its group's, N10).
-                text: qsTr("Ion")
+                longText: qsTr("Ion")
             }
             HeaderLabel {
                 horizontalAlignment: Text.AlignHCenter
@@ -175,7 +175,7 @@ Column {
             HeaderLabel {
                 horizontalAlignment: Text.AlignRight
                 uid: "atom_site_moment.symmform"
-                text: qsTr("Symmetry")
+                longText: qsTr("Symmetry")
             }
         }
 
@@ -327,7 +327,8 @@ Column {
 
         // In spherical form the modulus is the first component, so the |M| column takes no width and is hidden.
         // Its columns by kind (the shared column model, DataTable.columnKinds; ADR-0103 decision 4).
-        columnKinds: ["index", "short", "short", "value", "value", "value", spherical ? 0.001 : "value", "text"]
+        columnKinds: ["index", "name", "short", "value", "value", "value", spherical ? 0.001 : "value", "text"]
+        columnTexts: ["", "label", "ion", "", "", "", "", "symmform"]
 
         header: EaComponents.ListViewHeader {
             EaComponents.ListViewLabel {
@@ -342,7 +343,7 @@ Column {
                 horizontalAlignment: Text.AlignLeft
                 uid: "magnetic_form_factor.ion"
                 // "Ion": the group's title already says magnetic (no title repeats its group's, N10).
-                text: qsTr("Ion")
+                longText: qsTr("Ion")
             }
             EaComponents.ListViewLabel {
                 elide: Text.ElideRight
@@ -368,7 +369,7 @@ Column {
             HeaderLabel {
                 horizontalAlignment: Text.AlignRight
                 uid: "atom_site_moment.symmform"
-                text: qsTr("Symmetry")
+                longText: qsTr("Symmetry")
             }
         }
 

@@ -47,6 +47,7 @@ class AssistantWidgetInput final : public QObject {
     ~AssistantWidgetInput() override;
     std::uint64_t start(Request request); // Not exposed to QML/provider tools.
     void cancel();
+    void leave() noexcept; // The shown pointer leaves the window, so nothing under it stays hovered.
 
     bool injecting() const noexcept { return injecting_; }
     // Genuine input at this exact paced control/popup supersedes only its operation.
@@ -131,6 +132,7 @@ class AssistantWidgetInput final : public QObject {
     int shown_moves_ = 0;  // pointer moves repeated because the target moved before its press
     QPointF press_point_;  // where the press went, so its release goes to the same place
     bool cleanup_release_ = false;
+    bool pointer_inside_ = false;  // the last pointer movement in the window was this helper's
     bool injecting_ = false, draft_ = false, commit_prepared_ = false, pressed_ = false, choice_releasing_ = false;
 };
 }

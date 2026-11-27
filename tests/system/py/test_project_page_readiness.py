@@ -81,12 +81,15 @@ def test_tabs_are_disabled_until_their_actual_page_is_built(opening_receipts, ph
     painted = [snap for snap in row['snapshots'] if snap['painted']]
     assert painted, 'Disabled-tab evidence includes actual rendered frames'
     for index, name in enumerate(PAGES):
-        assert any(
-            not snap['ready'][index] and not snap['enabled'][index] for snap in row['snapshots']
-        ), (
-            'Every opened page first has a disabled tab while its actual Loader is incomplete: '
-            + name
-        )
+        if index == 0 and row['projectPageRetained']:
+            assert all(snap['ready'][0] for snap in painted), (
+                'The original Project page stays ready in every rendered frame of the replacement'
+            )
+        else:
+            assert any(
+                not snap['ready'][index] and not snap['enabled'][index]
+                for snap in row['snapshots']
+            ), 'Each new page has a disabled tab while its actual Loader is incomplete: ' + name
         assert all(not snap['enabled'][index] or snap['ready'][index] for snap in painted), (
             'An exposed enabled tab always has an actual completed page behind it: ' + name
         )
@@ -102,8 +105,9 @@ def test_tabs_are_disabled_until_their_actual_page_is_built(opening_receipts, ph
 @pytest.mark.parametrize('phase', ['cold', 'warm'])
 def test_pages_build_in_workflow_order_without_a_placeholder(opening_receipts, phase, route):
     row = next(row for row in opening_receipts[route] if row['phase'] == phase)
-    assert row['order'] == list(range(len(PAGES))), (
-        'Actual Loader completion follows Project, Structure, Experiment, Analysis, Report'
+    first_built = 1 if row['projectPageRetained'] else 0
+    assert row['order'] == list(range(first_built, len(PAGES))), (
+        'Pages that need construction complete in workflow order after any retained Project page'
     )
     assert all(not snap['placeholders'] for snap in row['snapshots']), (
         'Background page construction never exposes the removed Opening this page state'
@@ -127,7 +131,8 @@ def test_tab_availability_improves_the_committed_opening_baseline(opening_receip
             if index == 0
             else baseline['marks_ms']['tab:appBar.tab.' + name + ':frame']
         )
-        assert 0 < row['enabledAt'][index] <= ceiling, (
+        earliest = 0 if index == 0 and row['projectPageRetained'] else 1
+        assert earliest <= row['enabledAt'][index] <= ceiling, (
             "Each enabled tab meets Project's target or beats its retained baseline: "
             + name
             + ' measured='

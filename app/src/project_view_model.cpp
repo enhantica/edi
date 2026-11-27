@@ -64,6 +64,8 @@
 #include "edi/scan_views.hpp"
 #include "edi/selectors.hpp"
 #include "edi/su_text.hpp"
+#include "label_case.hpp"
+#include "label_registry.hpp"
 #include "parameter_item.hpp"
 #include "parameter_registry.hpp"
 #include "report_view_model.hpp"
@@ -2291,24 +2293,51 @@ bool ProjectViewModel::locateDataFolder(const QUrl& folder, const QString& missi
     if (retired_ || !folder.isLocalFile() || !project_->sequential_fit.declared()) return false;
     // The chooser was opened for the folder then missing: a scan replaced or relinked since is not this answer's.
     if (!missing.isEmpty() && missingDataFolder() != missing) return false;
-    if (!QFileInfo(folder.toLocalFile()).isDir()) {
-        announceRefused(tr("%1 is not a folder").arg(folder.toLocalFile()));
+    const QString error = declareDataFolder(folder.toLocalFile());
+    if (!self || retired_) return false;
+    if (!error.isEmpty()) announceRefused(error);
+    return error.isEmpty();
+}
+
+bool ProjectViewModel::setDataFolder(const QString& folder) {
+    const PublicationScope publication(*this);
+    if (retired_ || !project_->sequential_fit.declared()) return false;
+    const QString typed = folder.trimmed();
+    if (typed.isEmpty()) {
+        setLastError(tr("A sequential fit needs a data directory"));
         return false;
     }
+    // Relative to what the declared one is relative to: the project, or the folder an archive was unpacked into.
+    const std::string& base = project_->scan_data_root.empty() ? project_->path : project_->scan_data_root;
+    if (QFileInfo(typed).isRelative() && base.empty()) {
+        setLastError(tr("Save the project first, or give the whole path of the folder"));
+        return false;
+    }
+    const QString absolute = QFileInfo(typed).isAbsolute() ? typed : QDir(QString::fromStdString(base)).filePath(typed);
+    return declareDataFolder(absolute).isEmpty();
+}
+
+QString ProjectViewModel::declareDataFolder(const QString& folder) {
+    const PublicationScope publication(*this);
+    const QPointer<ProjectViewModel> self(this);
+    if (!QFileInfo(folder).isDir()) {
+        const QString error = tr("%1 is not a folder").arg(folder);
+        setLastError(error);
+        return error;
+    }
     edi::Project next(*project_);
-    next.sequential_fit.data_dir = declared_folder(project_->path, folder.toLocalFile()).toStdString();
+    next.sequential_fit.data_dir = declared_folder(project_->path, folder).toStdString();
     auto before = std::make_shared<const edi::Project>(*project_);
-    const QString error = apply(edi::Edit::replace_project(*project_, std::move(next)), true);
-    if (!self || retired_) return false;
+    QString error = apply(edi::Edit::replace_project(*project_, std::move(next)), true);
+    if (!self || retired_) return error;
     if (!error.isEmpty()) {
         setLastError(error);
-        announceRefused(error);
-        return false;
+        return error;
     }
     undo_history_.emplace_back(AppliedText{std::move(before), {}});
     syncUndo();
     emit missingDataFolderChanged();
-    return true;
+    return {};
 }
 
 QString ProjectViewModel::missingDataFile() const {
@@ -4075,15 +4104,53 @@ void ProjectViewModel::loadScan() {
         const std::string first = project_->experiments.empty() ? std::string() : project_->experiments.front()->name + ".";
         for (const edi::NamedSlot& slot : edi::named_slots(*project_)) {
             const std::string own = edi::scan_results_column(slot.unique_name);
+            // A free parameter is listed by its own name, which its results column may shorten (an instrument's).
             const bool match = bank ? own.size() > first.size() && own.compare(0, first.size(), first) == 0 &&
                                           own.substr(first.size()) == wanted
-                                    : own == wanted;
+                                    : own == wanted || slot.unique_name == wanted;
             if (!match) continue;
             return registry_->find(slot.parameter);
         }
         return nullptr;
     };
     evolution_->setFinder([find_column](const QString& column, bool bank) -> QObject* { return find_column(column, bank); });
+    evolution_->setPlacer([this](const QStringList& columns, bool bank) {
+        QHash<const QObject*, int> rows;
+        for (const ParameterItem* item : registry_->items()) rows.insert(item, static_cast<int>(rows.size()));
+        const std::string first = project_->experiments.empty() ? std::string() : project_->experiments.front()->name + ".";
+        std::map<std::string, const ParameterItem*> items;
+        for (const edi::NamedSlot& slot : edi::named_slots(*project_)) {
+            const ParameterItem* item = registry_->find(slot.parameter);
+            if (item == nullptr) continue;
+            const std::string own = edi::scan_results_column(slot.unique_name);
+            if (!bank) {
+                items.emplace(slot.unique_name, item);
+                items.emplace(own, item);
+            } else if (own.starts_with(first)) {
+                items.emplace(own.substr(first.size()), item);
+            }
+        }
+        std::vector<EvolutionViewModel::Place> places;
+        places.reserve(static_cast<std::size_t>(columns.size()));
+        for (const QString& column : columns) {
+            const auto found = items.find(column.toStdString());
+            EvolutionViewModel::Place place{column.section(QLatin1Char('.'), 0, 0)};
+            if (found != items.end()) place = {found->second->blockName(), rows.value(found->second, place.row)};
+            places.push_back(std::move(place));
+        }
+        return places;
+    });
+    evolution_->setSibling([this](const QString& column, bool bank) -> QObject* {
+        if (!edi::scan_derived_column(column.toStdString())) return nullptr;
+        // The category's row the column is in, a bank's own in the first experiment.
+        std::string prefix = column.left(column.lastIndexOf(QLatin1Char('.')) + 1).toStdString();
+        if (bank && !project_->experiments.empty()) prefix = project_->experiments.front()->name + "." + prefix;
+        for (const edi::NamedSlot& slot : edi::named_slots(*project_)) {
+            if (!slot.unique_name.starts_with(prefix)) continue;
+            if (ParameterItem* item = registry_->find(slot.parameter)) return item;
+        }
+        return nullptr;
+    });
     // The search text, as ParameterNames.pickerText spells it: the short name and the full name.
     evolution_->setLabeller([find_column](const QString& column, bool bank) {
         // How well each point fits: χ² and the agreement factors, by what they measure.
@@ -4099,6 +4166,20 @@ void ProjectViewModel::loadScan() {
             if (prefix.endsWith(QLatin1Char('.')) ? column.startsWith(prefix) : column == prefix) {
                 const QString label = prefix.endsWith(QLatin1Char('.')) ? text.arg(column.mid(prefix.size())) : text;
                 return label + QStringLiteral(" · ") + column;
+            }
+        }
+        if (edi::scan_derived_column(column.toStdString())) {
+            // The row it belongs to (a moment's atom, a linked structure) and its symbol, as its table's header has it.
+            const QStringList parts = column.split(QLatin1Char('.'));
+            const qsizetype last = parts.size() - 1;
+            if (last >= 2) {
+                const std::string uid = (parts[last - 2] + QLatin1Char('.') + parts[last]).toStdString();
+                // A name the dictionary lacks takes the label registry's words; its raw item only if neither has it.
+                const LabelForms* forms = find_label_forms(QString::fromStdString(uid));
+                const QString symbol = edi::has_item(uid) ? label_case(QString::fromStdString(edi::shown_label(uid)))
+                                       : forms != nullptr ? forms->long_text
+                                                          : parts[last];
+                return parts[last - 1] + QLatin1Char(' ') + symbol + QStringLiteral(" · ") + column;
             }
         }
         const ParameterItem* item = find_column(column, bank);
@@ -4188,7 +4269,10 @@ void ProjectViewModel::followScanDeclaration() {
         return;
     }
     scan_declaration_ = declared;
-    scan_columns_ = scanColumns(*project_);
+    if (QStringList columns = scanColumns(*project_); columns != scan_columns_) {
+        scan_columns_ = std::move(columns);
+        emit scanColumnsChanged();
+    }
     const edi::ScanDatasets listed = scan_session_ != nullptr ? scan_session_->datasets() : edi::ScanDatasets{};
     // What the model holds was read from a file of the old listing: it is not the shown dataset's any more, and a read
     // the old listing asked for delivers nothing (startViewRead).
@@ -5977,6 +6061,10 @@ QString ProjectViewModel::assign_parameter_value(edi::Parameter& parameter, doub
         // Equal values outside the admissible range must still reach the original refusal.
         if (parameter.value.get() == value && (!parameter.spec ||
             !(value < parameter.spec->range.min || value > parameter.spec->range.max))) return {};
+        if (const QString refusal = wavelengthRefusal(parameter, value); !refusal.isEmpty()) {
+            if (!retired_) setLastError(refusal);
+            return refusal;
+        }
         const EditOutcome result = applyRecordedEdit(edi::shared_group(*project_, parameter).size() > 1 ? edi::Edit::group_value(*project_, parameter, value) : edi::Edit::value(parameter, value), false);
         if (!retired_ && !result.applied) setLastError(result.message);
         return result.applied ? QString{} : result.message;
@@ -5984,11 +6072,25 @@ QString ProjectViewModel::assign_parameter_value(edi::Parameter& parameter, doub
     if (input->consumed || input->parameter != &parameter || input->field != WidgetParameterInput::Field::Value || input->value != value)
         return tr("A different parameter input cannot enter the current native event");
     input->consumed = true;
+    if (const QString refusal = wavelengthRefusal(parameter, value); !refusal.isEmpty()) {
+        input->outcome = EditOutcome{false, false, refusal};
+        return refusal;
+    }
     widget_input_executing_ = true;
     const QPointer<ProjectViewModel> self(this);
     const auto release = qScopeGuard([self] { if (self) self->widget_input_executing_ = false; });
     input->outcome = applyRecordedEdit(edi::shared_group(*project_, parameter).size() > 1 ? edi::Edit::group_value(*project_, parameter, value) : edi::Edit::value(parameter, value), false);
     return input->outcome.applied ? QString{} : input->outcome.message;
+}
+
+QString ProjectViewModel::wavelengthRefusal(const edi::Parameter& parameter, double value) const {
+    // The write itself refuses a first wavelength of 0 or below (check_enterable). The second is 0 where there is none,
+    // which changes the lists too, so it is asked about as any other value.
+    const bool second = parameter.spec == &edi::spec::instrument_wavelength_2;
+    if ((parameter.spec != &edi::spec::instrument_wavelength && !second) || !std::isfinite(value)) return {};
+    if (!(value > 0.0) && !(second && value == 0.0)) return {};
+    const std::string refusal = edi::wavelength_refusal(*project_, parameter, value);
+    return refusal.empty() ? QString{} : tr("The calculation cannot hold this wavelength: %1").arg(QString::fromStdString(refusal));
 }
 QString ProjectViewModel::assign_parameter_free(edi::Parameter& parameter, bool free) {
     if (const auto refusal = free_refusal(); !refusal.isEmpty()) return refusal;
@@ -6170,6 +6272,10 @@ ProjectViewModel::EditOutcome ProjectViewModel::applyEdit(const edi::Edit& chang
                 scan_template_->pattern_x_axis = project_->pattern_x_axis;
                 scan_template_->evolution_error_bars = project_->evolution_error_bars;
                 scan_template_->evolution_range = project_->evolution_range;
+                scan_template_->sequential_fit.extract = project_->sequential_fit.extract;
+                // Written outside the template's own editor: what was made of it before is made again.
+                identityMemoFor(&*scan_template_).reset();
+                template_snapshot_.reset();
             } else if (scan_template_ && adjusting_ && !structural) {
                 // A drag step: the template takes the shown values once, on release (edi ADR-0070).
                 template_promotion_held_ = true;
@@ -6245,6 +6351,23 @@ QString ProjectViewModel::apply_setting(const edi::Edit& change) {
     applying_setting_ = true;
     const QString refusal = apply(change, false);
     applying_setting_ = false;
+    return refusal;
+}
+
+QString ProjectViewModel::apply_extract_rules(const edi::Edit& change) {
+    const PublicationScope publication(*this);
+    const QPointer<ProjectViewModel> self(this);
+    ExtractRules rules;
+    rules.before.reserve(project_->sequential_fit.extract.size());
+    for (const auto& rule : project_->sequential_fit.extract) rules.before.push_back(*rule);
+    undo_history_.reserve(undo_history_.size() + 1);
+    undo_history_.emplace_back(std::move(rules));
+    QString refusal;
+    try { refusal = apply_setting(change); }
+    catch (...) { if (self) undo_history_.pop_back(); throw; }
+    if (!self || retired_) return refusal;
+    if (!refusal.isEmpty()) undo_history_.pop_back();
+    syncUndo();
     return refusal;
 }
 
@@ -6496,6 +6619,7 @@ std::shared_ptr<ProjectViewModel::WidgetBackgroundInput> ProjectViewModel::prepa
 std::shared_ptr<ProjectViewModel::WidgetBackgroundInput> ProjectViewModel::prepareWidgetBackgroundRename(
     edi::ExperimentBase& experiment, edi::LineSegment& point, const std::string& id) {
     if (const QString refusal = editReadinessRefusal(false); !refusal.isEmpty()) throw std::runtime_error(refusal.toStdString());
+    if (!currentExperiment() || currentExperiment()->experiment() != &experiment) throw std::invalid_argument("The original background experiment changed");
     auto input = std::make_shared<WidgetBackgroundInput>();
     input->experiment = &experiment; input->row = &point; input->rename = true; input->expected.id = id;
     input->outcome.message = tr("The original background ID control did not commit");
@@ -6783,6 +6907,12 @@ void ProjectViewModel::undo() {
         undone = apply(edi::Edit::replace_project(*project_, edi::Project(*text->before)), true).isEmpty();
     } else if (const auto* report = std::get_if<edi::ReportSettingsState>(&undo_history_.back())) {
         undone = write_report_settings(edi::Edit::report_settings(*project_, *report)).isEmpty();
+    } else if (const auto* rules = std::get_if<ExtractRules>(&undo_history_.back())) {
+        // As the edit went in: a setting, which leaves a shown dataset out of the template.
+        applying_setting_ = true;
+        undone = restore(edi::Edit::restore_extract_rules(*project_, rules->before), false);
+        if (!self) return;
+        applying_setting_ = false;
     } else if (const auto* flags = std::get_if<FreeFlags>(&undo_history_.back())) {
         undone = apply(edi::Edit::set_free(*project_, flags->before), false).isEmpty();
     } else if (const auto* block = std::get_if<BlockName>(&undo_history_.back())) {

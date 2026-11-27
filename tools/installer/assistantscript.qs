@@ -14,7 +14,9 @@ function Component() {
     installer.addWizardPageItem(component, "DoneForm", QInstaller.InstallationFinished);
     if (installer.isInstaller())
         installer.addWizardPageItem(component, "AssistantForm", QInstaller.TargetDirectory);
-    else if (installer.isPackageManager() || installer.isUpdater())
+    // Changing components asks about the assistant on a page of its own; updating takes everything installed and
+    // goes straight to its summary (owner, 2026-11-26).
+    else if (installer.isPackageManager())
         installer.addWizardPage(component, "AssistantForm", QInstaller.ReadyForInstallation);
     else
         return;
@@ -31,27 +33,24 @@ function Component() {
     function part(name) { return gui.findChild(form, name); }
     var box = part("AssistantCheckBox");
     if (installer.isInstaller()) {
-        // Ticked from the start (owner's choice); the command line still installs it only when named.
+        // Ticked from the start (owner's choice); the command line still installs it only when named. Under
+        // EasyDiffraction, which is always installed (ticked, fixed), each with its size (Installer.qs).
+        part("AppBox").visible = true;
+        box.text = "AI assistant";
         box.checked = true;
         // The folder field of our own (Installer.qs keeps the Framework's in step with it).
         part("FolderBox").visible = true;
         installer.selectComponent(component.name);
     } else {
-        // The choice page, the same when adding or removing and when updating: EasyDiffraction is always kept
-        // (ticked, fixed), the AI assistant is ticked when installed. Updating, its box says whether it is updated;
-        // an assistant that is not installed cannot be, and a note says where to add it.
+        // The choice page when adding or removing components: EasyDiffraction is always kept (ticked, fixed), the AI
+        // assistant is ticked when installed.
         part("AppBox").visible = true;
         box.text = "AI assistant";
         box.checked = component.installed;
-        // The licence, shortcut and space belong to installing, not to this choice.
-        ["LicenseBox", "ShortcutBox", "NoticeBox", "SpaceBox"].forEach(function (name) {
+        // The licence and shortcut belong to installing, not to this choice; the space line stays (Installer.qs).
+        ["LicenseBox", "ShortcutBox", "NoticeBox"].forEach(function (name) {
             part(name).visible = false;
         });
-        if (installer.isUpdater() && !component.installed) {
-            box.enabled = false;
-            part("NoticeLabel").text = "The AI assistant is not installed. Choose Change components to add it.";
-            part("NoticeBox").visible = true;
-        }
     }
     box.toggled.connect(function (checked) {
         if (checked)

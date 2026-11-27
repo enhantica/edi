@@ -36,7 +36,9 @@ load several files at once and to keep large data where it is. crysta now lets a
    when the project is saved elsewhere.
 4. A project whose linked folder or file is missing still opens. The Experiment page shows "Data not found" with the
    folder and Locate folder…, or the selected experiment's file and Locate file…, which points it at the new place as
-   one undoable change.
+   one undoable change. The same change is made in the Sequential fit group (Analysis, Extra), where the data directory
+   can be typed or chosen at any time, except in a browser, which has no folder to name; a typed path is absolute or
+   relative to the project, and one that is no folder is refused at the field.
 5. Data on save (Project page, Extras) says what a save does with a scan's linked files: include them, keep them
    linked, or ask on every save. Included files are copied into the saved project's `scans/<name>` and the written
    project reads them there; the open project points there only once the save succeeded, one undoable change, and a

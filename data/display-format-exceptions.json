@@ -683,11 +683,6 @@
    "reason": "the name of a sidebar width mode, a choice of the window and not an item's option"
   },
   {
-   "file": "app/qml/Pages/Experiment/ExperimentTypeGroup.qml",
-   "literal": "TOF",
-   "reason": "the short form of the beam mode option in a selector too narrow for the dictionary's name"
-  },
-  {
    "file": "app/qml/Pages/Structure/AtomSiteMomentGroup.qml",
    "literal": "θ",
    "reason": "the symbol of the polar angle over its column"
@@ -710,6 +705,26 @@
   {
    "file": "app/src/demo_driver.cpp",
    "literal": "cRwp",
+   "reason": "the layout check's list of symbols that need no capital"
+  },
+  {
+   "file": "app/qml/Components/StatusBar.qml",
+   "literal": "χ²",
+   "reason": "the status bar's key for the fit's reduced χ², not an experiment's χ² item"
+  },
+  {
+   "file": "app/src/project_view_model.cpp",
+   "literal": "χ²",
+   "reason": "the report's title for the fit's own χ² (fit_result.chi_square), beside its reduced χ²"
+  },
+  {
+   "file": "app/src/demo_driver.cpp",
+   "literal": "χ²",
+   "reason": "the layout check's list of symbols that need no capital"
+  },
+  {
+   "file": "app/src/demo_driver.cpp",
+   "literal": "f rand",
    "reason": "the layout check's list of symbols that need no capital"
   }
  ]

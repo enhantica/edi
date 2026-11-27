@@ -20,7 +20,9 @@ for (const fitCase of ['lbco','ncaf']) {
     const workers=name==='oneworker'?'1':'auto';
     const dir = join(output, fitCase, name);
     // The one-worker case also opens and calculates several projects during file routing.
-    const timeout = name === 'oneworker' ? 1_200_000 : 300_000;
+    // The November 25, 2026 hosted site check took 323 s for LBCO with Auto
+    // workers and 399 s for the shim. Allow eight minutes for either route.
+    const timeout = name === 'oneworker' ? 1_200_000 : 480_000;
     const run = spawnSync(process.execPath, ['--experimental-websocket',driver,resolve(site),mode,dir,chrome,`--fit-case=${fitCase}`,`--engine-workers=${workers}`,reference], {stdio:'inherit',timeout});
     const label = `${fitCase}/${name}`;
     if (run.error?.code === 'ETIMEDOUT') throw new Error(`${label} exceeded its ${timeout} ms case deadline`, {cause:run.error});

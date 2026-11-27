@@ -1402,8 +1402,10 @@ inline bool set_free(Parameter& parameter, bool free) {
 }
 
 // Set a parameter's value under its admissible range — the Python
-// `Parameter.value` setter's rule and message (check_admissible), for the app's writes.
+// `Parameter.value` setter's rule and message (check_admissible), for the app's writes. A wavelength of 0 or below is
+// refused too (check_enterable), as a load refuses it.
 inline void assign_value(Parameter& parameter, double value) {
+    check_enterable(parameter.spec, value);
     check_admissible(parameter.spec, value, parameter.spec != nullptr ? parameter.spec->name : "value");
     parameter.value = value;
     parameter.epoch = detail::Epoch();  // A write, whatever the value

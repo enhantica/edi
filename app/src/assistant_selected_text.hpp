@@ -45,6 +45,16 @@ inline quint64 selected_text_utf8_bytes(QAnyStringView text) {
         }
     });
 }
+// The characters of a text: a windows-1252 range has one for each of its bytes, all in the BMP.
+inline quint64 selected_text_characters(QAnyStringView text) {
+    return text.visit([](auto view)->quint64 {
+        if constexpr (std::is_same_v<decltype(view),QUtf8StringView>) {
+            quint64 characters=0;
+            for(const auto c:view)characters+=(static_cast<unsigned char>(c)&0xc0)!=0x80?1:0;
+            return characters;
+        } else return static_cast<quint64>(view.size());
+    });
+}
 inline void validate_selected_text(const QJsonObject& value) {
     using B = edi::assistant::SelectedFileLimits;
     static constexpr std::array<const char*,11> fields{"file_id","collection_id","generation","encoding","text",
@@ -69,7 +79,8 @@ inline void validate_selected_text(const QJsonObject& value) {
     const auto decimal=generation.toString();(void)decimal.toULongLong(&valid);
     if(!valid)throw std::invalid_argument("Selected text generation is unavailable");
     for (const auto c:decimal) if (c.unicode()<'0' || c.unicode()>'9') throw std::invalid_argument("Selected text generation is unavailable");
-    if (!QAnyStringView::equal(text("encoding"),QLatin1StringView("utf-8"))) throw std::invalid_argument("Selected text encoding is unavailable");
+    const bool single=QAnyStringView::equal(text("encoding"),QLatin1StringView("windows-1252"));
+    if (!single && !QAnyStringView::equal(text("encoding"),QLatin1StringView("utf-8"))) throw std::invalid_argument("Selected text encoding is unavailable");
     const auto bytes=[&](const char* key) {
         const auto n=value.value(QLatin1StringView(key));
         if (!n.isDouble() || !std::isfinite(n.toDouble()) || n.toDouble()<0 ||
@@ -79,7 +90,11 @@ inline void validate_selected_text(const QJsonObject& value) {
     };
     const auto total=bytes("total_bytes"), first=bytes("start"), end=bytes("end"), next=bytes("next_offset");
     const auto literal=text("text");
-    if (first>end || end>total || end-first>B::read_bytes || next!=end || selected_text_utf8_bytes(literal)!=end-first || !value.value("eof").isBool() || !value.value("complete").isBool() ||
+    const auto in_range=[&](QAnyStringView read) {
+        const auto wire=selected_text_utf8_bytes(read); // refuses NUL and invalid Unicode in both encodings
+        return (single?selected_text_characters(read):wire)==end-first;
+    };
+    if (first>end || end>total || end-first>B::read_bytes || next!=end || !in_range(literal) || !value.value("eof").isBool() || !value.value("complete").isBool() ||
         value.value("eof").toBool()!=(end==total) || value.value("complete").toBool()!=(first==0 && end==total))
         throw std::invalid_argument("Selected text facts are inconsistent");
 }
