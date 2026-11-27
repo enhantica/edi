@@ -15,7 +15,12 @@ def test_cli_project_loads_a_published_cif_and_reports_its_cell_atoms_and_symmet
     (source / 'structures/phase.edi').unlink()
     shutil.copyfile(
         ROOT / 'tests/fixtures/dictionary_display/published_cod_1000236.cif',
-        source / 'structures/phase.cif',
+        source / 'structures/1000236.cif',
+    )
+    bank = source / 'experiments/bank.edi'
+    bank.write_text(
+        bank.read_text(encoding='utf-8').replace('\nphase ', '\n1000236 '),
+        encoding='utf-8',
     )
     destination = tmp_path / 'report.html'
     result = subprocess.run(
