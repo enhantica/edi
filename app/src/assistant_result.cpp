@@ -682,7 +682,7 @@ bool separated_from_host_storage(const QString& physical) {
     };
     // Include actual existing child aliases, not only the app-data spelling.
     // No enumeration or provider-supplied protected-root list is involved.
-    for (const auto* suffix : {"", "/assistant", "/assistant/agent", "/assistant/input-cache", "/assistant/results", "/assistant/report-views"}) {
+    for (const auto* suffix : {"", "/assistant", "/assistant/agent", "/assistant/accounts", "/assistant/input-cache", "/assistant/results", "/assistant/report-views"}) {
         const QFileInfo entry(base + QString::fromLatin1(suffix));
         const auto protectedPath = entry.canonicalFilePath();
         if (protectedPath.isEmpty()) {
@@ -699,7 +699,9 @@ bool assistant_input_path_allowed(const QString& physical) noexcept {
     try {
         if(physical.isEmpty() || !separated_from_host_storage(physical))return false;
         const auto home=QDir::homePath();
-        const QStringList privateRoots{home+"/.codex",qEnvironmentVariable("CODEX_HOME"),home+"/.ssh",home+"/.aws"};
+        // The assistant runtimes' config homes hold their logins (ADR-0108 §8).
+        const QStringList privateRoots{home+"/.codex",qEnvironmentVariable("CODEX_HOME"),home+"/.claude",
+            qEnvironmentVariable("CLAUDE_CONFIG_DIR"),home+"/.copilot",qEnvironmentVariable("COPILOT_HOME"),home+"/.ssh",home+"/.aws"};
         for(const auto& name:privateRoots) {
             if(name.isEmpty())continue;
             const auto actual=QFileInfo(name).canonicalFilePath();
