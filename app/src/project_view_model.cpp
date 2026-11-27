@@ -4139,7 +4139,7 @@ QString ProjectViewModel::magneticGroupMoments(int node) {
     }
 }
 
-bool ProjectViewModel::addMagneticCandidates(int index, const QList<int>& nodes, bool startMoments) {
+bool ProjectViewModel::addMagneticCandidates(int index, const QList<int>& nodes, bool startMoments, bool select) {
     edi::Project& project = *project_;
     QString error;
     std::shared_ptr<edi::PreparedMagneticCandidates> prepared;
@@ -4169,7 +4169,7 @@ bool ProjectViewModel::addMagneticCandidates(int index, const QList<int>& nodes,
     }
     undo_history_.emplace_back(std::move(before));
     syncUndo();
-    setCurrentStructureIndex(static_cast<int>(structure_models_.size()) - static_cast<int>(prepared->structures.size()));
+    if (select) setCurrentStructureIndex(static_cast<int>(structure_models_.size()) - static_cast<int>(prepared->structures.size()));
     return true;
 }
 
@@ -4226,6 +4226,32 @@ QVariantList ProjectViewModel::magneticDataChoices(int index) const {
                                   {QStringLiteral("name"), QString::fromStdString(experiment->name)},
                                   {QStringLiteral("eligible"), reason.isEmpty()},
                                   {QStringLiteral("reason"), reason}});
+    }
+    return out;
+}
+
+QVariantList ProjectViewModel::magneticMarkCandidates(int index, int experiment) {
+    QVariantList out;
+    magnetic_peaks_.clear();
+    k_search_experiment_ = -1;
+    try {
+        if (index < 0 || index >= static_cast<int>(project_->structures.size()))
+            throw std::invalid_argument("the project has no such structure");
+        magnetic_peaks_ = edi::magnetic_mark_candidates(*project_, static_cast<std::size_t>(experiment),
+                                                        static_cast<std::size_t>(index));
+        k_search_stamp_ = edi::magnetic_fit_inputs_hash(*project_, static_cast<std::size_t>(experiment));
+        k_search_experiment_ = experiment;
+    } catch (const std::exception& refusal) {
+        setLastError(QString::fromUtf8(refusal.what()));
+        return out;
+    }
+    for (const edi::MagneticPeak& p : magnetic_peaks_) {
+        out.push_back(QVariantMap{{QStringLiteral("x"), p.x},
+                                  {QStringLiteral("d"), p.d},
+                                  {QStringLiteral("tolerance"), p.tolerance},
+                                  {QStringLiteral("significance"), p.significance},
+                                  {QStringLiteral("halfWidth"), p.half_width},
+                                  {QStringLiteral("suggestion"), p.on_allowed_reflection}});
     }
     return out;
 }
@@ -4298,7 +4324,12 @@ void ProjectViewModel::findPropagationVectors(int index, int experiment, const Q
                                        {QStringLiteral("verdict"), QString::fromStdString(r.verdict)},
                                        {QStringLiteral("parentCells"), static_cast<int>(r.parent_cells)},
                                        {QStringLiteral("undetermined"), static_cast<int>(r.undetermined)},
-                                       {QStringLiteral("estimate"), QString::fromStdString(r.estimate)}});
+                                       {QStringLiteral("estimate"), QString::fromStdString(r.estimate)},
+                                       {QStringLiteral("roles"), [&r] {
+                                            QStringList roles;
+                                            for (const std::string& role : r.roles) roles.append(QString::fromStdString(role));
+                                            return roles;
+                                        }()}});
         }
         emit propagationVectorsFound(rows);
     });

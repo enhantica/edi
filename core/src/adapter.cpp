@@ -10122,7 +10122,29 @@ std::vector<MagneticPeak> magnetic_unexplained_peaks(const Project& project, std
     std::vector<MagneticPeak> out;
     for (const crysta::UnexplainedPeak& p : crysta::unexplained_peaks(structure, k.engine.experiments.at(experiment), x,
                                                                       observed, calculated, sigma, included)) {
-        out.push_back({p.x, p.d, p.tolerance, p.significance, p.half_width});
+        out.push_back({p.x, p.d, p.tolerance, p.significance, p.half_width, false});
+    }
+    return out;
+}
+
+std::vector<MagneticPeak> magnetic_mark_candidates(const Project& project, std::size_t experiment, std::size_t parent) {
+    require_experiment(project, experiment, parent);
+    const BraggPdExperiment& source = *project.experiments[experiment];
+    if (!source.data.has_value() || source.data->intensity_meas.get().empty()) {
+        throw std::invalid_argument("the experiment has no measured pattern");
+    }
+    const PdDataBase& data = *source.data;
+    const std::vector<double>& x = data.axis();
+    std::vector<bool> included(x.size(), true);
+    const std::vector<std::string>& status = data.calc_status.values();
+    for (std::size_t i = 0; i < included.size() && i < status.size(); ++i) included[i] = status[i] == "incl";
+    const KEngine k(project);
+    const crysta::Structure& structure = engine_structure(k.engine, project.structures[parent]->name.value());
+    std::vector<MagneticPeak> out;
+    for (const crysta::UnexplainedPeak& p :
+         crysta::forbidden_peaks(structure, k.engine.experiments.at(experiment), x, data.intensity_meas.get(),
+                                 data.intensity_meas_su.get(), included, data.intensity_calc.values())) {
+        out.push_back({p.x, p.d, p.tolerance, p.significance, p.half_width, p.on_allowed_reflection});
     }
     return out;
 }
@@ -10133,7 +10155,7 @@ std::vector<MagneticKRow> magnetic_k_search(const Project& project, std::size_t 
     const KEngine k(project);
     const crysta::Structure& structure = engine_structure(k.engine, project.structures[parent]->name.value());
     std::vector<crysta::UnexplainedPeak> in;
-    for (const MagneticPeak& p : peaks) in.push_back({p.x, p.d, p.tolerance, p.significance, p.half_width});
+    for (const MagneticPeak& p : peaks) in.push_back({p.x, p.d, p.tolerance, p.significance, p.half_width, p.on_allowed_reflection});
     std::vector<MagneticKRow> out;
     for (const crysta::PropagationVectorRow& r :
          crysta::search_propagation_vectors(structure, k.engine.experiments.at(experiment), in)) {
@@ -10152,6 +10174,7 @@ std::vector<MagneticKRow> magnetic_k_search(const Project& project, std::size_t 
         row.parent_cells = r.parent_cells;
         row.undetermined = r.undetermined;
         row.estimate = r.estimate;
+        row.roles = r.roles;
         out.push_back(std::move(row));
     }
     return out;

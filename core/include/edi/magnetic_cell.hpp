@@ -100,7 +100,12 @@ struct MagneticPeak {
     double tolerance = 0.0;
     double significance = 0.0;
     double half_width = 0.0;  ///< half the local FWHM on the experiment's axis
+    bool on_allowed_reflection = false;  ///< a suggestion on a reflection the crystal group allows
 };
+/// Find k's candidate peaks on the pattern chart (owner, 2026-11-27): the observed peaks at no reflection the parent's
+/// space group allows, from the measured data alone, then, when the experiment holds a calculated curve, its
+/// unexplained peaks on allowed reflections as suggestions (crysta's forbidden_peaks).
+std::vector<MagneticPeak> magnetic_mark_candidates(const Project& project, std::size_t experiment, std::size_t parent);
 /// The peaks the experiment's current calculated curve leaves unexplained, over its included points (crysta's
 /// unexplained_peaks), highest first. Throws std::invalid_argument naming the reason.
 std::vector<MagneticPeak> magnetic_unexplained_peaks(const Project& project, std::size_t experiment,
@@ -117,6 +122,7 @@ struct MagneticKRow {
     long long parent_cells = 1;
     std::size_t undetermined = 0;
     std::string estimate;
+    std::vector<std::string> roles;  ///< per input peak: satellite, forbidden, allowed or empty
 };
 /// The ranked propagation vectors for `peaks` (crysta's search_propagation_vectors). Reads only its arguments'
 /// copies, so it runs off the GUI thread.

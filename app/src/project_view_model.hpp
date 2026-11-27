@@ -561,13 +561,18 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // The allowed moment components of found group `node`, per magnetic site.
     Q_INVOKABLE QString magneticGroupMoments(int node);
     // Adds found groups `nodes` as structures, one undoable step; false and `refused` on a refusal, nothing changed.
-    Q_INVOKABLE bool addMagneticCandidates(int index, const QList<int>& nodes, bool startMoments);
+    // `select`: the first new structure becomes the current one (the popup opened from the Structure page).
+    Q_INVOKABLE bool addMagneticCandidates(int index, const QList<int>& nodes, bool startMoments, bool select = true);
     // Find k from data: each experiment linking structure `index`, {index, name, eligible, reason}; eligible while a
     // kept fit's inputs still match (recordFitAdoption).
     Q_INVOKABLE QVariantList magneticDataChoices(int index) const;
     // Find k on the pattern chart (owner, 2026-11-27): the Crystal structure experiment `experiment` links and enables,
     // the parent of its k search, or -1.
     Q_INVOKABLE int magneticParentOf(int experiment) const;
+    // Find k on Experiment → Pattern: the candidate peaks for structure `index` in experiment `experiment`
+    // ({x, d, tolerance, significance, halfWidth, suggestion}), the ones at forbidden reflections first; the search
+    // that follows (findPropagationVectors) takes indices into this list. Empty and `refused` on a refusal.
+    Q_INVOKABLE QVariantList magneticMarkCandidates(int index, int experiment);
     // The structure model at `index`, or null.
     Q_INVOKABLE edi_app::StructureViewModel* structureAt(int index) const { return structure_models_.value(index); }
     // The peaks experiment `experiment`'s kept fit leaves unexplained, {x, d, tolerance, significance}; empty and
