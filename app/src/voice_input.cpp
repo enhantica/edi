@@ -143,8 +143,10 @@ void VoiceInput::toggle(QObject* owner) {
         stop();
         return;
     case State::Starting:
-    case State::Recognising:
         cancel();
+        return;
+    case State::Recognising:
+        // A press just after the silence stop means "I'm done", not "throw it away"; Cancel and Escape cancel.
         return;
     }
 }

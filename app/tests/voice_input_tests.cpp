@@ -212,6 +212,24 @@ private slots:
         voice.input->cancel();
     }
 
+    // A press that lands just after the silence stop keeps the recording: the text still arrives for its owner.
+    void pressWhileRecognisingKeepsTheText() {
+        auto voice = voiceOn(tinyModel());
+        QSignalSpy text(voice.input.get(), &VoiceInput::textRecognised);
+        QObject owner;
+        voice.input->toggle(&owner);
+        QTRY_COMPARE(voice.input->state(), VoiceInput::State::Listening);
+        voice.capture->play(spoken_);
+        QCOMPARE(voice.input->state(), VoiceInput::State::Recognising);
+        voice.input->toggle(&owner);
+        QCOMPARE(voice.input->state(), VoiceInput::State::Recognising);
+        QCOMPARE(voice.input->owner(), &owner);
+        QTRY_COMPARE_WITH_TIMEOUT(text.count(), 1, kRecognitionMs);
+        QVERIFY2(words(text.first().first().toString()).contains(QStringLiteral("country")),
+                 qPrintable(text.first().first().toString()));
+        QCOMPARE(voice.input->state(), VoiceInput::State::Idle);
+    }
+
     // Recognitions cancelled before the worker gets to them open no model and give no text, and they run one at a time.
     void cancelBeforeTheWorkerStartsOpensNoModel() {
         auto voice = voiceOn(tinyModel());

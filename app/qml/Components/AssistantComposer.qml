@@ -912,7 +912,7 @@ Rectangle {
                 KeyNavigation.backtab: voiceCancelButton.visible ? voiceCancelButton : nextUserButton
                 objectName: "assistant.voice"
                 fontIcon: "microphone"
-                text: VoiceInput.state === VoiceInput.Listening ? qsTr("Stop and insert the text") : VoiceInput.state === VoiceInput.Starting ? qsTr("Starting the microphone. Press to cancel") : VoiceInput.state === VoiceInput.Recognising ? qsTr("Recognising speech. Press to cancel") : qsTr("Voice input")
+                text: VoiceInput.state === VoiceInput.Listening ? qsTr("Stop and insert the text") : VoiceInput.state === VoiceInput.Starting ? qsTr("Starting the microphone. Press to cancel") : VoiceInput.state === VoiceInput.Recognising ? qsTr("Recognising speech") : qsTr("Voice input")
                 ToolTip.text: text
                 visible: VoiceInput.available
                 Accessible.name: text

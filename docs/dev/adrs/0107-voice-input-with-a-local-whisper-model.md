@@ -70,7 +70,8 @@ assistant runtime, and shows its choices as rows on the folder page instead of a
 8. **Composer button.** A round microphone button, the same component and size as the stop and send buttons, sits to
    their left. While listening it takes the accent colour and a cancel button appears beside it; Escape anywhere in
    the message box also cancels.
-   While recognising it shows that it is busy and stays cancellable.
+   While recognising it shows that it is busy; the cancel button and Escape stop it, and another press of the
+   microphone does not, so a press just after the silence stop keeps the recording.
 
 ## Speed
 

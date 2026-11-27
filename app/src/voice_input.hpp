@@ -34,7 +34,7 @@ public:
 /// text on this computer and hands it to the message box. Nothing is written to disk or sent anywhere.
 ///
 /// The states run Idle → Starting (asking for the microphone) → Listening → Recognising → Idle. `toggle` starts and
-/// stops; `cancel` drops the recording or its recognition from any state. A failure returns to Idle with `message`.
+/// stops, and does nothing while recognising; `cancel` drops the recording or its recognition from any state. A failure returns to Idle with `message`.
 /// The item that started a recording is its `owner` until the text arrives; only that item inserts it, and the
 /// recording is dropped when the owner goes away.
 class VoiceInput : public QObject {
