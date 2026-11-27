@@ -132,8 +132,10 @@ QList<QUrl> feed_urls() {
     QList<QUrl> result;
     QStringList bases{object.value(QStringLiteral("primary_base")).toString()};
     for (const auto& mirror : object.value(QStringLiteral("mirror_bases")).toArray()) bases.append(mirror.toString());
+    // Apps up to 2026.11.31 read stable.json and drop the whole file over a YY.N version,
+    // so it stays a legacy feed for them and this app reads the -v2 files (ADR-0106).
     for (const auto& base : bases) {
-        const QUrl url = QUrl(base).resolved(QUrl(testing ? QStringLiteral("releases/testing.json") : QStringLiteral("releases/stable.json")));
+        const QUrl url = QUrl(base).resolved(QUrl(testing ? QStringLiteral("releases/testing-v2.json") : QStringLiteral("releases/stable-v2.json")));
         if (url.scheme() == QLatin1String("https") && !url.host().isEmpty()) result.append(url);
     }
     return result;
@@ -274,7 +276,7 @@ void DesktopUpdates::fetchNext() {
     connect(reply, &QNetworkReply::finished, this, [this, reply, bytes, read] {
         read();
         bool valid = false;
-        const bool preview = reply->request().url().path().endsWith(QStringLiteral("/releases/testing.json"));
+        const bool preview = reply->request().url().path().endsWith(QStringLiteral("/releases/testing-v2.json"));
         const auto history = release_changes(*bytes, QString{}, &valid, preview);
         const bool success = reply->error() == QNetworkReply::NoError && valid;
         reply->deleteLater();
