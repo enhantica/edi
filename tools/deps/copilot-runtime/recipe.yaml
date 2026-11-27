@@ -1,0 +1,36 @@
+# GitHub Copilot CLI from npm's @github/copilot-<platform> packages (the optionalDependencies of
+# @github/copilot). Hashes are of the published tarballs and match the registry's dist.integrity.
+context:
+  version: "1.0.116"
+  platform: ${{ "linux-x64" if target_platform == "linux-64" else "darwin-arm64" if target_platform == "osx-arm64" else "win32-x64" }}
+  entrypoint: ${{ "copilot.exe" if target_platform == "win-64" else "copilot" }}
+  archive_sha256: ${{ "ca271c7861baa3c9fb8b28a042abab8d6cf11ea0548fd31ab3d916cd6cf4f9ef" if target_platform == "linux-64" else "aeb56d04031e2643da118131948af85cb7207918bef36980718d892534be2970" if target_platform == "osx-arm64" else "31cb1abece0f2b7e512736e50c3009f7aa1f1423df9b71096bb72f91be01e1cc" }}
+package:
+  name: edi-copilot-runtime
+  version: ${{ version }}
+source:
+  - url: https://registry.npmjs.org/@github/copilot-${{ platform }}/-/copilot-${{ platform }}-${{ version }}.tgz
+    sha256: ${{ archive_sha256 }}
+    target_directory: upstream
+build:
+  number: 0
+  skip: target_platform not in ["linux-64", "osx-arm64", "win-64"]
+  # The vendor's signed binary is shipped byte for byte.
+  prefix_detection:
+    ignore: true
+  dynamic_linking:
+    binary_relocation: false
+  script:
+    - if: win
+      then: 'python "%RECIPE_DIR%/install.py" --source "%SRC_DIR%/upstream" --prefix "%PREFIX%" --platform "${{ platform }}" --version "${{ version }}" --archive-sha256 "${{ archive_sha256 }}"'
+      else: 'python "$RECIPE_DIR/install.py" --source "$SRC_DIR/upstream" --prefix "$PREFIX" --platform "${{ platform }}" --version "${{ version }}" --archive-sha256 "${{ archive_sha256 }}"'
+requirements:
+  build:
+    - python >=3.12
+about:
+  homepage: https://github.com/github/copilot-cli
+  summary: The official GitHub Copilot CLI binary, unmodified, for Edi's assistant
+  license: LicenseRef-GitHub-Copilot-CLI
+  license_file:
+    - upstream/LICENSE.md
+    - upstream/Unicode.LICENSE.txt
