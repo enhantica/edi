@@ -2687,12 +2687,13 @@ void fill_crysta_sequential(const SequentialFitConfig& config,
     for (const auto& row : config.shared) {
         shared.push_back(row->parameter_unique_name.value());
     }
-    converted.shared = std::move(shared);
-    std::vector<crysta::SequentialFitConfig::PointStart> starts;
+    converted.set_shared_names(shared);
+    converted.starts.clear();
     for (const auto& row : config.starts) {
-        starts.push_back({row->point.value(), row->parameter_unique_name.value(), row->value.get()});
+        const std::string& point = row->point.value();
+        const std::string& name = row->parameter_unique_name.value();
+        converted.starts.push_back({crysta::parametric_start_id(point, name), point, name, row->value.get()});
     }
-    converted.starts = std::move(starts);
 }
 
 std::string effective_scan_template_file(const Project& scan, const ScanDatasets& datasets) {
