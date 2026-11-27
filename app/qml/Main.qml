@@ -653,7 +653,7 @@ EaComponents.ApplicationWindow {
                 width: parent.width
                 wrapMode: Text.Wrap
                 // The web build's note (the owner, 2026-11-04): what the desktop app offers and how it signs in.
-                text: ApplicationInfo.assistantBuilt ? ApplicationInfo.assistantUnavailableReason : qsTr("The AI assistant is available in the desktop app with your ChatGPT account. It signs in through OpenAI's official app server; your plan's usage limits apply.")
+                text: ApplicationInfo.assistantBuilt ? ApplicationInfo.assistantUnavailableReason : qsTr("The AI assistant is available in the desktop app with your ChatGPT, Claude or GitHub Copilot account. It signs in through each provider's own app; your plan's usage limits apply.")
             }
             IconLink {
                 objectName: "assistant.desktopOnly.updates"

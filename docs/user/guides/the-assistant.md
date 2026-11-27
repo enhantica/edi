@@ -19,6 +19,31 @@ Conversation activity is saved separately from the project on this computer. **C
 This is an implementation candidate, not a verified live-subscription release. The generic runtime uses an owned project/file working copy with workspace writes and network disabled; it declines broader approval requests. Its inherited runtime configuration remains effective: this is not a private read jail or proof that external extensions share that boundary. Nothing is automatically published back into the open project. Successful live chat, streamed inspection and an approved mutation still need verification. Decoder failure details preserve the available bounded reason and original category; diagnostics alone do not fix the failed request. Native Claude, the computer-browser connector, folder/browser file intake, complete sequential optimization and FullProf/GSAS-II import remain unfinished. A screenshot labelled SAMPLE shows original local preview text, not a live provider exchange or a completed refinement.
 
 
+## ChatGPT, Claude or GitHub Copilot
+
+The desktop assistant works with any of three providers. The installer offers each as its own checkbox (ChatGPT is
+ticked by default); add or remove one later with the Maintenance Tool and restart the app. Each provider runs its own
+program, bundled with the app, and signs you in its own way. Edi never sees your password or tokens and offers no
+API-key entry.
+
+- **ChatGPT** signs in through OpenAI's page in your browser with your ChatGPT plan. If you already use the Codex
+  command-line tool, the app starts with that login, and signing out in the app also signs it out there.
+- **Claude** signs in through Claude's own login in your browser, with your Claude plan. Anthropic's Consumer Terms
+  apply to Free, Pro, Max and Ultra plans, and its Commercial Terms to Team, Enterprise and API accounts.
+- **GitHub Copilot** signs in with a device code: the app shows a code and opens GitHub, where you enter it. Personal
+  and business seats work, as do GitHub Enterprise Cloud hosts with data residency (`<name>.ghe.com`, entered when you
+  add the account). GitHub Enterprise Server is not supported. Your organisation must allow the Copilot CLI and MCP
+  servers. On Linux the Copilot program needs OpenSSL 3 from the system. Signing out removes the account from the app;
+  the GitHub sign-in stays in the system keychain until you remove it there or revoke it on GitHub.
+
+The account button at the top of the assistant opens the **Account** dialog. It lists your accounts by provider and
+marks the active one. **Add account** starts a new sign-in for that provider, **Switch** makes another account the
+active one and starts an empty conversation, and **Sign out** acts on one account. Each account keeps its own
+conversations: opening one that belongs to another account asks whether to switch to it.
+
+Claude and GitHub Copilot use only the app's own actions: their own file, command and web tools are off. Claude's
+and Copilot's past conversations list only the ones started in this app.
+
 ## Try the generic desktop candidate
 
 Build using your usual `pixi run -e app app-with-crysta ../crysta`. The normal native app build automatically downloads and verifies its app-owned runtime package. This development command also builds the existing Edi Python bindings in the compatible default environment against the same local crysta prefix, and supplies the app Python/module path to runtime commands. A plain app-only build does not establish that Python prerequisite.
