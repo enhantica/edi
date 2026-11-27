@@ -147,7 +147,7 @@ void AssistantToolServer::accept() {
             discard(socket, this);
             continue;
         }
-        pending_.append({socket, {}});
+        pending_.append(Pending{socket, {}});
         connect(socket, &QLocalSocket::readyRead, this, [this, socket] { readPending(socket); });
         connect(socket, &QLocalSocket::disconnected, this, [this, socket] { dropPending(socket); });
         QTimer::singleShot(keyWaitMs, socket, [this, socket] { dropPending(socket); });
