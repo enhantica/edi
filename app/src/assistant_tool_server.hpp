@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #pragma once
 #include <QByteArray>
+#include <QHash>
 #include <QJsonArray>
 #include <QJsonObject>
 #include <QJsonValue>
@@ -13,6 +14,7 @@
 
 class QLocalServer;
 class QLocalSocket;
+class QTimer;
 
 namespace edi_app {
 /// edi's tools as an MCP server (ADR-0108 §3) for runtimes other than Codex. The runtime starts
@@ -57,6 +59,8 @@ public:
 
     /// The longest line read or written; a longer one closes the connection.
     static constexpr qsizetype lineBytes = static_cast<qsizetype>(edi::assistant::Limits::request_bytes);
+    /// How often a running call that carried a progress token reports progress, so a long fit is not cut off.
+    static constexpr int progressIntervalMs = 30000;
 
 signals:
     /// The bound generation's bridge sent the right key.
@@ -79,6 +83,8 @@ private:
     void readPending(QLocalSocket* socket);
     void readConnection();
     void dropPending(QLocalSocket* socket);
+    bool endCall(const QJsonValue& requestId);
+    void clearCalls();
     void removeKeyFile();
     void closeConnection(bool notify);
     void handle(const QJsonObject& message);
@@ -96,7 +102,7 @@ private:
     QString keyFile_;
     QJsonArray tools_;
     QSet<QString> toolNames_;
-    QSet<QString> calls_;
+    QHash<QString, QTimer*> calls_; // pending tools/call ids, each with its progress timer or none
     quint64 generation_ = 0;
     bool bound_ = false;
     bool used_ = false;

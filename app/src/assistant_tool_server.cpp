@@ -193,6 +193,19 @@ void AssistantToolServer::dropPending(QLocalSocket* socket) {
     discard(socket, this);
 }
 
+bool AssistantToolServer::endCall(const QJsonValue& requestId) {
+    const auto found = calls_.constFind(idKey(requestId));
+    if (found == calls_.constEnd()) return false;
+    delete found.value();
+    calls_.erase(found);
+    return true;
+}
+
+void AssistantToolServer::clearCalls() {
+    qDeleteAll(calls_);
+    calls_.clear();
+}
+
 void AssistantToolServer::readConnection() {
     const QPointer<QLocalSocket> socket = connection_;
     if (!socket) return;
@@ -224,7 +237,7 @@ void AssistantToolServer::readConnection() {
 }
 
 void AssistantToolServer::closeConnection(bool notify) {
-    calls_.clear();
+    clearCalls();
     buffer_.clear();
     QLocalSocket* socket = connection_.data();
     connection_ = nullptr;
@@ -242,7 +255,7 @@ void AssistantToolServer::handle(const QJsonObject& message) {
     if (!message.contains("id")) {
         if (name == QLatin1StringView("notifications/cancelled")) {
             const auto requestId = params.value("requestId");
-            if (calls_.remove(idKey(requestId))) emit cancelled(requestId);
+            if (endCall(requestId)) emit cancelled(requestId);
         }
         return;
     }
@@ -272,7 +285,18 @@ void AssistantToolServer::handle(const QJsonObject& message) {
         } else if (calls_.contains(idKey(id))) {
             sendError(id, -32600, QStringLiteral("Request id is already in use"));
         } else {
-            calls_.insert(idKey(id));
+            QTimer* progress = nullptr;
+            const auto token = params.value("_meta").toObject().value("progressToken");
+            if (token.isString() || token.isDouble()) {
+                progress = new QTimer(this);
+                progress->setInterval(progressIntervalMs);
+                connect(progress, &QTimer::timeout, this, [this, token, count = 0]() mutable {
+                    send({{"jsonrpc", "2.0"}, {"method", "notifications/progress"},
+                          {"params", QJsonObject{{"progressToken", token}, {"progress", ++count}, {"message", "Working"}}}});
+                });
+                progress->start();
+            }
+            calls_.insert(idKey(id), progress);
             emit toolCall(id, tool, arguments.toObject());
         }
     } else {
@@ -297,7 +321,7 @@ bool AssistantToolServer::sendError(const QJsonValue& id, int code, const QStrin
 }
 
 bool AssistantToolServer::answerCall(const QJsonValue& requestId, bool isError, const QString& text) {
-    if (!connection_ || !calls_.remove(idKey(requestId))) return false;
+    if (!connection_ || !endCall(requestId)) return false;
     const auto result = [](bool error, const QString& content) {
         return QJsonObject{{"content", QJsonArray{QJsonObject{{"type", "text"}, {"text", content}}}}, {"isError", error}};
     };
