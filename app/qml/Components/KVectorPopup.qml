@@ -25,6 +25,13 @@ AppDialog {
     readonly property var markedPeaks: snapshot.marks ?? []
 
     property var rows: []
+    // The chosen row: the first when the search answers, then wherever the user moves it in the table, by a click on
+    // any cell or by Up and Down, the app table's own selection (owner, 2026-11-27).
+    property int chosen: -1
+    onRowsChanged: {
+        chosen = rows.length > 0 ? 0 : -1;
+        Qt.callLater(() => list.forceActiveFocus());  // Up and Down move the choice at once
+    }
     // The chosen k; the chart opens the analysis with it.
     // The chosen row: its k, and its rank in the search, by which the analysis names it to the project.
     signal chosen(string k, int rank)
@@ -74,7 +81,8 @@ AppDialog {
         EaElements.Label {
             Layout.fillWidth: true
             wrapMode: Text.Wrap
-            text: popup.searching ? qsTr("Searching…") : qsTr("Choose a propagation vector to analyse the magnetic symmetry it allows.")
+            visible: popup.searching
+            text: qsTr("Searching…")
         }
         EaElements.Label {
             Layout.fillWidth: true
@@ -93,7 +101,8 @@ AppDialog {
             Layout.fillHeight: true
             clip: true
             marksCurrentRow: true
-            currentIndex: popup.rows.length > 0 ? 0 : -1
+            currentIndex: popup.chosen
+            onRowActivated: row => popup.chosen = row
             sourceModel: popup.rows
             defaultInfoText: popup.searching ? qsTr("Searching…") : qsTr("No propagation vector")
             columnKinds: ["index", "short", "text", "number", "number", "text"]
@@ -102,7 +111,7 @@ AppDialog {
                 EaComponents.ListViewLabel {}
                 EaComponents.ListViewLabel {
                     horizontalAlignment: Text.AlignLeft
-                    text: qsTr("Point")
+                    text: qsTr("Special point")
                 }
                 EaComponents.ListViewLabel {
                     horizontalAlignment: Text.AlignLeft
@@ -125,13 +134,11 @@ AppDialog {
                 id: row
                 required property var modelData
                 objectName: `chart.kVector.${row.index}`
-                MouseArea {
-                    parent: row
-                    anchors.fill: parent
-                    z: 1
-                    onClicked: list.currentIndex = row.index
-                    onDoubleClicked: {
-                        list.currentIndex = row.index;
+                // A double click analyses the row; a single click is the table's own selection, so this handler
+                // only listens (a passive grab).
+                TapHandler {
+                    onDoubleTapped: {
+                        popup.chosen = row.index;
                         popup.analyse();
                     }
                 }
@@ -165,14 +172,14 @@ AppDialog {
                 }
             }
         }
-        // The chosen k's reading of each marked peak, in the pattern's order (by 2θ).
+        // The details strip, as the symmetry popup's (owner, 2026-11-27): what the chosen k explains, each marked peak in
+        // the pattern's order (by 2θ) with its role, in the normal text colour.
         EaElements.Label {
             objectName: "chart.kVectorRoles"
             Layout.fillWidth: true
             wrapMode: Text.Wrap
-            color: EaStyle.Colors.themeForegroundMinor
             text: {
-                const r = popup.rows[list.currentIndex];
+                const r = popup.rows[popup.chosen];
                 if (r === undefined)
                     return "";
                 const names = {
@@ -182,23 +189,22 @@ AppDialog {
                     "": qsTr("not indexed")
                 };
                 const order = popup.markedPeaks.map((p, i) => i).sort((a, b) => popup.markedPeaks[a].x - popup.markedPeaks[b].x);
-                // Named by its row, so it reads as the chosen k's (conductor seq 51).
-                const point = r.label === "" ? `(${r.k})` : r.label;
-                return `${point}: ` + order.map(i => `${popup.markedPeaks[i].x.toFixed(2)}° ${names[r.roles[i] ?? ""] ?? r.roles[i]}`).join(" · ") + (r.equallyGood ? qsTr(" · equally good") : "");
+                const point = r.label === "" ? `(${r.k})` : `${r.label} (${r.k})`;
+                return qsTr("%1 explains: %2").arg(point).arg(order.map(i => `${popup.markedPeaks[i].x.toFixed(2)}° ${names[r.roles[i] ?? ""] ?? r.roles[i]}`).join(", ")) + (r.equallyGood ? qsTr(" · equally good") : "");
             }
         }
     }
 
     // Analyse the chosen k: the data, links and marks the search ran on must still hold (review 12, F19).
     function analyse() {
-        if (list.currentIndex < 0 || list.currentIndex >= rows.length)
+        if (chosen < 0 || chosen >= rows.length)
             return;
         if (!project.kSnapshotCurrent(snapshot.id)) {
             refusal = qsTr("The data, the structures or the marked peaks changed; mark the peaks again.");
             return;
         }
-        const k = rows[list.currentIndex].k;
-        const rank = rows[list.currentIndex].rank;
+        const k = rows[chosen].k;
+        const rank = rows[chosen].rank;
         close();
         chosen(k, rank);
     }
@@ -222,7 +228,7 @@ AppDialog {
                 objectName: "chart.kVectorPopup.analyse"
                 fontIcon: "magnet"
                 text: qsTr("Analyse")
-                enabled: list.currentIndex >= 0 && !popup.searching
+                enabled: popup.chosen >= 0 && !popup.searching
                 onClicked: popup.analyse()
             }
         }
