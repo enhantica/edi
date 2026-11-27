@@ -142,6 +142,7 @@ nav:
           - "ADR-0105 Declared columns": dev/adrs/0105-declared-columns.md
           - "ADR-0106 Versions and checksum updates": dev/adrs/0106-versions-and-checksum-updates.md
           - "ADR-0107 Voice input with a local Whisper model": dev/adrs/0107-voice-input-with-a-local-whisper-model.md
+          - "ADR-0108 Replacing the Maintenance Tool's own files": dev/adrs/0108-replacing-the-maintenance-tools-own-files.md
           - dev/adrs/template.md
       - Design:
           - dev/design/api-types.md

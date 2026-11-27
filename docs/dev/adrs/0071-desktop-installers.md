@@ -108,9 +108,15 @@ building a custom helper or packaging a replacement system C library for older s
 
 The Linux IFW bootstrap itself links portable X11 and utility libraries, even when its CLI uses the
 offscreen platform. Relocate a copy of `installerbase` before the framework appends its payload. Ship
-its non-glibc library closure and licence files beside the bootstrap in the Linux download ZIP and inside
-the component for the installed maintenance tool. Do not patch an already appended installer or
-rely on Pixi paths in the user's environment. The operating system still supplies glibc.
+its non-glibc library closure and licence files as `installer-runtime/` beside the bootstrap in the
+Linux download ZIP and, for the installed maintenance tool, in the tool's own component
+(`org.easydiffraction.app.maintenancetool`, which on Linux carries only this runtime). An update swaps
+the new runtime in and keeps the installed one until it has succeeded, a rollback puts that one back,
+and no undo ever removes the runtime in use; the control script removes it when the installation is
+purged ([ADR-0108](0108-replacing-the-maintenance-tools-own-files.md)). Earlier releases kept it in the
+app component, where a failed update's rollback deleted it and left the tool without its libraries.
+Do not patch an already appended installer or rely on Pixi paths in the user's environment. The
+operating system still supplies glibc.
 
 Before compiling the application, CI exercises the real framework with tiny marker components:
 unpack the distribution ZIP, install offline, update from a local file repository, uninstall, then
@@ -318,8 +324,9 @@ tool's tooltip "Updates and uninstalls EasyDiffraction"), each with its size on 
 update summary lists them; then the licence and, on Windows and Linux, the desktop shortcut boxes.
 Every page and list orders the components EasyDiffraction, Maintenance Tool, AI assistant (their
 sorting priorities 200, 150, 100). The optional voice input component (ADR-0107) follows as a fourth row on the
-same page and in the same Change components page, unticked, with sorting priority 90. The tool's component has no payload on Linux, so its row shows
-the size of the Framework's binary the installation writes as the tool. In Maintenance Tool's Change components flow
+same page and in the same Change components page, unticked, with sorting priority 90. On Linux the tool's component
+carries only the installer runtime (ADR-0108), and the Framework writes the tool from its own binary. In Maintenance
+Tool's Change components flow
 it is a page of its own whose box shows whether the assistant is installed; Update has no such page and goes straight
 to Ready to update, updating everything installed (owner, 2026-11-26). Ready to update lists the tool only when the update
 changes it: with checksum updates (ADR-0106) it can stay unchanged while EasyDiffraction changes, or be the only change.
