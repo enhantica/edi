@@ -88,6 +88,9 @@ def dump_hung(pid: int, path: Path) -> None:
 def run(command: list[str], log: Path, timeout: float, hung: Path) -> tuple[str, bytes]:
     """Run one call, its output to the console and the log; its exit code, or `timeout`."""
     environment = dict(os.environ)
+    # A CI runner has no console window, so Qt would send its messages and Qt Test's results to
+    # the debugger only (OutputDebugString), and the log would hold no case at all.
+    environment.setdefault('QT_FORCE_STDERR_LOGGING', '1')
     environment.setdefault('QT_LOGGING_RULES', LOGGING_RULES)
     environment.setdefault('QT_MESSAGE_PATTERN', '%{time process} %{category}: %{message}')
     seen = bytearray()
