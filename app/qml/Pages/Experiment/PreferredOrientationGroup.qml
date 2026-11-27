@@ -26,7 +26,25 @@ Column {
         sourceModel: group.rows
 
         // Its columns by kind (the shared column model, DataTable.columnKinds; ADR-0103 decision 4).
-        columnKinds: ["index", "text", "short", "short", "short", "number", "number", "control"]
+        columnKinds: ["index", "name", "short", "short", "short", "value", "value", "control"]
+        columnTexts: ["",
+            {
+                "role": "structureId",
+                "edited": true
+            },
+            {
+                "role": "indexH",
+                "edited": true
+            },
+            {
+                "role": "indexK",
+                "edited": true
+            },
+            {
+                "role": "indexL",
+                "edited": true
+            }
+        ]
         // Widths from column types, not rows (ADR-0103 rule 4): an id or label, then values.
 
         header: EaComponents.ListViewHeader {

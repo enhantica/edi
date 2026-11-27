@@ -157,7 +157,7 @@ AppDialog {
                         readonly property string displayDate: Qt.formatDate(new Date(parts[0], parts[1] - 1, parts[2]), "d MMM yyyy")
 
                         font.bold: true
-                        text: day.modelData.version ? qsTr("EasyDiffraction %1 (%2)").arg(day.modelData.version).arg(displayDate) : displayDate
+                        text: day.modelData.version ? qsTr("%1 · %2").arg(day.modelData.version).arg(displayDate) : displayDate
                     }
 
                     NotesText {

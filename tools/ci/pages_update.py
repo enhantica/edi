@@ -8,6 +8,7 @@ import json
 import re
 import shutil
 import subprocess
+import sys
 import tarfile
 import tempfile
 import xml.etree.ElementTree as ET  # noqa: S405 - qualified Pages artifacts
@@ -15,6 +16,9 @@ from operator import itemgetter
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / 'tools/release'))
+from versions import PATTERN, version_key  # noqa: E402
+
 # The crysta commits a site's content was checked against (edi ADR-0083). What a publisher keeps
 # is checked against them again, so no component owns the record and none may drop it.
 CHECKED = 'crysta-commits.json'
@@ -139,7 +143,7 @@ def check_package_index(site: Path) -> None:
     page = project / 'index.html'
     if not page.is_file():
         return
-    wheel = re.compile(r'easydiffraction-(\d{4}\.\d{1,2}\.\d+)-cp312-abi3-[a-z0-9_]+\.whl')
+    wheel = re.compile(rf'easydiffraction-({PATTERN})-cp312-abi3-[a-z0-9_]+\.whl')
     release = re.compile(
         r'https://github\.com/enhantica/edi/releases/download/v(?P<version>[^/]+)/(?P<name>[^/]+)'
     )
@@ -208,10 +212,6 @@ def check_feed_agreement(site: Path) -> None:
                     f'The {channel} repository for {repository.name} offers '
                     f'{sorted(map(str, offered))}, but its feed advertises {advertised}'
                 )
-
-
-def version_key(version: str) -> tuple[int, ...]:
-    return tuple(map(int, version.split('.')))
 
 
 def overlay_release(site: Path, incoming: Path) -> None:
@@ -319,9 +319,7 @@ def overlay_testing_feed(site: Path, feed: Path) -> None:
         previous = json.loads(target.read_text(encoding='utf-8'))
         if previous.get('sequence') == current.get('sequence'):
             version = current['releases'][0]['version']
-            if tuple(map(int, version.split('.'))) < tuple(
-                map(int, previous['releases'][0]['version'].split('.'))
-            ):
+            if version_key(version) < version_key(previous['releases'][0]['version']):
                 raise RuntimeError('Testing update feed cannot move backwards')
             current['releases'].extend(
                 entry for entry in previous['releases'][:19] if entry['version'] != version

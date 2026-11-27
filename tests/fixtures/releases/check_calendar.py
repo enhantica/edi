@@ -36,16 +36,17 @@ def make_plan(releases=(), today=datetime.date(2026, 11, 5), requests=None):
 @pytest.mark.parametrize(
     ('versions', 'date', 'expected'),
     [
-        ([], '2026-11-05', '2026.11.0'),
-        (['2026.11.0', '2026.11.9'], '2026-11-05', '2026.11.10'),
-        (['2026.11.10'], '2026-12-01', '2026.12.0'),
-        (['2026.12.2'], '2027-01-01', '2027.01.0'),
+        # 2026 had 16 releases before YY.N, so its counter starts at 17 (edi ADR-0106).
+        ([], '2026-11-05', '26.17'),
+        (['2026.11.0', '2026.11.9'], '2026-11-05', '26.17'),
+        (['26.17'], '2026-12-01', '26.18'),
+        (['26.20'], '2027-01-01', '27.1'),
     ],
 )
 def test_release_calendar(versions, date, expected):
     releases = [{'version': version, 'commit': 'b' * 40} for version in versions]
     assert make_plan(releases, datetime.date.fromisoformat(date))['version'] == expected, (
-        'Calendar versions must use the numeric sequence for their calendar month.'
+        'Versions must use the counter of their year.'
     )
 
 
@@ -59,7 +60,7 @@ def test_retry_on_another_day_reuses_the_published_identity_and_notes():
 def test_labels_group_notes_without_changing_the_version_rule():
     for label, group in PLAN.GROUPS.items():
         result = make_plan(requests=[request(labels=[label, '[interface] desktop'])])
-        assert result['version'] == '2026.11.0', (
+        assert result['version'] == '26.17', (
             'Labels group notes without changing the version rule.'
         )
         assert result['notes'][group][0]['title'] == request()['title'], (

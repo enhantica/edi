@@ -326,8 +326,8 @@ AppDialog {
                         minimumLines: 5
                         maximumLines: 5
                         // What the type list and the subject asked before (edi-feedback #102); the site's form says
-                        // the same.
-                        placeholderText: qsTr("Feedback, a question, a problem or an idea: tell us what it is about. For a problem, what did you do, what happened, and what did you expect?")
+                        // the same. Two lines: a placeholder does not wrap, and the field is at most 48 units wide.
+                        placeholderText: qsTr("Feedback, a question, a problem or an idea: tell us what it is about.\nFor a problem, what did you do, what happened, and what did you expect?")
                     }
                     // The log box, and Attach files at the right of the same row (owner, 2026-11-17), with the AI
                     // work report link left of it (owner, 2026-11-19).

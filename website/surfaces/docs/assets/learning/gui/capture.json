@@ -48,22 +48,22 @@
   "generator_sha256": "e3f89a779bac27825cf0e3ad64c37c084355e6974a76aea5c172390aca3b0ab0",
   "input_sha256": {
     "analysis/analysis.edi": "9a95bbed9e75c1a9984f6b36631d74ae300c348bcaf418b9e1e5c806f68877e9",
-    "experiments/spodi.edi": "0800fa77057104d38d7c949dae607dc5085185efc7bcaf8212eba10de56a6fca",
-    "project.edi": "47ad70bd60b1f867df22fca048a87731287b8e8bd651f7b65c0af68ad1b5e917",
+    "experiments/spodi.edi": "c80ac2072708d90d40dd59937bcf6a96c0b587cf68dc37f02bf7befea3d1ae68",
+    "project.edi": "23dbfb8d00287f3ee8f644e88d603f7d5f2af806649a4df09ac0974f93357b14",
     "reports/report.edi": "ccf0a412ae4f61ed0be46e8e7b010680a5b9da02d43db3e3ae88aded07f44ffc",
     "structures/y2o3.edi": "6a0c455ac2890563bc7313a01cdcd12c19e866ed3d1c8a949d8673e6b4db720b"
   },
   "refined_input_sha256": {
-    "analysis/analysis.edi": "1cf58e7338beb8469d065b7408f4479f0140577bce7081a7b4ff1cf233e5889f",
-    "experiments/spodi.edi": "471912167580a37983c322d634f7385e73252556fcd33e079eff83c7bf1fca7e",
-    "project.edi": "873b6149e5257d82d7b03c9a8c99d38f9111b932b0739a8d013cc1f861fff905",
+    "analysis/analysis.edi": "908f9a673f31de4c90fd46262e2ad1b3538e090f438c9d9b459128d232a40966",
+    "experiments/spodi.edi": "c9af5bdffbba26fe571347ed8d408a6678a5ba95686d0b7a0ee5e121323fdd2b",
+    "project.edi": "e5eace679a63c53450874b27ce2cdad73a53b0e65dbdf6e158369ced50962336",
     "reports/report.edi": "ccf0a412ae4f61ed0be46e8e7b010680a5b9da02d43db3e3ae88aded07f44ffc",
     "structures/y2o3.edi": "afbab42d16a2f14c9f11d8dbda28f55287b5d3c260daec579961e0ecf632779b"
   },
   "gui_capture": {
-    "source_revision": "66250b0826244790ae402c00384ea8fca62ae552",
-    "binary_sha256": "6b270a81225af60207e9664a9d77ce7e7a96c47e78c931c73331f97a7c9b9ce5",
-    "manifest_sha256": "3f06e02078ab64e449e18dbc3c8b3ce7a3c7c5f2507e18778fc0907049d6a548"
+    "source_revision": "1bbb542a5be8bc99e889b80989c28c7404fbc7e3",
+    "binary_sha256": "a250bce468ec68a1d78e84ea5b0a49a606cb059703aa3518df88badd1da0e3c3",
+    "manifest_sha256": "fc59ae2e21f4c1a18cbb1af7faa0b6b0a7c7f594e3f6f31d2461610be75555fe"
   },
   "assets_sha256": {
     "dark/initial.svg": "c2caeb25e7d77f7c0913428bc56c48582bf211a16b0f000a7cea0c0380431cf1",

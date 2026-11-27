@@ -1,10 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- SPDX-License-Identifier: BSD-3-Clause -->
-<!-- The folder field and the choices on the installer's one page (assistantscript.qs, Installer.qs): the AI
-     assistant, the licence, a desktop shortcut on Windows and Linux, and the space the installation needs. Also the
-     maintenance tool's choice page when adding, removing or updating: the logo, EasyDiffraction (always kept, so
-     ticked and fixed) and the AI assistant; it has no window title, so that page
-     has no header. -->
+<!-- The folder field and the choices on the installer's one page (assistantscript.qs, Installer.qs): the folder
+     with the space the installation needs under it, then one group of EasyDiffraction, the Maintenance Tool (both
+     ticked and fixed) and the AI assistant with their sizes, then the licence and a desktop shortcut on Windows and
+     Linux. Also the maintenance tool's choice page when adding, removing or updating: the logo and heading, the space
+     line and the same three rows; it has no window title, so that page has no header. The Maintenance Tool's row
+     and the sizes are there from the start, so the rows are spaced once, with every row in place. -->
 <ui version="4.0">
  <class>AssistantForm</class>
  <widget class="QWidget" name="AssistantForm">
@@ -19,9 +20,10 @@
        macOS (the hidden box's layout margins). Nor is a box ever put straight in the column. On macOS a check box reaches 2 px past
        its cell (its layout margins), and a column holding one moves all its rows right to make room, so boxes and
        text started 2 px apart. A row's own layout takes up its box's margins, so every row starts at the column's
-       edge and each row's frame is its cell: one 8 px gap between all rows. -->
+       edge and each row's frame is its cell: an 8 px gap between the rows of a group, 24 between groups. -->
   <!-- The column has no spacing of its own: above each row a gap widget, 8 high, which Installer.qs (settleForm)
-       sets once the page shows so that the drawn frames stand one row gap apart, the logo one step above the rest.
+       sets once the page shows so that the drawn frames stand one row gap apart, a new group (the folder, the
+       choices, the notes under them) and the rest 32 under the logo.
        A fixed spacing cannot: a row is not always exactly its drawn frames (on macOS the licence row is 1 px more). -->
   <layout class="QVBoxLayout" name="AssistantLayout">
    <property name="spacing">
@@ -125,6 +127,47 @@
     </widget>
    </item>
    <item>
+    <widget class="QWidget" name="SpaceRowGap">
+     <property name="minimumSize">
+      <size>
+       <width>0</width>
+       <height>8</height>
+      </size>
+     </property>
+     <property name="maximumSize">
+      <size>
+       <width>16777215</width>
+       <height>8</height>
+      </size>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QWidget" name="SpaceBox">
+     <layout class="QHBoxLayout" name="SpaceRow">
+      <property name="spacing">
+       <number>8</number>
+      </property>
+      <property name="leftMargin">
+       <number>0</number>
+      </property>
+      <property name="topMargin">
+       <number>0</number>
+      </property>
+      <property name="rightMargin">
+       <number>0</number>
+      </property>
+      <property name="bottomMargin">
+       <number>0</number>
+      </property>
+      <item>
+       <widget class="QLabel" name="SpaceLabel">
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
     <widget class="QWidget" name="AppRowGap">
      <property name="minimumSize">
       <size>
@@ -174,6 +217,79 @@
         </property>
        </widget>
       </item>
+      <item>
+       <spacer name="AppSizeSpacer">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+       </spacer>
+      </item>
+      <item>
+       <widget class="QLabel" name="AppSizeLabel"/>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QWidget" name="MaintenanceRowGap">
+     <property name="minimumSize">
+      <size>
+       <width>0</width>
+       <height>16</height>
+      </size>
+     </property>
+     <property name="maximumSize">
+      <size>
+       <width>16777215</width>
+       <height>16</height>
+      </size>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QWidget" name="MaintenanceBox">
+     <layout class="QHBoxLayout" name="MaintenanceRow">
+      <property name="spacing">
+       <number>8</number>
+      </property>
+      <property name="leftMargin">
+       <number>0</number>
+      </property>
+      <property name="topMargin">
+       <number>0</number>
+      </property>
+      <property name="rightMargin">
+       <number>0</number>
+      </property>
+      <property name="bottomMargin">
+       <number>0</number>
+      </property>
+      <item>
+       <widget class="QCheckBox" name="MaintenanceCheckBox">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+        <property name="checked">
+         <bool>true</bool>
+        </property>
+        <property name="text">
+         <string>Maintenance Tool</string>
+        </property>
+        <property name="toolTip">
+         <string>Updates and uninstalls EasyDiffraction</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <spacer name="MaintenanceSizeSpacer">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+       </spacer>
+      </item>
+      <item>
+       <widget class="QLabel" name="MaintenanceSizeLabel"/>
+      </item>
      </layout>
     </widget>
    </item>
@@ -214,9 +330,19 @@
       <item>
        <widget class="QCheckBox" name="AssistantCheckBox">
         <property name="text">
-         <string>Also install the AI assistant</string>
+         <string>AI assistant</string>
         </property>
        </widget>
+      </item>
+      <item>
+       <spacer name="AssistantSizeSpacer">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+       </spacer>
+      </item>
+      <item>
+       <widget class="QLabel" name="AssistantSizeLabel"/>
       </item>
      </layout>
     </widget>
@@ -366,47 +492,6 @@
         <property name="openExternalLinks">
          <bool>false</bool>
         </property>
-       </widget>
-      </item>
-     </layout>
-    </widget>
-   </item>
-   <item>
-    <widget class="QWidget" name="SpaceRowGap">
-     <property name="minimumSize">
-      <size>
-       <width>0</width>
-       <height>8</height>
-      </size>
-     </property>
-     <property name="maximumSize">
-      <size>
-       <width>16777215</width>
-       <height>8</height>
-      </size>
-     </property>
-    </widget>
-   </item>
-   <item>
-    <widget class="QWidget" name="SpaceBox">
-     <layout class="QHBoxLayout" name="SpaceRow">
-      <property name="spacing">
-       <number>8</number>
-      </property>
-      <property name="leftMargin">
-       <number>0</number>
-      </property>
-      <property name="topMargin">
-       <number>0</number>
-      </property>
-      <property name="rightMargin">
-       <number>0</number>
-      </property>
-      <property name="bottomMargin">
-       <number>0</number>
-      </property>
-      <item>
-       <widget class="QLabel" name="SpaceLabel">
        </widget>
       </item>
      </layout>

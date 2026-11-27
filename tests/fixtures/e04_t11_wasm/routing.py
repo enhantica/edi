@@ -10,7 +10,7 @@ import sys
 from pathlib import Path
 
 
-def materialize(target):
+def materialize(target, *, replacement=False):
     root = Path(__file__).resolve().parents[3]
     source = root / 'docs/user/cli/pd-neut-cwl_lbco-hrpt_start-4/project'
     target = Path(target)
@@ -27,6 +27,15 @@ def materialize(target):
                 flags=re.MULTILINE,
             )
         )
+    if replacement:
+        folder = target / 'routing_empty'
+        folder.mkdir()
+        (folder / 'project.edi').write_text(
+            '_edi.schema_version 2\n'
+            '_metadata.name routing_empty\n'
+            '_metadata.description "A project with no data"\n',
+            encoding='utf-8',
+        )
     files = target / 'blocks'
     files.mkdir()
     structure = (source / 'structures/lbco.edi').read_text()
@@ -41,4 +50,4 @@ def materialize(target):
 
 
 if __name__ == '__main__':
-    materialize(sys.argv[1])
+    materialize(sys.argv[1], replacement='--replacement' in sys.argv[2:])

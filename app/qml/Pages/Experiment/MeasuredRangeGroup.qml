@@ -88,7 +88,7 @@ Column {
         // Its columns by kind (the shared column model, DataTable.columnKinds; ADR-0103 decision 4): the position, the
         // intensities, d, the background and the residual are numbers, the status a short text, then one number per
         // structure; each as wide as its content, the spare at the right end.
-        columnKinds: ["index", "number", "number", "number", "number", "number", "number", "number", "short"].concat(componentNames.map(() => "number"))
+        columnKinds: ["index", "number", "number", "number", "number", "number", "number", "number", "mark"].concat(componentNames.map(() => "number"))
 
         header: EaComponents.ListViewHeader {
             EaComponents.ListViewLabel {

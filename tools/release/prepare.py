@@ -16,6 +16,8 @@ from operator import itemgetter
 from pathlib import Path
 
 from plan import (
+    PATTERN,
+    is_version,
     markdown_notes,
     next_calendar_version,
     release_body,
@@ -96,12 +98,11 @@ def calendar_tags(repo: str) -> list[str]:
         for item in page
         if item['draft'] and item['tag_name'].startswith('v')
     )
-    return [
-        tag for tag in tags if re.fullmatch(r'[0-9]{4}\.(0[1-9]|1[0-2])\.(0|[1-9][0-9]*)', tag)
-    ]
+    return [tag for tag in tags if is_version(tag)]
 
 
-CALENDAR_TAG = re.compile(r'v[0-9]{4}\.(0[1-9]|1[0-2])\.(0|[1-9][0-9]*)')
+# A release tag in either form, old YYYY.MM.N or YY.N (versions.py).
+CALENDAR_TAG = re.compile('v' + PATTERN)
 
 
 def list_releases(repo: str) -> list[dict]:

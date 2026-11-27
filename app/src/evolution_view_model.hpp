@@ -10,6 +10,7 @@
 #include <QTimer>
 #include <QtQml/qqmlregistration.h>
 #include <cstdint>
+#include <limits>
 #include <memory>
 #include <optional>
 #include <string>
@@ -22,9 +23,9 @@
 
 namespace edi_app {
 
-// The parameters of the Evolution tab's selector: every free parameter, then any other one the scan's results
-// record; roles `name` (the results column, a diffraction-lib unique name) and `label` (the same, as the selector
-// shows it).
+// The parameters of the Evolution tab's selector: every free parameter and any other one the scan's results
+// record, in groups (EvolutionViewModel::ordered); roles `name` (the results column, a diffraction-lib unique name),
+// `label` (the same, as the selector shows it) and `group` (the title of the group the row belongs to).
 class EvolutionParameterListModel : public RowTableModel {
     Q_OBJECT
     QML_ELEMENT
@@ -34,7 +35,7 @@ class EvolutionParameterListModel : public RowTableModel {
     explicit EvolutionParameterListModel(QObject* parent);
     // Each parameter's results column (`name`) and what the selector shows for it (`label`): its name as the parameter
     // table shows it, else the column (the owner, 2026-11-16).
-    void setNames(const QStringList& names, const QStringList& labels = {});
+    void setNames(const QStringList& names, const QStringList& labels = {}, const QStringList& groups = {});
 };
 
 // The Evolution tab (edi ADR-0017 §19): one fitted parameter across a scan's datasets, read from
@@ -52,7 +53,7 @@ class EvolutionViewModel : public QObject {
     // Whether the next datasetAt picks: a pointer gesture that is not a plain left click (a drag, a right click) turns
     // it off, so it selects nothing.
     Q_PROPERTY(bool picking READ picking WRITE setPicking NOTIFY pickingChanged)
-    Q_PROPERTY(QStringList xModes READ xModes CONSTANT)
+    Q_PROPERTY(QStringList xModes READ xModes NOTIFY xModesChanged)
     Q_PROPERTY(QString xTitle READ xTitle NOTIFY xTitleChanged)
     Q_PROPERTY(QString yTitle READ yTitle NOTIFY yTitleChanged)
     // The y title as the parameter table names it (yTitle is the results column, the tooltip's full name).
@@ -127,6 +128,19 @@ class EvolutionViewModel : public QObject {
     void setLabeller(std::function<QString(const QString&, bool)> labeller) { labeller_ = std::move(labeller); }
     // The parameter a results column stands for (a bank's own with `bank`), for the selector's coloured name.
     void setFinder(std::function<QObject*(const QString&, bool)> finder) { finder_ = std::move(finder); }
+    // Where a results column belongs: its datablock, and its parameter's place in the Analysis table.
+    struct Place {
+        QString block;
+        int row = std::numeric_limits<int>::max();  // no parameter of the project: after those that are
+    };
+    // Each column's place (a bank's own columns with `bank`).
+    void setPlacer(std::function<std::vector<Place>(const QStringList&, bool)> placer) { placer_ = std::move(placer); }
+    // A parameter of the same row of the same category (the moment's component, the structure's scale), which names a
+    // derived value's block, row and colours; null for any other column.
+    void setSibling(std::function<QObject*(const QString&, bool)> sibling) { sibling_ = std::move(sibling); }
+    Q_INVOKABLE QObject* siblingItem(int index) const {
+        return sibling_ && index >= 0 && index < names_.size() ? sibling_(names_[index], per_experiment_) : nullptr;
+    }
     // The parameter of the selector's entry `index`; null for a column no parameter has (a derived value).
     Q_INVOKABLE QObject* parameterItem(int index) const {
         return finder_ && index >= 0 && index < names_.size() ? finder_(names_[index], per_experiment_) : nullptr;
@@ -148,6 +162,7 @@ class EvolutionViewModel : public QObject {
     void refused(const QString& message);
     void currentParameterChanged();
     void xModeChanged();
+    void xModesChanged();
     void pickingChanged();
     void xTitleChanged();
     void yTitleChanged();
@@ -168,6 +183,9 @@ class EvolutionViewModel : public QObject {
    private:
     // Lists the parameters again; whether the list changed. The shown one stays, else the first.
     bool syncNames();
+    // The core's list in the selector's groups: one per datablock, in the Analysis table's order and each as the table
+    // lists its parameters, then the derived values, then how well the points fit. The report keeps the core's order.
+    QStringList ordered(const QStringList& columns, QStringList& groups) const;
     void syncFitted();
     // Thins the points above the drawing limit (per x bucket the lowest and the highest).
     void thin();
@@ -207,10 +225,12 @@ class EvolutionViewModel : public QObject {
     QPointer<MeasuredLayer> layer_;
     QList<QPointer<MeasuredLayer>> bank_layers_;
     bool allBanks() const { return per_experiment_ && current_experiment_ < 0; }
+    QStringList columns_;  // the core's list
     QStringList names_;
     QStringList labels_;  // names_' labels, as the selector shows them
     std::function<QString(const QString&, bool)> labeller_;
-    std::function<QObject*(const QString&, bool)> finder_;
+    std::function<QObject*(const QString&, bool)> finder_, sibling_;
+    std::function<std::vector<Place>(const QStringList&, bool)> placer_;
     QStringList experiments_;  // a series of joint fits' experiments, in project order; empty otherwise
     bool per_experiment_ = false;
     int current_experiment_ = 0;

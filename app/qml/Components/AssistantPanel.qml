@@ -509,8 +509,18 @@ Popup {
                         onPositioningComplete: conversation.followOutput()
                         ListView.onPooled: ApplicationInfo.assistantMessageReset(messageItem)
                         ListView.onReused: ApplicationInfo.assistantMessageReset(messageItem)
+                        AssistantSteps {
+                            visible: messageDelegate.kind === "steps"
+                            width: parent.width
+                            payload: messageDelegate.payload
+                            onToggled: (group, shown) => {
+                                ApplicationInfo.conversationDetailsChanging();
+                                panel.assistant.showSteps(group, shown);
+                            }
+                        }
                         AssistantMessage {
                             id: messageItem
+                            visible: messageDelegate.kind !== "steps"
                             assistant: panel.assistant
                             chatBackgroundColor: assistantChatBackground.color
                             width: parent.width
@@ -519,7 +529,7 @@ Popup {
                             payload: messageDelegate.payload
                             status: messageDelegate.status
                             rowId: messageDelegate.rowId
-                            stepNumber: messageDelegate.index + 1
+                            stepNumber: messageDelegate.model.number
                             onReportRequested: (sourceRowId, link) => panel.openReportLink(sourceRowId, link)
                             onDetailsChanging: ApplicationInfo.conversationDetailsChanging()
                             highlighted: kind === "user" && rowId === conversation.jumpedUserId
