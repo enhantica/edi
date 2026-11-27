@@ -146,7 +146,10 @@ channel. The tools also publish `releases/stable.json` for 2026.11.x apps, whose
 version that is not `YYYY.MM.N`: it keeps the old releases and adds only the newest `YY.N` release, under the alias
 `2026.11.<31 + k>`, `k` being its place among the published `YY.N` releases (26.17 is 2026.11.32), with a first note
 naming the real release. `tools/release/legacy_feed.py` checks it by the 2026.11 app's rules, and a feed it rejects
-is not published. A testing feed gets the same legacy `testing.json` (ADR-0106).
+is not published. The apps fetch both feeds from the site that enhantica/edi-download builds for each release. It
+writes them from the release's `release-history.json` asset with `legacy_feed.write_feeds`; the apps never read the
+copies `distribution.py` writes. The testing channel has no feed on those bases yet, so testing-channel apps find no
+update there (ADR-0106).
 
 ## Python preview distribution
 
