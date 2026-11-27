@@ -78,7 +78,7 @@ AppDialog {
             Layout.fillWidth: true
             spacing: 0
             Repeater {
-                model: [[qsTr("Point"), 0.12], [qsTr("k"), 0.22], [qsTr("Marked peaks indexed"), 0.24], [qsTr("Worst misfit"), 0.16], [qsTr("Magnetic cell"), 0.26]]
+                model: [[qsTr("Point"), 0.1], [qsTr("k"), 0.2], [qsTr("Indexed"), 0.14], [qsTr("Worst misfit"), 0.16], [qsTr("Magnetic cell"), 0.4]]
                 delegate: EaElements.Label {
                     required property var modelData
                     width: list.width * modelData[1]
@@ -117,7 +117,7 @@ AppDialog {
                     width: parent.width
                     Row {
                         Repeater {
-                            model: [[row.modelData.label === "" ? "—" : row.modelData.label, 0.12], [`(${row.modelData.k})`, 0.22], [qsTr("%1 of %2").arg(row.modelData.explained).arg(popup.marked.length), 0.24], [row.modelData.misfit.toFixed(2), 0.16], [row.modelData.parentCells === 1 ? qsTr("a, b, c (same as the crystal)") : qsTr("%1 parent cells").arg(row.modelData.parentCells), 0.26]]
+                            model: [[row.modelData.label === "" ? "—" : row.modelData.label, 0.1], [`(${row.modelData.k})`, 0.2], [qsTr("%1 of %2").arg(row.modelData.explained).arg(popup.marked.length), 0.14], [row.modelData.misfit.toFixed(2), 0.16], [row.modelData.parentCells === 1 ? qsTr("a, b, c (same as the crystal)") : qsTr("%1 parent cells").arg(row.modelData.parentCells), 0.4]]
                             delegate: EaElements.Label {
                                 required property var modelData
                                 width: list.width * modelData[1]
