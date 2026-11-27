@@ -268,7 +268,9 @@ def publishable(feed: dict, *, testing: bool = False, original: bytes | None = N
 def write_feeds(history: Path, folder: Path, channel: str = 'stable') -> None:
     """``<channel>-v2.json``, a copy of ``history``, and ``<channel>.json``, its legacy feed.
 
-    The legacy feed is checked first, so nothing is written when old apps would drop it.
+    The legacy feed is checked first, so nothing is written when old apps would drop it. The site
+    the apps fetch the feeds from is built by enhantica/edi-download, which calls this at the
+    release tag, so a change of its arguments needs a change there too.
     """
     original = history.read_bytes()
     content = publishable(
