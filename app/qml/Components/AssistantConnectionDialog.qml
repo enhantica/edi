@@ -43,7 +43,7 @@ AppDialog {
     }
     Component.onCompleted: refreshDisclosedContext()
     readonly property var disclosedContext: ApplicationInfo.connectionDisclosedContext()
-    title: assistant.connected ? qsTr("Approve project information") : qsTr("Connect ChatGPT")
+    title: assistant.connected ? qsTr("Approve project information") : qsTr("Connect %1").arg(assistant.activeProviderName)
     readonly property real viewportHeight: Math.max(0, parent.height - AppSizes.unit * 2)
     width: Math.min(AppSizes.unit * 40 + leftPadding + rightPadding, Math.max(0, parent.width - AppSizes.unit * 2))
     height: Math.min(implicitHeight, viewportHeight)
@@ -111,7 +111,7 @@ AppDialog {
         id: connectionFailure
         objectName: "assistant.connectionFailure"
         property string message: ""
-        title: qsTr("ChatGPT connection was not completed")
+        title: qsTr("%1 connection was not completed").arg(dialog.assistant.activeProviderName)
         width: dialog.width
         height: Math.min(implicitHeight, dialog.viewportHeight)
         contentWidth: Math.max(0, width - leftPadding - rightPadding)
@@ -166,13 +166,13 @@ AppDialog {
                 width: parent.width
                 wrapMode: Text.WordWrap
                 textFormat: Text.PlainText
-                text: dialog.assistant.connected ? qsTr("Allow the assistant to use current project information and attached files for your message.") : qsTr("Sign in with your ChatGPT account. Your existing sign-in is reused when available; otherwise OpenAI opens to sign in.")
+                text: dialog.assistant.connected ? qsTr("Allow the assistant to use current project information and attached files for your message.") : qsTr("Sign in with your %1 account. Your existing sign-in is reused when available; otherwise %2 opens to sign in.").arg(dialog.assistant.activeProviderName).arg(dialog.assistant.activeProviderCompany)
             }
             EaElements.Label {
                 width: parent.width
                 wrapMode: Text.WordWrap
                 textFormat: Text.PlainText
-                text: qsTr("Your messages, attachments and relevant project data, including measurements, are sent to OpenAI. Your account's availability and usage limits apply.")
+                text: qsTr("Your messages, attachments and relevant project data, including measurements, are sent to %1. Your account's availability and usage limits apply.").arg(dialog.assistant.activeProviderCompany)
             }
             EaElements.Label {
                 width: parent.width

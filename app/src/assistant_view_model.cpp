@@ -21306,6 +21306,27 @@ QVariantList AssistantViewModel::providers() const {
 #endif
     return result;
 }
+QString AssistantViewModel::activeProvider() const {
+#ifndef __EMSCRIPTEN__
+    return assistant_provider_key(state_->active_provider_account.provider);
+#else
+    return QStringLiteral("chatgpt");
+#endif
+}
+QString AssistantViewModel::activeProviderName() const {
+#ifndef __EMSCRIPTEN__
+    return assistant_provider_name(state_->active_provider_account.provider);
+#else
+    return QStringLiteral("ChatGPT");
+#endif
+}
+QString AssistantViewModel::activeProviderCompany() const {
+#ifndef __EMSCRIPTEN__
+    return assistant_provider_company(state_->active_provider_account.provider);
+#else
+    return QStringLiteral("OpenAI");
+#endif
+}
 QString AssistantViewModel::managedSettingsNotice() const {
 #ifndef __EMSCRIPTEN__
     return state_->managed_notice;
