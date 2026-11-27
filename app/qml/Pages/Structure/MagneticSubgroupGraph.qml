@@ -270,7 +270,7 @@ Flickable {
                     id: pin
                     objectName: `magnetic.node.${node.index}.pin`
                     readonly property bool on: graph.pinned === node.index
-                    visible: on || cardArea.containsMouse
+                    visible: on || graph.hovered === node.index
                     x: parent.width - width - graph.cardMargin * 0.5
                     y: graph.cardMargin * 0.5
                     width: EaStyle.Sizes.fontPixelSize * 1.5
@@ -292,13 +292,13 @@ Flickable {
                 }
                 ToolTip {
                     objectName: `magnetic.node.${node.index}.tooltip`
-                    visible: cardArea.containsMouse && node.data_.bns !== ""
+                    visible: graph.hovered === node.index && node.data_.bns !== ""
                     contentItem: GridLayout {
                         columns: 2
                         columnSpacing: EaStyle.Sizes.fontPixelSize
                         rowSpacing: EaStyle.Sizes.fontPixelSize * 0.2
                         Repeater {
-                            model: cardArea.containsMouse ? graph.detailsOf(node.data_).flat() : []
+                            model: graph.hovered === node.index ? graph.detailsOf(node.data_).flat() : []
                             delegate: EaElements.Label {
                                 required property string modelData
                                 required property int index
