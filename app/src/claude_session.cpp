@@ -112,6 +112,12 @@ bool sign_in_url(const QString& text) {
     return false;
 }
 
+// A sorted, comma-separated list for an error message; "none" when empty.
+QString listed(QStringList names) {
+    names.sort();
+    return names.isEmpty() ? QStringLiteral("none") : names.join(QStringLiteral(", "));
+}
+
 QString strip_terminal_codes(QString text) {
     static const QRegularExpression codes(QStringLiteral("\x1b\\[[0-9;?]*[A-Za-z]|\x1b\\][^\x07]*\x07|\r"));
     return text.remove(codes);
@@ -200,6 +206,7 @@ ClaudeSession::~ClaudeSession() {
 bool ClaudeSession::start(const AssistantRuntimeLaunch& launch) {
     retire();
     launch_ = launch;
+    expected_tools_ = launch.expectedTools;
     session_id_.clear();
     model_.clear();
     effort_.clear();
@@ -554,26 +561,53 @@ void ClaudeSession::initializeReply(const QJsonObject& reply) {
 }
 
 void ClaudeSession::systemInit(const QJsonObject& init) {
-    QString problem;
+    // The process's effective tools must be exactly the skill loader and edi's listed tools.
     QStringList tools;
-    for (const auto& value : init.value(QStringLiteral("tools")).toArray()) {
-        const auto name = value.toString();
-        if (!allowed_tool(name)) {
-            problem = QStringLiteral("Claude offers a tool edi does not allow: %1.").arg(name);
-            break;
+    for (const auto& value : init.value(QStringLiteral("tools")).toArray()) tools.append(value.toString());
+    QStringList expected{skill_tool};
+    for (const auto& name : expected_tools_) expected.append(edi_tool_prefix + name);
+    QString problem;
+    if (expected_tools_.isEmpty()) problem = QStringLiteral("edi has no tool list to compare Claude's tools with.");
+    else if (QSet<QString>(tools.cbegin(), tools.cend()) != QSet<QString>(expected.cbegin(), expected.cend()) ||
+             tools.size() != expected.size())
+        problem = QStringLiteral("Claude's tools differ from edi's. Expected: %1. Observed: %2.")
+                      .arg(listed(expected), listed(tools));
+    if (problem.isEmpty()) {
+        QStringList servers;
+        for (const auto& value : init.value(QStringLiteral("mcp_servers")).toArray()) {
+            const auto server = value.toObject();
+            servers.append(QStringLiteral("%1 (%2)").arg(server.value(QStringLiteral("name")).toString(),
+                                                         server.value(QStringLiteral("status")).toString()));
         }
-        tools.append(name);
+        const QStringList wanted{QStringLiteral("edi (connected)")};
+        if (servers != wanted)
+            problem = QStringLiteral("Claude's tool servers differ from edi's. Expected: %1. Observed: %2.")
+                          .arg(listed(wanted), listed(servers));
     }
-    bool edi_connected = false;
-    for (const auto& value : init.value(QStringLiteral("mcp_servers")).toArray()) {
-        const auto server = value.toObject();
-        const auto name = server.value(QStringLiteral("name")).toString();
-        if (problem.isEmpty() && name != edi_server)
-            problem = QStringLiteral("Claude loaded a tool server edi did not give it: %1.").arg(name);
-        if (name == edi_server && server.value(QStringLiteral("status")).toString() == QStringLiteral("connected"))
-            edi_connected = true;
+    if (problem.isEmpty()) {
+        const auto plugin_dir = QDir(launch_.workspace).filePath(QStringLiteral(".edi/claude-plugin"));
+        QStringList plugins;
+        bool plugin_ours = true;
+        for (const auto& value : init.value(QStringLiteral("plugins")).toArray()) {
+            const auto plugin = value.toObject();
+            plugins.append(plugin.value(QStringLiteral("name")).toString());
+            const auto path = plugin.value(QStringLiteral("path")).toString();
+            if (!path.isEmpty() && !same_folder(path, plugin_dir)) plugin_ours = false;
+        }
+        const auto errors = init.value(QStringLiteral("plugin_errors")).toArray();
+        if (plugins != QStringList{edi_server} || !plugin_ours || !errors.isEmpty())
+            problem = QStringLiteral("Claude's plugins differ from edi's. Expected: edi. Observed: %1%2.")
+                          .arg(listed(plugins), errors.isEmpty() ? QString() : QStringLiteral(", with load errors"));
     }
-    if (problem.isEmpty() && !edi_connected) problem = QStringLiteral("Claude could not reach edi's tools.");
+    if (problem.isEmpty()) {
+        QSet<QString> skills;
+        for (const auto& value : init.value(QStringLiteral("skills")).toArray()) skills.insert(value.toString());
+        QStringList missing;
+        for (const auto& id : launch_.skills)
+            if (!skills.contains(QStringLiteral("edi:") + id)) missing.append(QStringLiteral("edi:") + id);
+        if (!missing.isEmpty())
+            problem = QStringLiteral("Claude did not load edi's skills: %1.").arg(missing.join(QStringLiteral(", ")));
+    }
     if (!problem.isEmpty()) {
         if (!readbacks_done_) {
             startFailed(problem);

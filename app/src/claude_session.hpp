@@ -62,6 +62,7 @@ public:
         account_method_ = authMethod;
     }
 
+    void setExpectedTools(const QStringList& names) override { expected_tools_ = names; }
     bool start(const AssistantRuntimeLaunch& launch) override;
     void retire() override;
     quint64 generation() const noexcept override { return generation_; }
@@ -89,6 +90,7 @@ private:
     QPointer<AssistantProcess> process_;
     Purpose purpose_ = Purpose::Probe;
     bool initialize_passed_ = false, init_verified_ = false, readbacks_done_ = false;
+    QStringList expected_tools_;
     QJsonObject identity_;
     QJsonArray models_;
     QStringList tools_, capabilities_;
