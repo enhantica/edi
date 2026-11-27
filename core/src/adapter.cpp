@@ -662,14 +662,14 @@ auto publish_fit_transaction(Project& host, std::vector<detail::RefinedValue>& r
     return measured;
 }
 
-void complete_atom_site_moments(Structure& structure, bool restore, bool imported) {
+void complete_atom_site_moments(Structure& structure, bool restore) {
     if (structure.magnetic->operations.empty()) {
         return;
     }
     // crysta's one completion of a magnetic edit (ADR-0137 B8): it refuses, naming why, a structure its acceptance
     // rule refuses, before anything here changes.
-    const crysta::CompletedMagnetic completed = crysta::complete_magnetic(
-        to_crysta_structure(structure), imported ? crysta::kAdmitImported : crysta::kAdmitAsStated, restore);
+    const crysta::CompletedMagnetic completed =
+        crysta::complete_magnetic(to_crysta_structure(structure), crysta::kAdmitSeed, restore);
     adopt_completed_structure(structure, completed.structure);
 }
 
