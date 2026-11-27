@@ -2,9 +2,10 @@
 <!-- SPDX-License-Identifier: BSD-3-Clause -->
 <!-- The folder field and the choices on the installer's one page (assistantscript.qs, Installer.qs): the folder
      with the space the installation needs under it, then one group of EasyDiffraction, the Maintenance Tool (both
-     ticked and fixed) and the AI assistant with their sizes, then the licence and a desktop shortcut on Windows and
-     Linux. Also the maintenance tool's choice page when adding, removing or updating: the logo and heading, the space
-     line and the same three rows; it has no window title, so that page has no header. The Maintenance Tool's row
+     ticked and fixed) and the assistants, ChatGPT, Claude and GitHub Copilot, with their sizes, then the licence and
+     a desktop shortcut on Windows and Linux. A provider whose component the installer does not carry has no row.
+     Also the maintenance tool's choice page when adding, removing or updating: the logo and heading, the space line
+     and the same rows; it has no window title, so that page has no header. The Maintenance Tool's row
      and the sizes are there from the start, so the rows are spaced once, with every row in place. -->
 <ui version="4.0">
  <class>AssistantForm</class>
@@ -330,7 +331,7 @@
       <item>
        <widget class="QCheckBox" name="AssistantCheckBox">
         <property name="text">
-         <string>AI assistant</string>
+         <string>ChatGPT</string>
         </property>
        </widget>
       </item>
@@ -343,6 +344,114 @@
       </item>
       <item>
        <widget class="QLabel" name="AssistantSizeLabel"/>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QWidget" name="ClaudeRowGap">
+     <property name="minimumSize">
+      <size>
+       <width>0</width>
+       <height>8</height>
+      </size>
+     </property>
+     <property name="maximumSize">
+      <size>
+       <width>16777215</width>
+       <height>8</height>
+      </size>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QWidget" name="ClaudeBox">
+     <layout class="QHBoxLayout" name="ClaudeRow">
+      <property name="spacing">
+       <number>8</number>
+      </property>
+      <property name="leftMargin">
+       <number>0</number>
+      </property>
+      <property name="topMargin">
+       <number>0</number>
+      </property>
+      <property name="rightMargin">
+       <number>0</number>
+      </property>
+      <property name="bottomMargin">
+       <number>0</number>
+      </property>
+      <item>
+       <widget class="QCheckBox" name="ClaudeCheckBox">
+        <property name="text">
+         <string>Claude</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <spacer name="ClaudeSizeSpacer">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+       </spacer>
+      </item>
+      <item>
+       <widget class="QLabel" name="ClaudeSizeLabel"/>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QWidget" name="CopilotRowGap">
+     <property name="minimumSize">
+      <size>
+       <width>0</width>
+       <height>8</height>
+      </size>
+     </property>
+     <property name="maximumSize">
+      <size>
+       <width>16777215</width>
+       <height>8</height>
+      </size>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QWidget" name="CopilotBox">
+     <layout class="QHBoxLayout" name="CopilotRow">
+      <property name="spacing">
+       <number>8</number>
+      </property>
+      <property name="leftMargin">
+       <number>0</number>
+      </property>
+      <property name="topMargin">
+       <number>0</number>
+      </property>
+      <property name="rightMargin">
+       <number>0</number>
+      </property>
+      <property name="bottomMargin">
+       <number>0</number>
+      </property>
+      <item>
+       <widget class="QCheckBox" name="CopilotCheckBox">
+        <property name="text">
+         <string>GitHub Copilot</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <spacer name="CopilotSizeSpacer">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+       </spacer>
+      </item>
+      <item>
+       <widget class="QLabel" name="CopilotSizeLabel"/>
       </item>
      </layout>
     </widget>

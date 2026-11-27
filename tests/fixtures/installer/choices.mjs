@@ -8,9 +8,9 @@ import {createContext, runInContext} from 'node:vm';
 const root = process.argv[2];
 const source = name => readFileSync(join(root, name), 'utf8');
 const ui = source('AssistantForm.ui');
-for (const name of ['AssistantCheckBox', 'LicenseCheckBox'])
+for (const name of ['AssistantCheckBox', 'ClaudeCheckBox', 'CopilotCheckBox', 'LicenseCheckBox'])
   assert.match(ui, new RegExp('<widget class="QCheckBox" name="' + name + '"'),
-    'Both install choices are actual checkbox widgets');
+    'Every install choice is an actual checkbox widget');
 assert.doesNotMatch(ui, /<widget class="QTree(?:View|Widget)"/,
   'The embedded choices contain no replacement component tree');
 
@@ -24,11 +24,19 @@ function signal() {
 }
 
 const assistantName = 'org.easydiffraction.app.assistant';
+const claudeName = 'org.easydiffraction.app.claude';
+const copilotName = 'org.easydiffraction.app.copilot';
 const appName = 'org.easydiffraction.app';
 const selected = new Set([appName]);
 const fields = {
   AppBox: {},
+  AssistantBox: {},
   AssistantCheckBox: {checked: false, toggled: signal()},
+  ClaudeBox: {},
+  ClaudeCheckBox: {checked: false, toggled: signal()},
+  CopilotBox: {},
+  CopilotCheckBox: {checked: false, toggled: signal()},
+  CopilotSizeLabel: {},
   FolderBox: {},
   LicenseCheckBox: {checked: false, toggled: signal()},
   LicenseLink: {},
@@ -50,7 +58,9 @@ const pages = Object.fromEntries(frameworkPages.map(name => [name + 'Page', {
 }]));
 pages.DynamicAssistantForm = {
   fields: {
-    AppBox: {}, AssistantCheckBox: {toggled: signal()}, LicenseBox: {}, ShortcutBox: {},
+    AppBox: {}, AssistantBox: {}, AssistantCheckBox: {toggled: signal()}, ClaudeBox: {},
+    ClaudeCheckBox: {toggled: signal()}, CopilotBox: {}, CopilotCheckBox: {toggled: signal()},
+    LicenseBox: {}, ShortcutBox: {},
     NoticeBox: {}, NoticeLabel: {}, SpaceBox: {},
   },
 };
@@ -69,7 +79,9 @@ const extraPages = [];
 let mode = 'install';
 const records = [
   [appName, 'EasyDiffraction', 123500000],
-  [assistantName, 'AI assistant', 27500000],
+  [assistantName, 'ChatGPT', 27500000],
+  // Claude is not carried while its distribution is internal (data/distribution.json).
+  [copilotName, 'GitHub Copilot', 60000000],
 ];
 const components = records.map(([name, displayName, bytes]) => ({
   name,
@@ -156,8 +168,14 @@ wizard.IntroductionPageCallback();
 assert.deepEqual(buttonClicks.splice(0), ['Next'], 'Introduction passes without a visible choice');
 wizard.TargetDirectoryPageCallback();
 assert.deepEqual(buttonClicks, [], 'Install waits for the user on the first stop');
-assert.equal(fields.AssistantCheckBox.checked, true, 'The assistant starts selected');
-assert.match(fields.SpaceLabel.text, /^151\.00 MB needed/, 'Install space includes both components');
+assert.equal(fields.AssistantCheckBox.checked, true, 'ChatGPT starts selected');
+assert.equal(fields.AssistantCheckBox.text, 'ChatGPT', 'The first assistant row is ChatGPT');
+assert.equal(fields.CopilotCheckBox.checked, false, 'GitHub Copilot starts unselected');
+assert.equal(fields.CopilotCheckBox.text, 'GitHub Copilot', 'The Copilot row names it');
+assert.equal(fields.CopilotBox.visible, true, 'A carried assistant has its row');
+assert.equal(fields.ClaudeBox.visible, false, 'An assistant the installer does not carry has no row');
+assert.equal(fields.CopilotSizeLabel.text, '60.00 MB', 'Each assistant row shows its own size');
+assert.match(fields.SpaceLabel.text, /^151\.00 MB needed/, 'Install space counts only the ticked assistants');
 assert.match(fields.LicenseLink.text, /https:\/\/www\.gnu\.org\/licenses\/gpl-3\.0\.html/, 'The checkbox has a link to the GPL');
 
 fields.LicenseCheckBox.checked = false;
@@ -175,7 +193,7 @@ fields.LicenseCheckBox.checked = true;
 wizard.ReadyForInstallationPageCallback();
 assert.deepEqual(buttonClicks.splice(0), ['Commit'], 'An accepted license permits commit');
 assert.match(summary.RemoveAllMsgLabel.text, /EasyDiffraction<\/td><td[^>]*>123\.50 MB/, 'The summary lists the base size');
-assert.doesNotMatch(summary.RemoveAllMsgLabel.text, /AI assistant/, 'The summary omits the unchecked assistant');
+assert.doesNotMatch(summary.RemoveAllMsgLabel.text, /ChatGPT|Copilot/, 'The summary omits the unchecked assistants');
 assert.equal(summary.InstallComponentsWidget.visible, false, 'The install component tree is hidden from the summary');
 assert.equal(summary.UninstallComponentsWidget.visible, false, 'The uninstall component tree is hidden from the summary');
 
@@ -184,8 +202,21 @@ fields.AssistantCheckBox.toggled.emit(true);
 pages.TargetDirectoryPage.left.emit();
 wizard.ReadyForInstallationPageCallback();
 assert.deepEqual([...selected], [appName, assistantName], 'Ticking selects the assistant at commit');
-assert.match(summary.RemoveAllMsgLabel.text, /AI assistant<\/td><td[^>]*>27\.50 MB/, 'The summary lists the selected assistant size');
+assert.match(summary.RemoveAllMsgLabel.text, /ChatGPT<\/td><td[^>]*>27\.50 MB/, 'The summary lists the selected assistant size');
+
 assert.deepEqual(buttonClicks.splice(0), ['Commit'], 'The summary advances directly to Installing');
+
+fields.CopilotCheckBox.checked = true;
+fields.CopilotCheckBox.toggled.emit(true);
+assert.match(fields.SpaceLabel.text, /^211\.00 MB needed/, 'Ticking Copilot adds its bytes');
+pages.TargetDirectoryPage.left.emit();
+wizard.ReadyForInstallationPageCallback();
+buttonClicks.splice(0);
+assert.deepEqual([...selected], [appName, assistantName, copilotName], 'Each ticked assistant is requested');
+assert.match(summary.RemoveAllMsgLabel.text, /ChatGPT<\/td>.*GitHub Copilot<\/td><td[^>]*>60\.00 MB/,
+  'The summary lists the assistants in the rows\' order');
+assert.ok(!selected.has(claudeName), 'An absent component is never requested');
+
 wizard.PerformInstallationPageCallback();
 wizard.FinishedPageCallback();
 assert.deepEqual(buttonClicks, [], 'The progress and Done pages add no intermediate choice or component tree');
