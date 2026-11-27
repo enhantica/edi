@@ -116,6 +116,7 @@ std::unique_ptr<AssistantProvider> make_assistant_provider(const AssistantAccoun
             launch.account = account;
             launch.environment = QProcessEnvironment::systemEnvironment();
             launch.toolTimeoutMs = assistant_tool_timeout_ms;
+            launch.executable = assistant_provider_executable(account.provider);
             return std::make_unique<AssistantRuntimeTranslator>(AssistantProviderId::Claude, std::move(session),
                                                                 std::move(launch), parent, std::move(releaseOwner));
         }
@@ -125,6 +126,7 @@ std::unique_ptr<AssistantProvider> make_assistant_provider(const AssistantAccoun
             launch.account = account;
             launch.environment = QProcessEnvironment::systemEnvironment();
             launch.toolTimeoutMs = assistant_tool_timeout_ms;
+            launch.executable = assistant_provider_executable(account.provider);
             return std::make_unique<AssistantRuntimeTranslator>(AssistantProviderId::Copilot,
                                                                 std::make_unique<CopilotSession>(AssistantAccounts::defaultAccountsRoot()), std::move(launch),
                                                                 parent, std::move(releaseOwner));
