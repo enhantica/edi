@@ -57,12 +57,14 @@ diffraction-lib's `elements.py` at `c0654956`, the commit crysta's covalent radi
 equals crysta's `covalent-radii.tsv`. `data/elements/PROVENANCE.md` names the published sources and licences. The
 element of a type symbol is its first capital letter and the lower-case letter after it (`Co2+` is Co, `13C` is C):
 the rule the app already used for element colours, which differs from diffraction-lib's for a symbol that does not
-start with its element. Deuterium is one atom however a file writes it: `D` and `2H` are both element `D`, so the site
-table, the view and the legend show them alike, under one legend entry `D`. The element table has no deuterium row, as
-diffraction-lib has none, so `D` takes hydrogen's colours and radii, and a polyhedron never centres on it, as on H. A
-declared scattering-length map may name deuterium under either spelling, or both with one value: two values are
-refused where the map is read or edited (the `.edi` loop, the Scattering lengths table, a FullProf import), with
-crysta's message.
+start with its element. Deuterium is one atom however a file writes it: `D` and `2H` are both element `D`, so they take
+one colour and one radius. The element table has no deuterium row, as diffraction-lib has none, so `D` takes
+hydrogen's colours and radii, and a polyhedron never centres on it, as on H. What the view says in words (the legend,
+an atom's hover text, the note naming atoms with a substituted radius) is the atom as the site writes it: its element
+with any mass number and without the charge (`2H`, `D`, `13C`, but `Co` for `Co2+`). A structure writing both `D` and
+`2H` has two legend entries of one colour. A declared scattering-length map may name deuterium under either spelling,
+or both with one value: two values are refused where the map is read or edited (the `.edi` loop, the Scattering
+lengths table, a FullProf import), with crysta's message.
 Fallbacks are diffraction-lib's: a missing VESTA colour is the Jmol one, a missing ionic radius the covalent one, an
 unknown element pink and 1.0 Angstrom, and a substituted radius is reported.
 

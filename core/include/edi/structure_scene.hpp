@@ -60,6 +60,10 @@ const std::vector<ElementStyle>& element_style_table();
 // `Co`, `162Dy` is `Dy`, `13C` is `C`. Deuterium is `D` however it is written (`D` or `2H`) and takes
 // hydrogen's style. A symbol with no capital letter gives the empty string.
 std::string element_of(std::string_view type_symbol);
+// The atom a type symbol names as it is written, for what the view shows in words (the legend, an atom's hover text,
+// the radius note): the element with any mass number before it and without the charge, so `2H` is `2H`, `D` is `D`,
+// `13C` is `13C` and `Co2+` is `Co`. A symbol with no capital letter gives the empty string.
+std::string written_atom(std::string_view type_symbol);
 struct ElementColor {
     Rgb color;
     bool known = false;  // the element is in the table
@@ -211,7 +215,7 @@ struct StructureScene {
     MomentColours moment_colours = MomentColours::GreyedAtom;  // as the options asked
     MomentView moment_view = MomentView::ThroughAtom;          // as the options asked
     std::vector<SceneLegendEntry> legend;
-    std::vector<std::string> substituted_elements;  // sorted, once each; "" for parts with no element
+    std::vector<std::string> substituted_elements;  // written_atom of each, sorted, once each; "" for no element
     SceneFrame frame;
 };
 StructureScene present_structure(const SceneSource& source, const SceneOptions& options);
