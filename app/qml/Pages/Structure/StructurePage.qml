@@ -5,6 +5,7 @@ import QtQuick
 import QtQuick.Controls
 
 import EasyApplication.Gui.Components as EaComponents
+import EasyApplication.Gui.Style as EaStyle
 import EasyApplication.Gui.Elements as EaElements
 
 import edi.app
@@ -116,9 +117,11 @@ WorkflowPage {
                 structure: page.structure
             }
             // A Crystal structure's magnetic symmetry analysis (owner, 2026-11-27): the magnetic popup over this page.
-            EaElements.Button {
+            EaElements.SideBarButton {
                 objectName: "spaceGroup.magneticAnalysis"
+                width: EaStyle.Sizes.sideBarContentWidth
                 visible: page.structure !== null && !page.structure.magnetic
+                fontIcon: "magnet"
                 text: qsTr("Magnetic symmetry analysis…")
                 onClicked: {
                     const popup = magneticAnalysisComponent.createObject(Overlay.overlay, {
