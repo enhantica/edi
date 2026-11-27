@@ -10135,15 +10135,29 @@ std::vector<MagneticPeak> magnetic_mark_candidates(const Project& project, std::
     }
     const PdDataBase& data = *source.data;
     const std::vector<double>& x = data.axis();
+    // The mask is the experiment's excluded regions on its axis, whether or not anything has been calculated.
     std::vector<bool> included(x.size(), true);
-    const std::vector<std::string>& status = data.calc_status.values();
-    for (std::size_t i = 0; i < included.size() && i < status.size(); ++i) included[i] = status[i] == "incl";
+    for (const auto& region : source.excluded_regions) {
+        if (!region->axis.value().empty()) continue;
+        const double lo = std::min(region->first.get(), region->second.get());
+        const double hi = std::max(region->first.get(), region->second.get());
+        for (std::size_t i = 0; i < x.size(); ++i) {
+            if (x[i] >= lo && x[i] <= hi) included[i] = false;
+        }
+    }
     const KEngine k(project);
-    const crysta::Structure& structure = engine_structure(k.engine, project.structures[parent]->name.value());
+    const std::string parent_name = project.structures[parent]->name.value();
+    const crysta::Structure& structure = engine_structure(k.engine, parent_name);
+    // Every other phase the experiment links and enables: a peak at its allowed lines is not pre-marked.
+    std::vector<const crysta::Structure*> others;
+    for (const auto& link : source.linked_structures) {
+        if (!link->enabled.get() || link->structure_id.value() == parent_name) continue;
+        others.push_back(&engine_structure(k.engine, link->structure_id.value()));
+    }
     std::vector<MagneticPeak> out;
-    for (const crysta::UnexplainedPeak& p :
-         crysta::forbidden_peaks(structure, k.engine.experiments.at(experiment), x, data.intensity_meas.get(),
-                                 data.intensity_meas_su.get(), included, data.intensity_calc.values())) {
+    for (const crysta::UnexplainedPeak& p : crysta::forbidden_peaks(structure, k.engine.experiments.at(experiment), x,
+                                                                    data.intensity_meas.get(),
+                                                                    data.intensity_meas_su.get(), included, others)) {
         out.push_back({p.x, p.d, p.tolerance, p.significance, p.half_width, p.on_allowed_reflection});
     }
     return out;

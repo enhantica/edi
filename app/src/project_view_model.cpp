@@ -9,6 +9,7 @@
 #include "run_log.hpp"
 
 #include <QtConcurrent/QtConcurrentRun>
+#include <QThreadPool>
 #include <QFutureWatcher>
 #include <QCoreApplication>
 #include <QJsonArray>
@@ -4047,6 +4048,18 @@ bool ProjectViewModel::duplicateStructure() {
     return true;
 }
 
+namespace {
+// The magnetic searches' own worker, so the global pool's long-running work never holds them back.
+QThreadPool* magneticPool() {
+    static QThreadPool* pool = [] {
+        auto* made = new QThreadPool;
+        made->setMaxThreadCount(1);
+        return made;
+    }();
+    return pool;
+}
+}  // namespace
+
 QVariantList ProjectViewModel::magneticPresets(int index) const {
     QVariantList out;
     if (index < 0 || index >= static_cast<int>(project_->structures.size())) return out;
@@ -4121,7 +4134,7 @@ void ProjectViewModel::findMagneticGroups(int index, const QString& k, const QSt
                                              {QStringLiteral("parentCells"), static_cast<int>(magnetic_graph_->parent_cells)},
                                              {QStringLiteral("nodes"), nodes}});
     });
-    watcher->setFuture(QtConcurrent::run([parent, k = k.toStdString(), ticked, withZeroMomentGroups]() -> Result {
+    watcher->setFuture(QtConcurrent::run(magneticPool(), [parent, k = k.toStdString(), ticked, withZeroMomentGroups]() -> Result {
         try {
             return edi::magnetic_candidate_graph(*parent, k, ticked, withZeroMomentGroups);
         } catch (const std::exception& refusal) {
@@ -4186,17 +4199,22 @@ void ProjectViewModel::recordFitAdoption() {
 }
 
 int ProjectViewModel::magneticParentOf(int experiment) const {
+    // The experiment's one enabled atom-based Crystal structure (review 12, F19): -1 with none, -2 with several, so
+    // link order never chooses.
     if (experiment < 0 || experiment >= static_cast<int>(project_->experiments.size())) return -1;
+    int found = -1;
     for (const auto& link : project_->experiments[static_cast<std::size_t>(experiment)]->linked_structures) {
         if (!link->enabled.get()) continue;
         for (std::size_t s = 0; s < project_->structures.size(); ++s) {
             const auto& structure = project_->structures[s];
             if (structure->name.value() == link->structure_id.value() && structure->magnetic->operations.empty() &&
-                !structure->atom_sites.empty())
-                return static_cast<int>(s);
+                !structure->atom_sites.empty()) {
+                if (found >= 0) return -2;
+                found = static_cast<int>(s);
+            }
         }
     }
-    return -1;
+    return found;
 }
 
 QVariantList ProjectViewModel::magneticDataChoices(int index) const {
@@ -4308,6 +4326,11 @@ void ProjectViewModel::findPropagationVectors(int index, int experiment, const Q
     connect(watcher, &QFutureWatcher<Result>::finished, this, [this, watcher, search] {
         watcher->deleteLater();
         if (search != k_search_) return;
+        // A late result for data that has changed since is dropped (review 12, F19).
+        if (!propagationSearchCurrent(k_search_experiment_)) {
+            emit propagationVectorsRefused(tr("The data or the structures changed; mark the peaks again."));
+            return;
+        }
         const Result result = watcher->result();
         if (const auto* refusal = std::get_if<QString>(&result)) {
             emit propagationVectorsRefused(*refusal);
@@ -4333,7 +4356,7 @@ void ProjectViewModel::findPropagationVectors(int index, int experiment, const Q
         }
         emit propagationVectorsFound(rows);
     });
-    watcher->setFuture(QtConcurrent::run([project, experiment, index, peaks]() -> Result {
+    watcher->setFuture(QtConcurrent::run(magneticPool(), [project, experiment, index, peaks]() -> Result {
         try {
             return edi::magnetic_k_search(*project, static_cast<std::size_t>(experiment), static_cast<std::size_t>(index),
                                           peaks);
