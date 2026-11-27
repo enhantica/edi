@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-27T08:54:38Z
+# measured_utc = 2026-11-27T11:32:44Z
 #
-# Recorded from: measured test run (13 node(s) measured once, 187620 banked, 0 stale row(s) dropped)
-# Collected tests: 268868; with a reported duration: 86305
+# Recorded from: measured test run (2 node(s) measured once, 187620 banked, 0 stale row(s) dropped)
+# Collected tests: 268870; with a reported duration: 86307
 # Module-scoped fixture costs recorded: 222
 #
 # Breaches are decided PER TIER against the table
@@ -29,12 +29,12 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 268868
+# inventory_python = 268870
 # inventory_cpp = 0
-# inventory_measured = 187620
+# inventory_measured = 187622
 # inventory_unmeasured = 81248
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
-# inventory_pr_python = 92997
+# inventory_pr_python = 92999
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -184549,6 +184549,8 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_parameter_correlations.p
 0.050	tests/integration/py/test_parameter_table_notation.py::test_value_and_su_keep_iucr_rounding_and_share_the_value_power[999.9-iucr_99-notebook]
 0.090	tests/integration/py/test_parameter_table_notation.py::test_value_and_su_keep_iucr_rounding_and_share_the_value_power[999.9-iucr_99-report]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_parametric_sharing.py::test_loaded_group_preserves_selected_member
+0.030	tests/integration/py/test_parametric_sharing.py::test_new_mixed_shared_group_keeps_any_free_and_the_clicked_value[fixed-clicked]
+0.020	tests/integration/py/test_parametric_sharing.py::test_new_mixed_shared_group_keeps_any_free_and_the_clicked_value[free-clicked]
 0.010	tests/integration/py/test_parametric_sharing.py::test_parametric_fixed_and_free_shared_background_reload[False]
 0.010	tests/integration/py/test_parametric_sharing.py::test_parametric_fixed_and_free_shared_background_reload[True]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_parametric_sharing.py::test_parametric_mode_requires_a_scan

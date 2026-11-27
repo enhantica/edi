@@ -117,6 +117,30 @@ TestCase {
             compare(parameter.shared, true, "Undoing Free retains Shared");
         });
     }
+    function test_click_shared_uses_any_free_and_the_clicked_value() {
+        const parameters = members();
+        parameters.forEach((parameter, index) => {
+            parameter.free = index === 0;
+            parameter.value = 0.3 + index;
+        });
+        const row = rowIndex("alpha", "peak.broad_gauss_w");
+        const box = findChild(table, "parameters.shared." + row);
+        verify(box && box.enabled, "The fixed middle copy has an actionable Shared checkbox");
+        mouseClick(box, box.width / 2, box.height / 2);
+        tryVerify(() => parameters.every(parameter => parameter.shared), 2000,
+            "Pointer input shares all three eligible copies");
+        parameters.forEach(parameter => {
+            compare(parameter.free, true, "A free copy makes the newly shared group free");
+            compare(parameter.value, 1.3, "The clicked fixed copy still supplies the common value");
+        });
+        compare(shownGroup(), ["alpha"], "The clicked row remains as the visible group owner");
+        Session.project.undo();
+        const restored = members();
+        compare(restored.map(parameter => parameter.free), [true, false, false],
+            "Undo restores each copy's original Free state");
+        compare(restored.map(parameter => parameter.value), [0.3, 1.3, 2.3],
+            "Undo restores each original value");
+    }
     function test_bulk_shared_is_one_undo() {
         const parameters = members();
         verify(Session.project.setParametersShared([parameters[1], parameters[2]], true), "The bulk operation accepts eligible visible members");

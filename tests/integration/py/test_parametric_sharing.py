@@ -87,6 +87,28 @@ def test_shared_group_round_trip_and_inactive_mode(tmp_path, path, free):
     )
 
 
+@pytest.mark.parametrize('free_index', [0, 1], ids=['fixed-clicked', 'free-clicked'])
+def test_new_mixed_shared_group_keeps_any_free_and_the_clicked_value(tmp_path, free_index):
+    project = engine.Project.load(cases.model(tmp_path / 'source'))
+    path = 'peak.broad_gauss_w'
+    members = [cases.parameter(project, bank, path) for bank in cases.BANKS]
+    for index, member in enumerate(members):
+        member.free = index == free_index
+        member.value = 0.3 + index
+
+    members[1].shared = True
+    assert all(member.shared and member.free for member in members), (
+        'A new group with any previously free copy starts free and shared throughout'
+    )
+    assert [member.value for member in members] == [1.3] * 3, (
+        'The clicked copy supplies the common value even if another copy determined Free'
+    )
+    members[2].free = False
+    assert all(member.shared and not member.free for member in members), (
+        'Later Free edits change the single group flag while retaining Shared'
+    )
+
+
 def test_loaded_group_preserves_selected_member(tmp_path):
     root = cases.model(tmp_path / 'source')
     first = root / 'experiments/0_zeta.edi'
@@ -105,8 +127,8 @@ def test_loaded_group_preserves_selected_member(tmp_path):
         'Saving a loaded group preserves exactly the persisted member name'
     )
     assert [project.experiments[bank].peak.broad_gauss_w.free for bank in cases.BANKS] == [
-        False
-    ] * 3, 'A mixed loaded group takes the persisted member Free flag'
+        True
+    ] * 3, 'A mixed loaded group is free if any saved copy was free'
     assert [project.experiments[bank].peak.broad_gauss_w.value for bank in cases.BANKS] == [
         0.85
     ] * 3, 'A mixed loaded group takes the persisted member value'
