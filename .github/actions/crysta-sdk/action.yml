@@ -6,12 +6,15 @@ inputs:
   platform:
     description: linux-64, osx-arm64 or win-64
     required: true
+  diagnostic:
+    description: Take the SDK of a manual run of another commit (crysta-diagnostic.yml), named so
+    default: 'false'
 runs:
   using: composite
   steps:
     - uses: actions/download-artifact@v4
       with:
-        name: crysta-sdk-${{ inputs.platform }}
+        name: crysta-sdk-${{ inputs.platform }}${{ inputs.diagnostic == 'true' && '-diagnostic' || '' }}
         path: crysta-sdk-archives
     - shell: bash
       run: echo "CRYSTA_SDK_ARCHIVES=$GITHUB_WORKSPACE/crysta-sdk-archives" >>"$GITHUB_ENV"

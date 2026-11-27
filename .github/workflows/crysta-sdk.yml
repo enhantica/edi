@@ -14,6 +14,10 @@ on:
         description: The full crysta commit to build
         required: true
         type: string
+      diagnostic:
+        description: A manual run of another commit (crysta-diagnostic.yml), which saves no cache
+        type: boolean
+        default: false
     outputs:
       sha:
         description: The crysta commit built
@@ -200,7 +204,7 @@ jobs:
           RECIPE: ${{ needs.resolve.outputs.recipe }}
         run: python3 tools/ci/crysta_sdk_record.py write --archives crysta-sdk-archives --sha "$SHA" --platform '${{ matrix.platform }}' --recipe "$RECIPE"
       - name: Save the SDK compiler cache
-        if: ${{ !cancelled() && steps.compiler-inputs.outcome == 'success' && steps.compiler-cache.outcome == 'success' && steps.cache.outputs.cache-hit != 'true' }}
+        if: ${{ !cancelled() && !inputs.diagnostic && steps.compiler-inputs.outcome == 'success' && steps.compiler-cache.outcome == 'success' && steps.cache.outputs.cache-hit != 'true' }}
         uses: ./.github/actions/store
         with:
           ccache: pixi run --manifest-path "$RUNNER_TEMP/crysta/pixi.toml" -e cpp-ci --skip-deps python
@@ -234,14 +238,14 @@ jobs:
           RECIPE: ${{ needs.resolve.outputs.recipe }}
         run: python3 tools/ci/crysta_sdk_record.py show --archives crysta-sdk-archives --sha "$SHA" --platform '${{ matrix.platform }}' --recipe "$RECIPE"
       - name: Keep the SDK for the next run
-        if: steps.cache.outputs.cache-hit != 'true'
+        if: steps.cache.outputs.cache-hit != 'true' && !inputs.diagnostic
         uses: ./.github/actions/store
         with:
           key: ${{ steps.cache.outputs.cache-primary-key }}
           path: crysta-sdk-archives
       - uses: ./.github/actions/store
         with:
-          artifact: crysta-sdk-${{ matrix.platform }}
+          artifact: crysta-sdk-${{ matrix.platform }}${{ inputs.diagnostic && '-diagnostic' || '' }}
           path: crysta-sdk-archives
           retention-days: 30
           if-no-files-found: error
@@ -255,7 +259,7 @@ jobs:
         if: ${{ failure() && !cancelled() }}
         uses: ./.github/actions/store
         with:
-          artifact: crysta-sdk-red-${{ matrix.platform }}-${{ needs.resolve.outputs.sha }}
+          artifact: crysta-sdk-red-${{ matrix.platform }}-${{ needs.resolve.outputs.sha }}${{ inputs.diagnostic && '-diagnostic' || '' }}
           path: ${{ runner.temp }}/sdk-red/summary.json
           retention-days: 7
           if-no-files-found: ignore
