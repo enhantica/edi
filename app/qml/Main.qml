@@ -969,8 +969,8 @@ EaComponents.ApplicationWindow {
     // untitled guard Save's (ApplicationInfo). Each showing is its own dialog, made when it asks and gone with it, and
     // each answer names its showing: an answer from a showing that ended (a handoff, or a newer question) does
     // nothing, and every showing takes one answer only.
-    // Each showing is placed as the declared dialogs were: the window's own dialogs on its content item, the browser
-    // warning on the overlay, centred by AppDialog.
+    // Each showing is placed as the declared dialogs were: on the window's overlay, the base Dialog's parent, centred by
+    // AppDialog.
     QtObject {
         id: unsavedChanges
         property var action: null
@@ -1012,7 +1012,7 @@ EaComponents.ApplicationWindow {
             unsavedChanges.retire();
             const showing = {
                 dialog: unsavedQuestion.createObject(window.contentItem, {
-                    parent: window.contentItem
+                    parent: window.Overlay.overlay
                 }),
                 ownerGeneration: Session.projectGeneration(),
                 answered: false,
@@ -1171,7 +1171,7 @@ EaComponents.ApplicationWindow {
             ApplicationInfo.prepareProjectSaveChoice();
             const showing = {
                 dialog: saveAsQuestion.createObject(window.contentItem, {
-                    parent: window.contentItem
+                    parent: window.Overlay.overlay
                 }),
                 ownerGeneration: Session.projectGeneration(),
                 answered: false,
@@ -1683,7 +1683,7 @@ EaComponents.ApplicationWindow {
             saveData.retire();
             const showing = {
                 dialog: saveDataQuestion.createObject(window.contentItem, {
-                    parent: window.contentItem,
+                    parent: window.Overlay.overlay,
                     bytes: bytes,
                     files: files,
                     large: large,

@@ -226,8 +226,10 @@ EaComponents.SideBarColumn {
         function open() {
             discardDialog.end();
             const showing = {
+                // On the window's overlay, as the earlier declared dialog was: the tab's page can be leaving view (Home)
+                // while it asks, and the question must stay on screen.
                 dialog: discardQuestion.createObject(tab, {
-                    parent: tab
+                    parent: tab.Overlay.overlay
                 }),
                 ownerGeneration: Session.projectGeneration(),
                 answered: false,
