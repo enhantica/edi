@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-27T00:43:30Z
+# measured_utc = 2026-11-27T00:55:25Z
 #
-# Recorded from: measured test run (1 node(s) measured once, 187627 banked, 0 stale row(s) dropped)
-# Collected tests: 267563; with a reported duration: 86320
+# Recorded from: Native API-absence compile on edi 499909374; transaction definitions unexecuted on that base
+# Collected tests: 267574; with a reported duration: 86320
 # Module-scoped fixture costs recorded: 221
 #
 # Breaches are decided PER TIER against the table
@@ -30,9 +30,9 @@
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
 # inventory_python = 267563
-# inventory_cpp = 9
+# inventory_cpp = 11
 # inventory_measured = 187627
-# inventory_unmeasured = 79945
+# inventory_unmeasured = 79947
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
 # inventory_pr_python = 92652
 
@@ -1346,6 +1346,8 @@ UNMEASURED:failed-in-this-run	tests/integration/app/test_web_control_geometry.py
 UNMEASURED:failed-in-this-run	tests/integration/app/test_web_control_geometry.py::test_transformed_control_extent_is_independent_of_ink_and_clip[populated]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_web_control_geometry.py::test_transformed_control_extent_is_independent_of_ink_and_clip[unclipped]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_web_control_geometry.py::test_visual_children_remain_discoverable_without_qobject_parentage
+UNMEASURED:not-completed-in-this-run	tests/integration/cpp/test_magnetic_candidate_transaction.cpp::An invalid disabled second candidate row refuses the whole transaction
+UNMEASURED:not-completed-in-this-run	tests/integration/cpp/test_magnetic_candidate_transaction.cpp::The candidate transaction accepts three independently valid staged rows
 0.064	tests/integration/cpp/test_magnetic_legacy_editor.cpp::Regression pin preserves type I native and FullProf editor paths
 0.023	tests/integration/cpp/test_magnetic_legacy_editor.cpp::Regression pin preserves type III native and FullProf editor paths
 UNMEASURED:expected-red-on-499909374	tests/integration/cpp/test_type_iv_site_symmetry.cpp::Equivalent type IV signed rows retain verified metadata in the native editor
