@@ -91,9 +91,16 @@ jobs:
         run: |
           [ -n "${{ steps.marker.outputs.app }}" ] || { echo "no marker installer to walk"; exit 1; }
           bash tools/installer/a11y-check.sh "${{ steps.marker.outputs.app }}" "$RUNNER_TEMP/a11y-this-commit" --own-script
-          # The assistant box is ticked by default and installs the assistant.
+          # The ChatGPT box is ticked by default and installs ChatGPT; GitHub Copilot's starts cleared. Claude has no
+          # box while its distribution is internal (data/distribution.json), so it is never installed.
           grep -q "perform org.easydiffraction.app.assistant" "$RUNNER_TEMP/a11y-this-commit/installer.log" \
             || { echo "the ticked assistant box did not install the assistant"; exit 1; }
+          if grep -q "perform org.easydiffraction.app.copilot" "$RUNNER_TEMP/a11y-this-commit/installer.log"; then
+            echo "the cleared GitHub Copilot box still installed it"; exit 1
+          fi
+          if grep -q "org.easydiffraction.app.claude" "$RUNNER_TEMP/a11y-this-commit/installer.log"; then
+            echo "the installer offered Claude while its distribution is internal"; exit 1
+          fi
       - name: The same with the assistant box cleared
         if: ${{ !cancelled() }}
         env:
