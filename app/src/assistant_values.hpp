@@ -180,6 +180,40 @@ struct AssistantAccount {
     }
 };
 
+// One assistant provider as the connect and Account dialogs show it (edi ADR-0108).
+struct AssistantProviderInfo {
+    Q_GADGET
+    QML_VALUE_TYPE(assistantProviderInfo)
+    Q_PROPERTY(QString provider MEMBER provider CONSTANT)
+    Q_PROPERTY(QString name MEMBER name CONSTANT)
+    Q_PROPERTY(QString company MEMBER company CONSTANT)
+    Q_PROPERTY(bool installed MEMBER installed CONSTANT)
+
+   public:
+    QString provider, name, company;
+    bool installed = false;
+    bool operator==(const AssistantProviderInfo&) const = default;
+};
+
+// One saved account in the Account dialog's provider groups (edi ADR-0108 §8).
+struct AssistantAccountEntry {
+    Q_GADGET
+    QML_VALUE_TYPE(assistantAccountEntry)
+    Q_PROPERTY(QString provider MEMBER provider CONSTANT)
+    Q_PROPERTY(QString providerName MEMBER providerName CONSTANT)
+    Q_PROPERTY(QString id MEMBER id CONSTANT)
+    Q_PROPERTY(QString email MEMBER email CONSTANT)
+    Q_PROPERTY(QString plan MEMBER plan CONSTANT)
+    Q_PROPERTY(QString host MEMBER host CONSTANT)
+    Q_PROPERTY(bool active MEMBER active CONSTANT)
+    Q_PROPERTY(bool installed MEMBER installed CONSTANT)
+
+   public:
+    QString provider, providerName, id, email, plan, host;
+    bool active = false, installed = false;
+    bool operator==(const AssistantAccountEntry&) const = default;
+};
+
 // What creating a project did (Session::createProjectWithOutcome), and the project and replacement it was made against,
 // so a later step can tell whether that creation is still the current one.
 struct ProjectCreationResult {

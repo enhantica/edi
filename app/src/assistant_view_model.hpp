@@ -105,15 +105,15 @@ class AssistantViewModel : public QObject {
     Q_PROPERTY(QString lastError READ lastError NOTIFY lastErrorChanged)
     Q_PROPERTY(QVariantMap usage READ usage NOTIFY usageChanged)
     Q_PROPERTY(edi_app::AssistantAccount account READ account NOTIFY accountChanged)
-    /// Every recorded account: {provider, providerName, id, email, plan, host, active, installed} (ADR-0108 §8, §9).
-    Q_PROPERTY(QVariantList accounts READ accounts NOTIFY accountsChanged)
-    /// The providers edi offers, in order: {provider, name, company, installed}.
-    Q_PROPERTY(QVariantList providers READ providers CONSTANT)
+    /// Every recorded account, grouped by provider in the Account dialog (ADR-0108 §8, §9).
+    Q_PROPERTY(QList<edi_app::AssistantAccountEntry> accounts READ accounts NOTIFY accountsChanged)
+    /// The providers edi offers, in order.
+    Q_PROPERTY(QList<edi_app::AssistantProviderInfo> providers READ providers CONSTANT)
     /// Non-empty while the active Claude account runs under an organisation's managed settings or hooks that the user
     /// has not acknowledged yet; Send waits for acknowledgeManagedSettings() (ADR-0108 §4).
     Q_PROPERTY(QString managedSettingsNotice READ managedSettingsNotice NOTIFY managedSettingsNoticeChanged)
-    /// The active account's provider: {provider (chatgpt, claude, copilot), name, company receiving the data}.
-    Q_PROPERTY(QVariantMap activeProvider READ activeProvider NOTIFY activeProviderChanged)
+    /// The active account's provider (chatgpt, claude, copilot) and the company receiving the data.
+    Q_PROPERTY(edi_app::AssistantProviderInfo activeProvider READ activeProvider NOTIFY activeProviderChanged)
     Q_PROPERTY(QString contextPreview READ contextPreview NOTIFY contextPreviewChanged)
     Q_PROPERTY(QString contextConsentIdentity READ contextConsentIdentity NOTIFY contextConsentIdentityChanged)
     Q_PROPERTY(bool draftAdmissionReady READ draftAdmissionReady NOTIFY draftAdmissionReadyChanged)
@@ -262,12 +262,12 @@ class AssistantViewModel : public QObject {
     Q_INVOKABLE void switchAccount(const QString& provider, const QString& id);
     /// Start an account of `provider` in a fresh config home; it is recorded once its sign-in succeeds.
     Q_INVOKABLE void addAccount(const QString& provider, const QString& host = {});
-    QVariantList accounts() const;
+    QList<AssistantAccountEntry> accounts() const;
     QString managedSettingsNotice() const;
-    QVariantMap activeProvider() const;
+    AssistantProviderInfo activeProvider() const;
     /// The user read the managed-settings notice for the active account; remembered per account.
     Q_INVOKABLE void acknowledgeManagedSettings();
-    QVariantList providers() const;
+    QList<AssistantProviderInfo> providers() const;
     Q_INVOKABLE void clearHistory();
     Q_INVOKABLE QString beginFileSelection(bool requireSignedIn = false);
     Q_INVOKABLE bool addSelectedFiles(const QString& requestId, const QList<QUrl>& urls);

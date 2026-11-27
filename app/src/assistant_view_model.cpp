@@ -21349,23 +21349,22 @@ void AssistantViewModel::retireConnection(bool logout) {
     if (!current()) return;
     state_->sync();
 }
-QVariantList AssistantViewModel::providers() const {
-    QVariantList result;
+QList<AssistantProviderInfo> AssistantViewModel::providers() const {
+    QList<AssistantProviderInfo> result;
 #ifndef __EMSCRIPTEN__
     for (const auto id : {AssistantProviderId::ChatGpt, AssistantProviderId::Claude, AssistantProviderId::Copilot})
-        result.append(QVariantMap{{"provider", assistant_provider_key(id)}, {"name", assistant_provider_name(id)},
-                                  {"company", assistant_provider_company(id)},
-                                  {"installed", assistant_provider_available(id)}});
+        result.append({assistant_provider_key(id), assistant_provider_name(id), assistant_provider_company(id),
+                       assistant_provider_available(id)});
 #endif
     return result;
 }
-QVariantMap AssistantViewModel::activeProvider() const {
+AssistantProviderInfo AssistantViewModel::activeProvider() const {
 #ifndef __EMSCRIPTEN__
     const auto id = state_->active_provider_account.provider;
-    return {{"provider", assistant_provider_key(id)}, {"name", assistant_provider_name(id)},
-            {"company", assistant_provider_company(id)}};
+    return {assistant_provider_key(id), assistant_provider_name(id), assistant_provider_company(id),
+            assistant_provider_available(id)};
 #else
-    return {{"provider", "chatgpt"}, {"name", "ChatGPT"}, {"company", "OpenAI"}};
+    return {QStringLiteral("chatgpt"), QStringLiteral("ChatGPT"), QStringLiteral("OpenAI"), false};
 #endif
 }
 QString AssistantViewModel::managedSettingsNotice() const {
@@ -21387,8 +21386,8 @@ void AssistantViewModel::acknowledgeManagedSettings() {
     emit managedSettingsNoticeChanged();
 #endif
 }
-QVariantList AssistantViewModel::accounts() const {
-    QVariantList result;
+QList<AssistantAccountEntry> AssistantViewModel::accounts() const {
+    QList<AssistantAccountEntry> result;
 #ifndef __EMSCRIPTEN__
     const auto& active = state_->active_provider_account;
     for (const auto id : {AssistantProviderId::ChatGpt, AssistantProviderId::Claude, AssistantProviderId::Copilot}) {
@@ -21396,10 +21395,8 @@ QVariantList AssistantViewModel::accounts() const {
         try { records = state_->account_store().accounts(id); } catch (...) { continue; }
         const bool installed = assistant_provider_available(id);
         for (const auto& record : records)
-            result.append(QVariantMap{{"provider", assistant_provider_key(id)}, {"providerName", assistant_provider_name(id)},
-                                      {"id", record.id}, {"email", record.email}, {"plan", record.plan}, {"host", record.host},
-                                      {"active", record.provider == active.provider && record.id == active.id},
-                                      {"installed", installed}});
+            result.append({assistant_provider_key(id), assistant_provider_name(id), record.id, record.email, record.plan,
+                           record.host, record.provider == active.provider && record.id == active.id, installed});
     }
 #endif
     return result;
