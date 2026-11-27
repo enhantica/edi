@@ -253,3 +253,22 @@ def test_a_preview_needs_the_testing_feed_and_no_pull_request():
     stable['releases'][0]['notes']['Added'][0]['pull_request'] = 0
     with pytest.raises(FEED.RejectedError, match='pull request'):
         FEED.check(content(stable), testing=True)
+
+
+def test_every_copy_of_a_release_serves_both_feeds(tmp_path):
+    spec = importlib.util.spec_from_file_location(
+        'distribution', ROOT / 'tools/release/distribution.py'
+    )
+    distribution = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(distribution)
+    distribution.fixture(tmp_path / 'publication', '26.17')
+    distribution.build(tmp_path / 'publication', tmp_path / 'copies')
+    history = (tmp_path / 'publication/assets/release-history.json').read_bytes()
+    for tree in ('pages', 'offsite'):
+        releases = tmp_path / 'copies' / tree / 'releases'
+        assert (releases / 'stable-v2.json').read_bytes() == history
+        assert FEED.check((releases / 'stable.json').read_bytes()) == ['2026.11.32', '2026.11.31']
+        sums = (tmp_path / 'copies' / tree / 'SHA256SUMS').read_text()
+        assert '  releases/stable-v2.json\n' in sums
+        assert '  releases/stable.json\n' in sums
+    assert distribution.check(tmp_path / 'copies', '26.17') == []
