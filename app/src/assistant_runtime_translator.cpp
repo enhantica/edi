@@ -445,15 +445,13 @@ void AssistantRuntimeTranslator::service() {
 QJsonObject AssistantRuntimeTranslator::accountResult() const {
     // The protocol's account kinds, as the view model checks them:
     //   session state                    account/read result
-    //   ready {email, plan, authMethod}  account {type: "chatgpt", email, planType: plan, authMethod}
+    //   ready {email, plan, authMethod}  account {type: accountKind(), email, planType: plan, authMethod}
     //   accountRefused, signed out       account: null (the view model starts account/login/start)
     //   accountRefused, other reason     no reply; the provider fails with the reason
-    // "chatgpt" is the protocol's kind for a subscription account signed in through the runtime's own login, which
-    // is how every Claude and Copilot account is read back. The protocol's apiKey kind would send the view model to
-    // its sign-in flow, so a Claude identity decided by the user's own key keeps "chatgpt" and names the method in
-    // authMethod.
+    // The kind is the provider's own key (accountKind()); a Claude identity decided by the user's own key keeps it and
+    // names the method in authMethod.
     if (account_ != Account::Ready) return {{"account", QJsonValue::Null}, {"requiresOpenaiAuth", true}};
-    QJsonObject account{{"type", "chatgpt"}};
+    QJsonObject account{{"type", accountKind()}};
     const auto email = string_field(identity_, "email");
     account["email"] = email.isEmpty() ? QJsonValue(QJsonValue::Null) : QJsonValue(email);
     const auto plan = string_field(identity_, "plan");
@@ -633,7 +631,7 @@ void AssistantRuntimeTranslator::onAccountRefused(const QString& reason, bool si
 void AssistantRuntimeTranslator::onSignInOpened(const QString& url, const QString& code, const QString& prompt) {
     if (!live_ || failed_ || login_rpc_.isEmpty()) return;
     const auto rpc = std::exchange(login_rpc_, {});
-    QJsonObject result{{"type", "chatgpt"}, {"loginId", login_id_}, {"authUrl", url}};
+    QJsonObject result{{"type", accountKind()}, {"loginId", login_id_}, {"authUrl", url}};
     if (!code.isEmpty()) result["userCode"] = code;
     if (!prompt.isEmpty()) result["prompt"] = prompt;
     respond(rpc, QStringLiteral("account/login/start"), result);
@@ -654,7 +652,7 @@ void AssistantRuntimeTranslator::onSignInFinished(bool success, const QString& m
            {{"loginId", login}, {"success", success},
             {"error", success ? QJsonValue(QJsonValue::Null) : QJsonValue(message.isEmpty() ? tr("The sign-in did not complete.") : message)}});
     if (!success) return;
-    notify(QStringLiteral("account/updated"), {{"authMode", "chatgpt"}});
+    notify(QStringLiteral("account/updated"), {{"authMode", accountKind()}});
     // Read the new identity back before anything is sent: restart the session's readbacks.
     account_ = Account::Unknown;
     identity_ = {};

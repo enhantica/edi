@@ -33,6 +33,10 @@ struct ThreadSettingsWanted {
     QString workspace;
     QString model;
     QString effort;
+    QString modelProvider = QStringLiteral("openai");  // the active provider's (ADR-0108 §1)
+    // The provider's thread policy; when set, only the fields it names are checked (approvalsReviewer, sandbox).
+    // Empty means Codex's full check.
+    QJsonObject policy;
 };
 
 // Empty when `actual` matches `wanted` with the never-ask, user-reviewed, read-only policy; otherwise the first field

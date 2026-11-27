@@ -36,6 +36,7 @@ public:
     AssistantProviderId providerId() const noexcept override { return provider_; }
     QString runtimeExecutable() const override { return launch_.executable; }
     QJsonObject threadPolicy() const override;
+    QString accountKind() const override { return assistant_provider_key(provider_); }
     OutputOwnerState outputOwnerState() const noexcept override;
     bool start(const QString& executable, const QString& workspace) override;
     QString request(const QString& method, const QJsonObject& params,
