@@ -47,6 +47,27 @@ else()
     set(EDI_APP_ASSISTANT_LICENCES)
 endif()
 
+# Voice input in the assistant's message box (ADR-0107): the speech recogniser and the microphone, built with the
+# assistant. The model is an optional installer component, so the app shows the button only where it finds one.
+set(EDI_APP_VOICE ${EDI_APP_ASSISTANT})
+if(EDI_APP_VOICE)
+    include(${PROJECT_SOURCE_DIR}/cmake/EdiWhisper.cmake)
+    find_package(Qt6 REQUIRED COMPONENTS Multimedia)
+    set(EDI_APP_VOICE_SOURCES
+        src/speech_recogniser.hpp src/speech_recogniser.cpp
+        src/audio_capture.hpp src/audio_capture.cpp
+        src/voice_input.hpp src/voice_input.cpp)
+    # Where the voice component puts the model, from the app's executable: beside the signed bundle on macOS, as the
+    # assistant runtime (ADR-0071).
+    if(EDI_DEPLOY_APP AND APPLE)
+        set(EDI_VOICE_INSTALL_RELATIVE "../../../share/edi/voice")
+    else()
+        set(EDI_VOICE_INSTALL_RELATIVE "../share/edi/voice")
+    endif()
+else()
+    set(EDI_APP_VOICE_SOURCES)
+endif()
+
 # What the app tells its user about itself (ApplicationInfo). Its version and date come from git at every build, as the
 # commit does, so a reused build folder never shows an old one (cmake/build_version.cmake).
 set(EDI_RELEASE_VERSION "" CACHE STRING "Calendar version selected by release preparation")
@@ -102,6 +123,7 @@ qt_add_qml_module(edi_app_module
         src/assistant_data.hpp
         src/assistant_data_summary.hpp
         ${EDI_APP_ASSISTANT_SOURCES}
+        ${EDI_APP_VOICE_SOURCES}
         src/example_list_model.hpp src/example_list_model.cpp
         src/engine_setup.hpp src/engine_setup.cpp
         src/demo_driver.hpp src/demo_driver.cpp src/demo_documentation.cpp
@@ -352,6 +374,11 @@ qt_add_qml_module(edi_app_module
         ${EDI_APP_ASSISTANT_RESOURCES}
 )
 target_compile_definitions(edi_app_module PUBLIC EDI_APP_ASSISTANT=$<IF:$<BOOL:${EDI_APP_ASSISTANT}>,1,0>)
+target_compile_definitions(edi_app_module PUBLIC EDI_APP_VOICE=$<IF:$<BOOL:${EDI_APP_VOICE}>,1,0>)
+if(EDI_APP_VOICE)
+    target_compile_definitions(edi_app_module PRIVATE EDI_VOICE_INSTALL_RELATIVE="${EDI_VOICE_INSTALL_RELATIVE}")
+    target_link_libraries(edi_app_module PUBLIC Qt6::Multimedia PRIVATE whisper)
+endif()
 target_sources(edi_app_module PRIVATE "${EDI_APP_BUILD_VERSION_CPP}")
 add_dependencies(edi_app_module edi_app_build_version)
 # The Stacked view's line shader (edi ADR-0041), compiled for every graphics API Qt Quick runs on.

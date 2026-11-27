@@ -177,6 +177,8 @@ python = "3.14.*"
 qt6-main = "6.11.2.*"
 qt6-graphs = "6.11.2.*"
 qt6-quick3d = "6.11.2.*"
+# Voice input records from the microphone with Qt Multimedia (ADR-0107); GPL-3.0-only like qt6-graphs.
+qt6-multimedia = "6.11.2.*"
 # A compiler cache for the app build (about 500 targets, 270 of them QML compiled to C++) and the app
 # environment's crysta, as crysta's own CI uses. A hit reproduces the identical object; the cache
 # directory lives outside the workspace (CI: $HOME/.cache/edi-ccache), so it survives the checkout's
@@ -352,6 +354,8 @@ format-check = "ruff format --check ."
 format = "ruff format ."
 # The CI lint job's checks, every one reported (tools/ci/lint.sh); the pre-push hook in .githooks runs it.
 lint = { cmd = ["bash", "tools/ci/lint.sh"] }
+# The pinned Whisper models voice input packs and tests (ADR-0107); `--test` fetches only the tiny test model.
+voice-models = "python tools/deps/voice/fetch.py"
 # --- tests --------------------------------------------------------------------------- Exit code 5 (= no
 # tests collected) is tolerated so the gate is green on the pre-code skeleton and tightens automatically
 # once the first test lands. depends-on core-build: from the suite imports `edi._edi` (a git-ignored
