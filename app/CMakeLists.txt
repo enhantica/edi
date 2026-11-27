@@ -739,6 +739,7 @@ if(NOT EMSCRIPTEN)
         src/assistant_providers.hpp src/assistant_providers.cpp
         src/assistant_accounts.hpp src/assistant_accounts.cpp
         src/native_chatgpt_provider.hpp src/native_chatgpt_provider.cpp
+        src/assistant_runtime_session.hpp src/claude_session.hpp src/claude_session.cpp
         src/assistant_native_tools.hpp src/assistant_native_tools.cpp
         src/assistant_native_create.hpp src/assistant_native_create.cpp)
     file(GLOB_RECURSE EDI_RUNTIME_SKILL_FILES CONFIGURE_DEPENDS
