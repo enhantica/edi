@@ -35,7 +35,7 @@ Item {
     // Each marked peak's role under the best-ranked k of the last search on these marks, by candidate index.
     readonly property var peakRoles: peakMode ? kState.roles : ({})
     // The marked peak under the pointer or under its table row in the k search group, by candidate index, else -1: its
-    // line is drawn thicker in the current-row blue, and its row is highlighted (owner, 2026-11-27).
+    // line and pin turn grey, and its row is highlighted (owner, 2026-11-27).
     property int hoveredMark: -1
     // A few pixels on the chart's axis: how near a line a click drops its mark, and the pointer finds it.
     readonly property real markReach: 4 * (controller.xMax - controller.xMin) / Math.max(1, pointer.width)
@@ -1210,10 +1210,8 @@ Item {
         height: mainView.plotArea.height
         acceptedButtons: Qt.LeftButton | Qt.RightButton
         hoverEnabled: toolbar.hoverShown || chart.peakMode
-        // Over a marked line while marking: a pointing hand and what a click does.
+        // Over a marked line while marking: a pointing hand (owner, 2026-11-27: no tooltip).
         cursorShape: chart.peakMode && chart.hoveredMark >= 0 ? Qt.PointingHandCursor : Qt.ArrowCursor
-        ToolTip.visible: chart.peakMode && chart.hoveredMark >= 0 && !pressed
-        ToolTip.text: chart.hoveredMark >= 0 && chart.peakCandidates[chart.hoveredMark] !== undefined ? qsTr("Click to remove %1°").arg(chart.peakCandidates[chart.hoveredMark].x.toFixed(2)) : ""
 
         onPressed: mouse => ApplicationInfo.patternPointer(mouse, 0)
         onPositionChanged: mouse => {
@@ -1348,10 +1346,11 @@ Item {
                 // marked: the tick alone, grey.
                 Rectangle {
                     x: -width / 2
-                    width: mark.hovered ? 3 : 1
+                    width: 1
                     height: peakLayer.height
                     visible: mark.marked
-                    color: EaStyle.Colors.themeAccent
+                    // Hovered, the line and its pin turn grey (owner, 2026-11-27).
+                    color: mark.hovered ? EaStyle.Colors.themeForegroundMinor : EaStyle.Colors.themeAccent
                     opacity: mark.hovered ? 1 : 0.35
                 }
                 Rectangle {
@@ -1359,7 +1358,7 @@ Item {
                     width: mark.marked ? 4 : 2
                     height: chart.em * 0.8
                     radius: 1
-                    color: mark.marked ? EaStyle.Colors.themeAccent : EaStyle.Colors.themeForegroundDisabled
+                    color: mark.hovered ? EaStyle.Colors.themeForegroundMinor : mark.marked ? EaStyle.Colors.themeAccent : EaStyle.Colors.themeForegroundDisabled
                 }
             }
         }
