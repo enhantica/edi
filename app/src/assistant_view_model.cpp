@@ -1743,16 +1743,6 @@ struct AssistantViewModel::State {
     std::optional<AssistantAccountRecord> pending_account;
     // True after the user switched accounts, until that account's identity was read back.
     bool account_chosen_explicitly = false;
-    // The account a saved conversation belongs to: empty for the default ChatGPT login.
-    QString conversation_account() const {
-        if (!active_provider_account.home.isEmpty()) return active_provider_account.id;
-        // Legacy records carry no account: they belong to the first default ChatGPT record.
-        try {
-            const auto first = account_store().defaultChatGpt();
-            if (active_provider_account.id.isEmpty() || !first || first->id == active_provider_account.id) return {};
-        } catch (...) { return {}; }
-        return active_provider_account.id;
-    }
     void resolve_active_account() noexcept {
         if (!active_provider_account.id.isEmpty() || !active_provider_account.home.isEmpty()) return;
         try {
@@ -2294,7 +2284,7 @@ struct AssistantViewModel::State {
             auto index=session_associations();auto records=index.value("threads").toObject();
             Object record{{"cacheCleared",session_history_explicit_target==id?false:records.value(id).toObject().value("cacheCleared").toBool()},{"thread",id},{"originator","edi"},{"email",viewed.email},
                 {"model",model},{"effort",effort},{"draft",session_draft}};
-            if(!conversation_account().isEmpty())record["account"]=conversation_account();
+            if(!active_provider_account.id.isEmpty())record["account"]=active_provider_account.id;
             const QPointer<Session> session(qobject_cast<Session*>(owner.parent()));
             if(session && session->assistant()==&owner && session->project()==project && project && !session->needsSaveAs()) {
                 const auto location=session->projectLocation();const auto canonical=QFileInfo(location).canonicalFilePath();
@@ -2563,18 +2553,29 @@ struct AssistantViewModel::State {
         if(automatic && record.value("archived").toBool())return false;
         saved_session_refusal=QObject::tr("It is no longer saved on this computer.");
         if(record.isEmpty() && !owned_session(session_metadata.value(id)))return false;
-        if(!record.isEmpty() && record.value("account").toString()!=conversation_account()) {
-            // Another account's conversation: offer to switch instead of mixing histories (ADR-0108 §8).
-            saved_session_refusal=QObject::tr("It belongs to another account.");
-            const auto belongs=record.value("account").toString();
-            QString label;
+        if(!record.isEmpty()) {
+            // The account a saved conversation belongs to (ADR-0108 §8): its recorded id, or for a legacy record the
+            // default-home record holding its saved e-mail; with neither it stays unbound.
+            std::optional<AssistantAccountRecord> belongs;
             try {
                 const auto store=account_store();
-                const auto other=belongs.isEmpty()?store.defaultChatGpt():store.find(active_provider_account.provider,belongs);
-                if(other)label=other->email;
+                if(record.contains("account")) belongs=store.find(active_provider_account.provider,record.value("account").toString());
+                else if(active_provider_account.provider==AssistantProviderId::ChatGpt && !record.value("email").toString().isEmpty())
+                    for(const auto& candidate:store.accounts(AssistantProviderId::ChatGpt))
+                        if(candidate.home.isEmpty() && candidate.email==record.value("email").toString()) belongs=candidate;
             } catch(...) {}
-            emit owner.sessionAccountSwitchRequested(id,label,assistant_provider_name(active_provider_account.provider));
-            return false;
+            if(!belongs) {
+                saved_session_refusal=record.value("email").toString().isEmpty()
+                    ? QObject::tr("It belongs to an account this computer has not recorded.")
+                    : QObject::tr("It belongs to %1, an account this computer has not recorded.").arg(record.value("email").toString());
+                return false;
+            }
+            if(belongs->id!=active_provider_account.id) {
+                // Another account's conversation: offer to switch instead of mixing histories.
+                saved_session_refusal=QObject::tr("It belongs to another account.");
+                emit owner.sessionAccountSwitchRequested(id,belongs->email,assistant_provider_name(active_provider_account.provider));
+                return false;
+            }
         }
         const auto previous=viewed_session && viewed_session_current(*viewed_session)?viewed_session->thread:generic_thread;
         session_selection_target=id;sessions_loading=true;
