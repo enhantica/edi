@@ -923,16 +923,20 @@ jobs:
         if: ${{ runner.os != 'Windows' && (!cancelled() && steps.apphost.outcome == 'success') }}
         run: >-
           pixi run --skip-deps python -m pytest tests/system/app/test_assistant_voice_input.py -vv
-          --basetemp "$RUNNER_TEMP/voice-journey"
+          --basetemp build/voice-journey
         env:
           EDI_APP_TEST_RUNNER: ${{ github.workspace }}/build/app/app/edi_app_tests
       # The app's last state and logs, which the failure message only points at.
       - name: Keep the voice input journey's receipts
         if: ${{ !cancelled() && steps.voicejourney.outcome == 'failure' }}
-        uses: actions/upload-artifact@v4
+        uses: ./.github/actions/store
         with:
-          name: voice-journey-${{ runner.os }}
-          path: ${{ runner.temp }}/voice-journey/
+          artifact: voice-journey-${{ env.APP_PLATFORM }}
+          withhold: 'true'
+          path: |
+            build/voice-journey/**/*.json
+            build/voice-journey/**/*.log
+            build/voice-journey/**/*.txt
           if-no-files-found: ignore
           retention-days: 7
       - name: qmllint over edi's QML (zero warnings)
