@@ -321,7 +321,9 @@ edi keeps the account list; a runtime only says who is signed in.
   ChatGPT's from the runtime as today, Claude's and Copilot's from edi's records. Opening a thread of another account
   says "This conversation belongs to <account> (<provider>)" with Switch account and Cancel, in place of today's refusal
   of a different e-mail. A home that reports another identity than its record is an error; edi never relabels the
-  record.
+  record. The default ChatGPT login is the user's own Codex login, which can change outside edi, so its record follows
+  the identity the runtime reports. Adding an account whose user and host are already recorded is refused, and its new
+  home is deleted.
 - **Switching** retires the current process as sign-out does, without logging out, advances the usage epoch every
   queued reply already checks, starts the other account's runtime and opens an empty conversation. It is refused while
   a turn or trial runs, with Clear's rule and wording.
