@@ -71,6 +71,11 @@ jobs:
         run: python tools/release/distribution.py --publication publication --output copies --repo "$GITHUB_REPOSITORY"
         env:
           GH_TOKEN: ${{ github.token }}
+      # Apps up to v2026.11.31 read stable.json and drop it whole for one YY.N version, so it holds the
+      # newest release under an alias they accept (tools/release/legacy_feed.py); the log shows what they list.
+      - name: Check the update feed the 2026.11 apps read
+        shell: bash
+        run: python tools/release/legacy_feed.py check copies/pages/releases/stable.json
       - name: Attach every file of the release copy, component archives and SHA256SUMS included
         shell: bash
         run: |
