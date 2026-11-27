@@ -176,7 +176,7 @@ jobs:
         with:
           sha: ${{ inputs.crysta-sha }}
           app-id: ${{ vars.ENHANTICA_APP_ID }}
-          private-key: ${{ secrets.ENHANTICA_APP_KEY }}
+          private-key: ${{ secrets.CRYSTA_READ_KEY }}
       - &subject
         if: needs.plan.outputs.skip != 'true'
         name: The crysta commit under test
@@ -759,7 +759,7 @@ jobs:
         with:
           sha: ${{ inputs.crysta-sha }}
           app-id: ${{ vars.ENHANTICA_APP_ID }}
-          private-key: ${{ secrets.ENHANTICA_APP_KEY }}
+          private-key: ${{ secrets.CRYSTA_READ_KEY }}
           base: ${{ matrix.part == '' && 'main' || '' }}
       - *subject
       - *pixi-cpp

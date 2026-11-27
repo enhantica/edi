@@ -52,7 +52,7 @@ jobs:
         uses: actions/create-github-app-token@v2
         with:
           app-id: ${{ vars.ENHANTICA_APP_ID }}
-          private-key: ${{ secrets.ENHANTICA_APP_KEY }}
+          private-key: ${{ secrets.CRYSTA_READ_KEY }}
           owner: enhantica
           repositories: crysta
           permission-contents: read
