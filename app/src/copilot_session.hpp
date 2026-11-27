@@ -51,6 +51,7 @@ public:
     /// any other input goes to the sign-in process as one line.
     void answerSignIn(const QString& input) override;
     void signOut(const AssistantRuntimeLaunch& launch) override;
+    void removeAccount(const AssistantRuntimeLaunch& launch) override;
 
     void openThread(const QString& resumeId, const QString& model, const QString& effort) override;
     void sendMessage(const QString& thread, const QString& clientMessageId, const QString& text) override;
@@ -103,8 +104,9 @@ private:
     void finishStart(const QString& login);
     void readbackExpired();
 
-    QString accountSession() const;
     void logout(const QString& session);
+    void confirmSignOut(const QString& session);
+    void unconfirmed(const QString& reason);
     void removeHome(const AssistantAccountRef& account);
 
     void configure(const QString& session, const QString& model, const QString& effort, bool open, bool verify);

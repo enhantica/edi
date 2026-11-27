@@ -51,8 +51,12 @@ public:
     /// What the user typed or chose for the sign-in process's prompt (a code, or yes/no). Written only to that
     /// process's input; never stored, logged or recorded.
     virtual void answerSignIn(const QString& input) = 0;
-    /// The runtime's own sign-out for the account's home. Emits `signedOut`.
+    /// The runtime's own sign-out for the account's home. Emits `signedOut` once the runtime confirms it, else
+    /// `signOutUnconfirmed`.
     virtual void signOut(const AssistantRuntimeLaunch& launch) = 0;
+    /// Remove the account from edi: stop the runtime and delete the home edi created, leaving the runtime's own
+    /// sign-in where the runtime keeps it. Emits `removedOnly`. By default a runtime's sign-out does this.
+    virtual void removeAccount(const AssistantRuntimeLaunch& launch) { signOut(launch); }
 
     /// The tool names edi's server now lists, for every process started after this call (see `expectedTools`).
     virtual void setExpectedTools(const QStringList& names) { Q_UNUSED(names); }
@@ -73,6 +77,10 @@ signals:
     void signInOpened(const QString& url, const QString& code, const QString& prompt);
     void signInFinished(bool success, const QString& message);
     void signedOut();
+    /// The sign-out was not confirmed, or the runtime offers none; the account is not signed out. Plain words.
+    void signOutUnconfirmed(const QString& reason);
+    /// The account's home was deleted; the runtime's sign-in may stay, e.g. in the system keychain.
+    void removedOnly();
     /// Catalogue rows {id, displayName, efforts: [..], defaultEffort} (defaultEffort may be empty).
     void modelsListed(const QJsonArray& models);
     void threadOpened(const QString& thread);

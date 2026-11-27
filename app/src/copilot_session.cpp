@@ -1050,34 +1050,74 @@ void CopilotSession::cancelSignIn() {
 }
 
 void CopilotSession::signOut(const AssistantRuntimeLaunch& launch) {
-    // With the account's runtime running and `/logout` advertised, the CLI signs itself out. Otherwise edi stops the
-    // runtime and removes the home it created, where the CLI keeps a plain-file token when no keychain exists; a
-    // keychain token stays until it is removed or revoked on GitHub.
-    const auto session = accountSession();
-    if (ready_ && launch_.account.id == launch.account.id && !session.isEmpty() &&
-        commands_.contains(QStringLiteral("logout"))) {
-        logout(session);
+    // The CLI signs itself out with `/logout` in the account's own session, once `/user show` has shown that
+    // session is the account's. Without it, edi offers removal instead (`removeAccount`).
+    if (!ready_ || launch_.account.id != launch.account.id || probe_.isEmpty()) {
+        emit signOutUnconfirmed(QStringLiteral("GitHub Copilot can sign out only the account that is in use."));
         return;
     }
-    retire();
-    removeHome(launch.account);
+    if (!commands_.contains(QStringLiteral("logout"))) {
+        emit signOutUnconfirmed(QStringLiteral("This GitHub Copilot release cannot sign out from edi."));
+        return;
+    }
+    const auto session = probe_;
+    checkIdentity(
+        session, [this, session](const QString&) { logout(session); },
+        [this](const QString& reason, bool noUser) {
+            if (noUser) {
+                retire();
+                emit signedOut();
+            } else unconfirmed(reason);
+        });
 }
-
-QString CopilotSession::accountSession() const { return probe_; }
 
 void CopilotSession::logout(const QString& session) {
     request(QStringLiteral("session/prompt"),
             {{"sessionId", session}, {"prompt", QJsonArray{QJsonObject{{"type", "text"}, {"text", "/logout"}}}}},
-            [this](const QJsonObject&, const QJsonObject& error) {
-                const auto generation = process_.generation();
+            [this, session](const QJsonObject&, const QJsonObject& error) {
                 if (!error.isEmpty()) {
-                    refuse(error, QStringLiteral("GitHub Copilot could not sign out."));
-                    if (process_.generation() == generation) retire();
+                    auto reason = errorText(error);
+                    unconfirmed(reason.isEmpty() ? QStringLiteral("GitHub Copilot could not sign out.") : reason);
                     return;
                 }
-                retire();
-                emit signedOut();
+                confirmSignOut(session);
             });
+}
+
+void CopilotSession::confirmSignOut(const QString& session) {
+    // Confirmed only by the CLI itself: `/user show` naming no user, or without `/user` a new session that needs
+    // a sign-in.
+    const auto done = [this](bool confirmed) {
+        if (!confirmed) {
+            unconfirmed(QStringLiteral("GitHub Copilot did not confirm the sign-out."));
+            return;
+        }
+        retire();
+        emit signedOut();
+    };
+    if (commands_.contains(QStringLiteral("user"))) {
+        readUser(session, [done](const QJsonObject& error, const QString& text) {
+            const auto user = parseUser(text);
+            done((error.isEmpty() && user.signedOut && user.login.isEmpty()) ||
+                 error.value(QStringLiteral("code")).toInt() == auth_required);
+        });
+        return;
+    }
+    request(QStringLiteral("session/new"), {{"cwd", launch_.workspace}, {"mcpServers", QJsonArray{}}},
+            [done](const QJsonObject&, const QJsonObject& error) {
+                done(error.value(QStringLiteral("code")).toInt() == auth_required);
+            });
+}
+
+void CopilotSession::unconfirmed(const QString& reason) {
+    // After a `/logout` attempt the runtime's state is unknown, so it is not used again.
+    retire();
+    emit signOutUnconfirmed(withNotices(reason));
+}
+
+void CopilotSession::removeAccount(const AssistantRuntimeLaunch& launch) {
+    retire();
+    removeHome(launch.account);
 }
 
 void CopilotSession::removeHome(const AssistantAccountRef& account) {
@@ -1091,14 +1131,14 @@ void CopilotSession::removeHome(const AssistantAccountRef& account) {
                         QDir::cleanPath(account.home) == QDir::cleanPath(copilotRoot + QLatin1Char('/') + account.id) &&
                         !home.isSymLink() && QFileInfo(home.absolutePath()).canonicalFilePath() == canonicalRoot;
     if (!inside) {
-        emit accountRefused(QStringLiteral("edi signs out only accounts whose folder it created."), false);
+        emit accountRefused(QStringLiteral("edi removes only accounts whose folder it created."), false);
         return;
     }
     if (home.exists() && !QDir(account.home).removeRecursively()) {
         emit accountRefused(QStringLiteral("The GitHub Copilot account folder could not be removed."), false);
         return;
     }
-    emit signedOut();
+    emit removedOnly();
 }
 
 }  // namespace edi_app
