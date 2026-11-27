@@ -6,9 +6,11 @@ import json
 import os
 import subprocess
 import time
+import xml.etree.ElementTree as ET  # noqa: S405 - binarycreator's own XML only
 from pathlib import Path
 from unittest.mock import patch
 
+from maintenance_resource import RESOURCE_NAME, dat_resources, read_rcc
 from package import (
     ASSISTANT_COMPONENT,
     ASSISTANT_RUNTIME,
@@ -21,7 +23,11 @@ from package import (
     run,
     sha256,
     verify_installed_maintenance_tool,
+    write_controller,
 )
+
+# Ends the first release's control script, so the check can tell its pages from the new ones.
+FIRST_RELEASE_MARKER = '// edi protocol check: the interface of the first release'
 
 
 def installer_command(path: Path) -> Path:
@@ -29,6 +35,13 @@ def installer_command(path: Path) -> Path:
     if SYSTEM == 'macos':
         return next((path / 'Contents/MacOS').iterdir())
     return path
+
+
+def first_release_controller(config: Path, tool_bytes: int = 0) -> None:
+    """Write the controller and mark it as the first release's."""
+    write_controller(config, tool_bytes)
+    with (config / 'Installer.qs').open('a', encoding='utf-8') as controller:
+        controller.write('\n' + FIRST_RELEASE_MARKER + '\n')
 
 
 def check(tools: Path, output: Path) -> None:
@@ -49,9 +62,16 @@ def check(tools: Path, output: Path) -> None:
     repository = (output / 'online/repository').as_uri() + '/'
     # Substitute only the endpoint; install and maintenance use the real embedded configuration.
     # The update goes from the last old-form version to the first YY.N, which sorts lower by its
-    # numbers: the repository offers it by content checksum (edi ADR-0106).
-    with patch('package.repository_urls', return_value=(repository,)):
+    # numbers: the repository offers it by content checksum (edi ADR-0106). The first release
+    # stands for 2026.11: its pages are marked and it ships no replacement for the tool's default
+    # resource, so only the update can bring the new pages.
+    with (
+        patch('package.repository_urls', return_value=(repository,)),
+        patch('package.write_controller', first_release_controller),
+    ):
         offline = package_app(stage, tools, output / 'offline', '2026.11.31')
+    if list((output / 'offline/source/packages').glob('*/data/**/' + RESOURCE_NAME)):
+        raise RuntimeError(f'The first release ships {RESOURCE_NAME}, which 2026.11 did not')
     marker.write_text('second marker\n')
     # The new release's tool gets other bytes, so the update has a tool to replace. On Linux the
     # update leaves the tool alone (edi ADR-0091), so only macOS and Windows build one.
@@ -110,6 +130,9 @@ def exercise(
             installed_assistant = target / assistant_marker
             if installed_assistant.exists():
                 raise RuntimeError('Default installation selected the optional component')
+            # The offline install shows the first release's pages, which proves the check below
+            # can tell them apart; the online install shows the new ones.
+            maintenance_pages(target, output / kind / 'source', first_release=kind == 'offline')
             if kind == 'offline':
                 user_file = target / 'user-project.edi'
                 user_file.write_text('keep the project\n')
@@ -141,6 +164,8 @@ def exercise(
                 tool_replaced(target, new_metadata)
                 # Nothing is left to offer after the update.
                 nothing_offered(maintenance, env)
+                # The new tool must show the new release's pages, not the ones the old .dat held.
+                maintenance_pages(target, output / 'online/source', first_release=False)
                 if user_file.read_text() != 'keep the project\n':
                     raise RuntimeError('In-place update changed an unrelated user file')
             maintenance_args = [
@@ -159,6 +184,52 @@ def exercise(
             run([maintenance, '--default-answer', '--confirm-command', 'purge'], **options)
         if installed.exists():
             raise RuntimeError('Maintenance tool left the component installed')
+
+
+def maintenance_pages(target: Path, source: Path, *, first_release: bool) -> None:
+    """Require the installed tool's pages to be the ones the installer `source` was built with.
+
+    The tool reads its configuration, control script and style sheet from the default resource,
+    the first segment of MaintenanceTool.dat, and an update replaces that segment only with the
+    MaintenanceTool.rcc the app component brings, which the Framework deletes once written. A
+    2026.11 .dat holds no -r resources, so after an update the replacement must carry them too.
+    """
+    if (target / RESOURCE_NAME).exists():
+        raise RuntimeError(f'The Framework left {RESOURCE_NAME} in the installation')
+    dat = target / 'MaintenanceTool.dat'
+    if not dat.is_file():
+        raise RuntimeError('The installation has no MaintenanceTool.dat')
+    files = read_rcc(dat_resources(dat)[0])
+    if 'installer-config/config.xml' not in files:
+        raise RuntimeError('The default resource of MaintenanceTool.dat has no config.xml')
+    config = ET.fromstring(files['installer-config/config.xml'])  # noqa: S314 - from binarycreator
+    control_script = b''
+    for element, built in [('ControlScript', 'Installer.qs'), ('StyleSheet', 'Installer.qss')]:
+        named = config.findtext(element)
+        if not named:
+            raise RuntimeError(f'The config.xml in MaintenanceTool.dat names no {element}')
+        # binarycreator renames the file it copies under installer-config/ and names it there.
+        name = named.removeprefix(':/metadata/').removeprefix('installer-config/')
+        path = 'installer-config/' + name
+        if path not in files:
+            raise RuntimeError(f'MaintenanceTool.dat has no {path}, the {element} it names')
+        if files[path] != (source / 'config' / built).read_bytes():
+            raise RuntimeError(
+                f'The {element} in MaintenanceTool.dat is not the {built} of {source.parent.name}'
+            )
+        if element == 'ControlScript':
+            control_script = files[path]
+    if (FIRST_RELEASE_MARKER.encode() in control_script) != first_release:
+        raise RuntimeError(
+            'The first release does not show its marked control script'
+            if first_release
+            else "The maintenance tool still shows the first release's control script"
+        )
+    if first_release:
+        return  # binarycreator keeps the -r resources in a segment of their own
+    for required in ('translations/ifw_en.qm', 'edi/CheckMark.png'):
+        if required not in files:
+            raise RuntimeError(f'The default resource of MaintenanceTool.dat has no {required}')
 
 
 def nothing_offered(maintenance: Path, env: dict) -> None:

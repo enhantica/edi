@@ -17,6 +17,7 @@ year, one identity everywhere (2026-11-26). The first such number, 26.17, is sma
 
 An update by the Maintenance Tool also kept the installed tool: the signed tool of ADR-0091 was unpacked only by a
 first installation, so a tool once installed was never replaced.
+Once the tool was replaced, it still showed the old release's pages, which the framework keeps beside the tool.
 
 ## Decision
 
@@ -50,6 +51,16 @@ first installation, so a tool once installed was never replaced.
    new tool in place. An update that leaves the component alone keeps the installed tool. Linux has no separate tool and is unchanged. The
    installer protocol check updates a 2026.11.31 install from a 26.17 repository and checks the tool's checksum
    afterwards.
+6. **An update also replaces the Maintenance Tool's pages**, on every platform. The framework keeps the tool's
+   configuration, control script, style sheet and the `-r` resources (the English text and the images) in
+   `MaintenanceTool.dat`, which the running tool writes at the end of every update by copying the resources the old
+   file holds, so a new tool showed the pages of the release first installed. Every online build therefore ships
+   `MaintenanceTool.rcc` with the app component: the installer's default resource (`binarycreator -rcc`) with the
+   `-r` files added, since a 2026.11 file has no `-r` resource to keep them (`maintenance_resource.py`). The app
+   component's script names it as the framework's `DefaultResourceReplacement`, which the running tool reads while it
+   writes the data file: the file becomes its first resource and is deleted. A first installation does the same, so
+   no copy is left behind. The protocol check starts from a release whose pages differ, and checks after the update
+   that the data file's first resource holds the new release's control script, style sheet, text and images.
 
 ## Consequences
 
