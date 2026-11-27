@@ -154,8 +154,7 @@ T.ToolTip {
         }
 
         Rectangle {
-            // A retiring tooltip is briefly without a parent (AppState.retirePopup).
-            x: -control.x - width / 2 + (control.parent ? control.parent.width / 2 : 0)
+            x: -control.x - width / 2 + control.parent.width / 2
             y: control.y >= 0 ? control.arrowLength * 0.207 + 1 : parent.height - control.arrowLength * 1.707 - 1
 
             width: control.arrowLength / 0.707
