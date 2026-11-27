@@ -277,10 +277,17 @@ EaComponents.ListView {
     //   "number", "value", "uncertainty", "displacement", "change"    a number at its content type's width;
     //   "unit"    a unit, right after its value;
     //   "control" a check box or a button: at the table's right edge;
-    // or a number, a fixed width (a selector sized from its options). Every column is as wide as its content, its
-    // header or its widest value (measured, never estimated); the spare is left before the controls, or at the right
-    // end; nothing scrolls sideways (the owner, 2026-11-23). A table that sets `columns` itself (the parameter table, which drops columns) keeps its own rule.
+    // or a number, a fixed width (a selector sized from its options). A number, unit, mark, control or the row number
+    // takes its kind's width or its header's, whichever is wider; a text column its header or its widest text. The spare
+    // is left before the controls, or at the right end; nothing scrolls sideways (the owner, 2026-11-23). A table that
+    // sets `columns` itself (the parameter table, which drops columns) keeps its own rule.
     property var columnKinds: []
+    // Where a text column's texts are, by column: the model role it shows, or {role, edited: true} for a column of
+    // inputs (measured in the bold an edit takes, with room for the caret). When every text column names one, the
+    // widths come from the kinds, the headers and the model alone: no row is made to measure them, so they are known
+    // while the table's group is folded and a first unfold changes nothing (edi ADR-0105). A table
+    // whose text is not a plain role (icons, a selector, a derived text) is measured from its rows.
+    property var columnTexts: []
     readonly property bool kindModel: columnKinds.length > 0
     function kindIsControl(kind: var): bool {
         return kind === "control" || kind === "mark";

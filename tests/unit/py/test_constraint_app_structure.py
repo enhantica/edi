@@ -173,7 +173,9 @@ def test_alias_picker_uses_core_candidates_and_the_closed_edit_door():
     )
     # The widget-aware route adds input identity; both typed routes retain the
     # same recorded-edit and preview publisher (the relation Undo contract).
-    relations = text.split('AnalysisViewModel::AnalysisViewModel', 1)[0]
+    relations = text.split('AliasListModel::AliasListModel', 1)[1].split(
+        'FitStartListModel::FitStartListModel', 1
+    )[0]
     edits = re.findall(r'edi::Edit::\w+\(', relations)
     routed = re.findall(
         r'editor_\.apply_relation_(?:edit|control)\(\s*edi::Edit::\w+\(', relations
@@ -220,6 +222,15 @@ def test_alias_picker_uses_core_candidates_and_the_closed_edit_door():
     assert 'preview_->apply(change, applied, applied_result)' in body('applyEdit'), (
         'The common edit door submits the same typed change and application receipts to preview'
     )
+    constraints = source('qml/Pages/Analysis/ConstraintsGroup.qml')
+    assert re.search(
+        r'columnKinds:\s*\["index",\s*"name",\s*"name",\s*"control",\s*"control"\]',
+        constraints,
+    ), 'The constraint ID and expression use the name sizing columns'
+    assert re.search(
+        r'columnTexts:\s*\[[^\]]*\{\s*"role":\s*"expression",\s*"edited":\s*true\s*\}',
+        constraints,
+    ), 'Expression column sizing uses the edited model text'
 
 
 def test_analysis_text_uses_the_saved_core_block_and_invalidates_after_edits():

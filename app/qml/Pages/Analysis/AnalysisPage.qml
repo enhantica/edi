@@ -157,6 +157,7 @@ WorkflowPage {
     Component {
         id: sequentialFitContent
         SequentialFitGroup {
+            project: page.project
             analysis: page.analysis
         }
     }

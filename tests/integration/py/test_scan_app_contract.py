@@ -301,7 +301,8 @@ def search_functions(shared):
         'control.matches = function(text) {let filter = control.filter; '
         + matcher[matcher.index('{') + 1 : -1]
         + '};\n'
-        'control.pickedIndex = function() {let {count,filter,textAt,matches} = control; '
+        'control.pickedIndex = function() {'
+        'let {count,filter,textAt,matches,groupOf=null,shownRows,clickedEntry=-1} = control; '
         + picker[picker.index('{') + 1 : -1]
         + '};\n'
     )
@@ -309,7 +310,7 @@ def search_functions(shared):
 
 def assert_search(shared, delegate=None):
     field = item(shared, 'comboBox.search')
-    delegate = delegate or block(shared, 'delegate:')
+    delegate = delegate or block(shared, 'delegate: EaElements.MenuItem')
     # Both a direct input binding and state updated by the input are valid compositions.
     program = """const control = {count: 11, searchText: ""}; const searchField = {text:
 ""};
@@ -330,11 +331,11 @@ for (const size of [10,11]) {
  control.count=size;
  for (const term of ["SiO", "absent"]) {
   const text=term; searchField.text=term; ASSIGN;
-  const shown=evaluateRow("CoSiO cooling.dat");
-  output.push([control.searchable, shown]);
+  const shown=[0, 16].map(titleHeight=>evaluateRow("CoSiO cooling.dat", titleHeight));
+  output.push([control.searchable, ...shown]);
  }
 }
-function evaluateRow(text) {
+function evaluateRow(text, titleHeight) {
  const matching = MATCHING;
  return !!(VISIBLE) && (HEIGHT)>0 && (OPACITY)>0;
 }
@@ -358,7 +359,12 @@ console.log(JSON.stringify(output));"""
     }
     for token, value in replacements.items():
         program = program.replace(token, value)
-    assert javascript(program) == [[False, True], [False, True], [True, True], [True, False]], (
+    assert javascript(program) == [
+        [False, True, True],
+        [False, True, True],
+        [True, True, True],
+        [True, False, False],
+    ], (
         'Search wiring: actual field, matcher and delegate implement '
         'case-insensitive substring filtering above ten'
     )
@@ -391,18 +397,22 @@ console.log(JSON.stringify(output));"""
         'search header above the popup list entries only while search is available'
     )
     accepted = property_value(field, 'onAccepted')
-    # Each interaction has fresh state; execute the complete matrix in one declared Node host.
+    # The native acceptance writes the index on the original QObject.
     context = (
         'let results=[]; for (const term of ["SiO"," cosio cooling.DAT ","absent",""]) {'
-        'let picked=[],closed=0; const control={count:3,currentIndex:0,'
-        'textAt:i=>["other","CoSiO warming.dat","CoSiO cooling.dat"][i],'
-        'activated:i=>picked.push(i),popup:{close:()=>closed++}};'
+        'let picked=[],closed=0;'
+        'const control=Qt.createQmlObject("import QtQml; QtObject {'
+        'property int count: 3; property int currentIndex: 0; property string filter;'
+        'property var textAt; property var folded; property var matches; property var pickedIndex;'
+        'property var activated; property var popup }",__nativeFixture,"SearchBoxFixture");'
+        'control.textAt=i=>["other","CoSiO warming.dat","CoSiO cooling.dat"][i];'
+        'control.activated=i=>picked.push(i);control.popup={close:()=>closed++};'
         + search_functions(shared)
         + 'control.filter=control.folded(term);'
         + '(function(){'
         + accepted
         + '})();'
-        'results.push([control.currentIndex,picked,closed]);}'
+        'results.push([control.currentIndex,picked,closed]);control.destroy();}'
         'console.log(JSON.stringify(results));'
     )
     assert javascript(context) == [[1, [1], 1], [2, [2], 1], [0, [], 0], [0, [0], 1]], (
@@ -1307,7 +1317,7 @@ def test_search_accepts_direct_field_and_state_compositions():
     assert direct != shared, (
         'Search wiring: the control supplies the alternative field composition'
     )
-    delegate = block(shared, 'delegate:')
+    delegate = block(shared, 'delegate: EaElements.MenuItem')
     visible_delegate = (
         delegate
         .replace(
@@ -1323,6 +1333,29 @@ def test_search_accepts_direct_field_and_state_compositions():
     assert visible_delegate != delegate, 'Search wiring: the control supplies visibility filtering'
     assert_search(shared)
     assert_search(direct, visible_delegate)
+    order = block(shared, 'function searchOrder(')
+    shown = block(shared, 'function shownRows(')
+    program = (
+        'const texts=["15D","D","Ir","Duo","145Gd","Duo"];'
+        'const count=texts.length, textAt=i=>texts[i], groupOf=i=>i<4?"a":"b";'
+        'const filter="d", control={filter};'
+        + search_functions(shared)
+        + 'const {folded,matches}=control;'
+        + order
+        + shown
+        + 'const ordered={rows:searchOrder()};'
+        'Object.assign(control,{groupOf,shownRows});'
+        'console.log(JSON.stringify([ordered.rows,shownRows(),control.pickedIndex()]));'
+    )
+    assert javascript(program) == [[1, 3, 0, 5, 4, 2], [1, 3, 0, 5, 4], 1], (
+        'A typed search ranks matches within each group and Enter takes the first shown row'
+    )
+    assert 'ordered.arrange(order)' in block(shared, 'function orderEntries('), (
+        'The popup applies the search order to the delegate model'
+    )
+    assert 'entries.items.move(' in block(shared, 'DelegateModel {'), (
+        'The ordered delegate model moves existing rows and retains their original identities'
+    )
 
 
 @pytest.fixture(scope='module')

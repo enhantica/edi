@@ -57,7 +57,8 @@ Column {
             font.family: EaStyle.Fonts.fontFamily
             font.pixelSize: EaStyle.Sizes.fontPixelSize
         }
-        columnKinds: ["index", "short", typeWidth, "displacement", "displacement", "displacement", "displacement", "displacement", "displacement", "displacement"]
+        columnTexts: ["", "label"]
+        columnKinds: ["index", "name", typeWidth, "displacement", "displacement", "displacement", "displacement", "displacement", "displacement", "displacement"]
 
         header: EaComponents.ListViewHeader {
             EaComponents.ListViewLabel {
@@ -72,13 +73,12 @@ Column {
             HeaderLabel {
                 horizontalAlignment: Text.AlignHCenter
                 uid: "atom_site.adp_type"
-                text: qsTr("Type")
+                longText: qsTr("Type")
             }
             HeaderLabel {
                 horizontalAlignment: Text.AlignHCenter
                 // B iso or U iso, editable, or a tensor's read-only equivalent B eq or U eq (owner, 2026-10-12).
                 uid: "atom_site.adp_iso"
-                shortText: qsTr("Iso")
             }
             HeaderLabel {
                 horizontalAlignment: Text.AlignHCenter

@@ -49,6 +49,11 @@
           "proof": null,
           "overloads": 1
         },
+        "labelForms": {
+          "domain": "read-only query",
+          "proof": null,
+          "overloads": 1
+        },
         "units": {
           "domain": "read-only query",
           "proof": null,
@@ -519,6 +524,11 @@
         "loadSeriesOfJointFits": {
           "domain": "dataset-load",
           "proof": "tests/integration/py/test_scan_app_contract.py",
+          "overloads": 1
+        },
+        "setDataFolder": {
+          "domain": "dataset-admission",
+          "proof": "tests/unit/app/tst_sequential_data_directory.qml",
           "overloads": 1
         },
         "previewSeriesGroups": {

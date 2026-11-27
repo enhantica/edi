@@ -92,6 +92,13 @@ WorkStamps work_stamps(const Project& live, std::size_t construction_bytes);
 // Owner thread. Takes the stamps, then copies the project.
 WorkSnapshot snapshot_for_work(const Project& live);
 
+// Owner thread. Whether writing `value` into `parameter`, a wavelength of `live`, would make the calculation
+// refuse a reflection list: crysta's reason, or empty. Asked of crysta (reflection_list_refusal) without
+// calculating, on a copy made as the preview's snapshot is, with the value written and the relations applied,
+// for each experiment whose wavelength that changes. A copy that cannot be prepared answers empty: the
+// calculation then reports why.
+std::string wavelength_refusal(const Project& live, const Parameter& parameter, double value);
+
 // Any thread. What `calculated` holds computed now, staged for `publish` under `stamps` (a fitted copy's
 // pattern, which the fit's own last calculation left). Each structure's geometry where it is current.
 // With a `refusal`, or when an experiment's computed categories are not current (a model the calculation

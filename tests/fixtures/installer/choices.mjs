@@ -27,6 +27,7 @@ const assistantName = 'org.easydiffraction.app.assistant';
 const appName = 'org.easydiffraction.app';
 const selected = new Set([appName]);
 const fields = {
+  AppBox: {},
   AssistantCheckBox: {checked: false, toggled: signal()},
   FolderBox: {},
   LicenseCheckBox: {checked: false, toggled: signal()},
@@ -121,11 +122,13 @@ const context = createContext({
     value: (key, fallback = '') => metadata.get(key) ?? fallback,
     setValue(key, value) { metadata.set(key, value); },
     components: () => components,
+    componentByName: name => components.find(entry => entry.name === name) ?? null,
     selectComponent: name => selected.add(name),
     deselectComponent: name => selected.delete(name),
     addWizardPageItem: (_component, form, page) => embedded.push([form, page]),
     addWizardPage: (_component, form, page) => extraPages.push([form, page]),
     installationFinished: signal(), updateFinished: signal(), uninstallationFinished: signal(),
+    statusChanged: signal(),
     titleMessageChanged: {connect() {}},
   },
   gui: {
@@ -134,7 +137,7 @@ const context = createContext({
     pageWidgetByObjectName: name => pages[name] ?? null,
     pageByObjectName: name => pages[name] ?? null,
     pageById: id => pagesById.get(id) ?? null,
-    findChild: (page, name) => page.fields[name] ?? null,
+    findChild: (page, name) => page.fields?.[name] ?? null,
     findChildren: () => [],
     clickButton: button => buttonClicks.push(button),
   },
@@ -192,9 +195,9 @@ for (mode of ['maintenance', 'update', 'remove', 'cli']) {
   runInContext('new Component()', context);
   assert.deepEqual(embedded.splice(0), mode === 'cli' ? [] : [['ProgressForm', 'progress'], ['DoneForm', 'done']],
     'Graphical modes embed the progress and launch forms on Installing and Done');
-  const hasAssistantChoice = mode === 'maintenance' || mode === 'update';
+  const hasAssistantChoice = mode === 'maintenance';
   assert.deepEqual(extraPages.splice(0), hasAssistantChoice ? [['AssistantForm', 'ready']] : [],
-    'Change components and Update offer a separate assistant choice');
+    'Change components offers an assistant choice; Update goes directly to its summary');
   if (controller) {
     controller.IntroductionPageCallback();
     if (hasAssistantChoice)

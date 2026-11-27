@@ -59,8 +59,35 @@ AppDialog {
     // The agreement factors (edi ADR-0045), below the summary: one column per factor, one row per dataset.
     readonly property FitAgreementModel agreement: dialog.results ? dialog.results.agreement : null
     readonly property var factorColumns: dialog.agreement ? dialog.agreement.columns : []
-    // Wide enough for the longest structure name under a phase factor, with its icon: a name is never cut.
-    readonly property real factorWidth: Math.max(EaStyle.Sizes.fontPixelSize * 4.5, structureMetrics.advanceWidth + EaStyle.Sizes.fontPixelSize * 2.5)
+    // Wide enough for the longest structure name under a phase factor, with its icon, and for the widest value: neither
+    // is ever cut ("undefined" is wider than a number).
+    readonly property real factorWidth: Math.max(EaStyle.Sizes.fontPixelSize * 4.5, structureMetrics.advanceWidth + EaStyle.Sizes.fontPixelSize * 2.5, dialog.widestValue + AppSizes.tableCellMargin * 2)
+    property int valuesRevision: 0
+    readonly property real widestValue: {
+        let widest = 0;
+        for (let row = 0; dialog.valuesRevision >= 0 && row < factorValues.count; ++row) {
+            const texts = factorValues.objectAt(row) as FactorTexts;
+            widest = Math.max(widest, texts?.widest ?? 0);
+        }
+        return Math.ceil(widest);
+    }
+
+    component FactorTexts: QtObject {
+        required property var values
+        readonly property real widest: Math.max(0, ...values.map(text => valueMetrics.advanceWidth(text)))
+    }
+    Instantiator {
+        id: factorValues
+        model: dialog.agreement
+        delegate: FactorTexts {}
+        onObjectAdded: ++dialog.valuesRevision
+        onObjectRemoved: ++dialog.valuesRevision
+    }
+    FontMetrics {
+        id: valueMetrics
+        font.family: EaStyle.Fonts.fontFamily
+        font.pixelSize: EaStyle.Sizes.fontPixelSize
+    }
 
     TextMetrics {
         id: structureMetrics

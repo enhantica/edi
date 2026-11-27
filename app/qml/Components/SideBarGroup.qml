@@ -55,10 +55,19 @@ EaElements.GroupBox {
                     other.collapsed = true;
             }
         }
-        if (!onScreen)
+        if (!onScreen || resting)
             return;
         folding = true;
         foldEnd.restart();
+    }
+    // Folded or open at once, as a page made now shows it: no fold for a click to land in.
+    property bool resting: false
+    function rest(folded) {
+        resting = true;
+        collapsed = folded;
+        resting = false;
+        folding = false;
+        foldEnd.stop();
     }
     // On the current item of every SwipeView it is in (its page and its sidebar tab): a SwipeView keeps the others
     // visible.

@@ -70,15 +70,16 @@ QPushButton:default, QPushButton:focus {
     border-color: @BORDER@;
 }
 
+/* Hovered or pressed, the border takes the text's accent. */
 QPushButton:hover {
     color: @ACCENT@;
     background-color: @BACKGROUND_HOVERED@;
-    border-color: @BACKGROUND@;
+    border-color: @ACCENT@;
 }
 
 QPushButton:pressed, QPushButton:checked {
     color: @ACCENT@;
-    border-color: @BACKGROUND@;
+    border-color: @ACCENT@;
 }
 
 QPushButton:disabled {
@@ -176,26 +177,46 @@ QCheckBox, QRadioButton {
     outline: none;
 }
 
+/* The page's content stands 6 px in from the logo's left edge, and as far from the right (Installer.qs, sideIndent):
+   every widget that starts or ends a row takes it as a margin. */
 QCheckBox {
-    margin: 0;
+    margin: 0 0 0 6px;
     padding: 0;
 }
 
-/* A radio row is a check box row's size: no padding, an indicator as large as the box (package.py). */
+QLineEdit#FolderLineEdit, QLabel#SpaceLabel, QLabel#NoticeLabel, QLabel#EdiProgressStatus,
+QLabel#InformationLabel {
+    margin-left: 6px;
+}
+
+/* A label given a margin by a stylesheet also indents its text by half an "x" unless told otherwise. */
+QLabel#SpaceLabel, QLabel#NoticeLabel, QLabel#EdiProgressStatus, QLabel#AppSizeLabel, QLabel#AssistantSizeLabel,
+QLabel#MaintenanceSizeLabel, QLabel#InformationLabel {
+    qproperty-indent: 0;
+}
+
+QPushButton#FolderBrowseButton, QLabel#AppSizeLabel, QLabel#AssistantSizeLabel, QLabel#MaintenanceSizeLabel,
+QLabel#NoticeLabel {
+    margin-right: 6px;
+}
+
+/* A radio row is a check box row's size: no padding, an indicator as large as the box outside. */
 QRadioButton {
-    margin: 0;
+    margin: 0 0 0 6px;
     padding: 0;
 }
 
-
-
-QCheckBox:disabled, QRadioButton:disabled {
+/* A disabled radio is greyed; a disabled check box (one that cannot be changed, as EasyDiffraction's) keeps its text
+   readable and shows it by its box (QCheckBox::indicator:disabled). */
+QRadioButton:disabled {
     color: @FOREGROUND_DISABLED@;
 }
 
+/* The indicators follow the text's size (em): the box 1em inside a 1 px border, the radio 0.86em inside a 2 px one,
+   both about 16 px at the 14 px text. */
 QCheckBox::indicator {
-    width: @CHECK_PX@px;
-    height: @CHECK_PX@px;
+    width: 1em;
+    height: 1em;
     border: 1px solid @BORDER@;
     border-radius: 2px;
     background-color: @CHECK_BACKGROUND@;
@@ -207,11 +228,21 @@ QCheckBox::indicator:checked {
     image: url(:/metadata/edi/CheckMark.png);
 }
 
+QCheckBox::indicator:disabled {
+    border-color: @FOREGROUND_DISABLED@;
+}
+
+QCheckBox::indicator:checked:disabled {
+    background-color: @FOREGROUND_DISABLED@;
+    border-color: @FOREGROUND_DISABLED@;
+}
+
 QRadioButton::indicator {
-    width: @RADIO_PX@px;
-    height: @RADIO_PX@px;
+    width: 0.86em;
+    height: 0.86em;
     border: 2px solid @FOREGROUND@;
-    border-radius: @RADIO_RADIUS_PX@px;
+    /* Half the inside or less: Qt draws a square where the radius is more than half the outside. */
+    border-radius: 0.5em;
     background-color: transparent;
 }
 
@@ -258,19 +289,30 @@ QScrollBar::add-page, QScrollBar::sub-page {
     background: none;
 }
 
-/* The progress bar, as the app's fit progress: the accent on a faint accent track. */
+/* One progress bar on every page (fetching, installing, updating, removing), in the app's colours: the accent on a
+   faint accent track, the percentage inside, the bar tall enough for the text with room around it, its corners
+   rounded as the buttons'. */
 QProgressBar {
     color: @FOREGROUND@;
     background-color: @ACCENT_TRACK@;
     border: none;
-    border-radius: 4px;
-    max-height: 8px;
+    border-radius: 2px;
+    min-height: @PROGRESS_PX@px;
+    max-height: @PROGRESS_PX@px;
+    margin: 0 6px;
+    padding: 0;
     text-align: center;
 }
 
 QProgressBar::chunk {
     background-color: @ACCENT@;
-    border-radius: 4px;
+    border-radius: 2px;
+}
+
+/* The removal page shows its logo and status line in the Framework's picture area, the one place above its bar. */
+QScrollArea#ProductImagesScrollArea, QScrollArea#ProductImagesScrollArea > QWidget, QLabel#ProductImagesLabel {
+    border: none;
+    background: transparent;
 }
 
 QToolTip {

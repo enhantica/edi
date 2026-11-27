@@ -10969,6 +10969,15 @@ def test_manual_selection_cannot_substitute_current_project_for_missing_original
             'intent'
         )
         actor.until(
+            lambda row: _unique_input_control(row, 'unsavedChanges.close', fully=True) is not None
+        )
+        assert (
+            Path(actor.last['ui']['project']['path']).resolve() == current.resolve()
+            and qml(actor, '(' + control_expression(marker) + ').changes') == 0
+            and len(_session_wire(actor, 'thread/resume')) == before
+        ), 'A repaired association still waits for the user before closing the current project'
+        actor.command('click', name='unsavedChanges.close')
+        actor.until(
             lambda value: (
                 value['ui']['connected']
                 and Path(value['ui']['project'].get('path', '')).resolve() == target.resolve()
@@ -13392,9 +13401,8 @@ def test_failed_durable_archive_last_write_survives_successful_ordinary_browser_
 
 
 # Independently authored original-owner gate packet: review72_unsaved_flow_private_gates.py
-# PRIVATE/UNRUN review72. Routine delegated Save may choose the genuine normal
-# role itself; this gate does not require an unnecessary second user approval.
-# Read-only original signals prove guard-before-write and SaveAs abandonment.
+# Read-only original signals prove that the pending question owns preservation
+# and that the new project remains pending until a user chooses Save.
 
 
 def _watch_first_unsaved_flow(actor, marker):
@@ -13414,7 +13422,7 @@ def _watch_first_unsaved_flow(actor, marker):
     )
     expression += (
         'function bindSave(){if(o.saveButtonBound)return;const '
-        'b=d.standardButton(Dialog.Save);if(b){o.saveButtonBound=true;b.pressedChanged.connect(function(){if(b.pressed)o.savePresses++;});}}d.aboutToShow.connect(function(){event("originalUnsavedGuard");bindSave();});d.opened.connect(bindSave);p.modifiedChanged.connect(function(){event(p.modified?"originalModified":"originalMarkedSaved");});'
+        'b=d.standardButton(Dialog.Save);if(b){o.saveButtonBound=true;b.pressedChanged.connect(function(){if(b.pressed)o.savePresses++;});}}d.aboutToShow.connect(function(){event("originalUnsavedGuard");bindSave();});d.openedChanged.connect(function(){if(d.opened)bindSave();});p.modifiedChanged.connect(function(){event(p.modified?"originalModified":"originalMarkedSaved");});'
     )
     expression += 'bindSave();'
     expression += (
@@ -13438,6 +13446,15 @@ def _unsaved_flow_observation(actor, marker):
     )
 
 
+def _ordinary_create_destination(actor, name):
+    group = _scene_control_expression('group.getStarted')
+    defaults = qml(actor, f'({group}).nativeCreateDefaults({json.dumps(name)}, "", "")')
+    assert defaults.get('name') == name and defaults.get('location'), (
+        'The Create form supplies the actual remembered destination for the requested name'
+    )
+    return Path(defaults['location'])
+
+
 @pytest.mark.parametrize('show_actions', [False, True], ids=['off', 'on'])
 def test_native_new_enters_original_unsaved_guard_before_any_preservation_save(
     main_actor, tmp_path, show_actions
@@ -13452,15 +13469,13 @@ def test_native_new_enters_original_unsaved_guard_before_any_preservation_save(
         'Original unsaved-flow ordering begins with a genuine complete saved project'
     )
     actor.until(lambda value: not value['ui']['project']['calculating'])
-    description = (
-        'The original user edit must enter the first ordinary unsaved guard before it is saved.'
-    )
+    description = "Original edit kept by the user's Save."
     qml(actor, 'Session.project.description=' + json.dumps(description))
     assert qml(actor, 'Session.project.modified') and not qml(actor, 'Session.needsSaveAs'), (
         'The specific preservation-write case really is modified ordinary in-place work before New'
     )
     original = _new_project_scientific_bytes(old)
-    destination = Path(actor.last['ui']['environment']['documents_root']) / name
+    destination = _ordinary_create_destination(actor, name)
     assert not destination.exists(), (
         'The normal new-project destination remains absent before its real owner acts'
     )
@@ -13471,6 +13486,30 @@ def test_native_new_enters_original_unsaved_guard_before_any_preservation_save(
     actor.request(
         'Create a genuinely new project while preserving my current unsaved work through the '
         'normal app choices.'
+    )
+    actor.until(
+        lambda row: (
+            any(
+                c['name'] == 'unsavedChanges.save' and c['fully_exposed'] and c['enabled']
+                for c in row['ui']['controls']
+            )
+            or bool(actor.responses())
+        ),
+        visible_progress=show_actions,
+    )
+    pending = _unsaved_flow_observation(actor, marker)
+    assert (
+        pending['sameOriginal']
+        and pending['saveButtonBound']
+        and pending['savePresses'] == 0
+        and not actor.responses()
+        and qml(actor, 'Session.project.modified')
+        and _new_project_scientific_bytes(old) == original
+        and not destination.exists()
+    ), 'The assistant leaves the original project and its bytes in place while the user decides'
+    pressed = actor.command('dialog_ok', name='unsavedChanges', role='save')['reply']
+    assert pressed['pressed_changes'] > 0, (
+        'A real user press on the ordinary Save button authorizes preservation and replacement'
     )
     actor.until(
         lambda value: len(actor.responses()) == 1 and value['ui']['state'] == 'idle',
@@ -13489,15 +13528,7 @@ def test_native_new_enters_original_unsaved_guard_before_any_preservation_save(
         'A real FIRST unsaved decision precedes every preservation Save; calling afterChanges '
         'only after a preemptive write is insufficient'
     )
-    if show_actions:
-        assert proof['saveButtonBound'], (
-            'The ON Save input witness must reach its actual original standard button before '
-            'interpreting a missing press'
-        )
-        assert proof['savePresses'] > 0, (
-            'Show ON actually delivers the original normal Save choice rather than replacing '
-            'it with a pre-guard Save cue/API shortcut'
-        )
+    assert proof['savePresses'] == 1, 'The user supplies the only Save press for the old project'
     created = native_result(actor.responses()[0])
     assert (
         created['adopted']
@@ -13561,7 +13592,7 @@ def test_native_new_preserves_original_save_as_abandonment_without_resurrecting_
             'The original mutable working copy has a real unsaved user edit'
         )
         name = 'abandon_' + hashlib.sha256(str(tmp_path).encode()).hexdigest()[:16]
-        destination = Path(actor.last['ui']['environment']['documents_root']) / name
+        destination = _ordinary_create_destination(actor, name)
         assert not destination.exists(), (
             'The requested New destination is absent before the original guard'
         )
@@ -13576,9 +13607,50 @@ def test_native_new_preserves_original_save_as_abandonment_without_resurrecting_
             'choices.'
         )
         actor.until(
-            lambda value: len(actor.responses()) == 1 and value['ui']['state'] == 'idle',
+            lambda row: (
+                any(
+                    c['name'] == 'unsavedChanges.save' and c['fully_exposed'] and c['enabled']
+                    for c in row['ui']['controls']
+                )
+                or bool(actor.responses())
+            ),
             visible_progress=show_actions,
         )
+        pending = _unsaved_flow_observation(actor, marker)
+        assert (
+            pending['sameOriginal']
+            and pending['savePresses'] == 0
+            and pending['saveAsOffers'] == 0
+            and not actor.responses()
+            and not destination.exists()
+        ), 'The assistant asks before offering Save As or abandoning the original creation'
+        pressed = actor.command('dialog_ok', name='unsavedChanges', role='save')['reply']
+        assert pressed['pressed_changes'] > 0, (
+            'A real user Save press reaches the existing read-only source Save As path'
+        )
+        actor.until(
+            lambda row: (
+                _unique_input_control(row, 'saveAs.folder', fully=True) is not None
+                or bool(actor.responses())
+            ),
+            visible_progress=show_actions,
+        )
+        assert (
+            _unsaved_flow_observation(actor, marker)['sameOriginal'] and not destination.exists()
+        ), 'The Save As offer cannot itself close the original project or create the new one'
+        # The user dismisses a pending format choice before waiting for the turn to settle.
+        open_offer = qml(actor, 'saveAsChoice.opened')
+        if open_offer:
+            assert _unique_input_control(actor.last, 'saveAs.folder', fully=True) is not None, (
+                'A pending Save As offer is exposed on the original window before Cancel input'
+            )
+            cancelled = actor.command('dialog_ok', name='saveAs.choice', role='cancel')['reply']
+            assert cancelled['pressed_changes'] > 0, (
+                'The user dismisses the visible Save As offer with its real Cancel button'
+            )
+            actor.until(lambda _value: not qml(actor, 'saveAsChoice.opened'))
+        history_poll(lambda: bool(actor.responses()), seconds=10)
+        actor.until(lambda row: len(actor.responses()) == 1 and row['ui']['state'] == 'idle')
         proof = _unsaved_flow_observation(actor, marker)
         assert (
             any(
@@ -13604,19 +13676,6 @@ def test_native_new_preserves_original_save_as_abandonment_without_resurrecting_
             'Readonly-source preservation never overwrites the real original source while a '
             'different place is selected or abandoned'
         )
-        # If the original offer remains open, cancel it using genuine keyboard
-        # input. No chooser acceptance or destination is manufactured.
-        open_offer = qml(actor, 'saveAsChoice.opened')
-        if open_offer:
-            assert any(
-                c['name'] == 'saveAs.folder' and c['fully_exposed']
-                for c in actor.last['ui']['controls']
-            ), (
-                'A pending ordinary SaveAs offer belongs to the actual exposed original Main '
-                'controls before Cancel input'
-            )
-            actor.command('manual_key', key='escape')
-            actor.until(lambda _value: not qml(actor, 'saveAsChoice.opened'))
         assert (
             not destination.exists() and _unsaved_flow_observation(actor, marker)['sameOriginal']
         ), (

@@ -26,6 +26,7 @@ OUTPUT = ROOT / 'build/tutorial-transactions'
 RECEIPT = OUTPUT / 'receipt.json'
 ARCHIVE = OUTPUT / 'inputs.tar'
 PREFIX = 'tutorial-transactions:'
+SDK_FOLDER = 'build/crysta-sdk/'
 
 
 def digest(path: Path) -> str:
@@ -60,6 +61,9 @@ def differing(files: dict[str, str]) -> list[str]:
 
 def pack() -> None:
     files = inputs(json.loads(RECEIPT.read_text()))
+    # The system jobs install the pinned crysta SDK themselves, and its headers must not be stored
+    # in an artifact (tools/ci/stored_source.py).
+    files = {name: sha for name, sha in files.items() if not name.startswith(SDK_FOLDER)}
     stale = differing(files)
     if stale:
         raise SystemExit(f'{PREFIX} {len(stale)} file(s) changed since the observer was built')

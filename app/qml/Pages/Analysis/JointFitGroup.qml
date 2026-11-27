@@ -27,6 +27,7 @@ DataTable {
     // owner, 2026-11-21: the weight was a gap away from its name).
     // Its columns by kind (the shared column model, DataTable.columnKinds; ADR-0103 decision 4).
     columnKinds: ["index", "mark", "name", "number"]
+    columnTexts: ["", "", "name"]
     // Widths from column types, not rows (ADR-0103 rule 4): the experiment, then its weight.
 
     header: EaComponents.ListViewHeader {

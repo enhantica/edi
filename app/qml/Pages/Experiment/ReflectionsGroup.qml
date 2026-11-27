@@ -36,7 +36,8 @@ DataTable {
     readonly property bool magnetic: experiment !== null && experiment.reflections !== null && experiment.reflections.magnetic
 
     // Its columns by kind (the shared column model, DataTable.columnKinds; ADR-0103 decision 4).
-    columnKinds: magnetic ? ["index", "short", "number", "number", "number", "number", "number"] : ["index", "short", "number", "number", "number"]
+    columnKinds: magnetic ? ["index", "text", "number", "number", "number", "number", "number"] : ["index", "text", "number", "number", "number"]
+    columnTexts: ["", "hkl"]
     // Widths from column types, not rows (ADR-0103 rule 4): the Miller indices a short column (three small integers),
     // then values; a text column made them half the table (the owner, 2026-11-21).
     // The values share the spare width, so the table spans its panel evenly rather than one last column taking it all.
