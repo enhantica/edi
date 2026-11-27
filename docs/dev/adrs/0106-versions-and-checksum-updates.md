@@ -17,6 +17,7 @@ year, one identity everywhere (2026-11-26). The first such number, 26.17, is sma
 
 An update by the Maintenance Tool also kept the installed tool: the signed tool of ADR-0091 was unpacked only by a
 first installation, so a tool once installed was never replaced.
+Once the tool was replaced, it still showed the old release's pages, which the framework keeps beside the tool.
 
 ## Decision
 
@@ -46,10 +47,32 @@ first installation, so a tool once installed was never replaced.
    leaves the staged bundle in place on an update, so an operation of the component runs `maintenance_swap.sh`: it
    can run again after any failure, never leaves the tool's place empty except between two renames, keeps the
    installed bundle as `MaintenanceTool.app.old`, and puts it back if it fails; its undo (`maintenance_restore.sh`)
-   puts it back after a rollback. The control script removes the kept bundle once the update has succeeded with the
-   new tool in place. An update that leaves the component alone keeps the installed tool. Linux has no separate tool and is unchanged. The
-   installer protocol check updates a 2026.11.31 install from a 26.17 repository and checks the tool's checksum
-   afterwards.
+   puts it back after a rollback. Qt IFW saves the operation and, in the next update, runs its undo before it unpacks
+   the component again, so the backup carries a mark: the operation's token and the process running the update with
+   its start time. The undo restores only in the run that kept the backup and otherwise touches nothing, so undoing a
+   committed operation is harmless even after an update run by the released 2026.11 control script, which leaves its
+   backup behind. The next swap drops a backup with another mark only while a usable tool is in place; when an
+   update stopped between the renames left the backup as the only tool, the swap keeps it as its own until the new
+   tool is in place or it is put back. Such an update saves no operation, and the app opens the tool only at
+   `MaintenanceTool.app`, so the app puts the backup back itself: on start, and before Maintenance or Update opens
+   the tool, a missing tool with a kept one beside it is renamed back and its mark removed, leaving any
+   `MaintenanceTool.app.new` for the retried update to finish the swap with. It does so only once the process the
+   mark names has ended (its number and start time, read with `ps` in the C locale by the scripts and the app alike),
+   so an app opened while an update runs never takes the backup from a swap or undo between its renames; that
+   installation still counts as managed, and the launch actions put the tool back when the update has ended. The control script removes the kept
+   bundle once the update has succeeded with the new tool in place. An update that leaves the component alone keeps the installed tool. Linux has no separate
+   tool and is unchanged. The installer protocol check updates a 2026.11.31 install from a 26.17 repository and
+   checks the tool's checksum afterwards.
+6. **An update also replaces the Maintenance Tool's pages**, on every platform. The framework keeps the tool's
+   configuration, control script, style sheet and the `-r` resources (the English text and the images) in
+   `MaintenanceTool.dat`, which the running tool writes at the end of every update by copying the resources the old
+   file holds, so a new tool showed the pages of the release first installed. Every online build therefore ships
+   `MaintenanceTool.rcc` with the app component: the installer's default resource (`binarycreator -rcc`) with the
+   `-r` files added, since a 2026.11 file has no `-r` resource to keep them (`maintenance_resource.py`). The app
+   component's script names it as the framework's `DefaultResourceReplacement`, which the running tool reads while it
+   writes the data file: the file becomes its first resource and is deleted. A first installation does the same, so
+   no copy is left behind. The protocol check starts from a release whose pages differ, and checks after the update
+   that the data file's first resource holds the new release's control script, style sheet, text and images.
 
 ## Consequences
 
