@@ -111,10 +111,10 @@ struct Incoming {
 };
 
 #if defined(Q_OS_WASM)
-// The largest data file the web app reads: the size it loaded three times out of three with a quarter of its memory to
-// spare (measured in Chrome; edi ADR-0110). Bigger files are refused before any byte is read. Zero until that
-// measurement sets it: no file is refused.
-constexpr qint64 web_data_file_bytes = 0;
+// The largest data file the web app reads: 50 MB loaded three times out of three in Chrome with 43 % of its memory to
+// spare and 100 MB did not (edi ADR-0110; files from tools/probes/large_plain_data.py). Bigger files are refused
+// before any byte is read.
+constexpr qint64 web_data_file_bytes = 50'000'000;
 
 bool over_web_bound(qint64 bytes) { return web_data_file_bytes > 0 && bytes > web_data_file_bytes; }
 
