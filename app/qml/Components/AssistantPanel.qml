@@ -859,7 +859,8 @@ Popup {
                         id: signOutButton
                         objectName: "assistant.signOut"
                         fontIcon: "sign-out-alt"
-                        text: qsTr("Sign out")
+                        // Copilot's sign-out is not yet qualified, so the account is removed from edi instead.
+                        text: panel.assistant.activeProvider.provider === "copilot" ? qsTr("Remove from edi") : qsTr("Sign out")
                         contentItem: Row {
                             spacing: AppSizes.unit * 0.5
                             EaElements.Label {
@@ -878,6 +879,53 @@ Popup {
                         enabled: panel.assistant.connected
                         Accessible.name: text
                         onClicked: panel.assistant.signOut()
+                    }
+                    Item {
+                        width: 1
+                        height: AppSizes.unit * 1.5
+                        visible: panel.assistant.managedSettingsNotice.length > 0
+                    }
+                    EaElements.Label {
+                        objectName: "assistant.managedSettingsNotice"
+                        width: parent.width
+                        visible: text.length > 0
+                        text: panel.assistant.managedSettingsNotice
+                        textFormat: Text.PlainText
+                        wrapMode: Text.WordWrap
+                    }
+                    EaElements.Button {
+                        id: acknowledgeButton
+                        objectName: "assistant.acknowledgeManagedSettings"
+                        visible: panel.assistant.managedSettingsNotice.length > 0
+                        fontIcon: "check"
+                        text: qsTr("I understand")
+                        contentItem: Row {
+                            spacing: AppSizes.unit * 0.5
+                            EaElements.Label {
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: acknowledgeButton.fontIcon
+                                font.family: EaStyle.Fonts.iconsFamily
+                                color: acknowledgeButton.foregroundColor()
+                            }
+                            EaElements.Label {
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: acknowledgeButton.text
+                                color: acknowledgeButton.foregroundColor()
+                            }
+                        }
+                        width: Math.min(implicitWidth, parent.width)
+                        Accessible.name: text
+                        onClicked: panel.assistant.acknowledgeManagedSettings()
+                    }
+                    Item {
+                        width: 1
+                        height: AppSizes.unit * 1.5
+                    }
+                    AssistantAccountList {
+                        objectName: "assistant.accountList"
+                        width: parent.width
+                        assistant: panel.assistant
+                        onAddRequested: provider => panel.assistant.addAccount(provider, "")
                     }
                 }
             }
