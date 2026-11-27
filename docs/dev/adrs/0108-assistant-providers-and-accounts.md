@@ -176,8 +176,9 @@ starts the server as its own child, so the server is a small bridge to the app:
   `edit_background`) is flattened in this projection only: the union of the branches' properties, `required` limited to
   what every branch requires, a selector as one enum, and no combinator left at the root. The exact branch check stays in `assistant_native_arguments`, which every call already
   passes. Each tool carries `_meta: {"anthropic/alwaysLoad": true, "anthropic/maxResultSizeChars": 500000}`, so
-  Claude loads it up front and never moves a result to a file the model cannot read. ChatGPT's `dynamicTools` do not
-  change.
+  Claude loads it up front and never moves a result to a file the model cannot read. Claude 2.1.326 cuts a tool
+  description longer than 4096 characters, so the projection refuses such a description instead of letting it be cut.
+  ChatGPT's `dynamicTools` do not change.
 - **`tools/call`** reaches the provider of the process it came through, which emits it as edi's assistant protocol
   does for Codex: a `dynamicToolCall` item for the active turn, then the `item/tool/call` server request. It enters the
   view model's existing dispatch (`native_dispatch`, the snapshot check included) like a ChatGPT call. A call with no
