@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-27T04:26:10Z
+# measured_utc = 2026-11-27T04:46:54Z
 #
-# Recorded from: focused red-first run e04-t65-seq3-scope.out
-# Collected tests: 267550; with a reported duration: 86290
+# Recorded from: focused e04-t65-seq3-path-launcher.out
+# Collected tests: 267553; with a reported duration: 86290
 # Module-scoped fixture costs recorded: 221
 #
 # Breaches are decided PER TIER against the table
@@ -29,12 +29,12 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 267550
+# inventory_python = 267553
 # inventory_cpp = 0
 # inventory_measured = 187602
-# inventory_unmeasured = 79948
+# inventory_unmeasured = 79951
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
-# inventory_pr_python = 92639
+# inventory_pr_python = 92642
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -183822,6 +183822,8 @@ UNMEASURED:not-completed-in-this-run	tests/integration/py/test_project_save_fina
 0.000	tests/integration/py/test_published_prompt_evidence.py::test_published_trial_refuses_changes_to_the_annotated_original_reference[pin-provenance]
 0.000	tests/integration/py/test_published_prompt_evidence.py::test_published_trial_refuses_changes_to_the_annotated_original_reference[scientific-value]
 0.000	tests/integration/py/test_published_prompt_evidence.py::test_published_trial_refuses_changes_to_the_annotated_original_reference[tolerance]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_python_path_roundtrip.py::test_python_paths_round_trip_through_save_import_and_scan
+UNMEASURED:not-completed-in-this-run	tests/integration/py/test_python_path_roundtrip.py::test_python_refuses_a_path_cp1252_cannot_represent_before_creating_it
 0.050	tests/integration/py/test_reflection_admission.py::test_absence_diagnostic_reports_independent_count_and_mean[above-exclude]
 0.070	tests/integration/py/test_reflection_admission.py::test_absence_diagnostic_reports_independent_count_and_mean[above-include]
 0.070	tests/integration/py/test_reflection_admission.py::test_absence_diagnostic_reports_independent_count_and_mean[below-exclude]
@@ -255516,6 +255518,7 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_phase_r_factors.py::test_phas
 0.820	tests/system/py/test_phase_scan_parity.py::test_negative_points_and_zero_files_preserve_successful_scan[sequential]
 1.480	tests/system/py/test_phase_scan_parity.py::test_phase_scan_equals_single_fits_and_recovers_linear_coefficients[independent]
 1.130	tests/system/py/test_phase_scan_parity.py::test_phase_scan_equals_single_fits_and_recovers_linear_coefficients[sequential]
+UNMEASURED:failed-in-this-run	tests/system/py/test_pixi_launcher_selection.py::test_launcher_uses_three_exact_versions_and_refuses_a_range
 0.090	tests/system/py/test_plain_data_app.py::test_app_rename_follows_all_saved_references_and_undo[experiment]
 0.110	tests/system/py/test_plain_data_app.py::test_app_rename_follows_all_saved_references_and_undo[point]
 0.100	tests/system/py/test_plain_data_app.py::test_app_rename_follows_all_saved_references_and_undo[site]
