@@ -744,8 +744,7 @@ if(NOT EMSCRIPTEN)
         src/assistant_tool_server.hpp src/assistant_tool_server.cpp
         src/assistant_native_tools.hpp src/assistant_native_tools.cpp
         src/assistant_native_create.hpp src/assistant_native_create.cpp)
-    target_sources(edi_app_module PRIVATE src/assistant_runtime_session.hpp
-        src/copilot_session.hpp src/copilot_session.cpp)
+    target_sources(edi_app_module PRIVATE src/copilot_session.hpp src/copilot_session.cpp)
     file(GLOB_RECURSE EDI_RUNTIME_SKILL_FILES CONFIGURE_DEPENDS
          ${PROJECT_SOURCE_DIR}/data/assistant/skills/*)
     qt_add_resources(edi_app_module edi_runtime_skills PREFIX "/edi/assistant/skills"
