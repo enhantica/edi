@@ -128,6 +128,16 @@ not the project being read (measured with the app's software renderer, as on the
    those changes, until a Save or a discard drops them. The page writes the browser's storage from a worker with
    synchronous file handles, which Firefox and Safari have where they lack writable streams.
 
+   Amended 2026-11-27: one tab at a time runs the app (owner, 2026-11-25). Before the page loads the app it asks for
+   the browser's Web Lock `edi-owner` without waiting. The tab that gets it keeps it until the tab is closed, crashes
+   or is discarded, and runs the app. Another tab of the same site loads nothing of the app, so it reads and writes
+   none of the stored projects, and says *EasyDiffraction is open in another tab. Close it there, then press Try
+   again.* with a Try again button that asks once more. No tab takes over from another, and the tabs send each other
+   nothing. A page that reloads itself to turn on isolation asks only after that reload. A browser without Web Locks
+   starts the app as before, and a tab of an earlier version that is still open holds no lock until it is reloaded.
+   No other tab can then discard a project's unsaved changes while this one saves them, so those changes carry no
+   mark of a discard. The per-place locks and ADR-0100's first-save claims stay as they were.
+
    With a screen reader on, Qt lays an accessible element over each item, those of the pages beside the shown one
    included, and focuses it from script. The browser then scrolled Qt's window, 1600 pixels in one measured case, and
    the drawn app with it. The page therefore clips Qt's windows (`overflow: clip` in Qt's shadow root), whether
