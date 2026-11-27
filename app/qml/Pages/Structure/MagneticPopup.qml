@@ -444,7 +444,7 @@ AppDialog {
 
     // Esc unpins a pinned card before it would close the dialog.
     Shortcut {
-        sequence: StandardKey.Cancel
+        sequences: [StandardKey.Cancel]
         enabled: graphView.pinned >= 0
         onActivated: graphView.pinned = -1
     }

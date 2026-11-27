@@ -29,22 +29,21 @@ Flickable {
     property int pinned: -1
     // The transform from the parent to the groups' magnetic cell, for each card's tooltip.
     property string parentCell: ""
-    // A card's details, row by row, for its tooltip (owner, 2026-11-27): the group, its type and net moment, the two
+    // A card's details, label then value for each row, for its tooltip (owner, 2026-11-27): the group, its type and net moment, the two
     // transforms, the domains, then each magnetic site's allowed moment components.
     function detailsOf(n) {
-        const rows = [[qsTr("BNS"), `${n.name} ${n.bns}${n.embedding > 1 ? " #" + n.embedding : ""}`],
-                      [qsTr("Type"), ["", "I", "II", "III", "IV"][n.type] ?? ""]];
+        const cells = [qsTr("BNS"), `${n.name} ${n.bns}${n.embedding > 1 ? " #" + n.embedding : ""}`,
+                       qsTr("Type"), ["", "I", "II", "III", "IV"][n.type] ?? ""];
         if (n.netMoment)
-            rows.push([qsTr("Net moment"), qsTr("yes")]);
-        rows.push([qsTr("From the parent"), parentCell]);
-        rows.push([qsTr("To the BNS standard"), n.transform]);
-        rows.push([qsTr("Domains"), String(n.domains)]);
+            cells.push(qsTr("Net moment"), qsTr("yes"));
+        cells.push(qsTr("From the parent"), parentCell, qsTr("To the BNS standard"), n.transform,
+                   qsTr("Domains"), String(n.domains));
         for (const site of String(n.moments ?? "").split(" · ")) {
             const at = site.indexOf(" ");
             if (at > 0)
-                rows.push([site.slice(0, at), site.slice(at + 1)]);
+                cells.push(site.slice(0, at), site.slice(at + 1));
         }
-        return rows;
+        return cells;
     }
     onNodesChanged: pinned = -1
     readonly property int shownNode: pinned >= 0 ? pinned : hovered
@@ -298,7 +297,7 @@ Flickable {
                         columnSpacing: EaStyle.Sizes.fontPixelSize
                         rowSpacing: EaStyle.Sizes.fontPixelSize * 0.2
                         Repeater {
-                            model: graph.hovered === node.index ? graph.detailsOf(node.data_).flat() : []
+                            model: graph.hovered === node.index ? graph.detailsOf(node.data_) : []
                             delegate: EaElements.Label {
                                 required property string modelData
                                 required property int index
