@@ -306,6 +306,8 @@ links the real marker in a release build and reads it from the resulting binary.
 
 ## Optional assistant component
 
+**Amended 2026-11-27 (ADR-0108):** the one checkbox becomes three optional components, ChatGPT, Claude and GitHub Copilot, each added or removed on its own; Claude's and Copilot's runtimes sit beside Codex's under `libexec/edi/`.
+
 The required EasyDiffraction component contains the application, Qt, crysta and the small process
 lifetime guard. The separate AI assistant component contains the complete verified Codex runtime
 under `libexec/edi/codex`, including on macOS where it sits beside the signed application bundle.

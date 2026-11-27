@@ -5,6 +5,8 @@
 - **Implementation:** ✅ Implemented
 - **Priority:** High
 
+**Amended 2026-11-27 (ADR-0108):** the runtime helpers signed here are Codex's. The Claude and GitHub Copilot binaries are shipped unmodified and keep their vendor signatures; packaging checks those signatures and the pinned SHA-256 instead.
+
 ## Context
 
 The installers from [ADR-0071](0071-desktop-installers.md) are unsigned. macOS refuses to open them until the
