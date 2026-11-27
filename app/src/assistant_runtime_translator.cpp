@@ -897,4 +897,233 @@ QString AssistantRuntimeTranslator::idKey(const QJsonValue& value) {
     }
     return {};
 }
+
+// ---- Turns and items ----
+
+void AssistantRuntimeTranslator::startTurn(const QString& id, const QJsonObject& params) {
+    const auto method = QStringLiteral("turn/start");
+    if (thread_.isEmpty() || params.value(QLatin1StringView("threadId")) != thread_) {
+        refuse(id, method, kInvalidRequest, tr("No such conversation is open."));
+        return;
+    }
+    if (!turn_.isEmpty()) {
+        refuse(id, method, kInvalidRequest, tr("A turn is already running."));
+        return;
+    }
+    const auto text = joined_text(params.value(QLatin1StringView("input")).toArray());
+    if (text.isEmpty()) {
+        refuse(id, method, kInvalidRequest, QStringLiteral("input must not be empty"));
+        return;
+    }
+    const auto model = string_field(params, "model");
+    const auto effort = string_field(params, "effort");
+    if (!model.isEmpty() && (model != model_ || effort != effort_)) {
+        model_ = model;
+        effort_ = effort;
+        session_->selectModel(thread_, model_, effort_);
+    }
+    // Acknowledged at admission, as the app-server does, with edi's own turn id; the runtime's turn id is matched
+    // to it when the session announces the turn.
+    turn_ = QStringLiteral("edi-turn-%1-%2").arg(generation_).arg(++next_id_);
+    session_turn_.clear();
+    interrupting_ = false;
+    held_ = false;
+    follow_ups_ = 0;
+    messages_.clear();
+    message_order_.clear();
+    calls_completed_.clear();
+    early_calls_.clear();
+    respond(id, method, {{"turn", QJsonObject{{"id", turn_}, {"status", "inProgress"}, {"items", QJsonArray{}}, {"error", QJsonValue::Null}}}});
+    notify(QStringLiteral("turn/started"),
+           {{"threadId", thread_}, {"turn", QJsonObject{{"id", turn_}, {"status", "inProgress"}, {"items", QJsonArray{}}}}});
+    session_->sendMessage(thread_, string_field(params, "clientUserMessageId"), text);
+}
+
+void AssistantRuntimeTranslator::steerTurn(const QString& id, const QJsonObject& params) {
+    // The refusal reasons are the app-server's own words, which the view model recognises as "not admitted".
+    const auto method = QStringLiteral("turn/steer");
+    const auto expected = string_field(params, "expectedTurnId");
+    if (expected.isEmpty()) {
+        refuse(id, method, kInvalidRequest, QStringLiteral("expectedTurnId must not be empty"));
+        return;
+    }
+    if (turn_.isEmpty() || interrupting_ || params.value(QLatin1StringView("threadId")) != thread_) {
+        refuse(id, method, kInvalidRequest, QStringLiteral("no active turn to steer"));
+        return;
+    }
+    if (expected != turn_) {
+        refuse(id, method, kInvalidRequest,
+               QStringLiteral("expected active turn id `") + expected + QStringLiteral("` but found `") + turn_ + QLatin1Char('`'));
+        return;
+    }
+    const auto text = joined_text(params.value(QLatin1StringView("input")).toArray());
+    if (text.isEmpty()) {
+        refuse(id, method, kInvalidRequest, QStringLiteral("input must not be empty"));
+        return;
+    }
+    // The session steers when its runtime can and otherwise queues the message as the next runtime turn; either way
+    // it belongs to this protocol turn.
+    const auto turn = turn_;
+    ++follow_ups_;
+    respond(id, method, {{"turnId", turn}});
+    session_->sendMessage(thread_, string_field(params, "clientUserMessageId"), text);
+}
+
+void AssistantRuntimeTranslator::interruptTurn(const QString& id, const QJsonObject& params) {
+    const auto method = QStringLiteral("turn/interrupt");
+    // A turn that has already ended needs no interrupt; the view model only needs the acknowledgement.
+    const bool running = !turn_.isEmpty() && params.value(QLatin1StringView("threadId")) == thread_ &&
+                         params.value(QLatin1StringView("turnId")) == turn_;
+    respond(id, method, {});
+    if (!running || interrupting_) return;
+    interrupting_ = true;
+    follow_ups_ = 0;
+    for (const auto& call : std::exchange(early_calls_, {}))
+        if (tools_) (void)tools_->refuse(call.toolId, tr("The assistant turn was stopped."));
+    session_->cancelTurn(thread_);
+    // Between runtime turns, or before the first one began, no runtime turn will report the end.
+    if (held_ || session_turn_.isEmpty()) finishTurn(QStringLiteral("interrupted"), {});
+}
+
+bool AssistantRuntimeTranslator::currentTurn(const QString& thread, const QString& turn) const {
+    return live_ && !failed_ && !thread_.isEmpty() && thread == thread_ && !turn_.isEmpty() && !held_ &&
+           !session_turn_.isEmpty() && turn == session_turn_;
+}
+
+void AssistantRuntimeTranslator::onTurnStarted(const QString& thread, const QString& turn) {
+    if (!live_ || failed_ || thread_.isEmpty() || thread != thread_ || turn.isEmpty()) return;
+    if (!turn_.isEmpty() && session_turn_.isEmpty() && !interrupting_) {
+        session_turn_ = turn;
+    } else if (!turn_.isEmpty() && turn == session_turn_) {
+        return;
+    } else if (!turn_.isEmpty() && !interrupting_ && (held_ || follow_ups_ > 0)) {
+        // The runtime turn a follow-up message started continues the same protocol turn.
+        held_ = false;
+        hold_.stop();
+        if (follow_ups_ > 0) --follow_ups_;
+        session_turn_ = turn;
+    } else {
+        // A runtime turn nobody asked for, or one after Stop: it must not run unseen.
+        session_->cancelTurn(thread);
+        return;
+    }
+    const QPointer<AssistantRuntimeTranslator> self(this);
+    const auto scope = generation_;
+    for (const auto& call : std::exchange(early_calls_, {})) {
+        if (!self || generation_ != scope || failed_) return;
+        admitCall(call);
+    }
+}
+
+void AssistantRuntimeTranslator::startMessage(const QString& item, const QString& type) {
+    messages_.insert(item, Message{type, {}, false});
+    message_order_.append(item);
+    const auto declared = type == QLatin1StringView("reasoning")
+                              ? QJsonObject{{"type", type}, {"id", item}, {"summary", QJsonArray{}}, {"content", QJsonArray{}}}
+                              : QJsonObject{{"type", type}, {"id", item}, {"text", QString()}};
+    notify(QStringLiteral("item/started"), {{"threadId", thread_}, {"turnId", turn_}, {"item", declared}});
+}
+
+void AssistantRuntimeTranslator::onTextDelta(const QString& thread, const QString& turn, const QString& item,
+                                             const QString& delta) {
+    if (!currentTurn(thread, turn) || item.isEmpty() || delta.isEmpty()) return;
+    if (!messages_.contains(item)) startMessage(item, QStringLiteral("agentMessage"));
+    auto& message = messages_[item];
+    // The view model refuses text added to a finished message, or to an item of another type.
+    if (message.completed || message.type != QLatin1StringView("agentMessage")) return;
+    message.text += delta;
+    notify(QStringLiteral("item/agentMessage/delta"), {{"threadId", thread_}, {"turnId", turn_}, {"itemId", item}, {"delta", delta}});
+}
+
+void AssistantRuntimeTranslator::onItemCompleted(const QString& thread, const QString& turn, const QJsonObject& item) {
+    if (!currentTurn(thread, turn)) return;
+    const auto type = string_field(item, "type");
+    const auto id = string_field(item, "id");
+    if (id.isEmpty() || (type != QLatin1StringView("agentMessage") && type != QLatin1StringView("reasoning"))) return;
+    if (!messages_.contains(id)) startMessage(id, type);
+    auto& message = messages_[id];
+    if (message.completed || message.type != type) return;  // a final item never changes
+    const auto text = string_field(item, "text");
+    if (!text.isEmpty()) message.text = text;
+    message.completed = true;
+    const auto finished = type == QLatin1StringView("reasoning")
+                           ? QJsonObject{{"type", type}, {"id", id}, {"summary", QJsonArray{message.text}}, {"content", QJsonArray{}}}
+                           : QJsonObject{{"type", type}, {"id", id}, {"text", message.text}};
+    notify(QStringLiteral("item/completed"), {{"threadId", thread_}, {"turnId", turn_}, {"item", finished}});
+}
+
+void AssistantRuntimeTranslator::onForeignTool(const QString& thread, const QString& turn, const QString& tool) {
+    if (!live_ || failed_ || thread != thread_) return;
+    const auto message = tr("The assistant tried to use %1, a tool edi does not offer, so the turn was stopped.").arg(tool);
+    Q_UNUSED(turn);
+    if (!turn_.isEmpty()) finishTurn(QStringLiteral("failed"), {{"message", message}});
+    // Stop the runtime now; the failure follows the turn's end, so the view model reads that first.
+    try {
+        session_->retire();
+    } catch (...) {
+    }
+    post([this, message] { fail(message); });
+}
+
+void AssistantRuntimeTranslator::onTurnFinished(const QString& thread, const QString& turn, const QString& status,
+                                                const QJsonObject& error) {
+    if (!live_ || failed_ || thread_.isEmpty() || thread != thread_) return;
+    if (!turn_.isEmpty() && session_turn_.isEmpty() && !held_) session_turn_ = turn;  // ended before it was announced
+    if (turn_.isEmpty() || held_ || turn != session_turn_) return;
+    if (status == QLatin1StringView("completed") && follow_ups_ > 0 && !interrupting_) {
+        // A queued follow-up starts the next runtime turn; keep this protocol turn open for it, for a bounded time.
+        held_ = true;
+        hold_.start();
+        return;
+    }
+    finishTurn(status, error);
+}
+
+void AssistantRuntimeTranslator::finishTurn(QString status, QJsonObject error) {
+    if (turn_.isEmpty()) return;
+    hold_.stop();
+    held_ = false;
+    // Every item the turn declared is final before its end (the view model checks this for a completed turn).
+    for (const auto& id : std::as_const(message_order_)) {
+        auto& message = messages_[id];
+        if (message.completed) continue;
+        message.completed = true;
+        const auto finished = message.type == QLatin1StringView("reasoning")
+                               ? QJsonObject{{"type", message.type}, {"id", id}, {"summary", QJsonArray{message.text}}, {"content", QJsonArray{}}}
+                               : QJsonObject{{"type", message.type}, {"id", id}, {"text", message.text}};
+        notify(QStringLiteral("item/completed"), {{"threadId", thread_}, {"turnId", turn_}, {"item", finished}});
+    }
+    // Calls and questions still open end with the turn, as the app-server resolves them.
+    bool unfinished = false;
+    for (auto it = requests_.begin(); it != requests_.end(); ++it) {
+        auto& request = it.value();
+        if (request.closed || request.params.value(QLatin1StringView("turnId")) != turn_) continue;
+        request.closed = true;
+        unfinished = true;
+        if (tools_) (void)tools_->refuse(request.toolId, tr("The assistant turn ended."));
+        notify(QStringLiteral("serverRequest/resolved"), {{"threadId", thread_}, {"requestId", request.id}});
+    }
+    for (const auto& call : std::exchange(early_calls_, {}))
+        if (tools_) (void)tools_->refuse(call.toolId, tr("The assistant turn ended."));
+    if (status != QLatin1StringView("completed") && status != QLatin1StringView("interrupted")) status = QStringLiteral("failed");
+    if (status == QLatin1StringView("completed") && unfinished) {
+        status = QStringLiteral("failed");
+        error = {{"message", tr("The assistant ended the turn before edi's tool finished.")}};
+    }
+    QJsonObject turn{{"id", turn_}, {"status", status}, {"items", QJsonArray{}}, {"error", QJsonValue::Null}};
+    if (status == QLatin1StringView("failed")) {
+        const auto message = string_field(error, "message");
+        QJsonObject failure{{"message", message.isEmpty() ? tr("The assistant turn failed.") : message}};
+        if (error.value(QLatin1StringView("signedOut")).toBool()) failure["codexErrorInfo"] = QStringLiteral("unauthorized");
+        turn["error"] = failure;
+    }
+    notify(QStringLiteral("turn/completed"), {{"threadId", thread_}, {"turn", turn}});
+    turn_.clear();
+    session_turn_.clear();
+    interrupting_ = false;
+    follow_ups_ = 0;
+    messages_.clear();
+    message_order_.clear();
+    calls_completed_.clear();
+}
 }  // namespace edi_app
