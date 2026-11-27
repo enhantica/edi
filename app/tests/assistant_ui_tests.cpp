@@ -351,9 +351,9 @@ private slots:
         QStringList offered;
         for (const auto& entry : providers) {
             const auto facts = entry.toMap();
-            const auto key = facts.value("provider").toString();
-            offered.append(key);
-            if (facts.value("installed").toBool()) available.append(key);
+            const auto providerKey = facts.value("provider").toString();
+            offered.append(providerKey);
+            if (facts.value("installed").toBool()) available.append(providerKey);
         }
         offered.sort();
         QVERIFY2((offered == QStringList{"chatgpt", "claude", "copilot"}),
