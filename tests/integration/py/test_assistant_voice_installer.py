@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 """Offline checks at the generated installer component boundary."""
 
+import hashlib
 import re
 from pathlib import Path
 
@@ -40,6 +41,12 @@ def installer_source(tmp_path, monkeypatch):
             source = stage / MODEL
             source.parent.mkdir(parents=True, exist_ok=True)
             source.write_bytes(MODEL_BYTES)
+            pin = {
+                'file': MODEL.name,
+                'bytes': len(MODEL_BYTES),
+                'sha256': hashlib.sha256(MODEL_BYTES).hexdigest(),
+            }
+            monkeypatch.setattr(package, 'release_voice_pin', lambda: pin)
         prepared, *_ = package.prepare_installer_source(
             stage, tmp_path / 'tools', tmp_path / 'output', '26.18', None, (), 'testing'
         )

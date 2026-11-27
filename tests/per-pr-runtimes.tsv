@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-27T02:47:43Z
+# measured_utc = 2026-11-27T07:31:52Z
 #
-# Recorded from: isolated assistant voice baseline and focused collection, carrying the committed inventory
-# Collected tests: 267550; with a reported duration: 86293
+# Recorded from: focused opt-in voice installer fixture rerun, carrying the committed inventory
+# Collected tests: 267550; with a reported duration: 86296
 # Module-scoped fixture costs recorded: 221
 #
 # Breaches are decided PER TIER against the table
@@ -31,8 +31,8 @@
 # measurement nobody took and which passes every tier threshold.
 # inventory_python = 267550
 # inventory_cpp = 0
-# inventory_measured = 187605
-# inventory_unmeasured = 79945
+# inventory_measured = 187608
+# inventory_unmeasured = 79942
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
 # inventory_pr_python = 92639
 
@@ -1636,9 +1636,9 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_shipment.py:
 0.010	tests/integration/py/test_assistant_voice_installer.py::test_core_installer_prepares_without_a_voice_model[macos]
 0.010	tests/integration/py/test_assistant_voice_installer.py::test_core_installer_prepares_without_a_voice_model[windows]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_assistant_voice_installer.py::test_desktop_composer_registers_voice_controls_for_native_input
-UNMEASURED:failed-in-this-run	tests/integration/py/test_assistant_voice_installer.py::test_model_is_installed_only_with_the_opt_in_voice_component[linux]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_assistant_voice_installer.py::test_model_is_installed_only_with_the_opt_in_voice_component[macos]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_assistant_voice_installer.py::test_model_is_installed_only_with_the_opt_in_voice_component[windows]
+0.010	tests/integration/py/test_assistant_voice_installer.py::test_model_is_installed_only_with_the_opt_in_voice_component[linux]
+0.010	tests/integration/py/test_assistant_voice_installer.py::test_model_is_installed_only_with_the_opt_in_voice_component[macos]
+0.020	tests/integration/py/test_assistant_voice_installer.py::test_model_is_installed_only_with_the_opt_in_voice_component[windows]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_assistant_voice_installer.py::test_voice_choice_follows_all_assistant_choices
 UNMEASURED:failed-in-this-run	tests/integration/py/test_background_basis_presence.py::test_clearing_minus_one_basis_refreshes_derives_and_round_trips[reload-chebyshev-x_max]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_background_basis_presence.py::test_clearing_minus_one_basis_refreshes_derives_and_round_trips[reload-chebyshev-x_min]
