@@ -16,7 +16,7 @@ import edi.app
 SideBarGroup {
     id: group
 
-    // The Experiment page's pattern chart, which holds the marks (AppState.kChart).
+    // The Experiment page's pattern chart (AppState.kChart), which draws the marks the project's k search holds.
     readonly property var chart: AppState.kChart
     readonly property bool marking: chart !== null && chart.peakMode
     // The marked peaks in the pattern's order, each with its index in the chart's candidates.
@@ -113,7 +113,7 @@ SideBarGroup {
                             "": qsTr("not indexed")
                         };
                         const role = group.chart.peakRoles[row.modelData.index];
-                        return role === undefined ? (row.modelData.peak.suggestion ? qsTr("added by hand") : qsTr("pre-marked")) : names[role] ?? role;
+                        return role === undefined ? (row.modelData.peak.onAllowed ? qsTr("added by hand") : qsTr("pre-marked")) : names[role] ?? role;
                     }
                 }
                 EaComponents.ListViewButton {
@@ -121,7 +121,7 @@ SideBarGroup {
                     objectName: `kSearch.remove.${row.index}`
                     fontIcon: "minus-circle"
                     ToolTip.text: qsTr("Drop this peak")
-                    onClicked: group.chart.peakMarks = group.chart.peakMarks.filter(i => i !== row.modelData.index)
+                    onClicked: group.chart.axisProject.removeKMark(row.modelData.index)
                 }
             }
         }
@@ -140,7 +140,7 @@ SideBarGroup {
                 fontIcon: "eraser"
                 text: qsTr("Clear")
                 enabled: group.marking && group.chart.peakMarks.length > 0
-                onClicked: group.chart.peakMarks = []
+                onClicked: group.chart.axisProject.clearKMarks()
             }
         }
     }

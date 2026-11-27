@@ -25,14 +25,15 @@ Item {
     // the strongest marked to start with; a click marks or drops the one nearest it, and Find k ranks the propagation
     // vectors the marked ones allow.
     property bool findKPage: false
-    property bool peakMode: false
-    property var peakCandidates: []
-    property var peakMarks: []
-    property int peakParent: -1
-    property string peakNote: ""
-    // Each marked peak's role under the best-ranked k of the last search, by candidate index.
-    property var peakRoles: ({})
-    onPeakMarksChanged: peakRoles = ({})
+    // The current experiment's k search, held by the project (review 16, F4): this chart draws its candidates and
+    // marks and passes clicks on; the Experiment page's k search group shows and edits the same marks.
+    readonly property var kState: chart.axisProject ? chart.axisProject.kSearch : ({})
+    readonly property bool peakMode: chart.findKPage && kState.active === true
+    readonly property var peakCandidates: peakMode ? kState.candidates : []
+    readonly property var peakMarks: peakMode ? kState.marks : []
+    readonly property string peakNote: peakMode ? kState.note : ""
+    // Each marked peak's role under the best-ranked k of the last search on these marks, by candidate index.
+    readonly property var peakRoles: peakMode ? kState.roles : ({})
     // The Experiment page's chart is the one the sidebar's k search group edits.
     Binding {
         target: AppState
@@ -43,104 +44,52 @@ Item {
     }
     property string addedNote: ""
     property string addedBase: ""
-    // Set while this chart's own analysis is open, so the Add it makes does not retire the marks it reads after.
-    property bool addingCandidates: false
     readonly property Component kVector: kVectorComponent
     readonly property Component analysis: analysisComponent
 
     function setPeakMode(on) {
-        peakNote = "";
         addedNote = "";
-        peakCandidates = [];
-        peakMarks = [];
-        peakMode = on;
-        if (!on || !chart.axisProject)
-            return;
-        const project = chart.axisProject;
-        const experiment = project.currentExperimentIndex;
-        peakParent = project.magneticParentOf(experiment);
-        if (peakParent === -2) {
-            peakNote = qsTr("Several crystal structures are enabled here; disable all but the one to search k for.");
-            return;
-        }
-        if (peakParent < 0) {
-            peakNote = qsTr("Link and enable the crystal structure to search k for.");
-            return;
-        }
-        const peaks = project.magneticMarkCandidates(peakParent, experiment);
-        if (peaks.length === 0) {
-            peakNote = project.lastError !== "" ? project.lastError : qsTr("No peak found in the measured pattern.");
-            return;
-        }
-        peakCandidates = peaks;
-        // Pre-marked: the peaks at no reflection the crystal's space group allows; the others stay unmarked.
-        const marked = [];
-        for (let i = 0; i < peaks.length; ++i)
-            if (!peaks[i].suggestion)
-                marked.push(i);
-        peakMarks = marked;
-        if (marked.length === 0)
-            peakNote = qsTr("No peak at a forbidden reflection; click peaks to mark them.");
+        if (chart.axisProject)
+            chart.axisProject.setKSearchActive(on);
     }
-    // Find k: the ranked vectors for the marked peaks; a chosen one opens the analysis here, over this page, so its
-    // Add notification comes back to this chart.
+    // Find k: one snapshot of the parent, the experiment, its calculation and the marks, taken now and carried by value
+    // through the k dialog and the analysis into Add, which refuses it once anything in it changed (review 16, F4).
     function openKVectors() {
+        const snapshot = chart.axisProject.kSnapshot();
+        if (snapshot.parent === undefined)
+            return;
         const popup = chart.kVector.createObject(Overlay.overlay, {
             project: chart.axisProject,
-            structureIndex: chart.peakParent,
-            experimentIndex: chart.axisProject.currentExperimentIndex,
-            marked: chart.peakMarks,
-            markedPeaks: chart.peakMarks.map(i => chart.peakCandidates[i])
+            snapshot: snapshot
         }) as KVectorPopup;
-        popup.chosen.connect(k => chart.openAnalysis(k));
+        popup.chosen.connect(k => chart.openAnalysis(k, snapshot));
         popup.open();
     }
-    function openAnalysis(k) {
-        // The parent the chosen row was found for, by its snapshot, never the chart's current one (review 15, F4).
-        const parent = chart.axisProject.propagationParent();
-        if (parent < 0) {
-            chart.peakNote = qsTr("The data or the structures changed; mark the peaks again.");
+    function openAnalysis(k, snapshot) {
+        if (!chart.axisProject.kSnapshotCurrent(snapshot))
             return;
-        }
-        chart.addingCandidates = true;
         const analysis = chart.analysis.createObject(Overlay.overlay, {
             project: chart.axisProject,
-            structureIndex: parent,
-            structure: chart.axisProject.structureAt(parent),
+            structureIndex: snapshot.parent,
+            structure: chart.axisProject.structureAt(snapshot.parent),
             initialK: k,
+            kSnapshot: snapshot,
             selectAfterAdd: false
         }) as MagneticPopup;
-        analysis.closed.connect(() => chart.addingCandidates = false);
         analysis.added.connect(count => {
             const base = count === 1 ? qsTr("1 magnetic structure added") : qsTr("%1 magnetic structures added").arg(count);
             const note = chart.axisProject.lastMagneticNote();
             chart.addedNote = note === "" ? base : base + " · " + note;
             chart.addedBase = chart.addedNote;
+            intensityCheck.snapshot = snapshot;
             intensityCheck.tries = 0;
             intensityCheck.start();
         });
         analysis.open();
     }
     function togglePeakAt(x) {
-        let best = -1;
-        for (let i = 0; i < peakCandidates.length; ++i) {
-            const gap = Math.abs(peakCandidates[i].x - x);
-            if (gap <= peakCandidates[i].halfWidth && (best < 0 || gap < Math.abs(peakCandidates[best].x - x)))
-                best = i;
-        }
-        if (best < 0) {
-            peakNote = qsTr("No candidate peak there.");
-            return;
-        }
-        peakNote = "";
         addedNote = "";
-        const next = peakMarks.slice();
-        const at = next.indexOf(best);
-        if (at >= 0)
-            next.splice(at, 1);
-        else
-            next.push(best);
-        peakMarks = next;
+        chart.axisProject.toggleKMarkAt(x);
     }
 
     // One accessible part in the browser, where Qt reads a flat page again for each of its items.
@@ -1333,7 +1282,9 @@ Item {
                 readonly property bool marked: chart.peakMarks.indexOf(index) >= 0
                 objectName: `chart.peak.${index}`
                 x: peakLayer.px(modelData.x)
-                visible: x >= 0 && x <= peakLayer.width
+                // Every observed peak can be marked by a click; only the marked, the forbidden-line and the suggested
+                // ones are drawn.
+                visible: x >= 0 && x <= peakLayer.width && (marked || !modelData.onAllowed || modelData.suggested)
                 // A marked peak: a short tick at the top of the plot and a faint line through it; a candidate not
                 // marked: the tick alone, grey.
                 Rectangle {
@@ -1360,39 +1311,14 @@ Item {
         }
     }
 
-    // Marks belong to the bank and model they were taken on: a bank change, or an edit or Undo other than this chart's
-    // own Add, retires them (review 15, F4).
-    Connections {
-        target: chart.axisProject
-        enabled: chart.peakMode
-        function onCurrentExperimentIndexChanged() {
-            chart.retireMarks();
-        }
-        function onEdited() {
-            if (!chart.addingCandidates && chart.addedNote === "")
-                chart.retireMarks();
-        }
-        // The roles the best-ranked k gives the peaks it was searched for, in the order they were ticked.
-        function onPropagationVectorsFound(found) {
-            const roles = {};
-            if (found.length > 0)
-                chart.peakMarks.forEach((index, at) => roles[index] = found[0].roles[at] ?? "");
-            chart.peakRoles = roles;
-        }
-    }
-    function retireMarks() {
-        if (chart.peakMarks.length === 0 && chart.peakCandidates.length === 0)
-            return;
-        chart.peakCandidates = [];
-        chart.peakMarks = [];
-        chart.peakNote = qsTr("The data or the structures changed; mark the peaks again.");
-    }
 
     // After Add: once the recalculated pattern holds the first new structure, the marked peaks where it puts no
     // magnetic intensity are named (owner, 2026-11-27).
     Timer {
         id: intensityCheck
         property int tries: 0
+        // The Find k snapshot of the Add: its experiment and marks, not whatever is shown by now.
+        property var snapshot: ({})
         interval: 500
         repeat: true
         onTriggered: {
@@ -1400,8 +1326,8 @@ Item {
                 stop();
                 return;
             }
-            const marks = chart.peakMarks.map(i => chart.peakCandidates[i]).filter(p => p !== undefined);
-            const found = chart.axisProject.magneticIntensityAt(chart.axisProject.currentExperimentIndex, marks.map(p => p.x), marks.map(p => p.halfWidth));
+            const marks = snapshot.marks ?? [];
+            const found = chart.axisProject.magneticIntensityAt(snapshot.experiment, marks.map(p => p.x), marks.map(p => p.halfWidth));
             if (found.values === undefined)
                 return;
             stop();

@@ -222,6 +222,10 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     Q_PROPERTY(edi_app::ReportViewModel* report READ report CONSTANT)
     Q_PROPERTY(int currentStructureIndex READ currentStructureIndex WRITE setCurrentStructureIndex NOTIFY currentStructureIndexChanged)
     Q_PROPERTY(int currentExperimentIndex READ currentExperimentIndex WRITE setCurrentExperimentIndex NOTIFY currentExperimentIndexChanged)
+    // The k search of the current experiment (review 16, F4): {active, experiment, parent, note, candidates, marks,
+    // roles}. The marks belong to it, not to the chart that draws them: the chart and the Experiment page's k search
+    // group read and change this one state.
+    Q_PROPERTY(QVariantMap kSearch READ kSearch NOTIFY kSearchChanged)
     Q_PROPERTY(edi_app::StructureViewModel* currentStructure READ currentStructure NOTIFY currentStructureChanged)
     Q_PROPERTY(edi_app::ExperimentViewModel* currentExperiment READ currentExperiment NOTIFY currentExperimentChanged)
     // The most rows of Bragg ticks a pattern of the project's has: one per linked structure, two for a magnetic one.
@@ -562,7 +566,22 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     Q_INVOKABLE QString magneticGroupMoments(int node);
     // Adds found groups `nodes` as structures, one undoable step; false and `refused` on a refusal, nothing changed.
     // `select`: the first new structure becomes the current one (the popup opened from the Structure page).
-    Q_INVOKABLE bool addMagneticCandidates(int index, const QList<int>& nodes, bool startMoments, bool select = true);
+    // `snapshot`: the Find k snapshot the analysis came from (kSnapshot); Add refuses when it is no longer current.
+    Q_INVOKABLE bool addMagneticCandidates(int index, const QList<int>& nodes, bool startMoments, bool select = true,
+                                           const QVariantMap& snapshot = {});
+    QVariantMap kSearch() const;
+    // Turns marking on for the current experiment (its parent, its candidate peaks, the pre-marks) or off.
+    Q_INVOKABLE void setKSearchActive(bool on);
+    // Marks or unmarks the candidate peak nearest `x` within its half width; drops candidate `index`; drops them all.
+    Q_INVOKABLE void toggleKMarkAt(double x);
+    Q_INVOKABLE void removeKMark(int index);
+    Q_INVOKABLE void clearKMarks();
+    // Find k's snapshot, taken when the user presses Find k, as a value: the parent by row, name and content key, the
+    // experiment by row, name and inputs, whether its calculation was current, and the marked peaks. It travels with
+    // the search, the k dialog and the analysis into Add. Empty and `refused` when nothing is marked.
+    Q_INVOKABLE QVariantMap kSnapshot();
+    // Whether `snapshot` still describes the project and the current marks.
+    Q_INVOKABLE bool kSnapshotCurrent(const QVariantMap& snapshot) const;
     // Find k from data: each experiment linking structure `index`, {index, name, eligible, reason}; eligible while a
     // kept fit's inputs still match (recordFitAdoption).
     Q_INVOKABLE QVariantList magneticDataChoices(int index) const;
@@ -587,11 +606,8 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     Q_INVOKABLE QVariantList magneticPeaks(int index, int experiment);
     // Ranks propagation vectors for the ticked peaks off the GUI thread; propagationVectorsFound or
     // propagationVectorsRefused answers.
-    Q_INVOKABLE void findPropagationVectors(int index, int experiment, const QList<int>& ticked);
-    // Whether the data and the peaks are still those the last search ran on.
-    Q_INVOKABLE bool propagationSearchCurrent(int experiment) const;
-    // The parent the last result was found for, while its snapshot is current, else -1 (review 15, F4).
-    Q_INVOKABLE int propagationParent() const;
+    // The search runs on the snapshot's own peaks; a result arrives only while that snapshot is still current.
+    Q_INVOKABLE void findPropagationVectors(const QVariantMap& snapshot);
     // Called when a fit is kept: the inputs of every experiment it calculated.
     void recordFitAdoption();
     // The parameter table's "free" header: free or fix every one of `parameters` (the rows the filters show) that can
@@ -918,6 +934,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     void magneticGroupsFound(const QVariantMap& graph);
     void magneticGroupsRefused(const QString& message);
     void propagationVectorsFound(const QVariantList& rows);
+    void kSearchChanged();
     void propagationVectorsRefused(const QString& message);
     // A grouping previewSeriesGroups worked out: what it found, and whether the files make a series.
     void seriesGroupsPreviewed(int request, const QString& text, bool valid);
@@ -986,11 +1003,24 @@ class ProjectViewModel : public QObject, public ProjectEditor {
         std::uint64_t stamp = 0;
         std::vector<edi::MagneticPeak> peaks;
     };
-    std::shared_ptr<const KSnapshot> k_snapshot_;  // the last extraction
-    std::shared_ptr<const KSnapshot> k_result_;    // the snapshot the last result was found for
+    std::shared_ptr<const KSnapshot> k_snapshot_;  // the last extraction (the Structure page's data route)
     unsigned k_search_ = 0;
-    bool snapshotCurrent(const KSnapshot& snapshot) const;
     void takeKSnapshot(int index, int experiment, std::vector<edi::MagneticPeak> peaks);
+    // The current experiment's k search: its parent, candidate peaks, marks and the roles the last current search
+    // gave them. Any edit retires the marks.
+    struct KMarks {
+        bool active = false;
+        int experiment = -1;
+        int parent = -1;
+        std::vector<edi::MagneticPeak> candidates;
+        std::vector<int> marks;
+        QStringList roles;  // per mark, after a search on exactly these marks
+        QString note;
+    };
+    KMarks k_marks_;
+    bool adding_k_ = false;  // an Add from Find k is publishing: its own edit does not retire the marks
+    void setKNote(const QString& note);
+    void retireKMarks();
     // The information entry for an estimate with the calculated peaks set to auto (none for another setting).
     void postAutoModelReason(const std::string& experiment, const std::string& reason);
     void publish(bool structural);

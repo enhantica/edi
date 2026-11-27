@@ -19,13 +19,12 @@ AppDialog {
     objectName: "chart.kVectorPopup"
 
     property ProjectViewModel project: null
-    property int structureIndex: -1
-    property int experimentIndex: -1
-    property var marked: []
+    // Find k's snapshot, taken when Find k was pressed (review 16, F4): the search runs on its marks, and Analyse
+    // carries it on to the analysis and Add.
+    property var snapshot: ({})
+    readonly property var markedPeaks: snapshot.marks ?? []
 
     property var rows: []
-    // The marked peaks themselves ({x, d, ...}), for each row's identities.
-    property var markedPeaks: []
     // The chosen k; the chart opens the analysis with it.
     signal chosen(string k)
     property bool searching: true
@@ -40,7 +39,7 @@ AppDialog {
     anchors.centerIn: parent
     onClosed: destroy()
 
-    Component.onCompleted: project.findPropagationVectors(structureIndex, experimentIndex, marked)
+    Component.onCompleted: project.findPropagationVectors(snapshot)
 
     Connections {
         target: popup.project
@@ -147,7 +146,7 @@ AppDialog {
                 }
                 EaComponents.ListViewLabel {
                     horizontalAlignment: Text.AlignHCenter
-                    text: qsTr("%1 of %2").arg(row.modelData.explained).arg(popup.marked.length)
+                    text: qsTr("%1 of %2").arg(row.modelData.explained).arg(popup.markedPeaks.length)
                 }
                 EaComponents.ListViewLabel {
                     horizontalAlignment: Text.AlignHCenter
@@ -188,8 +187,8 @@ AppDialog {
     function analyse() {
         if (list.currentIndex < 0 || list.currentIndex >= rows.length)
             return;
-        if (!project.propagationSearchCurrent(experimentIndex)) {
-            refusal = qsTr("The data or the structures changed; mark the peaks again.");
+        if (!project.kSnapshotCurrent(snapshot)) {
+            refusal = qsTr("The data, the structures or the marked peaks changed; mark the peaks again.");
             return;
         }
         const k = rows[list.currentIndex].k;

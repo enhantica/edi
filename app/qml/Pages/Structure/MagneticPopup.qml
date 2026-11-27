@@ -27,6 +27,9 @@ AppDialog {
     // Opened from the Structure page, the first new structure becomes the current one; from Experiment → Pattern the
     // page stays as it is (the popup never moves the user, owner 2026-11-27).
     property bool selectAfterAdd: true
+    // Opened from Find k: the snapshot the chosen k was found for; Add refuses once it is no longer current
+    // (review 16, F4). Empty from the Structure page.
+    property var kSnapshot: ({})
     signal added(int count)
 
     property var presets: []
@@ -451,7 +454,7 @@ AppDialog {
                 enabled: popup.selected.length > 0 && !popup.busy
                 onClicked: {
                     const count = popup.selected.length;
-                    if (popup.project.addMagneticCandidates(popup.structureIndex, popup.selected, startMoments.checked, popup.selectAfterAdd)) {
+                    if (popup.project.addMagneticCandidates(popup.structureIndex, popup.selected, startMoments.checked, popup.selectAfterAdd, popup.kSnapshot)) {
                         popup.added(count);
                         popup.close();
                     } else {
