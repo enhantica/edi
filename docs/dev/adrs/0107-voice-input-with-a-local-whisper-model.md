@@ -76,10 +76,13 @@ assistant runtime, and shows its choices as rows on the folder page instead of a
    whisper.cpp lists, so the list cannot disagree with the model; it is the searchable combo box every long list uses
    (ADR-0017 §7). A saved choice keeps its value, and the bundled model stays multilingual.
 8. **Composer button.** A round microphone button, the same component and size as the stop and send buttons, sits to
-   their left. While listening it takes the accent colour and a cancel button appears beside it; Escape anywhere in
-   the message box also cancels.
-   While recognising it shows that it is busy; the cancel button and Escape stop it, and another press of the
-   microphone does not, so a press just after the silence stop keeps the recording.
+   their left. One press starts listening, the next stops and recognises. There is no cancel button; Escape anywhere
+   in the message box cancels. While listening the button takes the accent colour, an empty box shows "Listening…"
+   where its placeholder is, and an accent-coloured level meter beside the button follows the microphone. While
+   recognising the button shows it is busy and the box shows "Recognising…"; Escape stops it and another press does
+   not, so a press just after the silence stop keeps the recording. When the box holds text, the state is written
+   beside the meter. A recording in which no speech was heard is not recognised, since Whisper makes up text from
+   silence; the box says "Nothing was heard."
 
 ## Speed
 

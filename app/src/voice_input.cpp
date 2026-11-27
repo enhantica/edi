@@ -12,6 +12,7 @@
 #include <QLoggingCategory>
 #include <QPointer>
 
+#include <algorithm>
 #include <cmath>
 #include <filesystem>
 #include <mutex>
@@ -42,6 +43,11 @@ constexpr int rate = SpeechRecogniser::sample_rate;
 constexpr auto block = static_cast<std::size_t>(rate * 30 / 1000);  // the silence check reads 30 ms at a time
 // Speech is louder than about -34 dBFS in a 30 ms block; a quiet room is well below that.
 constexpr float speech_level = 0.02F;
+// The level meter shows -60 to -10 dBFS: a quiet room near the bottom, close speech near the top. It rises at once and
+// falls back over a few updates, so it does not flicker between words.
+constexpr double meter_floor_db = -60.0;
+constexpr double meter_range_db = 50.0;
+constexpr double meter_fall = 0.7;
 constexpr qint64 manifest_bytes = 4096;
 
 QString refusal_text() {
@@ -162,6 +168,15 @@ void VoiceInput::stop() {
     if (state_ != State::Listening)
         return;
     capture_->stop();
+    // Whisper makes up text for a recording without speech, so such a recording is never recognised.
+    if (!heard_) {
+        qCInfo(lcVoice) << "Nothing was heard; the recording is dropped";
+        dropRecording();
+        setState(State::Idle);
+        setMessage(tr("Nothing was heard."));
+        dropOwner();
+        return;
+    }
     qCInfo(lcVoice).nospace() << "Recognising " << static_cast<double>(recording_.size()) / rate << " s of audio";
     recognising_.start();
     auto job = std::make_shared<RecognitionJob>();
@@ -254,12 +269,20 @@ void VoiceInput::captureSamples(const QList<float>& chunk) {
         for (std::size_t i = analysed_; i < analysed_ + block; ++i)
             energy += static_cast<double>(recording_[i]) * static_cast<double>(recording_[i]);
         analysed_ += block;
-        if (std::sqrt(energy / static_cast<double>(block)) > static_cast<double>(speech_level)) {
+        const double rms = std::sqrt(energy / static_cast<double>(block));
+        loudest_ = std::max(loudest_, rms);
+        if (rms > static_cast<double>(speech_level)) {
             heard_ = true;
             silent_ = 0;
         } else if (heard_) {
             silent_ += block;
         }
+    }
+    if (!levelShown_.isValid() || levelShown_.elapsed() >= level_ms) {
+        const double db = 20.0 * std::log10(std::max(loudest_, 1e-6));
+        setLevel(std::max(std::clamp((db - meter_floor_db) / meter_range_db, 0.0, 1.0), level_ * meter_fall));
+        loudest_ = 0.0;
+        levelShown_.start();
     }
     const bool pause =
         heard_ && silent_ >= static_cast<std::size_t>(silence_seconds) * static_cast<std::size_t>(rate);
@@ -326,6 +349,13 @@ void VoiceInput::setMessage(const QString& message) {
     emit messageChanged();
 }
 
+void VoiceInput::setLevel(double level) {
+    if (level == level_)
+        return;
+    level_ = level;
+    emit levelChanged();
+}
+
 void VoiceInput::dropOwner() {
     if (!owned_)
         return;
@@ -342,6 +372,9 @@ void VoiceInput::dropRecording() {
     analysed_ = 0;
     silent_ = 0;
     heard_ = false;
+    loudest_ = 0.0;
+    levelShown_.invalidate();
+    setLevel(0.0);
 }
 
 QString VoiceInput::installedModel() {

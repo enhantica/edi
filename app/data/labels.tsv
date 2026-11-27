@@ -39,7 +39,6 @@ assistant.showActions	Show actions		eye
 assistant.signOut	Sign out		sign-out-alt
 assistant.stop	Stop		stop
 assistant.usageDialog	Usage		
-assistant.voiceCancel	Cancel voice input		times
 atomSites.append	Append new atom site	Append	plus-circle
 atomSites.duplicate	Duplicate selected atom site	Duplicate	clone
 atom_site	Atom sites		atom

@@ -423,6 +423,11 @@ Rectangle {
     // Voice input (edi ADR-0107): the recognised text goes in at the cursor and is never sent by itself.
     readonly property bool voiceBusy: VoiceInput.state === VoiceInput.Starting || VoiceInput.state === VoiceInput.Recognising
     readonly property bool voiceActive: VoiceInput.state !== VoiceInput.Idle
+    readonly property bool voiceListening: VoiceInput.state === VoiceInput.Listening && VoiceInput.owner === composer
+    // What the recording is doing, shown where the placeholder is while the box is empty and beside the level meter
+    // once the box holds text, so it never hides what was typed.
+    readonly property string voiceStatus: VoiceInput.owner !== composer ? "" : VoiceInput.state === VoiceInput.Listening ? qsTr("Listening…") : VoiceInput.state === VoiceInput.Recognising ? qsTr("Recognising…") : ""
+    readonly property bool editorEmpty: editor.length === 0 && editor.preeditText.length === 0
     // The panel stays loaded while hidden: a recording must not go on without its controls or its conversation.
     onVisibleChanged: {
         if (!composer.visible)
@@ -540,7 +545,7 @@ Rectangle {
             TextArea {
                 id: editor
                 objectName: "assistant.composer"
-                placeholderText: qsTr("Ask about your project or describe a fitting plan…")
+                placeholderText: composer.voiceStatus.length > 0 ? "" : qsTr("Ask about your project or describe a fitting plan…")
                 wrapMode: TextEdit.Wrap
                 selectByMouse: true
                 persistentSelection: true
@@ -565,6 +570,21 @@ Rectangle {
                 background: null
                 Accessible.name: qsTr("Message to the assistant")
                 Keys.onReturnPressed: event => ApplicationInfo.composerReturnPressed(event)
+                EaElements.Label {
+                    objectName: "assistant.voiceStatus"
+                    x: editor.leftPadding
+                    y: editor.topPadding
+                    width: Math.max(0, editor.width - editor.leftPadding - editor.rightPadding)
+                    visible: composer.voiceStatus.length > 0 && composer.editorEmpty
+                    text: composer.voiceStatus
+                    textFormat: Text.PlainText
+                    elide: Text.ElideRight
+                    font.family: editor.font.family
+                    font.pixelSize: editor.font.pixelSize
+                    font.italic: true
+                    color: editor.placeholderTextColor
+                    Accessible.name: text
+                }
             }
         }
         // Why the last recording gave no text.
@@ -649,7 +669,7 @@ Rectangle {
         }
         RowLayout {
             id: composerToolbar
-            readonly property real choiceWidth: Math.max(0, width - addFilesButton.implicitWidth - showActionsControl.implicitWidth - (sendButton.visible ? sendButton.implicitWidth : 0) - (stopButton.visible ? stopButton.implicitWidth : 0) - (voiceButton.visible ? voiceButton.implicitWidth : 0) - (voiceCancelButton.visible ? voiceCancelButton.implicitWidth : 0) - previousUserButton.implicitWidth - nextUserButton.implicitWidth - spacing * (5 + (sendButton.visible ? 1 : 0) + (stopButton.visible ? 1 : 0) + (voiceButton.visible ? 1 : 0) + (voiceCancelButton.visible ? 1 : 0)))
+            readonly property real choiceWidth: Math.max(0, width - addFilesButton.implicitWidth - showActionsControl.implicitWidth - (sendButton.visible ? sendButton.implicitWidth : 0) - (stopButton.visible ? stopButton.implicitWidth : 0) - (voiceButton.visible ? voiceButton.implicitWidth : 0) - (voiceIndicator.visible ? voiceIndicator.implicitWidth : 0) - previousUserButton.implicitWidth - nextUserButton.implicitWidth - spacing * (5 + (sendButton.visible ? 1 : 0) + (stopButton.visible ? 1 : 0) + (voiceButton.visible ? 1 : 0) + (voiceIndicator.visible ? 1 : 0)))
             width: parent.width
             spacing: AppSizes.unit * 0.5
             EaElements.ToolButton {
@@ -827,38 +847,36 @@ Rectangle {
                 Accessible.name: ToolTip.text
                 KeyNavigation.priority: KeyNavigation.BeforeItem
                 KeyNavigation.backtab: previousUserButton
-                KeyNavigation.tab: voiceCancelButton.visible ? voiceCancelButton : voiceButton.visible ? voiceButton : stopButton.visible ? stopButton : sendButton
+                KeyNavigation.tab: voiceButton.visible ? voiceButton : stopButton.visible ? stopButton : sendButton
                 onClicked: composer.nextUserRequested()
             }
-            EaElements.ToolButton {
-                id: voiceCancelButton
-                Layout.minimumWidth: composer.actionSize
-                Layout.maximumWidth: composer.actionSize
-                Layout.minimumHeight: composer.actionSize
-                Layout.maximumHeight: composer.actionSize
-                implicitWidth: composer.actionSize
-                implicitHeight: composer.actionSize
-                font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.75
-                objectName: "assistant.voiceCancel"
-                fontIcon: "times"
-                background: Rectangle {
-                    border.width: 0
-                    implicitWidth: composer.actionSize
-                    implicitHeight: implicitWidth
-                    radius: width * 0.5
-                    color: voiceCancelButton.pressed ? EaStyle.Colors.sideBarButtonBackgroundPressed : voiceCancelButton.visualFocus ? EaStyle.Colors.themeRowHovered : composer.actionBackground
+            // The microphone level while listening; the state in words too once the box holds text.
+            Row {
+                id: voiceIndicator
+                objectName: "assistant.voiceIndicator"
+                Layout.alignment: Qt.AlignVCenter
+                spacing: AppSizes.unit * 0.5
+                visible: composer.voiceListening || (composer.voiceStatus.length > 0 && !composer.editorEmpty)
+                EaElements.Label {
+                    anchors.verticalCenter: parent.verticalCenter
+                    visible: composer.voiceStatus.length > 0 && !composer.editorEmpty
+                    text: composer.voiceStatus
+                    textFormat: Text.PlainText
+                    font.italic: true
+                    color: EaStyle.Colors.themeForegroundMinor
+                    Accessible.name: text
                 }
-                text: qsTr("Cancel voice input")
-                ToolTip.text: text
-                Accessible.name: text
-                visible: composer.voiceActive
-                KeyNavigation.priority: KeyNavigation.BeforeItem
-                KeyNavigation.backtab: nextUserButton
-                KeyNavigation.tab: voiceButton
-                onClicked: VoiceInput.release(composer)
+                AssistantVoiceMeter {
+                    objectName: "assistant.voiceLevel"
+                    anchors.verticalCenter: parent.verticalCenter
+                    visible: composer.voiceListening
+                    running: composer.voiceListening
+                    level: VoiceInput.level
+                }
             }
-            // Listening takes the accent colour; while the microphone starts or the speech is recognised it shows the
-            // assistant's spinner. A press while it starts cancels; a press while it recognises does nothing.
+            // One button starts and stops: listening takes the accent colour; while the microphone starts or the speech is
+            // recognised it shows the assistant's spinner. A press while it starts cancels; a press while it recognises
+            // does nothing, and Escape cancels.
             EaElements.ToolButton {
                 id: voiceButton
                 Layout.minimumWidth: composer.actionSize
@@ -911,7 +929,7 @@ Rectangle {
                 }
                 KeyNavigation.priority: KeyNavigation.BeforeItem
                 KeyNavigation.tab: stopButton.visible ? stopButton : sendButton
-                KeyNavigation.backtab: voiceCancelButton.visible ? voiceCancelButton : nextUserButton
+                KeyNavigation.backtab: nextUserButton
                 objectName: "assistant.voice"
                 fontIcon: "microphone"
                 text: VoiceInput.state === VoiceInput.Listening ? qsTr("Stop and insert the text") : VoiceInput.state === VoiceInput.Starting ? qsTr("Starting the microphone. Press to cancel") : VoiceInput.state === VoiceInput.Recognising ? qsTr("Recognising speech") : qsTr("Voice input")

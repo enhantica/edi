@@ -32,6 +32,7 @@ if(EDI_APP_ASSISTANT)
         qml/Components/AssistantMessage.qml
         qml/Components/AssistantSteps.qml
         qml/Components/AssistantComposer.qml
+        qml/Components/AssistantVoiceMeter.qml
         qml/Components/AssistantPlan.qml
         qml/Components/AssistantQuestion.qml
         qml/Components/AssistantTrial.qml
