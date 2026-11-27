@@ -89,19 +89,19 @@ jobs:
               schedule) if [ "$SCHEDULE" = '15 2 * * 0' ]; then set_=none; else set_=night; fi ;;
               *) set_=night ;;
             esac
-            # Unchanged inputs (tools/ci/crysta-inputs.txt) skip a round and a main push.
-            fi
+          fi
           # Unchanged inputs (tools/ci/crysta-inputs.txt) leave a round and a main push to the marker steps.
           skip=false
           if [ "$INPUTS_CHANGED" = false ] && { [ "$set_" = round ] || [ "$set_" = main ]; }; then skip=true; fi
+          # `seeded` is not a job: it runs the seeded series, which crysta runs at night only.
           case "$set_" in
             round) rows='checks tidy python audit edi-verification' ;;
             final) rows='checks tidy python-full audit edi-verification cpp-full full-macos cppcheck asan release performance' ;;
             main) rows='checks tidy audit' ;;
-            night) rows='checks tidy python-full audit cpp-full full-macos cppcheck asan release performance coverage' ;;
+            night) rows='checks tidy python-full audit cpp-full full-macos cppcheck asan release performance coverage seeded' ;;
             coverage) rows='coverage' ;;
             wheels) rows='wheels' ;;
-            probe) rows='checks tidy python python-full audit edi-verification cpp-full full-macos cppcheck asan release performance coverage wheels' ;;
+            probe) rows='checks tidy python python-full audit edi-verification cpp-full full-macos cppcheck asan release performance coverage wheels seeded' ;;
             none) rows='' ;;
             *) echo "unknown set '$set_'" >&2; exit 1 ;;
           esac
@@ -421,7 +421,7 @@ jobs:
         run: |
           cd "$RUNNER_TEMP/crysta"
           export PYTHONPATH="$GITHUB_WORKSPACE/tools/ci${PYTHONPATH:+:$PYTHONPATH}"
-          python3 "$GITHUB_WORKSPACE/tools/ci/crysta_findings.py" run pytest "$CRYSTA_PYTEST_RECORD" -- pixi run -e cpp-ci --skip-deps suite-pr
+          python3 "$GITHUB_WORKSPACE/tools/ci/crysta_findings.py" run pytest "$CRYSTA_PYTEST_RECORD" -- pixi run -e cpp-ci suite-pr
 
   python-full:
     needs: plan
@@ -464,9 +464,9 @@ jobs:
         run: |
           cd "$RUNNER_TEMP/crysta"
           export PYTHONPATH="$GITHUB_WORKSPACE/tools/ci${PYTHONPATH:+:$PYTHONPATH}"
-          python3 "$GITHUB_WORKSPACE/tools/ci/crysta_findings.py" run pytest "$CRYSTA_PYTEST_RECORD" -- pixi run -e cpp-ci --skip-deps suite-coverage
-      - name: Seeded series, slow cadence
-        if: ${{ needs.plan.outputs.skip != 'true' && (!cancelled() && matrix.part == '1/6') }}
+          python3 "$GITHUB_WORKSPACE/tools/ci/crysta_findings.py" run pytest "$CRYSTA_PYTEST_RECORD" -- pixi run -e cpp-ci suite-coverage
+      - name: Seeded series (slow cadence)
+        if: ${{ needs.plan.outputs.skip != 'true' && (!cancelled() && matrix.part == '1/6' && contains(fromJSON(needs.plan.outputs.rows), 'seeded')) }}
         run: cd "$RUNNER_TEMP/crysta" && pixi run -e cpp-ci --skip-deps slow-seeded-series
 
   audit:
@@ -635,8 +635,8 @@ jobs:
       - name: LTO correctness (-DCRYSTA_LTO=ON byte-identical build + parity)
         if: ${{ needs.plan.outputs.skip != 'true' && (!cancelled()) }}
         run: cd "$RUNNER_TEMP/crysta" && pixi run -e cpp-ci bash tools/ci/_lto_correctness.sh
-      - name: Seeded series, slow cadence
-        if: ${{ needs.plan.outputs.skip != 'true' && (!cancelled()) }}
+      - name: Seeded series (slow cadence)
+        if: ${{ needs.plan.outputs.skip != 'true' && (!cancelled() && contains(fromJSON(needs.plan.outputs.rows), 'seeded')) }}
         run: cd "$RUNNER_TEMP/crysta" && pixi run -e cpp-ci --skip-deps slow-seeded-series
 
   cppcheck:
