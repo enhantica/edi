@@ -666,6 +666,8 @@ class Session : public QObject {
     // confirmed, or it is moved back and nothing is replaced; only that folder is removed after.
     bool publishStaged(const QString& stage, const QString& destination, bool replace,
                        const UntitledOperation::Destination* approved = nullptr);
+    bool publishStagedOrThrow(const QString& stage, const QString& destination, bool replace,
+                              const UntitledOperation::Destination* approved);
     // What a Save writes (round, adopt, recalculate, write), done on a copy in `name` inside a new folder (the folder
     // itself for an empty name), once the project may be saved; the open project is left as it is.
     bool stageCopy(const SaveOperation& operation, const char* purpose, const QString& name, Staged& staged,

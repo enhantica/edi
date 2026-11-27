@@ -6,12 +6,13 @@
 
 It takes Qt, the crysta SDK and the compiler settings from the installer's own build
 (tools/installer/build.py), so the app compiles as the Windows installer compiles it, and stops
-once edi_app is built: nothing is staged.
+once edi_app and the CLI are built and carry the UTF-8 code page (ADR-0109): nothing is staged.
 """
 
 from __future__ import annotations
 
 import argparse
+import subprocess
 import sys
 from pathlib import Path
 
@@ -48,7 +49,13 @@ def main() -> None:
         f'-DCMAKE_PREFIX_PATH={prefix.as_posix()};{qt.as_posix()}',
     ])
     # Every file compiles even after one fails, so one run lists every warning made an error.
-    build.run(['cmake', '--build', app, '--target', 'edi_app', '--parallel', '4', '--', '-k', '0'])
+    targets = ['--target', 'edi_app', 'easydiffraction']
+    build.run(['cmake', '--build', app, *targets, '--parallel', '4', '--', '-k', '0'])
+    # The programs' own embedded manifests, and Python's, which must fail the same check.
+    check = Path(__file__).resolve().parent / 'windows_manifest.py'
+    programs = [app / 'app/edi_app.exe', app / 'cli/easydiffraction.exe']
+    subprocess.run([sys.executable, check, *programs], check=True)
+    subprocess.run([sys.executable, check, '--refused', sys.executable], check=True)
 
 
 if __name__ == '__main__':

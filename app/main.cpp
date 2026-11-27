@@ -29,6 +29,9 @@
 #include "stall_probe.hpp"
 #include "ui_probe.hpp"
 #include "test_observer.hpp"
+#if defined(Q_OS_WIN)
+#include <windows.h>  // GetACP, after edi's headers so its macros reach none of them
+#endif
 #ifndef __EMSCRIPTEN__
 void start_installer_smoke(QQuickWindow&, const QString&);
 #ifdef Q_OS_MACOS
@@ -168,6 +171,13 @@ int main(int argc, char* argv[]) {
         qWarning("cannot write the run log in %s; this run logs to the terminal only",
                  qPrintable(edi_app::run_log_directory()));
     }
+#if defined(Q_OS_WIN)
+    // Windows before 10 1903 ignores the UTF-8 code page the manifest asks for (ADR-0109).
+    if (const UINT page = GetACP(); page != CP_UTF8) {
+        qWarning("this Windows keeps code page %u: folder names with letters outside it may not open or save",
+                 page);
+    }
+#endif
     // Off unless EDI_STALL_PROBE is set; its summary is written before the log finishes.
     edi_app::install_stall_probe(app);
 #if QT_CONFIG(thread) && !defined(__EMSCRIPTEN__)
