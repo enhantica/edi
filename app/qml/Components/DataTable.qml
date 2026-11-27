@@ -58,6 +58,7 @@ EaComponents.ListView {
     // What the table showed before, and when it left it (placeRoom).
     property real roomLeft: 0
     property double roomLeftAt: 0
+    property int roomLeftCount: -1
     readonly property int roomRows: Math.ceil(roomShown)
     // Rows of another height than the table's (tableRowHeight, a list's least row: an example's description takes as
     // many lines as it needs): what each has over it, by its row. A row says its height when it has it (noteRowHeight),
@@ -217,12 +218,15 @@ EaComponents.ListView {
         const placed = shown.has(table) ? shown.get(table) : Math.max(2.5, Math.min(count, Math.floor(rowsIn(roomColumn.height - headerOf(table)))));
         if (placed === roomShown)
             return;
-        // Never back up to what it left a moment ago: a layout answering to the table's own height would go round
-        // for ever, and the smaller of the two always fits.
-        if (placed > roomShown && placed === roomLeft && Date.now() - roomLeftAt < 2000)
+        // Never back up to what it left a moment ago with the same rows: a layout answering to the table's own height
+        // would go round for ever, and the smaller of the two always fits. New rows are a new placement: a table
+        // emptied and filled again at once (marks restored, a project loaded) otherwise stayed at one row (owner,
+        // 2026-11-27).
+        if (placed > roomShown && placed === roomLeft && count === roomLeftCount && Date.now() - roomLeftAt < 2000)
             return;
         roomLeft = roomShown;
         roomLeftAt = Date.now();
+        roomLeftCount = count;
         roomShown = placed;
     }
     Connections {
