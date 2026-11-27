@@ -66,10 +66,10 @@ Item {
             project: chart.axisProject,
             snapshot: snapshot
         }) as KVectorPopup;
-        popup.chosen.connect(k => chart.openAnalysis(k, snapshot));
+        popup.chosen.connect((k, rank) => chart.openAnalysis(k, rank, snapshot));
         popup.open();
     }
-    function openAnalysis(k, snapshot) {
+    function openAnalysis(k, rank, snapshot) {
         if (!chart.axisProject.kSnapshotCurrent(snapshot.id))
             return;
         const analysis = chart.analysis.createObject(Overlay.overlay, {
@@ -78,6 +78,7 @@ Item {
             structure: chart.axisProject.structureAt(snapshot.parent),
             initialK: k,
             kSnapshotId: snapshot.id,
+            kRow: rank,
             selectAfterAdd: false
         }) as MagneticPopup;
         analysis.added.connect(count => {
@@ -1332,7 +1333,9 @@ Item {
             }
             const found = chart.axisProject.kAddedIntensity(snapshot);
             if (found.retired === true) {
+                // The Add's child or bank is gone (Undo) or replaced: its notice goes with it.
                 stop();
+                chart.addedNote = "";
                 return;
             }
             if (found.values === undefined)

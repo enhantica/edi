@@ -26,7 +26,8 @@ AppDialog {
 
     property var rows: []
     // The chosen k; the chart opens the analysis with it.
-    signal chosen(string k)
+    // The chosen row: its k, and its rank in the search, by which the analysis names it to the project.
+    signal chosen(string k, int rank)
     property bool searching: true
     property string refusal: ""
 
@@ -197,8 +198,9 @@ AppDialog {
             return;
         }
         const k = rows[list.currentIndex].k;
+        const rank = rows[list.currentIndex].rank;
         close();
-        chosen(k);
+        chosen(k, rank);
     }
 
     // Cancel and the primary Analyse at the right, as the app's other dialogs place their actions.

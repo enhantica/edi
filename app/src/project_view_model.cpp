@@ -4122,20 +4122,38 @@ QVariantList ProjectViewModel::magneticSites(int index) const {
     return out;
 }
 
-int ProjectViewModel::findMagneticGroups(int index, const QString& k, const QStringList& sites, bool withZeroMomentGroups) {
+int ProjectViewModel::findMagneticGroups(int index, const QString& k, const QStringList& sites, bool withZeroMomentGroups,
+                                          qint64 snapshot, int row) {
     const unsigned search = ++magnetic_search_;
     magnetic_graph_.reset();
     magnetic_graph_id_ = 0;
-    if (index < 0 || index >= static_cast<int>(project_->structures.size())) {
-        emit magneticGroupsRefused(tr("the project has no such structure"), static_cast<int>(search));
+    magnetic_graph_snapshot_ = 0;
+    magnetic_graph_row_ = -1;
+    // A refusal is delivered after the caller holds this request's identity (review 18, F4).
+    const auto refuse = [this, search](const QString& message) {
+        QMetaObject::invokeMethod(
+            this, [this, search, message] { emit magneticGroupsRefused(message, static_cast<int>(search)); },
+            Qt::QueuedConnection);
         return static_cast<int>(search);
+    };
+    if (index < 0 || index >= static_cast<int>(project_->structures.size()))
+        return refuse(tr("the project has no such structure"));
+    QString searched = k;
+    if (snapshot != 0) {
+        // From Find k: the ranked row of a current snapshot of this parent, searched at that row's own k.
+        const auto rows = k_rows_.find(snapshot);
+        const auto held = k_snapshots_.find(snapshot);
+        if (held == k_snapshots_.end() || held->second->parent != index || !kSnapshotCurrent(snapshot) ||
+            rows == k_rows_.end() || row < 0 || row >= static_cast<int>(rows->second.size()))
+            return refuse(tr("The data, the structures or the marked peaks changed since Find k; search again."));
+        searched = QString::fromStdString(rows->second[static_cast<std::size_t>(row)]);
     }
     auto parent = std::make_shared<const edi::Structure>(*project_->structures[static_cast<std::size_t>(index)]);
     std::vector<std::string> ticked;
     for (const QString& s : sites) ticked.push_back(s.toStdString());
     using Result = std::variant<edi::MagneticCandidateGraph, QString>;
     auto* watcher = new QFutureWatcher<Result>(this);
-    connect(watcher, &QFutureWatcher<Result>::finished, this, [this, watcher, search, index] {
+    connect(watcher, &QFutureWatcher<Result>::finished, this, [this, watcher, search, index, snapshot, row] {
         watcher->deleteLater();
         if (search != magnetic_search_) {
             emit magneticGroupsRefused(tr("another search replaced this one"), static_cast<int>(search));
@@ -4149,6 +4167,8 @@ int ProjectViewModel::findMagneticGroups(int index, const QString& k, const QStr
         magnetic_graph_ = std::get<edi::MagneticCandidateGraph>(result);
         magnetic_graph_structure_ = index;
         magnetic_graph_id_ = static_cast<int>(search);
+        magnetic_graph_snapshot_ = snapshot;
+        magnetic_graph_row_ = row;
         QVariantList nodes;
         for (const edi::MagneticCandidateNode& n : magnetic_graph_->nodes) {
             QVariantList subgroups;
@@ -4166,11 +4186,13 @@ int ProjectViewModel::findMagneticGroups(int index, const QString& k, const QStr
                                         {QStringLiteral("subgroups"), subgroups}});
         }
         emit magneticGroupsFound(QVariantMap{{QStringLiteral("graphId"), static_cast<int>(search)},
+                                             {QStringLiteral("snapshot"), snapshot},
+                                             {QStringLiteral("row"), row},
                                              {QStringLiteral("cell"), QString::fromStdString(magnetic_graph_->cell)},
                                              {QStringLiteral("parentCells"), static_cast<int>(magnetic_graph_->parent_cells)},
                                              {QStringLiteral("nodes"), nodes}});
     });
-    watcher->setFuture(QtConcurrent::run(magneticPool(), [parent, k = k.toStdString(), ticked, withZeroMomentGroups]() -> Result {
+    watcher->setFuture(QtConcurrent::run(magneticPool(), [parent, k = searched.toStdString(), ticked, withZeroMomentGroups]() -> Result {
         try {
             return edi::magnetic_candidate_graph(*parent, k, ticked, withZeroMomentGroups);
         } catch (const std::exception& refusal) {
@@ -4193,15 +4215,18 @@ bool ProjectViewModel::addMagneticCandidates(int index, const QList<int>& nodes,
                                              int graph, qint64 snapshot) {
     edi::Project& project = *project_;
     QString error;
-    std::shared_ptr<edi::PreparedMagneticCandidates> prepared;
+    std::shared_ptr<const edi::PreparedMagneticCandidates> prepared;
     try {
         // The nodes belong to the graph the caller chose them in, still the one held (review 17, F4).
         if (!magnetic_graph_ || magnetic_graph_structure_ != index || graph <= 0 || graph != magnetic_graph_id_)
             throw std::invalid_argument("the magnetic groups shown are no longer the ones found; find them again");
-        // From Find k: the snapshot taken when Find k was pressed, still current and this parent's.
-        if (snapshot != 0) {
-            const auto held = k_snapshots_.find(snapshot);
-            if (held == k_snapshots_.end() || held->second->parent != index || !kSnapshotCurrent(snapshot))
+        // The graph is the one result object (review 18, F4): Add takes its own Find k snapshot, never another, and
+        // that snapshot must still be current and this parent's. A graph of the Structure page carries none.
+        if (snapshot != magnetic_graph_snapshot_)
+            throw std::invalid_argument("these magnetic groups were found for another propagation vector search; find them again");
+        if (magnetic_graph_snapshot_ != 0) {
+            const auto held = k_snapshots_.find(magnetic_graph_snapshot_);
+            if (held == k_snapshots_.end() || held->second->parent != index || !kSnapshotCurrent(magnetic_graph_snapshot_))
                 throw std::invalid_argument(
                     "the data, the structures or the marked peaks changed since Find k; search again");
         }
@@ -4241,7 +4266,13 @@ bool ProjectViewModel::addMagneticCandidates(int index, const QList<int>& nodes,
     last_magnetic_added_ = prepared->structures.empty() ? std::string() : prepared->structures.front()->name.value();
     // The after-Add notice belongs to this Add: its snapshot and its first child, never to what is shown later.
     k_added_.reset();
-    if (snapshot != 0) k_added_ = KAdded{k_snapshots_.at(snapshot), last_magnetic_added_};
+    if (snapshot != 0) {
+        const auto& bank = project.experiments[static_cast<std::size_t>(k_snapshots_.at(snapshot)->experiment)];
+        std::shared_ptr<const edi::Structure> child;
+        for (const auto& held : project.structures)
+            if (held->name.value() == last_magnetic_added_) child = held;
+        k_added_ = KAdded{k_snapshots_.at(snapshot), last_magnetic_added_, child, bank};
+    }
     if (!last_magnetic_note_.isEmpty()) emit information(last_magnetic_note_);
     if (select) setCurrentStructureIndex(static_cast<int>(structure_models_.size()) - static_cast<int>(prepared->structures.size()));
     return true;
@@ -4408,6 +4439,7 @@ void ProjectViewModel::changeKMarks() {
     ++k_generation_;
     ++k_search_;  // a search still running belongs to marks that are about to change
     k_snapshots_.clear();  // every snapshot of the earlier marks is retired
+    k_rows_.clear();
 }
 
 void ProjectViewModel::setKSearchActive(bool on) {
@@ -4526,6 +4558,9 @@ QVariantMap ProjectViewModel::kSnapshot() {
         marks.push_back(peak_map(snapshot->marks.back()));
     }
     snapshot->id = ++k_next_snapshot_;
+    // A newer Find k retires every older snapshot and the rows ranked for it (review 18, F4).
+    k_snapshots_.clear();
+    k_rows_.clear();
     k_snapshots_[snapshot->id] = snapshot;
     return {{QStringLiteral("id"), snapshot->id},
             {QStringLiteral("parent"), snapshot->parent},
@@ -4560,12 +4595,15 @@ QVariantMap ProjectViewModel::kAddedIntensity(qint64 id) const {
     if (!k_added_ || k_added_->snapshot->id != id || last_magnetic_added_ != k_added_->child) return retired;
     const KSearchSnapshot& snapshot = *k_added_->snapshot;
     const int experiment = snapshot.experiment;
-    if (experiment < 0 || experiment >= static_cast<int>(project_->experiments.size()) ||
-        project_->experiments[static_cast<std::size_t>(experiment)]->name != snapshot.experiment_name)
+    // The Add's own bank and child, by identity, not a same-name replacement; gone or replaced retires the notice.
+    const std::shared_ptr<const edi::BraggPdExperiment> bank = k_added_->experiment.lock();
+    const std::shared_ptr<const edi::Structure> child = k_added_->child_item.lock();
+    if (!bank || !child || experiment < 0 || experiment >= static_cast<int>(project_->experiments.size()) ||
+        project_->experiments[static_cast<std::size_t>(experiment)].get() != bank.get() ||
+        std::none_of(project_->structures.begin(), project_->structures.end(),
+                     [&child](const auto& s) { return s.get() == child.get(); }))
         return retired;
-    if (std::none_of(project_->structures.begin(), project_->structures.end(),
-                     [this](const auto& s) { return s->name.value() == k_added_->child; }))
-        return retired;  // undone
+    if (!bank->computed_current()) return {};  // the calculation of the edited model is not in yet
     QList<double> xs;
     QList<double> halfWidths;
     for (const edi::MagneticPeak& p : snapshot.marks) {
@@ -4641,7 +4679,8 @@ void ProjectViewModel::findPropagationVectors(qint64 id) {
         QVariantList rows;
         const auto& found = std::get<std::vector<edi::MagneticKRow>>(result);
         for (const edi::MagneticKRow& r : found) {
-            rows.push_back(QVariantMap{{QStringLiteral("k"), QString::fromStdString(r.k)},
+            rows.push_back(QVariantMap{{QStringLiteral("rank"), static_cast<int>(rows.size())},
+                                       {QStringLiteral("k"), QString::fromStdString(r.k)},
                                        {QStringLiteral("label"), QString::fromStdString(r.label)},
                                        {QStringLiteral("stage"), r.stage},
                                        {QStringLiteral("explained"), static_cast<int>(r.explained)},
@@ -4657,6 +4696,9 @@ void ProjectViewModel::findPropagationVectors(qint64 id) {
                                             return roles;
                                         }()}});
         }
+        std::vector<std::string>& ranked = k_rows_[id];
+        ranked.clear();
+        for (const edi::MagneticKRow& r : found) ranked.push_back(r.k);
         // The best row's roles, for the marks this search ran on.
         k_marks_.roles.clear();
         if (!found.empty())

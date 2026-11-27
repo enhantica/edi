@@ -563,7 +563,10 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // magneticGroupsRefused answers. A newer search supersedes an older one.
     // Returns the request's identity; magneticGroupsFound carries it as the graph's `graphId` and magneticGroupsRefused
     // as its second argument, so each popup settles on its own request (review 17, F4).
-    Q_INVOKABLE int findMagneticGroups(int index, const QString& k, const QStringList& sites, bool withZeroMomentGroups);
+    // From Find k, `snapshot` and `row` name the ranked row the analysis was opened for: the graph is then searched for
+    // that row's k (the `k` text is not read) and carries both, and Add accepts it only while that snapshot is current.
+    Q_INVOKABLE int findMagneticGroups(int index, const QString& k, const QStringList& sites, bool withZeroMomentGroups,
+                                       qint64 snapshot = 0, int row = -1);
     // The allowed moment components of found group `node`, per magnetic site.
     Q_INVOKABLE QString magneticGroupMoments(int node);
     // Adds found groups `nodes` as structures, one undoable step; false and `refused` on a refusal, nothing changed.
@@ -1042,14 +1045,20 @@ class ProjectViewModel : public QObject, public ProjectEditor {
         std::vector<edi::MagneticPeak> marks;
     };
     std::map<qint64, std::shared_ptr<const KSearchSnapshot>> k_snapshots_;
+    // The rows each snapshot's search ranked, by their k, kept with the snapshot (review 18, F4).
+    std::map<qint64, std::vector<std::string>> k_rows_;
     qint64 k_next_snapshot_ = 0;
     // The last Add from a Find k snapshot: the snapshot, its first child and its experiment.
     struct KAdded {
         std::shared_ptr<const KSearchSnapshot> snapshot;
         std::string child;
+        std::weak_ptr<const edi::Structure> child_item;          // the child itself, not a same-name replacement
+        std::weak_ptr<const edi::BraggPdExperiment> experiment;  // the bank itself
     };
     std::optional<KAdded> k_added_;
     int magnetic_graph_id_ = 0;  // the request the held graph answered
+    qint64 magnetic_graph_snapshot_ = 0;  // the Find k snapshot and ranked row it was searched for, if any
+    int magnetic_graph_row_ = -1;
     void changeKMarks();
     bool adding_k_ = false;  // an Add from Find k is publishing: its own edit does not retire the marks
     void setKNote(const QString& note);

@@ -30,6 +30,10 @@ AppDialog {
     // Opened from Find k: the snapshot the chosen k was found for; Add refuses once it is no longer current
     // (review 16, F4). Empty from the Structure page.
     property real kSnapshotId: 0
+    // The ranked row of that search the analysis was opened for, and the k it set; a k typed or picked here instead
+    // is a choice of the user's own, which leaves the Find k search (review 18, F4).
+    property int kRow: -1
+    property string openedK: ""
     // The graph search this popup made; it settles on that request's answer only, and Add names the graph shown.
     property int graphRequest: 0
     signal added(int count)
@@ -117,7 +121,11 @@ AppDialog {
             return;
         }
         busy = true;
-        graphRequest = project.findMagneticGroups(structureIndex, k, ticked, zeroMoment.checked);
+        if (kSnapshotId !== 0 && k !== openedK) {
+            kSnapshotId = 0;
+            kRow = -1;
+        }
+        graphRequest = project.findMagneticGroups(structureIndex, k, ticked, zeroMoment.checked, kSnapshotId, kRow);
     }
 
     Component.onCompleted: {
@@ -126,6 +134,7 @@ AppDialog {
         Qt.callLater(() => {
             if (popup.initialK !== "")
                 popup.setK(popup.initialK);
+            popup.openedK = popup.k;
             popup.find();
         });
     }
@@ -460,7 +469,7 @@ AppDialog {
                 enabled: popup.selected.length > 0 && !popup.busy
                 onClicked: {
                     const count = popup.selected.length;
-                    if (popup.project.addMagneticCandidates(popup.structureIndex, popup.selected, startMoments.checked, popup.selectAfterAdd, popup.found ? popup.found.graphId : 0, popup.kSnapshotId)) {
+                    if (popup.project.addMagneticCandidates(popup.structureIndex, popup.selected, startMoments.checked, popup.selectAfterAdd, popup.found ? popup.found.graphId : 0, popup.found ? popup.found.snapshot : 0)) {
                         popup.added(count);
                         popup.close();
                     } else {
