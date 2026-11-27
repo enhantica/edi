@@ -21,6 +21,7 @@
 #include <QMouseEvent>
 #include <QRegularExpression>
 #include <QTimer>
+#include <QUuid>
 #include <algorithm>
 #include <iostream>
 #include <memory>
@@ -36,6 +37,7 @@
 #include "session.hpp"
 #include "assistant_test_settings.hpp"
 #include "assistant_widget_input.hpp"
+#include "row_table_model.hpp"
 #include "project_view_model.hpp"
 #include "run_log.hpp"
 #include "online_search.hpp"
@@ -44,6 +46,11 @@
 #include "assistant_file_primitives.hpp"
 #include <sys/stat.h>
 #include <sys/xattr.h>
+#endif
+#if defined(Q_OS_LINUX)
+#include <cerrno>
+#include <sys/inotify.h>
+#include <unistd.h>
 #endif
 
 // Keeps what a retried check found, for the steps after it, without an assignment inside the check.
@@ -264,6 +271,119 @@ signals:
 private:
     QString state_ = "idle";
 };
+
+#ifndef __EMSCRIPTEN__
+class AssistantProviderProbe : public QObject {
+    Q_OBJECT
+private slots:
+    void accountTurn() {
+        edi_app::use_fresh_settings();
+        QQmlApplicationEngine engine;
+        edi_app::configure_engine(engine);
+        edi_app::test::assistant_defaults();
+        QFile fixture(qEnvironmentVariable("EDI_PROVIDER_TEST_CASE"));
+        QVERIFY2(fixture.open(QIODevice::ReadOnly), "The provider probe needs an isolated account case");
+        const auto test = QJsonDocument::fromJson(fixture.readAll()).object();
+        QSettings settings(edi_app::settings_file_path(), QSettings::IniFormat);
+        const auto provider = test.value("provider").toString();
+        auto account = test.value("account").toObject();
+        const auto id = account.value("id").toString();
+        const auto accountParent = QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation)
+            + "/assistant/accounts/" + provider + "/";
+        const auto home = accountParent + id;
+        QVERIFY2(QDir().mkpath(home), "Each selected account needs its own config home");
+        QVERIFY2(QFile::setPermissions(home, QFileDevice::ReadOwner | QFileDevice::WriteOwner |
+                                      QFileDevice::ExeOwner), "The fixture must have an owner-only account home");
+        account.insert("home", home);
+        QFile identity(home + "/fixture-account.txt");
+        QVERIFY2(identity.open(QIODevice::WriteOnly), "Set the identity returned by the offline runtime");
+        identity.write(test.value("runtimeEmail").toString().toUtf8());
+        identity.close();
+        QFile credential(home + "/.credentials.json");
+        QVERIFY2(credential.open(QIODevice::WriteOnly), "Plant a credential file that edi must leave alone");
+        credential.write("{\"fixture\": \"private account sentinel\"}");
+        credential.close();
+#if defined(Q_OS_LINUX)
+        const int watcher = ::inotify_init1(IN_CLOEXEC | IN_NONBLOCK);
+        QVERIFY2(watcher >= 0, "The credential test needs a real file-access observer");
+        const auto closeWatcher = qScopeGuard([&] { ::close(watcher); });
+        QVERIFY2(::inotify_add_watch(watcher, QFile::encodeName(credential.fileName()).constData(),
+                                  IN_OPEN | IN_ACCESS | IN_MODIFY | IN_MOVE_SELF | IN_DELETE_SELF) >= 0,
+                 "The credential observer must watch the planted file");
+        char activity[1024];
+        QVERIFY2(credential.open(QIODevice::ReadOnly), "Prove the credential observer detects a read");
+        credential.read(1);
+        credential.close();
+        QVERIFY2(::read(watcher, activity, sizeof(activity)) > 0,
+                 "An actual open and read must reach the observer");
+#endif
+        auto other = account;
+        const auto otherId = QUuid::createUuid().toString(QUuid::WithoutBraces);
+        const auto otherHome = accountParent + otherId;
+        other.insert("id", otherId);
+        other.insert("email", "other@example.invalid");
+        other.insert("home", otherHome);
+        QVERIFY2(QDir().mkpath(otherHome), "The other signed-in account must have a separate home");
+        QFile otherIdentity(otherHome + "/fixture-account.txt");
+        QVERIFY2(otherIdentity.open(QIODevice::WriteOnly), "Set the other account's offline identity");
+        otherIdentity.write("other@example.invalid");
+        otherIdentity.close();
+        const auto key = "Assistant/Providers/" + provider;
+        settings.setValue(key + "/accounts",
+                          QJsonDocument(QJsonObject{{"version", 1}, {"accounts", QJsonArray{other, account}}})
+                              .toJson(QJsonDocument::Compact));
+        settings.setValue("Assistant/activeAccount", provider + "/" + id);
+        const auto foreignThread = QUuid::createUuid().toString(QUuid::WithoutBraces);
+        const QJsonObject foreign{
+            {"thread", foreignThread}, {"originator", "edi"}, {"account", otherId},
+            {"provider", provider}, {"title", "Other account conversation"}};
+        settings.setValue(key + "/sessions",
+                          QJsonDocument(QJsonObject{{"version", 1}, {"threads", QJsonObject{{foreignThread, foreign}}}})
+                              .toJson(QJsonDocument::Compact));
+        settings.sync();
+        QVERIFY2(settings.status() == QSettings::NoError, "The account fixture must reach the settings store");
+
+        auto* session = engine.singletonInstance<edi_app::Session*>("edi.app", "Session");
+        QVERIFY2(session, "The probe must reach the application's normal desktop session");
+        auto* assistant = session->assistant();
+        QVERIFY2(assistant->resumeConnection(), "A selected, signed-in provider must be available");
+        if (test.value("mismatch").toBool()) {
+            QTRY_VERIFY2_WITH_TIMEOUT(!assistant->lastError().isEmpty(),
+                                     "The wrong runtime identity must surface as an error", 3000);
+            QVERIFY2(!assistant->connected(), "A mismatched runtime must not connect");
+            assistant->send("Do not send this prompt");
+            return;
+        }
+        QTRY_VERIFY2_WITH_TIMEOUT(assistant->connected() && assistant->draftAdmissionReady(),
+                                 qPrintable(assistant->lastError()), 3000);
+        assistant->refreshSessions();
+        QTRY_VERIFY2_WITH_TIMEOUT(!assistant->sessionsLoading(), "The account thread list must settle", 1000);
+        const auto* sessions = assistant->sessions();
+        for (int row = 0; row < sessions->rowCount(); ++row)
+            QVERIFY2(sessions->text(row, "id") != foreignThread, "Another account's thread must stay out of this list");
+        const auto selection = assistant->beginFileSelection();
+        QVERIFY2(!selection.isEmpty(), "The signed-in assistant must accept file selection");
+        QVERIFY2(assistant->addSelectedFiles(selection, {QUrl::fromLocalFile(test.value("file").toString())}),
+                 qPrintable(assistant->lastError()));
+        const auto fileId = assistant->selectedFiles()->text(0, "id");
+        QVERIFY2(!fileId.isEmpty(), "The attached sample must have an edi file identity");
+        assistant->send("Read the attached sample. fixture-file-id=" + fileId);
+        const auto appearsInTranscript = [&] {
+            auto* rows = assistant->messages();
+            for (int row = 0; row < rows->rowCount(); ++row)
+                if (rows->text(row, "kind") == "assistant" && rows->text(row, "text").contains("visible")) return true;
+            return false;
+        };
+        QTRY_VERIFY2_WITH_TIMEOUT(appearsInTranscript(), qPrintable(assistant->lastError()), 3000);
+#if defined(Q_OS_LINUX)
+        const auto events = ::read(watcher, activity, sizeof(activity));
+        const auto readError = errno;
+        QVERIFY2(events == -1 && readError == EAGAIN,
+                 "The credential observer must report no opens, reads or changes");
+#endif
+    }
+};
+#endif
 
 class AssistantUiTests : public QObject {
     Q_OBJECT
@@ -1649,6 +1769,12 @@ int main(int argc, char** argv) {
         QStandardPaths::setTestModeEnabled(true);
         QGuiApplication app(argc, argv);
         app.setAttribute(Qt::AA_Use96Dpi, true);
+#ifndef __EMSCRIPTEN__
+        if (qEnvironmentVariableIsSet("EDI_PROVIDER_TEST_CASE")) {
+            AssistantProviderProbe probe;
+            return QTest::qExec(&probe, argc, argv);
+        }
+#endif
         AssistantUiTests tests;
         QTEST_SET_MAIN_SOURCE_PATH
         return QTest::qExec(&tests, argc, argv);

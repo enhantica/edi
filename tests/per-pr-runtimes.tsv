@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-25T16:21:43Z
+# measured_utc = 2026-11-27T00:43:40Z
 #
-# Recorded from: measured test run (3 node(s) measured once, 187620 banked, 0 stale row(s) dropped)
-# Collected tests: 267525; with a reported duration: 86316
+# Recorded from: measured test run (6 node(s) measured once, 187623 banked, 0 stale row(s) dropped)
+# Collected tests: 267531; with a reported duration: 86316
 # Module-scoped fixture costs recorded: 219
 #
 # Breaches are decided PER TIER against the table
@@ -29,12 +29,12 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 267525
+# inventory_python = 267531
 # inventory_cpp = 0
 # inventory_measured = 187623
-# inventory_unmeasured = 79902
+# inventory_unmeasured = 79908
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
-# inventory_pr_python = 92614
+# inventory_pr_python = 92620
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -639,6 +639,9 @@ UNMEASURED:failed-in-this-run	tests/integration/app/test_phase_scan_state.py::te
 0.580	tests/integration/app/test_phase_scan_state.py::test_description_tab_keeps_literal_authors_including_cif_nulls[.]
 0.690	tests/integration/app/test_phase_scan_state.py::test_description_tab_keeps_literal_authors_including_cif_nulls[?]
 0.580	tests/integration/app/test_phase_scan_state.py::test_description_tab_keeps_literal_authors_including_cif_nulls[A. Author; B. Author]
+UNMEASURED:failed-in-this-run	tests/integration/app/test_provider_runtime.py::test_claude_identity_mismatch_refuses_before_a_prompt
+UNMEASURED:failed-in-this-run	tests/integration/app/test_provider_runtime.py::test_selected_provider_runs_only_the_edi_tool[claude]
+UNMEASURED:failed-in-this-run	tests/integration/app/test_provider_runtime.py::test_selected_provider_runs_only_the_edi_tool[copilot]
 0.000	tests/integration/app/test_report_deferred_save.py::test_real_save_route_keeps_finished_content_and_completed_rows[deferred-excluded]
 0.000	tests/integration/app/test_report_deferred_save.py::test_real_save_route_keeps_finished_content_and_completed_rows[deferred-html]
 0.000	tests/integration/app/test_report_deferred_save.py::test_real_save_route_keeps_finished_content_and_completed_rows[deferred-pdf]
@@ -183761,6 +183764,9 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_project_load_messages.py
 0.630	tests/integration/py/test_project_load_messages.py::test_every_project_load_route_has_a_per_attempt_visible_failure_channel[zip-GetStartedGroup.qml-openProject]
 UNMEASURED:not-completed-in-this-run	tests/integration/py/test_project_save_final_write.py::test_final_save_write_contains_the_adopted_complement_and_optional_dependent[calculated]
 UNMEASURED:not-completed-in-this-run	tests/integration/py/test_project_save_final_write.py::test_final_save_write_contains_the_adopted_complement_and_optional_dependent[uncalculated]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_provider_installer.py::test_each_provider_is_an_independent_installer_payload
+UNMEASURED:failed-in-this-run	tests/integration/py/test_provider_installer.py::test_release_signing_preserves_vendor_binary_bytes[macos--\xcf\xfa\xed\xfe]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_provider_installer.py::test_release_signing_preserves_vendor_binary_bytes[windows-.exe-MZ\x00\x00]
 0.150	tests/integration/py/test_public_trial_provenance.py::test_exported_trial_provenance_requires_its_real_committed_document[absolute]
 0.190	tests/integration/py/test_public_trial_provenance.py::test_exported_trial_provenance_requires_its_real_committed_document[dirty]
 0.190	tests/integration/py/test_public_trial_provenance.py::test_exported_trial_provenance_requires_its_real_committed_document[missing-argument]
