@@ -44,6 +44,9 @@ Item {
     }
     property string addedNote: ""
     property string addedBase: ""
+    // A dismissed or replaced notice is not brought back by a late check.
+    onAddedNoteChanged: if (addedNote === "")
+        intensityCheck.stop()
     readonly property Component kVector: kVectorComponent
     readonly property Component analysis: analysisComponent
 
@@ -52,11 +55,12 @@ Item {
         if (chart.axisProject)
             chart.axisProject.setKSearchActive(on);
     }
-    // Find k: one snapshot of the parent, the experiment, its calculation and the marks, taken now and carried by value
-    // through the k dialog and the analysis into Add, which refuses it once anything in it changed (review 16, F4).
+    // Find k: one snapshot of the parent, the experiment, its calculation and the marks, taken now and kept by the
+    // project; the k dialog, the analysis and Add receive its identity and Add refuses it once anything in it changed
+    // (review 16 and 17, F4).
     function openKVectors() {
         const snapshot = chart.axisProject.kSnapshot();
-        if (snapshot.parent === undefined)
+        if (snapshot.id === undefined)
             return;
         const popup = chart.kVector.createObject(Overlay.overlay, {
             project: chart.axisProject,
@@ -66,14 +70,14 @@ Item {
         popup.open();
     }
     function openAnalysis(k, snapshot) {
-        if (!chart.axisProject.kSnapshotCurrent(snapshot))
+        if (!chart.axisProject.kSnapshotCurrent(snapshot.id))
             return;
         const analysis = chart.analysis.createObject(Overlay.overlay, {
             project: chart.axisProject,
             structureIndex: snapshot.parent,
             structure: chart.axisProject.structureAt(snapshot.parent),
             initialK: k,
-            kSnapshot: snapshot,
+            kSnapshotId: snapshot.id,
             selectAfterAdd: false
         }) as MagneticPopup;
         analysis.added.connect(count => {
@@ -81,7 +85,7 @@ Item {
             const note = chart.axisProject.lastMagneticNote();
             chart.addedNote = note === "" ? base : base + " · " + note;
             chart.addedBase = chart.addedNote;
-            intensityCheck.snapshot = snapshot;
+            intensityCheck.snapshot = snapshot.id;
             intensityCheck.tries = 0;
             intensityCheck.start();
         });
@@ -1317,8 +1321,8 @@ Item {
     Timer {
         id: intensityCheck
         property int tries: 0
-        // The Find k snapshot of the Add: its experiment and marks, not whatever is shown by now.
-        property var snapshot: ({})
+        // The Find k snapshot of the Add, whose experiment, marks and child the project reads, not whatever is shown by now.
+        property real snapshot: 0
         interval: 500
         repeat: true
         onTriggered: {
@@ -1326,11 +1330,15 @@ Item {
                 stop();
                 return;
             }
-            const marks = snapshot.marks ?? [];
-            const found = chart.axisProject.magneticIntensityAt(snapshot.experiment, marks.map(p => p.x), marks.map(p => p.halfWidth));
+            const found = chart.axisProject.kAddedIntensity(snapshot);
+            if (found.retired === true) {
+                stop();
+                return;
+            }
             if (found.values === undefined)
                 return;
             stop();
+            const marks = found.marks;
             const none = [];
             for (let i = 0; i < marks.length; ++i)
                 if (found.values[i] < Math.max(1.0, 0.01 * found.max))

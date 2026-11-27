@@ -561,14 +561,17 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     Q_INVOKABLE QVariantList magneticSites(int index) const;
     // Finds the magnetic groups `k` allows for structure `index` off the GUI thread; magneticGroupsFound or
     // magneticGroupsRefused answers. A newer search supersedes an older one.
-    Q_INVOKABLE void findMagneticGroups(int index, const QString& k, const QStringList& sites, bool withZeroMomentGroups);
+    // Returns the request's identity; magneticGroupsFound carries it as the graph's `graphId` and magneticGroupsRefused
+    // as its second argument, so each popup settles on its own request (review 17, F4).
+    Q_INVOKABLE int findMagneticGroups(int index, const QString& k, const QStringList& sites, bool withZeroMomentGroups);
     // The allowed moment components of found group `node`, per magnetic site.
     Q_INVOKABLE QString magneticGroupMoments(int node);
     // Adds found groups `nodes` as structures, one undoable step; false and `refused` on a refusal, nothing changed.
     // `select`: the first new structure becomes the current one (the popup opened from the Structure page).
-    // `snapshot`: the Find k snapshot the analysis came from (kSnapshot); Add refuses when it is no longer current.
-    Q_INVOKABLE bool addMagneticCandidates(int index, const QList<int>& nodes, bool startMoments, bool select = true,
-                                           const QVariantMap& snapshot = {});
+    // `graph`: the identity of the graph the nodes were chosen in, which must still be the one held. `snapshot`: the
+    // Find k snapshot the analysis came from (0 from the Structure page), which must still be current and this parent's.
+    Q_INVOKABLE bool addMagneticCandidates(int index, const QList<int>& nodes, bool startMoments, bool select, int graph,
+                                           qint64 snapshot = 0);
     QVariantMap kSearch() const;
     // Turns marking on for the current experiment (its parent, its candidate peaks, the pre-marks) or off.
     Q_INVOKABLE void setKSearchActive(bool on);
@@ -576,12 +579,18 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     Q_INVOKABLE void toggleKMarkAt(double x);
     Q_INVOKABLE void removeKMark(int index);
     Q_INVOKABLE void clearKMarks();
-    // Find k's snapshot, taken when the user presses Find k, as a value: the parent by row, name and content key, the
-    // experiment by row, name and inputs, whether its calculation was current, and the marked peaks. It travels with
-    // the search, the k dialog and the analysis into Add. Empty and `refused` when nothing is marked.
+    // Find k's snapshot, taken when the user presses Find k (review 17, F4): one immutable object the project keeps,
+    // holding the parent by row, name and content key, the experiment by row, name and inputs, whether its calculation
+    // was current, and the marks with their generation. Every later step receives its identity, never a copy:
+    // {id, parent, experiment, marks} for display, the id for every call. Empty and `refused` when nothing is marked.
     Q_INVOKABLE QVariantMap kSnapshot();
-    // Whether `snapshot` still describes the project and the current marks.
-    Q_INVOKABLE bool kSnapshotCurrent(const QVariantMap& snapshot) const;
+    // Whether snapshot `id` exists and still describes the project and the current marks (a Clear and the same marks
+    // again is another generation).
+    Q_INVOKABLE bool kSnapshotCurrent(qint64 id) const;
+    // After an Add from snapshot `id`: the added child's magnetic curve at the snapshot's marks in the snapshot's
+    // experiment ({structure, values, max}); {retired: true} once that Add's child or experiment is gone or another
+    // Add followed; empty while the calculation does not hold the child yet.
+    Q_INVOKABLE QVariantMap kAddedIntensity(qint64 id) const;
     // Find k from data: each experiment linking structure `index`, {index, name, eligible, reason}; eligible while a
     // kept fit's inputs still match (recordFitAdoption).
     Q_INVOKABLE QVariantList magneticDataChoices(int index) const;
@@ -606,8 +615,9 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     Q_INVOKABLE QVariantList magneticPeaks(int index, int experiment);
     // Ranks propagation vectors for the ticked peaks off the GUI thread; propagationVectorsFound or
     // propagationVectorsRefused answers.
-    // The search runs on the snapshot's own peaks; a result arrives only while that snapshot is still current.
-    Q_INVOKABLE void findPropagationVectors(const QVariantMap& snapshot);
+    // The search runs on snapshot `id`'s own peaks; propagationVectorsFound or propagationVectorsRefused answers with
+    // the same id, a stale snapshot's search with a refusal.
+    Q_INVOKABLE void findPropagationVectors(qint64 id);
     // Called when a fit is kept: the inputs of every experiment it calculated.
     void recordFitAdoption();
     // The parameter table's "free" header: free or fix every one of `parameters` (the rows the filters show) that can
@@ -932,10 +942,10 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     void edited();
     void refused(const QString& message);
     void magneticGroupsFound(const QVariantMap& graph);
-    void magneticGroupsRefused(const QString& message);
-    void propagationVectorsFound(const QVariantList& rows);
+    void magneticGroupsRefused(const QString& message, int request);
+    void propagationVectorsFound(const QVariantList& rows, qint64 snapshot);
     void kSearchChanged();
-    void propagationVectorsRefused(const QString& message);
+    void propagationVectorsRefused(const QString& message, qint64 snapshot);
     // A grouping previewSeriesGroups worked out: what it found, and whether the files make a series.
     void seriesGroupsPreviewed(int request, const QString& text, bool valid);
     // A message for the status bar's Messages (Session lists it): a load's account, a removal's links.
@@ -1018,6 +1028,29 @@ class ProjectViewModel : public QObject, public ProjectEditor {
         QString note;
     };
     KMarks k_marks_;
+    quint64 k_generation_ = 1;  // every change of the marks
+    struct KSearchSnapshot {
+        qint64 id = 0;
+        quint64 generation = 0;
+        int parent = -1;
+        std::string parent_name;
+        std::string parent_key;
+        int experiment = -1;
+        std::string experiment_name;
+        std::uint64_t inputs = 0;
+        bool calculated = false;
+        std::vector<edi::MagneticPeak> marks;
+    };
+    std::map<qint64, std::shared_ptr<const KSearchSnapshot>> k_snapshots_;
+    qint64 k_next_snapshot_ = 0;
+    // The last Add from a Find k snapshot: the snapshot, its first child and its experiment.
+    struct KAdded {
+        std::shared_ptr<const KSearchSnapshot> snapshot;
+        std::string child;
+    };
+    std::optional<KAdded> k_added_;
+    int magnetic_graph_id_ = 0;  // the request the held graph answered
+    void changeKMarks();
     bool adding_k_ = false;  // an Add from Find k is publishing: its own edit does not retire the marks
     void setKNote(const QString& note);
     void retireKMarks();

@@ -4122,12 +4122,13 @@ QVariantList ProjectViewModel::magneticSites(int index) const {
     return out;
 }
 
-void ProjectViewModel::findMagneticGroups(int index, const QString& k, const QStringList& sites, bool withZeroMomentGroups) {
+int ProjectViewModel::findMagneticGroups(int index, const QString& k, const QStringList& sites, bool withZeroMomentGroups) {
     const unsigned search = ++magnetic_search_;
     magnetic_graph_.reset();
+    magnetic_graph_id_ = 0;
     if (index < 0 || index >= static_cast<int>(project_->structures.size())) {
-        emit magneticGroupsRefused(tr("the project has no such structure"));
-        return;
+        emit magneticGroupsRefused(tr("the project has no such structure"), static_cast<int>(search));
+        return static_cast<int>(search);
     }
     auto parent = std::make_shared<const edi::Structure>(*project_->structures[static_cast<std::size_t>(index)]);
     std::vector<std::string> ticked;
@@ -4136,14 +4137,18 @@ void ProjectViewModel::findMagneticGroups(int index, const QString& k, const QSt
     auto* watcher = new QFutureWatcher<Result>(this);
     connect(watcher, &QFutureWatcher<Result>::finished, this, [this, watcher, search, index] {
         watcher->deleteLater();
-        if (search != magnetic_search_) return;
+        if (search != magnetic_search_) {
+            emit magneticGroupsRefused(tr("another search replaced this one"), static_cast<int>(search));
+            return;
+        }
         const Result result = watcher->result();
         if (const auto* refusal = std::get_if<QString>(&result)) {
-            emit magneticGroupsRefused(*refusal);
+            emit magneticGroupsRefused(*refusal, static_cast<int>(search));
             return;
         }
         magnetic_graph_ = std::get<edi::MagneticCandidateGraph>(result);
         magnetic_graph_structure_ = index;
+        magnetic_graph_id_ = static_cast<int>(search);
         QVariantList nodes;
         for (const edi::MagneticCandidateNode& n : magnetic_graph_->nodes) {
             QVariantList subgroups;
@@ -4160,7 +4165,8 @@ void ProjectViewModel::findMagneticGroups(int index, const QString& k, const QSt
                                         {QStringLiteral("moments"), QString::fromStdString(n.moments)},
                                         {QStringLiteral("subgroups"), subgroups}});
         }
-        emit magneticGroupsFound(QVariantMap{{QStringLiteral("cell"), QString::fromStdString(magnetic_graph_->cell)},
+        emit magneticGroupsFound(QVariantMap{{QStringLiteral("graphId"), static_cast<int>(search)},
+                                             {QStringLiteral("cell"), QString::fromStdString(magnetic_graph_->cell)},
                                              {QStringLiteral("parentCells"), static_cast<int>(magnetic_graph_->parent_cells)},
                                              {QStringLiteral("nodes"), nodes}});
     });
@@ -4171,6 +4177,7 @@ void ProjectViewModel::findMagneticGroups(int index, const QString& k, const QSt
             return QString::fromUtf8(refusal.what());
         }
     }));
+    return static_cast<int>(search);
 }
 
 QString ProjectViewModel::magneticGroupMoments(int node) {
@@ -4183,19 +4190,21 @@ QString ProjectViewModel::magneticGroupMoments(int node) {
 }
 
 bool ProjectViewModel::addMagneticCandidates(int index, const QList<int>& nodes, bool startMoments, bool select,
-                                             const QVariantMap& snapshot) {
+                                             int graph, qint64 snapshot) {
     edi::Project& project = *project_;
     QString error;
     std::shared_ptr<edi::PreparedMagneticCandidates> prepared;
     try {
-        if (!magnetic_graph_ || magnetic_graph_structure_ != index)
-            throw std::invalid_argument("find the magnetic groups first");
-        // From Find k: the analysis belongs to the snapshot taken when Find k was pressed, still current, and to
-        // its parent (review 16, F4).
-        if (!snapshot.isEmpty() &&
-            (snapshot.value(QStringLiteral("parent"), -1).toInt() != index || !kSnapshotCurrent(snapshot)))
-            throw std::invalid_argument(
-                "the data, the structures or the marked peaks changed since Find k; search again");
+        // The nodes belong to the graph the caller chose them in, still the one held (review 17, F4).
+        if (!magnetic_graph_ || magnetic_graph_structure_ != index || graph <= 0 || graph != magnetic_graph_id_)
+            throw std::invalid_argument("the magnetic groups shown are no longer the ones found; find them again");
+        // From Find k: the snapshot taken when Find k was pressed, still current and this parent's.
+        if (snapshot != 0) {
+            const auto held = k_snapshots_.find(snapshot);
+            if (held == k_snapshots_.end() || held->second->parent != index || !kSnapshotCurrent(snapshot))
+                throw std::invalid_argument(
+                    "the data, the structures or the marked peaks changed since Find k; search again");
+        }
         std::vector<std::size_t> picked;
         for (const int n : nodes) picked.push_back(static_cast<std::size_t>(n));
         prepared = edi::prepare_magnetic_candidates(project, static_cast<std::size_t>(index), *magnetic_graph_, picked,
@@ -4214,7 +4223,7 @@ bool ProjectViewModel::addMagneticCandidates(int index, const QList<int>& nodes,
     edi::StructuresUndo before = edi::capture_structures(project);
     if (error.isEmpty()) {
         try {
-            adding_k_ = !snapshot.isEmpty();
+            adding_k_ = snapshot != 0;
             error = apply(edi::Edit::add_magnetic_candidates(project, prepared), true);
             adding_k_ = false;
         } catch (const std::exception& refusal) {
@@ -4230,6 +4239,9 @@ bool ProjectViewModel::addMagneticCandidates(int index, const QList<int>& nodes,
     undo_history_.emplace_back(std::move(before));
     syncUndo();
     last_magnetic_added_ = prepared->structures.empty() ? std::string() : prepared->structures.front()->name.value();
+    // The after-Add notice belongs to this Add: its snapshot and its first child, never to what is shown later.
+    k_added_.reset();
+    if (snapshot != 0) k_added_ = KAdded{k_snapshots_.at(snapshot), last_magnetic_added_};
     if (!last_magnetic_note_.isEmpty()) emit information(last_magnetic_note_);
     if (select) setCurrentStructureIndex(static_cast<int>(structure_models_.size()) - static_cast<int>(prepared->structures.size()));
     return true;
@@ -4354,17 +4366,6 @@ QVariantMap peak_map(const edi::MagneticPeak& p) {
             // the older name the k dialog reads: a peak on an allowed line
             {QStringLiteral("suggestion"), p.on_allowed_reflection}};
 }
-edi::MagneticPeak peak_of(const QVariantMap& m) {
-    edi::MagneticPeak p;
-    p.x = m.value(QStringLiteral("x")).toDouble();
-    p.d = m.value(QStringLiteral("d")).toDouble();
-    p.tolerance = m.value(QStringLiteral("tolerance")).toDouble();
-    p.significance = m.value(QStringLiteral("significance")).toDouble();
-    p.half_width = m.value(QStringLiteral("halfWidth")).toDouble();
-    p.on_allowed_reflection = m.value(QStringLiteral("onAllowed")).toBool();
-    p.suggested = m.value(QStringLiteral("suggested")).toBool();
-    return p;
-}
 }  // namespace
 
 QVariantList ProjectViewModel::magneticMarkCandidates(int index, int experiment) {
@@ -4403,8 +4404,14 @@ void ProjectViewModel::setKNote(const QString& note) {
     emit kSearchChanged();
 }
 
-void ProjectViewModel::setKSearchActive(bool on) {
+void ProjectViewModel::changeKMarks() {
+    ++k_generation_;
     ++k_search_;  // a search still running belongs to marks that are about to change
+    k_snapshots_.clear();  // every snapshot of the earlier marks is retired
+}
+
+void ProjectViewModel::setKSearchActive(bool on) {
+    changeKMarks();
     k_marks_ = KMarks{};
     if (!on) {
         emit kSearchChanged();
@@ -4452,7 +4459,7 @@ void ProjectViewModel::toggleKMarkAt(double x) {
         setKNote(tr("No candidate peak there."));
         return;
     }
-    ++k_search_;
+    changeKMarks();
     k_marks_.roles.clear();
     const auto at = std::find(k_marks_.marks.begin(), k_marks_.marks.end(), best);
     if (at != k_marks_.marks.end()) {
@@ -4469,7 +4476,7 @@ void ProjectViewModel::toggleKMarkAt(double x) {
 void ProjectViewModel::removeKMark(int index) {
     const auto at = std::find(k_marks_.marks.begin(), k_marks_.marks.end(), index);
     if (at == k_marks_.marks.end()) return;
-    ++k_search_;
+    changeKMarks();
     k_marks_.marks.erase(at);
     k_marks_.roles.clear();
     emit kSearchChanged();
@@ -4477,7 +4484,7 @@ void ProjectViewModel::removeKMark(int index) {
 
 void ProjectViewModel::clearKMarks() {
     if (k_marks_.marks.empty()) return;
-    ++k_search_;
+    changeKMarks();
     k_marks_.marks.clear();
     k_marks_.roles.clear();
     emit kSearchChanged();
@@ -4485,7 +4492,7 @@ void ProjectViewModel::clearKMarks() {
 
 void ProjectViewModel::retireKMarks() {
     if (!k_marks_.active || adding_k_ || (k_marks_.candidates.empty() && k_marks_.marks.empty())) return;
-    ++k_search_;
+    changeKMarks();
     k_marks_.candidates.clear();
     k_marks_.marks.clear();
     k_marks_.roles.clear();
@@ -4497,54 +4504,81 @@ QVariantMap ProjectViewModel::kSnapshot() {
         setLastError(tr("mark at least one peak"));
         return {};
     }
+    auto snapshot = std::make_shared<KSearchSnapshot>();
+    snapshot->generation = k_generation_;
+    snapshot->parent = k_marks_.parent;
+    snapshot->experiment = k_marks_.experiment;
     const std::size_t parent = static_cast<std::size_t>(k_marks_.parent);
     const std::size_t experiment = static_cast<std::size_t>(k_marks_.experiment);
-    QVariantList marks;
-    for (const int m : k_marks_.marks) marks.push_back(peak_map(k_marks_.candidates[static_cast<std::size_t>(m)]));
     try {
-        return {{QStringLiteral("parent"), k_marks_.parent},
-                {QStringLiteral("parentName"), QString::fromStdString(project_->structures[parent]->name.value())},
-                {QStringLiteral("parentKey"), QString::fromStdString(edi::magnetic_parent_key(*project_->structures[parent]))},
-                {QStringLiteral("experiment"), k_marks_.experiment},
-                {QStringLiteral("experimentName"), QString::fromStdString(project_->experiments[experiment]->name)},
-                {QStringLiteral("inputs"), QString::number(edi::magnetic_fit_inputs_hash(*project_, experiment))},
-                {QStringLiteral("calculated"), project_->experiments[experiment]->computed_current()},
-                {QStringLiteral("marks"), marks}};
+        snapshot->parent_name = project_->structures[parent]->name.value();
+        snapshot->parent_key = edi::magnetic_parent_key(*project_->structures[parent]);
+        snapshot->experiment_name = project_->experiments[experiment]->name;
+        snapshot->inputs = edi::magnetic_fit_inputs_hash(*project_, experiment);
+        snapshot->calculated = project_->experiments[experiment]->computed_current();
     } catch (const std::exception& refusal) {
         setLastError(QString::fromUtf8(refusal.what()));
         return {};
     }
+    QVariantList marks;
+    for (const int m : k_marks_.marks) {
+        snapshot->marks.push_back(k_marks_.candidates[static_cast<std::size_t>(m)]);
+        marks.push_back(peak_map(snapshot->marks.back()));
+    }
+    snapshot->id = ++k_next_snapshot_;
+    k_snapshots_[snapshot->id] = snapshot;
+    return {{QStringLiteral("id"), snapshot->id},
+            {QStringLiteral("parent"), snapshot->parent},
+            {QStringLiteral("experiment"), snapshot->experiment},
+            {QStringLiteral("marks"), marks}};
 }
 
-bool ProjectViewModel::kSnapshotCurrent(const QVariantMap& snapshot) const {
-    const int parent = snapshot.value(QStringLiteral("parent"), -1).toInt();
-    const int experiment = snapshot.value(QStringLiteral("experiment"), -1).toInt();
-    if (parent < 0 || parent >= static_cast<int>(project_->structures.size()) || experiment < 0 ||
-        experiment >= static_cast<int>(project_->experiments.size()))
+bool ProjectViewModel::kSnapshotCurrent(qint64 id) const {
+    const auto held = k_snapshots_.find(id);
+    if (held == k_snapshots_.end()) return false;  // foreign, or retired with its marks
+    const KSearchSnapshot& snapshot = *held->second;
+    if (snapshot.generation != k_generation_ || !k_marks_.active || k_marks_.parent != snapshot.parent ||
+        k_marks_.experiment != snapshot.experiment)
         return false;
-    const edi::Structure& structure = *project_->structures[static_cast<std::size_t>(parent)];
-    const edi::BraggPdExperiment& bank = *project_->experiments[static_cast<std::size_t>(experiment)];
-    if (QString::fromStdString(structure.name.value()) != snapshot.value(QStringLiteral("parentName")).toString() ||
-        QString::fromStdString(edi::magnetic_parent_key(structure)) != snapshot.value(QStringLiteral("parentKey")).toString() ||
-        QString::fromStdString(bank.name) != snapshot.value(QStringLiteral("experimentName")).toString() ||
-        bank.computed_current() != snapshot.value(QStringLiteral("calculated")).toBool())
+    if (snapshot.parent >= static_cast<int>(project_->structures.size()) ||
+        snapshot.experiment >= static_cast<int>(project_->experiments.size()))
+        return false;
+    const edi::Structure& structure = *project_->structures[static_cast<std::size_t>(snapshot.parent)];
+    const edi::BraggPdExperiment& bank = *project_->experiments[static_cast<std::size_t>(snapshot.experiment)];
+    if (structure.name.value() != snapshot.parent_name || edi::magnetic_parent_key(structure) != snapshot.parent_key ||
+        bank.name != snapshot.experiment_name || bank.computed_current() != snapshot.calculated)
         return false;
     try {
-        if (QString::number(edi::magnetic_fit_inputs_hash(*project_, static_cast<std::size_t>(experiment))) !=
-            snapshot.value(QStringLiteral("inputs")).toString())
-            return false;
+        return edi::magnetic_fit_inputs_hash(*project_, static_cast<std::size_t>(snapshot.experiment)) == snapshot.inputs;
     } catch (const std::exception&) {
         return false;
     }
-    // The marks still those of the experiment's k search.
-    if (!k_marks_.active || k_marks_.experiment != experiment || k_marks_.parent != parent) return false;
-    const QVariantList marks = snapshot.value(QStringLiteral("marks")).toList();
-    if (marks.size() != static_cast<qsizetype>(k_marks_.marks.size())) return false;
-    for (qsizetype i = 0; i < marks.size(); ++i) {
-        const edi::MagneticPeak& held = k_marks_.candidates[static_cast<std::size_t>(k_marks_.marks[static_cast<std::size_t>(i)])];
-        if (marks[i].toMap().value(QStringLiteral("x")).toDouble() != held.x) return false;
+}
+
+QVariantMap ProjectViewModel::kAddedIntensity(qint64 id) const {
+    const QVariantMap retired{{QStringLiteral("retired"), true}};
+    if (!k_added_ || k_added_->snapshot->id != id || last_magnetic_added_ != k_added_->child) return retired;
+    const KSearchSnapshot& snapshot = *k_added_->snapshot;
+    const int experiment = snapshot.experiment;
+    if (experiment < 0 || experiment >= static_cast<int>(project_->experiments.size()) ||
+        project_->experiments[static_cast<std::size_t>(experiment)]->name != snapshot.experiment_name)
+        return retired;
+    if (std::none_of(project_->structures.begin(), project_->structures.end(),
+                     [this](const auto& s) { return s->name.value() == k_added_->child; }))
+        return retired;  // undone
+    QList<double> xs;
+    QList<double> halfWidths;
+    for (const edi::MagneticPeak& p : snapshot.marks) {
+        xs.push_back(p.x);
+        halfWidths.push_back(p.half_width);
     }
-    return true;
+    QVariantMap out = magneticIntensityAt(experiment, xs, halfWidths);
+    if (!out.isEmpty()) {
+        QVariantList marks;
+        for (const edi::MagneticPeak& p : snapshot.marks) marks.push_back(peak_map(p));
+        out.insert(QStringLiteral("marks"), marks);
+    }
+    return out;
 }
 
 QVariantList ProjectViewModel::magneticPeaks(int index, int experiment) {
@@ -4578,30 +4612,30 @@ QVariantList ProjectViewModel::magneticPeaks(int index, int experiment) {
     return out;
 }
 
-void ProjectViewModel::findPropagationVectors(const QVariantMap& snapshot) {
+void ProjectViewModel::findPropagationVectors(qint64 id) {
     const unsigned search = ++k_search_;
-    if (!kSnapshotCurrent(snapshot)) {
-        emit propagationVectorsRefused(tr("The data, the structures or the marked peaks changed; mark the peaks again."));
+    const QString stale = tr("The data, the structures or the marked peaks changed; mark the peaks again.");
+    if (!kSnapshotCurrent(id)) {
+        emit propagationVectorsRefused(stale, id);
         return;
     }
-    std::vector<edi::MagneticPeak> peaks;
-    for (const QVariant& mark : snapshot.value(QStringLiteral("marks")).toList()) peaks.push_back(peak_of(mark.toMap()));
-    const int index = snapshot.value(QStringLiteral("parent")).toInt();
-    const int experiment = snapshot.value(QStringLiteral("experiment")).toInt();
+    const std::shared_ptr<const KSearchSnapshot> snapshot = k_snapshots_.at(id);
+    const std::vector<edi::MagneticPeak> peaks = snapshot->marks;
+    const int index = snapshot->parent;
+    const int experiment = snapshot->experiment;
     auto project = std::make_shared<const edi::Project>(*project_);
     using Result = std::variant<std::vector<edi::MagneticKRow>, QString>;
     auto* watcher = new QFutureWatcher<Result>(this);
-    connect(watcher, &QFutureWatcher<Result>::finished, this, [this, watcher, search, snapshot] {
+    connect(watcher, &QFutureWatcher<Result>::finished, this, [this, watcher, search, id, stale] {
         watcher->deleteLater();
-        // Retired by a later search or a change of the marks; a late result for inputs that changed is refused.
-        if (search != k_search_) return;
-        if (!kSnapshotCurrent(snapshot)) {
-            emit propagationVectorsRefused(tr("The data, the structures or the marked peaks changed; mark the peaks again."));
+        // Settled on its own result or retirement: a later search, a change of the marks or of the inputs refuses it.
+        if (search != k_search_ || !kSnapshotCurrent(id)) {
+            emit propagationVectorsRefused(stale, id);
             return;
         }
         const Result result = watcher->result();
         if (const auto* refusal = std::get_if<QString>(&result)) {
-            emit propagationVectorsRefused(*refusal);
+            emit propagationVectorsRefused(*refusal, id);
             return;
         }
         QVariantList rows;
@@ -4628,7 +4662,7 @@ void ProjectViewModel::findPropagationVectors(const QVariantMap& snapshot) {
         if (!found.empty())
             for (const std::string& role : found.front().roles) k_marks_.roles.append(QString::fromStdString(role));
         emit kSearchChanged();
-        emit propagationVectorsFound(rows);
+        emit propagationVectorsFound(rows, id);
     });
     watcher->setFuture(QtConcurrent::run(magneticPool(), [project, experiment, index, peaks]() -> Result {
         try {

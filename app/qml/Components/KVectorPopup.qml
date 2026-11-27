@@ -39,11 +39,14 @@ AppDialog {
     anchors.centerIn: parent
     onClosed: destroy()
 
-    Component.onCompleted: project.findPropagationVectors(snapshot)
+    Component.onCompleted: project.findPropagationVectors(snapshot.id)
 
     Connections {
         target: popup.project
-        function onPropagationVectorsFound(found) {
+        // Each answer names its snapshot; this dialog settles on its own only.
+        function onPropagationVectorsFound(found, id) {
+            if (id !== popup.snapshot.id)
+                return;
             popup.searching = false;
             // Buildable only; special points first, each group in the engine's ranking; at most ten.
             const buildable = found.filter(r => r.verdict === "buildable");
@@ -55,7 +58,9 @@ AppDialog {
             if (popup.rows.length === 0)
                 popup.refusal = qsTr("No k with a magnetic cell of at most 24 parent cells indexes the marked peaks.");
         }
-        function onPropagationVectorsRefused(message) {
+        function onPropagationVectorsRefused(message, id) {
+            if (id !== popup.snapshot.id)
+                return;
             popup.searching = false;
             popup.refusal = message;
         }
@@ -187,7 +192,7 @@ AppDialog {
     function analyse() {
         if (list.currentIndex < 0 || list.currentIndex >= rows.length)
             return;
-        if (!project.kSnapshotCurrent(snapshot)) {
+        if (!project.kSnapshotCurrent(snapshot.id)) {
             refusal = qsTr("The data, the structures or the marked peaks changed; mark the peaks again.");
             return;
         }

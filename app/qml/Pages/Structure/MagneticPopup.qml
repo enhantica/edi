@@ -29,7 +29,9 @@ AppDialog {
     property bool selectAfterAdd: true
     // Opened from Find k: the snapshot the chosen k was found for; Add refuses once it is no longer current
     // (review 16, F4). Empty from the Structure page.
-    property var kSnapshot: ({})
+    property real kSnapshotId: 0
+    // The graph search this popup made; it settles on that request's answer only, and Add names the graph shown.
+    property int graphRequest: 0
     signal added(int count)
 
     property var presets: []
@@ -115,7 +117,7 @@ AppDialog {
             return;
         }
         busy = true;
-        project.findMagneticGroups(structureIndex, k, ticked, zeroMoment.checked);
+        graphRequest = project.findMagneticGroups(structureIndex, k, ticked, zeroMoment.checked);
     }
 
     Component.onCompleted: {
@@ -131,10 +133,14 @@ AppDialog {
     Connections {
         target: popup.project
         function onMagneticGroupsFound(graph) {
+            if (graph.graphId !== popup.graphRequest)
+                return;
             popup.busy = false;
             popup.found = graph;
         }
-        function onMagneticGroupsRefused(message) {
+        function onMagneticGroupsRefused(message, request) {
+            if (request !== popup.graphRequest)
+                return;
             popup.busy = false;
             popup.refusal = message;
         }
@@ -454,7 +460,7 @@ AppDialog {
                 enabled: popup.selected.length > 0 && !popup.busy
                 onClicked: {
                     const count = popup.selected.length;
-                    if (popup.project.addMagneticCandidates(popup.structureIndex, popup.selected, startMoments.checked, popup.selectAfterAdd, popup.kSnapshot)) {
+                    if (popup.project.addMagneticCandidates(popup.structureIndex, popup.selected, startMoments.checked, popup.selectAfterAdd, popup.found ? popup.found.graphId : 0, popup.kSnapshotId)) {
                         popup.added(count);
                         popup.close();
                     } else {
