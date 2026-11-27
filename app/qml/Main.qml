@@ -892,60 +892,15 @@ EaComponents.ApplicationWindow {
                 if (WebFiles.available)
                     Session.openWebProject(zip ? "file" : "folder");
                 else
-                    window.openChooser(zip ? openZipChooser : openFolderChooser, {});
+                    Qt.callLater(() => (zip ? openZipDialog : openFolderDialog).open());
             });
         }
         function onImportProjectRequested(importer) {
-            AppState.afterChanges(() => window.openChooser(importChooser, {
-                    importer: importer
-                }));
+            AppState.afterChanges(() => {
+                importDialog.importer = importer;
+                Qt.callLater(() => importDialog.open());
+            });
         }
-    }
-    // A Load chooser opens on the next turn for the project whose changes were just dealt with, and what it chooses
-    // opens only while that project is still open: another one published meanwhile was never asked about. The
-    // browser's chooser carries its request the same way (Session.openWebProject).
-    function openChooser(chooser, properties) {
-        const owner = Session.projectGeneration();
-        Qt.callLater(() => {
-            if (Session.projectGeneration() !== owner)
-                return;
-            const ask = window.showNativeAsk(chooser, properties);
-            ask.ownerGeneration = owner;
-            ask.open();
-        });
-    }
-    // A native picker is made for each showing and goes with it. A platform may deliver a dialog's answer after its
-    // close(); that late answer then reaches only the retired showing's own object, never the next showing's.
-    property var nativeAsk: null
-    // The last showing a handoff or a newer ask ended, kept until it is deleted: a test can still deliver its old
-    // answer there and see that it changes nothing.
-    property var retiredAsk: null
-    function showNativeAsk(component, properties) {
-        window.endNativeAsk(window.nativeAsk);
-        window.nativeAsk = component.createObject(window, properties);
-        return window.nativeAsk;
-    }
-    // Ends a showing on every path, in this order: no longer the current one and its answer void, then closed (its
-    // close() answers Rejected at once, which now finds nothing), then deleted.
-    function endNativeAsk(ask) {
-        if (!ask || ask.ended)
-            return;
-        ask.ended = true;
-        ask.ownerGeneration = -2;
-        if (window.nativeAsk === ask)
-            window.nativeAsk = null;
-        if (ask.visible) {
-            window.retiredAsk = ask;
-            ask.close();
-        }
-        ask.destroy();
-    }
-    function openChosen(location) {
-        const owner = Session.projectGeneration();
-        Qt.callLater(() => {
-            if (Session.projectGeneration() === owner)
-                Session.openProject(location);
-        });
     }
 
     // Unsaved changes are saved or discarded before the project is replaced, closed or the app quits (edi ADR-0052): a
@@ -965,24 +920,62 @@ EaComponents.ApplicationWindow {
             ApplicationInfo.projectChangesQuestion(action, null, true);
         }
     }
-    // The question's state, which outlives each showing: what waits on the answer, a browser Save's action and an
-    // untitled guard Save's (ApplicationInfo). Each showing is its own dialog, made when it asks and gone with it, and
-    // each answer names its showing: an answer from a showing that ended (a handoff, or a newer question) does
-    // nothing, and every showing takes one answer only.
-    // Each showing is placed as the declared dialogs were: on the window's overlay, the base Dialog's parent, centred by
-    // AppDialog.
-    QtObject {
+    AppDialog {
         id: unsavedChanges
+        objectName: "unsavedChanges"
         property var action: null
         property var abandoned: null
         property var nativeCreation: null
+        onOpened: ApplicationInfo.unsavedProjectOpened()
+        function abandonAction() {
+            ApplicationInfo.abandonUnsavedProjectAction();
+        }
+        onRejected: abandonAction()
         // The assistant closes a saved project: nothing to save, only Close project or Cancel.
         property bool saved: false
         property string closing: ""
-        // The project the answer was given about: a browser Save's waiting action runs only while it is open.
+        title: saved ? qsTr("Close the project?") : qsTr("Save the changes?")
+        standardButtons: saved ? Dialog.Yes | Dialog.Cancel : Dialog.Save | Dialog.Discard | Dialog.Cancel
+        // The project this question is about (Session.projectGeneration): its answers act only while it is the open one.
         property real ownerGeneration: -1
         // The tutorial is bringing its own project back to answer this question (ApplicationInfo.retireProjectAsks).
         property bool restoring: false
+        onAboutToShow: {
+            ownerGeneration = Session.projectGeneration();
+            const yes = standardButton(Dialog.Yes);
+            if (yes !== null) {
+                yes.text = qsTr("Close project");
+                yes.objectName = "unsavedChanges.close";
+            }
+        }
+        // Name the existing visible controls, as Save as names its real native OK button.
+        Binding {
+            target: unsavedChanges.opened ? unsavedChanges.header : null
+            when: target !== null
+            property: "objectName"
+            value: "unsavedChanges.title"
+        }
+        Binding {
+            target: unsavedChanges.opened ? unsavedChanges.standardButton(Dialog.Discard) : null
+            when: target !== null
+            property: "objectName"
+            value: "unsavedChanges.discard"
+        }
+        Binding {
+            target: unsavedChanges.opened ? unsavedChanges.standardButton(Dialog.Save) : null
+            when: target !== null
+            property: "objectName"
+            value: "unsavedChanges.save"
+        }
+        Binding {
+            target: unsavedChanges.opened ? unsavedChanges.standardButton(Dialog.Cancel) : null
+            when: target !== null
+            property: "objectName"
+            value: "unsavedChanges.cancel"
+        }
+        // As wide as its line (owner, 2026-10-25).
+        contentWidth: unsavedRow.implicitWidth
+        contentHeight: unsavedRow.implicitHeight
         // Save writes in place; a project with nowhere to write yet opens Save as, and the action waits for the user to
         // ask again. In the web app the place is written after Save returns: the action waits until it is, and is
         // dropped if it is not (the window says why).
@@ -997,150 +990,35 @@ EaComponents.ApplicationWindow {
         property var untitledAbandoned: null
         // The project the guard asked about: the action runs only while it is still the open one.
         property var untitledProject: null
-        // The showing on screen, `{dialog, ownerGeneration, answered, gone}`, or null; kept until its exit has ended.
-        property var ask: null
-        readonly property var dialog: ask !== null ? ask.dialog : null
-        readonly property bool visible: ask !== null && ask.dialog.visible
+        onAccepted: ApplicationInfo.acceptUnsavedProject()
 
-        function abandonAction() {
-            ApplicationInfo.abandonUnsavedProjectAction();
-        }
-        // An open question that has not been answered takes the new action as it is; otherwise a new showing asks.
-        function open() {
-            if (unsavedChanges.ask !== null && !unsavedChanges.ask.answered)
-                return;
-            unsavedChanges.retire();
-            const showing = {
-                dialog: unsavedQuestion.createObject(window.contentItem, {
-                    parent: window.Overlay.overlay
-                }),
-                ownerGeneration: Session.projectGeneration(),
-                answered: false,
-                gone: false
-            };
-            showing.dialog.opened.connect(() => unsavedChanges.shown(showing));
-            showing.dialog.accepted.connect(() => unsavedChanges.answer(showing, "save"));
-            showing.dialog.discarded.connect(() => unsavedChanges.answer(showing, "discard"));
-            showing.dialog.rejected.connect(() => unsavedChanges.answer(showing, "cancel"));
-            showing.dialog.closed.connect(() => unsavedChanges.forget(showing));
-            unsavedChanges.ask = showing;
-            showing.dialog.open();
-        }
-        function close() {
-            if (unsavedChanges.ask !== null)
-                unsavedChanges.ask.dialog.close();
-        }
-        function shown(showing) {
-            if (showing === unsavedChanges.ask && !showing.answered)
-                ApplicationInfo.unsavedProjectOpened();
-        }
-        function answer(showing, kind) {
-            // Discard leaves a dialog open by itself.
-            if (kind === "discard")
-                showing.dialog.close();
-            if (showing !== unsavedChanges.ask || showing.answered)
-                return;
-            showing.answered = true;
-            if (showing.ownerGeneration !== Session.projectGeneration())
-                return;
-            unsavedChanges.ownerGeneration = showing.ownerGeneration;
-            if (kind === "save")
-                ApplicationInfo.acceptUnsavedProject();
-            else if (kind === "discard")
-                ApplicationInfo.discardUnsavedProject();
-            else
-                unsavedChanges.abandonAction();
-        }
-        function forget(showing) {
-            if (unsavedChanges.ask === showing)
-                unsavedChanges.ask = null;
-            if (!showing.gone) {
-                showing.gone = true;
-                showing.dialog.destroy();
+        Connections {
+            target: Session
+            function onWebSaveFinished(saved) {
+                ApplicationInfo.projectWebSaveFinished(saved);
+            }
+            function onUntitledSettled(id, state) {
+                ApplicationInfo.projectUntitledSettled(id, state);
             }
         }
-        // Ends the showing at once, an answered one still closing included: true when nobody had answered it.
-        function retire(): bool {
-            const showing = unsavedChanges.ask;
-            if (showing === null)
-                return false;
-            unsavedChanges.ask = null;
-            const pending = !showing.answered;
-            showing.answered = true;
-            window.retiredAsk = showing.dialog;
-            AppState.retirePopup(showing.dialog);
-            unsavedChanges.forget(showing);
-            return pending;
-        }
-    }
-    Connections {
-        target: Session
-        function onWebSaveFinished(saved) {
-            ApplicationInfo.projectWebSaveFinished(saved);
-        }
-        function onUntitledSettled(id, state) {
-            ApplicationInfo.projectUntitledSettled(id, state);
-        }
-    }
-    Component {
-        id: unsavedQuestion
-        AppDialog {
-            id: question
-            objectName: "unsavedChanges"
-            title: unsavedChanges.saved ? qsTr("Close the project?") : qsTr("Save the changes?")
-            standardButtons: unsavedChanges.saved ? Dialog.Yes | Dialog.Cancel : Dialog.Save | Dialog.Discard | Dialog.Cancel
-            onAboutToShow: {
-                const yes = question.standardButton(Dialog.Yes);
-                if (yes !== null) {
-                    yes.text = qsTr("Close project");
-                    yes.objectName = "unsavedChanges.close";
-                }
-            }
-            // Name the existing visible controls, as Save as names its real native OK button.
-            Binding {
-                target: question.opened ? question.header : null
-                when: target !== null
-                property: "objectName"
-                value: "unsavedChanges.title"
-            }
-            Binding {
-                target: question.opened ? question.standardButton(Dialog.Discard) : null
-                when: target !== null
-                property: "objectName"
-                value: "unsavedChanges.discard"
-            }
-            Binding {
-                target: question.opened ? question.standardButton(Dialog.Save) : null
-                when: target !== null
-                property: "objectName"
-                value: "unsavedChanges.save"
-            }
-            Binding {
-                target: question.opened ? question.standardButton(Dialog.Cancel) : null
-                when: target !== null
-                property: "objectName"
-                value: "unsavedChanges.cancel"
-            }
-            // As wide as its line (owner, 2026-10-25).
-            contentWidth: unsavedRow.implicitWidth
-            contentHeight: unsavedRow.implicitHeight
+        onDiscarded: ApplicationInfo.discardUnsavedProject()
 
-            // The app's warning icon, then the project's name in bold (owner, 2026-10-25).
-            Row {
-                id: unsavedRow
-                spacing: EaStyle.Sizes.fontPixelSize * 0.5
+        // The app's warning icon, then the project's name in bold (owner, 2026-10-25).
+        Row {
+            id: unsavedRow
+            spacing: EaStyle.Sizes.fontPixelSize * 0.5
 
-                EaElements.Label {
-                    anchors.verticalCenter: parent.verticalCenter
-                    font.family: EaStyle.Fonts.iconsFamily
-                    color: EaStyle.Colors.orange
-                    text: "exclamation-triangle"
-                }
-                EaElements.Label {
-                    anchors.verticalCenter: parent.verticalCenter
-                    textFormat: Text.StyledText
-                    text: ApplicationInfo.windowUnsavedText()
-                }
+            EaElements.Label {
+                anchors.verticalCenter: parent.verticalCenter
+                font.family: EaStyle.Fonts.iconsFamily
+                color: EaStyle.Colors.orange
+                text: "exclamation-triangle"
+            }
+            EaElements.Label {
+                id: unsavedText
+                anchors.verticalCenter: parent.verticalCenter
+                textFormat: Text.StyledText
+                text: ApplicationInfo.windowUnsavedText()
             }
         }
     }
@@ -1148,316 +1026,213 @@ EaComponents.ApplicationWindow {
     // Save as (edi ADR-0052): the format and whether to keep working where the project is (a copy) come from Get
     // started's Save menu (saveWith), then the system's dialog for the folder or the .zip. The dialog itself opens only
     // for the assistant's delegated save, which presses its OK.
-    QtObject {
+    AppDialog {
         id: saveAsChoice
+        objectName: "saveAs.choice"
+        onRejected: {
+            Session.setNextSaveData("");
+            window.cancelAssistantSaveAs();
+        }
+        enterAccepts: true
         property bool zip: false
         property bool copy: false
         // Measured data (edi ADR-0088 point 5): for a project that reads data from outside its folder, copied into the
         // project or kept linked, preset from Data on save.
         property bool linkedData: false
         property string dataChoice: "copy"
+        readonly property Item nativeAcceptButton: opened ? standardButton(Dialog.Ok) : null
+        onOpened: ApplicationInfo.windowSaveChoiceOpened()
         // A browser without the File System Access API writes no folder and moves no project onto the disk: a copy
         // as a .zip download is all it offers.
         readonly property bool diskWritable: !WebFiles.available || WebStorage.diskAccess
-        // The showing on screen, `{dialog, ownerGeneration, answered, gone}`, or null: each showing is its own dialog,
-        // and an answer acts only from the current one, once, for the project it asked about.
-        property var ask: null
-        readonly property bool visible: ask !== null && ask.dialog.visible
-
-        function open() {
-            saveAsChoice.retire();
-            saveAsChoice.linkedData = Session.project !== null && Session.project.hasLinkedData();
-            saveAsChoice.dataChoice = Session.project !== null ? Session.project.presetSaveData() : "copy";
+        title: qsTr("Save project as")
+        standardButtons: Dialog.Ok | Dialog.Cancel
+        // About half the usual dialog width, never narrower than its content (owner, 2026-10-25).
+        contentWidth: Math.max(saveAsChoiceColumn.implicitWidth, Math.round(AppSizes.messagesDialogContentWidth / 2))
+        contentHeight: saveAsChoiceColumn.implicitHeight
+        onAboutToShow: {
+            linkedData = Session.project !== null && Session.project.hasLinkedData();
+            dataChoice = Session.project !== null ? Session.project.presetSaveData() : "copy";
             ApplicationInfo.prepareProjectSaveChoice();
-            const showing = {
-                dialog: saveAsQuestion.createObject(window.contentItem, {
-                    parent: window.Overlay.overlay
-                }),
-                ownerGeneration: Session.projectGeneration(),
-                answered: false,
-                gone: false
-            };
-            showing.dialog.accepted.connect(() => saveAsChoice.answer(showing, true));
-            showing.dialog.rejected.connect(() => saveAsChoice.answer(showing, false));
-            showing.dialog.closed.connect(() => saveAsChoice.forget(showing));
-            saveAsChoice.ask = showing;
-            showing.dialog.open();
         }
-        function answer(showing, accepted) {
-            if (showing !== saveAsChoice.ask || showing.answered)
-                return;
-            showing.answered = true;
-            if (showing.ownerGeneration !== Session.projectGeneration())
-                return;
-            if (!accepted) {
-                Session.setNextSaveData("");
-                window.cancelAssistantSaveAs();
-                return;
-            }
-            Session.setNextSaveData(saveAsChoice.linkedData ? saveAsChoice.dataChoice : "");
+        onAccepted: {
+            Session.setNextSaveData(linkedData ? dataChoice : "");
             ApplicationInfo.acceptProjectSaveChoice();
         }
-        // The format and copy chosen from Get started's Save menu: the same save as the dialog's OK, without asking
+        // The format and copy chosen from Get started's Save menu: the same save as this dialog's OK, without asking
         // again. Linked measured data follows Data on save's preset.
         function saveWith(asZip, asCopy) {
             if (Session.project === null)
                 return;
-            saveAsChoice.retire();
             window.assistantSaveIntent = "";
-            saveAsChoice.linkedData = Session.project.hasLinkedData();
-            saveAsChoice.dataChoice = Session.project.presetSaveData();
-            saveAsChoice.zip = asZip || !saveAsChoice.diskWritable;
-            saveAsChoice.copy = asCopy || !saveAsChoice.diskWritable;
-            Session.setNextSaveData(saveAsChoice.linkedData ? saveAsChoice.dataChoice : "");
-            ApplicationInfo.acceptProjectSaveChoice();
+            linkedData = Session.project.hasLinkedData();
+            dataChoice = Session.project.presetSaveData();
+            zip = asZip || !diskWritable;
+            copy = asCopy || !diskWritable;
+            accept();
         }
-        function forget(showing) {
-            if (saveAsChoice.ask === showing)
-                saveAsChoice.ask = null;
-            if (!showing.gone) {
-                showing.gone = true;
-                showing.dialog.destroy();
-            }
-        }
-        // Ends the showing at once: true when nobody had answered it.
-        function retire(): bool {
-            const showing = saveAsChoice.ask;
-            if (showing === null)
-                return false;
-            saveAsChoice.ask = null;
-            const pending = !showing.answered;
-            showing.answered = true;
-            window.retiredAsk = showing.dialog;
-            AppState.retirePopup(showing.dialog);
-            saveAsChoice.forget(showing);
-            return pending;
-        }
-    }
-    Component {
-        id: saveAsQuestion
-        AppDialog {
-            id: saveAsDialog
-            objectName: "saveAs.choice"
-            enterAccepts: true
-            readonly property Item nativeAcceptButton: opened ? standardButton(Dialog.Ok) : null
-            onOpened: ApplicationInfo.windowSaveChoiceOpened()
-            title: qsTr("Save project as")
-            standardButtons: Dialog.Ok | Dialog.Cancel
-            // About half the usual dialog width, never narrower than its content (owner, 2026-10-25).
-            contentWidth: Math.max(saveAsChoiceColumn.implicitWidth, Math.round(AppSizes.messagesDialogContentWidth / 2))
-            contentHeight: saveAsChoiceColumn.implicitHeight
 
-            Column {
-                id: saveAsChoiceColumn
-                objectName: "project.saveChoice"
+        Column {
+            id: saveAsChoiceColumn
+            objectName: "project.saveChoice"
 
-                // Folder and Zip archive: one group, rows closer than the usual spacing, no heading (owner, 2026-10-25).
-                // A disabled button takes no hover, so its tooltip comes from the item around it.
-                Item {
-                    implicitWidth: saveAsFolder.implicitWidth
-                    implicitHeight: saveAsFolder.implicitHeight
+            // Folder and Zip archive: one group, rows closer than the usual spacing, no heading (owner, 2026-10-25).
+            // A disabled button takes no hover, so its tooltip comes from the item around it.
+            Item {
+                implicitWidth: saveAsFolder.implicitWidth
+                implicitHeight: saveAsFolder.implicitHeight
 
-                    ChoiceRadioButton {
-                        id: saveAsFolder
-                        objectName: "saveAs.folder"
-                        enabled: saveAsChoice.diskWritable
-                        text: qsTr("Folder")
-                        checked: !saveAsChoice.zip
-                        onClicked: saveAsChoice.zip = false
-                    }
-                    HoverHandler {
-                        id: saveAsFolderHover
-                    }
-                    EaElements.ToolTip {
-                        Component.onCompleted: contentItem.objectName = "saveAs.folderTooltip"
-                        text: saveAsChoice.diskWritable ? "" : qsTr("This browser cannot write a folder on your disk; Chrome and Edge can")
-                        requested: saveAsFolderHover.hovered
-                    }
-                }
                 ChoiceRadioButton {
-                    objectName: "saveAs.zip"
-                    text: qsTr("Zip archive")
-                    checked: saveAsChoice.zip
-                    onClicked: saveAsChoice.zip = true
-                }
-                // Set apart from the format.
-                Item {
-                    width: 1
-                    height: EaStyle.Sizes.fontPixelSize
-                }
-                EaElements.CheckBox {
-                    objectName: "saveAs.copy"
+                    id: saveAsFolder
+                    objectName: "saveAs.folder"
                     enabled: saveAsChoice.diskWritable
-                    text: qsTr("Save a copy")
-                    checked: saveAsChoice.copy
-                    onToggled: saveAsChoice.copy = checked
-                    // The check box draws the app's tooltip from this text itself.
-                    ToolTip.text: qsTr("Write the project there and keep working where it is")
+                    text: qsTr("Folder")
+                    checked: !saveAsChoice.zip
+                    onClicked: saveAsChoice.zip = false
                 }
-                Item {
-                    width: 1
-                    height: EaStyle.Sizes.fontPixelSize
-                    visible: saveAsChoice.linkedData
+                HoverHandler {
+                    id: saveAsFolderHover
                 }
-                EaElements.Label {
-                    visible: saveAsChoice.linkedData
-                    text: Session.categoryTitle("data")
+                EaElements.ToolTip {
+                    Component.onCompleted: contentItem.objectName = "saveAs.folderTooltip"
+                    text: saveAsChoice.diskWritable ? "" : qsTr("This browser cannot write a folder on your disk; Chrome and Edge can")
+                    requested: saveAsFolderHover.hovered
                 }
-                ChoiceRadioButton {
-                    objectName: "saveAs.dataCopy"
-                    visible: saveAsChoice.linkedData
-                    text: qsTr("Copy into the project")
-                    checked: saveAsChoice.dataChoice === "copy"
-                    onClicked: saveAsChoice.dataChoice = "copy"
-                }
-                ChoiceRadioButton {
-                    objectName: "saveAs.dataLinked"
-                    visible: saveAsChoice.linkedData
-                    text: qsTr("Keep linked")
-                    checked: saveAsChoice.dataChoice === "linked"
-                    onClicked: saveAsChoice.dataChoice = "linked"
-                }
+            }
+            ChoiceRadioButton {
+                objectName: "saveAs.zip"
+                text: qsTr("Zip archive")
+                checked: saveAsChoice.zip
+                onClicked: saveAsChoice.zip = true
+            }
+            // Set apart from the format.
+            Item {
+                width: 1
+                height: EaStyle.Sizes.fontPixelSize
+            }
+            EaElements.CheckBox {
+                objectName: "saveAs.copy"
+                enabled: saveAsChoice.diskWritable
+                text: qsTr("Save a copy")
+                checked: saveAsChoice.copy
+                onToggled: saveAsChoice.copy = checked
+                // The check box draws the app's tooltip from this text itself.
+                ToolTip.text: qsTr("Write the project there and keep working where it is")
+            }
+            Item {
+                width: 1
+                height: EaStyle.Sizes.fontPixelSize
+                visible: saveAsChoice.linkedData
+            }
+            EaElements.Label {
+                visible: saveAsChoice.linkedData
+                text: Session.categoryTitle("data")
+            }
+            ChoiceRadioButton {
+                objectName: "saveAs.dataCopy"
+                visible: saveAsChoice.linkedData
+                text: qsTr("Copy into the project")
+                checked: saveAsChoice.dataChoice === "copy"
+                onClicked: saveAsChoice.dataChoice = "copy"
+            }
+            ChoiceRadioButton {
+                objectName: "saveAs.dataLinked"
+                visible: saveAsChoice.linkedData
+                text: qsTr("Keep linked")
+                checked: saveAsChoice.dataChoice === "linked"
+                onClicked: saveAsChoice.dataChoice = "linked"
             }
         }
     }
 
-    // Open project's and Import's choosers (Get started's Load menu), both opening where one was last chosen, one
-    // object per showing (showNativeAsk). The project read replaces the current one on the next turn.
-    Component {
-        id: openFolderChooser
-        FolderDialog {
-            id: chooser
-            objectName: "load.folderChooser"
-            // The project it was opened over (window.openChooser); -2 once answered or retired.
-            property real ownerGeneration: -1
-            property bool ended: false
-            title: qsTr("Open an edi project folder")
-            acceptLabel: qsTr("Open")
-            currentFolder: DialogFolders.folder("openProject", "")
-            onAccepted: {
-                if (window.nativeAsk === chooser && ApplicationInfo.takeOwnedAnswer()) {
-                    DialogFolders.remember("openProject", selectedFolder);
-                    window.openChosen(selectedFolder);
-                }
-                window.endNativeAsk(chooser);
-            }
-            onRejected: {
-                window.endNativeAsk(chooser);
-            }
+    // Open project's and Import's choosers (Get started's Load menu), both opening where one was last chosen. The
+    // project read replaces the current one on the next turn.
+    FolderDialog {
+        id: openFolderDialog
+        title: qsTr("Open an edi project folder")
+        acceptLabel: qsTr("Open")
+        currentFolder: DialogFolders.folder("openProject", "")
+        onAccepted: {
+            DialogFolders.remember("openProject", selectedFolder);
+            Qt.callLater(Session.openProject, selectedFolder);
         }
     }
-    Component {
-        id: openZipChooser
-        FileDialog {
-            id: chooser
-            objectName: "load.zipChooser"
-            property real ownerGeneration: -1
-            property bool ended: false
-            title: qsTr("Open an edi project archive")
-            nameFilters: [qsTr("edi project archives (*.zip)")]
-            currentFolder: DialogFolders.folder("openProject", "")
-            onAccepted: {
-                if (window.nativeAsk === chooser && ApplicationInfo.takeOwnedAnswer()) {
-                    DialogFolders.remember("openProject", selectedFile);
-                    window.openChosen(selectedFile);
-                }
-                window.endNativeAsk(chooser);
-            }
-            onRejected: {
-                window.endNativeAsk(chooser);
-            }
+    FileDialog {
+        id: openZipDialog
+        title: qsTr("Open an edi project archive")
+        nameFilters: [qsTr("edi project archives (*.zip)")]
+        currentFolder: DialogFolders.folder("openProject", "")
+        onAccepted: {
+            DialogFolders.remember("openProject", selectedFile);
+            Qt.callLater(Session.openProject, selectedFile);
         }
     }
     // An import opens as a new, unsaved project, as Open does.
-    Component {
-        id: importChooser
-        FileDialog {
-            id: chooser
-            objectName: "load.importChooser"
-            property var importer: null
-            property real ownerGeneration: -1
-            property bool ended: false
-            title: importer !== null ? qsTr("Import a %1 project").arg(importer.program) : ""
-            nameFilters: importer !== null ? [importer.nameFilter] : []
-            currentFolder: DialogFolders.folder("importProject", "")
-            onAccepted: {
-                if (window.nativeAsk === chooser && ApplicationInfo.takeOwnedAnswer()) {
-                    DialogFolders.remember("importProject", selectedFile);
-                    window.openChosen(selectedFile);
-                }
-                window.endNativeAsk(chooser);
-            }
-            onRejected: {
-                window.endNativeAsk(chooser);
-            }
+    FileDialog {
+        id: importDialog
+        property var importer: null
+        title: importer !== null ? qsTr("Import a %1 project").arg(importer.program) : ""
+        nameFilters: importer !== null ? [importer.nameFilter] : []
+        currentFolder: DialogFolders.folder("importProject", "")
+        onAccepted: {
+            DialogFolders.remember("importProject", selectedFile);
+            Qt.callLater(Session.openProject, selectedFile);
         }
     }
 
     // The project's folder by its name, as a file is named: the dialog is filled with the project's own name, in the
-    // folder it is in (owner, 2026-10-25); the folder is made if it is new. One object per showing, as Load's.
-    Component {
-        id: saveFolderPicker
-        FileDialog {
-            id: picker
-            objectName: "saveAs.folderPicker"
-            // The project it was opened over (ApplicationInfo.openProjectSavePicker); -2 once answered or retired, a
-            // retirement having ended its Save As already.
-            property real ownerGeneration: -1
-            property bool ended: false
-            readonly property bool saving: true
-            onRejected: {
-                if (window.nativeAsk === picker && ApplicationInfo.takeOwnedAnswer()) {
-                    Session.setNextSaveData("");
-                    window.cancelAssistantSaveAs();
-                }
-                window.endNativeAsk(picker);
-            }
-            // In the folder a project was last saved to, unless the assistant chose the place (the owner, 2026-11-17).
-            function openAt(target) {
-                ApplicationInfo.openProjectSavePicker(window.assistantSaveIntent === "" ? DialogFolders.retarget("saveProject", target) : target);
-            }
-            title: saveAsChoice.copy ? qsTr("Save a copy of the project as a folder") : qsTr("Save the project as a folder")
-            fileMode: FileDialog.SaveFile
-            acceptLabel: qsTr("Save")
-            onAccepted: {
-                if (window.nativeAsk === picker && ApplicationInfo.takeOwnedAnswer()) {
-                    DialogFolders.remember("saveProject", selectedFile);
-                    ApplicationInfo.acceptProjectSavePicker(false);
-                }
-                window.endNativeAsk(picker);
-            }
+    // folder it is in (owner, 2026-10-25); the folder is made if it is new.
+    FileDialog {
+        id: saveFolder
+        // The project it was opened over (ApplicationInfo.openProjectSavePicker): an answer after another one replaced it
+        // is ignored, that Save As having ended at the handoff.
+        property real ownerGeneration: -1
+        onRejected: {
+            if (!ApplicationInfo.takeProjectSavePicker())
+                return;
+            Session.setNextSaveData("");
+            window.cancelAssistantSaveAs();
+        }
+        // In the folder a project was last saved to, unless the assistant chose the place (the owner, 2026-11-17).
+        function openAt(target) {
+            ApplicationInfo.openProjectSavePicker(window.assistantSaveIntent === "" ? DialogFolders.retarget("saveProject", target) : target);
+        }
+        title: saveAsChoice.copy ? qsTr("Save a copy of the project as a folder") : qsTr("Save the project as a folder")
+        fileMode: FileDialog.SaveFile
+        acceptLabel: qsTr("Save")
+        onAccepted: {
+            if (!ApplicationInfo.takeProjectSavePicker())
+                return;
+            DialogFolders.remember("saveProject", selectedFile);
+            ApplicationInfo.acceptProjectSavePicker(false);
         }
     }
-    Component {
-        id: saveZipPicker
-        FileDialog {
-            id: picker
-            objectName: "saveAs.zipPicker"
-            property real ownerGeneration: -1
-            property bool ended: false
-            readonly property bool saving: true
-            onRejected: {
-                if (window.nativeAsk === picker && ApplicationInfo.takeOwnedAnswer()) {
-                    Session.setNextSaveData("");
-                    window.cancelAssistantSaveAs();
-                }
-                window.endNativeAsk(picker);
-            }
-            function openAt(target) {
-                ApplicationInfo.openProjectSavePicker(window.assistantSaveIntent === "" ? DialogFolders.retarget("saveProject", target) : target);
-            }
-            title: saveAsChoice.copy ? qsTr("Save a copy of the project as a .zip") : qsTr("Save the project as a .zip")
-            fileMode: FileDialog.SaveFile
-            defaultSuffix: "zip"
-            nameFilters: [qsTr("Zip archives (*.zip)")]
-            acceptLabel: qsTr("Save")
-            onAccepted: {
-                if (window.nativeAsk === picker && ApplicationInfo.takeOwnedAnswer()) {
-                    DialogFolders.remember("saveProject", selectedFile);
-                    ApplicationInfo.acceptProjectSavePicker(true);
-                }
-                window.endNativeAsk(picker);
-            }
+
+    FileDialog {
+        id: saveZip
+        // The project it was opened over (ApplicationInfo.openProjectSavePicker): an answer after another one replaced it
+        // is ignored, that Save As having ended at the handoff.
+        property real ownerGeneration: -1
+        onRejected: {
+            if (!ApplicationInfo.takeProjectSavePicker())
+                return;
+            Session.setNextSaveData("");
+            window.cancelAssistantSaveAs();
+        }
+        // In the folder a project was last saved to, unless the assistant chose the place (the owner, 2026-11-17).
+        function openAt(target) {
+            ApplicationInfo.openProjectSavePicker(window.assistantSaveIntent === "" ? DialogFolders.retarget("saveProject", target) : target);
+        }
+        title: saveAsChoice.copy ? qsTr("Save a copy of the project as a .zip") : qsTr("Save the project as a .zip")
+        fileMode: FileDialog.SaveFile
+        defaultSuffix: "zip"
+        nameFilters: [qsTr("Zip archives (*.zip)")]
+        acceptLabel: qsTr("Save")
+        onAccepted: {
+            if (!ApplicationInfo.takeProjectSavePicker())
+                return;
+            DialogFolders.remember("saveProject", selectedFile);
+            ApplicationInfo.acceptProjectSavePicker(true);
         }
     }
 
@@ -1500,89 +1275,39 @@ EaComponents.ApplicationWindow {
     }
     // Where a save into the browser's storage leaves the project: kept there, which the browser may clear, or, where it
     // keeps nothing, only in this tab. Save project as… is the way onto the disk.
-    QtObject {
+    AppDialog {
         id: browserSaved
+        objectName: "webStorageWarning"
+        enterAccepts: true
         property var warnedFor: null
         property bool kept: true
-        // The showing on screen, `{dialog, ownerGeneration, answered, gone}`, or null: its Save project as… acts only
-        // from the current showing, once, for the project the warning is about.
-        property var ask: null
-        readonly property bool visible: ask !== null && ask.dialog.visible
+        parent: Overlay.overlay
+        title: kept ? qsTr("Saved in this browser only") : qsTr("Not saved")
+        standardButtons: Dialog.Apply | Dialog.Ok
+        contentWidth: AppSizes.messagesDialogContentWidth
+        contentHeight: browserSavedRow.implicitHeight
+        Component.onCompleted: ApplicationInfo.windowBrowserWarningReady()
+        onApplied: ApplicationInfo.windowBrowserWarningApplied()
 
-        function open() {
-            browserSaved.retire();
-            const showing = {
-                dialog: browserSavedQuestion.createObject(window.Overlay.overlay, {
-                    parent: window.Overlay.overlay
-                }),
-                ownerGeneration: Session.projectGeneration(),
-                answered: false,
-                gone: false
-            };
-            showing.dialog.applied.connect(() => browserSaved.apply(showing));
-            showing.dialog.closed.connect(() => browserSaved.forget(showing));
-            browserSaved.ask = showing;
-            showing.dialog.open();
-        }
-        function apply(showing) {
-            if (showing !== browserSaved.ask || showing.answered)
-                return;
-            showing.answered = true;
-            showing.dialog.close();
-            if (showing.ownerGeneration === Session.projectGeneration())
-                ApplicationInfo.windowBrowserWarningApplied();
-        }
-        function forget(showing) {
-            if (browserSaved.ask === showing)
-                browserSaved.ask = null;
-            if (!showing.gone) {
-                showing.gone = true;
-                showing.dialog.destroy();
+        Row {
+            id: browserSavedRow
+            spacing: EaStyle.Sizes.fontPixelSize * 0.5
+
+            // Centred on the text, however many lines it wraps to (owner, 2026-10-25).
+            EaElements.Label {
+                objectName: "webStorageWarning.icon"
+                anchors.verticalCenter: parent.verticalCenter
+                font.family: EaStyle.Fonts.iconsFamily
+                color: EaStyle.Colors.orange
+                text: "exclamation-triangle"
             }
-        }
-        function retire() {
-            const showing = browserSaved.ask;
-            if (showing === null)
-                return;
-            browserSaved.ask = null;
-            showing.answered = true;
-            window.retiredAsk = showing.dialog;
-            AppState.retirePopup(showing.dialog);
-            browserSaved.forget(showing);
-        }
-    }
-    Component {
-        id: browserSavedQuestion
-        AppDialog {
-            id: browserSavedDialog
-            objectName: "webStorageWarning"
-            enterAccepts: true
-            title: browserSaved.kept ? qsTr("Saved in this browser only") : qsTr("Not saved")
-            standardButtons: Dialog.Apply | Dialog.Ok
-            contentWidth: AppSizes.messagesDialogContentWidth
-            contentHeight: browserSavedRow.implicitHeight
-            Component.onCompleted: ApplicationInfo.windowBrowserWarningReady()
-
-            Row {
-                id: browserSavedRow
-                spacing: EaStyle.Sizes.fontPixelSize * 0.5
-
-                // Centred on the text, however many lines it wraps to (owner, 2026-10-25).
-                EaElements.Label {
-                    objectName: "webStorageWarning.icon"
-                    anchors.verticalCenter: parent.verticalCenter
-                    font.family: EaStyle.Fonts.iconsFamily
-                    color: EaStyle.Colors.orange
-                    text: "exclamation-triangle"
-                }
-                EaElements.Label {
-                    objectName: "webStorageWarning.text"
-                    width: browserSavedDialog.contentWidth - x
-                    wrapMode: Text.Wrap
-                    // The way out in bold (owner, 2026-10-25).
-                    textFormat: Text.StyledText
-                    text: browserSaved.kept ? qsTr("Saved in this browser only. The browser may clear what it keeps; use <b>Save project as…</b> to keep a copy on your disk.") : qsTr("This browser keeps nothing for the app here (a private window, for example), so the project is only in this tab. Use <b>Save project as…</b> to keep it on your disk.")
-                }
+            EaElements.Label {
+                objectName: "webStorageWarning.text"
+                width: browserSaved.contentWidth - x
+                wrapMode: Text.Wrap
+                // The way out in bold (owner, 2026-10-25).
+                textFormat: Text.StyledText
+                text: browserSaved.kept ? qsTr("Saved in this browser only. The browser may clear what it keeps; use <b>Save project as…</b> to keep a copy on your disk.") : qsTr("This browser keeps nothing for the app here (a private window, for example), so the project is only in this tab. Use <b>Save project as…</b> to keep it on your disk.")
             }
         }
     }
@@ -1671,106 +1396,61 @@ EaComponents.ApplicationWindow {
 
     // A save asks first (edi ADR-0069): above 100 MB, or with the project set to ask, the user chooses whether a scan's
     // linked files go with it (the owner, 2026-11-04). The answer names the question it answers.
-    // The save's question about its data. Each showing is its own dialog and answers the session's question it was
-    // made for, once: a showing a handoff ended answers nothing, and the session drops a replaced project's question.
-    QtObject {
+    AppDialog {
         id: saveData
-        // The showing on screen, `{dialog, request, answered, gone}`, or null.
-        property var ask: null
-        readonly property bool visible: ask !== null && ask.dialog.visible
+        objectName: "save.dataChoice"
+        property int request: 0
+        property real bytes: 0
+        property int files: 0
+        property bool large: false
+        property bool linked: false
+        title: saveData.linked ? qsTr("Linked data") : qsTr("Large save")
+        contentWidth: AppSizes.messagesDialogContentWidth
+        contentHeight: saveDataText.implicitHeight
+        onRejected: Session.answerSaveData(saveData.request, "cancel")
 
-        function open(request, bytes, files, large, linked) {
-            saveData.retire();
-            const showing = {
-                dialog: saveDataQuestion.createObject(window.contentItem, {
-                    parent: window.Overlay.overlay,
-                    bytes: bytes,
-                    files: files,
-                    large: large,
-                    linked: linked
-                }),
-                request: request,
-                answered: false,
-                gone: false
-            };
-            showing.dialog.showing = showing;
-            showing.dialog.rejected.connect(() => saveData.answer(showing, "cancel"));
-            showing.dialog.closed.connect(() => saveData.forget(showing));
-            saveData.ask = showing;
-            showing.dialog.open();
+        EaElements.Label {
+            id: saveDataText
+            width: saveData.contentWidth
+            wrapMode: Text.Wrap
+            text: !saveData.linked ? qsTr("This save writes %1 (%2 files).").arg(Qt.locale().formattedDataSize(saveData.bytes)).arg(saveData.files) : saveData.large ? qsTr("This save writes %1 (%2 files). Keep the data linked instead?").arg(Qt.locale().formattedDataSize(saveData.bytes)).arg(saveData.files) : qsTr("This save writes %1 (%2 files) with the linked data. Copy the data into the project?").arg(Qt.locale().formattedDataSize(saveData.bytes)).arg(saveData.files)
         }
-        function answer(showing, choice) {
-            if (showing !== saveData.ask || showing.answered)
-                return;
-            showing.answered = true;
-            showing.dialog.close();
-            Session.answerSaveData(showing.request, choice);
-        }
-        function forget(showing) {
-            if (saveData.ask === showing)
-                saveData.ask = null;
-            if (!showing.gone) {
-                showing.gone = true;
-                showing.dialog.destroy();
+        footer: EaElements.DialogButtonBox {
+            EaElements.Button {
+                objectName: "save.dataChoice.linked"
+                visible: saveData.linked
+                text: qsTr("Keep linked")
+                DialogButtonBox.buttonRole: DialogButtonBox.ActionRole
+                onClicked: {
+                    saveData.close();
+                    Session.answerSaveData(saveData.request, "linked");
+                }
             }
-        }
-        function retire() {
-            const showing = saveData.ask;
-            if (showing === null)
-                return;
-            saveData.ask = null;
-            showing.answered = true;
-            window.retiredAsk = showing.dialog;
-            AppState.retirePopup(showing.dialog);
-            saveData.forget(showing);
-        }
-    }
-    Component {
-        id: saveDataQuestion
-        AppDialog {
-            id: saveDataDialog
-            objectName: "save.dataChoice"
-            property var showing: null
-            property real bytes: 0
-            property int files: 0
-            property bool large: false
-            property bool linked: false
-            title: saveDataDialog.linked ? qsTr("Linked data") : qsTr("Large save")
-            contentWidth: AppSizes.messagesDialogContentWidth
-            contentHeight: saveDataText.implicitHeight
-
-            EaElements.Label {
-                id: saveDataText
-                width: saveDataDialog.contentWidth
-                wrapMode: Text.Wrap
-                text: !saveDataDialog.linked ? qsTr("This save writes %1 (%2 files).").arg(Qt.locale().formattedDataSize(saveDataDialog.bytes)).arg(saveDataDialog.files) : saveDataDialog.large ? qsTr("This save writes %1 (%2 files). Keep the data linked instead?").arg(Qt.locale().formattedDataSize(saveDataDialog.bytes)).arg(saveDataDialog.files) : qsTr("This save writes %1 (%2 files) with the linked data. Copy the data into the project?").arg(Qt.locale().formattedDataSize(saveDataDialog.bytes)).arg(saveDataDialog.files)
+            EaElements.Button {
+                objectName: "save.dataChoice.copy"
+                text: !saveData.linked ? qsTr("Save") : saveData.large ? qsTr("Copy anyway") : qsTr("Copy")
+                DialogButtonBox.buttonRole: DialogButtonBox.ActionRole
+                onClicked: {
+                    saveData.close();
+                    Session.answerSaveData(saveData.request, "copy");
+                }
             }
-            footer: EaElements.DialogButtonBox {
-                EaElements.Button {
-                    objectName: "save.dataChoice.linked"
-                    visible: saveDataDialog.linked
-                    text: qsTr("Keep linked")
-                    DialogButtonBox.buttonRole: DialogButtonBox.ActionRole
-                    onClicked: saveData.answer(saveDataDialog.showing, "linked")
-                }
-                EaElements.Button {
-                    objectName: "save.dataChoice.copy"
-                    text: !saveDataDialog.linked ? qsTr("Save") : saveDataDialog.large ? qsTr("Copy anyway") : qsTr("Copy")
-                    DialogButtonBox.buttonRole: DialogButtonBox.ActionRole
-                    onClicked: saveData.answer(saveDataDialog.showing, "copy")
-                }
-                EaElements.Button {
-                    objectName: "save.dataChoice.cancel"
-                    text: qsTr("Cancel")
-                    DialogButtonBox.buttonRole: DialogButtonBox.RejectRole
-                }
+            EaElements.Button {
+                objectName: "save.dataChoice.cancel"
+                text: qsTr("Cancel")
+                DialogButtonBox.buttonRole: DialogButtonBox.RejectRole
             }
         }
     }
     Connections {
         target: Session
         function onSaveDataChoiceNeeded(request, bytes, files, large, linked) {
-            saveData.open(request, bytes, files, large, linked);
+            saveData.request = request;
+            saveData.linked = linked;
+            saveData.bytes = bytes;
+            saveData.files = files;
+            saveData.large = large;
+            saveData.open();
         }
     }
 

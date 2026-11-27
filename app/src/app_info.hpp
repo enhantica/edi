@@ -399,8 +399,8 @@ class ApplicationInfo : public QObject {
     Q_INVOKABLE void acceptProjectSaveChoice() const;
     Q_INVOKABLE void openProjectSavePicker(const QJSValue& target) const;
     Q_INVOKABLE void acceptProjectSavePicker(bool zip) const;
-    // The answer of the ask in scope (its `ownerGeneration`): true once, while the project it asked about is open.
-    Q_INVOKABLE bool takeOwnedAnswer() const;
+    // A Save As picker's answer: true while the project it was opened over is still published, and once only.
+    Q_INVOKABLE bool takeProjectSavePicker() const;
     // Another project replaces the open one: the window's questions and Save As about it end (Session::projectReplacing).
     Q_INVOKABLE void retireProjectAsks() const;
     Q_INVOKABLE void dropProject(const QJSValue& drop) const;

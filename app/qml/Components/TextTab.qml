@@ -208,104 +208,29 @@ EaComponents.SideBarColumn {
         }
     }
 
-    // The question about an unapplied edit. Each showing is its own dialog, made when it asks and gone with it, and
-    // its answers name it: an answer acts only from the current showing, once, for the project it was asked over,
-    // checked before the dialog closes or the actions are touched.
-    QtObject {
+    AppDialog {
         id: discardDialog
 
         // What each answer runs (askLeave).
         property var actions: ({})
-        // The showing on screen, `{dialog, ownerGeneration, answered, gone}`, or null, and the last one ended early,
-        // kept until it is deleted: a test can still deliver its old answer there and see that it changes nothing.
-        property var ask: null
-        property var retiredAsk: null
-        readonly property bool visible: ask !== null && ask.dialog.visible
 
-        // The actions are already the new question's (askLeave): an earlier showing ends without touching them.
-        function open() {
-            discardDialog.end();
-            const showing = {
-                // On the window's overlay, as the earlier declared dialog was: the tab's page can be leaving view (Home)
-                // while it asks, and the question must stay on screen.
-                dialog: discardQuestion.createObject(tab, {
-                    parent: tab.Overlay.overlay
-                }),
-                ownerGeneration: Session.projectGeneration(),
-                answered: false,
-                gone: false
-            };
-            showing.dialog.applied.connect(() => discardDialog.respond(showing, "apply"));
-            showing.dialog.discarded.connect(() => discardDialog.respond(showing, "drop"));
-            showing.dialog.rejected.connect(() => discardDialog.respond(showing, "stay"));
-            showing.dialog.closed.connect(() => discardDialog.forget(showing));
-            discardDialog.ask = showing;
-            showing.dialog.open();
-        }
-        function respond(showing, kind: string): void {
-            if (showing !== discardDialog.ask || showing.answered || showing.ownerGeneration !== Session.projectGeneration())
-                return;
-            showing.answered = true;
-            showing.dialog.close();
-            if (kind === "apply")
-                ApplicationInfo.textDiscardApplied();
-            else if (kind === "drop")
-                ApplicationInfo.textDiscardDiscarded();
-            else
-                discardDialog.answer("stay", "");
-        }
-        // Runs the answer's action (ApplicationInfo.textTabAnswer); only an answer checked above reaches it.
         function answer(name: string, argument): void {
             ApplicationInfo.textTabAnswer(name, argument);
         }
-        function forget(showing) {
-            if (discardDialog.ask === showing)
-                discardDialog.ask = null;
-            if (!showing.gone) {
-                showing.gone = true;
-                showing.dialog.destroy();
-            }
-        }
-        // Ends the showing at once, answering nothing; a handoff's retirement drops its actions too.
-        function end(): bool {
-            const showing = discardDialog.ask;
-            if (showing === null)
-                return false;
-            discardDialog.ask = null;
-            const pending = !showing.answered;
-            showing.answered = true;
-            discardDialog.retiredAsk = showing.dialog;
-            AppState.retirePopup(showing.dialog);
-            discardDialog.forget(showing);
-            return pending;
-        }
-        function retire() {
-            if (discardDialog.end())
-                discardDialog.actions = {};
-        }
-    }
-    Component {
-        id: discardQuestion
-        AppDialog {
-            objectName: "text.discard"
-            title: qsTr("Discard changes?")
-            standardButtons: Dialog.Apply | Dialog.Discard | Dialog.Cancel
-            contentWidth: discardText.implicitWidth
-            contentHeight: discardText.implicitHeight
-            Component.onCompleted: ApplicationInfo.textDiscardCompleted()
 
-            EaElements.Label {
-                id: discardText
-                text: qsTr("The edited text has not been applied.")
-            }
-        }
-    }
-    // Every replacement starts with this signal, the assistant's own one included: the question goes before the next
-    // project shows, and no answer reaches it.
-    Connections {
-        target: Session
-        function onProjectReplacing() {
-            discardDialog.retire();
+        objectName: "text.discard"
+        title: qsTr("Discard changes?")
+        standardButtons: Dialog.Apply | Dialog.Discard | Dialog.Cancel
+        contentWidth: discardText.implicitWidth
+        contentHeight: discardText.implicitHeight
+        Component.onCompleted: ApplicationInfo.textDiscardCompleted()
+        onApplied: ApplicationInfo.textDiscardApplied()
+        onDiscarded: ApplicationInfo.textDiscardDiscarded()
+        onRejected: discardDialog.answer("stay", "")
+
+        EaElements.Label {
+            id: discardText
+            text: qsTr("The edited text has not been applied.")
         }
     }
 }
