@@ -127,6 +127,32 @@ static std::string python_path_text(const std::string& core) {
 #endif
 }
 
+// Core's message text as a Python str. On Windows a message can name a path in the process code page,
+// which python.exe keeps as the system's, so text that is not UTF-8 is read in that code page.
+static nb::str python_text(const std::string& core) {
+#if defined(_WIN32)
+    const auto size = static_cast<Py_ssize_t>(core.size());
+    PyObject* text = PyUnicode_DecodeUTF8(core.data(), size, nullptr);
+    if (text == nullptr) {
+        PyErr_Clear();
+        text = PyUnicode_DecodeMBCS(core.data(), size, "replace");
+    }
+    if (text == nullptr) {
+        throw nb::python_error();
+    }
+    return nb::steal<nb::str>(text);
+#else
+    return nb::str(core.c_str(), core.size());
+#endif
+}
+
+// Core's message as a Python UserWarning (python_text).
+static void warn_text(const std::string& message) {
+    if (PyErr_WarnEx(PyExc_UserWarning, python_text(message).c_str(), 1) < 0) {
+        throw nb::python_error();
+    }
+}
+
 // Metadata access on a bound Parameter. Fail-closed — a Parameter no model constructor attached
 // a spec to has no metadata to report, and answering with a placeholder would hide exactly the
 // defect the substrate gate exists to catch.
@@ -1078,9 +1104,7 @@ static void warn_python(const std::string& message) {
     if (!edi::log_shows("warning")) {
         return;
     }
-    if (PyErr_WarnEx(PyExc_UserWarning, message.c_str(), 1) < 0) {
-        throw nb::python_error();
-    }
+    warn_text(message);
 }
 
 // The project a relation row belongs to, once that project handed its collection out; else null.
@@ -2119,9 +2143,7 @@ static void def_collection_views(nb::module_& m) {
                 edi::ExperimentBase& experiment = *self.experiment;
                 const edi::BackgroundEstimate estimate = edi::estimate_background(experiment, options);
                 for (const std::string& warning : estimate.warnings) {
-                    if (PyErr_WarnEx(PyExc_UserWarning, warning.c_str(), 1) != 0) {
-                        throw nb::python_error();
-                    }
+                    warn_text(warning);
                 }
                 if (estimate.points.empty() && estimate.terms.empty()) {
                     return;  // nothing measured to estimate from: the background stays
@@ -2419,10 +2441,10 @@ NB_MODULE(_edi, m) {
             try {
                 std::rethrow_exception(pointer);
             } catch (const edi::IoError& error) {
-                nb::object exception = (*g_io_error_type)(nb::str(error.what()));
+                nb::object exception = (*g_io_error_type)(python_text(error.what()));
                 nb::dict entry;
                 entry["code"] = "io-error";
-                entry["message"] = nb::str(error.what());
+                entry["message"] = python_text(error.what());
                 nb::list diagnostics;
                 diagnostics.append(entry);
                 exception.attr("diagnostics") = diagnostics;
@@ -2439,9 +2461,16 @@ NB_MODULE(_edi, m) {
     nb::class_<edi::Diagnostic>(m, "Diagnostic")
         .def_ro("code", &edi::Diagnostic::code)
         .def_ro("severity", &edi::Diagnostic::severity)
-        .def_ro("path", &edi::Diagnostic::path)
-        .def_ro("message", &edi::Diagnostic::message)
-        .def_ro("params", &edi::Diagnostic::params)
+        .def_prop_ro("path", [](const edi::Diagnostic& diagnostic) { return python_text(diagnostic.path); })
+        .def_prop_ro("message", [](const edi::Diagnostic& diagnostic) { return python_text(diagnostic.message); })
+        .def_prop_ro("params",
+                     [](const edi::Diagnostic& diagnostic) {
+                         nb::dict params;
+                         for (const auto& [key, value] : diagnostic.params) {
+                             params[python_text(key)] = python_text(value);
+                         }
+                         return params;
+                     })
         .def_ro("source", &edi::Diagnostic::source)
         .def("__repr__", [](const edi::Diagnostic& diagnostic) {
             std::string repr = "<Diagnostic " + diagnostic.code + " " +
@@ -2449,7 +2478,7 @@ NB_MODULE(_edi, m) {
             if (!diagnostic.path.empty()) {
                 repr += " @" + diagnostic.path;
             }
-            return repr + ": " + diagnostic.message + ">";
+            return python_text(repr + ": " + diagnostic.message + ">");
         });
     auto make_error_type = [&m](const char* name, const nb::object& base) {
         const std::string qualified = "edi._edi." + std::string(name);
@@ -2472,7 +2501,7 @@ NB_MODULE(_edi, m) {
                                          : error.tier() == 2 ? types.schema
                                          : error.tier() == 3 ? types.domain
                                                              : types.base;
-                nb::object exception = type(nb::str(error.what()));
+                nb::object exception = type(python_text(error.what()));
                 exception.attr("diagnostics") = nb::cast(error.diagnostics());
                 PyErr_SetObject(type.ptr(), exception.ptr());
             }
@@ -2554,9 +2583,7 @@ NB_MODULE(_edi, m) {
                                                                           : "constrained by symmetry") +
                         "; free = True is ignored and it stays dependent" +
                         (p.fit_reason.empty() ? std::string() : " (cannot be fitted: " + p.fit_reason + ")");
-                    if (PyErr_WarnEx(PyExc_UserWarning, message.c_str(), 1) < 0) {
-                        throw nb::python_error();
-                    }
+                    warn_text(message);
                 }
             })
         // Whether a declared constraint or the space group sets this parameter (diffraction-lib
@@ -5250,9 +5277,7 @@ NB_MODULE(_edi, m) {
                 // own notes keep their stderr line.
                 edi::Project project = edi::load_project(where, [](const std::string& message) {
                     if (message.rfind("crysta.", 0) == 0) {
-                        if (PyErr_WarnEx(PyExc_UserWarning, message.c_str(), 1) < 0) {
-                            throw nb::python_error();
-                        }
+                        warn_text(message);
                         return;
                     }
                     std::cerr << "Warning: " << message << "\n";
