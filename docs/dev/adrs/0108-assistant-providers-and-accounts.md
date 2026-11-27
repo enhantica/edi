@@ -408,8 +408,8 @@ edi keeps the account list; a runtime only says who is signed in.
   a token, a path to a token or anything read from a home.
 - **Storage**, in the existing settings file (ADR-0031): `Assistant/Providers/<provider>/accounts` as
   `{version: 1, accounts: [...]}`, `Assistant/activeAccount` as `<provider>/<id>`, and the per-provider thread records
-  and selection. Today's ChatGPT thread records keep their shape; one without `account` is a legacy record whose owner
-  edi resolves from its saved e-mail (below).
+  and selection. Every thread record edi writes from now on names its `account`; a record without one is a legacy
+  record whose owner edi resolves from its saved e-mail (below).
 - **Homes.** Each account except the first ChatGPT one gets `<AppLocalData>/assistant/accounts/<provider>/<id>`,
   created empty by edi, owner-only on POSIX, and given to the runtime as `CODEX_HOME`, `CLAUDE_CONFIG_DIR` or
   `COPILOT_HOME`. edi never opens anything inside it, and never adopts `~/.claude` or `~/.copilot`.
