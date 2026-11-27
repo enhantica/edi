@@ -36,6 +36,7 @@ jobs:
     runs-on: ubuntu-24.04
     outputs:
       rows: ${{ steps.plan.outputs.rows }}
+      skip: ${{ steps.plan.outputs.skip }}
       performance: ${{ steps.plan.outputs.performance }}
       edi: ${{ steps.plan.outputs.edi }}
       pr: ${{ steps.plan.outputs.pr }}
@@ -85,8 +86,10 @@ jobs:
               *) set_=night ;;
             esac
             # Unchanged inputs (tools/ci/crysta-inputs.txt) skip a round and a main push.
-            if [ "$INPUTS_CHANGED" = false ] && { [ "$set_" = round ] || [ "$set_" = main ]; }; then set_=none; fi
-          fi
+            fi
+          # Unchanged inputs (tools/ci/crysta-inputs.txt) leave a round and a main push to the marker steps.
+          skip=false
+          if [ "$INPUTS_CHANGED" = false ] && { [ "$set_" = round ] || [ "$set_" = main ]; }; then skip=true; fi
           case "$set_" in
             round) rows='checks tidy python audit edi-verification' ;;
             final) rows='checks tidy python-full audit edi-verification cpp-full full-macos cppcheck asan release performance' ;;
@@ -105,9 +108,10 @@ jobs:
             performance='[{"platform":"Linux","runner":"ubuntu-24.04","part":""},{"platform":"macOS","runner":"macos-15","part":""}]'
           fi
           json=$(python3 -c 'import json, sys; print(json.dumps(sys.argv[1].split()))' "$rows")
-          echo "crysta rows ($set_): ${rows:-none}"
+          echo "crysta rows ($set_): ${rows:-none}; inputs changed: $INPUTS_CHANGED"
           {
             echo "rows=$json"
+            echo "skip=$skip"
             echo "performance=$performance"
             echo "edi=$EDI"
             echo "pr=$PR"
@@ -139,7 +143,13 @@ jobs:
       CRYSTA_SHA: ${{ inputs.crysta-sha }}
       CMAKE_GENERATOR: ${{ matrix.platform == 'macOS' && 'Ninja' || 'Unix Makefiles' }}
     steps:
+      - &marker
+        name: crysta inputs unchanged, so crysta's checks do not run
+        if: needs.plan.outputs.skip == 'true'
+        shell: bash
+        run: echo "crysta's inputs (tools/ci/crysta-inputs.txt) did not change, so its checks do not run"
       - &checkout
+        if: needs.plan.outputs.skip != 'true'
         uses: actions/checkout@v5
         with:
           sparse-checkout-cone-mode: false
@@ -149,11 +159,13 @@ jobs:
             !/docs/
             !/website/
       - name: This run's crysta SDK, for the consumer smoke
+        if: needs.plan.outputs.skip != 'true'
         uses: ./.github/actions/crysta-sdk
         with:
           platform: ${{ matrix.sdk }}
           diagnostic: ${{ inputs.diagnostic && 'true' || 'false' }}
       - &source
+        if: needs.plan.outputs.skip != 'true'
         name: crysta's source, whose lines no later step prints or stores
         uses: ./.github/actions/crysta-source
         with:
@@ -161,15 +173,18 @@ jobs:
           app-id: ${{ vars.ENHANTICA_APP_ID }}
           private-key: ${{ secrets.ENHANTICA_APP_KEY }}
       - &subject
+        if: needs.plan.outputs.skip != 'true'
         name: The crysta commit under test
         run: python3 tools/ci/crysta_subject.py --sha "$CRYSTA_SHA"
       - name: Set up pixi for crysta
+        if: needs.plan.outputs.skip != 'true'
         uses: ./.github/actions/setup-pixi
         with:
           manifest-path: ${{ runner.temp }}/crysta/pixi.toml
           environments: ${{ matrix.environments }}
           cache: false
       - &ccache-env
+        if: needs.plan.outputs.skip != 'true'
         name: Point the compiler cache at the runner
         id: ccache
         run: |
@@ -180,6 +195,7 @@ jobs:
           } >> "$GITHUB_ENV"
           python3 -c 'import hashlib, os, pathlib; print("lock=" + hashlib.sha256((pathlib.Path(os.environ["RUNNER_TEMP"]) / "crysta/pixi.lock").read_bytes()).hexdigest())' >> "$GITHUB_OUTPUT"
       - &ccache-restore
+        if: needs.plan.outputs.skip != 'true'
         name: Restore the crysta compiler cache
         uses: actions/cache/restore@v4
         with:
@@ -188,51 +204,69 @@ jobs:
           restore-keys: |
             ccache2-crysta-checks-${{ runner.os }}-${{ steps.ccache.outputs.lock }}-
             ccache2-crysta-checks-${{ runner.os }}-
-      - name: Guards, dictionary and conventions
-        if: matrix.platform == 'Linux'
-        run: |
-          cd "$RUNNER_TEMP/crysta"
-          status=0
-          for check in no_src_spike_import no_log_in_parallel entity_path_convention keyed_swap_completeness token_consumers descent_names symop_shift_bound; do
-            echo "guard: $check"
-            python3 "tools/checks/$check.py" || status=1
-          done
-          for check in write_boundary computed_inputs category_census; do
-            echo "guard: $check"
-            pixi run -e cpp-ci python "tools/checks/$check.py" || status=1
-          done
-          echo "guard: dictionary_sync"
-          pixi run -e cpp-ci python tools/checks/dictionary_sync.py --check || status=1
-          exit "$status"
-      - name: Build the extension and the CLI
+      - name: Spike-import guard
+        if: ${{ needs.plan.outputs.skip != 'true' && (!cancelled() && matrix.platform == 'Linux') }}
+        run: cd "$RUNNER_TEMP/crysta" && python3 tools/checks/no_src_spike_import.py
+      - name: No-logging-in-parallel guard
+        if: ${{ needs.plan.outputs.skip != 'true' && (!cancelled() && matrix.platform == 'Linux') }}
+        run: cd "$RUNNER_TEMP/crysta" && python3 tools/checks/no_log_in_parallel.py
+      - name: One entity-path composition
+        if: ${{ needs.plan.outputs.skip != 'true' && (!cancelled() && matrix.platform == 'Linux') }}
+        run: cd "$RUNNER_TEMP/crysta" && python3 tools/checks/entity_path_convention.py
+      - name: Keyed item fields all exchanged
+        if: ${{ needs.plan.outputs.skip != 'true' && (!cancelled() && matrix.platform == 'Linux') }}
+        run: cd "$RUNNER_TEMP/crysta" && python3 tools/checks/keyed_swap_completeness.py
+      - name: One write boundary
+        if: ${{ needs.plan.outputs.skip != 'true' && (!cancelled() && matrix.platform == 'Linux') }}
+        run: cd "$RUNNER_TEMP/crysta" && pixi run -e cpp-ci python tools/checks/write_boundary.py
+      - name: Computed-unit inputs classified and walked
+        if: ${{ needs.plan.outputs.skip != 'true' && (!cancelled() && matrix.platform == 'Linux') }}
+        run: cd "$RUNNER_TEMP/crysta" && pixi run -e cpp-ci python tools/checks/computed_inputs.py
+      - name: One column table for every category
+        if: ${{ needs.plan.outputs.skip != 'true' && (!cancelled() && matrix.platform == 'Linux') }}
+        run: cd "$RUNNER_TEMP/crysta" && pixi run -e cpp-ci python tools/checks/category_census.py
+      - name: Token fields resolved through the vocabulary table
+        if: ${{ needs.plan.outputs.skip != 'true' && (!cancelled() && matrix.platform == 'Linux') }}
+        run: cd "$RUNNER_TEMP/crysta" && python3 tools/checks/token_consumers.py
+      - name: Each descent reads the same as id, label and guide entry
+        if: ${{ needs.plan.outputs.skip != 'true' && (!cancelled() && matrix.platform == 'Linux') }}
+        run: cd "$RUNNER_TEMP/crysta" && python3 tools/checks/descent_names.py
+      - name: Symmetry operators keep the one-digit symmetry code
+        if: ${{ needs.plan.outputs.skip != 'true' && (!cancelled() && matrix.platform == 'Linux') }}
+        run: cd "$RUNNER_TEMP/crysta" && python3 tools/checks/symop_shift_bound.py
+      - name: Parameter dictionary sync
+        if: ${{ needs.plan.outputs.skip != 'true' && (!cancelled() && matrix.platform == 'Linux') }}
+        run: cd "$RUNNER_TEMP/crysta" && pixi run -e cpp-ci python tools/checks/dictionary_sync.py --check
+      - name: Build C++ extension + CLI
+        if: needs.plan.outputs.skip != 'true'
         env:
           SKBUILD_CMAKE_DEFINE: CRYSTA_REQUIRE_SIMD=ON
         run: cd "$RUNNER_TEMP/crysta" && pixi run -e cpp-ci cpp-build
       - name: Report the perf configuration
-        if: ${{ !cancelled() }}
+        if: ${{ needs.plan.outputs.skip != 'true' && (!cancelled()) }}
         run: cd "$RUNNER_TEMP/crysta" && build/crysta --perf-info
-      - name: Warnings-as-errors build
-        if: ${{ !cancelled() }}
+      - name: warnings-as-errors build
+        if: ${{ needs.plan.outputs.skip != 'true' && (!cancelled()) }}
         run: cd "$RUNNER_TEMP/crysta" && pixi run -e cpp-ci cpp-werror
       - name: clang-format
-        if: ${{ !cancelled() }}
+        if: ${{ needs.plan.outputs.skip != 'true' && (!cancelled()) }}
         run: cd "$RUNNER_TEMP/crysta" && pixi run -e lint cpp-format-check
-      - name: Sanitizer-guard negative control
-        if: ${{ !cancelled() }}
+      - name: Sanitizer-guard negative control (configure-only)
+        if: ${{ needs.plan.outputs.skip != 'true' && (!cancelled()) }}
         run: cd "$RUNNER_TEMP/crysta" && pixi run -e cpp-ci sanitize-guard-control
-      - name: Unit coverage, pull-request subset
-        if: ${{ !cancelled() && matrix.platform == 'Linux' }}
+      - name: Unit coverage, PR subset (clang -O0 + LLVM)
+        if: ${{ needs.plan.outputs.skip != 'true' && (!cancelled() && matrix.platform == 'Linux') }}
         run: |
           cd "$RUNNER_TEMP/crysta"
           python3 "$GITHUB_WORKSPACE/tools/ci/crysta_findings.py" run doctest "$RUNNER_TEMP/crysta/build" -- pixi run -e cpp-ci bash tools/ci/cpp-coverage-unit.sh
-      - name: LTO premise
-        if: ${{ !cancelled() }}
+      - name: LTO premise (configure-only, fail-closed IPO probe)
+        if: ${{ needs.plan.outputs.skip != 'true' && (!cancelled()) }}
         run: cd "$RUNNER_TEMP/crysta" && pixi run -e cpp-ci bash tools/ci/_lto_premise.sh
-      - name: Boundary guard
-        if: ${{ !cancelled() }}
+      - name: Boundary guard — empty grid raises ValueError
+        if: ${{ needs.plan.outputs.skip != 'true' && (!cancelled()) }}
         run: cd "$RUNNER_TEMP/crysta" && pixi run -e cpp-ci python tools/ci/_boundary_guard.py
-      - name: Contract checks
-        if: ${{ !cancelled() && matrix.platform == 'Linux' }}
+      - name: Contract checks (vocabulary, corpus, Python surface, nav, unit tier)
+        if: ${{ needs.plan.outputs.skip != 'true' && (!cancelled() && matrix.platform == 'Linux') }}
         run: |
           cd "$RUNNER_TEMP/crysta"
           status=0
@@ -242,22 +276,22 @@ jobs:
           done
           exit "$status"
       - name: Python-surface coverage of the unit tier
-        if: ${{ !cancelled() && matrix.platform == 'Linux' }}
+        if: ${{ needs.plan.outputs.skip != 'true' && (!cancelled() && matrix.platform == 'Linux') }}
         run: cd "$RUNNER_TEMP/crysta" && pixi run -e cpp-ci --skip-deps py-surface-cov-unit
-      - name: ruff
-        if: ${{ !cancelled() && matrix.platform == 'Linux' }}
+      - name: ruff lint + format (gating)
+        if: ${{ needs.plan.outputs.skip != 'true' && (!cancelled() && matrix.platform == 'Linux') }}
         run: cd "$RUNNER_TEMP/crysta" && pixi run -e lint-docs-ci check
-      - name: Docs build
-        if: ${{ !cancelled() && matrix.platform == 'Linux' }}
+      - name: docs build --strict (gating)
+        if: ${{ needs.plan.outputs.skip != 'true' && (!cancelled() && matrix.platform == 'Linux') }}
         run: cd "$RUNNER_TEMP/crysta" && pixi run -e lint-docs-ci docs-build
-      - name: SDK consumer smoke, on this run's SDK
-        if: ${{ !cancelled() }}
+      - name: SDK consumer smoke (find_package + crysta --perf-info)
+        if: ${{ needs.plan.outputs.skip != 'true' && (!cancelled()) }}
         run: cd "$RUNNER_TEMP/crysta" && pixi run -e cpp-ci bash tools/ci/sdk-smoke/run.sh "$CRYSTA_SDK_ARCHIVES" "${{ matrix.sdk }}"
       - name: Compiler cache statistics
-        if: ${{ !cancelled() }}
+        if: ${{ needs.plan.outputs.skip != 'true' && (!cancelled()) }}
         run: cd "$RUNNER_TEMP/crysta" && pixi run -e cpp-ci --skip-deps ccache --show-stats
       - name: Keep the crysta compiler cache
-        if: ${{ !cancelled() && !inputs.diagnostic && steps.ccache.outcome == 'success' }}
+        if: ${{ needs.plan.outputs.skip != 'true' && (!cancelled() && !inputs.diagnostic && steps.ccache.outcome == 'success') }}
         uses: ./.github/actions/store
         with:
           ccache: pixi run --manifest-path "$RUNNER_TEMP/crysta/pixi.toml" -e cpp-ci --skip-deps python
@@ -288,10 +322,12 @@ jobs:
       CRYSTA_SHA: ${{ inputs.crysta-sha }}
       CMAKE_GENERATOR: ${{ matrix.platform == 'macOS' && 'Ninja' || 'Unix Makefiles' }}
     steps:
+      - *marker
       - *checkout
       - *source
       - *subject
       - name: Set up pixi for crysta
+        if: needs.plan.outputs.skip != 'true'
         uses: ./.github/actions/setup-pixi
         with:
           manifest-path: ${{ runner.temp }}/crysta/pixi.toml
@@ -300,8 +336,10 @@ jobs:
       - *ccache-env
       - *ccache-restore
       - name: The build tree clang-tidy reads
+        if: needs.plan.outputs.skip != 'true'
         run: cd "$RUNNER_TEMP/crysta" && pixi run -e cpp-ci cpp-werror
-      - name: clang-tidy, this part
+      - name: clang-tidy
+        if: needs.plan.outputs.skip != 'true'
         run: |
           cd "$RUNNER_TEMP/crysta"
           pixi run -e cpp-ci python "$GITHUB_WORKSPACE/tools/ci/crysta_tidy_part.py" '${{ matrix.part }}' . --list
@@ -325,10 +363,12 @@ jobs:
     env:
       CRYSTA_SHA: ${{ inputs.crysta-sha }}
     steps:
+      - *marker
       - *checkout
       - *source
       - *subject
       - &pixi-cpp
+        if: needs.plan.outputs.skip != 'true'
         name: Set up pixi for crysta
         uses: ./.github/actions/setup-pixi
         with:
@@ -337,11 +377,13 @@ jobs:
           cache: false
       - *ccache-env
       - *ccache-restore
-      - name: Build the extension and the CLI
+      - name: Build C++ extension + CLI
+        if: needs.plan.outputs.skip != 'true'
         env:
           SKBUILD_CMAKE_DEFINE: CRYSTA_REQUIRE_SIMD=ON
         run: cd "$RUNNER_TEMP/crysta" && pixi run -e cpp-ci cpp-build
-      - name: Python tiers, pull-request selection, this part
+      - name: Hidden numerical suite (Python tiers)
+        if: needs.plan.outputs.skip != 'true'
         env:
           COVERAGE_CORE: sysmon
           CRYSTA_PYTEST_PART: ${{ matrix.part }}
@@ -369,17 +411,20 @@ jobs:
     env:
       CRYSTA_SHA: ${{ inputs.crysta-sha }}
     steps:
+      - *marker
       - *checkout
       - *source
       - *subject
       - *pixi-cpp
       - *ccache-env
       - *ccache-restore
-      - name: Build the extension and the CLI
+      - name: Build C++ extension + CLI
+        if: needs.plan.outputs.skip != 'true'
         env:
           SKBUILD_CMAKE_DEFINE: CRYSTA_REQUIRE_SIMD=ON
         run: cd "$RUNNER_TEMP/crysta" && pixi run -e cpp-ci cpp-build
-      - name: Python tiers in full, this part
+      - name: Hidden numerical suite with coverage (Python tiers)
+        if: needs.plan.outputs.skip != 'true'
         env:
           COVERAGE_CORE: sysmon
           CRYSTA_PYTEST_PART: ${{ matrix.part }}
@@ -390,7 +435,7 @@ jobs:
           export PYTHONPATH="$GITHUB_WORKSPACE/tools/ci${PYTHONPATH:+:$PYTHONPATH}"
           python3 "$GITHUB_WORKSPACE/tools/ci/crysta_findings.py" run pytest "$CRYSTA_PYTEST_RECORD" -- pixi run -e cpp-ci --skip-deps suite-coverage
       - name: Seeded series, slow cadence
-        if: ${{ !cancelled() && matrix.part == '1/6' }}
+        if: ${{ needs.plan.outputs.skip != 'true' && (!cancelled() && matrix.part == '1/6') }}
         run: cd "$RUNNER_TEMP/crysta" && pixi run -e cpp-ci --skip-deps slow-seeded-series
 
   audit:
@@ -406,6 +451,7 @@ jobs:
     env:
       CRYSTA_SHA: ${{ inputs.crysta-sha }}
     steps:
+      - *marker
       - *checkout
       - *source
       - *subject
@@ -413,6 +459,7 @@ jobs:
       - *ccache-env
       - *ccache-restore
       - name: Runtime-manifest equality audit
+        if: needs.plan.outputs.skip != 'true'
         run: cd "$RUNNER_TEMP/crysta" && pixi run -e cpp-ci per-pr-audit
 
   edi-verification:
@@ -428,13 +475,17 @@ jobs:
     env:
       CRYSTA_SHA: ${{ inputs.crysta-sha }}
     steps:
+      - *marker
       # The verification reads edi's tests, so this checkout is the whole pull-request head.
       - uses: actions/checkout@v5
+        if: needs.plan.outputs.skip != 'true'
         with:
           ref: ${{ needs.plan.outputs.edi }}
       - name: Set up pixi for edi
+        if: needs.plan.outputs.skip != 'true'
         uses: ./.github/actions/setup-pixi
       - name: This run's crysta SDK, the package under test
+        if: needs.plan.outputs.skip != 'true'
         uses: ./.github/actions/crysta-sdk
         with:
           platform: linux-64
@@ -447,6 +498,7 @@ jobs:
       # edi's pinned route takes only the pinned commit; another one (a diagnostic, or a candidate
       # not pinned yet) is linked through CRYSTA_SDK_DIR.
       - name: edi verification against this crysta
+        if: needs.plan.outputs.skip != 'true'
         env:
           EDI_DIR: ${{ github.workspace }}
           CRYSTA_SDK_TARBALL_DIR: ${{ github.workspace }}/crysta-sdk-archives
@@ -462,7 +514,7 @@ jobs:
           fi
           bash "$CRYSTA_SRC/tools/ci/edi-verification.sh"
       - name: Every edi file the verification read is an input
-        if: ${{ !cancelled() }}
+        if: ${{ needs.plan.outputs.skip != 'true' && (!cancelled()) }}
         run: python3 tools/ci/crysta_read_audit.py --log "$RUNNER_TEMP/edi-reads.txt" --root "$GITHUB_WORKSPACE"
 
   cpp-full:
@@ -478,27 +530,30 @@ jobs:
     env:
       CRYSTA_SHA: ${{ inputs.crysta-sha }}
     steps:
+      - *marker
       - *checkout
       - *source
       - *subject
       - *pixi-cpp
       - *ccache-env
       - *ccache-restore
-      - name: Build the extension and the CLI
+      - name: Build C++ extension + CLI
+        if: needs.plan.outputs.skip != 'true'
         env:
           SKBUILD_CMAKE_DEFINE: CRYSTA_REQUIRE_SIMD=ON
         run: cd "$RUNNER_TEMP/crysta" && pixi run -e cpp-ci cpp-build
-      - name: C++ tier in full
+      - name: Hidden numerical suite (cpp surface)
+        if: needs.plan.outputs.skip != 'true'
         env:
           COVERAGE_CORE: sysmon
         run: |
           cd "$RUNNER_TEMP/crysta"
           python3 "$GITHUB_WORKSPACE/tools/ci/crysta_findings.py" run doctest "$RUNNER_TEMP/crysta/build" -- pixi run -e cpp-ci cpp-test-merge
-      - name: Scalar fallback build and parity
-        if: ${{ !cancelled() }}
+      - name: Scalar fallback (CRYSTA_SLEEF=OFF) -Werror build + parity
+        if: ${{ needs.plan.outputs.skip != 'true' && (!cancelled()) }}
         run: cd "$RUNNER_TEMP/crysta" && pixi run -e cpp-ci bash tools/ci/_scalar_fallback.sh
-      - name: LTO correctness
-        if: ${{ !cancelled() }}
+      - name: LTO correctness (-DCRYSTA_LTO=ON byte-identical build + parity)
+        if: ${{ needs.plan.outputs.skip != 'true' && (!cancelled()) }}
         run: cd "$RUNNER_TEMP/crysta" && pixi run -e cpp-ci bash tools/ci/_lto_correctness.sh
 
   full-macos:
@@ -515,17 +570,20 @@ jobs:
       CRYSTA_SHA: ${{ inputs.crysta-sha }}
       CMAKE_GENERATOR: Ninja
     steps:
+      - *marker
       - *checkout
       - *source
       - *subject
       - *pixi-cpp
       - *ccache-env
       - *ccache-restore
-      - name: Build the extension and the CLI
+      - name: Build C++ extension + CLI
+        if: needs.plan.outputs.skip != 'true'
         env:
           SKBUILD_CMAKE_DEFINE: CRYSTA_REQUIRE_SIMD=ON
         run: cd "$RUNNER_TEMP/crysta" && pixi run -e cpp-ci cpp-build
-      - name: The full suite, C++ and Python tiers
+      - name: Hidden numerical suite (cpp surface)
+        if: needs.plan.outputs.skip != 'true'
         env:
           COVERAGE_CORE: sysmon
           CRYSTA_PYTEST_RECORD: ${{ runner.temp }}/findings/pytest.jsonl
@@ -537,11 +595,11 @@ jobs:
           python3 "$GITHUB_WORKSPACE/tools/ci/crysta_findings.py" run doctest "$RUNNER_TEMP/crysta/build" -- pixi run -e cpp-ci group-full || status=$?
           python3 "$GITHUB_WORKSPACE/tools/ci/crysta_findings.py" show pytest "$CRYSTA_PYTEST_RECORD"
           exit "$status"
-      - name: LTO correctness
-        if: ${{ !cancelled() }}
+      - name: LTO correctness (-DCRYSTA_LTO=ON byte-identical build + parity)
+        if: ${{ needs.plan.outputs.skip != 'true' && (!cancelled()) }}
         run: cd "$RUNNER_TEMP/crysta" && pixi run -e cpp-ci bash tools/ci/_lto_correctness.sh
       - name: Seeded series, slow cadence
-        if: ${{ !cancelled() }}
+        if: ${{ needs.plan.outputs.skip != 'true' && (!cancelled()) }}
         run: cd "$RUNNER_TEMP/crysta" && pixi run -e cpp-ci --skip-deps slow-seeded-series
 
   cppcheck:
@@ -563,11 +621,13 @@ jobs:
     env:
       CRYSTA_SHA: ${{ inputs.crysta-sha }}
     steps:
+      - *marker
       - *checkout
       - *source
       - *subject
       - *pixi-cpp
       - name: cppcheck
+        if: needs.plan.outputs.skip != 'true'
         run: |
           cd "$RUNNER_TEMP/crysta"
           python3 "$GITHUB_WORKSPACE/tools/ci/crysta_findings.py" --root "$RUNNER_TEMP/crysta" run cppcheck "$RUNNER_TEMP/findings/cppcheck.log" -- pixi run -e cpp-ci cpp-cppcheck
@@ -581,9 +641,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - {name: asan · Linux, runner: ubuntu-24.04, task: cpp-asan}
-          - {name: asan pool · Linux, runner: ubuntu-24.04, task: cpp-asan-pool}
-          - {name: asan · macOS, runner: macos-15, task: cpp-asan}
+          - {name: asan · Linux, runner: ubuntu-24.04, task: cpp-asan, step: ASan + UBSan}
+          - {name: asan pool · Linux, runner: ubuntu-24.04, task: cpp-asan-pool, step: ASan + UBSan on the std::thread pool}
+          - {name: asan · macOS, runner: macos-15, task: cpp-asan, step: ASan + UBSan}
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 90
     defaults:
@@ -595,13 +655,15 @@ jobs:
       ASAN_OPTIONS: detect_container_overflow=0
       CMAKE_GENERATOR: ${{ runner.os == 'macOS' && 'Ninja' || 'Unix Makefiles' }}
     steps:
+      - *marker
       - *checkout
       - *source
       - *subject
       - *pixi-cpp
       - *ccache-env
       - *ccache-restore
-      - name: ASan and UBSan
+      - name: ${{ matrix.step }}
+        if: needs.plan.outputs.skip != 'true'
         run: |
           cd "$RUNNER_TEMP/crysta"
           python3 "$GITHUB_WORKSPACE/tools/ci/crysta_findings.py" run doctest "$RUNNER_TEMP/crysta/build" -- pixi run -e cpp-ci '${{ matrix.task }}'
@@ -619,11 +681,13 @@ jobs:
     env:
       CRYSTA_SHA: ${{ inputs.crysta-sha }}
     steps:
+      - *marker
       - *checkout
       - *source
       - *subject
       - *pixi-cpp
-      - name: The full Release suite, GCC -O3, every case
+      - name: Full Release suite (GCC -O3, every case)
+        if: needs.plan.outputs.skip != 'true'
         run: |
           cd "$RUNNER_TEMP/crysta"
           python3 "$GITHUB_WORKSPACE/tools/ci/crysta_findings.py" run doctest "$RUNNER_TEMP/crysta/build" -- pixi run -e cpp-ci bash tools/ci/cpp-test.sh --merge
@@ -646,9 +710,11 @@ jobs:
       CRYSTA_SHA: ${{ inputs.crysta-sha }}
       CMAKE_GENERATOR: ${{ matrix.platform == 'macOS' && 'Ninja' || 'Unix Makefiles' }}
     steps:
+      - *marker
       - *checkout
       # The A/B compares with crysta main, whose head the source step lists and checks out beside.
       - name: crysta's source, whose lines no later step prints or stores
+        if: needs.plan.outputs.skip != 'true'
         uses: ./.github/actions/crysta-source
         with:
           sha: ${{ inputs.crysta-sha }}
@@ -660,10 +726,11 @@ jobs:
       - *ccache-env
       - *ccache-restore
       - name: Build the engine under test
+        if: needs.plan.outputs.skip != 'true'
         run: cd "$RUNNER_TEMP/crysta" && pixi run -e cpp-ci cpp-build && build/crysta --perf-info
       # A/A: both sides are this commit's engine, so every ratio outside the band is runner noise.
       - name: A/A runs at this commit
-        if: matrix.part != ''
+        if: needs.plan.outputs.skip != 'true' && (matrix.part != '')
         env:
           RUNS: ${{ matrix.platform == 'macOS' && '2' || '1' }}
         run: |
@@ -679,8 +746,8 @@ jobs:
           done
           exit "$status"
       # The base is built under its own manifest, with this commit's link script, as crysta did.
-      - name: A/B against crysta main
-        if: matrix.part == ''
+      - name: A/B performance gate
+        if: needs.plan.outputs.skip != 'true' && (matrix.part == '')
         run: |
           cd "$RUNNER_TEMP/crysta"
           work="$RUNNER_TEMP/ab"
@@ -705,16 +772,18 @@ jobs:
     env:
       CRYSTA_SHA: ${{ inputs.crysta-sha }}
     steps:
+      - *marker
       - *checkout
       - *source
       - *subject
       - *pixi-cpp
-      - name: Unit coverage, gated
+      - name: C++ unit coverage, gated at cpp_lines_min (clang -O0 + LLVM)
+        if: needs.plan.outputs.skip != 'true'
         run: |
           cd "$RUNNER_TEMP/crysta"
           python3 "$GITHUB_WORKSPACE/tools/ci/crysta_findings.py" run doctest "$RUNNER_TEMP/crysta/build" -- pixi run -e cpp-ci bash tools/ci/cpp-coverage-unit.sh
-      - name: Python-surface coverage of the unit tier, gated
-        if: ${{ !cancelled() }}
+      - name: Python surface coverage, gated at python_surface_min (unit tier)
+        if: ${{ needs.plan.outputs.skip != 'true' && (!cancelled()) }}
         run: cd "$RUNNER_TEMP/crysta" && pixi run -e cpp-ci --skip-deps py-surface-cov-unit
 
   wheels:
@@ -730,11 +799,13 @@ jobs:
     env:
       CRYSTA_SHA: ${{ inputs.crysta-sha }}
     steps:
+      - *marker
       - *checkout
       - *source
       - *subject
       # Built to prove the wheels build; they are not stored.
       - name: Build the wheels
+        if: needs.plan.outputs.skip != 'true'
         run: |
           python3 -m pip install --quiet 'cibuildwheel==3.4.1'
           python3 -m cibuildwheel "$RUNNER_TEMP/crysta" --output-dir "$RUNNER_TEMP/wheels"
