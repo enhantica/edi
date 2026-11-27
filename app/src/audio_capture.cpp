@@ -5,6 +5,7 @@
 #include <QAudioSource>
 #include <QCoreApplication>
 #include <QFile>
+#include <QLoggingCategory>
 #include <QMediaDevices>
 #include <QPermissions>
 #include <QtEndian>
@@ -19,6 +20,9 @@
 namespace edi_app {
 
 namespace {
+
+// The format the microphone really gives, so a run log shows what the resampler started from (ADR-0107 §4).
+Q_LOGGING_CATEGORY(lcVoiceCapture, "edi.voice")
 
 constexpr std::size_t kernel_step = 64;  // kernel points per input sample; linear in between is exact to about -90 dB
 constexpr auto kernel_steps = static_cast<double>(kernel_step);
@@ -221,6 +225,8 @@ void QtAudioCapture::open() {
         emit failed(Failure::DeviceFailed);
         return;
     }
+    qCInfo(lcVoiceCapture) << "Microphone" << input.description() << format_.sampleRate() << "Hz" << format_.channelCount()
+                           << "channels" << format_.sampleFormat();
     resampler_ = std::make_unique<MonoResampler>(format_.sampleRate());
     source_ = new QAudioSource(input, format_, this);
     connect(source_, &QAudioSource::stateChanged, this, [this](QtAudio::State) {
