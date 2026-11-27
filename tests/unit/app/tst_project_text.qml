@@ -318,6 +318,9 @@ Item {
                 polyhedraMaxDistance: o.polyhedraMaxDistance
             };
         }
+        function compareAppearance(expected, message) {
+            compare(JSON.stringify(appearance()), JSON.stringify(expected), message);
+        }
         function expectGlobalViewOnDisk(project, scale) {
             const record = SettingsProof.text(project, "project.edi");
             const entry = record.match(/^_structure_view\.moment_scale\s+(["']?)([0-9.]+)\1\s*$/m);
@@ -363,23 +366,23 @@ Item {
             };
             for (const key of Object.keys(chosen))
                 o[key] = chosen[key];
-            compare(appearance(), chosen, "The actual project options accept the complete independent witness");
+            compareAppearance(chosen, "The actual project options accept the complete independent witness");
             Session.project.currentStructureIndex = 1;
             verify(Session.project.currentStructure !== first, "The actual selected structure changed");
-            compare(appearance(), chosen, "All appearance settings survive selecting the other structure");
+            compareAppearance(chosen, "All appearance settings survive selecting the other structure");
             o.momentScale = 1.625;
             chosen.momentScale = 1.625;
             Session.project.currentStructureIndex = 0;
-            compare(appearance(), chosen, "An edit from the other structure applies to the first one too");
+            compareAppearance(chosen, "An edit from the other structure applies to the first one too");
             const editor = openText(Session.project.currentStructure);
             verify(!/^_structure_view\./m.test(editor.text), "Project appearance is absent from the structure Text tab");
             verify(Session.save(), "The normal save writes one project appearance");
             expectGlobalViewOnDisk(project, chosen.momentScale);
             Session.closeProject();
             verify(Session.openProject(project), "The ordinary reader reopens the project appearance");
-            compare(appearance(), chosen, "All saved settings survive reopen before selecting any structure");
+            compareAppearance(chosen, "All saved settings survive reopen before selecting any structure");
             Session.project.currentStructureIndex = 1;
-            compare(appearance(), chosen, "The same saved settings apply when selecting the second structure after reopen");
+            compareAppearance(chosen, "The same saved settings apply when selecting the second structure after reopen");
         }
         function test_legacy_appearance_migrates_first_structure_once() {
             Session.closeProject();
@@ -395,18 +398,18 @@ Item {
             compare(inherited.showLabels, false, "A setting that only the second legacy structure declared keeps its default");
             compare(inherited.momentScale, .75, "An explicitly saved scale of 0.75 survives the new default of one");
             Session.project.currentStructureIndex = 1;
-            compare(appearance(), inherited, "Selecting the conflicting legacy structure does not replace or merge its settings");
+            compareAppearance(inherited, "Selecting the conflicting legacy structure does not replace or merge its settings");
             Session.project.structureViewOptions.momentScale = 1.625;
             inherited.momentScale = 1.625;
             Session.project.currentStructureIndex = 0;
-            compare(appearance(), inherited, "Returning to the first structure does not reapply its original scale");
+            compareAppearance(inherited, "Returning to the first structure does not reapply its original scale");
             verify(Session.save(), "The next save upgrades the legacy settings to a project record");
             expectGlobalViewOnDisk(legacy, inherited.momentScale);
             Session.closeProject();
             verify(Session.openProject(legacy), "The migrated project reopens");
-            compare(appearance(), inherited, "Reopening reads the migrated values and keeps the edit");
+            compareAppearance(inherited, "Reopening reads the migrated values and keeps the edit");
             Session.project.currentStructureIndex = 1;
-            compare(appearance(), inherited, "The migrated appearance stays global after another selection");
+            compareAppearance(inherited, "The migrated appearance stays global after another selection");
             Session.closeProject();
             const firstWithoutView = isolatedAppearanceProject();
             verify(SettingsProof.write(firstWithoutView, second, SettingsProof.text(firstWithoutView, second) + "\n_structure_view.moment_scale 1.875\n"), "Only the second structure supplies an old scale");
