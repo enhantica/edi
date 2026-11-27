@@ -29,4 +29,4 @@ probe="$3"
 [ -n "$t" ] && [ -n "$item" ] && [ -n "$probe" ] || exit 1
 cur="$t/$item"
 [ -f "$cur/$probe" ] || exit 0
-rm -rf "$cur.old" "$cur.old-token" "$t/maintenancetool"
+rm -rf "$cur.old" "$cur.old-token" "$cur.copy" "$t/maintenancetool"

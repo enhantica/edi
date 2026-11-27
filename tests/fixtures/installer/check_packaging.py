@@ -157,6 +157,20 @@ def test_mirror_is_enabled_only_for_production(tmp_path, channel, prefix):
     )
 
 
+@pytest.mark.parametrize('system', ['linux', 'macos', 'windows'])
+def test_the_linux_app_brings_the_tool_component_with_an_update(tmp_path, monkeypatch, system):
+    # An update offers only installed components, but adds a missing dependency of one it updates;
+    # Linux installations from before ADR-0108 have no tool component, which now holds the runtime.
+    monkeypatch.setattr(PACKAGE, 'SYSTEM', system)
+    config, meta = tmp_path / 'config', tmp_path / 'meta'
+    config.mkdir()
+    meta.mkdir()
+    PACKAGE.write_metadata(config, meta, '26.18', None, [], enable_mirrors=False)
+    dependencies = ElementTree.parse(meta / 'package.xml').findtext('Dependencies')
+    expected = PACKAGE.MAINTENANCE_COMPONENT if system == 'linux' else None
+    assert dependencies == expected, 'Only the Linux app component depends on the tool component'
+
+
 def copy_bundles(command, **_):
     # Stands in for the subprocess so the macOS tool component gets its copied bundle.
     if command[0] == 'ditto':

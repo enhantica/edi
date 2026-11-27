@@ -11,6 +11,9 @@
 # once it was committed changes nothing. Any other backup is stale and goes, but only while a usable item is in place;
 # otherwise it is the only copy (an update stopped between the renames) and this operation keeps it as its own.
 # maintenance_cleanup.sh removes the backup once the update has succeeded.
+# With a fifth argument, copy, it only keeps a copy of the usable item as the backup with the same mark and puts
+# nothing new in place. The first Linux update off a release whose app component carried the runtime runs it before
+# the Framework undoes that component; maintenance_restore.sh with copy settles it afterwards.
 # IFW expands variable names between at signs in an operation's arguments, so this file has no at sign.
 
 # A closing terminal must not stop the renames half way.
@@ -25,11 +28,11 @@ if [ -z "$EDI_MAINTENANCE_LOCKED" ]; then
     export EDI_MAINTENANCE_LOCKED EDI_MAINTENANCE_TOOL_PID
     lock="$1/.MaintenanceTool.lock"
     # The tool runs this as the text given to sh -c, with the same text as its name.
-    set -- /bin/sh -c "$0" "$0" "$1" "$2" "$3" "$4"
+    set -- /bin/sh -c "$0" "$0" "$1" "$2" "$3" "$4" "$5"
     if [ -x /usr/bin/lockf ]; then
-        /usr/bin/lockf -k -t 60 "$lock" "$1" "$2" "$3" "$4" "$5" "$6" "$7" "$8" && exit 0
+        /usr/bin/lockf -k -t 60 "$lock" "$1" "$2" "$3" "$4" "$5" "$6" "$7" "$8" "$9" && exit 0
     elif command -v flock > /dev/null 2>&1; then
-        flock -w 60 "$lock" "$1" "$2" "$3" "$4" "$5" "$6" "$7" "$8" && exit 0
+        flock -w 60 "$lock" "$1" "$2" "$3" "$4" "$5" "$6" "$7" "$8" "$9" && exit 0
     fi
     exit 1
 fi
@@ -66,6 +69,16 @@ if [ -d "$old" ] && ! ours; then
     else
         printf '%s\n' "$mark" > "$owner" || exit 1
     fi
+fi
+if [ "$5" = copy ]; then
+    # Hard links where cp makes them (GNU), else a plain copy: either survives the undo deleting the item's files.
+    # The copy gets its final name only once complete and marked.
+    if ! ours && usable "$cur"; then
+        rm -rf "$cur.copy" || exit 1
+        cp -al "$cur" "$cur.copy" 2> /dev/null || { rm -rf "$cur.copy" && cp -pR "$cur" "$cur.copy"; } || exit 1
+        printf '%s\n' "$mark" > "$owner" && mv "$cur.copy" "$old" || exit 1
+    fi
+    exit 0
 fi
 if [ -d "$staged" ]; then
     rm -rf "$new" && mv "$staged" "$new" || restore

@@ -117,15 +117,25 @@ update replaces while the tool runs. So the runtime takes the bundle's design ra
    more; the uninstalling tool has already loaded its libraries. On Windows it removes only a lock file, if one is
    there.
 
-7. **Accepted windows.**
+7. **Accepted window.**
    - *An app built before this decision, running during the one update that brings it.* It does not take the lock and
      still reads the mark, whose start time is now in UTC, so outside UTC it can read the mark as a reused process
      number and take the backup in the moment between the swap's two renames. The window lasts milliseconds, once.
-   - *The first Linux update off a release whose app component carries the runtime.* Qt Installer Framework 4.11 runs
-     that release's saved undo of the app component before any operation of the new release, which deletes
-     `installer-runtime/` before the swap. If that update then fails before the swap, the tool cannot start and the
-     installer has to be run again over the installation. No operation can run earlier to protect the runtime, so the
-     exposure is accepted for that one update; once it has succeeded, no undo owns the runtime.
+
+8. **The first Linux update off a release whose app component carries the runtime.** Qt Installer Framework 4.11 runs
+   that release's saved undo of the app component before any operation of the new release, which deletes
+   `installer-runtime/`, and a rollback undoes only the new release's operations. The Framework calls each component
+   script's `beginInstallation` before that undo, so the app component's script keeps the runtime there:
+   `maintenance_swap.sh … copy` puts a copy of a usable runtime (hard links where `cp -l` works, a plain copy
+   otherwise) at `installer-runtime.old`, marked for this run as in decision 2. `maintenance_restore.sh … copy` then
+   settles it: the copy goes back when no usable runtime is in place and is dropped otherwise. It runs as the app
+   component's first operation and that operation's undo, and on `installer.installationFinished` after a success or
+   a rollback, so a failure anywhere after the undo, an unpacking error included, leaves the original runtime. A swap
+   of the tool's component in the same update finds no usable runtime, takes the copy as its own backup, and its undo
+   puts it back. After a successful update no copy is left, and no undo owns the runtime any more.
+   An update offers only components already installed, so on Linux the app component depends on the tool's
+   component: the Framework adds a missing dependency of a component it updates, and the first update installs the
+   tool's component with the new runtime.
 
 ## How CI proves it
 
@@ -163,6 +173,6 @@ update replaces while the tool runs. So the runtime takes the bundle's design ra
 | Decide whether an update is running from the process named in the mark (ADR-0106) | Rejected: a force-quit tool, a time zone change or a second app each led it to take the backup at the wrong moment. |
 | `QLockFile` in the app | Rejected: it is a process-number file, with the same stale-number problem the kernel lock removes. |
 | A mark that older apps can read (process number only) with the run in a second file | Rejected: a second mark file kept forever for an exposure of milliseconds in one update. |
-| Keep the Linux runtime in the app component and copy it aside before the undo | Rejected: no operation runs before the Framework's undo, and the runtime belongs to the tool, not the app. |
+| Keep the Linux runtime in the app component and copy it aside before every update | Rejected: the runtime belongs to the tool, not the app; the copy covers only the one update that moves it (decision 8). |
 | Remove the staging folder only when it is empty | Rejected: Finder writes files into it, and whatever is left once the staged item has moved out is debris. |
 | Keep the staged Windows tool after an update | Rejected: the owner asked for no staging folder after a successful update, whichever tool drove it. |

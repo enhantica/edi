@@ -71,12 +71,14 @@ class Site:
         probe = path / self.form.probe
         return probe.read_text() if probe.exists() else None
 
-    def command(self, script: Path, token: str = OPERATION) -> list[str]:
+    def command(self, script: Path, token: str = OPERATION, mode: str = '') -> list[str]:
         # As maintenancescript.qs runs it: the text given to sh -c, with the same text as its name.
         text = script.read_text(encoding='utf-8')
         arguments = [self.form.item, self.form.probe]
         if script != CLEANUP:
             arguments = [token, *arguments]
+        if mode:
+            arguments.append(mode)
         return ['/bin/sh', '-c', text, text, str(self.target), *arguments]
 
 
@@ -95,13 +97,14 @@ SESSION = (
 
 def session_command(site: Site, steps: tuple) -> list[str]:
     commands = [
-        [site.command(step[0], step[1]), step[2] if len(step) > 2 else None] for step in steps
+        [site.command(step[0], step[1], *step[3:]), step[2] if len(step) > 2 else None]
+        for step in steps
     ]
     return [sys.executable, '-c', SESSION, json.dumps(commands)]
 
 
 def session(site: Site, *steps: tuple) -> list[int]:
-    """Run (script, token[, env]) steps in one tool run; their exit codes."""
+    """Run (script, token[, env[, mode]]) steps in one tool run; their exit codes."""
     result = subprocess.run(
         session_command(site, steps), capture_output=True, text=True, check=True
     )
@@ -532,6 +535,71 @@ def test_the_cleanup_keeps_the_only_tool(installed: Site, shims: Path) -> None:
     assert installed.tool(installed.path('.old')) == 'installed'
     assert installed.path('.old-token').exists()
     assert (installed.target / 'maintenancetool/.DS_Store').exists()
+
+
+# The first Linux update off a release whose app component carried the runtime: the Framework
+# undoes that component, deleting the runtime's files, before any operation of the update runs.
+# The app component's script keeps a copy first (swap with copy) and settles it at the end and in
+# its operation's undo (restore with copy).
+KEEP = (SWAP, 'transition', None, 'copy')
+SETTLE = (RESTORE, 'transition', None, 'copy')
+OLD_UNDO = (
+    'import os, sys\n'
+    'for folder, _, files in os.walk(sys.argv[1]):\n'
+    '    for name in files:\n'
+    '        os.remove(os.path.join(folder, name))\n'
+)
+
+
+def undoes_the_old_app(site: Site) -> tuple:
+    # Deletes the files as the Framework's undo of an unpack does, leaving the folders.
+    return ([sys.executable, '-c', OLD_UNDO, str(site.path())], None)
+
+
+def transition(site: Site, *steps) -> list[int]:
+    commands = [
+        step if isinstance(step[0], list) else [site.command(step[0], step[1], step[3]), step[2]]
+        for step in steps
+    ]
+    command = [sys.executable, '-c', SESSION, json.dumps([list(step) for step in commands])]
+    result = subprocess.run(command, capture_output=True, text=True, check=True)
+    return [int(code) for code in result.stdout.split()]
+
+
+def test_a_failed_first_update_puts_the_kept_runtime_back(installed: Site) -> None:
+    codes = transition(installed, KEEP, undoes_the_old_app(installed), SETTLE)
+    assert codes == [0, 0, 0]
+    assert installed.tool(installed.path()) == 'installed', 'the copy survived the undo'
+    for suffix in ('.old', '.old-token', '.copy'):
+        assert not installed.path(suffix).exists(), suffix
+
+
+def test_the_kept_copy_goes_when_the_runtime_is_still_usable(installed: Site) -> None:
+    assert transition(installed, KEEP, SETTLE, SETTLE) == [0, 0, 0]
+    assert installed.tool(installed.path()) == 'installed'
+    for suffix in ('.old', '.old-token', '.copy'):
+        assert not installed.path(suffix).exists(), suffix
+
+
+def test_a_later_run_never_settles_the_copy(installed: Site) -> None:
+    assert session(installed, KEEP) == [0]
+    assert session(installed, SETTLE) == [0]
+    assert installed.path('.old').exists(), 'kept by another run'
+
+
+@pytest.mark.parametrize('rolled_back', [False, True], ids=['succeeded', 'rolled-back'])
+def test_a_swap_after_the_undo_takes_the_copy_as_its_backup(
+    installed: Site, *, rolled_back: bool
+) -> None:
+    # A tool component that swaps a new runtime in after the undo finds no usable one in place,
+    # so it keeps the copy as its own backup; its undo puts the original back.
+    installed.put(installed.staged, 'new')
+    swap, undo = (SWAP, OPERATION, None, ''), (RESTORE, OPERATION, None, '')
+    steps = (KEEP, undoes_the_old_app(installed), swap, *([undo] if rolled_back else []), SETTLE)
+    assert transition(installed, *steps) == [0] * len(steps)
+    assert installed.tool(installed.path()) == ('installed' if rolled_back else 'new')
+    kept = None if rolled_back else 'installed'
+    assert installed.tool(installed.path('.old')) == kept, 'the swap backup, for the cleanup'
 
 
 def test_each_component_script_assigns_each_function_once() -> None:

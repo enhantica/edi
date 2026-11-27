@@ -432,9 +432,13 @@ def write_metadata(
             # Listed first wherever components are (the Framework orders by this, higher first).
             'SortingPriority': '200',
             'Script': 'installscript.qs',
+            # Linux installations from before ADR-0108 have no tool component, and an update only
+            # offers components already installed; as a dependency of the app it comes with the
+            # update that takes the runtime out of the app component.
+            **({'Dependencies': MAINTENANCE_COMPONENT} if SYSTEM == 'linux' else {}),
         },
     )
-    shutil.copy2(ROOT / 'tools/installer/installscript.qs', meta / 'installscript.qs')
+    (meta / 'installscript.qs').write_text(app_script(), encoding='utf-8')
     # No <Licenses>: the GPL needs no acceptance page, so the install page has a ticked box and a
     # link to read it (Installer.qs); the licence text ships with the app.
     ET.indent(root)
@@ -566,23 +570,38 @@ def write_maintenance_tool_metadata(meta: Path, version: str) -> None:
     (meta / 'maintenancescript.qs').write_text(maintenance_script(), encoding='utf-8')
 
 
-def maintenance_script() -> str:
-    """The tool component's script, its shell scripts written in as string literals.
+SHELL_SCRIPTS = {
+    'EDI_SWAP_SCRIPT': 'maintenance_swap.sh',
+    'EDI_RESTORE_SCRIPT': 'maintenance_restore.sh',
+    'EDI_CLEANUP_SCRIPT': 'maintenance_cleanup.sh',
+}
 
-    They are the swap, its undo and the cleanup after a successful update (ADR-0108).
-    """
+
+def with_shell_scripts(name: str, markers: tuple[str, ...]) -> str:
+    """A component script with the named shell scripts written in as string literals (ADR-0108)."""
     folder = ROOT / 'tools/installer'
-    script = (folder / 'maintenancescript.qs').read_text(encoding='utf-8')
-    for marker, name in (
-        ('EDI_SWAP_SCRIPT', 'maintenance_swap.sh'),
-        ('EDI_RESTORE_SCRIPT', 'maintenance_restore.sh'),
-        ('EDI_CLEANUP_SCRIPT', 'maintenance_cleanup.sh'),
-    ):
+    script = (folder / name).read_text(encoding='utf-8')
+    for marker in markers:
         quoted = f'"@{marker}@"'
         if script.count(quoted) != 1:
-            raise RuntimeError(f'maintenancescript.qs must name {quoted} once')
-        script = script.replace(quoted, json.dumps((folder / name).read_text(encoding='utf-8')))
+            raise RuntimeError(f'{name} must name {quoted} once')
+        text = (folder / SHELL_SCRIPTS[marker]).read_text(encoding='utf-8')
+        script = script.replace(quoted, json.dumps(text))
     return script
+
+
+def maintenance_script() -> str:
+    """The tool component's script with the swap, its undo and the cleanup after an update."""
+    return with_shell_scripts('maintenancescript.qs', tuple(SHELL_SCRIPTS))
+
+
+def app_script() -> str:
+    """The app component's script with the swap and its undo.
+
+    They keep the Linux tool's runtime through the first update off a release whose app component
+    carried it.
+    """
+    return with_shell_scripts('installscript.qs', ('EDI_SWAP_SCRIPT', 'EDI_RESTORE_SCRIPT'))
 
 
 def maintenance_tool_name() -> str:
