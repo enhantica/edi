@@ -448,7 +448,7 @@ edi keeps the account list; a runtime only says who is signed in.
 The account button (`connectionButton`) keeps its place, size and states, and keeps opening the Account dialog
 (`accountDialog`, ADR-0057's account card); it stays the one account surface. The dialog gains one group per provider:
 a header with the provider's name, one row per account with the active one checked and its e-mail, plan and state, a
-Switch action on the others, Sign out on each signed-in account, and "Add account" per installed provider (disabled,
+Switch action on the others, Sign out (for Copilot, Remove from edi) on the active account, and "Add account" per installed provider (disabled,
 with a tooltip naming the Maintenance Tool, when the runtime is not installed). E-mail, plan and usage show for the
 active account where the provider has them. Every element copies the closest existing one in the panel and its
 dialogs. The consent dialog before the first sign-in (`AssistantConnectionDialog.qml`) names the provider and the
