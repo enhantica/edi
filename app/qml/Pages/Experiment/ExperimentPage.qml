@@ -86,10 +86,6 @@ WorkflowPage {
                     measured: page.measured
                 }
             }
-            // The k search: not a file category, a group of its own after them (owner, 2026-11-27).
-            KSearchGroup {
-                visible: page.measured
-            }
         }
     }
     extrasItem: Component {
@@ -112,6 +108,10 @@ WorkflowPage {
                     contents: page.extrasContents
                     measured: page.measured
                 }
+            }
+            // The k-vector search: not a file category, a group of its own on Extra after them (owner, 2026-11-27).
+            KSearchGroup {
+                visible: page.measured
             }
         }
     }

@@ -10,9 +10,9 @@ import EasyApplication.Gui.Components as EaComponents
 
 import edi.app
 
-// The propagation vector (k) search, a group of its own (owner, 2026-11-27): the peaks marked on the pattern chart as a
-// table built like Excluded regions (2θ, d, and each peak's role after a search), each row removable, and Find k and
-// Clear as the group's buttons. The chart's toolbar keeps only its Mark peaks toggle; the marks belong to the chart.
+// The propagation vector (k) search, a group of its own, laid out like Excluded regions (owner decision 2026-11-27): the
+// marked peaks' table always shown (2θ, d, and each peak's role after a search), each row removable and all of them
+// by the remove column's header button, then Mark peaks and Find k below it. The marks belong to the chart.
 SideBarGroup {
     id: group
 
@@ -31,30 +31,18 @@ SideBarGroup {
         return out;
     }
 
-    readonly property string openKey: "Basic:k_search"
+    readonly property string openKey: "Extras:k_search"
     pinKey: openKey
     objectName: "group.k_search"
     collapsed: !SideBarGroups.isOpen(openKey, group)
     onCollapsedChanged: SideBarGroups.setOpen(openKey, !collapsed, group)
     last: SideBarGroups.isLast(group)
-    title: group.marking ? qsTr("Propagation vector (k) search (%1)").arg(group.rows.length) : qsTr("Propagation vector (k) search")
+    title: group.marking ? qsTr("k-vector search (%1)").arg(group.rows.length) : qsTr("k-vector search")
     icon: "magnet"
 
     Column {
         width: parent ? parent.width : 0
         spacing: AppSizes.groupContentSpacing
-
-        // The group starts with this toggle alone (owner decision 2026-11-27); on, the marked peaks, Find k and Clear
-        // follow. While it is on, a click on the pattern marks a peak and a click on a mark drops it.
-        EaElements.SideBarButton {
-            objectName: "kSearch.mark"
-            fontIcon: "magnet"
-            text: group.marking ? qsTr("Stop marking peaks") : qsTr("Mark peaks")
-            checkable: true
-            checked: group.marking
-            enabled: group.chart !== null
-            onClicked: group.chart.setPeakMode(!group.marking)
-        }
 
         // Only when marking cannot start here: several crystal structures, or none, linked to the experiment.
         EaElements.Label {
@@ -67,7 +55,8 @@ SideBarGroup {
 
         DataTable {
             objectName: "kSearch.list"
-            visible: group.marking
+            // Empty and disabled until a peak is marked.
+            enabled: group.rows.length > 0
             defaultInfoText: qsTr("No peaks marked yet")
             sourceModel: group.rows
             columnKinds: ["index", "number", "number", "text", "control"]
@@ -90,8 +79,14 @@ SideBarGroup {
                     horizontalAlignment: Text.AlignLeft
                     text: qsTr("Role")
                 }
-                EaComponents.ListViewLabel {
+                // Above the remove column, the button that removes them all.
+                EaComponents.ListViewButton {
                     horizontalAlignment: Text.AlignHCenter
+                    objectName: "kSearch.clear"
+                    fontIcon: "minus-circle"
+                    enabled: group.rows.length > 0
+                    ToolTip.text: qsTr("Remove all marked peaks")
+                    onClicked: group.chart.axisProject.clearKMarks()
                 }
             }
 
@@ -160,22 +155,24 @@ SideBarGroup {
             }
         }
 
+        // While marking, a click on the pattern marks a peak and a click on a mark drops it.
         Row {
-            visible: group.marking
             spacing: EaStyle.Sizes.fontPixelSize
+            EaElements.SideBarButton {
+                objectName: "kSearch.mark"
+                fontIcon: "magnet"
+                text: group.marking ? qsTr("Stop marking peaks") : qsTr("Mark peaks")
+                checkable: true
+                checked: group.marking
+                enabled: group.chart !== null
+                onClicked: group.chart.setPeakMode(!group.marking)
+            }
             EaElements.SideBarButton {
                 objectName: "kSearch.findK"
                 fontIcon: "search"
                 text: qsTr("Find k")
                 enabled: group.marking && group.chart.peakMarks.length > 0
                 onClicked: group.chart.openKVectors()
-            }
-            EaElements.SideBarButton {
-                objectName: "kSearch.clear"
-                fontIcon: "eraser"
-                text: qsTr("Clear")
-                enabled: group.marking && group.chart.peakMarks.length > 0
-                onClicked: group.chart.axisProject.clearKMarks()
             }
         }
     }
