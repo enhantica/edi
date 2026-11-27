@@ -394,7 +394,12 @@ QString CodexAgent::executable() {
 }
 
 bool CodexAgent::start(const QString& executable, const QString& workspace) {
-    return startWith(executable, workspace, nullptr);
+    if (account_home_.isEmpty()) return startWith(executable, workspace, nullptr);
+    // An added account must never fall back to the ordinary profile, so a missing home refuses the start.
+    if (!QFileInfo(account_home_).isAbsolute() || !QFileInfo(account_home_).isDir()) return false;
+    auto environment = QProcessEnvironment::systemEnvironment();
+    environment.insert(QStringLiteral("CODEX_HOME"), account_home_);
+    return startWith(executable, workspace, &environment);
 }
 bool CodexAgent::start(const QString& executable, const QString& workspace, const QProcessEnvironment& environment) {
     return startWith(executable, workspace, &environment);

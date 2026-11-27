@@ -106,7 +106,11 @@ bool assistant_provider_available(AssistantProviderId id) noexcept {
 std::unique_ptr<AssistantProvider> make_assistant_provider(const AssistantAccountRef& account, QObject* parent,
                                                            std::shared_ptr<const void> releaseOwner) {
     switch (account.provider) {
-        case AssistantProviderId::ChatGpt: return std::make_unique<CodexAgent>(parent, std::move(releaseOwner));
+        case AssistantProviderId::ChatGpt: {
+            auto agent = std::make_unique<CodexAgent>(parent, std::move(releaseOwner));
+            agent->setAccountHome(account.home);
+            return agent;
+        }
         case AssistantProviderId::Claude: {
             if (!assistant_provider_available(AssistantProviderId::Claude)) return nullptr;
             auto session = std::make_unique<ClaudeSession>();

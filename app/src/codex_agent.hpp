@@ -35,7 +35,10 @@ public:
     QString runtimePolicyPatch() const override { return policyPatch(); }
     QJsonObject threadPolicy() const override;
     ~CodexAgent() override;
-    /// Start with the app's own environment: the runtime's ordinary profile and login.
+    /// An added account's own empty folder, given to the runtime as CODEX_HOME; empty for the first ChatGPT
+    /// account, which keeps the runtime's ordinary profile (ADR-0108 §8).
+    void setAccountHome(const QString& home) { account_home_ = home; }
+    /// Start with the app's own environment, plus CODEX_HOME when the account has its own home.
     bool start(const QString& executable, const QString& workspace) override;
     /// Start with exactly `environment`, which names an added account's own CODEX_HOME (ADR-0108 §8).
     bool start(const QString& executable, const QString& workspace, const QProcessEnvironment& environment);
@@ -72,6 +75,7 @@ private:
     friend struct CodexAgentTestAccess; // Defined only by the independent finite native probe.
     class Process;
     const std::shared_ptr<const void> release_owner_;
+    QString account_home_;
     quint64 process_birth_=0;
     bool process_owner_alive_=false;
     void processOwnerReleased(quint64) noexcept;
