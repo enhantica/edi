@@ -106,8 +106,7 @@ private:
     void finishStart(const QString& login);
     void readbackExpired();
 
-    void logout(const QString& session);
-    void confirmSignOut(const QString& session);
+    void logout();
     void unconfirmed(const QString& reason);
     void removeHome(const AssistantAccountRef& account);
 
@@ -136,7 +135,7 @@ private:
 
     // The start's readbacks.
     QTimer readback_timer_;
-    bool ready_ = false, can_load_ = false;
+    bool ready_ = false, can_load_ = false, can_logout_ = false;
     QString probe_, spare_;
     bool probe_listed_ = false, checking_start_ = false;
     QStringList commands_;

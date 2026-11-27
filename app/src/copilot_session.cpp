@@ -299,7 +299,7 @@ void CopilotSession::retire() {
     pending_.clear();
     threads_.clear();
     notices_.clear();
-    ready_ = can_load_ = false;
+    ready_ = can_load_ = can_logout_ = false;
     probe_.clear();
     spare_.clear();
     probe_listed_ = checking_start_ = false;
@@ -414,6 +414,7 @@ void CopilotSession::initialized(const QJsonObject& result) {
     }
     const auto capabilities = result.value(QStringLiteral("agentCapabilities")).toObject();
     can_load_ = capabilities.value(QStringLiteral("loadSession")).toBool();
+    can_logout_ = capabilities.value(QStringLiteral("auth")).toObject().value(QStringLiteral("logout")).isObject();
     // ACP reports skills only per session (`available_commands_update`), so the readback opens one session.
     request(QStringLiteral("session/new"), {{"cwd", launch_.workspace}, {"mcpServers", QJsonArray{}}},
             [this](const QJsonObject& reply, const QJsonObject& error) {
@@ -1076,67 +1077,47 @@ void CopilotSession::cancelSignIn() {
 }
 
 void CopilotSession::signOut(const AssistantRuntimeLaunch& launch) {
-    // The CLI signs itself out with `/logout` in the account's own session, once `/user show` has shown that
-    // session is the account's. Without it, edi offers removal instead (`removeAccount`).
+    // ACP's own `logout`, sent only after `/user switch` and `/user show` proved this process uses the account.
+    // Without that proof edi offers removal instead (`removeAccount`).
     if (!ready_ || launch_.account.id != launch.account.id || probe_.isEmpty()) {
         emit signOutUnconfirmed(QStringLiteral("GitHub Copilot can sign out only the account that is in use."));
         return;
     }
-    if (!commands_.contains(QStringLiteral("logout"))) {
+    if (!can_logout_) {
         emit signOutUnconfirmed(QStringLiteral("This GitHub Copilot release cannot sign out from edi."));
         return;
     }
-    const auto session = probe_;
-    checkIdentity(
-        session, [this, session](const QString&) { logout(session); },
-        [this](const QString& reason, bool noUser) {
-            if (noUser) {
-                retire();
-                emit signedOut();
-            } else unconfirmed(reason);
-        });
-}
-
-void CopilotSession::logout(const QString& session) {
-    request(QStringLiteral("session/prompt"),
-            {{"sessionId", session}, {"prompt", QJsonArray{QJsonObject{{"type", "text"}, {"text", "/logout"}}}}},
-            [this, session](const QJsonObject&, const QJsonObject& error) {
-                if (!error.isEmpty()) {
-                    auto reason = errorText(error);
-                    unconfirmed(reason.isEmpty() ? QStringLiteral("GitHub Copilot could not sign out.") : reason);
-                    return;
-                }
-                confirmSignOut(session);
-            });
-}
-
-void CopilotSession::confirmSignOut(const QString& session) {
-    // Confirmed only by the CLI itself: `/user show` naming no user, or without `/user` a new session that needs
-    // a sign-in.
-    const auto done = [this](bool confirmed) {
-        if (!confirmed) {
-            unconfirmed(QStringLiteral("GitHub Copilot did not confirm the sign-out."));
-            return;
-        }
-        retire();
-        emit signedOut();
-    };
-    if (commands_.contains(QStringLiteral("user"))) {
-        runCommand(session, QStringLiteral("/user show"), [done](const QJsonObject& error, const QString& text) {
-            const auto user = parseUser(text);
-            done((error.isEmpty() && user.signedOut && user.login.isEmpty()) ||
-                 error.value(QStringLiteral("code")).toInt() == auth_required);
-        });
+    if (!commands_.contains(QStringLiteral("user")) || launch_.account.email.isEmpty()) {
+        emit signOutUnconfirmed(QStringLiteral("GitHub Copilot cannot show which account it would sign out."));
         return;
     }
-    request(QStringLiteral("session/new"), {{"cwd", launch_.workspace}, {"mcpServers", QJsonArray{}}},
-            [done](const QJsonObject&, const QJsonObject& error) {
-                done(error.value(QStringLiteral("code")).toInt() == auth_required);
-            });
+    checkIdentity(
+        probe_, [this](const QString&) { logout(); },
+        [this](const QString& reason, bool) { unconfirmed(reason); });
+}
+
+void CopilotSession::logout() {
+    request(QStringLiteral("logout"), {}, [this](const QJsonObject&, const QJsonObject& error) {
+        if (!error.isEmpty()) {
+            const auto reason = errorText(error);
+            unconfirmed(reason.isEmpty() ? QStringLiteral("GitHub Copilot could not sign out.") : reason);
+            return;
+        }
+        // Confirmed only by the CLI itself: a new session now needs a sign-in (ACP's auth_required).
+        request(QStringLiteral("session/new"), {{"cwd", launch_.workspace}, {"mcpServers", QJsonArray{}}},
+                [this](const QJsonObject&, const QJsonObject& refusal) {
+                    if (refusal.value(QStringLiteral("code")).toInt() != auth_required) {
+                        unconfirmed(QStringLiteral("GitHub Copilot did not confirm the sign-out."));
+                        return;
+                    }
+                    retire();
+                    emit signedOut();
+                });
+    });
 }
 
 void CopilotSession::unconfirmed(const QString& reason) {
-    // After a `/logout` attempt the runtime's state is unknown, so it is not used again.
+    // After a sign-out attempt the runtime's state is unknown, so it is not used again.
     retire();
     emit signOutUnconfirmed(withNotices(reason));
 }
