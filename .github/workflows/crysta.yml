@@ -183,6 +183,12 @@ jobs:
           manifest-path: ${{ runner.temp }}/crysta/pixi.toml
           environments: ${{ matrix.environments }}
           cache: false
+          install: false
+      - name: Install crysta's environments
+        if: needs.plan.outputs.skip != 'true'
+        env:
+          CRYSTA_ENVS: ${{ matrix.environments }}
+        run: for environment in $CRYSTA_ENVS; do pixi install --manifest-path "$RUNNER_TEMP/crysta/pixi.toml" -e "$environment" --frozen; done
       - &ccache-env
         if: needs.plan.outputs.skip != 'true'
         name: Point the compiler cache at the runner
@@ -333,6 +339,12 @@ jobs:
           manifest-path: ${{ runner.temp }}/crysta/pixi.toml
           environments: cpp-ci lint
           cache: false
+          install: false
+      - name: Install crysta's environments
+        if: needs.plan.outputs.skip != 'true'
+        env:
+          CRYSTA_ENVS: cpp-ci lint
+        run: for environment in $CRYSTA_ENVS; do pixi install --manifest-path "$RUNNER_TEMP/crysta/pixi.toml" -e "$environment" --frozen; done
       - *ccache-env
       - *ccache-restore
       - name: The build tree clang-tidy reads
@@ -375,6 +387,13 @@ jobs:
           manifest-path: ${{ runner.temp }}/crysta/pixi.toml
           environments: cpp-ci
           cache: false
+          install: false
+      - &install-cpp
+        name: Install crysta's environments
+        if: needs.plan.outputs.skip != 'true'
+        env:
+          CRYSTA_ENVS: cpp-ci
+        run: for environment in $CRYSTA_ENVS; do pixi install --manifest-path "$RUNNER_TEMP/crysta/pixi.toml" -e "$environment" --frozen; done
       - *ccache-env
       - *ccache-restore
       - name: Build C++ extension + CLI
@@ -388,7 +407,8 @@ jobs:
           COVERAGE_CORE: sysmon
           CRYSTA_PYTEST_PART: ${{ matrix.part }}
           CRYSTA_PYTEST_RECORD: ${{ runner.temp }}/findings/pytest.jsonl
-          PYTEST_ADDOPTS: -p crysta_pytest
+          # A failed test's message and traceback can quote crysta's tests or corpus.
+          PYTEST_ADDOPTS: -p crysta_pytest --tb=no -rN
         run: |
           cd "$RUNNER_TEMP/crysta"
           export PYTHONPATH="$GITHUB_WORKSPACE/tools/ci${PYTHONPATH:+:$PYTHONPATH}"
@@ -416,6 +436,7 @@ jobs:
       - *source
       - *subject
       - *pixi-cpp
+      - *install-cpp
       - *ccache-env
       - *ccache-restore
       - name: Build C++ extension + CLI
@@ -429,7 +450,8 @@ jobs:
           COVERAGE_CORE: sysmon
           CRYSTA_PYTEST_PART: ${{ matrix.part }}
           CRYSTA_PYTEST_RECORD: ${{ runner.temp }}/findings/pytest.jsonl
-          PYTEST_ADDOPTS: -p crysta_pytest
+          # A failed test's message and traceback can quote crysta's tests or corpus.
+          PYTEST_ADDOPTS: -p crysta_pytest --tb=no -rN
         run: |
           cd "$RUNNER_TEMP/crysta"
           export PYTHONPATH="$GITHUB_WORKSPACE/tools/ci${PYTHONPATH:+:$PYTHONPATH}"
@@ -456,6 +478,7 @@ jobs:
       - *source
       - *subject
       - *pixi-cpp
+      - *install-cpp
       - *ccache-env
       - *ccache-restore
       - name: Runtime-manifest equality audit
@@ -493,6 +516,7 @@ jobs:
       - *source
       - *subject
       - *pixi-cpp
+      - *install-cpp
       - *ccache-env
       - *ccache-restore
       # edi's pinned route takes only the pinned commit; another one (a diagnostic, or a candidate
@@ -505,6 +529,7 @@ jobs:
           DIAGNOSTIC: ${{ inputs.diagnostic }}
           EDI_READ_AUDIT_LOG: ${{ runner.temp }}/edi-reads.txt
           EDI_READ_AUDIT_ROOT: ${{ github.workspace }}
+          PYTEST_ADDOPTS: --tb=no -rN
         run: |
           export PYTHONPATH="$GITHUB_WORKSPACE/tools/ci/read-audit${PYTHONPATH:+:$PYTHONPATH}"
           if [ "$DIAGNOSTIC" = true ] || ! grep -q "^CRYSTA_COMMIT = \"$CRYSTA_SHA\"" pixi.toml; then
@@ -535,6 +560,7 @@ jobs:
       - *source
       - *subject
       - *pixi-cpp
+      - *install-cpp
       - *ccache-env
       - *ccache-restore
       - name: Build C++ extension + CLI
@@ -575,6 +601,7 @@ jobs:
       - *source
       - *subject
       - *pixi-cpp
+      - *install-cpp
       - *ccache-env
       - *ccache-restore
       - name: Build C++ extension + CLI
@@ -587,7 +614,8 @@ jobs:
         env:
           COVERAGE_CORE: sysmon
           CRYSTA_PYTEST_RECORD: ${{ runner.temp }}/findings/pytest.jsonl
-          PYTEST_ADDOPTS: -p crysta_pytest
+          # A failed test's message and traceback can quote crysta's tests or corpus.
+          PYTEST_ADDOPTS: -p crysta_pytest --tb=no -rN
         run: |
           cd "$RUNNER_TEMP/crysta"
           export PYTHONPATH="$GITHUB_WORKSPACE/tools/ci${PYTHONPATH:+:$PYTHONPATH}"
@@ -626,6 +654,7 @@ jobs:
       - *source
       - *subject
       - *pixi-cpp
+      - *install-cpp
       - name: cppcheck
         if: needs.plan.outputs.skip != 'true'
         run: |
@@ -660,6 +689,7 @@ jobs:
       - *source
       - *subject
       - *pixi-cpp
+      - *install-cpp
       - *ccache-env
       - *ccache-restore
       - name: ${{ matrix.step }}
@@ -686,6 +716,7 @@ jobs:
       - *source
       - *subject
       - *pixi-cpp
+      - *install-cpp
       - name: Full Release suite (GCC -O3, every case)
         if: needs.plan.outputs.skip != 'true'
         run: |
@@ -723,6 +754,7 @@ jobs:
           base: ${{ matrix.part == '' && 'main' || '' }}
       - *subject
       - *pixi-cpp
+      - *install-cpp
       - *ccache-env
       - *ccache-restore
       - name: Build the engine under test
@@ -777,6 +809,7 @@ jobs:
       - *source
       - *subject
       - *pixi-cpp
+      - *install-cpp
       - name: C++ unit coverage, gated at cpp_lines_min (clang -O0 + LLVM)
         if: needs.plan.outputs.skip != 'true'
         run: |
