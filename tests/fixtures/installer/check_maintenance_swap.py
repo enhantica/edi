@@ -10,6 +10,7 @@ next update, undoes it before it unpacks the component again: that undo must cha
 import importlib.util
 import json
 import re
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -246,6 +247,61 @@ def test_a_new_operation_after_a_stop_rolled_back_puts_the_only_tool_back(
     steps = (SWAP, 'next-update'), (RESTORE, 'next-update')
     assert session(installed, *steps) == [0, 0]
     assert tool(installed / 'MaintenanceTool.app') == 'installed'
+
+
+# After such a stop the app is the only way back: on start, and before Maintenance or Update opens
+# the tool, it puts the kept bundle back (restore_kept_maintenance_tool in
+# app/src/desktop_updates.cpp, tested with the app). This copies its renames so that the update the
+# user retries from the app runs on the folder the app leaves.
+
+
+def app_restores_the_kept_tool(target: Path) -> None:
+    cur = target / 'MaintenanceTool.app'
+    kept, drop = target / 'MaintenanceTool.app.old', target / 'MaintenanceTool.app.drop'
+    if tool(cur) is not None or tool(kept) is None:
+        return
+    shutil.rmtree(drop, ignore_errors=True)
+    if cur.exists() or cur.is_symlink():
+        cur.rename(drop)
+    kept.rename(cur)
+    (target / 'MaintenanceTool.app.old-token').unlink(missing_ok=True)
+    shutil.rmtree(drop, ignore_errors=True)
+
+
+@pytest.mark.parametrize('staged', ['newer', None])
+def test_a_retried_update_after_the_app_put_the_tool_back_finishes(
+    installed: Path, tmp_path_factory, staged: str | None
+) -> None:
+    stopped_update(installed, tmp_path_factory.mktemp('shims'))
+    app_restores_the_kept_tool(installed)
+    assert tool(installed / 'MaintenanceTool.app') == 'installed'
+    assert not (installed / 'MaintenanceTool.app.old').exists()
+    assert not (installed / 'MaintenanceTool.app.old-token').exists()
+    assert tool(installed / 'MaintenanceTool.app.new') == 'new', 'left for the retried update'
+    if staged:
+        bundle(installed / 'maintenancetool/MaintenanceTool.app', staged)
+    assert session(installed, (SWAP, 'retried-update')) == [0]
+    assert tool(installed / 'MaintenanceTool.app') == (staged or 'new')
+    assert tool(installed / 'MaintenanceTool.app.old') == 'installed'
+
+
+def test_a_retried_update_after_the_app_put_the_tool_back_rolls_back(
+    installed: Path, tmp_path_factory
+) -> None:
+    stopped_update(installed, tmp_path_factory.mktemp('shims'))
+    app_restores_the_kept_tool(installed)
+    bundle(installed / 'maintenancetool/MaintenanceTool.app', 'newer')
+    steps = (SWAP, 'retried-update'), (RESTORE, 'retried-update')
+    assert session(installed, *steps) == [0, 0]
+    assert tool(installed / 'MaintenanceTool.app') == 'installed'
+    assert not (installed / 'MaintenanceTool.app.old').exists()
+
+
+def test_the_app_leaves_a_tool_in_place_alone(installed: Path) -> None:
+    bundle(installed / 'MaintenanceTool.app.old', 'two updates ago')
+    app_restores_the_kept_tool(installed)
+    assert tool(installed / 'MaintenanceTool.app') == 'installed'
+    assert tool(installed / 'MaintenanceTool.app.old') == 'two updates ago'
 
 
 def test_nothing_staged_changes_nothing(installed: Path) -> None:

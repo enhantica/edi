@@ -53,8 +53,11 @@ Once the tool was replaced, it still showed the old release's pages, which the f
    committed operation is harmless even after an update run by the released 2026.11 control script, which leaves its
    backup behind. The next swap drops a backup with another mark only while a usable tool is in place; when an
    update stopped between the renames left the backup as the only tool, the swap keeps it as its own until the new
-   tool is in place or it is put back. The control script removes the kept bundle once the update has succeeded with
-   the new tool in place. An update that leaves the component alone keeps the installed tool. Linux has no separate
+   tool is in place or it is put back. Such an update saves no operation, and the app opens the tool only at
+   `MaintenanceTool.app`, so the app puts the backup back itself: on start, and before Maintenance or Update opens
+   the tool, a missing tool with a kept one beside it is renamed back and its mark removed, leaving any
+   `MaintenanceTool.app.new` for the retried update to finish the swap with. The control script removes the kept
+   bundle once the update has succeeded with the new tool in place. An update that leaves the component alone keeps the installed tool. Linux has no separate
    tool and is unchanged. The installer protocol check updates a 2026.11.31 install from a 26.17 repository and
    checks the tool's checksum afterwards.
 6. **An update also replaces the Maintenance Tool's pages**, on every platform. The framework keeps the tool's
