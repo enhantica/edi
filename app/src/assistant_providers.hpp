@@ -9,6 +9,10 @@ namespace edi_app {
 /// no total limit on them, so one day plus a minute (ADR-0108 §3).
 inline constexpr quint64 assistant_tool_timeout_ms = 24ull * 60 * 60 * 1000 + 60 * 1000;
 
+/// Whether a GitHub Copilot session may receive user input. Neither ACP nor the pinned CLI reads back a session's
+/// effective tools, so this stays false until the owner decides what proves them (ADR-0108, open question 1).
+inline constexpr bool assistant_copilot_input_open = false;
+
 /// The provider for an account (ADR-0108 §1): ChatGPT's Codex runtime, Claude or GitHub Copilot.
 /// Returns null for a provider whose runtime this build does not offer.
 std::unique_ptr<AssistantProvider> make_assistant_provider(const AssistantAccountRef& account, QObject* parent,

@@ -13,6 +13,7 @@
 #include <stdexcept>
 #include <utility>
 #include "assistant_native_tools.hpp"
+#include "assistant_providers.hpp"
 #include "assistant_thread_settings.hpp"
 #include "assistant_tool_server.hpp"
 #include "edi/assistant_limits.hpp"
@@ -94,6 +95,7 @@ AssistantRuntimeTranslator::AssistantRuntimeTranslator(AssistantProviderId provi
     connect(runtime, &AssistantRuntimeSession::signInOpened, this, &AssistantRuntimeTranslator::onSignInOpened);
     connect(runtime, &AssistantRuntimeSession::signInFinished, this, &AssistantRuntimeTranslator::onSignInFinished);
     connect(runtime, &AssistantRuntimeSession::signedOut, this, &AssistantRuntimeTranslator::onSignedOut);
+    connect(runtime, &AssistantRuntimeSession::removedOnly, this, &AssistantRuntimeTranslator::onSignedOut);
     connect(runtime, &AssistantRuntimeSession::modelsListed, this, &AssistantRuntimeTranslator::onModelsListed);
     connect(runtime, &AssistantRuntimeSession::threadOpened, this, &AssistantRuntimeTranslator::onThreadOpened);
     connect(runtime, &AssistantRuntimeSession::turnStarted, this, &AssistantRuntimeTranslator::onTurnStarted);
@@ -388,7 +390,10 @@ void AssistantRuntimeTranslator::handle(const QString& id, const QString& method
     } else if (method == QLatin1StringView("account/logout")) {
         logout_rpc_ = id;
         ack_deadlines_.insert(id, now + static_cast<qint64>(Limits::http_json_ms));
-        session_->signOut(launch_);
+        // Copilot's sign-out is not yet qualified to end only the selected account, so edi removes the account
+        // from edi instead and says the GitHub sign-in stays (ADR-0108 §5).
+        if (provider_ == AssistantProviderId::Copilot) session_->removeAccount(launch_);
+        else session_->signOut(launch_);
     } else if (method == QLatin1StringView("account/rateLimits/read")) {
         if (!session_->reportsUsage()) refuse(id, method, kUnsupported, tr("This assistant does not report usage."));
         else respond(id, method, usageResult());
@@ -578,6 +583,25 @@ bool AssistantRuntimeTranslator::writeInstructions(const QString& text) const {
 }
 
 void AssistantRuntimeTranslator::openThread(const QString& id, const QString& method, const QJsonObject& params) {
+    if (provider_ == AssistantProviderId::Copilot) {
+        // No input without proof of the effective tools and of the selected login and host (ADR-0108 §5).
+        if (!assistant_copilot_input_open) {
+            refuse(id, method, kInvalidRequest,
+                   tr("GitHub Copilot is not available yet: edi cannot confirm which tools it would use."));
+            return;
+        }
+        // The record's host as the Copilot session spells it: lower case, no scheme, github.com when empty.
+        auto host = launch_.account.host.trimmed().toLower();
+        if (host.startsWith(QStringLiteral("https://"))) host = host.mid(8);
+        while (host.endsWith(QLatin1Char('/'))) host.chop(1);
+        if (host.isEmpty()) host = QStringLiteral("github.com");
+        if (!identity_.value(QLatin1StringView("identityProven")).toBool() ||
+            string_field(identity_, "login") != launch_.account.email || string_field(identity_, "host") != host) {
+            refuse(id, method, kInvalidRequest,
+                   tr("GitHub Copilot did not confirm that it uses this account on this host."));
+            return;
+        }
+    }
     if (!thread_rpc_.isEmpty() || !turn_.isEmpty()) {
         refuse(id, method, kInvalidRequest, tr("A conversation is already being opened or used."));
         return;
