@@ -7,6 +7,7 @@ import QtQuick.Layouts
 
 import EasyApplication.Gui.Style as EaStyle
 import EasyApplication.Gui.Elements as EaElements
+import EasyApplication.Gui.Components as EaComponents
 
 import edi.app
 
@@ -63,7 +64,7 @@ AppDialog {
 
     ColumnLayout {
         anchors.fill: parent
-        spacing: EaStyle.Sizes.fontPixelSize * 0.5
+        spacing: AppSizes.groupContentSpacing
 
         EaElements.Label {
             Layout.fillWidth: true
@@ -77,91 +78,105 @@ AppDialog {
             color: EaStyle.Colors.red
             text: popup.refusal
         }
-        // The columns' header, as the app's tables have one.
-        Row {
-            Layout.fillWidth: true
-            spacing: 0
-            Repeater {
-                model: [[qsTr("Point"), 0.1], [qsTr("k"), 0.2], [qsTr("Indexed"), 0.14], [qsTr("Worst misfit"), 0.16], [qsTr("Magnetic cell"), 0.4]]
-                delegate: EaElements.Label {
-                    required property var modelData
-                    width: list.width * modelData[1]
-                    leftPadding: EaStyle.Sizes.fontPixelSize * 0.5
-                    color: EaStyle.Colors.themeForegroundMinor
-                    text: modelData[0]
-                }
-            }
-        }
-        ListView {
+        // The ranked vectors, in the app's table (DataTable, as Excluded regions and the parameter table): the row
+        // number marks the chosen k, a click chooses it and a double click analyses it (conductor seq 50).
+        DataTable {
             id: list
             objectName: "chart.kVectors"
             Layout.fillWidth: true
+            Layout.preferredHeight: Math.max(contentHeight, EaStyle.Sizes.tableRowHeight * 2)
             Layout.fillHeight: true
-            Layout.preferredHeight: Math.max(contentHeight, EaStyle.Sizes.fontPixelSize * 3.2)
             clip: true
+            marksCurrentRow: true
             currentIndex: popup.rows.length > 0 ? 0 : -1
-            ScrollBar.vertical: EaElements.ScrollBar {}
-            model: popup.rows
-            delegate: Rectangle {
+            sourceModel: popup.rows
+            defaultInfoText: popup.searching ? qsTr("Searching…") : qsTr("No propagation vector")
+            columnKinds: ["index", "short", "text", "number", "number", -1]
+            header: EaComponents.ListViewHeader {
+                EaComponents.ListViewLabel {}
+                EaComponents.ListViewLabel {
+                    horizontalAlignment: Text.AlignLeft
+                    text: qsTr("Point")
+                }
+                EaComponents.ListViewLabel {
+                    horizontalAlignment: Text.AlignLeft
+                    text: qsTr("k")
+                }
+                EaComponents.ListViewLabel {
+                    horizontalAlignment: Text.AlignHCenter
+                    text: qsTr("Indexed")
+                }
+                EaComponents.ListViewLabel {
+                    horizontalAlignment: Text.AlignHCenter
+                    text: qsTr("Worst misfit")
+                }
+                EaComponents.ListViewLabel {
+                    horizontalAlignment: Text.AlignLeft
+                    text: qsTr("Magnetic cell")
+                }
+            }
+            delegate: TableRow {
                 id: row
                 required property var modelData
-                required property int index
-                readonly property bool current: ListView.isCurrentItem
-                objectName: `chart.kVector.${index}`
-                width: list.width
-                height: EaStyle.Sizes.fontPixelSize * 3.2
-                color: row.current ? EaStyle.Colors.contentBackground : hover.containsMouse ? EaStyle.Colors.themeRowHovered : "transparent"
-                Rectangle {
-                    visible: row.current
-                    width: 3
-                    height: parent.height
-                    color: EaStyle.Colors.themeAccent
-                }
-                Column {
-                    anchors.verticalCenter: parent.verticalCenter
-                    width: parent.width
-                    Row {
-                        Repeater {
-                            model: [[row.modelData.label === "" ? "—" : row.modelData.label, 0.1], [`(${row.modelData.k})`, 0.2], [qsTr("%1 of %2").arg(row.modelData.explained).arg(popup.marked.length), 0.14], [row.modelData.misfit.toFixed(2), 0.16], [row.modelData.parentCells === 1 ? qsTr("a, b, c (same as the crystal)") : qsTr("%1 parent cells").arg(row.modelData.parentCells), 0.4]]
-                            delegate: EaElements.Label {
-                                required property var modelData
-                                width: list.width * modelData[1]
-                                leftPadding: EaStyle.Sizes.fontPixelSize * 0.5
-                                elide: Text.ElideRight
-                                text: modelData[0]
-                            }
-                        }
-                    }
-                    // Each marked peak, where it is and how this k indexes it.
-                    EaElements.Label {
-                        width: parent.width
-                        leftPadding: EaStyle.Sizes.fontPixelSize * 0.5
-                        elide: Text.ElideRight
-                        font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.85
-                        color: EaStyle.Colors.themeForegroundMinor
-                        text: {
-                            const names = {
-                                satellite: qsTr("satellite"),
-                                forbidden: qsTr("forbidden reflection"),
-                                allowed: qsTr("allowed reflection"),
-                                "": qsTr("not indexed")
-                            };
-                            // In the pattern's order, by position (conductor seq 48).
-                            const order = popup.markedPeaks.map((p, i) => i).sort((a, b) => popup.markedPeaks[a].x - popup.markedPeaks[b].x);
-                            return order.map(i => `${popup.markedPeaks[i].x.toFixed(2)}°: ${names[row.modelData.roles[i] ?? ""] ?? row.modelData.roles[i]}`).join(" · ") + (row.modelData.equallyGood ? qsTr(" · equally good") : "");
-                        }
-                    }
-                }
+                objectName: `chart.kVector.${row.index}`
                 MouseArea {
-                    id: hover
+                    parent: row
                     anchors.fill: parent
-                    hoverEnabled: true
+                    z: 1
                     onClicked: list.currentIndex = row.index
                     onDoubleClicked: {
                         list.currentIndex = row.index;
                         popup.analyse();
                     }
                 }
+                EaComponents.ListViewLabel {
+                    horizontalAlignment: Text.AlignHCenter
+                    marksCurrentRow: true
+                    text: row.index + 1
+                }
+                EaComponents.ListViewLabel {
+                    horizontalAlignment: Text.AlignLeft
+                    elide: Text.ElideRight
+                    text: row.modelData.label === "" ? "—" : row.modelData.label
+                }
+                EaComponents.ListViewLabel {
+                    horizontalAlignment: Text.AlignLeft
+                    elide: Text.ElideRight
+                    text: `(${row.modelData.k})`
+                }
+                EaComponents.ListViewLabel {
+                    horizontalAlignment: Text.AlignHCenter
+                    text: qsTr("%1 of %2").arg(row.modelData.explained).arg(popup.marked.length)
+                }
+                EaComponents.ListViewLabel {
+                    horizontalAlignment: Text.AlignHCenter
+                    text: row.modelData.misfit.toFixed(2)
+                }
+                EaComponents.ListViewLabel {
+                    horizontalAlignment: Text.AlignLeft
+                    elide: Text.ElideRight
+                    text: row.modelData.parentCells === 1 ? qsTr("a, b, c (same as the crystal)") : qsTr("%1 parent cells").arg(row.modelData.parentCells)
+                }
+            }
+        }
+        // The chosen k's reading of each marked peak, in the pattern's order (by 2θ).
+        EaElements.Label {
+            objectName: "chart.kVectorRoles"
+            Layout.fillWidth: true
+            wrapMode: Text.Wrap
+            color: EaStyle.Colors.themeForegroundMinor
+            text: {
+                const r = popup.rows[list.currentIndex];
+                if (r === undefined)
+                    return "";
+                const names = {
+                    satellite: qsTr("satellite"),
+                    forbidden: qsTr("forbidden reflection"),
+                    allowed: qsTr("allowed reflection"),
+                    "": qsTr("not indexed")
+                };
+                const order = popup.markedPeaks.map((p, i) => i).sort((a, b) => popup.markedPeaks[a].x - popup.markedPeaks[b].x);
+                return order.map(i => `${popup.markedPeaks[i].x.toFixed(2)}°: ${names[r.roles[i] ?? ""] ?? r.roles[i]}`).join(" · ") + (r.equallyGood ? qsTr(" · equally good") : "");
             }
         }
     }

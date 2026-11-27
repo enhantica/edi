@@ -7,6 +7,7 @@ import QtQuick.Layouts
 
 import EasyApplication.Gui.Style as EaStyle
 import EasyApplication.Gui.Elements as EaElements
+import EasyApplication.Gui.Components as EaComponents
 
 import edi.app
 
@@ -141,7 +142,7 @@ AppDialog {
     ColumnLayout {
         id: content
         anchors.fill: parent
-        spacing: EaStyle.Sizes.fontPixelSize * 0.5
+        spacing: AppSizes.groupContentSpacing
 
         // The propagation vector.
         RowLayout {
@@ -252,7 +253,7 @@ AppDialog {
             Layout.fillHeight: true
             Layout.minimumHeight: EaStyle.Sizes.fontPixelSize * 8
             // Its content's own height, so the dialog fits what it shows.
-            Layout.preferredHeight: listMode.checked ? listPane.implicitHeight : graphView.contentHeight
+            Layout.preferredHeight: listMode.checked ? listView.contentHeight + EaStyle.Sizes.tableRowHeight : graphView.contentHeight
             currentIndex: listMode.checked ? 1 : 0
 
             MagneticSubgroupGraph {
@@ -265,22 +266,19 @@ AppDialog {
                 onLevelToggled: (level, on) => popup.setMany(graphView.levels[level], on)
             }
 
-            // The list: one row per group, its values in columns as the k table has them, each site's moments in
-            // its own column (conductor seq 33).
-            ColumnLayout {
-                id: listPane
-                spacing: 0
+            // The list: one row per group in the app's table (DataTable, as Excluded regions and the parameter table),
+            // a check box column to select, the group's values, then each site's moments in a column of its own
+            // (conductor seq 33, 50).
+            DataTable {
+                id: listView
+                objectName: "magnetic.list"
+                clip: true
                 // Each site's name, from the first group's moments (`Co1 0,0,0 · Co2 Mx,0,Mz`).
                 readonly property var sites: popup.nodes.length > 0 ? String(popup.nodes[0].moments).split(" · ").map(m => m.split(" ")[0]) : []
-                readonly property var widths: [0.18, 0.1, 0.06, 0.1, 0.1]
-                // A site's column is as wide as a moment form needs, so the sites stand side by side.
-                function siteWidth() {
-                    return sites.length > 0 ? Math.min(0.46 / sites.length, EaStyle.Sizes.fontPixelSize * 11 / Math.max(1, listView.width)) : 0;
-                }
                 function columns(n) {
-                    // A site split in a subgroup (`Co1_1`, `Co1_2`) goes under its parent site's column, its
-                    // distinct forms joined.
-                    const moments = sites.map(site => {
+                    // A site split in a subgroup (`Co1_1`, `Co1_2`) goes under its parent site's column, its distinct
+                    // forms joined.
+                    return sites.map(site => {
                         const forms = [];
                         for (const m of String(n.moments).split(" · ")) {
                             const id = m.slice(0, m.indexOf(" "));
@@ -290,80 +288,103 @@ AppDialog {
                         }
                         return forms.join(" / ");
                     });
-                    return [n.bns === "" ? "" : `${n.bns}${n.embedding > 1 ? " #" + n.embedding : ""}`, ["", "I", "II", "III", "IV"][n.type] ?? "", Math.max(1, n.row) === 1 ? qsTr("maximal") : qsTr("level %1").arg(n.row), n.netMoment ? "FM" : ""].concat(moments);
                 }
-                Row {
-                    Layout.fillWidth: true
+                sourceModel: {
+                    const rows = [];
+                    for (let i = 0; i < popup.nodes.length; ++i)
+                        if (!maximalOnly.checked || Math.max(1, popup.nodes[i].row) === 1)
+                            rows.push(i);
+                    rows.sort((a, b) => Math.max(1, popup.nodes[a].row) - Math.max(1, popup.nodes[b].row) || a - b);
+                    return rows;
+                }
+                defaultInfoText: qsTr("No magnetic group")
+                columnKinds: ["index", "control", "name", "short", "short", "short", "short"].concat(sites.map(() => "short"))
+                header: EaComponents.ListViewHeader {
+                    EaComponents.ListViewLabel {}
+                    EaComponents.ListViewLabel {}
+                    EaComponents.ListViewLabel {
+                        horizontalAlignment: Text.AlignLeft
+                        text: qsTr("Group")
+                    }
+                    EaComponents.ListViewLabel {
+                        horizontalAlignment: Text.AlignLeft
+                        text: qsTr("BNS")
+                    }
+                    EaComponents.ListViewLabel {
+                        horizontalAlignment: Text.AlignHCenter
+                        text: qsTr("Type")
+                    }
+                    EaComponents.ListViewLabel {
+                        horizontalAlignment: Text.AlignLeft
+                        text: qsTr("Level")
+                    }
+                    EaComponents.ListViewLabel {
+                        horizontalAlignment: Text.AlignHCenter
+                        text: qsTr("Net moment")
+                    }
                     Repeater {
-                        model: [qsTr("Group"), qsTr("BNS"), qsTr("Type"), qsTr("Level"), qsTr("Net moment")].concat(listPane.sites)
-                        delegate: EaElements.Label {
+                        model: listView.sites
+                        delegate: EaComponents.ListViewLabel {
                             required property var modelData
-                            required property int index
-                            width: listView.width * (index < listPane.widths.length ? listPane.widths[index] : listPane.siteWidth())
-                            leftPadding: EaStyle.Sizes.fontPixelSize * 0.5
-                            elide: Text.ElideRight
-                            color: EaStyle.Colors.themeForegroundMinor
+                            horizontalAlignment: Text.AlignLeft
                             text: modelData
                         }
                     }
                 }
-                ListView {
-                    id: listView
-                    objectName: "magnetic.list"
-                    Layout.fillWidth: true
-                    Layout.fillHeight: true
-                    Layout.preferredHeight: contentHeight
-                    clip: true
-                    ScrollBar.vertical: EaElements.ScrollBar {}
-                    model: {
-                        const rows = [];
-                        for (let i = 0; i < popup.nodes.length; ++i)
-                            if (!maximalOnly.checked || Math.max(1, popup.nodes[i].row) === 1)
-                                rows.push(i);
-                        rows.sort((a, b) => Math.max(1, popup.nodes[a].row) - Math.max(1, popup.nodes[b].row) || a - b);
-                        return rows;
+                delegate: TableRow {
+                    id: listRow
+                    required property int modelData
+                    readonly property var data_: popup.nodes[modelData]
+                    objectName: `magnetic.listRow.${listRow.index}`
+                    HoverHandler {
+                        onHoveredChanged: if (hovered)
+                            popup.hovered = listRow.modelData
                     }
-                    delegate: Rectangle {
-                        id: listRow
-                        required property int modelData
-                        readonly property var data_: popup.nodes[modelData]
-                        readonly property bool chosen: popup.selected.indexOf(modelData) >= 0
-                        width: listView.width
-                        height: EaStyle.Sizes.fontPixelSize * 2.2
-                        color: chosen ? EaStyle.Colors.contentBackground : popup.hovered === modelData ? EaStyle.Colors.themeRowHovered : "transparent"
-                        Row {
-                            anchors.verticalCenter: parent.verticalCenter
-                            EaElements.CheckBox {
-                                objectName: `magnetic.row.${listRow.modelData}`
-                                // The row's height, as its labels have, so the box and name share their line.
-                                height: listRow.height
-                                width: listView.width * listPane.widths[0]
-                                enabled: popup.selectable(listRow.modelData)
-                                checked: listRow.chosen
-                                onToggled: popup.toggle(listRow.modelData)
-                                text: listRow.data_.bns === "" ? qsTr("not identified") : listRow.data_.name
-                            }
-                            Repeater {
-                                model: listPane.columns(listRow.data_)
-                                delegate: EaElements.Label {
-                                    required property var modelData
-                                    required property int index
-                                    // A Repeater's label has no parent while it is created, so it centres by its
-                                    // own height, not an anchor.
-                                    height: listRow.height
-                                    verticalAlignment: Text.AlignVCenter
-                                    width: listView.width * (index + 1 < listPane.widths.length ? listPane.widths[index + 1] : listPane.siteWidth())
-                                    leftPadding: EaStyle.Sizes.fontPixelSize * 0.5
-                                    elide: Text.ElideRight
-                                    text: modelData
-                                }
-                            }
-                        }
-                        MouseArea {
+                    EaComponents.ListViewLabel {
+                        horizontalAlignment: Text.AlignHCenter
+                        marksCurrentRow: true
+                        text: listRow.index + 1
+                    }
+                    Item {
+                        property int horizontalAlignment: Text.AlignHCenter
+                        height: parent.height
+                        EaComponents.ListViewCheckBox {
                             anchors.fill: parent
-                            acceptedButtons: Qt.NoButton
-                            hoverEnabled: true
-                            onEntered: popup.hovered = listRow.modelData
+                            horizontalAlignment: Text.AlignHCenter
+                            objectName: `magnetic.row.${listRow.modelData}`
+                            enabled: popup.selectable(listRow.modelData)
+                            checked: popup.selected.indexOf(listRow.modelData) >= 0
+                            onToggled: popup.toggle(listRow.modelData)
+                        }
+                    }
+                    EaComponents.ListViewLabel {
+                        horizontalAlignment: Text.AlignLeft
+                        elide: Text.ElideRight
+                        text: listRow.data_.bns === "" ? qsTr("not identified") : listRow.data_.name
+                    }
+                    EaComponents.ListViewLabel {
+                        horizontalAlignment: Text.AlignLeft
+                        text: listRow.data_.bns === "" ? "" : `${listRow.data_.bns}${listRow.data_.embedding > 1 ? " #" + listRow.data_.embedding : ""}`
+                    }
+                    EaComponents.ListViewLabel {
+                        horizontalAlignment: Text.AlignHCenter
+                        text: ["", "I", "II", "III", "IV"][listRow.data_.type] ?? ""
+                    }
+                    EaComponents.ListViewLabel {
+                        horizontalAlignment: Text.AlignLeft
+                        text: Math.max(1, listRow.data_.row) === 1 ? qsTr("maximal") : qsTr("level %1").arg(listRow.data_.row)
+                    }
+                    EaComponents.ListViewLabel {
+                        horizontalAlignment: Text.AlignHCenter
+                        text: listRow.data_.netMoment ? qsTr("yes") : ""
+                    }
+                    Repeater {
+                        model: listView.columns(listRow.data_)
+                        delegate: EaComponents.ListViewLabel {
+                            required property var modelData
+                            horizontalAlignment: Text.AlignLeft
+                            elide: Text.ElideRight
+                            text: modelData
                         }
                     }
                 }
