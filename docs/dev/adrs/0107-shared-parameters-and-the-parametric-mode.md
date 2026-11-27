@@ -69,8 +69,8 @@ equality (TOPAS, GSAS-II, FullProf, Jana); general fitting tools put a Share col
   writing constraint rows.
 - A Joint fit hands crysta each shared group as equality ties `<member> = <leader>`, built for that fit only and never
   saved or listed with the user's constraints; the result is the constrained fit's.
-- The Parametric fit of a scan of one experiment is crysta's (its ADR-0136); a series of joint fits with shared
-  parameters refuses until crysta supports it.
+- The Parametric fit is crysta's (its ADR-0136), for a scan of one experiment and for a series of joint fits, where a
+  shared parameter is one experiment's, with one value at every point.
 - The owner's checks of the app removed what the first design added beside Shared: the Differences group, a second
   axis and "Compare with" in Evolution, and the many-bank map (records of 2026-11-26).
 
