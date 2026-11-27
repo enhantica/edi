@@ -40,7 +40,7 @@ Flickable {
         return n !== undefined && n.bns !== "" && n.momentAllowed;
     }
     function lit(i) {
-        return i === hovered || selected.indexOf(i) >= 0;
+        return i === hovered;
     }
     // The levels shown, each its node indices.
     readonly property var levels: {
@@ -84,12 +84,13 @@ Flickable {
     contentHeight: levelTops.length > 0 ? levelTops[levelTops.length - 1] : 0
     ScrollBar.vertical: EaElements.ScrollBar {}
 
-    // Edges of the lit groups only, to their covering subgroups and supergroups.
+    // Edges of the group under the pointer only, to its covering subgroups, behind every card.
     Repeater {
         model: graph.maximalOnly ? 0 : graph.nodes.length
         delegate: Item {
             id: edges
             required property int index
+            z: -1
             readonly property point from: graph.positionOf(index)
             visible: graph.shown(index) && graph.lit(index)
             Repeater {
@@ -157,11 +158,12 @@ Flickable {
             color: chosen ? EaStyle.Colors.themeAccentMinor : EaStyle.Colors.themeBackground
             border.width: chosen || near ? 2 : 1
             border.color: chosen || near ? EaStyle.Colors.themeAccent : EaStyle.Colors.themeForegroundMinor
-            opacity: graph.selectable(index) ? 1.0 : 0.45
 
             Column {
                 anchors.fill: parent
                 anchors.margins: 4
+                // A group that cannot be chosen reads faded, while its card stays opaque over the edges.
+                opacity: graph.selectable(node.index) ? 1.0 : 0.45
                 EaElements.Label {
                     width: parent.width
                     elide: Text.ElideRight

@@ -259,46 +259,88 @@ AppDialog {
                 onLevelToggled: (level, on) => popup.setMany(graphView.levels[level], on)
             }
 
-            ListView {
-                id: listView
-                objectName: "magnetic.list"
-                clip: true
-                ScrollBar.vertical: EaElements.ScrollBar {}
-                model: {
-                    const rows = [];
-                    for (let i = 0; i < popup.nodes.length; ++i)
-                        if (!maximalOnly.checked || Math.max(1, popup.nodes[i].row) === 1)
-                            rows.push(i);
-                    rows.sort((a, b) => Math.max(1, popup.nodes[a].row) - Math.max(1, popup.nodes[b].row) || a - b);
-                    return rows;
+            // The list: one row per group, its values in columns as the k table has them, each site's moments in
+            // its own column (conductor seq 33).
+            ColumnLayout {
+                id: listPane
+                spacing: 0
+                // Each site's name, from the first group's moments (`Co1 0,0,0 · Co2 Mx,0,Mz`).
+                readonly property var sites: popup.nodes.length > 0 ? String(popup.nodes[0].moments).split(" · ").map(m => m.split(" ")[0]) : []
+                readonly property var widths: [0.2, 0.11, 0.07, 0.1, 0.05]
+                function siteWidth() {
+                    return sites.length > 0 ? 0.47 / sites.length : 0;
                 }
-                delegate: Item {
-                    id: listRow
-                    required property int modelData
-                    readonly property var data_: popup.nodes[modelData]
-                    width: listView.width
-                    height: EaStyle.Sizes.fontPixelSize * 2.2
-                    Row {
-                        x: (Math.max(1, listRow.data_.row) - 1) * EaStyle.Sizes.fontPixelSize * 1.5
-                        anchors.verticalCenter: parent.verticalCenter
-                        spacing: EaStyle.Sizes.fontPixelSize * 0.8
-                        EaElements.CheckBox {
-                            objectName: `magnetic.row.${listRow.modelData}`
-                            enabled: popup.selectable(listRow.modelData)
-                            checked: popup.selected.indexOf(listRow.modelData) >= 0
-                            onToggled: popup.toggle(listRow.modelData)
-                            text: listRow.data_.bns === "" ? qsTr("not identified") : `${listRow.data_.name}  ${listRow.data_.bns}${listRow.data_.embedding > 1 ? " #" + listRow.data_.embedding : ""}`
-                        }
-                        EaElements.Label {
-                            anchors.verticalCenter: parent.verticalCenter
-                            text: `${qsTr("type")} ${["", "I", "II", "III", "IV"][listRow.data_.type] ?? ""} · ${Math.max(1, listRow.data_.row) === 1 ? qsTr("maximal") : qsTr("level %1").arg(listRow.data_.row)}${listRow.data_.netMoment ? " · FM" : ""} · ${listRow.data_.moments}`
+                function columns(n) {
+                    const moments = String(n.moments).split(" · ").map(m => m.slice(m.indexOf(" ") + 1));
+                    return [n.bns === "" ? "" : `${n.bns}${n.embedding > 1 ? " #" + n.embedding : ""}`, ["", "I", "II", "III", "IV"][n.type] ?? "", Math.max(1, n.row) === 1 ? qsTr("maximal") : qsTr("level %1").arg(n.row), n.netMoment ? "FM" : ""].concat(moments);
+                }
+                Row {
+                    Layout.fillWidth: true
+                    Repeater {
+                        model: [qsTr("Group"), qsTr("BNS"), qsTr("Type"), qsTr("Level"), ""].concat(listPane.sites)
+                        delegate: EaElements.Label {
+                            required property var modelData
+                            required property int index
+                            width: listView.width * (index < listPane.widths.length ? listPane.widths[index] : listPane.siteWidth())
+                            leftPadding: EaStyle.Sizes.fontPixelSize * 0.5
+                            elide: Text.ElideRight
+                            color: EaStyle.Colors.themeForegroundMinor
+                            text: modelData
                         }
                     }
-                    MouseArea {
-                        anchors.fill: parent
-                        acceptedButtons: Qt.NoButton
-                        hoverEnabled: true
-                        onEntered: popup.hovered = listRow.modelData
+                }
+                ListView {
+                    id: listView
+                    objectName: "magnetic.list"
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    clip: true
+                    ScrollBar.vertical: EaElements.ScrollBar {}
+                    model: {
+                        const rows = [];
+                        for (let i = 0; i < popup.nodes.length; ++i)
+                            if (!maximalOnly.checked || Math.max(1, popup.nodes[i].row) === 1)
+                                rows.push(i);
+                        rows.sort((a, b) => Math.max(1, popup.nodes[a].row) - Math.max(1, popup.nodes[b].row) || a - b);
+                        return rows;
+                    }
+                    delegate: Rectangle {
+                        id: listRow
+                        required property int modelData
+                        readonly property var data_: popup.nodes[modelData]
+                        readonly property bool chosen: popup.selected.indexOf(modelData) >= 0
+                        width: listView.width
+                        height: EaStyle.Sizes.fontPixelSize * 2.2
+                        color: chosen ? EaStyle.Colors.contentBackground : popup.hovered === modelData ? EaStyle.Colors.themeRowHovered : "transparent"
+                        Row {
+                            anchors.verticalCenter: parent.verticalCenter
+                            EaElements.CheckBox {
+                                objectName: `magnetic.row.${listRow.modelData}`
+                                width: listView.width * listPane.widths[0]
+                                enabled: popup.selectable(listRow.modelData)
+                                checked: listRow.chosen
+                                onToggled: popup.toggle(listRow.modelData)
+                                text: listRow.data_.bns === "" ? qsTr("not identified") : listRow.data_.name
+                            }
+                            Repeater {
+                                model: listPane.columns(listRow.data_)
+                                delegate: EaElements.Label {
+                                    required property var modelData
+                                    required property int index
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    width: listView.width * (index + 1 < listPane.widths.length ? listPane.widths[index + 1] : listPane.siteWidth())
+                                    leftPadding: EaStyle.Sizes.fontPixelSize * 0.5
+                                    elide: Text.ElideRight
+                                    text: modelData
+                                }
+                            }
+                        }
+                        MouseArea {
+                            anchors.fill: parent
+                            acceptedButtons: Qt.NoButton
+                            hoverEnabled: true
+                            onEntered: popup.hovered = listRow.modelData
+                        }
                     }
                 }
             }
