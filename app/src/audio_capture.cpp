@@ -118,9 +118,9 @@ void QtAudioCapture::read() {
     if (!device_ || !resampler_)
         return;
     carry_.append(device_->readAll());
-    const int frame = format_.bytesPerFrame();
-    const int sample = format_.bytesPerSample();
-    const int channels = format_.channelCount();
+    const qsizetype frame = format_.bytesPerFrame();
+    const qsizetype sample = format_.bytesPerSample();
+    const qsizetype channels = format_.channelCount();
     const auto frames = carry_.size() / frame;
     if (frames == 0)
         return;
@@ -128,7 +128,7 @@ void QtAudioCapture::read() {
     const char* data = carry_.constData();
     for (qsizetype f = 0; f < frames; ++f) {
         float sum = 0.0F;
-        for (int c = 0; c < channels; ++c)
+        for (qsizetype c = 0; c < channels; ++c)
             sum += format_.normalizedSampleValue(data + f * frame + c * sample);
         mono[static_cast<std::size_t>(f)] = sum / static_cast<float>(channels);
     }

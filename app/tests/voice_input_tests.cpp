@@ -148,7 +148,8 @@ private slots:
         voice.input->toggle(owner);
         QTRY_COMPARE(voice.input->state(), VoiceInput::State::Listening);
         // The first three seconds, all speech, so the silence check keeps listening.
-        voice.capture->play(std::vector<float>(speech_.begin(), speech_.begin() + 3 * SpeechRecogniser::sample_rate));
+        const auto three_seconds = std::ptrdiff_t{3} * SpeechRecogniser::sample_rate;
+        voice.capture->play(std::vector<float>(speech_.begin(), speech_.begin() + three_seconds));
         QCOMPARE(voice.input->state(), VoiceInput::State::Listening);
         delete owner;
         QCOMPARE(voice.input->state(), VoiceInput::State::Idle);

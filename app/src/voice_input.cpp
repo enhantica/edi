@@ -235,8 +235,8 @@ void VoiceInput::captureSamples(const QList<float>& chunk) {
             silent_ += block;
         }
     }
-    if ((heard_ && silent_ >= static_cast<std::size_t>(silence_seconds * rate)) ||
-        recording_.size() >= static_cast<std::size_t>(max_seconds * rate))
+    if ((heard_ && silent_ >= static_cast<std::size_t>(silence_seconds) * static_cast<std::size_t>(rate)) ||
+        recording_.size() >= static_cast<std::size_t>(max_seconds) * static_cast<std::size_t>(rate))
         stop();
 }
 
