@@ -21427,6 +21427,8 @@ void AssistantViewModel::switchAccount(const QString& provider, const QString& i
     if (!receiver) return;
     try { state_->account_store().setActive(record->provider, record->id); }
     catch (const std::exception& failure) { state_->error = QString::fromUtf8(failure.what()); state_->notify(); return; }
+    // An added account that never signed in leaves nothing behind when the user picks another one.
+    if (state_->pending_account) (void)state_->account_store().removeHome(state_->pending_account->home);
     state_->pending_account.reset();
     state_->active_provider_account = record->ref();
     state_->account_chosen_explicitly = true;
@@ -21457,7 +21459,12 @@ void AssistantViewModel::addAccount(const QString& provider, const QString& host
     }
     if (!state_->generic_mode) return;
     AssistantAccountRecord record;
-    try { record = state_->account_store().create(*which, host); }
+    try {
+        // The first ChatGPT account is the user's own Codex login, so it reuses the default home (ADR-0108 §8).
+        const auto store = state_->account_store();
+        record = *which == AssistantProviderId::ChatGpt && !store.defaultChatGpt() ? store.createDefaultChatGpt()
+                                                                                  : store.create(*which, host);
+    }
     catch (const std::exception& failure) { state_->error = QString::fromUtf8(failure.what()); state_->notify(); return; }
     const QPointer<AssistantViewModel> receiver(this);
     retireConnection(false);
