@@ -1,0 +1,16 @@
+name: Question
+description: Ask how to do something or why it works as it does
+labels: ['⚠️ scope needed', '⚠️ priority needed']
+body:
+  - type: textarea
+    id: question
+    attributes:
+      label: Your question
+      description: What are you trying to do, and what is unclear?
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version and system
+      description: Shown under About in the app, if it matters.

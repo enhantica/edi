@@ -4,7 +4,9 @@
 - **Date:** 2026-11-23, amended 2026-11-27 (the owner's three priorities and colours by importance of 2026-11-25)
 - **Implementation:** 🟢 The labels below exist in `enhantica/edi` and `enhantica/edi-feedback` with the names and
   colours below; the feedback service adds the placeholders to each issue it files. The release plan and the label
-  check read the names below and, for 30 days after the labels are renamed, the names they had before (`[group] name`)
+  check read the names below and, for 30 days after the labels are renamed, the names they had before (`[group] name`).
+  edi's issue forms (`.github/ISSUE_TEMPLATE`) set labels of the E rows only, which `tools/checks/issue_forms.py` checks
+  in `pixi run lint`; its `--live` option compares the E rows with the labels of `enhantica/edi`
 - **Priority:** Medium
 
 ## Context
@@ -23,9 +25,12 @@ each.
 
 ## Decision
 
-1. **The queue.** The feedback service gives every issue it files `⚠️ scope needed` and `⚠️ priority needed`; a public issue filed in `enhantica/edi` starts with them too. These two labels are the
-   triage agent's queue: it replaces each with exactly one real label of the same group, or with
-   `🤔 needs owner decision` when the rules below do not settle it.
+1. **The queue.** The feedback service gives every issue it files `⚠️ scope needed` and `⚠️ priority needed`; a public
+   issue filed in `enhantica/edi` starts with them too, except that its bug and feature forms set `🐞 bug` and
+   `✨ enhancement` in place of `⚠️ scope needed`. A question form sets both placeholders: `❓ question` asks the
+   reporter for more and is not a form's label. Blank issues are off, so an issue opened on GitHub's page starts from a form.
+   These two labels are the triage agent's queue: it replaces each with exactly one real label of the same group, or
+   with `🤔 needs owner decision` when the rules below do not settle it.
 2. **The labels and their rules.** In `enhantica/edi` (E) and `enhantica/edi-feedback` (F):
 
 | Group | Label | Colour | Repos | Read by | Rule (when the triage agent sets it) |

@@ -1,0 +1,38 @@
+name: Bug report
+description: Something is broken or gives a wrong result
+labels: ['🐞 bug', '⚠️ priority needed']
+body:
+  - type: markdown
+    attributes:
+      value: >-
+        Thank you for reporting. The app's **Feedback** form sends the same report with the version and system
+        filled in. Report a security problem privately, as
+        [SECURITY.md](https://github.com/enhantica/edi/blob/main/SECURITY.md) says.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What did you do, what did you expect, and what happened instead?
+    validations:
+      required: true
+  - type: dropdown
+    id: where
+    attributes:
+      label: Where
+      description: Choose every place you saw it.
+      multiple: true
+      options:
+        - Desktop app
+        - Web app
+        - Python package
+        - Command line
+  - type: input
+    id: version
+    attributes:
+      label: Version and system
+      description: Shown under About in the app, for example 2026.11.31 on Windows 11.
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else?
+      description: Logs, screenshots or a small project that shows the problem.
