@@ -9,6 +9,8 @@
 #include <QJsonObject>
 #include "claude_runtime_config.hpp"
 #include "copilot_runtime_config.hpp"
+#include "assistant_runtime_translator.hpp"
+#include "claude_session.hpp"
 #include "codex_agent.hpp"
 
 namespace edi_app {
@@ -93,7 +95,8 @@ QString assistant_provider_executable(AssistantProviderId id) {
 
 bool assistant_provider_available(AssistantProviderId id) noexcept {
     try {
-        return !assistant_provider_executable(id).isEmpty() && id == AssistantProviderId::ChatGpt;
+        // Copilot joins once its session is wired.
+        return !assistant_provider_executable(id).isEmpty() && id != AssistantProviderId::Copilot;
     } catch (...) {
         return false;
     }
@@ -103,7 +106,17 @@ std::unique_ptr<AssistantProvider> make_assistant_provider(const AssistantAccoun
                                                            std::shared_ptr<const void> releaseOwner) {
     switch (account.provider) {
         case AssistantProviderId::ChatGpt: return std::make_unique<CodexAgent>(parent, std::move(releaseOwner));
-        case AssistantProviderId::Claude:
+        case AssistantProviderId::Claude: {
+            if (!assistant_provider_available(AssistantProviderId::Claude)) return nullptr;
+            auto session = std::make_unique<ClaudeSession>();
+            session->setAccountRecord(account.email, {});
+            AssistantRuntimeLaunch launch;
+            launch.account = account;
+            launch.environment = QProcessEnvironment::systemEnvironment();
+            launch.toolTimeoutMs = assistant_tool_timeout_ms;
+            return std::make_unique<AssistantRuntimeTranslator>(AssistantProviderId::Claude, std::move(session),
+                                                                std::move(launch), parent, std::move(releaseOwner));
+        }
         case AssistantProviderId::Copilot: return nullptr;
     }
     return nullptr;

@@ -5,6 +5,10 @@
 
 namespace edi_app {
 
+/// The MCP call timeout edi gives a runtime for its tools: a fit or a question may take hours, and edi itself sets
+/// no total limit on them, so one day plus a minute (ADR-0108 §3).
+inline constexpr quint64 assistant_tool_timeout_ms = 24ull * 60 * 60 * 1000 + 60 * 1000;
+
 /// The provider for an account (ADR-0108 §1): ChatGPT's Codex runtime, Claude or GitHub Copilot.
 /// Returns null for a provider whose runtime this build does not offer.
 std::unique_ptr<AssistantProvider> make_assistant_provider(const AssistantAccountRef& account, QObject* parent,

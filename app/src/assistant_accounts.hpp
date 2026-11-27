@@ -15,7 +15,7 @@ struct AssistantAccountRecord {
     QString home;  ///< the config home edi created; empty for the default ChatGPT login
     QString email, plan, host;
 
-    AssistantAccountRef ref() const { return {provider, id, home, host}; }
+    AssistantAccountRef ref() const { return {provider, id, home, host, email}; }
     QJsonObject toJson() const;
     static std::optional<AssistantAccountRecord> fromJson(AssistantProviderId provider, const QJsonObject& value);
     bool operator==(const AssistantAccountRecord&) const = default;

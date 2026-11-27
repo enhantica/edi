@@ -188,7 +188,7 @@ starts the server as its own child, so the server is a small bridge to the app:
   same text serves every provider. The runtimes' own question tools stay off (sections 4, 5).
 - **Names.** The server is called `edi`; the models see `mcp__edi__<tool>` (Claude) and `edi-<tool>` (Copilot).
 - **Timeouts.** A fit or a question can outlast a runtime's default MCP call timeout. Each runtime's config gives edi's
-  server one fixed number, the largest native operation deadline edi allows plus one minute (section 4:
+  server one fixed number, one day plus a minute, since edi sets no total limit on a fit or a question (section 4:
   `MCP_TOOL_TIMEOUT`; section 5: the entry's `timeout`), and while native work runs the server sends
   `notifications/progress` every 30 seconds for a call that carried a `progressToken`, so an idle window never cuts a
   long fit.

@@ -16,6 +16,7 @@ enum class AssistantProviderId : unsigned char { ChatGpt, Claude, Copilot };
 struct AssistantAccountRef {
     AssistantProviderId provider = AssistantProviderId::ChatGpt;
     QString id, home, host;
+    QString email;  ///< the identity the record holds, compared with the runtime's readback; empty before sign-in
 };
 
 /// The settings key of a provider: chatgpt, claude or copilot.
@@ -44,6 +45,8 @@ public:
     virtual QString runtimeExecutable() const = 0;
     /// The source patch hash of a runtime built with edi's policy patch, else empty.
     virtual QString runtimePolicyPatch() const { return {}; }
+    /// The account kind the runtime's account readback names for a signed-in account: chatgpt, claude or copilot.
+    virtual QString accountKind() const { return QStringLiteral("chatgpt"); }
     /// The thread settings a thread's readback must show, field by field. The view model compares only these.
     virtual QJsonObject threadPolicy() const = 0;
 
