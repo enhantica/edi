@@ -229,42 +229,53 @@ EaElements.Dialog {
         }
     }
 
-    // The folder picker answers only the opening that asked, while its project is still the open one: a replaced
-    // project's picker can stay open, and its answer would otherwise become the next project's location and the saved
-    // preference. One answer per opening, so a late Accepted after a Rejected changes nothing.
-    property var locationPickerOwner: null
+    // The folder in which the project folder is created. A picker is made for each showing and goes with it, and only
+    // the showing still current, for the project it was opened on, may set the folder: a platform can deliver an
+    // answer after close(), and a replaced project's answer would otherwise become the next project's location and
+    // the saved preference. Each showing answers once, so a late Accepted after its Rejected changes nothing.
+    // `locationPicker`: the current showing, `{picker, generation}`, or null.
+    property var locationPicker: null
     function openLocationPicker() {
-        locationPickerOwner = {
+        retirePickers();
+        const picker = locationPickerComponent.createObject(dialog.contentItem, {
+            selectedFolder: projectParentDirectory
+        }) as FolderDialog;
+        const showing = {
+            picker: picker,
             generation: Session.projectGeneration()
         };
-        // Starts at the field's folder, not at an answer that was dropped.
-        projectParentDirDialog.selectedFolder = projectParentDirectory;
-        projectParentDirDialog.open();
+        // Each handler names its own showing.
+        picker.accepted.connect(() => dialog.answerLocationPicker(showing, true));
+        picker.rejected.connect(() => dialog.answerLocationPicker(showing, false));
+        locationPicker = showing;
+        picker.open();
     }
-    function takeLocationPickerAnswer() {
-        const owner = locationPickerOwner;
-        locationPickerOwner = null;
-        return owner !== null && owner.generation === Session.projectGeneration();
+    function answerLocationPicker(showing, accepted) {
+        if (showing !== locationPicker)
+            return;
+        locationPicker = null;
+        const folder = showing.picker.selectedFolder;
+        showing.picker.destroy();
+        if (accepted && showing.generation === Session.projectGeneration())
+            projectParentDirectory = folder;
     }
-    // Called when the project is replaced. The owner goes first: close() itself emits an answer.
+    // When the project is replaced. The picker stops being current before close(), which emits its answer at once.
     function retirePickers() {
-        locationPickerOwner = null;
-        projectParentDirDialog.close();
+        const showing = locationPicker;
+        if (showing === null)
+            return;
+        locationPicker = null;
+        showing.picker.close();
+        showing.picker.destroy();
     }
 
-    // The folder in which the project folder is created
+    Component {
+        id: locationPickerComponent
 
-    FolderDialog {
-        id: projectParentDirDialog
-        objectName: "createProject.locationPicker"
-
-        title: qsTr("Choose the folder for the project")
-        selectedFolder: dialog.projectParentDirectory
-        onAccepted: {
-            if (dialog.takeLocationPickerAnswer())
-                dialog.projectParentDirectory = selectedFolder;
+        FolderDialog {
+            objectName: "createProject.locationPicker"
+            title: qsTr("Choose the folder for the project")
         }
-        onRejected: dialog.takeLocationPickerAnswer()
     }
 
     // Persistent settings
