@@ -10,17 +10,31 @@ function clearQuarantine() {
         installer.execute("/usr/bin/xattr", ["-r", "-d", "com.apple.quarantine", target]);
 }
 
-// macOS: the maintenance tool an update replaced is kept (maintenance_swap.sh) until the update has succeeded with the
-// new tool in place; then it goes. The Framework signals the end of an update, a successful one or one rolled back,
-// as installationFinished, so the status and the tool are checked first: after a rollback the kept tool was put
-// back by the swap's undo and nothing is removed.
-function dropOldTool() {
-    if (systemInfo.kernelType !== "darwin" || !installer.isUpdater() || installer.status !== QInstaller.Success)
+// After a successful update the kept tool and the staging folder are removed by the tool component's script
+// (maintenancescript.qs), which comes with the release being installed and so runs inside an older tool too; this
+// script is the running tool's own and may be older than the fix (edi ADR-0108).
+
+// Purge: the Framework removes what its operations wrote, but the tool's own files reached their place through the
+// swap, not an operation, so they are removed here: the Linux Qt runtime, any kept copy of the tool, the staging
+// folder and the lock file. The running tool has already loaded its libraries. After a failed removal the tool may
+// still be needed, so nothing goes then (edi ADR-0108).
+function removeToolFiles() {
+    if (!installer.isUninstaller() || installer.status !== QInstaller.Success)
         return;
     var target = installer.value("TargetDir");
-    if (target === "" || !installer.fileExists(target + "/MaintenanceTool.app/Contents/MacOS/MaintenanceTool"))
+    if (target === "")
         return;
-    installer.execute("/bin/rm", ["-rf", target + "/MaintenanceTool.app.old", target + "/MaintenanceTool.app.old-token"]);
+    var lock = ".MaintenanceTool.lock";
+    if (systemInfo.kernelType === "winnt") {
+        if (installer.fileExists(target + "/" + lock))
+            installer.performOperation("Delete", [target + "/" + lock]);
+        return;
+    }
+    var item = systemInfo.kernelType === "darwin" ? "MaintenanceTool.app" : "installer-runtime";
+    var paths = [item + ".old", item + ".old-token", "maintenancetool", lock];
+    if (systemInfo.kernelType !== "darwin")
+        paths.unshift(item);
+    installer.execute("/bin/rm", ["-rf"].concat(paths.map(function (name) { return target + "/" + name; })));
 }
 
 // Windows: a new installation goes to %LOCALAPPDATA%\Programs\EasyDiffraction, or to
@@ -334,7 +348,7 @@ function Controller() {
     });
     installer.installationFinished.connect(clearQuarantine);
     installer.updateFinished.connect(clearQuarantine);
-    installer.installationFinished.connect(dropOldTool);
+    installer.uninstallationFinished.connect(removeToolFiles);
     // When the work is done the Framework moves on to the last page by itself; should it stay on the progress page,
     // Next is pressed for it, so the tool always ends by saying what it did.
     if (captureFolder === "") {
@@ -769,12 +783,16 @@ var appComponent = "org.easydiffraction.app";
 // The maintenance tool is a hidden (virtual) component, installed and updated with the rest. The pages show it as a
 // row of its own, ticked and fixed as EasyDiffraction, between it and the AI assistant (owner, 2026-11-26).
 var maintenanceComponent = "org.easydiffraction.app.maintenancetool";
-// The tool's size: on Linux its component has no payload (the Framework writes the tool from its own binary), so
-// package.py gives the size of that binary.
+// The size of the Framework's binary (package.py), which an installation writes as its tool where no package holds
+// the tool: on Linux, whose tool component carries only the tool's Qt runtime (edi ADR-0108), and when a script does
+// not see the component at all.
 var toolBytes = Number("@TOOL_BYTES@") || 0;
 
 function componentBytes(c) {
-    return Number(c.value("UncompressedSize") || 0) || (c.name === maintenanceComponent ? toolBytes : 0);
+    var bytes = Number(c.value("UncompressedSize") || 0);
+    if (c.name !== maintenanceComponent)
+        return bytes;
+    return systemInfo.kernelType === "linux" ? bytes + toolBytes : bytes || toolBytes;
 }
 
 // Whether a summary counts the component: what is installed, updated or removed. The maintenance tool's component
