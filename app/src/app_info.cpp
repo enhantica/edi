@@ -3181,6 +3181,13 @@ bool takeOwned(const PanelUsageFrame& frame) {
     panelUsageContextWrite(frame, "ownerGeneration", QJSValue(-2));
     return true;
 }
+// "Save the changes?" keeps its generation after its answer (a browser Save's action waits on it), so the one answer
+// each showing takes is marked apart: Save, Discard or Cancel, whichever comes first.
+bool takeUnsaved(const PanelUsageFrame& frame) {
+    if (panelUsageTruth(panelUsageContextRead(frame, "answered")) || !ownerCurrent(frame, panelUsageContextRead(frame, "ownerGeneration"))) return false;
+    panelUsageContextWrite(frame, "answered", QJSValue(true));
+    return true;
+}
 // `action` on the next turn, only if no other project was published meanwhile; else `abandoned`, as a Cancel would.
 void ownedCallLater(const PanelUsageFrame& frame, const QJSValue& action, const QJSValue& abandoned) {
     panelUsageCallLater(frame, panelUsageClosure(frame, 399, {action, ownerGeneration(frame), abandoned}, 0));
@@ -3469,11 +3476,8 @@ void ApplicationInfo::abandonUnsavedProjectAction() const {
 }
 void ApplicationInfo::acceptUnsavedProject() const {
     const auto frame = panelUsageEngine(this);
-    // A question about a project since replaced saves nothing and lets nothing wait on it.
-    if (!ownerCurrent(frame, panelUsageContextRead(frame, "ownerGeneration"))) {
-        panelUsageGlobalCall(frame, "abandonAction", {});
-        return;
-    }
+    // Answered already, or about a project since replaced (whose action the handoff abandoned): nothing more.
+    if (!takeUnsaved(frame)) return;
     // About the user's own project a tutorial holds aside: it comes back and the tutorial ends first, on the next turn.
     if (panelUsageTruth(panelUsageContextRead(frame, "setAside"))) {
         panelUsageContextWrite(frame, "setAside", QJSValue(false));
@@ -3615,9 +3619,8 @@ void ApplicationInfo::projectUntitledSettled(const QJSValue& id, const QJSValue&
 }
 void ApplicationInfo::discardUnsavedProject() const {
     const auto frame = panelUsageEngine(this);
-    // A question about a project since replaced discards nothing: the open project's changes were never asked about.
-    if (!ownerCurrent(frame, panelUsageContextRead(frame, "ownerGeneration"))) {
-        panelUsageGlobalCall(frame, "abandonAction", {});
+    // Answered already, or about a project since replaced: the open project's changes were never asked about.
+    if (!takeUnsaved(frame)) {
         panelUsageGlobalCall(frame, "close", {});
         return;
     }
@@ -3674,7 +3677,7 @@ void ApplicationInfo::acceptProjectSaveChoice() const {
         return;
     }
     const bool zip = panelUsageTruth(panelUsageContextRead(frame, "zip"));
-    const auto picker = panelUsageContextRead(frame, zip ? "saveZip" : "saveFolder");
+    const auto picker = projectInvoke(frame, "window", "showNativeAsk", {panelUsageContextRead(frame, zip ? "saveZipPicker" : "saveFolderPicker"), frame->newObject()});
     const auto actualIntent = assistantContextField(frame, "window", "assistantSaveIntent");
     const auto target = actualIntent.strictlyEquals(QJSValue(QString{})) ? projectInvoke(frame, "Session", "suggestedSaveTarget", {QJSValue(zip)})
         : projectInvoke(frame, "Session", "assistantSaveAsTarget", {assistantContextField(frame, "window", "assistantSaveIntent"), QJSValue(zip)});
@@ -3692,12 +3695,14 @@ void ApplicationInfo::openProjectSavePicker(const QJSValue& target) const {
     panelUsageGlobalCall(frame, "open", {});
 }
 bool ApplicationInfo::takeOwnedAnswer() const { return takeOwned(panelUsageEngine(this)); }
+bool ApplicationInfo::takeUnsavedAnswer() const { return takeUnsaved(panelUsageEngine(this)); }
 void ApplicationInfo::retireProjectAsks() const {
     const auto f = panelUsageEngine(this);
     // The question goes as Cancel would, except while the tutorial brings its own project back: that restore carries
     // the question's answer on (closures 397 and 398).
     if (panelUsageTruth(assistantContextField(f, "unsavedChanges", "visible")) && !panelUsageTruth(assistantContextField(f, "unsavedChanges", "restoring"))) {
         projectWrite(f, "unsavedChanges", "ownerGeneration", QJSValue(-2));
+        projectWrite(f, "unsavedChanges", "answered", QJSValue(true));
         projectInvoke(f, "unsavedChanges", "abandonAction");
         projectInvoke(f, "AppState", "retirePopup", {panelUsageContextRead(f, "unsavedChanges")});
     }
@@ -3709,21 +3714,25 @@ void ApplicationInfo::retireProjectAsks() const {
         projectInvoke(f, "AppState", "retirePopup", {panelUsageContextRead(f, "saveAsChoice")});
         saving = true;
     }
-    for (const char* picker : {"saveFolder", "saveZip"}) {
-        if (!panelUsageTruth(assistantContextField(f, picker, "visible"))) continue;
-        projectWrite(f, picker, "ownerGeneration", QJSValue(-2));
-        projectInvoke(f, picker, "close");
-        saving = true;
+    // The native picker, Save As's or Load's, goes with its showing (window.showNativeAsk): its close() answers there,
+    // and anything a platform delivers later reaches only that retired object. Load's choosers were opened once the
+    // replaced project's changes were dealt with, so they open nothing over another.
+    const auto ask = panelUsageContextRead(f, "nativeAsk");
+    if (panelUsageTruth(ask)) {
+        saving = saving || panelUsageTruth(panelUsageRead(f, ask, "saving"));
+        assistantMemberWrite(f, ask, "ownerGeneration", QJSValue(-2));
+        if (panelUsageTruth(panelUsageRead(f, ask, "visible"))) panelUsageMemberCall(f, ask, "close");
+        else projectInvoke(f, "window", "endNativeAsk", {ask});
     }
     if (saving) {
         projectInvoke(f, "Session", "setNextSaveData", {QJSValue(QString{})});
         projectInvoke(f, "window", "cancelAssistantSaveAs");
     }
-    // Load's choosers were opened once the replaced project's changes were dealt with: they open nothing over another.
-    for (const char* chooser : {"openFolderDialog", "openZipDialog", "importDialog"}) {
-        if (!panelUsageTruth(assistantContextField(f, chooser, "visible"))) continue;
-        projectWrite(f, chooser, "ownerGeneration", QJSValue(-2));
-        projectInvoke(f, chooser, "close");
+    // The save's question about its data: the session drops it with the replaced project, and this showing answers
+    // nothing more.
+    if (panelUsageTruth(assistantContextField(f, "saveData", "visible")) || !assistantContextField(f, "saveData", "request").strictlyEquals(QJSValue(0))) {
+        projectWrite(f, "saveData", "request", QJSValue(0));
+        projectInvoke(f, "AppState", "retirePopup", {panelUsageContextRead(f, "saveData")});
     }
     // Where the replaced project's save went is no longer news, and its Save project as… would act on the next one.
     if (panelUsageTruth(assistantContextField(f, "browserSaved", "visible"))) {
@@ -11864,6 +11873,7 @@ QJSValue lifecycleCallback(const PanelUsageFrame& f, uint op,
         if (!ownerCurrent(f, restoredGeneration)) { abandon(); return {}; }
         if (op == 396) return panelUsageGlobalCall(f, "afterChanges", {saved(0), saved(1)});
         panelUsageContextWrite(f, "ownerGeneration", restoredGeneration);
+        panelUsageContextWrite(f, "answered", QJSValue(false));
         if (op == 397) return projectInvoke(f, "ApplicationInfo", "acceptUnsavedProject");
         projectInvoke(f, "Session", "discardKeptChanges");
         ownedCallLater(f, saved(0), saved(1));

@@ -892,27 +892,42 @@ EaComponents.ApplicationWindow {
                 if (WebFiles.available)
                     Session.openWebProject(zip ? "file" : "folder");
                 else
-                    window.openChooser(zip ? openZipDialog : openFolderDialog);
+                    window.openChooser(zip ? openZipChooser : openFolderChooser, {});
             });
         }
         function onImportProjectRequested(importer) {
-            AppState.afterChanges(() => {
-                importDialog.importer = importer;
-                window.openChooser(importDialog);
-            });
+            AppState.afterChanges(() => window.openChooser(importChooser, {
+                    importer: importer
+                }));
         }
     }
     // A Load chooser opens on the next turn for the project whose changes were just dealt with, and what it chooses
     // opens only while that project is still open: another one published meanwhile was never asked about. The
     // browser's chooser carries its request the same way (Session.openWebProject).
-    function openChooser(chooser) {
+    function openChooser(chooser, properties) {
         const owner = Session.projectGeneration();
         Qt.callLater(() => {
             if (Session.projectGeneration() !== owner)
                 return;
-            chooser.ownerGeneration = owner;
-            chooser.open();
+            const ask = window.showNativeAsk(chooser, properties);
+            ask.ownerGeneration = owner;
+            ask.open();
         });
+    }
+    // A native picker is made for each showing and goes with it. A platform may deliver a dialog's answer after its
+    // close(); that late answer then reaches only the retired showing's own object, never the next showing's.
+    property var nativeAsk: null
+    function showNativeAsk(component, properties) {
+        window.endNativeAsk(window.nativeAsk);
+        window.nativeAsk = component.createObject(window, properties);
+        return window.nativeAsk;
+    }
+    function endNativeAsk(ask) {
+        if (!ask)
+            return;
+        if (window.nativeAsk === ask)
+            window.nativeAsk = null;
+        ask.destroy();
     }
     function openChosen(location) {
         const owner = Session.projectGeneration();
@@ -949,7 +964,10 @@ EaComponents.ApplicationWindow {
         function abandonAction() {
             ApplicationInfo.abandonUnsavedProjectAction();
         }
-        onRejected: abandonAction()
+        onRejected: {
+            if (ApplicationInfo.takeUnsavedAnswer())
+                abandonAction();
+        }
         // The assistant closes a saved project: nothing to save, only Close project or Cancel.
         property bool saved: false
         property string closing: ""
@@ -959,8 +977,11 @@ EaComponents.ApplicationWindow {
         property real ownerGeneration: -1
         // The tutorial is bringing its own project back to answer this question (ApplicationInfo.retireProjectAsks).
         property bool restoring: false
+        // This showing took its one answer (ApplicationInfo.takeUnsavedAnswer).
+        property bool answered: false
         onAboutToShow: {
             ownerGeneration = Session.projectGeneration();
+            answered = false;
             const yes = standardButton(Dialog.Yes);
             if (yes !== null) {
                 yes.text = qsTr("Close project");
@@ -1172,112 +1193,141 @@ EaComponents.ApplicationWindow {
         }
     }
 
-    // Open project's and Import's choosers (Get started's Load menu), both opening where one was last chosen. The
-    // project read replaces the current one on the next turn.
-    FolderDialog {
-        id: openFolderDialog
-        objectName: "load.folderChooser"
-        // The project it was opened over (window.openChooser); -2 once answered or retired.
-        property real ownerGeneration: -1
-        title: qsTr("Open an edi project folder")
-        acceptLabel: qsTr("Open")
-        currentFolder: DialogFolders.folder("openProject", "")
-        onAccepted: {
-            if (!ApplicationInfo.takeOwnedAnswer())
-                return;
-            DialogFolders.remember("openProject", selectedFolder);
-            window.openChosen(selectedFolder);
+    // Open project's and Import's choosers (Get started's Load menu), both opening where one was last chosen, one
+    // object per showing (showNativeAsk). The project read replaces the current one on the next turn.
+    Component {
+        id: openFolderChooser
+        FolderDialog {
+            id: chooser
+            objectName: "load.folderChooser"
+            // The project it was opened over (window.openChooser); -2 once answered or retired.
+            property real ownerGeneration: -1
+            title: qsTr("Open an edi project folder")
+            acceptLabel: qsTr("Open")
+            currentFolder: DialogFolders.folder("openProject", "")
+            onAccepted: {
+                if (ApplicationInfo.takeOwnedAnswer()) {
+                    DialogFolders.remember("openProject", selectedFolder);
+                    window.openChosen(selectedFolder);
+                }
+                window.endNativeAsk(chooser);
+            }
+            onRejected: {
+                ApplicationInfo.takeOwnedAnswer();
+                window.endNativeAsk(chooser);
+            }
         }
-        onRejected: ApplicationInfo.takeOwnedAnswer()
     }
-    FileDialog {
-        id: openZipDialog
-        objectName: "load.zipChooser"
-        property real ownerGeneration: -1
-        title: qsTr("Open an edi project archive")
-        nameFilters: [qsTr("edi project archives (*.zip)")]
-        currentFolder: DialogFolders.folder("openProject", "")
-        onAccepted: {
-            if (!ApplicationInfo.takeOwnedAnswer())
-                return;
-            DialogFolders.remember("openProject", selectedFile);
-            window.openChosen(selectedFile);
+    Component {
+        id: openZipChooser
+        FileDialog {
+            id: chooser
+            objectName: "load.zipChooser"
+            property real ownerGeneration: -1
+            title: qsTr("Open an edi project archive")
+            nameFilters: [qsTr("edi project archives (*.zip)")]
+            currentFolder: DialogFolders.folder("openProject", "")
+            onAccepted: {
+                if (ApplicationInfo.takeOwnedAnswer()) {
+                    DialogFolders.remember("openProject", selectedFile);
+                    window.openChosen(selectedFile);
+                }
+                window.endNativeAsk(chooser);
+            }
+            onRejected: {
+                ApplicationInfo.takeOwnedAnswer();
+                window.endNativeAsk(chooser);
+            }
         }
-        onRejected: ApplicationInfo.takeOwnedAnswer()
     }
     // An import opens as a new, unsaved project, as Open does.
-    FileDialog {
-        id: importDialog
-        objectName: "load.importChooser"
-        property var importer: null
-        property real ownerGeneration: -1
-        title: importer !== null ? qsTr("Import a %1 project").arg(importer.program) : ""
-        nameFilters: importer !== null ? [importer.nameFilter] : []
-        currentFolder: DialogFolders.folder("importProject", "")
-        onAccepted: {
-            if (!ApplicationInfo.takeOwnedAnswer())
-                return;
-            DialogFolders.remember("importProject", selectedFile);
-            window.openChosen(selectedFile);
+    Component {
+        id: importChooser
+        FileDialog {
+            id: chooser
+            objectName: "load.importChooser"
+            property var importer: null
+            property real ownerGeneration: -1
+            title: importer !== null ? qsTr("Import a %1 project").arg(importer.program) : ""
+            nameFilters: importer !== null ? [importer.nameFilter] : []
+            currentFolder: DialogFolders.folder("importProject", "")
+            onAccepted: {
+                if (ApplicationInfo.takeOwnedAnswer()) {
+                    DialogFolders.remember("importProject", selectedFile);
+                    window.openChosen(selectedFile);
+                }
+                window.endNativeAsk(chooser);
+            }
+            onRejected: {
+                ApplicationInfo.takeOwnedAnswer();
+                window.endNativeAsk(chooser);
+            }
         }
-        onRejected: ApplicationInfo.takeOwnedAnswer()
     }
 
     // The project's folder by its name, as a file is named: the dialog is filled with the project's own name, in the
-    // folder it is in (owner, 2026-10-25); the folder is made if it is new.
-    FileDialog {
-        id: saveFolder
-        objectName: "saveAs.folderPicker"
-        // The project it was opened over (ApplicationInfo.openProjectSavePicker): an answer after another one replaced it
-        // is ignored, that Save As having ended at the handoff.
-        property real ownerGeneration: -1
-        onRejected: {
-            if (!ApplicationInfo.takeOwnedAnswer())
-                return;
-            Session.setNextSaveData("");
-            window.cancelAssistantSaveAs();
-        }
-        // In the folder a project was last saved to, unless the assistant chose the place (the owner, 2026-11-17).
-        function openAt(target) {
-            ApplicationInfo.openProjectSavePicker(window.assistantSaveIntent === "" ? DialogFolders.retarget("saveProject", target) : target);
-        }
-        title: saveAsChoice.copy ? qsTr("Save a copy of the project as a folder") : qsTr("Save the project as a folder")
-        fileMode: FileDialog.SaveFile
-        acceptLabel: qsTr("Save")
-        onAccepted: {
-            if (!ApplicationInfo.takeOwnedAnswer())
-                return;
-            DialogFolders.remember("saveProject", selectedFile);
-            ApplicationInfo.acceptProjectSavePicker(false);
+    // folder it is in (owner, 2026-10-25); the folder is made if it is new. One object per showing, as Load's.
+    Component {
+        id: saveFolderPicker
+        FileDialog {
+            id: picker
+            objectName: "saveAs.folderPicker"
+            // The project it was opened over (ApplicationInfo.openProjectSavePicker); -2 once answered or retired, a
+            // retirement having ended its Save As already.
+            property real ownerGeneration: -1
+            readonly property bool saving: true
+            onRejected: {
+                if (ApplicationInfo.takeOwnedAnswer()) {
+                    Session.setNextSaveData("");
+                    window.cancelAssistantSaveAs();
+                }
+                window.endNativeAsk(picker);
+            }
+            // In the folder a project was last saved to, unless the assistant chose the place (the owner, 2026-11-17).
+            function openAt(target) {
+                ApplicationInfo.openProjectSavePicker(window.assistantSaveIntent === "" ? DialogFolders.retarget("saveProject", target) : target);
+            }
+            title: saveAsChoice.copy ? qsTr("Save a copy of the project as a folder") : qsTr("Save the project as a folder")
+            fileMode: FileDialog.SaveFile
+            acceptLabel: qsTr("Save")
+            onAccepted: {
+                if (ApplicationInfo.takeOwnedAnswer()) {
+                    DialogFolders.remember("saveProject", selectedFile);
+                    ApplicationInfo.acceptProjectSavePicker(false);
+                }
+                window.endNativeAsk(picker);
+            }
         }
     }
-
-    FileDialog {
-        id: saveZip
-        objectName: "saveAs.zipPicker"
-        // The project it was opened over (ApplicationInfo.openProjectSavePicker): an answer after another one replaced it
-        // is ignored, that Save As having ended at the handoff.
-        property real ownerGeneration: -1
-        onRejected: {
-            if (!ApplicationInfo.takeOwnedAnswer())
-                return;
-            Session.setNextSaveData("");
-            window.cancelAssistantSaveAs();
-        }
-        // In the folder a project was last saved to, unless the assistant chose the place (the owner, 2026-11-17).
-        function openAt(target) {
-            ApplicationInfo.openProjectSavePicker(window.assistantSaveIntent === "" ? DialogFolders.retarget("saveProject", target) : target);
-        }
-        title: saveAsChoice.copy ? qsTr("Save a copy of the project as a .zip") : qsTr("Save the project as a .zip")
-        fileMode: FileDialog.SaveFile
-        defaultSuffix: "zip"
-        nameFilters: [qsTr("Zip archives (*.zip)")]
-        acceptLabel: qsTr("Save")
-        onAccepted: {
-            if (!ApplicationInfo.takeOwnedAnswer())
-                return;
-            DialogFolders.remember("saveProject", selectedFile);
-            ApplicationInfo.acceptProjectSavePicker(true);
+    Component {
+        id: saveZipPicker
+        FileDialog {
+            id: picker
+            objectName: "saveAs.zipPicker"
+            property real ownerGeneration: -1
+            readonly property bool saving: true
+            onRejected: {
+                if (ApplicationInfo.takeOwnedAnswer()) {
+                    Session.setNextSaveData("");
+                    window.cancelAssistantSaveAs();
+                }
+                window.endNativeAsk(picker);
+            }
+            function openAt(target) {
+                ApplicationInfo.openProjectSavePicker(window.assistantSaveIntent === "" ? DialogFolders.retarget("saveProject", target) : target);
+            }
+            title: saveAsChoice.copy ? qsTr("Save a copy of the project as a .zip") : qsTr("Save the project as a .zip")
+            fileMode: FileDialog.SaveFile
+            defaultSuffix: "zip"
+            nameFilters: [qsTr("Zip archives (*.zip)")]
+            acceptLabel: qsTr("Save")
+            onAccepted: {
+                if (ApplicationInfo.takeOwnedAnswer()) {
+                    DialogFolders.remember("saveProject", selectedFile);
+                    ApplicationInfo.acceptProjectSavePicker(true);
+                }
+                window.endNativeAsk(picker);
+            }
         }
     }
 
@@ -1446,7 +1496,17 @@ EaComponents.ApplicationWindow {
     AppDialog {
         id: saveData
         objectName: "save.dataChoice"
+        // The question this showing answers, 0 once answered or retired (ApplicationInfo.retireProjectAsks): the
+        // session drops a replaced project's question too, so an old answer finds nothing.
         property int request: 0
+        function answer(choice: string): void {
+            const asked = saveData.request;
+            if (asked === 0)
+                return;
+            saveData.request = 0;
+            saveData.close();
+            Session.answerSaveData(asked, choice);
+        }
         property real bytes: 0
         property int files: 0
         property bool large: false
@@ -1454,7 +1514,7 @@ EaComponents.ApplicationWindow {
         title: saveData.linked ? qsTr("Linked data") : qsTr("Large save")
         contentWidth: AppSizes.messagesDialogContentWidth
         contentHeight: saveDataText.implicitHeight
-        onRejected: Session.answerSaveData(saveData.request, "cancel")
+        onRejected: saveData.answer("cancel")
 
         EaElements.Label {
             id: saveDataText
@@ -1468,19 +1528,13 @@ EaComponents.ApplicationWindow {
                 visible: saveData.linked
                 text: qsTr("Keep linked")
                 DialogButtonBox.buttonRole: DialogButtonBox.ActionRole
-                onClicked: {
-                    saveData.close();
-                    Session.answerSaveData(saveData.request, "linked");
-                }
+                onClicked: saveData.answer("linked")
             }
             EaElements.Button {
                 objectName: "save.dataChoice.copy"
                 text: !saveData.linked ? qsTr("Save") : saveData.large ? qsTr("Copy anyway") : qsTr("Copy")
                 DialogButtonBox.buttonRole: DialogButtonBox.ActionRole
-                onClicked: {
-                    saveData.close();
-                    Session.answerSaveData(saveData.request, "copy");
-                }
+                onClicked: saveData.answer("copy")
             }
             EaElements.Button {
                 objectName: "save.dataChoice.cancel"

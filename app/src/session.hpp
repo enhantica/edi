@@ -280,8 +280,9 @@ class Session : public QObject {
     // project (edi ADR-0064).
     Q_INVOKABLE bool setProjectAside();
     // The set-aside project back in place of the tutorial's, which is closed; with none set aside, no project. True
-    // only when the set-aside project is the open one at the end: false when there was none, or when a save holding
-    // the open project refused it (`lastError` says why) or another project took its place meanwhile.
+    // only when what was set aside is open at the end, the empty workspace included: false when nothing was set
+    // aside, or when a save holding the open project refused it (`lastError` says why) or another project took its
+    // place meanwhile.
     Q_INVOKABLE bool restoreProjectSetAside();
     // The tutorial's project is kept: the set-aside project is closed.
     Q_INVOKABLE void dropProjectSetAside();
@@ -643,6 +644,8 @@ class Session : public QObject {
         QString web_copy;
         WebPlace web_place;
         bool web_from_file = false;
+        // Nothing was open when it was set aside: restoring it leaves no project open, which is its success.
+        bool empty = false;
     };
     std::optional<SetAside> aside_;
     bool aside_next_ = false;  // the next replaceProject sets the open project aside
