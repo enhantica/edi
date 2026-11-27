@@ -38,7 +38,7 @@ EM_JS(char*, edi_web_site_file, (const char* path_utf8), {
         return 0;
     }
 });
-EM_JS(void, edi_web_pick_folder, (int request, const char* root_utf8), {
+EM_JS(void, edi_web_pick_folder, (int request, const char* root_utf8, double limit), {
     const root = UTF8ToString(root_utf8);
     document.getElementById("edi-open-folder")?.remove();
     const input = document.createElement("input");
@@ -54,6 +54,12 @@ EM_JS(void, edi_web_pick_folder, (int request, const char* root_utf8), {
     input.addEventListener("change", async () => {
         const files = Array.from(input.files);
         input.remove();
+        // A file over the web app's bound refuses the folder before any file is read.
+        const large = files.find((file) => file.size > limit);
+        if (large) {
+            Module._edi_web_folder_refused(request, stringToNewUTF8(large.name), large.size);
+            return;
+        }
         let copied = 0;
         let failed = false;
         for (const file of files) {
@@ -88,6 +94,11 @@ extern "C" EMSCRIPTEN_KEEPALIVE void edi_web_folder_copied(int request, int coun
 extern "C" EMSCRIPTEN_KEEPALIVE void edi_web_folder_cancelled(int request) {
     edi_app::WebFiles::folderCancelled(request);
 }
+extern "C" EMSCRIPTEN_KEEPALIVE void edi_web_folder_refused(int request, char* name_utf8, double bytes) {
+    const QString name = QString::fromUtf8(name_utf8);
+    std::free(name_utf8);
+    edi_app::WebFiles::folderRefused(request, name, static_cast<qint64>(bytes));
+}
 #endif
 
 namespace edi_app {
@@ -98,6 +109,24 @@ struct Incoming {
     QString name;
     QByteArray data;
 };
+
+#if defined(Q_OS_WASM)
+// The largest data file the web app reads: the size it loaded three times out of three with a quarter of its memory to
+// spare (measured in Chrome; edi ADR-0110). Bigger files are refused before any byte is read. Zero until that
+// measurement sets it: no file is refused.
+constexpr qint64 web_data_file_bytes = 0;
+
+bool over_web_bound(qint64 bytes) { return web_data_file_bytes > 0 && bytes > web_data_file_bytes; }
+
+QString too_large(const QString& name, qint64 bytes, bool in_folder) {
+    const QString size = QString::number(static_cast<double>(bytes) / 1e6, 'f', 0);
+    const QString limit = QString::number(static_cast<double>(web_data_file_bytes) / 1e6, 'f', 0);
+    return in_folder ? WebFiles::tr("%1 in the chosen folder is %2 MB. The web app opens data files up to %3 MB; open "
+                                    "it in the desktop app.").arg(name, size, limit)
+                     : WebFiles::tr("This file is %1 MB. The web app opens data files up to %2 MB; open it in the "
+                                    "desktop app.").arg(size, limit);
+}
+#endif
 
 }  // namespace
 
@@ -209,7 +238,9 @@ int WebFiles::openFolder(bool datasets) {
     const QString root = freshDirectory(QStringLiteral("open"));
     m_folders.insert(request, FolderRequest{root, datasets});
     folder_owner() = this;
-    edi_web_pick_folder(request, root.toUtf8().constData());
+    edi_web_pick_folder(request, root.toUtf8().constData(),
+                        web_data_file_bytes > 0 ? static_cast<double>(web_data_file_bytes)
+                                                : std::numeric_limits<double>::infinity());
     return request;
 }
 
@@ -230,6 +261,20 @@ void WebFiles::folderCopied(int request, int count) {
 }
 
 void WebFiles::folderCancelled(int request) { folderCopied(request, -1); }
+
+void WebFiles::folderRefused(int request, const QString& name, qint64 bytes) {
+    const QPointer<WebFiles> owner = folder_owner();
+    if (owner.isNull()) return;
+    QMetaObject::invokeMethod(
+        owner.data(),
+        [owner, request, name, bytes] {
+            if (owner.isNull() || !owner->m_folders.contains(request)) return;
+            const FolderRequest pending = owner->m_folders.take(request);
+            QDir(pending.root).removeRecursively();
+            if (owner->finish(request)) emit owner->failed(request, too_large(name, bytes, true));
+        },
+        Qt::QueuedConnection);
+}
 
 void WebFiles::answerFolder(int request, int count) {
     if (!m_folders.contains(request)) return;
@@ -269,6 +314,7 @@ void WebFiles::answerFolder(int request, int count) {
 int WebFiles::openFiles(const QString& accept, bool multiple) {
     struct Batch {
         int expected = 0;
+        bool refused = false;  // a file over the bound: the batch is answered and nothing more is read
         QString directory;
         std::vector<Incoming> files;
         QList<QUrl> written;
@@ -289,7 +335,15 @@ int WebFiles::openFiles(const QString& accept, bool multiple) {
                 emit self->cancelled(request);
             }
         },
-        [batch](uint64_t size, const std::string& name) -> char* {
+        [self, request, batch](uint64_t size, const std::string& name) -> char* {
+            // Asked before the browser reads a byte: a file over the bound gets no buffer, so it is never read.
+            if (batch->refused) return nullptr;
+            if (over_web_bound(static_cast<qint64>(size))) {
+                batch->refused = true;
+                if (!self.isNull() && self->finish(request))
+                    emit self->failed(request, too_large(QString::fromStdString(name), static_cast<qint64>(size), false));
+                return nullptr;
+            }
             batch->files.push_back(Incoming{QString::fromStdString(name), QByteArray()});
             batch->files.back().data.resize(static_cast<qsizetype>(size));
             return batch->files.back().data.data();
@@ -298,12 +352,13 @@ int WebFiles::openFiles(const QString& accept, bool multiple) {
             if (self.isNull() || self->m_active != request) {
                 return;  // superseded, failed or cancelled: the rest of the batch is not kept
             }
-            const Incoming& file = batch->files.back();
+            Incoming& file = batch->files.back();
             const QString path = QDir(batch->directory).filePath(QFileInfo(file.name).fileName());
             // Closed before the file is handed on: an open QFile can still hold the end of its data in its buffer.
             QFile out(path);
             const bool kept = out.open(QIODevice::WriteOnly) && out.write(file.data) == file.data.size() && out.flush();
             out.close();
+            file.data = QByteArray();  // the copy in the page's file system is the one kept: held once, not twice
             if (!kept) {
                 self->finish(request);
                 emit self->failed(request, QStringLiteral("cannot keep %1 in memory").arg(file.name));
@@ -354,6 +409,8 @@ int WebFiles::openFolder(bool /*datasets*/) {
 void WebFiles::folderCopied(int /*request*/, int /*count*/) {}
 
 void WebFiles::folderCancelled(int /*request*/) {}
+
+void WebFiles::folderRefused(int /*request*/, const QString& /*name*/, qint64 /*bytes*/) {}
 
 void WebFiles::answerFolder(int /*request*/, int /*count*/) {}
 

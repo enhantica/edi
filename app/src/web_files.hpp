@@ -43,6 +43,9 @@ class WebFiles : public QObject {
     // the page's script).
     static void folderCopied(int request, int count);
     static void folderCancelled(int request);
+    // A file of the chosen folder, `name` of `bytes`, is over the web app's bound: the folder is refused before any
+    // file is read.
+    static void folderRefused(int request, const QString& name, qint64 bytes);
     // Asks the browser for data files (`accept`: the input's filter, e.g. ".edi"), one or `multiple`; answers with
     // filesOpened (the files, copied into memory).
     Q_INVOKABLE int openFiles(const QString& accept, bool multiple);
