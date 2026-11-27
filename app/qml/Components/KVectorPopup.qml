@@ -105,7 +105,7 @@ AppDialog {
                 objectName: `chart.kVector.${index}`
                 width: list.width
                 height: EaStyle.Sizes.fontPixelSize * 3.2
-                color: row.current ? EaStyle.Colors.themeAccentMinor : hover.containsMouse ? EaStyle.Colors.themeRowHovered : "transparent"
+                color: row.current ? EaStyle.Colors.contentBackground : hover.containsMouse ? EaStyle.Colors.themeRowHovered : "transparent"
                 Rectangle {
                     visible: row.current
                     width: 3
