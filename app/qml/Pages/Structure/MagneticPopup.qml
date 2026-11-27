@@ -136,8 +136,7 @@ AppDialog {
     // strip and the footer at the bottom.
     ColumnLayout {
         id: content
-        width: popup.availableWidth
-        height: popup.availableHeight
+        anchors.fill: parent
         spacing: EaStyle.Sizes.fontPixelSize * 0.5
 
         // The propagation vector.
@@ -319,43 +318,46 @@ AppDialog {
                 return `${n.name} ${n.bns} · ${qsTr("from the parent")} ${popup.found.cell} · ${qsTr("to the BNS standard")} ${n.transform} · ${qsTr("%n domain(s)", "", n.domains)}\n${n.moments}`;
             }
         }
+    }
 
-        // The fixed footer.
-        RowLayout {
-            spacing: EaStyle.Sizes.fontPixelSize * 0.6
-            EaElements.Button {
-                objectName: "magnetic.selectAll"
-                text: qsTr("Select all")
-                enabled: popup.found !== null
-                onClicked: popup.selectAll()
-            }
-            EaElements.Button {
-                objectName: "magnetic.clear"
-                text: qsTr("Clear")
-                enabled: popup.selected.length > 0
-                onClicked: popup.selected = []
-            }
-            Item {
-                Layout.fillWidth: true
-            }
-            EaElements.Button {
-                objectName: "magnetic.add"
-                text: popup.selected.length > 1 ? qsTr("Add %1 structures").arg(popup.selected.length) : qsTr("Add")
-                enabled: popup.selected.length > 0 && !popup.busy
-                onClicked: {
-                    const count = popup.selected.length;
-                    if (popup.project.addMagneticCandidates(popup.structureIndex, popup.selected, startMoments.checked, popup.selectAfterAdd)) {
-                        popup.added(count);
-                        popup.close();
-                    } else
-                        popup.refusal = popup.project.lastError;
+    // The fixed footer, as the app's other dialogs have it.
+    footer: EaElements.DialogButtonBox {
+        EaElements.Button {
+            objectName: "magnetic.selectAll"
+            fontIcon: "check-double"
+            text: qsTr("Select all")
+            enabled: popup.found !== null
+            DialogButtonBox.buttonRole: DialogButtonBox.ActionRole
+            onClicked: popup.selectAll()
+        }
+        EaElements.Button {
+            objectName: "magnetic.clear"
+            fontIcon: "eraser"
+            text: qsTr("Clear")
+            enabled: popup.selected.length > 0
+            DialogButtonBox.buttonRole: DialogButtonBox.ActionRole
+            onClicked: popup.selected = []
+        }
+        EaElements.Button {
+            objectName: "magnetic.add"
+            fontIcon: "plus-circle"
+            text: popup.selected.length > 1 ? qsTr("Add %1 structures").arg(popup.selected.length) : qsTr("Add")
+            enabled: popup.selected.length > 0 && !popup.busy
+            DialogButtonBox.buttonRole: DialogButtonBox.ApplyRole
+            onClicked: {
+                const count = popup.selected.length;
+                if (popup.project.addMagneticCandidates(popup.structureIndex, popup.selected, startMoments.checked, popup.selectAfterAdd)) {
+                    popup.added(count);
+                    popup.close();
+                } else {
+                    popup.refusal = popup.project.lastError;
                 }
             }
-            EaElements.Button {
-                objectName: "magnetic.cancel"
-                text: qsTr("Cancel")
-                onClicked: popup.close()
-            }
+        }
+        EaElements.Button {
+            objectName: "magnetic.cancel"
+            text: qsTr("Cancel")
+            DialogButtonBox.buttonRole: DialogButtonBox.RejectRole
         }
     }
 }
