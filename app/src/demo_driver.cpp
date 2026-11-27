@@ -24,6 +24,7 @@
 #include <QKeyEvent>
 #include <QKeySequence>
 #include <QMouseEvent>
+#include <QWheelEvent>
 #include <QPointer>
 #include <QQmlEngine>
 #include <QQuickItem>
@@ -5078,6 +5079,35 @@ bool DemoDriver::perform(const QString& action) {
         QMouseEvent release(QEvent::MouseButtonRelease, to, window_.mapToGlobal(to), button, Qt::NoButton,
                             Qt::NoModifier);
         QCoreApplication::sendEvent(&window_, &release);
+        return true;
+    }
+    if (action.startsWith(QLatin1String("wheel:")) || action.startsWith(QLatin1String("double-click:"))) {
+        // wheel:<name>:<x>,<y>,<steps> turns the wheel over the item, at fractions of its size, by whole notches
+        // (positive away from the user); double-click:<name>:<x>,<y> double-clicks the left button there.
+        const bool wheel = action.startsWith(QLatin1String("wheel:"));
+        const QStringList parts = action.mid(wheel ? 6 : 13).split(QLatin1Char(':'));
+        QQuickItem* item = find(parts.value(0), true);
+        const QStringList at = parts.value(1, wheel ? QStringLiteral("0.5,0.5,1") : QStringLiteral("0.5,0.5"))
+                                   .split(QLatin1Char(','));
+        if (item == nullptr || at.size() != (wheel ? 3 : 2)) {
+            fail(QStringLiteral("step %1: cannot %2").arg(steps_[current_].image, action));
+            return false;
+        }
+        const QPointF to = item->mapToScene(QPointF(at[0].toDouble() * item->width(), at[1].toDouble() * item->height()));
+        if (wheel) {
+            QWheelEvent turn(to, window_.mapToGlobal(to), QPoint(), QPoint(0, 120 * at[2].toInt()), Qt::NoButton,
+                             Qt::NoModifier, Qt::NoScrollPhase, false);
+            QCoreApplication::sendEvent(&window_, &turn);
+            return true;
+        }
+        const auto send = [this, &to](QEvent::Type type, Qt::MouseButtons buttons) {
+            QMouseEvent event(type, to, window_.mapToGlobal(to), Qt::LeftButton, buttons, Qt::NoModifier);
+            QCoreApplication::sendEvent(&window_, &event);
+        };
+        send(QEvent::MouseButtonPress, Qt::LeftButton);
+        send(QEvent::MouseButtonRelease, Qt::NoButton);
+        send(QEvent::MouseButtonDblClick, Qt::LeftButton);
+        send(QEvent::MouseButtonRelease, Qt::NoButton);
         return true;
     }
     if (action.startsWith(QLatin1String("hover:"))) {
