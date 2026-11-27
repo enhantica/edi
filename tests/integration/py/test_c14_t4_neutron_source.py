@@ -163,9 +163,8 @@ def test_named_default_matches_omission_and_independent_table_for_every_element(
         )
 
 
-# Rauch and Waschkowski, Neutron Data Booklet (2003), table 2, 2H, bound b in fm.
-# https://www.ill.eu/documents/1013/NeutronDataBooklet.pdf
-RAUCH_DEUTERIUM = 6.674
+# periodictable 2.1.0 averages Snow et al. Table I, doi:10.1103/PhysRevD.101.062004.
+SNOW_DEUTERIUM = 6.6681
 
 # Sears (1992), 13C: https://www.ncnr.nist.gov/resources/n-lengths/list.html
 SEARS_CARBON_13 = 6.19
@@ -195,7 +194,7 @@ def test_deuterium_spelling_preserves_signed_default_neutron_amplitude(tmp_path,
     project.analysis.calculate()
     np.testing.assert_allclose(
         project.experiments[0].data.intensity_calc,
-        _closed_form(RAUCH_DEUTERIUM, boron=True),
+        _closed_form(SNOW_DEUTERIUM, boron=True),
         rtol=2e-7,
         atol=1e-9,
         err_msg='The default neutron calculation uses the published signed deuterium length',
