@@ -40,6 +40,20 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           INSTALLER_RUN: ${{ inputs.installer_run }}
+      # An app reading the legacy stable.json sees later YY.N releases only as 2026.11.x aliases, which it ranks
+      # below its own version, so a YY.N release must be built from a commit whose app reads stable-v2.json.
+      - name: Check that the release's app reads the newer feed
+        shell: bash
+        run: |
+          version=$(python3 -c 'import json; print(json.load(open("publication/release.json"))["version"])')
+          commit=$(python3 -c 'import json; print(json.load(open("publication/release.json"))["commit"])')
+          if [[ "$version" =~ ^[0-9]{2}\.[0-9]+$ ]]; then
+            updates=$(git show "$commit:app/src/desktop_updates.cpp")
+            if [[ "$updates" != *'releases/stable-v2.json'* ]]; then
+              echo "::error::The app at $commit reads releases/stable.json; build $version from a commit whose app reads stable-v2.json"
+              exit 1
+            fi
+          fi
       # The crysta SDKs every product of this release was built with (edi ADR-0083), attached beside them.
       - name: The pinned crysta commit
         id: crysta
