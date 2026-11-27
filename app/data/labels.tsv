@@ -419,6 +419,7 @@ fitting_mode	Fitting mode		sliders-h
 fitting_mode.type	Mode		
 fitting_mode.type=independent	Independent: each from the same start		
 fitting_mode.type=joint	Joint: all experiments at once		
+fitting_mode.type=parametric	Parametric: all as one fit		
 fitting_mode.type=sequential	Sequential: each from the previous		
 fitting_mode.type=single	Single experiment		
 geom	Bond settings		ruler-combined
@@ -561,7 +562,13 @@ onlineLoad.clear	Clear		eraser
 onlineLoad.close	Close		times
 onlineLoad.retry	Retry		redo
 parameters.freeHeader	Free		
-parameters.sameHeader	Same for all		
+parameters.sharedHeader	Shared		
+parametric_fit_shared	Shared parameters		link
+parametric_fit_shared.parameter_unique_name	Parameter		
+parametric_fit_start	Point starts		flag
+parametric_fit_start.parameter_unique_name	Parameter		
+parametric_fit_start.point	Point		
+parametric_fit_start.value	Value		
 parent_propagation_vector	Propagation vectors		long-arrow-alt-right
 parent_propagation_vector.id	ID		
 parent_propagation_vector.kxkykz	k		
