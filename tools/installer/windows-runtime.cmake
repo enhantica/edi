@@ -29,7 +29,8 @@ if(NOT WIN32 OR NOT IS_DIRECTORY "${STAGE}/bin" OR NOT IS_DIRECTORY "${PREFIX}/L
     message(FATAL_ERROR "Windows runtime deployment requires a staged app and its build prefix")
 endif()
 file(GLOB_RECURSE modules "${STAGE}/*.dll")
-list(FILTER modules EXCLUDE REGEX "/libexec/edi/codex/")
+# The assistant runtimes ship as published, with nothing added beside them (edi ADR-0108).
+list(FILTER modules EXCLUDE REGEX "/libexec/edi/(codex|claude|copilot)/")
 file(GET_RUNTIME_DEPENDENCIES
     EXECUTABLES "${STAGE}/bin/EasyDiffraction.exe" "${STAGE}/bin/edi_assistant_guard.exe"
     LIBRARIES ${modules}
