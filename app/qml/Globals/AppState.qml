@@ -93,6 +93,9 @@ QtObject {
     // Run `action` (opening, creating or closing a project, quitting) once the open project's unsaved changes are
     // dealt with: at once when there are none, else after the window asks to save or discard them.
     signal changesQuestion(var action, var abandoned)
+    // The assistant's `action` closes the open project, saved or not: the user answers first. `closing` says why: "create"
+    // (its new project) or "conversation" (a chosen conversation's own project).
+    signal closeQuestion(var action, var abandoned, string closing)
     // The same question about the user's own project while a tutorial holds it aside (edi ADR-0064).
     signal setAsideChangesQuestion(var action)
     // An action that replaces the project runs on the next turn of the event loop, never inside the handler that asked
@@ -100,8 +103,9 @@ QtObject {
     // `creating`: the action is Create a new project, which in a tutorial without a project of its own yet makes the
     // tutorial's project; it never touches the user's project held aside, so it asks nothing about it.
     // Opening, closing and quitting still do.
-    function afterChanges(action, abandoned, creating) {
-        ApplicationInfo.afterProjectChanges(action, abandoned, creating === true);
+    // `closing`: the assistant's action, which asks even when nothing is unsaved (closeQuestion).
+    function afterChanges(action, abandoned, creating, closing) {
+        ApplicationInfo.afterProjectChanges(action, abandoned, creating === true, closing ?? "");
     }
     // The Text tab holding an edit not yet applied, or null. What would replace what it shows (another project,
     // closing the window, another Show choice) settles the edit first, as leaving the tab does (TextTab.settleEdit).

@@ -192,7 +192,7 @@ Item {
             objectName: "evolution.parameters"
             visible: !chart.fromReport
             // The chosen parameter's whole line when the row has room; on a narrow chart it gives way, cutting only the
-            // end of the full name, before any control moves into More (the owner, 2026-11-17). The room is what the
+            // start of the full name, before any control moves into More (the owner, 2026-11-17). The room is what the
             // row's other controls leave, as they are, rather than a fixed reserve that cut the name with room beside it
             // (2026-11-21); its own width is not counted, so it cannot feed back.
             width: Math.max(chart.em * 18, room)
@@ -200,17 +200,18 @@ Item {
             backgroundColor: chart.colors.chartBackground
             blocks: chart.evolution ? chart.evolution.parameters : null
             blocksTextRole: "label"
+            groupRole: "group"
             blockKind: "parameter"
             blockIndex: chart.evolution ? chart.evolution.currentParameter : -1
             onBlockActivated: index => chart.evolution.currentParameter = index
             // The parameter table's coloured name and the full name (the owner, 2026-11-17).
-            lineFor: (index, text) => ParameterNames.pickerLine(chart.evolution ? chart.evolution.parameterItem(index) : null, text)
-            // The full parameter name, which a narrow box cuts at its end.
+            lineFor: (index, text) => ParameterNames.pickerLine(chart.evolution ? chart.evolution.parameterItem(index) : null, text, chart.evolution ? chart.evolution.siblingItem(index) : null)
+            // The whole line, of which a narrow box cuts the full name.
             HoverHandler {
                 id: parameterHover
             }
             EaElements.ToolTip {
-                text: chart.evolution ? chart.evolution.yTitle : ""
+                text: chart.evolution ? chart.evolution.yLabel : ""
                 requested: parameterHover.hovered
             }
         }

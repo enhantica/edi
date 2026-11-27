@@ -53,10 +53,6 @@ Grid {
         objectName: "experimentType.beamMode"
         width: row.cellWidth
         uid: "experiment_type.beam_mode"
-        shortForms: ({
-                "constant wavelength": qsTr("CWL"),
-                "time-of-flight": qsTr("TOF")
-            })
         options: row.experiment ? row.experiment.beamModeOptions : null
         token: row.experiment ? row.experiment.beamModeToken : ""
         enabled: row.editable

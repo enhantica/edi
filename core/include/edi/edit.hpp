@@ -1024,6 +1024,46 @@ class Edit {
             constraint.id = id;
         });
     }
+    // A scan's extraction rules: a row added, removed or changed, its target and pattern checked first
+    // (check_extract_target, check_extract_pattern). A required rule is a plain `assign`.
+    static Edit append_extract_rule(Project& project, const SequentialExtractRule& row) {
+        return Edit([&project, row = std::make_shared<SequentialExtractRule>(row)] {
+            check_extract_target(project, nullptr, row->target);
+            check_extract_pattern(row->pattern);
+            project.sequential_fit.extract.push_back(std::make_shared<SequentialExtractRule>(*row));
+        });
+    }
+    static Edit erase_extract_rule(Project& project, std::size_t index) {
+        return erasing(project.sequential_fit.extract, index);
+    }
+    static Edit rename_extract_rule(SequentialExtractRule& rule, std::string id) {
+        return Edit([&rule, id = std::move(id)] {
+            require_model_owner<SequentialExtractRule>(rule.id, "the extraction rule");
+            rule.id = id;
+        });
+    }
+    static Edit extract_rule_target(Project& project, SequentialExtractRule& rule, std::string target) {
+        return Edit([&project, &rule, target = std::move(target)] {
+            check_extract_target(project, &rule, target);
+            rule.target = target;
+        });
+    }
+    static Edit extract_rule_pattern(SequentialExtractRule& rule, std::string pattern) {
+        return Edit([&rule, pattern = std::move(pattern)] {
+            check_extract_pattern(pattern);
+            rule.pattern = pattern;
+        });
+    }
+    // The rules as they were (an undo of one of these): the whole collection is built before it replaces the live one.
+    static Edit restore_extract_rules(Project& project, std::vector<SequentialExtractRule> rows) {
+        return Edit([&project, rows = std::move(rows)] {
+            std::vector<std::shared_ptr<SequentialExtractRule>> items;
+            items.reserve(rows.size());
+            for (const SequentialExtractRule& row : rows) items.push_back(std::make_shared<SequentialExtractRule>(row));
+            ItemVec<SequentialExtractRule> prepared(std::move(items));
+            project.sequential_fit.extract = std::move(prepared);
+        });
+    }
     // ADR-0087's switches, each the alias and constraint rows it writes or removes (edi/sharing.hpp): "Phase ratios
     // shared" for `experiment`'s set, and "Same for all experiments" for the leader's parameter `path`.
     static Edit phase_ratios_shared(Project& project, std::string experiment, bool on) {

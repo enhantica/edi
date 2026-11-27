@@ -15,7 +15,7 @@ if [ -z "$wasm" ]; then
 fi
 dir=$(dirname "$wasm")
 markers=(codex_agent CodexAgent AssistantViewModel AssistantWorkReport AssistantHistory assistant_skill_import
-         AssistantPanel.qml AssistantWorking.qml AssistantMessage.qml AssistantComposer.qml AssistantPlan.qml
+         AssistantPanel.qml AssistantWorking.qml AssistantMessage.qml AssistantSteps.qml AssistantComposer.qml AssistantPlan.qml
          AssistantQuestion.qml AssistantTrial.qml AssistantSkillsDialog.qml AssistantConnectionDialog.qml
          /edi/assistant/ AssistantWorking.svg AssistantSpinner.svg)
 hits=0

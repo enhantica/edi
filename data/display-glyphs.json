@@ -138,6 +138,8 @@
     "app/qml/Components/ScanViewChart.qml",
     "app/qml/Components/SelectorField.qml",
     "app/qml/Components/TutorialPanel.qml",
+    "app/qml/Components/WhatsNewDialog.qml",
+    "app/qml/Components/WordmarkWithVersion.qml",
     "app/qml/Globals/FitOutcomes.qml",
     "app/qml/Globals/ParameterNames.qml",
     "app/qml/Pages/Analysis/FreeHeaderMenu.qml",
@@ -211,7 +213,8 @@
     "app/qml/Pages/Structure/AppearanceGroup.qml",
     "app/qml/Pages/Structure/PolyhedraGroup.qml",
     "app/src/app_info.cpp",
-    "core/src/presentation.cpp"
+    "core/src/presentation.cpp",
+    "core/include/edi/parameter_spec.hpp"
    ],
    "drawn_by": "PT Sans",
    "weight": 400
@@ -501,6 +504,7 @@
     "app/qml/Components/AppPreferencesDialog.qml",
     "app/qml/Components/AssistantComposer.qml",
     "app/qml/Components/AssistantPanel.qml",
+    "app/qml/Components/BlockSelector.qml",
     "app/qml/Components/ChartLegend.qml",
     "app/qml/Components/OnlineLoadDialog.qml",
     "app/qml/Components/PatternChart.qml",

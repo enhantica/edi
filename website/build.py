@@ -329,9 +329,22 @@ def _check_nav_icons(config_data: dict) -> None:
 
     An entry's icon is the one partials/nav-item.html draws: by its title from the interface,
     workflow or section icons, or from its page's `icon` or `category_glyph`. A group's own
-    index page opens the group and is not one of its entries.
+    index page opens the group and is not one of its entries. The site's top entries have the
+    icons of its tabs, in the portrait menu too.
     """
+    partials = ROOT / 'surfaces/overrides/partials'
+    tabs, menu = (
+        set(re.findall(r'config\.extra\.(\w+_icons)', (partials / name).read_text('utf-8')))
+        for name in ('tabs-item.html', 'nav-item.html')
+    )
+    if tabs - menu:
+        raise SystemExit(f'nav-item.html: draw the icons tabs-item.html draws: {tabs - menu}')
     extra = config_data['extra']
+    top_icons = {*extra['interface_icons'], *extra['tab_icons']}
+    titles = [next(iter(entry)) for entry in config_data['nav']]
+    without_icon = [title for title in titles if title not in top_icons]
+    if without_icon:
+        raise SystemExit(f'Navigation: top entries without an icon: {without_icon}')
     by_title = {*extra['interface_icons'], *extra['workflow_icons']}
 
     def has_icon(entry: object) -> bool:
@@ -1038,7 +1051,9 @@ def _feedback_dialog_texts(qml: str) -> dict:
         'message': one(
             r'areaObjectName: "feedback\.text"[^}]*?placeholderText: qsTr\("([^"]+)"\)',
             'the message prompt',
-        ).group(1),
+        )
+        .group(1)
+        .replace(r'\n', ' '),  # the app's line break; the site's field wraps by itself
         'privacy': f'{privacy.group(1)} {privacy.group(2)}',
     }
 

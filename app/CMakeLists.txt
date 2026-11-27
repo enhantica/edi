@@ -30,6 +30,7 @@ if(EDI_APP_ASSISTANT)
         qml/Components/AssistantPanel.qml
         qml/Components/AssistantWorking.qml
         qml/Components/AssistantMessage.qml
+        qml/Components/AssistantSteps.qml
         qml/Components/AssistantComposer.qml
         qml/Components/AssistantPlan.qml
         qml/Components/AssistantQuestion.qml
@@ -95,6 +96,7 @@ qt_add_qml_module(edi_app_module
         src/app_info.hpp src/app_info.cpp
         src/combo_box_metrics.hpp src/combo_box_metrics.cpp
         src/assistant_message_presentation.hpp
+        src/assistant_step_folds.hpp
         src/assistant_values.hpp
         src/assistant_panel_presentation.hpp
         src/assistant_data.hpp
@@ -117,6 +119,7 @@ qt_add_qml_module(edi_app_module
         src/project_editor.hpp
         src/row_table_model.hpp src/row_table_model.cpp
         src/label_case.hpp
+        src/label_registry.hpp src/label_registry.cpp
         src/parameter_item.hpp src/parameter_item.cpp
         src/parameter_registry.hpp src/parameter_registry.cpp
         src/option_list_model.hpp src/option_list_model.cpp
@@ -200,6 +203,7 @@ qt_add_qml_module(edi_app_module
         qml/Components/ChartLegend.qml
         qml/Components/ChartTheme.qml
         qml/Components/FigureColors.qml
+        qml/Components/AdaptiveLabel.qml
         qml/Components/HeaderLabel.qml
         qml/Components/ChartToolButton.qml
         qml/Components/SaveImageButton.qml
@@ -444,6 +448,8 @@ qt_add_resources(edi_app_module "edi_tutorials" PREFIX "/edi/tutorials"
 # collection, which `build_collection.py populate` writes them into.
 qt_add_resources(edi_app_module "edi_documentation_script" PREFIX "/edi/docs"
                  BASE ${CMAKE_CURRENT_SOURCE_DIR}/docs FILES docs/y2o3-spodi.js)
+# The label registry: every label's long and short forms and icon (Session.labelForms).
+qt_add_resources(edi_app_module "edi_labels" PREFIX "/edi" BASE ${CMAKE_CURRENT_SOURCE_DIR}/data FILES data/labels.tsv)
 qt_add_resources(edi_app_module "edi_example_metadata" PREFIX "/edi/examples"
                  BASE ${CMAKE_CURRENT_SOURCE_DIR}/examples FILES ${CMAKE_CURRENT_SOURCE_DIR}/examples/metadata.json
                  ${CMAKE_CURRENT_SOURCE_DIR}/examples/tags.json)

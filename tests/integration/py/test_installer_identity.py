@@ -111,21 +111,36 @@ def test_windows_installation_defaults(tmp_path, monkeypatch, field, expected):
 def test_download_is_one_native_installer(tmp_path, monkeypatch, system, suffix):
     monkeypatch.setattr(PACKAGE, 'SYSTEM', system)
     installer = tmp_path / ('EasyDiffraction.app' if system == 'macos' else 'EasyDiffraction.exe')
+    branding = (ROOT / 'website/BRANDING-LICENSE').read_bytes()
     if system == 'macos':
         installer.mkdir()
         (installer / 'payload').write_bytes(b'installer app')
+        resources = installer / 'Contents/Resources'
+        resources.mkdir(parents=True)
+        (resources / 'BRANDING-LICENSE.txt').write_bytes(branding)
     else:
         installer.write_bytes(b'MZfixture')
     commands = []
     volume_icon = tmp_path / 'Installer.icns'
     volume_icon.write_bytes(b'installer volume icon')
     monkeypatch.setattr(PACKAGE, 'standard_icns', lambda _work: volume_icon)
+    checked_images = []
+    monkeypatch.setattr(PACKAGE, 'check_volume_icon', checked_images.append)
 
     def external(args, **_kwargs):
         command = list(map(str, args))
         commands.append(command)
         if command[0] == 'ditto':
             shutil.copytree(args[1], args[2])
+            return
+        if command[0] == 'tiffutil':
+            assert command[1:5] == [
+                '-cathidpicheck',
+                str(ROOT / 'tools/installer/DiskImageBackground.png'),
+                str(ROOT / 'tools/installer/DiskImageBackground@2x.png'),
+                '-out',
+            ], 'Finder receives a combined background at both display densities'
+            Path(command[5]).write_bytes(b'Finder background fixture')
             return
         assert command[:4] == [sys.executable, '-m', 'dmgbuild', '-s'], (
             'ADR-0091: dmgbuild packages the macOS download'
@@ -134,19 +149,25 @@ def test_download_is_one_native_installer(tmp_path, monkeypatch, system, suffix)
         assert command[5] == 'EasyDiffraction Installer', (
             'The mounted disk image has the installer volume name'
         )
-        app, notice = map(Path, settings['files'])
+        app = Path(settings['files'][0])
+        assert settings['files'] == [str(app)], 'The image presents one installer app'
         assert app.name == 'EasyDiffraction Installer.app', (
             'The image holds the app under its Finder display name'
         )
         assert (app / 'payload').read_bytes() == b'installer app', (
             'The disk image receives the intact installer app'
         )
-        assert notice.name == 'BRANDING-LICENSE.txt', 'The image retains the branding notice'
-        assert notice.read_bytes() == (ROOT / 'website/BRANDING-LICENSE').read_bytes(), (
-            'The branding notice survives packaging byte for byte'
+        assert (app / 'Contents/Resources/BRANDING-LICENSE.txt').read_bytes() == branding, (
+            'The branding notice survives packaging inside the app byte for byte'
         )
         assert Path(settings['icon']) == volume_icon and settings['icon_size'] == 96, (
             'The mounted image uses the installer volume icon and 96-point Finder icons'
+        )
+        assert Path(settings['background']).read_bytes() == b'Finder background fixture', (
+            'dmgbuild receives the assembled Finder background'
+        )
+        assert settings['hide_extension'] == [app.name], (
+            'Finder displays the installer name without its bundle extension'
         )
         Path(command[6]).write_bytes(b'disk image fixture')
 
@@ -159,8 +180,11 @@ def test_download_is_one_native_installer(tmp_path, monkeypatch, system, suffix)
         assert result.read_bytes() == b'disk image fixture', (
             'The macOS delivery path is the file written by dmgbuild'
         )
-        assert [command[0] for command in commands] == ['ditto', sys.executable], (
-            'Packaging copies the app and invokes the image builder once'
+        assert [command[0] for command in commands] == ['ditto', 'tiffutil', sys.executable], (
+            'Packaging copies the app, assembles the background and builds the image once'
+        )
+        assert checked_images == [result], (
+            'The delivered disk image is checked for its volume icon'
         )
     else:
         assert result.read_bytes() == b'MZfixture', (

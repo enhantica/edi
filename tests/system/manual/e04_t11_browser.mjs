@@ -19,11 +19,14 @@ import { beginFitProgress, endFitProgress, advancesLiveFitProgress, observesOrde
 import { controlPointer, restoreCanvasViewport, waitControlGeometry } from './web_control_geometry.mjs';
 import {projectDialogExpression,waitForSaveSettled,projectFailureRecorder} from './web_project_save.mjs';
 import { assertSavedProject, assertSavedNativeChi } from './web_saved_fit.mjs';
+import { checkProjectOpenClick } from './web_project_open_click.mjs';
+import { checkProjectReplacement } from './web_project_replacement.mjs';
 import { fittingObservationKind, hasRunningProgress } from '../../fixtures/e04_t11_wasm/browser_observations.mjs';
 
 nativePickerTransportControls();
 
 const [siteArg, mode, outputArg, chromeArg] = process.argv.slice(2);
+const projectOpenClickOnly = process.argv.includes('--project-open-click-only');
 const saveRouteOnly = process.argv.includes('--save-route-only');
 const exampleOnly = process.argv.includes('--example-only');
 const statusActionLifetimeOnly = process.argv.includes('--status-action-lifetime-only');
@@ -48,7 +51,7 @@ assert(!statusActionLifetimeOnly || (!fileRequestsOnly && !exampleOnly && !reope
 // A written-domain counterpart is ephemeral and RAW-qualified; it never replaces
 // the committed live/native physics reference or its conditioning capture.
 const writtenReference = process.argv.find(arg => arg.startsWith('--written-reference='))?.slice('--written-reference='.length);
-const writtenRequired = !fileRequestsOnly && !exampleOnly && !statusActionLifetimeOnly &&
+const writtenRequired = !fileRequestsOnly && !exampleOnly && !statusActionLifetimeOnly && !projectOpenClickOnly &&
   !process.argv.includes('--startup-only') && !process.argv.includes('--diagnostics-only');
 const sourceRoot = fileURLToPath(new URL('../../../', import.meta.url));
 let currentNative;
@@ -66,8 +69,10 @@ assert(siteArg && outputArg && ['multithread', 'shim'].includes(mode),
 const site = resolve(siteArg), output = resolve(outputArg);
 await readFile(join(site, 'index.html')); // A missing product fails before the browser is launched.
 await mkdir(output, { recursive: true });
-await nativePickerOptionChecks(chromeArg || process.env.CHROME_HEADLESS_SHELL, output);
-await multithreadStartupRefusals(chromeArg || process.env.CHROME_HEADLESS_SHELL,site,output);
+if (!projectOpenClickOnly) {
+  await nativePickerOptionChecks(chromeArg || process.env.CHROME_HEADLESS_SHELL, output);
+  await multithreadStartupRefusals(chromeArg || process.env.CHROME_HEADLESS_SHELL,site,output);
+}
 const scratch = await mkdtemp(join(tmpdir(), 'e04-browser-'));
 const chrome = chromeArg || process.env.CHROME_HEADLESS_SHELL;
 assert(chrome, 'CHROME_HEADLESS_SHELL must identify the pinned headless Chrome executable');
@@ -556,6 +561,33 @@ try {
   await send('Runtime.callFunctionOn', { objectId: node.object.objectId,
     functionDeclaration: 'function() { this.click(); }' });
   await waitAX(/Get started|Home/);
+  if (projectOpenClickOnly) {
+    const inputs = join(scratch, 'routing');
+    const generator = spawnSync('python', [fileURLToPath(new URL('../../fixtures/e04_t11_wasm/routing.py', import.meta.url)), inputs, '--replacement'],
+      { encoding: 'utf8', timeout: 10000 });
+    assert.equal(generator.status, 0, 'The timed clicks need distinct project folders from the committed native inputs');
+    await click(/^Start$/);
+    await click(/^Project$/, 'tab');
+    const chooseProject = async (name, pointer) => {
+      if (pointer) await pointer(await waitControlGeometry(evaluate, frame, 'project.load'));
+      else await click(/^Load project$/, 'button', 'project.load');
+      lastEvents.delete('Page.fileChooserOpened');
+      const chooser = event('Page.fileChooserOpened');
+      if (pointer) await pointer(await waitControlGeometry(evaluate, frame, 'project.load.folder'));
+      else await click(/^Open project folder(?:…|\.\.\.)?$/, 'menuitem', 'project.load.folder');
+      const opened = await chooser;
+      assert(opened.backendNodeId, 'The project folder must be selected with the real browser chooser');
+      return () => send('DOM.setFileInputFiles', { backendNodeId: opened.backendNodeId, files: [join(inputs, name)] });
+    };
+    const checks = { send, evaluate, frame, output, mode, chooseProject, inputs };
+    const outcomes = [];
+    for (const check of [checkProjectOpenClick, checkProjectReplacement]) {
+      try { await check(checks); }
+      catch (error) { outcomes.push(error); }
+    }
+    if (outcomes.length) throw new AggregateError(outcomes, 'The project opening browser checks failed');
+    assert.equal(errors.length, 0, 'The early project click must complete without browser exceptions');
+  } else {
   await checkDesktopOnlyAssistant({send, evaluate, frame, click, closePreferences, output, mode});
   if (process.argv.some(arg=>arg.startsWith('--engine-workers='))) {
     await click(/^Application preferences$/,'button','appBar.button.preferences');
@@ -1222,6 +1254,7 @@ print(markers[0].parent)`, saved, reopened, reopenControl || 'normal'], { encodi
   if (exampleOnly) console.log(`${mode}: example-only opening passed; fit/save/reopen checks not run`);
   else if (fileRequestsOnly) console.log(`${mode}: request-only ${fileRequestCase} passed; full browser checks not run`);
   else console.log(`${mode}: workflow and saved-fit roundtrip passed; file requests ${fileRequestCase}`);
+  }
   }
   }
   }

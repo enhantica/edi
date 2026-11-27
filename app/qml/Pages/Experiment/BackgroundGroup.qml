@@ -166,7 +166,13 @@ Column {
                 sourceModel: group.points
 
                 // Its columns by kind (the shared column model, DataTable.columnKinds; ADR-0103 decision 4).
-                columnKinds: ["index", "short", "number", "number", "control"]
+                columnKinds: ["index", "name", "number", "value", "control"]
+                columnTexts: ["",
+                    {
+                        "role": "id",
+                        "edited": true
+                    }
+                ]
                 // Widths from column types, not rows (ADR-0103 rule 4): an id or label, then values.
 
                 header: EaComponents.ListViewHeader {
@@ -287,7 +293,13 @@ Column {
                 sourceModel: group.terms
 
                 // Its columns by kind (the shared column model, DataTable.columnKinds; ADR-0103 decision 4).
-                columnKinds: ["index", "short", "number", "number", "control"]
+                columnKinds: ["index", "name", "number", "value", "control"]
+                columnTexts: ["",
+                    {
+                        "role": "id",
+                        "edited": true
+                    }
+                ]
                 // Widths from column types, not rows (ADR-0103 rule 4): an id or label, then values.
 
                 header: EaComponents.ListViewHeader {

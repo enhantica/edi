@@ -3,9 +3,13 @@
 
 import json
 import re
+import sys
 from html import escape
 from operator import itemgetter
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'tools/release'))
+import versions
 
 INTERFACES = json.loads(
     (Path(__file__).resolve().parents[1] / 'data/release-interfaces.json').read_text(
@@ -64,18 +68,29 @@ def _flatten_headings(body: str) -> str:
     return '\n'.join(lines)
 
 
-def _day(release: dict) -> str:
-    """The release day, e.g. ``13 Nov``: the recorded release date, else the publication date."""
+def _date(release: dict) -> str:
+    """The release date: the recorded one, else the publication date."""
     recorded = RELEASE_DATE.search(release['body'] or '')
-    _, month, day = map(
-        int, (recorded[1] if recorded else release['published_at'][:10]).split('-')
-    )
+    return recorded[1] if recorded else release['published_at'][:10]
+
+
+def _day(release: dict) -> str:
+    """The release day as users read it: ``26 Nov 2026``, or ``13 Nov`` for an old YYYY.MM.N."""
+    date = _date(release)
+    if versions.is_new(release['tag_name'].removeprefix('v')):
+        return versions.shown_date(date)
+    _, month, day = map(int, date.split('-'))
     return f'{day} {MONTHS[month - 1]}'
 
 
 def _title(release: dict) -> str:
-    """The release title, as GitHub shows it: tag and release day (the tag names the year)."""
-    title = f'{release["tag_name"]} ({_day(release)})'
+    """The release title, as GitHub shows it: ``EasyDiffraction 26.17 (26 Nov 2026)``."""
+    version = release['tag_name'].removeprefix('v')
+    if versions.is_new(version):
+        title = versions.release_title(version, _date(release))
+    else:
+        # Old releases show their tag and day, as their titles on GitHub do.
+        title = f'{release["tag_name"]} ({_day(release)})'
     return escape(title) + (' preview' if release['prerelease'] else '')
 
 
@@ -90,9 +105,12 @@ def latest_release(pages: list[list[dict]]) -> str:
     if not releases:
         return ''
     latest = max(releases, key=itemgetter('published_at'))
+    tag = latest['tag_name']
+    # Users read a YY.N version without the tag's "v".
+    shown = tag.removeprefix('v') if versions.is_new(tag.removeprefix('v')) else tag
     return (
         '<p class="ed-landing__release" markdown="span">EasyDiffraction '
-        f'[{escape(latest["tag_name"])}](changelog.md) · released {_day(latest)}</p>'
+        f'[{escape(shown)}](changelog.md) · released {_day(latest)}</p>'
     )
 
 

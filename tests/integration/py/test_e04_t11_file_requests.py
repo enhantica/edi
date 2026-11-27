@@ -201,8 +201,10 @@ def native_project_checks(text, code, owners, needs, problems):
     needs(code['state'], 'signal openProjectRequested(bool zip)', 'AppState declares Open')
     needs(code['state'], 'signal importProjectRequested(var importer)', 'AppState declares Import')
     needs(
-        compact_block(text['state'], 'function afterChanges(action, abandoned, creating)'),
-        'ApplicationInfo.afterProjectChanges(action, abandoned, creating === true)',
+        compact_block(
+            text['state'], 'function afterChanges(action, abandoned, creating, closing)'
+        ),
+        'ApplicationInfo.afterProjectChanges(action, abandoned, creating === true, closing ?? "")',
         'Window requests reach the real unsaved-changes guard',
     )
     needs(

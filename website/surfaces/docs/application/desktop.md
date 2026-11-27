@@ -49,8 +49,8 @@ security warning.
     2. In a terminal opened in that folder, make the installer executable and run it.
 
         ```bash
-        chmod +x ./EasyDiffraction-Installer-*-Linux-x64.run
-        ./EasyDiffraction-Installer-*-Linux-x64.run
+        chmod +x ./EasyDiffraction-*-Linux-x64.run
+        ./EasyDiffraction-*-Linux-x64.run
         ```
 
     3. Follow the installer to choose the installation folder.

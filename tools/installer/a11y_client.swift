@@ -112,10 +112,12 @@ func visit(_ element: AXUIElement, depth: Int, into placed: inout [Placed], tall
 
 // The page's layout rules (owner, 2026-11-23): one left edge, gaps on the spacing scale, no clipped text, no frame
 // mostly empty. Content lies between the header (the logo, at the top) and the row of wizard buttons.
-// The one page template (Installer.qs, templatePage): the logo first, 16 under it, then rows 8 apart on one left
-// edge. Every page is held to it: its gaps, and its logo's place and left edge against the first page read.
+// The one page template (Installer.qs, templatePage): the logo first, 32 under it, then rows 8 apart on one left
+// edge, and 24 between groups of rows (owner, 2026-11-24 and -26). Every page is held to it: its gaps, and its
+// logo's place and left edge against the first page read.
 let rowGap: CGFloat = 8
-let logoGap: CGFloat = 16
+let logoGap: CGFloat = 32
+let groupGap: CGFloat = 24
 
 
 // Whether a radio button's indicator (at the left of its frame, centred, 23 points: package.py) is round: a
@@ -279,14 +281,16 @@ func check(window: CGRect, placed: [Placed]) -> Look? {
     for (place, (above, below)) in zip(firsts, firsts.dropFirst()).enumerated() {
         let gap = row(below).top - row(above).bottom
         gaps.append(Int(gap.rounded()))
-        // Under a logo standing alone (an image, no text) the template's logo step; everywhere else the row gap.
-        let wanted = plain(above.text).isEmpty && above.role == "AXStaticText" ? logoGap : rowGap
+        // Under a logo standing alone (an image, no text) the template's logo step; everywhere else the row gap or,
+        // where a group starts, the group gap.
+        let wanted = plain(above.text).isEmpty && above.role == "AXStaticText" ? [logoGap] : [rowGap, groupGap]
         if gap < -0.5 {
             problems.append(Problem(kind: "row gap", place: "row \(place)", text:
                 "overlap \(Int(-gap)) px between '\(named(above))' and '\(named(below))'"))
-        } else if abs(gap - wanted) > 0.5 {
+        } else if wanted.allSatisfy({ abs(gap - $0) > 0.5 }) {
+            let allowed = wanted.map { String(Int($0)) }.joined(separator: " or ")
             problems.append(Problem(kind: "row gap", place: "row \(place)", text:
-                "gap \(Int(gap)) px between '\(named(above))' and '\(named(below))', not \(Int(wanted))"))
+                "gap \(Int(gap)) px between '\(named(above))' and '\(named(below))', not \(allowed)"))
         }
     }
     // Every text on the window, wrapped or not: no word wider than its frame, and the wrapped text no taller.

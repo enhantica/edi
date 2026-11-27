@@ -1,0 +1,859 @@
+key	long	short	icon
+about	About		
+about.thirdParty	Third-party licences		balance-scale
+about.thirdPartyPopup	Third-party licences		
+absorption	Absorption		tint
+absorption.abscor1	ABSCOR1		
+absorption.mu_r	μR		
+absorption.type	Type		
+absorption.type=cylinder-hewat	Cylinder (Hewat)		
+absorption.type=cylinder-lobanov	Cylinder (Lobanov)		
+absorption.type=none	None		
+alias	Aliases		tag
+alias.id	Alias		
+alias.parameter_unique_name	Parameter		
+aliases.append	Append new alias	Append	plus-circle
+aliases.duplicate	Duplicate selected alias	Duplicate	clone
+app.tooSmall.text	Increase the window size		
+appBar.preparingToolTip	Preparing this page…		
+appBar.tab.analysis	Analysis		calculator
+appBar.tab.experiment	Experiment		microscope
+appBar.tab.home	Home		home
+appBar.tab.project	Project		archive
+appBar.tab.report	Report		clipboard-list
+appBar.tab.structure	Structure		layer-group
+assistant.accountDialog	Account		
+assistant.clear	New session		plus
+assistant.connectionFailure	ChatGPT connection was not completed		
+assistant.desktopOnly	AI assistant		
+assistant.desktopOnly.download	Open the desktop download page		external-link-alt
+assistant.desktopOnly.updates	Open Updates in Preferences to add the AI assistant		cog
+assistant.files.dialog	Add files to the assistant		
+assistant.modelEffort.popup	Model and reasoning effort		
+assistant.plan.approve	Approve plan		
+assistant.reportPageUnavailable	Report page unavailable		
+assistant.send	Send		arrow-up
+assistant.sessions	Sessions		history
+assistant.sessionsDialog	Assistant sessions		
+assistant.showActions	Show actions		eye
+assistant.signOut	Sign out		sign-out-alt
+assistant.stop	Stop		stop
+assistant.usageDialog	Usage		
+atomSites.append	Append new atom site	Append	plus-circle
+atomSites.duplicate	Duplicate selected atom site	Duplicate	clone
+atom_site	Atom sites		atom
+atom_site.adp_iso	Iso/eq	Iso	arrows-alt
+atom_site.adp_iso@Bani	B eq		arrows-alt
+atom_site.adp_iso@Biso	B iso		arrows-alt
+atom_site.adp_iso@Uani	U eq		arrows-alt
+atom_site.adp_iso@Uiso	U iso		arrows-alt
+atom_site.adp_iso@beta	B eq		arrows-alt
+atom_site.adp_type	ADP type		arrows-alt
+atom_site.adp_type=Bani	B aniso		
+atom_site.adp_type=Biso	B iso		
+atom_site.adp_type=Uani	U aniso		
+atom_site.adp_type=Uiso	U iso		
+atom_site.adp_type=beta	β		
+atom_site.fract_x	x		map-marker-alt
+atom_site.fract_y	y		map-marker-alt
+atom_site.fract_z	z		map-marker-alt
+atom_site.id	ID		
+atom_site.occupancy	Occ		fill
+atom_site.type_symbol	Type		
+atom_site.wyckoff_letter	WP		
+atom_site_aniso	Atomic displacement		arrows-alt
+atom_site_aniso.adp_11	11		arrows-alt
+atom_site_aniso.adp_11@Bani	B₁₁		arrows-alt
+atom_site_aniso.adp_11@Uani	U₁₁		arrows-alt
+atom_site_aniso.adp_11@beta	β₁₁		arrows-alt
+atom_site_aniso.adp_12	12		arrows-alt
+atom_site_aniso.adp_12@Bani	B₁₂		arrows-alt
+atom_site_aniso.adp_12@Uani	U₁₂		arrows-alt
+atom_site_aniso.adp_12@beta	β₁₂		arrows-alt
+atom_site_aniso.adp_13	13		arrows-alt
+atom_site_aniso.adp_13@Bani	B₁₃		arrows-alt
+atom_site_aniso.adp_13@Uani	U₁₃		arrows-alt
+atom_site_aniso.adp_13@beta	β₁₃		arrows-alt
+atom_site_aniso.adp_22	22		arrows-alt
+atom_site_aniso.adp_22@Bani	B₂₂		arrows-alt
+atom_site_aniso.adp_22@Uani	U₂₂		arrows-alt
+atom_site_aniso.adp_22@beta	β₂₂		arrows-alt
+atom_site_aniso.adp_23	23		arrows-alt
+atom_site_aniso.adp_23@Bani	B₂₃		arrows-alt
+atom_site_aniso.adp_23@Uani	U₂₃		arrows-alt
+atom_site_aniso.adp_23@beta	β₂₃		arrows-alt
+atom_site_aniso.adp_33	33		arrows-alt
+atom_site_aniso.adp_33@Bani	B₃₃		arrows-alt
+atom_site_aniso.adp_33@Uani	U₃₃		arrows-alt
+atom_site_aniso.adp_33@beta	β₃₃		arrows-alt
+atom_site_aniso.id	ID		
+atom_site_moment	Magnetic moments		location-arrow
+atom_site_moment.crystalaxis_x	Mx		
+atom_site_moment.crystalaxis_y	My		
+atom_site_moment.crystalaxis_z	Mz		
+atom_site_moment.label	Label		
+atom_site_moment.spherical_azimuthal	φ		
+atom_site_moment.spherical_modulus	|M|		
+atom_site_moment.spherical_polar	θ		
+atom_site_moment.symmform	Symmetry form		
+atom_sites_cartn_transform	Cartesian frame		vector-square
+atom_sites_cartn_transform.axes	Axes		
+atom_sites_cartn_transform.mat_11	M₁₁		
+atom_sites_cartn_transform.mat_12	M₁₂		
+atom_sites_cartn_transform.mat_13	M₁₃		
+atom_sites_cartn_transform.mat_21	M₂₁		
+atom_sites_cartn_transform.mat_22	M₂₂		
+atom_sites_cartn_transform.mat_23	M₂₃		
+atom_sites_cartn_transform.mat_31	M₃₁		
+atom_sites_cartn_transform.mat_32	M₃₂		
+atom_sites_cartn_transform.mat_33	M₃₃		
+atom_type_scat	Magnetic form factor coefficients		atom
+atom_type_scat.neutron_magnetic_j0_a1	j0 A1		
+atom_type_scat.neutron_magnetic_j0_a2	j0 a2		
+atom_type_scat.neutron_magnetic_j0_b1	j0 B1		
+atom_type_scat.neutron_magnetic_j0_b2	j0 b2		
+atom_type_scat.neutron_magnetic_j0_c1	j0 C1		
+atom_type_scat.neutron_magnetic_j0_c2	j0 c2		
+atom_type_scat.neutron_magnetic_j0_d	j0 D		
+atom_type_scat.neutron_magnetic_j0_e	j0 e		
+atom_type_scat.neutron_magnetic_j2_a1	j2 A1		
+atom_type_scat.neutron_magnetic_j2_a2	j2 a2		
+atom_type_scat.neutron_magnetic_j2_b1	j2 B1		
+atom_type_scat.neutron_magnetic_j2_b2	j2 b2		
+atom_type_scat.neutron_magnetic_j2_c1	j2 C1		
+atom_type_scat.neutron_magnetic_j2_c2	j2 c2		
+atom_type_scat.neutron_magnetic_j2_d	j2 D		
+atom_type_scat.neutron_magnetic_j2_e	j2 e		
+atom_type_scat.neutron_magnetic_j4_a1	j4 A1		
+atom_type_scat.neutron_magnetic_j4_a2	j4 a2		
+atom_type_scat.neutron_magnetic_j4_b1	j4 B1		
+atom_type_scat.neutron_magnetic_j4_b2	j4 b2		
+atom_type_scat.neutron_magnetic_j4_c1	j4 C1		
+atom_type_scat.neutron_magnetic_j4_c2	j4 c2		
+atom_type_scat.neutron_magnetic_j4_d	j4 D		
+atom_type_scat.neutron_magnetic_j4_e	j4 e		
+atom_type_scat.neutron_magnetic_j6_a1	j6 A1		
+atom_type_scat.neutron_magnetic_j6_a2	j6 a2		
+atom_type_scat.neutron_magnetic_j6_b1	j6 B1		
+atom_type_scat.neutron_magnetic_j6_b2	j6 b2		
+atom_type_scat.neutron_magnetic_j6_c1	j6 C1		
+atom_type_scat.neutron_magnetic_j6_c2	j6 c2		
+atom_type_scat.neutron_magnetic_j6_d	j6 D		
+atom_type_scat.neutron_magnetic_j6_e	j6 e		
+atom_type_scat.neutron_magnetic_source	Source		
+atom_type_scat.symbol	Type		
+background	Background		wave-square
+background.append	Add point		plus-circle
+background.appendTerm	Add term		plus-circle
+background.coef	Coefficient		
+background.estimate	Estimate		magic
+background.id	ID		
+background.intensity	Intensity		mountain
+background.namePoints	Id from position		tag
+background.nameTerms	Id from order		tag
+background.order	Order		
+background.origin	Origin		
+background.position	Position		
+background.type	Type		
+background.type=chebyshev	Chebyshev		
+background.type=line-segment	Line segment		
+background.type=polynomial	Polynomial		
+background.typeQuestion	Change the background type?		
+background.x_max	x max		
+background.x_min	x min		
+background_estimate	Background estimation		magic
+background_estimate.in_peaks	Points in peaks		
+background_estimate.in_peaks=drop	Drop		
+background_estimate.in_peaks=move	Move		
+background_estimate.inputs_digest	Inputs digest		
+background_estimate.max_terms	Max terms		
+background_estimate.method	Method		
+background_estimate.method=arpls	arPLS		
+background_estimate.method=auto	Auto		
+background_estimate.method=fabc	FABC		
+background_estimate.method=snip	SNIP		
+background_estimate.mode	Estimation mode		
+background_estimate.mode=auto	Auto		
+background_estimate.mode=manual	Manual		
+background_estimate.n_points	Points		
+background_estimate.points_digest	Points digest		
+background_estimate.smoothness	Smoothness		
+background_estimate.tolerance	Tolerance		
+background_estimate.use_model	Calculated peaks		
+background_estimate.use_model=auto	Auto		
+background_estimate.use_model=ignore	Ignore		
+background_estimate.use_model=subtract	Subtract		
+background_estimate.width	Peak width		
+calculator	Calculator		calculator
+calculator.type	Calculator		
+calculator.type=crysta	crysta		
+cell	Cell		cube
+cell.angle_alpha	α		ruler
+cell.angle_beta	β		ruler
+cell.angle_gamma	γ		ruler
+cell.length_a	a		ruler
+cell.length_b	b		ruler
+cell.length_c	c		ruler
+change.error	The change was not made		
+citation.copy.bibtex	Copy as BibTeX		copy
+citation.copy.text	Copy as text		copy
+citation.doi	DOI		external-link-alt
+constraint	Constraints		equals
+constraint.enabled	Enabled		
+constraint.expression	Expression		
+constraint.id	ID		
+constraints.append	Append new constraint	Append	plus-circle
+constraints.duplicate	Duplicate selected constraint	Duplicate	clone
+correlation_chart	Correlation chart		th
+correlation_chart.threshold	Threshold		
+crash.dismiss	OK		check
+crash.popup	The last session ended unexpectedly		
+crash.report	Send to developers		paper-plane
+create.error	The project was not saved		
+createProject.replace	Replace project?		
+data	Measured data		arrows-alt-h
+data.calc_status	Status		
+data.calc_status=excl	Excluded		
+data.calc_status=incl	Included		
+data.d_spacing	d		
+data.intensity_bkg	Bkg		mountain
+data.intensity_calc	Calc		mountain
+data.intensity_meas	Meas		mountain
+data.intensity_meas_su	s.u.		mountain
+data.time_of_flight	TOF		
+data.two_theta	2θ		
+data_calc	Calculated pattern		chart-area
+data_calc.point_id	Point		
+data_range	Calculation range		arrows-alt-h
+data_range.sin_theta_over_lambda_max	Max sin θ/λ		
+data_range.time_of_flight	TOF		
+data_range.time_of_flight_max	Max		
+data_range.time_of_flight_min	Min		
+data_range.time_of_flight_step	Step		
+data_range.two_theta	2θ		
+data_range.two_theta_max	Max		
+data_range.two_theta_min	Min		
+data_range.two_theta_step	Step		
+data_source	Data source		file-import
+data_source.collection_id	Collection entry		
+data_source.digest	Data digest		
+data_source.file_name	Data file		
+data_source.path	Data path		
+datasets.copy	Copy data into the project		
+datasets.replaceScan	Replace the scan		
+datasets.scan	Sequential fit: one experiment for all datasets		
+datasets.separate	Joint fit: one experiment per file, fitted together		
+datasets.series	Series of joint fits: one experiment per file name pattern, each point fitted jointly		
+diagnostics	Diagnostics		
+edi	File header		file-code
+edi.schema_version	Schema version		
+evolution.empty	No fitted results yet		
+evolution.outOfDate	Out of date: the template changed after this run		
+evolution_chart	Evolution chart		chart-line
+evolution_chart.error_bars	Error bars		
+evolution_chart.range	Range		
+evolution_chart.range=values	Values		
+evolution_chart.range=values_su	Values ± s.u.		
+excludedRegions.append	Append new region		plus-circle
+excluded_reflection	Excluded reflections		eraser
+excluded_reflection.id	ID		
+excluded_reflection.index_h	h		
+excluded_reflection.index_k	k		
+excluded_reflection.index_l	l		
+excluded_region	Excluded regions		eraser
+excluded_region.axis	Axis		
+excluded_region.axis=d_spacing	d		
+excluded_region.axis=sin_theta_over_lambda	sin(θ)/λ		
+excluded_region.end	End		
+excluded_region.end@constant wavelength	End		
+excluded_region.end@time-of-flight	End		
+excluded_region.id	ID		
+excluded_region.start	Start		
+excluded_region.start@constant wavelength	Start		
+excluded_region.start@time-of-flight	Start		
+expanded_atom_site	Atoms in the cell		braille
+expanded_atom_site.atom_site_id	Site		
+expanded_atom_site.cartn_x	X		
+expanded_atom_site.cartn_y	Y		
+expanded_atom_site.cartn_z	Z		
+expanded_atom_site.cluster_id	Pos		
+expanded_atom_site.fract_x	x		map-marker-alt
+expanded_atom_site.fract_y	y		map-marker-alt
+expanded_atom_site.fract_z	z		map-marker-alt
+expanded_atom_site.occupancy	Occ		fill
+expanded_atom_site.site_symmetry	Sym		
+expanded_atom_site.u_iso	Uiso		
+expanded_atom_site_moment	Moments in the cell		location-arrow
+expanded_atom_site_moment.atom_site_id	Site		
+expanded_atom_site_moment.crystalaxis_x	Mx		
+expanded_atom_site_moment.crystalaxis_y	My		
+expanded_atom_site_moment.crystalaxis_z	Mz		
+expanded_atom_site_moment.site_symmetry	Sym		
+experiment_set	Experiment sets		link
+experiment_set.id	Set		
+experiment_set.template_experiment_id	Template		
+experiment_set_member	Experiment set members		link
+experiment_set_member.experiment_id	Experiment		
+experiment_set_member.set_id	Set		
+experiment_type	Experiment type		radiation
+experiment_type.beam_mode	Beam mode		
+experiment_type.beam_mode=constant wavelength	Constant wavelength	CWL	
+experiment_type.beam_mode=time-of-flight	Time-of-flight	TOF	
+experiment_type.dimensionality	Dimensionality		
+experiment_type.dimensionality=1d	1D		
+experiment_type.polarisation	Polarisation		
+experiment_type.polarisation=.	Not applicable		
+experiment_type.polarisation=unpolarised	Unpolarised		
+experiment_type.radiation_probe	Probe		
+experiment_type.radiation_probe=neutron	Neutron		
+experiment_type.radiation_probe=xray	X-ray		
+experiment_type.sample_form	Sample form		
+experiment_type.sample_form=powder	Powder		
+experiment_type.sample_form=single crystal	Single crystal		
+experiment_type.scattering_type	Scattering type		
+experiment_type.scattering_type=bragg	Bragg		
+experiment_type.scattering_type=total	Total		
+experiments.create	Create experiment	Create	plus-circle
+experiments.downloadData	Download		
+experiments.duplicate	Duplicate experiment	Duplicate	clone
+experiments.load	Load		upload
+experiments.load.dataFile	File…		file
+experiments.load.dataFolder	Folder as a series…		folder-open
+experiments.load.dataSeries	Several files as a series…		clone
+experiments.load.dataWeb	From the web…		globe
+experiments.load.experimentFile	From file…		file
+experiments.load.experimentWeb	From web…		globe
+experiments.locateFile	Locate file…		
+experiments.locateFolder	Locate folder…		
+extinction	Extinction		gem
+extinction.coefficient	Extinction coefficient		
+extinction.coefficient_11	x11		
+extinction.coefficient_12	x12		
+extinction.coefficient_13	x13		
+extinction.coefficient_22	x22		
+extinction.coefficient_23	x23		
+extinction.coefficient_33	x33		
+extinction.crystal_radius	Crystal radius		
+extinction.domain_radius	Domain radius		
+extinction.mosaic_distribution	Mosaic distribution		
+extinction.mosaic_distribution=gaussian	Gaussian		
+extinction.mosaic_distribution=lorentzian	Lorentzian		
+extinction.mosaic_spread	Mosaic spread		
+extinction.type	Type		
+extinction.type=becker-coppens-mixed	Isotropic Becker-Coppens mixed		
+extinction.type=becker-coppens-type-1	Isotropic Becker-Coppens type I		
+extinction.type=becker-coppens-type-2	Isotropic Becker-Coppens type II		
+extinction.type=larson-anisotropic	Anisotropic Larson		
+extinction.type=larson-isotropic	Isotropic Larson		
+extinction.type=none	None		
+feedback.copyReport	Copy report		copy
+feedback.files.add	Attach files		paperclip
+feedback.files.workReport	Attach AI work report		file
+feedback.form	Help and feedback		
+feedback.include	Include app version, system and log		
+feedback.intro	We'd love to hear from you to make EasyDiffraction better.		
+feedback.send	Send		paper-plane
+feedback.unavailable	Sending is off: the feedback address in Preferences is empty.		
+fit.error	The fit did not run		
+fit.results	Least-squares fit results		
+fit.results.agreement.note	All R values are in %.		
+fit.results.evolution	Show evolution		chart-line
+fit_parameter	Fit start values		history
+fit_parameter.id	Parameter		
+fit_parameter.start_tied	Start tied		
+fit_parameter.start_uncertainty	Start error		
+fit_parameter.start_value	Start value		
+fit_parameter_correlation	Correlations		th-large
+fit_parameter_correlation.correlation	Correlation		
+fit_parameter_correlation.file_path	File		
+fit_parameter_correlation.id	ID		
+fit_parameter_correlation.parameter_unique_name_i	Parameter 1		
+fit_parameter_correlation.parameter_unique_name_j	Parameter 2		
+fit_parameter_correlation.source_kind	Source		
+fit_result	Fit result		check-circle
+fit_result.background_function	Background		
+fit_result.covariance_available	Covariance		
+fit_result.degrees_of_freedom	Degrees of freedom		
+fit_result.descent	Descent		
+fit_result.exit_reason	Exit reason		
+fit_result.fitting_time	Time		
+fit_result.iterations	Iterations		
+fit_result.last_shift_su	Last largest shift/s.u.		
+fit_result.message	Message		
+fit_result.n_data_points	Points		
+fit_result.n_free_parameters	Free parameters		
+fit_result.n_parameters	Parameters		
+fit_result.objective_name	Objective		
+fit_result.objective_value	Objective value		
+fit_result.prof_cr_factor	cRp		
+fit_result.prof_cwr_factor	cRwp		
+fit_result.prof_r_factor	Rp		
+fit_result.prof_r_factor@single crystal	R(F²)		
+fit_result.prof_wr_expected	Rexp		
+fit_result.prof_wr_factor	Rwp		
+fit_result.prof_wr_factor@single crystal	wR(F²)		
+fit_result.profile_function	Profile		
+fit_result.reduced_chi_square	Reduced χ²		
+fit_result.result_kind	Kind		
+fit_result.stopping_rule	Stopped by		
+fit_result.stopping_value	Stopping value		
+fit_result.success	Success		
+fit_result_bank	Experiment fit result		check
+fit_result_bank.absent_mean_i_over_su	Absent mean I/su		
+fit_result_bank.chi_square	χ²		
+fit_result_bank.n_data_points	Points		
+fit_result_bank.prof_cr_factor	cRp		
+fit_result_bank.prof_cwr_factor	cRwp		
+fit_result_bank.prof_r_factor	Rp		
+fit_result_bank.prof_r_factor@single crystal	R(F²)		
+fit_result_bank.prof_wr_expected	Rexp		
+fit_result_bank.prof_wr_factor	Rwp		
+fit_result_bank.prof_wr_factor@single crystal	wR(F²)		
+fit_result_bank.r_int	Rint		
+fit_result_bank.r_sigma	R-sigma		
+fit_result_phase	Structure fit result		check
+fit_result_phase.bragg_r_factor	R Bragg		
+fit_result_phase.f_r_factor	R F		
+fit_result_phase.magnetic_r_factor	R mag		
+fitting_mode	Fitting mode		sliders-h
+fitting_mode.type	Mode		
+fitting_mode.type=independent	Independent: each from the same start		
+fitting_mode.type=joint	Joint: all experiments at once		
+fitting_mode.type=sequential	Sequential: each from the previous		
+fitting_mode.type=single	Single experiment		
+geom	Bond settings		ruler-combined
+geom.bond_distance_inc	Tolerance		
+geom.min_bond_distance_cutoff	Minimum distance		
+geom_bond	Bonds		grip-lines
+geom_bond.atom_site_label_1	Site 1		
+geom_bond.atom_site_label_2	Site 2		
+geom_bond.distance	Distance		
+geom_bond.expanded_atom_site_id_1	Atom 1		
+geom_bond.expanded_atom_site_id_2	Atom 2		
+geom_bond.site_symmetry_1	Symmetry 1	Sym 1	
+geom_bond.site_symmetry_2	Symmetry 2	Sym 2	
+group.examples	Examples		database
+group.getStarted	Get started		rocket
+group.patternUpdates	Pattern updates during a scan		chart-line
+group.performance	Performance		tachometer-alt
+group.polyhedra	Polyhedra		dice-d20
+group.recentProjects	Recent projects		archive
+group.reportContents	Contents		list
+group.reportExport	Export		download
+group.save_data	Data on save		database
+group.shownParameters	Parameters shown		filter
+header.change	Change		
+header.component	Component		
+header.data_file	Data file		
+header.datablock	Datablock		
+header.dataset	Dataset		
+header.experiment	Experiment		
+header.fit	Fit		
+header.formula	Formula		
+header.h_k_l	h k l		
+header.id	ID		
+header.last_modified	Last modified		
+header.licence	Licence		
+header.max	Max		
+header.metric	Metric		
+header.min	Min		
+header.name	Name		
+header.name_description	Name / description		
+header.resid	Resid		
+header.s_u	s.u.		
+header.session	Session		
+header.source	Source		
+header.start	Start		
+header.structure	Structure		
+header.type	Type		
+header.value	Value		
+header.version	Version		
+header.θ	θ		
+header.φ	φ		
+home.changes	What's new		bullhorn
+home.cite	How to cite		quote-right
+home.documentation	Documentation		external-link-alt
+home.feedback	Help and feedback		comments
+home.intro.disable	Disable		
+home.intro.skip	Skip		
+home.start	Start		rocket
+home.survey	Take the user survey		external-link-alt
+home.tutorials	Tutorials		graduation-cap
+home.update	Update available		arrow-circle-up
+instrument	Instrument		microscope
+instrument.calib_d_to_tof_linear	TOF linear		radiation
+instrument.calib_d_to_tof_offset	TOF offset		arrows-alt-h
+instrument.calib_d_to_tof_quadratic	TOF quadratic		radiation
+instrument.calib_d_to_tof_reciprocal	TOF reciprocal		radiation
+instrument.calib_sample_displacement	Sample displacement		arrows-alt-h
+instrument.calib_sample_transparency	Sample transparency		arrows-alt-h
+instrument.calib_twotheta_offset	2θ offset		arrows-alt-h
+instrument.facility	Facility		
+instrument.name	Instrument		
+instrument.setup_monochromator_twotheta	Monochromator 2θ		
+instrument.setup_polarization_coefficient	Polarization coefficient		
+instrument.setup_twotheta_bank	2θ bank		hashtag
+instrument.setup_wavelength	Wavelength		radiation
+instrument.setup_wavelength@doublet	Wavelength 1		radiation
+instrument.setup_wavelength_2	Wavelength 2		radiation
+instrument.setup_wavelength_2_to_1_ratio	Intensity ratio 2/1		radiation
+joint_fit	Joint-fit weights		link
+joint_fit.weight	Weight		
+likes.never	Don't ask again		
+likes.no	Not really		thumbs-down
+likes.unsure	Not sure		question
+likes.yes	Yes		thumbs-up
+linkedStructure.append	Add linked structure		plus-circle
+linkedStructure.estimate	Estimate		magic
+linkedStructure.phaseRatiosShared	Phase ratios shared		
+linked_structure	Linked structures		layer-group
+linked_structure.enabled	Enabled		
+linked_structure.scale	Scale		weight
+linked_structure.structure_id	Structure		
+linked_structure.weight_fraction	Weight fraction		
+magneticSpaceGroup.nameBns	Name BNS		
+magneticSpaceGroup.numberBns	Number BNS		
+magneticSpaceGroup.setting	Setting		
+magnetic_form_factor	Magnetic form factors		atom
+magnetic_form_factor.approximation	Approximation		
+magnetic_form_factor.approximation=beyond_dipole	Beyond dipole ⟨j0⟩…⟨j6⟩		
+magnetic_form_factor.approximation=dipole	Dipole ⟨j0⟩ + C₂⟨j2⟩		
+magnetic_form_factor.approximation=j0	⟨j0⟩		
+magnetic_form_factor.ion	Ion		
+magnetic_form_factor.j2_coefficient	C₂		
+magnetic_form_factor.j4_coefficient	C₄		
+magnetic_form_factor.j6_coefficient	C₆		
+magnetic_form_factor.type_symbol	Type		
+mainArea.project.tab.description	Project		
+mainArea.report.tab.report	Report		
+mainArea.tab.correlations	Correlations		
+mainArea.tab.evolution	Evolution		
+mainArea.tab.map	Map		
+mainArea.tab.measCalc	Meas vs calc		
+mainArea.tab.pattern	Pattern		
+mainArea.tab.stacked	Stacked		
+mainArea.tab.structure	Structure		
+metadata	Project		archive
+metadata.authors	Authors		
+metadata.created	Created		
+metadata.description	Description		
+metadata.last_modified	Last modified		
+metadata.name	Name		
+metadata.path	Location		
+metadata.timestamp	Timestamp		
+metadata.title	Title		
+minimizer	Minimizer		level-down-alt
+minimizer.chi_square_tolerance	χ² change tolerance		
+minimizer.descent	Descent		
+minimizer.descent=auto	Auto		
+minimizer.descent=fast_descent	Fast descent		
+minimizer.descent=fast_descent_and_ladder	Fast descent and ladder		
+minimizer.descent=ladder	Ladder		
+minimizer.max_iterations	Max iterations		
+minimizer.moments_near_zero	Magnetic moments near zero		
+minimizer.moments_near_zero=keep_free	Keep free		
+minimizer.moments_near_zero=try_exact_zero	Try exact zero		
+minimizer.shift_tolerance	Shift/s.u. tolerance		
+minimizer.stop_rules	Stop rules		
+minimizer.type	Minimizer		
+minimizer.type=crysta	crysta		
+onlineLoad.clear	Clear		eraser
+onlineLoad.close	Close		times
+onlineLoad.retry	Retry		redo
+parameters.freeHeader	Free		
+parameters.sameHeader	Same for all		
+parent_propagation_vector	Propagation vectors		long-arrow-alt-right
+parent_propagation_vector.id	ID		
+parent_propagation_vector.kxkykz	k		
+parent_space_group	Parent space group		satellite
+parent_space_group.child_transform_pp_abc	To magnetic cell		
+parent_space_group.derived	Derived		
+parent_space_group.it_number	Number		
+parent_space_group.name_h_m_alt	Name		
+parent_space_group.reference_setting	Reference setting		
+parent_space_group.transform_pp_abc	To standard		
+pattern_chart	Pattern chart		chart-line
+pattern_chart.x_axis	X-axis		
+pattern_chart.x_axis=d_spacing	d-spacing		
+pattern_chart.x_axis=native	Measured axis		
+pd_block	Report block		file-code
+pd_block.id	Block		
+pd_calc	Structure curves		chart-area
+pd_calc.component_intensities_magnetic	Structure magnetic calc		
+pd_calc.component_intensities_net	Structure calc		
+pd_calc_overall	Structure curves		chart-area
+pd_calc_overall.component_presentation_order	Structure order		
+peak	Peak profile		shapes
+peak.asym_beba_a0	A₀		balance-scale-left
+peak.asym_beba_a1	A₁		balance-scale-left
+peak.asym_beba_b0	B₀		balance-scale-left
+peak.asym_beba_b1	B₁		balance-scale-left
+peak.asym_beba_limit	AsyLim		balance-scale-left
+peak.asym_fcj_1	S/L		balance-scale-left
+peak.asym_fcj_2	D/L		balance-scale-left
+peak.broad_gauss_sigma_0	σ₀²		shapes
+peak.broad_gauss_sigma_1	σ₁²		shapes
+peak.broad_gauss_sigma_2	σ₂²		shapes
+peak.broad_gauss_size	Size G		shapes
+peak.broad_gauss_strain	Strain G		shapes
+peak.broad_gauss_u	U		shapes
+peak.broad_gauss_v	V		shapes
+peak.broad_gauss_w	W		shapes
+peak.broad_lorentz_gamma_0	γ₀		shapes
+peak.broad_lorentz_gamma_1	γ₁		shapes
+peak.broad_lorentz_gamma_2	γ₂		shapes
+peak.broad_lorentz_size	Size L		shapes
+peak.broad_lorentz_strain	Strain L		shapes
+peak.broad_lorentz_x	X		shapes
+peak.broad_lorentz_y	Y		shapes
+peak.cutoff_fwhm	Cutoff (FWHM)		
+peak.cutoff_fwhm.auto	Set automatically		magic
+peak.decay_beta_0	β₀		shapes
+peak.decay_beta_1	β₁		shapes
+peak.mixing_eta_0	Eta0		
+peak.mixing_eta_1	Eta1		
+peak.rise_alpha_0	α₀		shapes
+peak.rise_alpha_1	α₁		shapes
+peak.type	Profile		
+peak.type=cwl-gaussian	Gaussian		
+peak.type=cwl-lorentzian	Lorentzian		
+peak.type=cwl-pseudo-voigt	Pseudo-Voigt		
+peak.type=cwl-pseudo-voigt-berar-baldinozzi	Pseudo-Voigt + Bérar-Baldinozzi asymmetry		
+peak.type=cwl-tch-pseudo-voigt	Thompson-Cox-Hastings pseudo-Voigt (TCH)		
+peak.type=cwl-tch-pseudo-voigt-fcj	Thompson-Cox-Hastings pseudo-Voigt (TCH) + Finger-Cox-Jephcoat asymmetry (FCJ)		
+peak.type=tof-jorgensen	Jorgensen		
+peak.type=tof-jorgensen-von-dreele	Jorgensen-Von Dreele		
+peak.type=tof-pseudo-voigt	Pseudo-Voigt		
+performance.preferences	Preferences		cog
+preferences	Preferences		
+preferences.ai.sources.add	Add skill source		plus-circle
+preferences.ai.sources.folder	Choose a skill folder or collection		
+preferences.ai.sources.webDialog	Add skills from web		
+preferences.diagnostics	Show diagnostics		info-circle
+preferences.online.sources.add	Add online source		plus-circle
+preferences.openMaintenanceTool	Open Maintenance Tool		cogs
+preferences.openSettingsFolder	Open folder		folder-open
+preferences.resetConfirm	Reset the settings		
+preferences.resetSettings	Reset to defaults		undo
+preferences.tab.advanced	Advanced		cogs
+preferences.tab.aiAssistance	AI assistance		robot
+preferences.tab.appearance	Appearance		paint-brush
+preferences.tab.interface	Interface		sliders-h
+preferences.tab.performance	Performance		tachometer-alt
+preferences.tab.projects	Projects		archive
+preferences.tab.updates	Updates		cloud-download-alt
+preferredOrientation.append	Add preferred orientation		plus-circle
+preferred_orientation	Preferred orientations		compass
+preferred_orientation.index_h	h		
+preferred_orientation.index_k	k		
+preferred_orientation.index_l	l		
+preferred_orientation.march_r	r		
+preferred_orientation.march_random_fract	f rand		
+preferred_orientation.structure_id	Structure		
+project.create	Create a new project	Create	plus-circle
+project.export.cryspy	As cryspy…		file-export
+project.export.fullProf	As FullProf…		file-export
+project.export.gsas	As GSAS-II…		file-export
+project.load	Load project	Load	upload
+project.load.folder	Open project folder…		folder-open
+project.load.url	Open project from URL…		link
+project.load.zip	Open project zip…		archive
+project.saveAs	Save project as		file-export
+project.saveAs.copy	Save a copy		
+project.saveAs.folder	As project folder…		folder-open
+project.saveAs.zip	As project zip…		archive
+propagationVectors.append	Add vector		plus-circle
+refine_ls	Fitted reflections		cut
+refine_ls.threshold_sigma	Fit reflections above (su)		
+refln	Reflections		list
+refln.d_spacing	d		
+refln.f_calc	F calc		
+refln.f_m_perp_squared_calc	|F_M⊥|² calc		
+refln.f_meas	F meas		
+refln.f_squared_calc	F² calc		
+refln.f_squared_total_calc	F² total calc		
+refln.index_h	h		
+refln.index_k	k		
+refln.index_l	l		
+refln.intensity_calc	F² calc		mountain
+refln.intensity_meas	F² meas		mountain
+refln.intensity_meas_su	s.u.		mountain
+refln.sin_theta_over_lambda	sin θ/λ		
+refln.structure_id	Structure		
+refln.time_of_flight	TOF		
+refln.two_theta	2θ		
+refln.wavelength	λ		
+reflns	Observed reflections		filter
+reflns.absences	Absences		
+reflns.absences=exclude	exclude		
+reflns.absences=include	include		
+reflns.merge	Merge		
+reflns.merge=laue_class	Laue class		
+reflns.merge=none	none		
+reflns.merge=point_group	point group		
+reflns.threshold_basis	On		
+reflns.threshold_basis=amplitude	F		
+reflns.threshold_basis=intensity	I		
+reflns.threshold_expression	Threshold		
+reflns.threshold_sigma	Observed above (su)		
+report	Report		file-alt
+report.cif	CIF		
+report.excluded	Excluded		
+report.html	HTML		
+report.html_offline	Embed chart libraries		
+report.pdf	PDF		
+report.save	Save report		download
+report.saveError	The report was not saved		
+report_file	Saved reports		file
+report_file.digest	Digest		
+report_file.format	Format		
+report_file.format=cif	CIF		
+report_file.format=html	HTML		
+report_file.format=pdf	PDF		
+report_file.name	File		
+report_file.project_last_modified	Project saved		
+report_file.saved	Saved		
+save.dataChoice.cancel	Cancel		
+save.dataChoice.linked	Keep linked		
+save.error	The project was not saved		
+saveAs.choice	Save project as		
+saveAs.copy	Save a copy		
+saveAs.dataCopy	Copy into the project		
+saveAs.dataLinked	Keep linked		
+saveAs.folder	Folder		
+saveAs.zip	Zip archive		
+scatteringLengths.append	Append a scattering length		plus-circle
+scattering_length	Scattering lengths		ruler
+scattering_length.length_fm	b		ruler
+scattering_length.type_symbol	Type		
+scattering_source	Scattering source		atom
+scattering_source.neutron_scattering_length	Neutron scattering lengths		
+scattering_source.neutron_scattering_length=rauch2003ext	Rauch & Waschkowski (2003)		
+scattering_source.neutron_scattering_length=sears1992	Sears (1992)		
+scattering_source.xray_dispersion	X-ray dispersion		
+scattering_source.xray_dispersion=cromer-liberman	Cromer & Liberman		
+scattering_source.xray_dispersion=it1992	International Tables C (1992)		
+scattering_source.xray_dispersion=none	None		
+scattering_source.xray_dispersion=sasaki1989	Sasaki (1989)		
+scattering_source.xray_form_factor	X-ray form factors		
+scattering_source.xray_form_factor=it1992	International Tables C (1992)		
+scattering_source.xray_form_factor=wk1995	Waasmaier & Kirfel (1995)		
+sequentialExtract.append	Append new rule	Append	plus-circle
+sequentialExtract.duplicate	Duplicate selected rule	Duplicate	clone
+sequential_fit	Sequential fit		list-ol
+sequential_fit.data_dir	Data directory		
+sequential_fit.file_pattern	Files		
+sequential_fit.reverse	Reverse		
+sequential_fit.template_file	Template		
+sequential_fit_experiment	Scan experiments		list-ol
+sequential_fit_experiment.experiment_id	Experiment		
+sequential_fit_experiment.file_pattern	File pattern		
+sequential_fit_extract	Scan extraction rules		filter
+sequential_fit_extract.id	ID		
+sequential_fit_extract.pattern	Pattern		
+sequential_fit_extract.required	Required		
+sequential_fit_extract.target	Target		
+sideBar.note.invite	Nothing here yet. What would you like this tab to hold? <a href="idea">Share your idea</a>		
+sideBar.note.waiting	Nothing to show yet: start in the Main tab		
+sideBar.tab.basic	Main		
+sideBar.tab.extras	Extra		
+sideBar.tab.settings	Settings		
+sideBar.tab.text	Text		
+sideBar.width.auto	Auto		
+sideBar.width.bounds	No change		
+sideBar.width.compact	Compact		
+sideBar.width.full	Full		
+sideBar.width.manual	Manual		
+sideBar.width.values	Fit values		
+space_group	Space group		satellite
+space_group.coord_system_code	Code		
+space_group.it_number	Number		
+space_group.name_h_m	Name		
+space_group_magn	Magnetic space group		magnet
+space_group_magn.name_bns	BNS symbol		
+space_group_magn.name_og	OG symbol		
+space_group_magn.name_uni	UNI symbol		
+space_group_magn.number_bns	BNS number		
+space_group_magn.number_og	OG number		
+space_group_magn.point_group_name_uni	Point group		
+space_group_magn.point_group_number_litvin	Point group number		
+space_group_magn_transforms	Magnetic setting transforms		exchange-alt
+space_group_magn_transforms.id	ID		
+space_group_magn_transforms.pp_abc	Transform		
+space_group_magn_transforms.source	Setting		
+space_group_symop	Symmetry operators		sync-alt
+space_group_symop.operation_xyz	Operation		
+space_group_symop_magn_centering	Magnetic centring vectors		arrows-alt
+space_group_symop_magn_centering.id	ID		
+space_group_symop_magn_centering.xyz	Operation		
+space_group_symop_magn_operation	Magnetic operators		sync-alt
+space_group_symop_magn_operation.id	ID		
+space_group_symop_magn_operation.xyz	Operation		
+structure.appearance.axes	Axes		
+structure.appearance.bonds	Bonds		
+structure.appearance.cell	Cell		
+structure.appearance.labels	Labels		
+structure.appearance.polyhedra	Polyhedra		
+structure.view.unavailable	The structure view needs a 3D graphics API, which this display does not provide		
+structure_view	Appearance		palette
+structure_view.adp_probability	Probability		arrows-alt
+structure_view.atom_scale	Atom scale		
+structure_view.atom_view	Atoms as		
+structure_view.atom_view=adp	Displacement		
+structure_view.atom_view=covalent	Covalent radius		
+structure_view.atom_view=ionic	Ionic radius		
+structure_view.atom_view=vdw	Van der Waals radius		
+structure_view.atoms	Atoms shown		
+structure_view.atoms=all	All		
+structure_view.atoms=asymmetric	Asymmetric unit (crystal)		
+structure_view.atoms=asymmetric_magnetic	Asymmetric unit (magnetic)		
+structure_view.atoms=magnetic	Magnetic atoms		
+structure_view.atoms=none	None		
+structure_view.axes	Axes		
+structure_view.bonds	Bonds		
+structure_view.cell	Cell		
+structure_view.colour_scheme	Colours		
+structure_view.colour_scheme=jmol	Jmol		
+structure_view.colour_scheme=vesta	VESTA		
+structure_view.labels	Labels		
+structure_view.moment_form	Moments as		
+structure_view.moment_form=cartesian	Cartesian		
+structure_view.moment_form=crystal_axes	Crystal axes		
+structure_view.moment_form=spherical	Spherical		
+structure_view.moment_scale	Moment scale		
+structure_view.moment_view	Moment view		
+structure_view.moment_view=from_centre	from atom centre		
+structure_view.moment_view=from_surface	from atom surface		
+structure_view.moment_view=through_atom	through atom		
+structure_view.polyhedra	Polyhedra		
+structure_view.polyhedra_centres	Centre atoms		
+structure_view.polyhedra_colour	Colour		
+structure_view.polyhedra_colour=atom	Atom colour		
+structure_view.polyhedra_colour=grey	Grey		
+structure_view.polyhedra_corners	Corner atoms		
+structure_view.polyhedra_extent	Extent		
+structure_view.polyhedra_extent=cell	Inside the cell		
+structure_view.polyhedra_extent=complete	Complete for atoms in the cell		
+structure_view.polyhedra_max_distance	Max distance		
+structure_view.polyhedra_opacity	Opacity		
+structure_view.show_moments	Moments		
+structures.create	Create structure	Create	plus-circle
+structures.duplicate	Duplicate structure	Duplicate	clone
+structures.load	Load		upload
+structures.load.file	From file…		file
+structures.load.web	From web…		globe
+structures.toCrystal	Make the structure a crystal		
+su_format	Standard uncertainties		balance-scale
+su_format.rule	Rule		
+su_format.rule=iucr_19	IUCr recommendation: 1 digit, or 2 from 10 to 19		
+su_format.rule=iucr_99	Always 2 digits, 10 to 99		
+survey.later	Not now		
+survey.never	Don't ask again		
+survey.take	Take the survey		external-link-alt
+text.discard	Discard changes?		
+tutorials	Tutorials		
+warnings	Messages		
+warnings.dismissAll	Dismiss all		eye-slash
+warnings.empty	No messages		
+webFiles.error	The browser could not use the file		
+whatsNew.page	The full page on the website		external-link-alt

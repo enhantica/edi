@@ -25,7 +25,7 @@ PYTHONUTF8 = "1"
 # The crysta commit edi builds (edi ADR-0083): its CI packs that commit's SDK once per platform
 # (.github/workflows/crysta-sdk.yml) and every job and product uses it. `pixi run crysta-sdk-pin <sha>`
 # moves it.
-CRYSTA_COMMIT = "9cfc194c4f711add891ea3bc4fedf75c731f250b"
+CRYSTA_COMMIT = "515116e2f94e40148131d17b7338892b40ea441f"
 # ONE ruff cache, outside every source and test tree. Same class as crysta's: ruff writes
 # `.ruff_cache` into the directory it is invoked from, and a stray cache can keep a RETIRED
 # directory alive after its tracked files are gone, tripping a layout gate on a folder that
@@ -508,7 +508,7 @@ wasm-parallel-check = { cmd = ["bash", "tools/ci/wasm-parallel-check.sh"] }
 # The cadence entry points: `verify-quick` — the static checks, the core build, the audit and
 # the quick group — runs ONCE before handing to review; `verify-full` (== `verify`, the mount
 # `verify:` command and the x-ship gate) runs ONCE when ready to merge, after the accept.
-verify-quick = { depends-on = ["check", "format-check", "weakref-policy", "entity-path-check", "tutorial-exclusions", "tutorial-code", "notebook-outputs", "wheel-packages", "report-pattern-panes", "cli-stream-parity", "category-census-check", "core-build", "python-surface-superset", "python-surface-check", "cli-vocabulary-check", "display-sources-check", "per-pr-audit", "crysta-consumer", "cli-projects", "group-quick", "py-cov-unit", "generated-regions", "app-verify"] }
+verify-quick = { depends-on = ["check", "format-check", "weakref-policy", "entity-path-check", "tutorial-exclusions", "tutorial-code", "notebook-outputs", "wheel-packages", "report-pattern-panes", "cli-stream-parity", "category-census-check", "label-registry-check", "core-build", "python-surface-superset", "python-surface-check", "cli-vocabulary-check", "display-sources-check", "per-pr-audit", "crysta-consumer", "cli-projects", "group-quick", "py-cov-unit", "generated-regions", "app-verify"] }
 # Gate the audit: every collected test must have a recorded runtime backing its tier. Collection
 # imports `edi._edi`, so without core-build the audit dies with
 # `ImportError: edi's compiled extension ... is not importable`. It passed locally and inside
@@ -522,6 +522,9 @@ entity-path-check = { cmd = ["python", "tools/checks/entity_path_convention.py"]
 # ADR-0018: every category has its schema, and the committed census is the generated one —
 # in verify-quick, verify-full and the CI lint job's static policy step.
 category-census-check = { cmd = ["python", "tools/checks/category_census.py"] }
+# ADR-0104: every visible label has a registry row, and the rows match their sources, crysta's dictionary among them,
+# which core-build fetches at the pinned commit — in verify-quick, verify-full and CI's checks after the native build.
+label-registry-check = { cmd = "python tools/checks/label_registry.py && python tools/data/build_labels.py --check", depends-on = ["core-build"] }
 # ADR-0051: every name and number a surface shows comes from crysta's dictionary through the display bridge. It reads
 # the dictionary from the pinned crysta source, which core-build fetches.
 display-sources-check = { cmd = ["python", "tools/checks/display_sources.py"], depends-on = ["core-build"] }
@@ -626,7 +629,7 @@ verify = { depends-on = ["verify-full"] }
 # `verify-full` is the merge-time FULL chain (the `full` group replaces the former per-commit
 # selection; `verify` == `verify-full` — the mount `verify:` command and the x-ship gate, run
 # ONCE after the accept). `verify-quick` is the review-time chain.
-verify-full = { depends-on = ["check", "format-check", "weakref-policy", "entity-path-check", "tutorial-exclusions", "tutorial-code", "notebook-outputs", "wheel-packages", "report-pattern-panes", "cli-stream-parity", "category-census-check", "core-build", "python-surface-superset", "python-surface-check", "cli-vocabulary-check", "display-sources-check", "per-pr-audit", "crysta-consumer", "cli-projects", "group-full", "py-cov-unit", "notebook-tests", "generated-regions", "docs-build", "tsan-worker", "app-verify"] }
+verify-full = { depends-on = ["check", "format-check", "weakref-policy", "entity-path-check", "tutorial-exclusions", "tutorial-code", "notebook-outputs", "wheel-packages", "report-pattern-panes", "cli-stream-parity", "category-census-check", "label-registry-check", "core-build", "python-surface-superset", "python-surface-check", "cli-vocabulary-check", "display-sources-check", "per-pr-audit", "crysta-consumer", "cli-projects", "group-full", "py-cov-unit", "notebook-tests", "generated-regions", "docs-build", "tsan-worker", "app-verify"] }
 # The merge-Linux equivalence set: the full chain itself (`verify` now IS the full chain,
 # so the two are one). `tools/ci/local-ci.sh` runs this.
 merge-tasks = { depends-on = ["verify-full"] }

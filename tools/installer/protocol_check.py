@@ -4,6 +4,8 @@
 import argparse
 import json
 import os
+import subprocess
+import time
 from pathlib import Path
 from unittest.mock import patch
 
@@ -12,10 +14,12 @@ from package import (
     ASSISTANT_RUNTIME,
     SUFFIX,
     SYSTEM,
+    build_maintenance_tool,
     clean_environment,
     installer_from_download,
     package_app,
     run,
+    sha256,
     verify_installed_maintenance_tool,
 )
 
@@ -44,10 +48,19 @@ def check(tools: Path, output: Path) -> None:
     assistant_marker.write_text('optional assistant marker\n')
     repository = (output / 'online/repository').as_uri() + '/'
     # Substitute only the endpoint; install and maintenance use the real embedded configuration.
+    # The update goes from the last old-form version to the first YY.N, which sorts lower by its
+    # numbers: the repository offers it by content checksum (edi ADR-0106).
     with patch('package.repository_urls', return_value=(repository,)):
-        offline = package_app(stage, tools, output / 'offline', '2026.11.0')
+        offline = package_app(stage, tools, output / 'offline', '2026.11.31')
     marker.write_text('second marker\n')
-    online = package_app(stage, tools, output / 'online', '2026.11.1', repository)
+    # The new release's tool gets other bytes, so the update has a tool to replace. On Linux the
+    # update leaves the tool alone (edi ADR-0091), so only macOS and Windows build one.
+    new_tool = (
+        build_maintenance_tool(tools, output / 'online tool', '1')
+        if SYSTEM in {'macos', 'windows'}
+        else None
+    )
+    online = package_app(stage, tools, output / 'online', '26.17', repository, (), new_tool)
     (output / 'isolated home').mkdir()
     for kind, bootstrap in [('offline', offline), ('online', online)]:
         exercise(
@@ -100,6 +113,11 @@ def exercise(
             if kind == 'offline':
                 user_file = target / 'user-project.edi'
                 user_file.write_text('keep the project\n')
+                new_metadata = json.loads((output / 'online/installer.json').read_text())
+                if SYSTEM in {'macos', 'windows'}:
+                    old_tool = sha256(maintenance)
+                    if old_tool == new_metadata['maintenance_tool_sha256']:
+                        raise RuntimeError('Old and new maintenance tools are the same file')
                 run(
                     [maintenance, 'check-updates'],
                     **options,
@@ -107,6 +125,7 @@ def exercise(
                 run(
                     [
                         maintenance,
+                        '--verbose',  # the log says whether the tool component was updated
                         '--accept-licenses',
                         '--default-answer',
                         '--confirm-command',
@@ -116,6 +135,12 @@ def exercise(
                 )
                 if installed.read_text() != 'second marker\n':
                     raise RuntimeError('Maintenance tool did not apply the component update')
+                # The update brings the newer release's signed tool along (edi ADR-0106). The
+                # Framework may swap the tool only once the updating process has ended, so the
+                # check waits for it a while, and says what it found if it never comes.
+                tool_replaced(target, new_metadata)
+                # Nothing is left to offer after the update.
+                nothing_offered(maintenance, env)
                 if user_file.read_text() != 'keep the project\n':
                     raise RuntimeError('In-place update changed an unrelated user file')
             maintenance_args = [
@@ -134,6 +159,38 @@ def exercise(
             run([maintenance, '--default-answer', '--confirm-command', 'purge'], **options)
         if installed.exists():
             raise RuntimeError('Maintenance tool left the component installed')
+
+
+def nothing_offered(maintenance: Path, env: dict) -> None:
+    """Require a successful update query with no update in it.
+
+    A query that failed to fetch the repository ends with an error status and proves nothing.
+    """
+    again = subprocess.run(
+        [maintenance, 'check-updates'],
+        env=env, capture_output=True, text=True, timeout=60, check=False,
+    )  # fmt: skip
+    print(again.stdout + again.stderr, flush=True)
+    if again.returncode != 0:
+        raise RuntimeError('The second update query failed')
+    if '<update ' in again.stdout:
+        raise RuntimeError('The maintenance tool still offers an update')
+
+
+def tool_replaced(target: Path, metadata: dict, wait: float = 60) -> None:
+    deadline = time.monotonic() + wait
+    while True:
+        try:
+            verify_installed_maintenance_tool(target, metadata)
+        # The signature probe fails with CalledProcessError while the bundle is being swapped.
+        except (RuntimeError, subprocess.CalledProcessError):
+            if time.monotonic() > deadline:
+                found = sorted(path.name for path in target.iterdir())
+                print(f'protocol check: after the update the folder holds {found}', flush=True)
+                raise
+            time.sleep(2)
+        else:
+            return
 
 
 def main() -> None:

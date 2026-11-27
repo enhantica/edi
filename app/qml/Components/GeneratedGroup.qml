@@ -111,10 +111,11 @@ Column {
                 objectName: `generated.${group.categoryId}.list`
                 defaultInfoText: qsTr("No rows")
                 sourceModel: categoryData.loop ? categoryData.rows : null
-                // Its columns by kind (the shared column model, DataTable.columnKinds; ADR-0103 decision 4): a parameter
-                // or a choice is a short text, a number or a real value a number; any other value (a symmetry operation,
-                // a site's label, an ID) is a name: its own text's width, left, never cut while there is room.
-                readonly property var dataKinds: categoryData.cells.map(cell => cell.kind === "number" && !/(^|_)(id|label)$/.test(cell.name) ? "number" : cell.kind === "parameter" || cell.kind === "choice" ? "short" : "name")
+                // Its columns by kind (the shared column model, DataTable.columnKinds; ADR-0103 decision 4): a number or
+                // a real value a number, a choice a fixed text, a flag (true, false) a short one; a parameter's name and
+                // any other value (a symmetry operation, a site's label, an ID) is a name: its own text's width, left,
+                // never cut while there is room. Its texts sit in one list per row, so it is measured from its rows.
+                readonly property var dataKinds: categoryData.cells.map(cell => cell.kind === "number" && !/(^|_)(id|label)$/.test(cell.name) ? "number" : cell.kind === "choice" ? "text" : cell.kind === "flag" ? "short" : "name")
                 columnKinds: ["index"].concat(dataKinds)
 
                 header: EaComponents.ListViewHeader {
