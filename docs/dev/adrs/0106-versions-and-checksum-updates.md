@@ -104,5 +104,6 @@ Once the tool was replaced, it still showed the old release's pages, which the f
 |---|---|
 | `YYYY.N` (2026.32, then 2027.1) | Rejected by the owner for `YY.N`; it sorts above 2026.11.31 by plain numbers but reads long. |
 | A shown `YY.N` with a hidden internal version for updates | Rejected: the owner preferred one identity to a pair kept in step forever. |
-| Ask 2026.11.x users to reinstall once | Not needed for the update itself, which the Maintenance Tool applies; a notice may still be wanted, since their app cannot read the new feed. |
+| Ask 2026.11.x users to reinstall once | Not needed: the Maintenance Tool applies the update, and the legacy feed shows it in their app (point 7). |
+| One feed holding both forms | Rejected: a 2026.11.x app drops the whole feed at the first version it cannot read, so it would show no update at all. |
 | Count the 2026 counter from every old tag and draft | Rejected: that would count previews and withdrawn reservations too; the count is of the 16 published releases. |
