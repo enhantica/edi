@@ -39,6 +39,9 @@
 #include "project_view_model.hpp"
 #include "run_log.hpp"
 #include "online_search.hpp"
+#include "desktop_updates.hpp"
+#include "speech_recogniser.hpp"
+#include "voice_input.hpp"
 #include "parameter_item.hpp"
 #if defined(Q_OS_UNIX)
 #include "assistant_file_primitives.hpp"
@@ -1600,6 +1603,95 @@ private slots:
         click(down);
         click(down);
         QTRY_COMPARE(spin->property("value").toInt(), start - step);
+    }
+    // The microphone is always in the message box (the owner, 2026-11-27). Without the voice input component a press
+    // opens the same note as the assistant's button, on adding it in Updates; with it a press starts voice input.
+    void microphoneWithAndWithoutVoiceInput_data() {
+        QTest::addColumn<bool>("installed");
+        QTest::newRow("not installed") << false;
+        QTest::newRow("installed") << true;
+    }
+    void microphoneWithAndWithoutVoiceInput() {
+        QFETCH(bool, installed);
+        if (installed && !edi_app::SpeechRecogniser::cpu_supported())
+            QSKIP("This processor cannot run the speech engine");
+        QTemporaryDir dir;
+        QVERIFY(dir.isValid());
+        const QString model = dir.filePath("model.bin");
+        if (installed) {
+            QFile file(model);
+            QVERIFY(file.open(QIODevice::WriteOnly));
+            file.write("model");
+        }
+        // The app's test microphone (voice_input.cpp), which reports no device: a press never reaches a real one.
+        const QList<QPair<QByteArray, QByteArray>> values{
+            {"PYTEST_CURRENT_TEST", "assistant_ui_tests"},
+            {"EDI_TEST_ASSISTANT_VOICE_CAPTURE", "no-device"},
+            {"EDI_TEST_ASSISTANT_VOICE_MODEL", model.toUtf8()},
+        };
+        QList<QPair<QByteArray, QByteArray>> originals;
+        for (const auto& [name, value] : values) {
+            originals.append(qMakePair(name, qgetenv(name.constData())));
+            qputenv(name.constData(), value);
+        }
+        const auto restore = qScopeGuard([originals] {
+            for (const auto& [name, value] : originals) {
+                if (value.isNull()) qunsetenv(name.constData());
+                else qputenv(name.constData(), value);
+            }
+        });
+        QQmlApplicationEngine engine;
+        edi_app::configure_engine(engine);
+        WorkingAssistant assistant;
+        engine.rootContext()->setContextProperty("testAssistant", &assistant);
+        QQmlComponent component(&engine);
+        component.setData(R"(
+            import QtQuick
+            import QtQuick.Controls
+            import edi.app
+            ApplicationWindow {
+                width: 900; height: 500; visible: true
+                Item { id: toggle }
+                AssistantComposer { anchors.left: parent.left; anchors.right: parent.right; anchors.bottom: parent.bottom; assistant: testAssistant; toggleControl: toggle }
+            }
+        )", QUrl());
+        QScopedPointer<QObject> root(component.create());
+        QVERIFY2(root, qPrintable(component.errorString()));
+        auto* window = qobject_cast<QQuickWindow*>(root.data());
+        QVERIFY(window);
+        QVERIFY(QTest::qWaitForWindowExposed(window));
+        auto* voice = engine.singletonInstance<edi_app::VoiceInput*>("edi.app", "VoiceInput");
+        QVERIFY(voice);
+        QCOMPARE(voice->available(), installed);
+        auto* button = root->findChild<QQuickItem*>("assistant.voice");
+        auto* dialog = root->findChild<QObject*>("assistant.voiceMissing");
+        QVERIFY(button);
+        QVERIFY(dialog);
+        QTRY_VERIFY(button->isVisible());
+        QVERIFY(QMetaObject::invokeMethod(button, "clicked"));
+        if (!installed) {
+            QTRY_VERIFY(dialog->property("visible").toBool());
+            QCOMPARE(dialog->property("title").toString(), QString("Voice input"));
+            auto* message = root->findChild<QObject*>("assistant.voiceMissing.message");
+            auto* updates = root->findChild<QObject*>("assistant.voiceMissing.updates");
+            QVERIFY(message);
+            QVERIFY(updates);
+            QCOMPARE(message->property("text").toString(), QString("The voice input component is not installed."));
+            QCOMPARE(updates->property("text").toString(), QString("Open Updates in Preferences to add voice input"));
+            QCOMPARE(updates->property("fontIcon").toString(), QString("cog"));
+            auto* updatesService = engine.singletonInstance<edi_app::DesktopUpdates*>("edi.app", "DesktopUpdates");
+            QVERIFY(updatesService);
+            QCOMPARE(updates->property("visible").toBool(), updatesService->managed());
+            QCOMPARE(voice->state(), edi_app::VoiceInput::State::Idle);
+            QVERIFY(QMetaObject::invokeMethod(dialog, "close"));
+            QTRY_VERIFY(!dialog->property("visible").toBool());
+        } else {
+            // The press starts the test microphone, which finds no device: no note, and the message box says why.
+            QTRY_VERIFY(!voice->message().isEmpty());
+            QVERIFY2(voice->message().contains("microphone", Qt::CaseInsensitive), qPrintable(voice->message()));
+            QCOMPARE(voice->state(), edi_app::VoiceInput::State::Idle);
+            QVERIFY(!dialog->property("visible").toBool());
+        }
     }
 #if defined(Q_OS_UNIX)
     // An attached file stays the same input when only its metadata changes: macOS writes the last-used date as an

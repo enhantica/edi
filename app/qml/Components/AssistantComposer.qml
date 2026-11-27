@@ -434,6 +434,14 @@ Rectangle {
             VoiceInput.release(composer);
     }
     Component.onDestruction: VoiceInput.release(composer)
+    MissingComponentDialog {
+        id: voiceMissingDialog
+        objectName: "assistant.voiceMissing"
+        title: qsTr("Voice input")
+        message: VoiceInput.unavailableReason
+        updatesText: qsTr("Open Updates in Preferences to add voice input")
+        updatesShown: !VoiceInput.installed && DesktopUpdates.managed
+    }
     // Escape from anywhere in the composer stops voice input; otherwise it goes on to the usual Escape action.
     Keys.onEscapePressed: event => {
         event.accepted = composer.voiceActive && VoiceInput.owner === composer;
@@ -933,10 +941,12 @@ Rectangle {
                 objectName: "assistant.voice"
                 fontIcon: "microphone"
                 text: VoiceInput.state === VoiceInput.Listening ? qsTr("Stop and insert the text") : VoiceInput.state === VoiceInput.Starting ? qsTr("Starting the microphone. Press to cancel") : VoiceInput.state === VoiceInput.Recognising ? qsTr("Recognising speech") : qsTr("Voice input")
-                ToolTip.text: text
-                visible: VoiceInput.available
+                // Always shown: without the voice input component it opens the note on adding it, as the assistant's
+                // button does (ADR-0107 §8).
+                ToolTip.text: VoiceInput.available ? text : VoiceInput.unavailableReason
                 Accessible.name: text
-                onClicked: VoiceInput.toggle(composer)
+                Accessible.description: VoiceInput.unavailableReason
+                onClicked: VoiceInput.available ? VoiceInput.toggle(composer) : voiceMissingDialog.open()
             }
             EaElements.ToolButton {
                 id: stopButton

@@ -49,7 +49,7 @@ else()
 endif()
 
 # Voice input in the assistant's message box (ADR-0107): the speech recogniser and the microphone, built with the
-# assistant. The model is an optional installer component, so the app shows the button only where it finds one.
+# assistant. The model is an optional installer component; without it the button says how to add it.
 set(EDI_APP_VOICE ${EDI_APP_ASSISTANT})
 if(EDI_APP_VOICE)
     include(${PROJECT_SOURCE_DIR}/cmake/EdiWhisper.cmake)
@@ -265,6 +265,7 @@ qt_add_qml_module(edi_app_module
         qml/Components/HomeIntro.qml
         qml/Components/IconLink.qml
         qml/Components/AssistantDownloadLink.qml
+        qml/Components/MissingComponentDialog.qml
         qml/Components/StatusBarButton.qml
         qml/Components/StatusBarFitButton.qml
         qml/Components/StatusBarItem.qml

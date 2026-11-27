@@ -120,6 +120,14 @@ VoiceInput::~VoiceInput() {
 
 bool VoiceInput::available() const { return !model_.isEmpty() && SpeechRecogniser::cpu_supported(); }
 
+QString VoiceInput::unavailableReason() const {
+    if (!installed())
+        return tr("The voice input component is not installed.");
+    if (!SpeechRecogniser::cpu_supported())
+        return tr("This computer's processor cannot run voice input: it needs AVX2.");
+    return {};
+}
+
 void VoiceInput::setLanguage(const QString& language) {
     if (language == language_)
         return;

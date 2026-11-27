@@ -42,9 +42,13 @@ class VoiceInput : public QObject {
     Q_OBJECT
     QML_ELEMENT
     QML_SINGLETON
-    /// The speech model is installed and this processor can run it: otherwise the message box shows no microphone
-    /// button.
+    /// The speech model is installed and this processor can run it: otherwise the microphone button opens a note on
+    /// what is missing (ADR-0107).
     Q_PROPERTY(bool available READ available CONSTANT)
+    /// The voice input component's model is installed, whether or not this processor can run it.
+    Q_PROPERTY(bool installed READ installed CONSTANT)
+    /// Why voice input is unavailable, in plain words; empty when it is available.
+    Q_PROPERTY(QString unavailableReason READ unavailableReason CONSTANT)
     Q_PROPERTY(State state READ state NOTIFY stateChanged)
     /// The item that started the current recording or recognition; null when idle or started without one.
     Q_PROPERTY(QObject* owner READ owner NOTIFY ownerChanged)
@@ -73,6 +77,8 @@ public:
     ~VoiceInput() override;
 
     bool available() const;
+    bool installed() const { return !model_.isEmpty(); }
+    QString unavailableReason() const;
     State state() const { return state_; }
     QObject* owner() const { return owner_; }
     QString message() const { return message_; }

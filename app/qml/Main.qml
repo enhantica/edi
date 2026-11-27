@@ -638,43 +638,15 @@ EaComponents.ApplicationWindow {
             ApplicationInfo.windowAssistantAction(3, undefined, undefined);
         }
     }
-    AppDialog {
+    MissingComponentDialog {
         id: assistantDesktopOnlyDialog
         objectName: "assistant.desktopOnly"
-        parent: Overlay.overlay
         title: qsTr("AI assistant")
-        standardButtons: ApplicationInfo.assistantBuilt ? Dialog.Ok : Dialog.Close
-        enterAccepts: true
-        contentWidth: AppSizes.messagesDialogContentWidth
-        contentHeight: assistantDesktopOnlyColumn.implicitHeight
-
-        Column {
-            id: assistantDesktopOnlyColumn
-            width: assistantDesktopOnlyDialog.contentWidth
-            spacing: AppSizes.unit
-            EaElements.Label {
-                id: assistantDesktopOnlyText
-                objectName: "assistant.desktopOnly.message"
-                width: parent.width
-                wrapMode: Text.Wrap
-                // The web build's note (the owner, 2026-11-04): what the desktop app offers and how it signs in.
-                text: ApplicationInfo.assistantBuilt ? ApplicationInfo.assistantUnavailableReason : qsTr("The AI assistant is available in the desktop app with your ChatGPT account. It signs in through OpenAI's official app server; your plan's usage limits apply.")
-            }
-            IconLink {
-                objectName: "assistant.desktopOnly.updates"
-                visible: ApplicationInfo.assistantBuilt && DesktopUpdates.managed
-                fontIcon: "cog"
-                text: qsTr("Open Updates in Preferences to add the AI assistant")
-                onClicked: {
-                    assistantDesktopOnlyDialog.close();
-                    Preferences.dialogTab = "updates";
-                    Preferences.dialogShown = true;
-                }
-            }
-            AssistantDownloadLink {
-                visible: !ApplicationInfo.assistantBuilt
-            }
-        }
+        // The web build's note (the owner, 2026-11-04): what the desktop app offers and how it signs in.
+        message: ApplicationInfo.assistantBuilt ? ApplicationInfo.assistantUnavailableReason : qsTr("The AI assistant is available in the desktop app with your ChatGPT account. It signs in through OpenAI's official app server; your plan's usage limits apply.")
+        updatesText: qsTr("Open Updates in Preferences to add the AI assistant")
+        updatesShown: ApplicationInfo.assistantBuilt && DesktopUpdates.managed
+        downloadShown: !ApplicationInfo.assistantBuilt
     }
 
     // The assistant's panel, only in a build that carries the assistant (ADR-0023 §6): loaded by file name with its

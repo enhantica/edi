@@ -391,8 +391,9 @@ payload manifests and share the release version. Publication verifies the archiv
 
 At startup, the desktop app uses its existing runtime manifest and executable checks to determine
 assistant availability. When the component is unavailable, Preferences disables AI assistance and
-the toolbar robot opens a message about installing it through Maintenance Tool. Restart the app
-after changing the installed components. The web toolbar continues to describe the desktop app and
+the toolbar robot opens a message about installing it through Maintenance Tool. Without the voice input
+component the message box's microphone opens the same message for it (`MissingComponentDialog`, one design for
+both). Restart the app after changing the installed components. The web toolbar continues to describe the desktop app and
 offer its download page.
 
 The local IFW protocol test adds and removes the optional component without disturbing the

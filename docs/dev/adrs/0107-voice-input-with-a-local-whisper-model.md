@@ -41,7 +41,7 @@ assistant runtime, and shows its choices as rows on the folder page instead of a
    depends on EasyDiffraction. Its row on the folder page comes below the AI assistant rows, with its size; its sorting
    priority is 90, after the assistant's 100. Maintenance Tool's Change components page adds or removes it. The engine
    itself is part of the app on every desktop system, a few megabytes; without the component the app has no model, and
-   with no model it shows no microphone button. At start the app checks that the manifest exists and that the model file
+   the microphone button then opens the note the assistant's button opens without its component (§8). At start the app checks that the manifest exists and that the model file
    has the stated size; packaging checks the staged model against the pin in `tools/deps/voice/models.json` and writes
    the manifest from that pin, and the installer's payload manifest checks it again. A change takes effect after a
    restart, as for the assistant.
@@ -84,7 +84,10 @@ assistant runtime, and shows its choices as rows on the folder page instead of a
    recognising the button shows it is busy and the box shows "Recognising…"; Escape stops it and another press does
    not, so a press just after the silence stop keeps the recording. When the box holds text, the state is written
    beside the meter. A recording in which no speech was heard is not recognised, since Whisper makes up text from
-   silence; the box says "Nothing was heard."
+   silence; the box says "Nothing was heard." The button is always shown (the owner, 2026-11-27). Without the
+   component, or on a processor without AVX2, a press opens the same note as the assistant's button without the
+   assistant (ADR-0071): what is missing and, in an installation Maintenance Tool manages, a link to Updates in
+   Preferences to add voice input.
 
 ## Speed
 
