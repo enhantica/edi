@@ -18,7 +18,6 @@ import itertools
 import json
 import os
 import re
-import select
 import shutil
 import sqlite3
 import subprocess
@@ -203,11 +202,15 @@ class _ProbeWorker:
         try:  # noqa: PLW0717
             process.stdin.write(json.dumps(str(path)).encode() + b'\n')
             process.stdin.flush()
-            ready, _, _ = select.select([process.stdout], [], [], self.seconds)
-            if not ready:
+            # select() takes only sockets on Windows, so the reply is read on a thread.
+            stdout, reply = process.stdout, []
+            reader = threading.Thread(target=lambda: reply.append(stdout.readline()), daemon=True)
+            reader.start()
+            reader.join(self.seconds)
+            if reader.is_alive():
                 self.close()
                 return 'timed out', f'import exceeded {self.seconds} seconds'
-            result = process.stdout.readline()
+            result = reply[0] if reply else b''
             if result:
                 status, detail = json.loads(result)
                 return status, detail
