@@ -892,6 +892,18 @@ detail::FullProfSiteGeometry detail::fullprof_site_geometry(const Structure& str
         return {match.letter, match.fract, match.rotation, general, group.wyckoff.at(match.letter).multiplicity};
     }
 
+    if (letter_source(structure) == LetterSource::Magnetic) {
+        // Type IV: crysta's admitted site (ADR-0137 B2), the multiplicity dispatcher's row: its letter, the projected
+        // point, and the family order (stabiliser times multiplicity) as the general multiplicity.
+        const crysta::Structure engine = to_crysta_structure(structure);
+        for (const crysta::AtomSite& candidate : engine.atom_sites) {
+            if (candidate.site_id.value() != site.id.value()) continue;
+            const crysta::AdmittedSite admitted = crysta::admitted_site(engine, candidate);
+            const int multiplicity = static_cast<int>(admitted.multiplicity);
+            return {candidate.wyckoff_letter.get(), admitted.coordinates, {1, 0, 0, 0, 1, 0, 0, 0, 1},
+                    static_cast<int>(admitted.stabiliser.size()) * multiplicity, multiplicity};
+        }
+    }
     const std::array<double, 3> fract{site.fract_x.value.get(), site.fract_y.value.get(), site.fract_z.value.get()};
     const auto operators = crysta::magnetic_operations(to_crysta_structure(structure));
     std::vector<std::array<double, 3>> images;
@@ -988,6 +1000,17 @@ AtomSite new_atom_site(const Structure& structure, const std::function<double()>
         }
     } catch (const std::exception&) {
         operations.clear();
+    }
+    if (letter_source(structure) == LetterSource::Magnetic) {
+        // Type IV: the family's own operations decide a special position (crysta ADR-0137 B2); its letter is derived
+        // when the site is completed, never chosen here.
+        operations.clear();
+        for (const crysta::MagneticOperation& op : crysta::magnetic_operations(to_crysta_structure(structure))) {
+            crysta::SymmetryOperation spatial;
+            spatial.rotation = op.rotation;
+            spatial.translation = op.translation;
+            operations.push_back(spatial);
+        }
     }
     const auto special = [&operations](const std::array<double, 3>& x) {
         for (const crysta::SymmetryOperation& operation : operations) {
@@ -1300,7 +1323,29 @@ void set_magnetic_symmetry(Structure& s, std::vector<std::pair<std::string, std:
             return false;
         }
     };
-    const bool keeps_names = group.has_value() || is_table(s.magnetic->group);
+    const auto rows = [](const std::vector<std::pair<std::string, std::string>>& named) {
+        std::vector<std::string> out;
+        out.reserve(named.size());
+        for (const auto& row : named) out.push_back(row.second);
+        return out;
+    };
+    // A type IV group keeps its names while crysta verifies the identity: another coset decomposition or order of the
+    // same signed group is the same group (crysta ADR-0137 B4). Types I-III keep today's row comparison.
+    const auto verifies = [&](const crysta::MagneticGroupName& named) {
+        if (named.number_bns.empty()) return false;
+        std::string transform = "a,b,c;0,0,0";
+        for (const auto& row : s.magnetic->transforms) {
+            if (row.second.source == "BNS") transform = row.second.pp_abc;
+        }
+        try {
+            return crysta::magnetic_group_verifies(rows(operations), rows(centerings),
+                                                   crysta::magnetic_space_group(named.number_bns), transform);
+        } catch (const std::invalid_argument&) {
+            return false;
+        }
+    };
+    const bool type_iv = crysta::holds_anti_translation(rows(operations), rows(centerings));
+    const bool keeps_names = group.has_value() || (type_iv ? verifies(s.magnetic->group) : is_table(s.magnetic->group));
     const auto replace = [&](MagneticDescription& magnetic) {
         magnetic.operations = operations;
         magnetic.centerings = centerings;
@@ -2002,8 +2047,17 @@ void set_magnetic_setting(Structure& s, const std::string& transform) {
     const crysta::MagneticSpaceGroupEntry& entry = crysta::magnetic_space_group(s.magnetic->group.number_bns);
     Structure trial = s;
     trial.magnetic.modify([&transform](MagneticDescription& magnetic) { set_bns_transform(magnetic, transform); });
-    set_magnetic_symmetry(trial, magnetic_rows_in_setting(entry.operations, *parsed),
-                          magnetic_rows_in_setting(entry.centerings, *parsed), trial.magnetic->group);
+    if (entry.magnetic_type == 4) {
+        // A type IV group in a setting is crysta's signed group carried by the transform, the one B4 verifies against.
+        std::vector<std::pair<std::string, std::string>> operations;
+        for (const std::string& op : crysta::magnetic_group_in_setting(entry, transform)) {
+            operations.emplace_back(std::to_string(operations.size() + 1), op);
+        }
+        set_magnetic_symmetry(trial, std::move(operations), {{"1", "x,y,z,+1"}}, trial.magnetic->group);
+    } else {
+        set_magnetic_symmetry(trial, magnetic_rows_in_setting(entry.operations, *parsed),
+                              magnetic_rows_in_setting(entry.centerings, *parsed), trial.magnetic->group);
+    }
     s = trial;  // Structure assigns by copy
 }
 
