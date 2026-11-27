@@ -74,11 +74,12 @@ each.
    (cli), `✉️` (can reply) and `⚠️` (the placeholders) end with the variation selector U+FE0F, the others have none.
    `🪟 app` and `🌍 all` are short for several interfaces: the release plan replaces them with those, and overlapping
    labels are accepted and name each one once.
-4. **In progress (amended 2026-11-27).** When a development task starts, every edi issue the task owns moves to the In
-   progress column of the edi board (https://github.com/orgs/enhantica/projects/1). When the task's pull request merges,
-   each issue is checked against the merged code: a done issue moves to Merged, a partly done one, or one another task now
-   owns, goes back to Planned or to that task's column, never to Merged. An issue a task stops or drops goes back to
-   Planned. No label marks the work; `🚧 in progress` is no longer set.
+4. **In progress (amended 2026-11-27).** The edi project board (https://github.com/orgs/enhantica/projects/1) shows
+   which task owns an issue. When a development task starts, a maintainer moves every edi issue the task owns to the
+   board's In progress column. When the task's pull request merges, the maintainer checks each issue against the merged
+   code and moves it: a done issue to Merged; a partly done one, or one another task now owns, back to Planned or to that
+   task's column, never to Merged. An issue a task stops or drops goes back to Planned. No label marks the work;
+   `🚧 in progress` is no longer set.
 5. **The nightly run.** There is at most one open issue for a red nightly run on `main`, "Nightly CI is red on main", with
    `🌙 nightly`, a scope and a priority. A maintainer keeps it by hand: it names the failures that are real, is updated
    instead of filing another, and is closed when a nightly run on `main` passes. Nothing files, updates or closes it
