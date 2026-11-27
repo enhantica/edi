@@ -35,7 +35,8 @@ if(EDI_APP_ASSISTANT)
         qml/Components/AssistantQuestion.qml
         qml/Components/AssistantTrial.qml
         qml/Components/AssistantSkillsDialog.qml
-        qml/Components/AssistantConnectionDialog.qml)
+        qml/Components/AssistantConnectionDialog.qml
+        qml/Components/AssistantAccountList.qml)
     set(EDI_APP_ASSISTANT_RESOURCES resources/logo/AssistantWorking.svg resources/logo/AssistantSpinner.svg)
     set(EDI_APP_ASSISTANT_LICENCES ${PROJECT_SOURCE_DIR}/third_party/jkqtmathtext/LICENSE
                                    ${PROJECT_SOURCE_DIR}/third_party/jkqtmathtext/lib/jkqtmathtext/resources/xits/OFL.txt)

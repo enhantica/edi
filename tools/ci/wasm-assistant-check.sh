@@ -18,7 +18,7 @@ markers=(codex_agent CodexAgent AssistantProvider AssistantAccounts AssistantVie
          assistant_skill_import assistant_guard_executable AssistantProcess AssistantJsonRpc ClaudeSession assistant_tool_server
          AssistantToolServer AssistantRuntimeSession AssistantRuntimeTranslator CopilotSession
          AssistantPanel.qml AssistantWorking.qml AssistantMessage.qml AssistantComposer.qml AssistantPlan.qml
-         AssistantQuestion.qml AssistantTrial.qml AssistantSkillsDialog.qml AssistantConnectionDialog.qml
+         AssistantQuestion.qml AssistantTrial.qml AssistantSkillsDialog.qml AssistantConnectionDialog.qml AssistantAccountList.qml
          /edi/assistant/ AssistantWorking.svg AssistantSpinner.svg)
 hits=0
 for file in "$wasm" "$dir"/edi_app.js "$dir"/*.data; do
