@@ -853,6 +853,11 @@ jobs:
         id: apphost
         if: ${{ runner.os != 'Windows' && (steps.inputs.outputs.run == 'true') }}
         run: pixi run -e app app-build
+      # The voice input tests read the tiny Whisper model from build/voice-models; it is downloaded and checked here,
+      # never inside a test (ADR-0107).
+      - name: Fetch the tiny speech model for the voice input tests
+        if: ${{ runner.os != 'Windows' && (steps.inputs.outputs.run == 'true') }}
+        run: pixi run --skip-deps voice-models --test
       - name: Compiler cache statistics
         if: ${{ runner.os != 'Windows' && (steps.inputs.outputs.run == 'true') }}
         run: pixi run -e app ccache --show-stats
