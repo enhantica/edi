@@ -27,39 +27,38 @@ INTERFACES = json.loads(
     )
 )
 
-# Every label of ADR-0101, as GitHub stores it, with its group and the colour that marks the group.
-# A name is compared whole, so some emoji keep their variation selector (U+FE0F).
+# Every label of ADR-0101, as GitHub stores it, with its group and its colour: one hue per group,
+# darker the more the label matters. A name is compared whole, so some emoji keep their variation
+# selector (U+FE0F).
 LABELS = {
-    '🐞 bug': ('scope', 'd73a4a'),
-    '✨ enhancement': ('scope', 'd73a4a'),
-    '📘 documentation': ('scope', 'd73a4a'),
-    '🧹 maintenance': ('scope', 'd73a4a'),
-    '💥 significant': ('scope', 'd73a4a'),
-    '⚠️ scope needed': ('scope', 'd73a4a'),
-    '🔥 highest': ('priority', 'fbca04'),
-    '🔴 high': ('priority', 'fbca04'),
-    '🟠 medium': ('priority', 'fbca04'),
-    '🟡 low': ('priority', 'fbca04'),
-    '⚪ lowest': ('priority', 'fbca04'),
-    '⚠️ priority needed': ('priority', 'fbca04'),
-    '🌍 all': ('interface', '0079b7'),
-    '🪟 app': ('interface', '0079b7'),
-    '🖥️ desktop': ('interface', '0079b7'),
-    '🌐 web': ('interface', '0079b7'),
-    '🐍 py': ('interface', '0079b7'),
-    '⌨️ cli': ('interface', '0079b7'),
-    '📦 cli-py': ('interface', '0079b7'),
-    '🙋 user': ('source', 'c5def5'),
-    '🔧 maintainer': ('source', 'c5def5'),
-    '🤖 agent': ('source', 'c5def5'),
-    '🌙 nightly': ('source', 'c5def5'),
-    '👯 duplicate': ('maintainer', '0e8a16'),
-    '🚫 invalid': ('maintainer', '0e8a16'),
-    '❓ question': ('maintainer', '0e8a16'),
-    '🙅 wontfix': ('maintainer', '0e8a16'),
-    '🤔 needs owner decision': ('status', '9333EA'),
-    '🚧 in progress': ('status', '9333EA'),
-    '🚀 release': ('bot', '5319e7'),
+    '🐞 bug': ('scope', 'C81E2B'),
+    '✨ enhancement': ('scope', 'E8747C'),
+    '📘 documentation': ('scope', 'F2A3A8'),
+    '🧹 maintenance': ('scope', 'F8CDD0'),
+    '💥 significant': ('scope', 'D9444F'),
+    '⚠️ scope needed': ('scope', 'FBE3E5'),
+    '🔴 high': ('priority', 'F5B800'),
+    '🟠 medium': ('priority', 'FAD24D'),
+    '🟡 low': ('priority', 'FDEBA8'),
+    '⚠️ priority needed': ('priority', 'FFF7DC'),
+    '🌍 all': ('interface', '0B5CAD'),
+    '🪟 app': ('interface', '1667C0'),
+    '🖥️ desktop': ('interface', '2F7DD1'),
+    '🌐 web': ('interface', '5E9FE0'),
+    '🐍 py': ('interface', 'B5D8F7'),
+    '⌨️ cli': ('interface', '8DBCEC'),
+    '📦 cli-py': ('interface', 'A3C9F0'),
+    '🙋 user': ('source', '0F766E'),
+    '🔧 maintainer': ('source', '5BB5AB'),
+    '🤖 agent': ('source', 'BFE5E0'),
+    '🌙 nightly': ('source', 'DDD6FE'),
+    '👯 duplicate': ('maintainer', '6E7781'),
+    '🚫 invalid': ('maintainer', '8C959F'),
+    '❓ question': ('maintainer', 'AFB8C1'),
+    '🙅 wontfix': ('maintainer', 'D0D7DE'),
+    '🤔 needs owner decision': ('status', 'C4B5FD'),
+    '🚧 in progress': ('status', '7C3AED'),
+    '🚀 release': ('bot', 'A78BFA'),
 }
 
 # The section of the notes a scope stands for, and the interfaces an interface label stands for.
@@ -88,7 +87,8 @@ BOT_LABELS = frozenset(name for name, (group, _) in LABELS.items() if group == '
 # The names the labels had before. GitHub renames a label on every pull request that has it, merged
 # ones too, so an old name comes only from before the rename: the labels themselves, or a re-run of
 # a check, which repeats the labels it started with. GitHub allows re-runs for 30 days, so this
-# table can go 30 days after the labels are renamed.
+# table can go 30 days after the labels are renamed. The highest and lowest priorities were deleted
+# since, so their old names read as high and low.
 OLD_NAMES = {
     '[scope] bug': '🐞 bug',
     '[scope] enhancement': '✨ enhancement',
@@ -96,11 +96,11 @@ OLD_NAMES = {
     '[scope] maintenance': '🧹 maintenance',
     '[scope] significant': '💥 significant',
     '[scope] ⚠️ label needed': '⚠️ scope needed',
-    '[priority] highest': '🔥 highest',
+    '[priority] highest': '🔴 high',
     '[priority] high': '🔴 high',
     '[priority] medium': '🟠 medium',
     '[priority] low': '🟡 low',
-    '[priority] lowest': '⚪ lowest',
+    '[priority] lowest': '🟡 low',
     '[priority] ⚠️ label needed': '⚠️ priority needed',
     '[interface] desktop': '🖥️ desktop',
     '[interface] web': '🌐 web',
