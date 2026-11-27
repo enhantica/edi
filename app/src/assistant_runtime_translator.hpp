@@ -37,6 +37,7 @@ public:
     QString runtimeExecutable() const override { return launch_.executable; }
     QJsonObject threadPolicy() const override;
     QString accountKind() const override { return assistant_provider_key(provider_); }
+    void setKnownThreads(const QJsonArray& threads) override { known_threads_ = threads; }
     OutputOwnerState outputOwnerState() const noexcept override;
     bool start(const QString& executable, const QString& workspace) override;
     QString request(const QString& method, const QJsonObject& params,
@@ -158,6 +159,7 @@ private:
 
     const AssistantProviderId provider_;
     const std::unique_ptr<AssistantRuntimeSession> session_;
+    QJsonArray known_threads_;  // edi's records, answered for thread/list
     const AssistantRuntimeLaunch template_;
     AssistantRuntimeLaunch launch_;
     const std::shared_ptr<const void> release_owner_;

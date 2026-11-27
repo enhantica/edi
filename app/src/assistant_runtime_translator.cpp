@@ -416,8 +416,14 @@ void AssistantRuntimeTranslator::handle(const QString& id, const QString& method
         steerTurn(id, params);
     } else if (method == QLatin1StringView("turn/interrupt")) {
         interruptTurn(id, params);
+    } else if (method == QLatin1StringView("thread/list")) {
+        // These runtimes keep no list for edi; edi's own records of this account's conversations are the list.
+        respond(id, method, {{"data", known_threads_}, {"nextCursor", QJsonValue::Null}});
+    } else if (method == QLatin1StringView("thread/archive") || method == QLatin1StringView("thread/name/set")) {
+        // edi's records carry the archive mark and the name; the runtime has nothing to change.
+        respond(id, method, {});
     } else {
-        // thread/list, thread/name/set, thread/archive and anything else the runtime has no equivalent for.
+        // Anything else the runtime has no equivalent for.
         refuse(id, method, kUnsupported, tr("This assistant does not support %1.").arg(method));
     }
 }

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #pragma once
 #include <functional>
+#include <QJsonArray>
 #include <QJsonObject>
 #include <QJsonValue>
 #include <QObject>
@@ -47,6 +48,9 @@ public:
     virtual QString runtimePolicyPatch() const { return {}; }
     /// The account kind the runtime's account readback names for a signed-in account: chatgpt, claude or copilot.
     virtual QString accountKind() const { return QStringLiteral("chatgpt"); }
+    /// edi's own records of this account's conversations, for a runtime that keeps no list of its own (Claude, Copilot):
+    /// each {id, name, preview, updatedAt, originator: "edi"}. Codex lists its threads itself and ignores this.
+    virtual void setKnownThreads(const QJsonArray& threads) { Q_UNUSED(threads); }
     /// The thread settings a thread's readback must show, field by field. The view model compares only these.
     virtual QJsonObject threadPolicy() const = 0;
 

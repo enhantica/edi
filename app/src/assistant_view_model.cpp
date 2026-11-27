@@ -2301,6 +2301,7 @@ struct AssistantViewModel::State {
                 {"model",model},{"effort",effort},{"draft",session_draft}};
             if(!active_provider_account.id.isEmpty())record["account"]=active_provider_account.id;
             if(identity_unidentified)record["unidentified"]=true;
+            record["updatedAt"]=static_cast<double>(QDateTime::currentSecsSinceEpoch());
             const QPointer<Session> session(qobject_cast<Session*>(owner.parent()));
             if(session && session->assistant()==&owner && session->project()==project && project && !session->needsSaveAs()) {
                 const auto location=session->projectLocation();const auto canonical=QFileInfo(location).canonicalFilePath();
@@ -2912,6 +2913,21 @@ struct AssistantViewModel::State {
         Object params{{"sortKey","updated_at"},{"sortDirection","desc"},{"sourceKinds",session_source_kinds()},
             {"modelProviders",QJsonArray{"openai"}},{"archived",false}};
         if(!cursor.isEmpty())params["cursor"]=cursor;
+        if(agent && agent->providerId()!=AssistantProviderId::ChatGpt) {
+            // Claude and Copilot keep no list for edi: the active account's own records are the list (ADR-0108 §8).
+            QJsonArray known;
+            try {
+                const auto records=session_associations().value("threads").toObject();
+                for(auto it=records.begin();it!=records.end();++it) {
+                    const auto record=it.value().toObject();
+                    if(record.value("archived").toBool() || record.value("account").toString()!=active_provider_account.id ||
+                        !record.value("updatedAt").isDouble())continue;
+                    known.append(Object{{"id",it.key()},{"originator","edi"},{"updatedAt",record.value("updatedAt")},
+                        {"name",record.value("name")},{"preview",record.value("title").toString()}});
+                }
+            } catch(...) {}
+            agent->setKnownThreads(known);
+        }
         (void)session_request("thread/list",params,"list");
     }
     bool settle_archived_session(const QString& id) {
