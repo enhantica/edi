@@ -23,12 +23,15 @@ AppDialog {
     property var marked: []
 
     property var rows: []
-    // The magnetic popup opened from here added `count` structures (the chart says so).
-    signal added(int count)
+    // The marked peaks themselves ({x, d, ...}), for each row's identities.
+    property var markedPeaks: []
+    // The chosen k; the chart opens the analysis with it.
+    signal chosen(string k)
     property bool searching: true
     property string refusal: ""
 
     title: qsTr("Possible propagation vectors")
+    standardButtons: Dialog.Cancel
     width: parent ? Math.min(Math.round(parent.width * 0.6), 760) : 700
     height: parent ? Math.min(Math.round(parent.height * 0.6), 520) : 480
     onClosed: destroy()
@@ -42,7 +45,9 @@ AppDialog {
             // Buildable only; special points first, each group in the engine's ranking; at most ten.
             const buildable = found.filter(r => r.verdict === "buildable");
             const special = buildable.filter(r => r.stage === 1);
-            const other = buildable.filter(r => r.stage !== 1);
+            // Another k is offered only when it indexes more marked peaks than every special point does.
+            const best = special.reduce((most, r) => Math.max(most, r.explained), 0);
+            const other = buildable.filter(r => r.stage !== 1 && r.explained > best);
             popup.rows = special.concat(other).slice(0, 10);
             if (popup.rows.length === 0)
                 popup.refusal = qsTr("No k with a magnetic cell of at most 24 parent cells indexes the marked peaks.");
@@ -53,20 +58,14 @@ AppDialog {
         }
     }
 
-    Component {
-        id: magneticPopupComponent
-        MagneticPopup {}
-    }
-
     ColumnLayout {
-        width: popup.availableWidth
-        height: popup.availableHeight
+        anchors.fill: parent
         spacing: EaStyle.Sizes.fontPixelSize * 0.5
 
         EaElements.Label {
             Layout.fillWidth: true
             wrapMode: Text.Wrap
-            text: popup.searching ? qsTr("Searching %n marked peak(s)…", "", popup.marked.length) : qsTr("%n marked peak(s). Choose a k to analyse its magnetic symmetry.", "", popup.marked.length)
+            text: popup.searching ? qsTr("Searching…") : qsTr("Choose a propagation vector to analyse the magnetic symmetry it allows.")
         }
         EaElements.Label {
             Layout.fillWidth: true
@@ -89,7 +88,7 @@ AppDialog {
                 required property int index
                 objectName: `chart.kVector.${index}`
                 width: list.width
-                height: EaStyle.Sizes.fontPixelSize * 2.6
+                height: EaStyle.Sizes.fontPixelSize * 3.8
                 color: hover.hovered ? EaStyle.Colors.themeRowHovered : "transparent"
                 Column {
                     anchors.verticalCenter: parent.verticalCenter
@@ -100,49 +99,40 @@ AppDialog {
                     }
                     EaElements.Label {
                         font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.85
+                        text: qsTr("Indexes %1 of %2 marked peaks · worst misfit %3 · magnetic cell: %4").arg(row.modelData.explained).arg(popup.marked.length).arg(row.modelData.misfit.toFixed(2)).arg(row.modelData.parentCells === 1 ? qsTr("the crystal's") : qsTr("%1 parent cells").arg(row.modelData.parentCells)) + (row.modelData.equallyGood ? qsTr(" · equally good") : "")
+                    }
+                    // Each marked peak, where it is and how this k indexes it.
+                    EaElements.Label {
+                        font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.85
+                        color: EaStyle.Colors.themeForegroundMinor
                         text: {
-                            const roles = row.modelData.roles;
-                            const forbidden = roles.filter(r => r === "forbidden").length;
-                            const satellite = roles.filter(r => r === "satellite").length;
-                            const allowed = roles.filter(r => r === "allowed").length;
-                            const parts = [];
-                            if (forbidden > 0)
-                                parts.push(qsTr("%n at forbidden reflections", "", forbidden));
-                            if (satellite > 0)
-                                parts.push(qsTr("%n as satellites", "", satellite));
-                            if (allowed > 0)
-                                parts.push(qsTr("%n on allowed reflections", "", allowed));
-                            return qsTr("indexes %1 of %2 marked peaks (%3) · worst misfit %4 · magnetic cell %5").arg(row.modelData.explained).arg(popup.marked.length).arg(parts.join(", ")).arg(row.modelData.parentCells === 1 ? qsTr("the crystal's") : qsTr("%1 parent cells").arg(row.modelData.parentCells)) + (row.modelData.equallyGood ? qsTr(" · equally good") : "");
+                            const names = {
+                                satellite: qsTr("satellite"),
+                                forbidden: qsTr("forbidden reflection"),
+                                allowed: qsTr("allowed reflection"),
+                                "": qsTr("not indexed")
+                            };
+                            return popup.markedPeaks.map((p, i) => `${p.x.toFixed(2)}: ${names[row.modelData.roles[i] ?? ""] ?? row.modelData.roles[i]}`).join(" · ");
                         }
                     }
                 }
-                HoverHandler {
+                MouseArea {
                     id: hover
-                }
-                TapHandler {
-                    onTapped: {
-                        const next = magneticPopupComponent.createObject(Overlay.overlay, {
-                            project: popup.project,
-                            structureIndex: popup.structureIndex,
-                            structure: popup.project.structureAt(popup.structureIndex),
-                            initialK: row.modelData.k,
-                            selectAfterAdd: false
-                        }) as MagneticPopup;
-                        next.added.connect(count => popup.added(count));
+                    readonly property bool hovered: containsMouse
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: {
+                        // The data, links and marks the search ran on must still hold (review 12, F19).
+                        if (!popup.project.propagationSearchCurrent(popup.experimentIndex)) {
+                            popup.refusal = qsTr("The data or the structures changed; mark the peaks again.");
+                            return;
+                        }
+                        const k = row.modelData.k;
                         popup.close();
-                        next.open();
+                        popup.chosen(k);
                     }
                 }
-            }
-        }
-        RowLayout {
-            Item {
-                Layout.fillWidth: true
-            }
-            EaElements.Button {
-                objectName: "chart.kVectorPopup.cancel"
-                text: qsTr("Cancel")
-                onClicked: popup.close()
             }
         }
     }

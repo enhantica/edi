@@ -32,6 +32,7 @@ Item {
     property string peakNote: ""
     property string addedNote: ""
     readonly property Component kVector: kVectorComponent
+    readonly property Component analysis: analysisComponent
 
     function setPeakMode(on) {
         peakNote = "";
@@ -44,22 +45,52 @@ Item {
         const project = chart.axisProject;
         const experiment = project.currentExperimentIndex;
         peakParent = project.magneticParentOf(experiment);
+        if (peakParent === -2) {
+            peakNote = qsTr("Several crystal structures are enabled here; disable all but the one to search k for.");
+            return;
+        }
         if (peakParent < 0) {
             peakNote = qsTr("Link and enable the crystal structure to search k for.");
             return;
         }
         const peaks = project.magneticMarkCandidates(peakParent, experiment);
         if (peaks.length === 0) {
-            peakNote = project.lastError !== "" ? project.lastError : qsTr("No peak at a reflection the crystal's space group forbids; click a peak to mark it.");
+            peakNote = project.lastError !== "" ? project.lastError : qsTr("No peak found in the measured pattern.");
             return;
         }
         peakCandidates = peaks;
-        // Pre-marked: the peaks at no reflection the crystal's space group allows; the suggestions stay unmarked.
+        // Pre-marked: the peaks at no reflection the crystal's space group allows; the others stay unmarked.
         const marked = [];
         for (let i = 0; i < peaks.length; ++i)
             if (!peaks[i].suggestion)
                 marked.push(i);
         peakMarks = marked;
+        if (marked.length === 0)
+            peakNote = qsTr("No peak at a forbidden reflection; click peaks to mark them.");
+    }
+    // Find k: the ranked vectors for the marked peaks; a chosen one opens the analysis here, over this page, so its
+    // Add notification comes back to this chart.
+    function openKVectors() {
+        const popup = chart.kVector.createObject(Overlay.overlay, {
+            project: chart.axisProject,
+            structureIndex: chart.peakParent,
+            experimentIndex: chart.axisProject.currentExperimentIndex,
+            marked: chart.peakMarks,
+            markedPeaks: chart.peakMarks.map(i => chart.peakCandidates[i])
+        }) as KVectorPopup;
+        popup.chosen.connect(k => chart.openAnalysis(k));
+        popup.open();
+    }
+    function openAnalysis(k) {
+        const analysis = chart.analysis.createObject(Overlay.overlay, {
+            project: chart.axisProject,
+            structureIndex: chart.peakParent,
+            structure: chart.axisProject.structureAt(chart.peakParent),
+            initialK: k,
+            selectAfterAdd: false
+        }) as MagneticPopup;
+        analysis.added.connect(count => chart.addedNote = count === 1 ? qsTr("1 magnetic structure added") : qsTr("%1 magnetic structures added").arg(count));
+        analysis.open();
     }
     function togglePeakAt(x) {
         let best = -1;
@@ -73,6 +104,7 @@ Item {
             return;
         }
         peakNote = "";
+        addedNote = "";
         const next = peakMarks.slice();
         const at = next.indexOf(best);
         if (at >= 0)
@@ -593,6 +625,65 @@ Item {
             findKAvailable: chart.findKPage && !chart.report && !chart.singleCrystal && chart.axisProject !== null
             findKActive: chart.peakMode
             onFindKToggled: chart.setPeakMode(!chart.peakMode)
+        }
+        // Find k's strip, in the toolbar row while peaks are marked: the count, Find k and Clear, sized as the
+        // toolbar's own controls (owner, 2026-11-27).
+        Row {
+            objectName: "chart.findK.strip"
+            visible: chart.peakMode
+            spacing: AppSizes.inputSpacing
+            EaElements.Label {
+                anchors.verticalCenter: parent.verticalCenter
+                color: chart.peakNote !== "" ? EaStyle.Colors.red : EaStyle.Colors.themeForeground
+                text: chart.addedNote !== "" ? chart.addedNote : chart.peakNote !== "" ? chart.peakNote : chart.peakMarks.length === 1 ? qsTr("1 peak marked") : qsTr("%1 peaks marked").arg(chart.peakMarks.length)
+            }
+            StripButton {
+                objectName: "chart.findK"
+                visible: chart.addedNote === ""
+                enabled: chart.peakMarks.length > 0
+                text: qsTr("Find k")
+                onClicked: chart.openKVectors()
+            }
+            StripButton {
+                objectName: "chart.findK.clear"
+                visible: chart.addedNote === ""
+                enabled: chart.peakMarks.length > 0
+                text: qsTr("Clear")
+                onClicked: chart.peakMarks = []
+            }
+            StripButton {
+                objectName: "chart.findK.openStructure"
+                visible: chart.addedNote !== ""
+                text: qsTr("Open in Structure page")
+                onClicked: {
+                    chart.addedNote = "";
+                    EaGlobals.Vars.appBarCurrentIndex = 2;
+                }
+            }
+        }
+    }
+
+    // A text button as the chart toolbar draws its buttons: its height, border and colours.
+    component StripButton: Rectangle {
+        id: strip
+        property string text: ""
+        signal clicked
+        width: stripLabel.implicitWidth + chart.em
+        height: AppSizes.toolbarControlSize
+        color: EaStyle.Colors.contentBackground
+        border.color: enabled ? (stripMouse.containsMouse ? EaStyle.Colors.themeAccent : EaStyle.Colors.chartAxis) : EaStyle.Colors.themeBackgroundDisabled
+        border.width: EaStyle.Sizes.borderThickness
+        EaElements.Label {
+            id: stripLabel
+            anchors.centerIn: parent
+            text: strip.text
+            color: strip.enabled ? EaStyle.Colors.themeForeground : EaStyle.Colors.themeForegroundDisabled
+        }
+        MouseArea {
+            id: stripMouse
+            anchors.fill: parent
+            hoverEnabled: true
+            onClicked: strip.clicked()
         }
     }
 
@@ -1207,19 +1298,31 @@ Item {
 
         Repeater {
             model: peakLayer.native_ ? chart.peakCandidates : []
-            delegate: Rectangle {
+            delegate: Item {
                 id: mark
                 required property var modelData
                 required property int index
                 readonly property bool marked: chart.peakMarks.indexOf(index) >= 0
                 objectName: `chart.peak.${index}`
-                x: peakLayer.px(modelData.x) - width / 2
-                y: 0
-                width: marked ? 3 : 1
-                height: peakLayer.height
-                visible: x >= -width && x <= peakLayer.width
-                color: marked ? EaStyle.Colors.themeAccent : EaStyle.Colors.themeForegroundDisabled
-                opacity: marked ? 0.9 : 0.5
+                x: peakLayer.px(modelData.x)
+                visible: x >= 0 && x <= peakLayer.width
+                // A marked peak: a short tick at the top of the plot and a faint line through it; a candidate not
+                // marked: the tick alone, grey.
+                Rectangle {
+                    x: -width / 2
+                    width: 1
+                    height: peakLayer.height
+                    visible: mark.marked
+                    color: EaStyle.Colors.themeAccent
+                    opacity: 0.35
+                }
+                Rectangle {
+                    x: -width / 2
+                    width: mark.marked ? 4 : 2
+                    height: chart.em * 0.8
+                    radius: 1
+                    color: mark.marked ? EaStyle.Colors.themeAccent : EaStyle.Colors.themeForegroundDisabled
+                }
             }
         }
         MouseArea {
@@ -1227,59 +1330,15 @@ Item {
             enabled: chart.peakMode && peakLayer.native_
             onClicked: mouse => chart.togglePeakAt(controller.xMin + mouse.x / Math.max(1, width) * (controller.xMax - controller.xMin))
         }
-        // The marked count, Find k and Done.
-        Rectangle {
-            x: chart.em * 0.5
-            y: chart.em * 0.5
-            width: peakBar.implicitWidth + chart.em
-            height: peakBar.implicitHeight + chart.em * 0.5
-            color: chart.colors.mainContentBackgroundHalfTransparent
-            border.color: chart.colors.chartGridLine
-            Row {
-                id: peakBar
-                anchors.centerIn: parent
-                spacing: chart.em * 0.5
-                EaElements.Label {
-                    anchors.verticalCenter: parent.verticalCenter
-                    text: !peakLayer.native_ ? qsTr("Show the native x axis to mark peaks") : chart.addedNote !== "" ? chart.addedNote : chart.peakNote !== "" ? chart.peakNote : qsTr("%n peak(s) marked", "", chart.peakMarks.length)
-                }
-                EaElements.Button {
-                    objectName: "chart.findK"
-                    text: qsTr("Find k")
-                    enabled: chart.peakMarks.length > 0
-                    onClicked: {
-                        const popup = chart.kVector.createObject(Overlay.overlay, {
-                            project: chart.axisProject,
-                            structureIndex: chart.peakParent,
-                            experimentIndex: chart.axisProject.currentExperimentIndex,
-                            marked: chart.peakMarks
-                        }) as KVectorPopup;
-                        popup.added.connect(count => chart.addedNote = qsTr("%n magnetic structure(s) added", "", count));
-                        popup.open();
-                    }
-                }
-                EaElements.Button {
-                    objectName: "chart.findK.clear"
-                    text: qsTr("Clear")
-                    enabled: chart.peakMarks.length > 0
-                    onClicked: chart.peakMarks = []
-                }
-                EaElements.Button {
-                    objectName: "chart.findK.openStructure"
-                    visible: chart.addedNote !== ""
-                    text: qsTr("Open in Structure page")
-                    onClicked: {
-                        chart.addedNote = "";
-                        EaGlobals.Vars.appBarCurrentIndex = 2;
-                    }
-                }
-            }
-        }
     }
 
     Component {
         id: kVectorComponent
         KVectorPopup {}
+    }
+    Component {
+        id: analysisComponent
+        MagneticPopup {}
     }
 
     // (PatternChartController.hoverReadout).
