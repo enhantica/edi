@@ -14961,8 +14961,8 @@ struct AssistantViewModel::State {
                 generic_fail(cause+QStringLiteral(" [account/read: %1]").arg(QString::fromLatin1(reason)));return;
             }
             if (const auto* stage = generic_bootstrap_stage(method)) {
-                generic_fail(QObject::tr("ChatGPT sign-in could not continue while %1 [%2: %3].")
-                    .arg(QString::fromLatin1(stage), method, QString::fromLatin1(reason)));
+                generic_fail(QObject::tr("%4 sign-in could not continue while %1 [%2: %3].")
+                    .arg(QString::fromLatin1(stage), method, QString::fromLatin1(reason), provider_label()));
                 return;
             }
             generic_fail(QObject::tr("The official agent reply is invalid or exceeds its limits."));
@@ -21210,8 +21210,8 @@ void AssistantViewModel::signIn() {
             state_->generic_sign_in(std::move(approval), publication);
         } catch (const std::exception& failure) {
             if (publication.input_current() && receiver && state_->generation == binding)
-                state_->generic_fail(tr("ChatGPT could not connect: %1").arg(state_->bounded_error(QString::fromUtf8(failure.what()))));
-        } catch (...) { if (publication.input_current() && receiver && state_->generation == binding) state_->generic_fail(tr("ChatGPT could not connect, and the cause was not reported. Try Connect ChatGPT again.")); }
+                state_->generic_fail(tr("%1 could not connect: %2").arg(state_->provider_label(),state_->bounded_error(QString::fromUtf8(failure.what()))));
+        } catch (...) { if (publication.input_current() && receiver && state_->generation == binding) state_->generic_fail(tr("%1 could not connect, and the cause was not reported. Try Connect %1 again.").arg(state_->provider_label())); }
         return;
     }
 #endif
