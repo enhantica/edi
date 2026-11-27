@@ -12,9 +12,12 @@
 #include <QSvgRenderer>
 #include <QTemporaryDir>
 #include <QTimer>
+#include <array>
 #include <cmath>
 #include <stdexcept>
+#include <utility>
 
+#include "assistant_providers.hpp"
 #include "build_version.hpp"
 #include "codex_agent.hpp"
 #include "desktop_updates.hpp"
@@ -108,6 +111,25 @@ void start_installer_smoke(QQuickWindow& window, const QString& output) {
                     throw std::runtime_error("Bundled assistant runtime did not start");
                 report.insert("assistant",
                               QString::fromUtf8(process.readAllStandardOutput()).trimmed());
+            }
+            // Claude and GitHub Copilot are components of their own (ADR-0108): each installed
+            // one must start.
+            const std::array<std::pair<QString, edi_app::AssistantProviderId>, 2> providers{{
+                {QStringLiteral("claude"), edi_app::AssistantProviderId::Claude},
+                {QStringLiteral("copilot"), edi_app::AssistantProviderId::Copilot},
+            }};
+            for (const auto& [key, id] : providers) {
+                const bool available = edi_app::assistant_provider_available(id);
+                report.insert(key + QStringLiteral("_available"), available);
+                if (!available) continue;
+                QProcess process;
+                process.start(edi_app::assistant_provider_executable(id),
+                              {QStringLiteral("--version")});
+                if (!process.waitForStarted(5000) || !process.waitForFinished(20000) ||
+                    process.exitStatus() != QProcess::NormalExit || process.exitCode() != 0)
+                    throw std::runtime_error("Bundled " + key.toStdString() +
+                                             " runtime did not start");
+                report.insert(key, QString::fromUtf8(process.readAllStandardOutput()).trimmed());
             }
             const auto image = window.grabWindow();
             if (image.isNull() || !image.save(QDir(output).filePath("window.png")))

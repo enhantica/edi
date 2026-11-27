@@ -1751,9 +1751,18 @@ def exercise_installer(
         smoke_installed_app(app, output, env, home)
         receipt = json.loads((output / 'smoke/result.json').read_text(encoding='utf-8'))
         verify_installed_identity(metadata, receipt)
+        # The app finds exactly the assistant runtimes installed (installer_smoke.cpp).
+        available = {
+            name: receipt.get(key)
+            for name, key in (
+                (ASSISTANT_COMPONENT, 'assistant_available'),
+                (CLAUDE_COMPONENT, 'claude_available'),
+                (COPILOT_COMPONENT, 'copilot_available'),
+            )
+        }
         if (
             not receipt.get('passed')
-            or receipt.get('assistant_available') is not (ASSISTANT_COMPONENT in chosen)
+            or available != {name: name in chosen for name in available}
             or not receipt.get('svg_images')
             or not (output / 'smoke/window.png').is_file()
         ):
