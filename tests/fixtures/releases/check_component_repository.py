@@ -24,7 +24,11 @@ PROMOTE = module(Path('tools/release/promote.py'))
 PAGES = module(Path('tools/ci/pages_update.py'))
 APP = 'org.easydiffraction.app'
 ASSISTANT = 'org.easydiffraction.app.assistant'
+CLAUDE = 'org.easydiffraction.app.claude'
+COPILOT = 'org.easydiffraction.app.copilot'
 MAINTENANCE = 'org.easydiffraction.app.maintenancetool'
+# The assistant components a public repository holds while Claude's distribution is internal.
+ASSISTANTS = (ASSISTANT, COPILOT)
 
 
 def sha1(path):
@@ -54,9 +58,9 @@ def repository(folder, versions):
 @pytest.mark.parametrize(
     ('platform', 'names'),
     [
-        ('macos-arm64', {APP, ASSISTANT, MAINTENANCE}),
-        ('linux-x86_64', {APP, ASSISTANT}),
-        ('windows-x86_64', {APP, ASSISTANT, MAINTENANCE}),
+        ('macos-arm64', {APP, *ASSISTANTS, MAINTENANCE}),
+        ('linux-x86_64', {APP, *ASSISTANTS}),
+        ('windows-x86_64', {APP, *ASSISTANTS, MAINTENANCE}),
     ],
 )
 def test_release_admits_exactly_each_platform_component_set(tmp_path, platform, names):
@@ -65,7 +69,9 @@ def test_release_admits_exactly_each_platform_component_set(tmp_path, platform, 
 
 
 def test_release_refuses_the_maintenance_component_on_linux(tmp_path):
-    folder = repository(tmp_path / 'r', dict.fromkeys([APP, ASSISTANT, MAINTENANCE], '2026.11.3'))
+    folder = repository(
+        tmp_path / 'r', dict.fromkeys([APP, *ASSISTANTS, MAINTENANCE], '2026.11.3')
+    )
     with pytest.raises(ValueError, match='does not match'):
         PROMOTE.validate_repository(
             folder, '2026.11.3', expected=PROMOTE.component_names('linux-x86_64')
@@ -74,7 +80,7 @@ def test_release_refuses_the_maintenance_component_on_linux(tmp_path):
 
 @pytest.mark.parametrize('platform', ['macos-arm64', 'windows-x86_64'])
 def test_release_refuses_a_platform_without_its_maintenance_component(tmp_path, platform):
-    folder = repository(tmp_path / 'r', dict.fromkeys([APP, ASSISTANT], '2026.11.3'))
+    folder = repository(tmp_path / 'r', dict.fromkeys([APP, *ASSISTANTS], '2026.11.3'))
     with pytest.raises(ValueError, match='does not match'):
         PROMOTE.validate_repository(
             folder, '2026.11.3', expected=PROMOTE.component_names(platform)
@@ -82,7 +88,12 @@ def test_release_refuses_a_platform_without_its_maintenance_component(tmp_path, 
 
 
 def test_release_refuses_a_maintenance_component_of_another_version(tmp_path):
-    versions = {APP: '2026.11.3', ASSISTANT: '2026.11.3', MAINTENANCE: '4.11.0'}
+    versions = {
+        APP: '2026.11.3',
+        ASSISTANT: '2026.11.3',
+        COPILOT: '2026.11.3',
+        MAINTENANCE: '4.11.0',
+    }
     folder = repository(tmp_path / 'r', versions)
     with pytest.raises(ValueError, match='does not match'):
         PROMOTE.validate_repository(
@@ -92,7 +103,9 @@ def test_release_refuses_a_maintenance_component_of_another_version(tmp_path):
 
 @pytest.mark.parametrize('archive', ['2026.11.3content.7z', '2026.11.3meta.7z'])
 def test_release_refuses_a_corrupt_maintenance_archive(tmp_path, archive):
-    folder = repository(tmp_path / 'r', dict.fromkeys([APP, ASSISTANT, MAINTENANCE], '2026.11.3'))
+    folder = repository(
+        tmp_path / 'r', dict.fromkeys([APP, *ASSISTANTS, MAINTENANCE], '2026.11.3')
+    )
     (folder / MAINTENANCE / archive).write_bytes(b'changed after repogen')
     with pytest.raises(ValueError, match='checksum differs'):
         PROMOTE.validate_repository(
@@ -133,11 +146,11 @@ def preview_delivery(tmp_path, platform, names):
     ('platform', 'names', 'accepted'),
     [
         ('macos-arm64', {APP, MAINTENANCE}, True),
-        ('macos-arm64', {APP, ASSISTANT, MAINTENANCE}, True),
-        ('linux-x86_64', {APP, ASSISTANT}, True),
+        ('macos-arm64', {APP, *ASSISTANTS, MAINTENANCE}, True),
+        ('linux-x86_64', {APP, *ASSISTANTS}, True),
         ('linux-x86_64', {APP, MAINTENANCE}, False),
-        ('windows-x86_64', {APP, ASSISTANT, MAINTENANCE}, True),
-        ('windows-x86_64', {APP, ASSISTANT}, False),
+        ('windows-x86_64', {APP, *ASSISTANTS, MAINTENANCE}, True),
+        ('windows-x86_64', {APP, *ASSISTANTS}, False),
     ],
 )
 def test_preview_recovery_admits_the_maintenance_component_on_macos_and_windows(
@@ -165,3 +178,39 @@ def test_pages_trims_old_maintenance_archives_with_the_app(tmp_path):
     PAGES.trim_testing_archives(folder, {'2026.11.3'})
     for name in [APP, MAINTENANCE]:
         assert [path.name for path in (folder / name).iterdir()] == ['2026.11.3content.7z']
+
+
+def test_the_committed_setting_keeps_claude_internal():
+    policy = json.loads((ROOT / 'data/distribution.json').read_text())
+    assert policy['claude_distribution'] == 'internal'
+    assert CLAUDE not in PROMOTE.component_names('linux-x86_64')
+
+
+@pytest.mark.parametrize('platform', ['macos-arm64', 'linux-x86_64', 'windows-x86_64'])
+def test_release_refuses_claude_while_its_distribution_is_internal(tmp_path, platform):
+    names = set(PROMOTE.component_names(platform)) | {CLAUDE}
+    folder = repository(tmp_path / 'r', dict.fromkeys(names, '2026.11.3'))
+    with pytest.raises(ValueError, match='does not match'):
+        PROMOTE.validate_repository(
+            folder, '2026.11.3', expected=PROMOTE.component_names(platform)
+        )
+
+
+def test_pages_refuses_claude_while_its_distribution_is_internal(tmp_path):
+    incoming = tmp_path / 'incoming'
+    repository(
+        incoming / 'testing/linux-x86_64', dict.fromkeys([APP, *ASSISTANTS, CLAUDE], '26.17')
+    )
+    with pytest.raises(RuntimeError, match='Claude is not distributed'):
+        PAGES.overlay_installers(tmp_path / 'site', incoming)
+
+
+def test_pages_trims_old_provider_archives(tmp_path):
+    folder = tmp_path / 'linux-x86_64'
+    for version in ['26.16', '26.17']:
+        for name in [CLAUDE, COPILOT]:
+            (folder / name).mkdir(parents=True, exist_ok=True)
+            (folder / name / f'{version}content.7z').write_bytes(b'data')
+    PAGES.trim_testing_archives(folder, {'26.17'})
+    for name in [CLAUDE, COPILOT]:
+        assert [path.name for path in (folder / name).iterdir()] == ['26.17content.7z']

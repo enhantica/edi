@@ -15,6 +15,7 @@ import zipfile
 from collections.abc import Callable
 from pathlib import Path, PurePosixPath
 
+from assistants import distributed_assistants
 from plan import installer_stem, markdown_notes, validate_history, version_key
 
 PLATFORMS = {'Linux': 'linux-x86_64', 'macOS': 'macos-arm64', 'Windows': 'windows-x86_64'}
@@ -332,7 +333,8 @@ def stage_optional_assets(output: Path, assets: Path, release: dict) -> None:
 
 
 APP_COMPONENT = 'org.easydiffraction.app'
-APP_COMPONENTS = frozenset({APP_COMPONENT, 'org.easydiffraction.app.assistant'})
+# The app and its assistant components; Claude only once it is distributed (edi ADR-0108).
+APP_COMPONENTS = frozenset({APP_COMPONENT, *distributed_assistants()})
 # macOS and Windows install their separately signed maintenance tool from it (edi ADR-0091).
 MAINTENANCE_COMPONENT = 'org.easydiffraction.app.maintenancetool'
 MAINTENANCE_PLATFORMS = frozenset({'macos-arm64', 'windows-x86_64'})
