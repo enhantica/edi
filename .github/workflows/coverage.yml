@@ -36,7 +36,7 @@ jobs:
         with:
           sha: ${{ needs.crysta-sdk.outputs.sha }}
           app-id: ${{ vars.ENHANTICA_APP_ID }}
-          private-key: ${{ secrets.ENHANTICA_APP_KEY }}
+          private-key: ${{ secrets.EDI_APP_KEY }}
       - name: C++ unit coverage (clang -O0 + LLVM source-based)
         run: pixi run cpp-coverage-unit
       - name: Python coverage (pytest-cov over lib/edi, unit tier)

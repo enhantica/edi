@@ -104,7 +104,7 @@ jobs:
         with:
           sha: ${{ needs.resolve.outputs.sha }}
           app-id: ${{ vars.ENHANTICA_APP_ID }}
-          private-key: ${{ secrets.ENHANTICA_APP_KEY }}
+          private-key: ${{ secrets.EDI_APP_KEY }}
       - name: Check SDK and consumer ABI package locks before compilation
         if: steps.cache.outputs.cache-hit != 'true'
         run: |

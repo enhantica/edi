@@ -3,8 +3,9 @@
 #
 # A job that builds against crysta needs a read token for crysta's prebuilt SDK, so it runs only for
 # events from this repository (never a fork's pull request) and in the reviewed `crysta-sdk`
-# environment, which holds the app key. A fork's pull request runs the jobs that need no token, and
-# the pin-currency job without its token steps.
+# environment. The app key is edi's own repository secret `EDI_APP_KEY`, which reaches no other
+# repository. A fork's pull request runs the jobs that need no token, and the pin-currency job
+# without its token steps.
 # Compatible native consumers share this run's validated Edi artifacts and qualified SDK.
 # Qt and browser configurations keep their own builds; compiler caches cover both.
 name: Tests
@@ -148,7 +149,7 @@ jobs:
         with:
           sha: ${{ env.CRYSTA_SOURCE_SHA }}
           app-id: ${{ vars.ENHANTICA_APP_ID }}
-          private-key: ${{ secrets.ENHANTICA_APP_KEY }}
+          private-key: ${{ secrets.EDI_APP_KEY }}
       - name: Build the native code once (core-build, then edi_tests in the same tree)
         id: build
         run: pixi run core-build
@@ -572,7 +573,7 @@ jobs:
         with:
           sha: ${{ env.CRYSTA_SOURCE_SHA }}
           app-id: ${{ vars.ENHANTICA_APP_ID }}
-          private-key: ${{ secrets.ENHANTICA_APP_KEY }}
+          private-key: ${{ secrets.EDI_APP_KEY }}
       - name: Build the native code
         if: ${{ env.NIGHTLY == 'true' && (github.event.pull_request.head.repo.fork == false) }}
         run: pixi run core-build
@@ -709,7 +710,7 @@ jobs:
         with:
           sha: ${{ env.CRYSTA_SOURCE_SHA }}
           app-id: ${{ vars.ENHANTICA_APP_ID }}
-          private-key: ${{ secrets.ENHANTICA_APP_KEY }}
+          private-key: ${{ secrets.EDI_APP_KEY }}
       - name: Prepare notebooks
         if: env.NIGHTLY == 'true'
         run: pixi run notebook-prepare

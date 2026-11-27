@@ -234,7 +234,7 @@ jobs:
         with:
           sha: ${{ env.CRYSTA_SOURCE_COMMIT }}
           app-id: ${{ vars.ENHANTICA_APP_ID }}
-          private-key: ${{ secrets.ENHANTICA_APP_KEY }}
+          private-key: ${{ secrets.EDI_APP_KEY }}
       - name: Unpack the pinned crysta source
         run: |
           pixi run --manifest-path tools/installer/pixi.toml python tools/ci/crysta_source_export.py "$CRYSTA_SRC" "$CRYSTA_SOURCE_COMMIT" .crysta
@@ -602,7 +602,7 @@ jobs:
         with:
           sha: ${{ steps.crysta.outputs.sha }}
           app-id: ${{ vars.ENHANTICA_APP_ID }}
-          private-key: ${{ secrets.ENHANTICA_APP_KEY }}
+          private-key: ${{ secrets.EDI_APP_KEY }}
           history: 'true'
           receipts: source-checks
       - name: Check every file that is published
@@ -749,7 +749,7 @@ jobs:
         uses: actions/create-github-app-token@v2
         with:
           app-id: ${{ vars.ENHANTICA_APP_ID }}
-          private-key: ${{ secrets.ENHANTICA_APP_KEY }}
+          private-key: ${{ secrets.EDI_APP_KEY }}
           owner: enhantica
           repositories: edi-sites
       - name: Preserve documentation, web app and previous components
@@ -775,7 +775,7 @@ jobs:
         with:
           sha: ${{ steps.crysta.outputs.sha }}
           app-id: ${{ vars.ENHANTICA_APP_ID }}
-          private-key: ${{ secrets.ENHANTICA_APP_KEY }}
+          private-key: ${{ secrets.EDI_APP_KEY }}
           history: 'true'
           site: site
           receipts: source-checks

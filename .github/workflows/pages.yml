@@ -87,7 +87,7 @@ jobs:
         with:
           sha: ${{ needs.crysta-sdk.outputs.sha }}
           app-id: ${{ vars.ENHANTICA_APP_ID }}
-          private-key: ${{ secrets.ENHANTICA_APP_KEY }}
+          private-key: ${{ secrets.EDI_APP_KEY }}
       - name: Check independent publication
         run: pixi run pages-check
       - name: Prepare notebooks
@@ -156,7 +156,7 @@ jobs:
         with:
           sha: ${{ needs.crysta-sdk.outputs.sha }}
           app-id: ${{ vars.ENHANTICA_APP_ID }}
-          private-key: ${{ secrets.ENHANTICA_APP_KEY }}
+          private-key: ${{ secrets.EDI_APP_KEY }}
       - name: Fetch the pinned crysta source
         run: pixi run crysta-sdk
       - name: Reset browser compiler-cache statistics
@@ -211,7 +211,7 @@ jobs:
         uses: actions/create-github-app-token@v2
         with:
           app-id: ${{ vars.ENHANTICA_APP_ID }}
-          private-key: ${{ secrets.ENHANTICA_APP_KEY }}
+          private-key: ${{ secrets.EDI_APP_KEY }}
           owner: enhantica
           repositories: edi-sites
       - name: Preserve the deployed web app and assemble the site
@@ -230,7 +230,7 @@ jobs:
         with:
           sha: ${{ steps.crysta.outputs.sha }}
           app-id: ${{ vars.ENHANTICA_APP_ID }}
-          private-key: ${{ secrets.ENHANTICA_APP_KEY }}
+          private-key: ${{ secrets.EDI_APP_KEY }}
           history: 'true'
           site: site
       - name: Check every file that is published
@@ -268,7 +268,7 @@ jobs:
         uses: actions/create-github-app-token@v2
         with:
           app-id: ${{ vars.ENHANTICA_APP_ID }}
-          private-key: ${{ secrets.ENHANTICA_APP_KEY }}
+          private-key: ${{ secrets.EDI_APP_KEY }}
           owner: enhantica
           repositories: edi-sites
       - name: Preserve the deployed documentation and assemble the site
@@ -287,7 +287,7 @@ jobs:
         with:
           sha: ${{ steps.crysta.outputs.sha }}
           app-id: ${{ vars.ENHANTICA_APP_ID }}
-          private-key: ${{ secrets.ENHANTICA_APP_KEY }}
+          private-key: ${{ secrets.EDI_APP_KEY }}
           history: 'true'
           site: site
       - name: Check every file that is published
