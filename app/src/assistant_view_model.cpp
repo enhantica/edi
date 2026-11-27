@@ -1743,6 +1743,8 @@ struct AssistantViewModel::State {
     std::optional<AssistantAccountRecord> pending_account;
     // True after the user switched accounts, until that account's identity was read back.
     bool account_chosen_explicitly = false;
+    // The runtime named no e-mail and no organisation for its credential (a bare key or token, ADR-0108 §4).
+    bool identity_unidentified = false;
     void resolve_active_account() noexcept {
         if (!active_provider_account.id.isEmpty() || !active_provider_account.home.isEmpty()) return;
         try {
@@ -2285,6 +2287,7 @@ struct AssistantViewModel::State {
             Object record{{"cacheCleared",session_history_explicit_target==id?false:records.value(id).toObject().value("cacheCleared").toBool()},{"thread",id},{"originator","edi"},{"email",viewed.email},
                 {"model",model},{"effort",effort},{"draft",session_draft}};
             if(!active_provider_account.id.isEmpty())record["account"]=active_provider_account.id;
+            if(identity_unidentified)record["unidentified"]=true;
             const QPointer<Session> session(qobject_cast<Session*>(owner.parent()));
             if(session && session->assistant()==&owner && session->project()==project && project && !session->needsSaveAs()) {
                 const auto location=session->projectLocation();const auto canonical=QFileInfo(location).canonicalFilePath();
@@ -2553,6 +2556,11 @@ struct AssistantViewModel::State {
         if(automatic && record.value("archived").toBool())return false;
         saved_session_refusal=QObject::tr("It is no longer saved on this computer.");
         if(record.isEmpty() && !owned_session(session_metadata.value(id)))return false;
+        if(record.value("unidentified").toBool()) {
+            // Nothing proves the same credential is back, so such a conversation is history only (ADR-0108 §4).
+            saved_session_refusal=QObject::tr("It was started with a key edi cannot identify, so it cannot continue. Start a new conversation.");
+            return false;
+        }
         if(!record.isEmpty()) {
             // The account a saved conversation belongs to (ADR-0108 §8): its recorded id, or for a legacy record the
             // default-home record holding its saved e-mail; with neither it stays unbound.
@@ -15659,11 +15667,13 @@ struct AssistantViewModel::State {
                     if(email.toString()!=resume_checkpoint->email)throw std::runtime_error("The current managed account differs; the previous session was not resumed");
                 }
                 accountStage("ACCOUNT_RECORD");
+                identity_unidentified=!emailProof && account.value("organization").toString().isEmpty() &&
+                    active_provider_account.provider==AssistantProviderId::Claude;
                 record_signed_in_account(emailProof?email.toString():QString(),account.value("planType").toString());
                 accountStage("ACCOUNT_PUBLIC_METADATA");
                 account_bootstrap_verified=true;usage_read_epoch=usage_epoch;
                 Object public_account;
-                for(const auto* field:{"email","planType","authMethod"})if(account.value(field).isString())public_account[field]=usage_text(account.value(field));
+                for(const auto* field:{"email","planType","authMethod","organization","apiKeySource","tokenSource","login","host"})if(account.value(field).isString())public_account[field]=usage_text(account.value(field));
                 generic_native["account"]=public_account;generic_native["accountEpoch"]=QString::number(usage_epoch);
                 generic_native["label"]=emailProof?email:QJsonValue(provider_label());generic_native["models"]=QJsonArray{};
                 accountStage("REQUEST_ADMISSION");generic_request("model/list",{{"includeHidden",true}});
