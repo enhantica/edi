@@ -184,14 +184,14 @@ def test_iteration_delivery_has_one_series_record_per_round(tmp_path):
         published.append(Path(record.file_name).name)
 
     project.analysis.fit(on_iteration=observe, on_file_complete=read_back)
-    assert published == expected_files, (
-        'A subscriber receives every published row in scan order'
-    )
+    assert published == expected_files, 'A subscriber receives every published row in scan order'
     assert iterations, 'The real parametric driver delivers iteration progress'
     assert iterations == sorted(set(iterations)), (
         'A nonlinear shared fit delivers one increasing series record per accepted round'
     )
-    assert len(cases.rows(root)) == len(expected_files), 'Final publication retains every admitted scan point'
+    assert len(cases.rows(root)) == len(expected_files), (
+        'Final publication retains every admitted scan point'
+    )
 
 
 @pytest.mark.parametrize('fixed', [False, True])

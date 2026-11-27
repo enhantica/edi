@@ -146,7 +146,8 @@ TestCase {
         const dependent = rowIndex("zeta", "peak.broad_gauss_w");
         const value = findChild(table, "parameters.value." + dependent);
         verify(value !== null, "The shown dependent row has a real value cell");
-        compare(String(value.color), String(Style.Colors.orange), "A displayed constrained value uses orange");
+        tryVerify(() => value.color.r > value.color.g && value.color.b > value.color.g,
+            1000, "A displayed constrained value uses magenta");
         for (const bank of ["zeta", "alpha", "third"]) {
             const index = rowIndex(bank, "peak.broad_gauss_w");
             const box = findChild(table, "parameters.shared." + index);

@@ -10,9 +10,9 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-27T00:49:02Z
+# measured_utc = 2026-11-27T02:49:21Z
 #
-# Recorded from: measured test run (17 node(s) measured once, 187627 banked, 5 stale row(s) dropped)
+# Recorded from: measured test run (1 node(s) measured once, 187640 banked, 0 stale row(s) dropped)
 # Collected tests: 268843; with a reported duration: 86331
 # Module-scoped fixture costs recorded: 220
 #
@@ -256358,7 +256358,7 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_parametric_linear.py::test_sh
 0.770	tests/system/py/test_parametric_sharing_controls.py::test_sharing_controls[bulk_shared_is_one_undo]
 1.030	tests/system/py/test_parametric_sharing_controls.py::test_sharing_controls[column_follows_fitting_mode]
 1.990	tests/system/py/test_parametric_sharing_controls.py::test_sharing_controls[group_edits_and_undo]
-1.160	tests/system/py/test_parametric_sharing_controls.py::test_sharing_controls[unshareable_rows_explain_why]
+0.800	tests/system/py/test_parametric_sharing_controls.py::test_sharing_controls[unshareable_rows_explain_why]
 UNMEASURED:failed-in-this-run	tests/system/py/test_pattern_owner_styles.py::test_pattern_owner_style[test_background_and_legend_dashed:analysis-dark]
 UNMEASURED:failed-in-this-run	tests/system/py/test_pattern_owner_styles.py::test_pattern_owner_style[test_background_and_legend_dashed:analysis-light]
 UNMEASURED:failed-in-this-run	tests/system/py/test_pattern_owner_styles.py::test_pattern_owner_style[test_background_and_legend_dashed:experiment-dark]
@@ -269023,7 +269023,7 @@ UNMEASURED:not-completed-in-this-run	tests/unit/py/test_web_science_identity.py:
 # module-cost: 0.899	tests/system/py/test_online_popup_contract.py
 # module-cost: 1.061	tests/system/py/test_online_search_continuation.py
 # module-cost: 2.601	tests/system/py/test_operation_contracts.py
-# module-cost: 0.510	tests/system/py/test_parametric_sharing_controls.py
+# module-cost: 0.530	tests/system/py/test_parametric_sharing_controls.py
 # module-cost: 3.896	tests/system/py/test_pattern_owner_styles.py
 # module-cost: 27.704	tests/system/py/test_pattern_range.py
 # module-cost: 179.025	tests/system/py/test_plain_data_app.py
