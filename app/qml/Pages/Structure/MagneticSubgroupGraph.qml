@@ -23,17 +23,51 @@ Flickable {
     property var selected: []
     property bool maximalOnly: true
     property int hovered: -1
+    // A card whose body was clicked stays shown, with its relatives and its details, while the pointer moves and the
+    // view scrolls; a click on it again, on another card's body or on an empty area, or Esc, unpins it (owner,
+    // 2026-11-27). The check box keeps selecting for Add.
+    property int pinned: -1
+    onNodesChanged: pinned = -1
+    readonly property int shownNode: pinned >= 0 ? pinned : hovered
 
     signal toggled(int index)
     signal levelToggled(int level, bool on)
 
-    readonly property int nodeWidth: 168
-    readonly property int nodeHeight: 46
-    readonly property int gap: 10
+    // A card as wide as its longest name or second line needs, with its check box and inner margins, so more fit on
+    // a line; as tall as its two lines with the same margin around and between them (owner, 2026-11-27).
+    readonly property real cardMargin: AppSizes.tableCellMargin
+    readonly property real cardSpacing: AppSizes.tableCellMargin * 0.5
+    readonly property real checkWidth: EaStyle.Sizes.fontPixelSize * 1.6
+    readonly property int nodeWidth: {
+        let widest = 0;
+        for (const n of nodes)
+            widest = Math.max(widest, nameMetrics.advanceWidth(graph.nameOf(n)) + checkWidth, lineMetrics.advanceWidth(graph.lineOf(n)));
+        return Math.ceil(Math.max(EaStyle.Sizes.fontPixelSize * 6, widest) + 2 * cardMargin + 2);
+    }
+    readonly property int nodeHeight: Math.ceil(2 * cardMargin + Math.max(nameMetrics.height, checkWidth) + cardSpacing + lineMetrics.height)
+    // About twice the earlier spacing between cards.
+    readonly property int gap: 20
     readonly property int headerHeight: 28
     readonly property int levelGap: 26
     readonly property int perLine: Math.max(1, Math.floor((width - gap) / (nodeWidth + gap)))
 
+    function nameOf(n) {
+        return n.bns === "" ? qsTr("not identified") : n.name;
+    }
+    function lineOf(n) {
+        return n.bns === "" ? "" : `${n.bns}${n.embedding > 1 ? " #" + n.embedding : ""} · ${qsTr("type")} ${["", "I", "II", "III", "IV"][n.type] ?? ""}${n.netMoment ? " · FM" : ""}`;
+    }
+    FontMetrics {
+        id: nameMetrics
+        font.family: EaStyle.Fonts.fontFamily
+        font.pixelSize: EaStyle.Sizes.fontPixelSize
+        font.bold: true
+    }
+    FontMetrics {
+        id: lineMetrics
+        font.family: EaStyle.Fonts.fontFamily
+        font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.85
+    }
     function shown(i) {
         return !maximalOnly || Math.max(1, nodes[i].row) === 1;
     }
@@ -42,7 +76,7 @@ Flickable {
         return n !== undefined && n.bns !== "" && n.momentAllowed;
     }
     function lit(i) {
-        return i === hovered;
+        return i === shownNode;
     }
     // The levels shown, each its node indices.
     readonly property var levels: {
@@ -78,8 +112,8 @@ Flickable {
         return Qt.point(0, 0);
     }
     // An edge's corners from parent i to child j, through the gaps only (conductor seq 51): down into the band above the
-    // child's level, across to the gap beside the child's column, down that gap to just above the child's row, across
-    // to the child's centre and down onto its top edge, so no edge crosses a card.
+    // child's level, across to the gap left of the child's column, down that gap to the child's middle and onto its
+    // left side (owner, 2026-11-27: shorter lines), so no edge crosses a card.
     function route(i, j) {
         const from = positionOf(i);
         const to = positionOf(j);
@@ -89,9 +123,8 @@ Flickable {
                 top = levelTops[l];
         const band = top - levelGap / 2;
         const lane = to.x - gap / 2;
-        const above = to.y - gap / 2;
-        const centre = to.x + nodeWidth / 2;
-        return [Qt.point(from.x + nodeWidth / 2, from.y + nodeHeight), Qt.point(from.x + nodeWidth / 2, band), Qt.point(lane, band), Qt.point(lane, above), Qt.point(centre, above), Qt.point(centre, to.y)];
+        const middle = to.y + nodeHeight / 2;
+        return [Qt.point(from.x + nodeWidth / 2, from.y + nodeHeight), Qt.point(from.x + nodeWidth / 2, band), Qt.point(lane, band), Qt.point(lane, middle), Qt.point(to.x, middle)];
     }
     function related(i, j) {
         return nodes[i].subgroups.indexOf(j) >= 0 || nodes[j].subgroups.indexOf(i) >= 0;
@@ -101,6 +134,14 @@ Flickable {
     contentWidth: width
     contentHeight: levelTops.length > 0 ? levelTops[levelTops.length - 1] : 0
     ScrollBar.vertical: EaElements.ScrollBar {}
+
+    // A click on an empty area unpins (owner, 2026-11-27).
+    MouseArea {
+        z: -2
+        width: graph.contentWidth
+        height: Math.max(graph.contentHeight, graph.height)
+        onClicked: graph.pinned = -1
+    }
 
     // Edges of the group under the pointer only, to its covering subgroups, behind every card.
     Repeater {
@@ -164,7 +205,7 @@ Flickable {
             required property int index
             readonly property var data_: graph.nodes[index]
             readonly property bool chosen: graph.selected.indexOf(index) >= 0
-            readonly property bool near: graph.hovered >= 0 && graph.hovered !== index && graph.related(graph.hovered, index)
+            readonly property bool near: graph.shownNode >= 0 && graph.shownNode !== index && graph.related(graph.shownNode, index)
             readonly property point at: graph.positionOf(index)
             objectName: `magnetic.node.${index}`
             visible: graph.shown(index)
@@ -176,45 +217,55 @@ Flickable {
             // its covering relatives (conductor seq 48).
             radius: 2
             color: EaStyle.Colors.contentBackground
-            border.width: near || graph.hovered === index ? 2 : 1
-            border.color: near || graph.hovered === index ? EaStyle.Colors.themeAccent : EaStyle.Colors.chartAxis
+            border.width: near || graph.shownNode === index ? 2 : 1
+            border.color: near || graph.shownNode === index ? EaStyle.Colors.themeAccent : EaStyle.Colors.chartAxis
 
-            Column {
-                anchors.fill: parent
-                // The inner margin of the app's table cells, so the check box is not on the border.
-                anchors.margins: AppSizes.tableCellMargin
-                // A group that cannot be chosen reads faded, while its card stays opaque over the edges.
-                opacity: graph.selectable(node.index) ? 1.0 : 0.45
-                Row {
-                    width: parent.width
-                    EaElements.CheckBox {
-                        objectName: `magnetic.node.${node.index}.check`
-                        height: nameLabel.implicitHeight
-                        enabled: graph.selectable(node.index)
-                        checked: node.chosen
-                    }
-                    EaElements.Label {
-                        id: nameLabel
-                        width: parent.width - parent.children[0].width
-                        elide: Text.ElideRight
-                        font.bold: true
-                        text: node.data_.bns === "" ? qsTr("not identified") : node.data_.name
-                    }
-                }
-                EaElements.Label {
-                    width: parent.width
-                    elide: Text.ElideRight
-                    font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.85
-                    text: node.data_.bns === "" ? "" : `${node.data_.bns}${node.data_.embedding > 1 ? " #" + node.data_.embedding : ""} · ${qsTr("type")} ${["", "I", "II", "III", "IV"][node.data_.type] ?? ""}${node.data_.netMoment ? " · FM" : ""}`
-                }
-            }
+            // The body: hovering shows the group's relatives and details, a click pins them. Below the check box, which
+            // takes its own clicks.
             MouseArea {
                 anchors.fill: parent
                 hoverEnabled: true
                 onEntered: graph.hovered = node.index
                 onExited: if (graph.hovered === node.index)
                     graph.hovered = -1
-                onClicked: graph.toggled(node.index)
+                onClicked: graph.pinned = graph.pinned === node.index ? -1 : node.index
+            }
+
+            Column {
+                anchors.fill: parent
+                // One margin around the two lines and half of it between them; the check box starts at the margin,
+                // where the second line's text does.
+                anchors.margins: graph.cardMargin
+                spacing: graph.cardSpacing
+                // A group that cannot be chosen reads faded, while its card stays opaque over the edges.
+                opacity: graph.selectable(node.index) ? 1.0 : 0.45
+                Row {
+                    width: parent.width
+                    EaElements.CheckBox {
+                        objectName: `magnetic.node.${node.index}.check`
+                        width: graph.checkWidth
+                        height: Math.max(nameLabel.implicitHeight, graph.checkWidth)
+                        padding: 0
+                        leftPadding: 0
+                        enabled: graph.selectable(node.index)
+                        checked: node.chosen
+                        onClicked: graph.toggled(node.index)
+                    }
+                    EaElements.Label {
+                        id: nameLabel
+                        width: parent.width - parent.children[0].width
+                        elide: Text.ElideRight
+                        font.bold: true
+                        anchors.verticalCenter: parent.children[0].verticalCenter
+                        text: graph.nameOf(node.data_)
+                    }
+                }
+                EaElements.Label {
+                    width: parent.width
+                    elide: Text.ElideRight
+                    font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.85
+                    text: graph.lineOf(node.data_)
+                }
             }
         }
     }
