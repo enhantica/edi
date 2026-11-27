@@ -815,6 +815,7 @@ TestCase {
         }
     }
     function test_magnetic_selector_and_scale_use_one_editing_surface() {
+        compare(Session.project.structureViewOptions.momentScale, 1, "Default moment length is one Angstrom per Bohr magneton");
         const dialog = preferences.createObject(appWindow.contentItem);
         verify(dialog !== null, "The magnetic preference check uses the production dialog");
         dialog.open();
@@ -837,7 +838,6 @@ TestCase {
         const atom = fields.find(item => item.label === "Atom scale");
         const moment = fields.find(item => item.label === "Moment scale");
         verify(atom !== undefined && moment !== undefined, "Appearance places Moment scale alongside Atom scale");
-        compare(Session.project.structureViewOptions.momentScale, .75, "Default moment length is 1.5 times the preview length");
         Session.project.structureViewOptions.momentScale = 1.125;
         verify(Session.save(), "The selected appearance scale saves through the real project");
         Session.closeProject();

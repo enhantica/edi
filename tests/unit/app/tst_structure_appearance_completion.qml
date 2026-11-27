@@ -243,7 +243,12 @@ Item {
             verify(/covalent/i.test(toolbar.currentText), "The actual toolbar follows the Extra atom-view choice");
             edit(findChild(page, "structure.appearance.atomScale"), .41);
             verify(Session.save(), "The actual session saves the atom-view and scale choices");
-            const saved = SettingsProof.fileObservation(root, "structures/cosio.edi").base64;
+            const structure = "structures/cosio.edi";
+            const saved = SettingsProof.fileObservation(root, structure);
+            verify(saved.exists && !/^_structure_view\./m.test(saved.text), "The actual save keeps appearance out of the structure file");
+            const projectRecord = () => SettingsProof.text(root, "project.edi").split("\n").filter(line => line.startsWith("_structure_view.")).sort();
+            const appearance = projectRecord();
+            verify(appearance.some(line => /^_structure_view\.atom_scale\s+0\.41\s*$/.test(line)), "The saved project record carries the chosen atom scale");
             retire();
             Session.closeProject();
             verify(Session.openProject(root), "The saved appearance project reopens through the real loader");
@@ -251,7 +256,8 @@ Item {
             compare(Session.project.structureViewOptions.atomView, "covalent", "The actual restored atom-view option retains the chosen style");
             verify(Math.abs(Session.project.structureViewOptions.atomScale - .41) < 1e-12, "The actual restored atom scale retains the nontrivial selected value");
             verify(Session.save(), "The restored appearance saves through the actual session");
-            compare(SettingsProof.fileObservation(root, "structures/cosio.edi").base64, saved, "Appearance save and reload retain every structure byte after the edit");
+            compare(SettingsProof.fileObservation(root, structure).base64, saved.base64, "Appearance save and reload retain every structure byte after the edit");
+            compare(projectRecord(), appearance, "Appearance save and reload retain the project record's exact appearance tokens");
         }
         function test_polyhedra_toolbar_and_extra_change_actual_geometry_visibility() {
             open();

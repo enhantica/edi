@@ -45,12 +45,13 @@ void check_arrows(edi::Structure& structure) {
         const auto source = edi::capture_scene(structure);
         REQUIRE_MESSAGE(source.current, "The moment viewer captures current computed geometry");
         Options options;
-        CHECK_MESSAGE(options.moment_scale == .75,
-                      "Moment arrows default to three quarters of an Angstrom per Bohr magneton");
+        CHECK_MESSAGE(options.moment_scale == 1.0,
+                      "Moment arrows default to one Angstrom per Bohr magneton");
         options.moments = true;
         options.moment_colours = edi::MomentColours::Single;
         options.axes = options.bonds = options.cell = false;
-        for (const double scale : {.5, .8}) {
+        const double default_scale = options.moment_scale;
+        for (const double scale : {default_scale, .5, .8}) {
             options.moment_scale = scale;
             const auto scene = edi::present_structure(source, options);
             const Drawing drawing = edi::scene_drawing(scene, {640, 480, 0});
@@ -139,7 +140,7 @@ TEST_CASE("Cobalt moment arrows preserve the independent cell expansion and disp
 }
 
 TEST_CASE("Moment arrow heads keep their proportion without changing the shaft width") {
-    constexpr double scale = 0.75;       // Angstrom per magneton in the viewer
+    constexpr double scale = 0.75;       // Deliberately chosen nondefault Angstrom per magneton
     constexpr double head_share = 0.35;  // ADR-0078
     constexpr double standard_head = 0.60;
     constexpr double shaft_radius = 0.12;

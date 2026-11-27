@@ -293,24 +293,9 @@ Item {
                 }
             }
         }
-        function options() {
-            return Session.project.currentStructure.viewOptions ?? Session.project.structureViewOptions;
-        }
-        function setAppearance(first) {
-            const o = options();
-            o.atomView = first ? "vdw" : "covalent";
-            o.atomScale = first ? .37 : .81;
-            o.adpProbability = first ? .63 : .91;
-            o.colorScheme = first ? "vesta" : "jmol";
-            o.showLabels = first;
-            o.atoms = first ? "asymmetric" : "all";
-            o.bonds = first;
-            o.cell = !first;
-            o.axes = first;
-        }
         function appearance() {
-            const o = options();
-            return JSON.stringify({
+            const o = Session.project.structureViewOptions;
+            return {
                 atomView: o.atomView,
                 atomScale: o.atomScale,
                 adpProbability: o.adpProbability,
@@ -319,30 +304,109 @@ Item {
                 atoms: o.atoms,
                 bonds: o.bonds,
                 cell: o.cell,
-                axes: o.axes
-            });
+                axes: o.axes,
+                showMoments: o.showMoments,
+                momentScale: o.momentScale,
+                momentForm: o.momentForm,
+                momentView: o.momentView,
+                polyhedra: o.polyhedra,
+                polyhedraColour: o.polyhedraColour,
+                polyhedraOpacity: o.polyhedraOpacity,
+                polyhedraExtent: o.polyhedraExtent,
+                polyhedraCentres: o.polyhedraCentres,
+                polyhedraCorners: o.polyhedraCorners,
+                polyhedraMaxDistance: o.polyhedraMaxDistance
+            };
         }
-        function test_per_structure_appearance() {
-            Session.project.currentStructureIndex = 0;
-            setAppearance(true);
-            const first = appearance();
-            Session.project.currentStructureIndex = 1;
-            setAppearance(false);
-            const second = appearance();
-            verify(first !== second, "The two structures have independently chosen nondefault appearances");
-            Session.project.currentStructureIndex = 0;
-            compare(appearance(), first, "Selecting another structure does not overwrite the first appearance");
-            const editor = openText(Session.project.currentStructure);
-            verify(/(?:appearance|atom_view|atom_scale)/i.test(editor.text), "The structure's appearance is visible in its Text tab");
-            verify(Session.save(), "The normal save persists per-structure appearance");
+        function expectGlobalViewOnDisk(project, scale) {
+            const record = SettingsProof.text(project, "project.edi");
+            const entry = record.match(/^_structure_view\.moment_scale\s+(["']?)([0-9.]+)\1\s*$/m);
+            verify(entry !== null, "The project record itself contains the saved scale");
+            compare(Number(entry[2]), scale, "The project record carries the scale actually chosen");
+            for (const filename of ["structure.edi", "zz_second.edi"])
+                verify(!/^_structure_view\./m.test(SettingsProof.text(project, "structures/" + filename)), "Appearance settings are absent from " + filename);
+        }
+        function isolatedAppearanceProject() {
+            const root = SettingsProof.copyProject(Probe.repoUrl("tests/fixtures/project_text/project"));
+            verify(root.toString() !== "", "The authored two-structure witness is copied into a private directory");
+            return root;
+        }
+        function test_project_appearance_survives_structure_switch_and_reopen() {
             Session.closeProject();
-            verify(Session.openProject(proof.project()), "The normal reader reopens the saved appearances");
-            const initiallyShown = appearance();
-            Session.project.currentStructureIndex = 1;
-            compare(appearance(), second, "The second structure's full appearance survives reopen");
+            const project = isolatedAppearanceProject();
+            verify(Session.openProject(project), "The independent project opens with no stored appearance");
+            compare(Session.project.structures.count, 2, "The witness has two actual structures to switch between");
             Session.project.currentStructureIndex = 0;
-            compare(appearance(), first, "Reselecting the first structure restores its saved appearance");
-            compare(initiallyShown, first, "The first structure's full appearance survives reopen before any reselection");
+            const first = Session.project.currentStructure;
+            const o = Session.project.structureViewOptions;
+            const chosen = {
+                atomView: "vdw",
+                atomScale: .37,
+                adpProbability: .63,
+                colorScheme: "vesta",
+                showLabels: true,
+                atoms: "asymmetric",
+                bonds: false,
+                cell: false,
+                axes: false,
+                showMoments: true,
+                momentScale: 1.375,
+                momentForm: "spherical",
+                momentView: "from_surface",
+                polyhedra: true,
+                polyhedraColour: "grey",
+                polyhedraOpacity: .37,
+                polyhedraExtent: "complete",
+                polyhedraCentres: "Fe",
+                polyhedraCorners: "O",
+                polyhedraMaxDistance: 2.73
+            };
+            for (const key of Object.keys(chosen))
+                o[key] = chosen[key];
+            compare(appearance(), chosen, "The actual project options accept the complete independent witness");
+            Session.project.currentStructureIndex = 1;
+            verify(Session.project.currentStructure !== first, "The actual selected structure changed");
+            compare(appearance(), chosen, "All appearance settings survive selecting the other structure");
+            o.momentScale = 1.625;
+            chosen.momentScale = 1.625;
+            Session.project.currentStructureIndex = 0;
+            compare(appearance(), chosen, "An edit from the other structure applies to the first one too");
+            const editor = openText(Session.project.currentStructure);
+            verify(!/^_structure_view\./m.test(editor.text), "Project appearance is absent from the structure Text tab");
+            verify(Session.save(), "The normal save writes one project appearance");
+            expectGlobalViewOnDisk(project, chosen.momentScale);
+            Session.closeProject();
+            verify(Session.openProject(project), "The ordinary reader reopens the project appearance");
+            compare(appearance(), chosen, "All saved settings survive reopen before selecting any structure");
+            Session.project.currentStructureIndex = 1;
+            compare(appearance(), chosen, "The same saved settings apply when selecting the second structure after reopen");
+        }
+        function test_legacy_appearance_migrates_first_structure_once() {
+            Session.closeProject();
+            const legacy = isolatedAppearanceProject();
+            verify(!/^_structure_view\./m.test(SettingsProof.text(legacy, "project.edi")), "The old project record carries no global appearance");
+            const first = "structures/structure.edi", second = "structures/zz_second.edi";
+            verify(SettingsProof.write(legacy, first, SettingsProof.text(legacy, first) + "\n_structure_view.atom_view vdw\n_structure_view.atom_scale 0.43\n_structure_view.moment_scale 0.75\n"), "The first legacy structure explicitly saved its own choices, including a scale of 0.75");
+            verify(SettingsProof.write(legacy, second, SettingsProof.text(legacy, second) + "\n_structure_view.atom_view ionic\n_structure_view.atom_scale 0.81\n_structure_view.moment_scale 1.875\n_structure_view.labels true\n"), "The second legacy structure saved conflicting choices");
+            verify(Session.openProject(legacy), "The ordinary reader opens the older project");
+            const inherited = appearance();
+            compare(inherited.atomView, "vdw", "The legacy project takes the first structure's atom view");
+            compare(inherited.atomScale, .43, "The legacy project takes the first structure's atom scale");
+            compare(inherited.showLabels, false, "A setting that only the second legacy structure declared keeps its default");
+            compare(inherited.momentScale, .75, "An explicitly saved scale of 0.75 survives the new default of one");
+            Session.project.currentStructureIndex = 1;
+            compare(appearance(), inherited, "Selecting the conflicting legacy structure does not replace or merge its settings");
+            Session.project.structureViewOptions.momentScale = 1.625;
+            inherited.momentScale = 1.625;
+            Session.project.currentStructureIndex = 0;
+            compare(appearance(), inherited, "Returning to the first structure does not reapply its original scale");
+            verify(Session.save(), "The next save upgrades the legacy settings to a project record");
+            expectGlobalViewOnDisk(legacy, inherited.momentScale);
+            Session.closeProject();
+            verify(Session.openProject(legacy), "The migrated project reopens");
+            compare(appearance(), inherited, "Reopening reads the migrated values and keeps the edit");
+            Session.project.currentStructureIndex = 1;
+            compare(appearance(), inherited, "The migrated appearance stays global after another selection");
         }
         function test_scattering_lengths_save_only_user_overrides() {
             Session.project.currentStructureIndex = 0;
