@@ -5,3 +5,6 @@
 # for example
 #   -input tests/unit/app/tst_example.qml ExampleCase::test_open
 # Lines starting with # are comments. With no other line the step has nothing to run.
+
+-input tests/unit/app/tst_data_file_open.qml DataFileOpen::test_create_save_and_reopen_zns_cus
+-input tests/unit/app/tst_data_file_open.qml DataFileOpen::test_recent_paths_at_start

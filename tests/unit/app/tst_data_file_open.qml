@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 import QtQuick
+import QtQuick.Controls
 import QtTest
 import edi.app
 import EdiAcceptance 1.0
@@ -156,6 +157,109 @@ TestCase {
             else
                 compare(project.experiments.count, 0, "Dropping the old read leaves its target removed");
         }
+    }
+
+    function test_edits_during_read_survive_publication() {
+        const original = Probe.repoUrl("tests/fixtures/loop_parameter_ids/line-segment");
+        verify(Session.openProject(SettingsProof.copyProject(original)), "The edit uses a saved powder project");
+        const project = Session.project;
+        tryCompare(project, "calculating", false, 15000, "The initial view is ready before the read");
+        settlements.target = project;
+        const input = Probe.repoUrl("tests/fixtures/online_sources/three_points.xye");
+        verify(project.loadData(0, input), "The powder read is admitted");
+        const id = project.startedDataLoad();
+        verify(id > 0, "The first call returns its own request id while reading");
+        const editedCutoff = 14.125;
+        project.currentExperiment.cutoffFwhm = editedCutoff;
+        compare(project.currentExperiment.cutoffFwhm, editedCutoff, "The edit goes through during the read");
+        tryCompare(settlements, "count", 1, 15000, "The requested read finishes after the edit");
+        compare(settlements.signalArguments, [[id, true]], "The read publishes successfully under its own id");
+        compare(project.currentExperiment.dataFile, "three_points.xye", "The picked file is applied");
+        compare(project.currentExperiment.cutoffFwhm, editedCutoff, "Publishing the input retains the intervening edit");
+    }
+
+    function newSingleCrystalProject() {
+        verify(Session.createProject("reflection_case", "", String(SettingsProof.emptyDirectory())),
+               "The application creates a fresh project for the reflection read");
+        const project = Session.project;
+        verify(project.createExperiment(), "The project contains one empty experiment");
+        verify(project.setExperimentType(0, "sampleForm", "single crystal"),
+               "The input is targeted at an empty single-crystal experiment");
+        settlements.target = project;
+        return project;
+    }
+
+    function test_fullprof_reflections_keep_the_two_banks_and_wavelength() {
+        const project = newSingleCrystalProject();
+        const path = "tests/fixtures/single_crystal/load_two_banks.int";
+        const lines = SettingsProof.repoText(path).trim().split(/\r?\n/);
+        const wavelength = Number(lines[2].split(/\s+/)[0]);
+        const observations = lines.slice(3).map(line => line.trim().split(/\s+/).map(Number));
+        const banks = [...new Set(observations.map(row => row[5]))].sort((a, b) => a - b);
+        compare(banks, [2, 7], "The independently written fixture contains two distinct bank codes");
+        verify(project.loadData(0, Probe.repoUrl(path)), "The reflection reader admits the FullProf input");
+        const load = project.startedDataLoad();
+        verify(load > 0, "The reflection read starts as an asynchronous load");
+        tryCompare(settlements, "count", 1, 15000, "The FullProf read settles");
+        compare(settlements.signalArguments, [[load, true]], "The FullProf request settles as applied");
+        compare(project.experiments.count, banks.length, "Each input bank becomes one experiment");
+        for (let i = 0; i < banks.length; ++i) {
+            project.currentExperimentIndex = i;
+            const experiment = project.currentExperiment;
+            compare(experiment.name, "load_two_banks_" + banks[i], "The bank code is retained in the experiment");
+            compare(experiment.instrument.parameterNamed("setup_wavelength").value, wavelength,
+                    "Each bank uses the wavelength from the third FullProf header line");
+            const actual = Probe.rows(experiment.singleCrystalReflections)
+                .map(row => [row.h, row.k, row.l, row.intensityMeas, row.intensityMeasSu]);
+            const expected = observations.filter(row => row[5] === banks[i]).map(row => row.slice(0, 5));
+            compare(actual, expected, "A bank contains its own indexed reflections and their measured values");
+        }
+    }
+
+    function test_reflection_read_is_refused_after_a_change_of_kind() {
+        const project = newSingleCrystalProject();
+        const input = Probe.repoUrl("tests/fixtures/single_crystal/load_two_banks.int");
+        verify(project.loadData(0, input), "The original single-crystal read starts");
+        const load = project.startedDataLoad();
+        verify(load > 0, "The started reflection request has its own number");
+        verify(project.setExperimentType(0, "sampleForm", "powder"),
+               "The still-empty target changes kind before the worker's answer is delivered");
+        tryCompare(settlements, "count", 1, 15000, "The incompatible read settles under its own number");
+        compare(settlements.signalArguments, [[load, false]], "The incompatible read cannot apply");
+        verify(project.lastError.includes("changed while it was read"),
+               "The refusal explains why this input must be loaded again");
+        compare(project.experiments.count, 1, "No extra banks are added after the type changes");
+        verify(project.currentExperiment.calculationOnly, "The changed target has no applied measurements");
+    }
+
+    function test_create_save_and_reopen_zns_cus() {
+        openWindow();
+        Ui.click(test, Probe, app, "home.start");
+        Ui.click(test, Probe, app, "project.create");
+        const dialog = SettingsProof.creationDialog(app);
+        verify(dialog !== null, "Create Project opens a real application form");
+        tryCompare(dialog, "opened", true, 3000, "The Create Project dialog opens before input");
+        dialog.projectParentDirectory = String(SettingsProof.emptyDirectory());
+        const name = findChild(dialog, "createProject.name");
+        const title = findChild(dialog, "createProject.title");
+        verify(name && SettingsProof.type(name, "zns-cus"), "The Windows witness enters a project name");
+        verify(title && SettingsProof.type(title, "ZnS-CuS"), "The Create form receives the reported title");
+        const ok = dialog.standardButton(Dialog.Ok);
+        verify(ok && ok.enabled, "A valid Create form allows the user to press OK");
+        const point = Ui.clickPoint(ok);
+        mouseClick(ok, point.x, point.y);
+        tryVerify(() => Session.hasProject, 15000, "The renderer stays alive after Create");
+        compare(Session.project.title, "ZnS-CuS", "The opened project retains the reported title");
+        const directory = Session.projectDirectoryUrl(Session.projectLocation);
+        const savedDescription = "Saved through the application after Create";
+        Session.project.description = savedDescription;
+        app.requestActivate();
+        keyClick(Qt.Key_S, Qt.ControlModifier);
+        tryVerify(() => SettingsProof.fileObservation(directory, "project.edi").text.includes(savedDescription),
+                  15000, "The application's Save action writes the new description to disk");
+        Session.closeProject();
+        verify(Session.openProject(directory), "The application reopens the saved directory");
+        compare(Session.project.description, savedDescription, "Reopen reads the change saved by the GUI");
     }
 
     function test_recent_paths_at_start_data() {
