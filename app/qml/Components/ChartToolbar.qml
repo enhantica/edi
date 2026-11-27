@@ -122,7 +122,7 @@ Item {
         objectName: "chart.toolbar.findK"
         visible: toolbar.findKAvailable
         fontIcon: "magnet"
-        toolTip: toolbar.findKActive ? qsTr("Stop marking peaks for Find k") : qsTr("Find k: mark the peaks the model leaves unexplained")
+        toolTip: toolbar.findKActive ? qsTr("Stop marking peaks for k") : qsTr("Mark peaks for k")
         checked: toolbar.findKActive
         onClicked: toolbar.findKToggled()
     }

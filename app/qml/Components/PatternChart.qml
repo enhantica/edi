@@ -9,6 +9,7 @@ import QtGraphs
 
 import EasyApplication.Gui.Style as EaStyle
 import EasyApplication.Gui.Elements as EaElements
+import EasyApplication.Gui.Globals as EaGlobals
 
 import edi.app
 
@@ -23,15 +24,18 @@ Item {
     // Find k on the chart (owner, 2026-11-27; crysta ADR-0137 A11): the peaks the parent's kept fit leaves unexplained,
     // the strongest marked to start with; a click marks or drops the one nearest it, and Find k ranks the propagation
     // vectors the marked ones allow.
+    property bool findKPage: false
     property bool peakMode: false
     property var peakCandidates: []
     property var peakMarks: []
     property int peakParent: -1
     property string peakNote: ""
+    property string addedNote: ""
     readonly property Component kVector: kVectorComponent
 
     function setPeakMode(on) {
         peakNote = "";
+        addedNote = "";
         peakCandidates = [];
         peakMarks = [];
         peakMode = on;
@@ -44,17 +48,18 @@ Item {
             peakNote = qsTr("Link and enable the crystal structure to search k for.");
             return;
         }
-        const peaks = project.magneticPeaks(peakParent, experiment);
+        const peaks = project.magneticMarkCandidates(peakParent, experiment);
         if (peaks.length === 0) {
-            peakNote = project.lastError !== "" ? project.lastError : qsTr("The kept fit leaves no peak unexplained.");
+            peakNote = project.lastError !== "" ? project.lastError : qsTr("No peak at a reflection the crystal's space group forbids; click a peak to mark it.");
             return;
         }
         peakCandidates = peaks;
-        const strong = [];
-        for (let i = 0; i < peaks.length && strong.length < 8; ++i)
-            if (peaks[i].significance >= 5)
-                strong.push(i);
-        peakMarks = strong;
+        // Pre-marked: the peaks at no reflection the crystal's space group allows; the suggestions stay unmarked.
+        const marked = [];
+        for (let i = 0; i < peaks.length; ++i)
+            if (!peaks[i].suggestion)
+                marked.push(i);
+        peakMarks = marked;
     }
     function togglePeakAt(x) {
         let best = -1;
@@ -64,7 +69,7 @@ Item {
                 best = i;
         }
         if (best < 0) {
-            peakNote = qsTr("No unexplained peak there.");
+            peakNote = qsTr("No candidate peak there.");
             return;
         }
         peakNote = "";
@@ -585,7 +590,7 @@ Item {
             onResetClicked: controller.reset()
             onIncludedOnlyToggled: ApplicationInfo.chartToolbarAction(5)
             onSubtractBackgroundToggled: ApplicationInfo.chartToolbarAction(6)
-            findKAvailable: !chart.report && !chart.singleCrystal && controller.hasCalculated && chart.axisProject !== null
+            findKAvailable: chart.findKPage && !chart.report && !chart.singleCrystal && chart.axisProject !== null
             findKActive: chart.peakMode
             onFindKToggled: chart.setPeakMode(!chart.peakMode)
         }
@@ -1236,7 +1241,7 @@ Item {
                 spacing: chart.em * 0.5
                 EaElements.Label {
                     anchors.verticalCenter: parent.verticalCenter
-                    text: !peakLayer.native_ ? qsTr("Show the native x axis to mark peaks") : chart.peakNote !== "" ? chart.peakNote : qsTr("%n peak(s) marked; click a peak to mark or drop it", "", chart.peakMarks.length)
+                    text: !peakLayer.native_ ? qsTr("Show the native x axis to mark peaks") : chart.addedNote !== "" ? chart.addedNote : chart.peakNote !== "" ? chart.peakNote : qsTr("%n peak(s) marked", "", chart.peakMarks.length)
                 }
                 EaElements.Button {
                     objectName: "chart.findK"
@@ -1248,14 +1253,25 @@ Item {
                             structureIndex: chart.peakParent,
                             experimentIndex: chart.axisProject.currentExperimentIndex,
                             marked: chart.peakMarks
-                        }) as AppDialog;
+                        }) as KVectorPopup;
+                        popup.added.connect(count => chart.addedNote = qsTr("%n magnetic structure(s) added", "", count));
                         popup.open();
                     }
                 }
                 EaElements.Button {
-                    objectName: "chart.findK.done"
-                    text: qsTr("Done")
-                    onClicked: chart.setPeakMode(false)
+                    objectName: "chart.findK.clear"
+                    text: qsTr("Clear")
+                    enabled: chart.peakMarks.length > 0
+                    onClicked: chart.peakMarks = []
+                }
+                EaElements.Button {
+                    objectName: "chart.findK.openStructure"
+                    visible: chart.addedNote !== ""
+                    text: qsTr("Open in Structure page")
+                    onClicked: {
+                        chart.addedNote = "";
+                        EaGlobals.Vars.appBarCurrentIndex = 2;
+                    }
                 }
             }
         }

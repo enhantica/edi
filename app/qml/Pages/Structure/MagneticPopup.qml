@@ -23,6 +23,10 @@ AppDialog {
     property StructureViewModel structure: null
     // A k to start from (the k-vector popup's choice), else the first preset.
     property string initialK: ""
+    // Opened from the Structure page, the first new structure becomes the current one; from Experiment → Pattern the
+    // page stays as it is (the popup never moves the user, owner 2026-11-27).
+    property bool selectAfterAdd: true
+    signal added(int count)
 
     property var presets: []
     property var sites: []
@@ -339,9 +343,11 @@ AppDialog {
                 text: popup.selected.length > 1 ? qsTr("Add %1 structures").arg(popup.selected.length) : qsTr("Add")
                 enabled: popup.selected.length > 0 && !popup.busy
                 onClicked: {
-                    if (popup.project.addMagneticCandidates(popup.structureIndex, popup.selected, startMoments.checked))
+                    const count = popup.selected.length;
+                    if (popup.project.addMagneticCandidates(popup.structureIndex, popup.selected, startMoments.checked, popup.selectAfterAdd)) {
+                        popup.added(count);
                         popup.close();
-                    else
+                    } else
                         popup.refusal = popup.project.lastError;
                 }
             }

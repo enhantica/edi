@@ -23,6 +23,8 @@ AppDialog {
     property var marked: []
 
     property var rows: []
+    // The magnetic popup opened from here added `count` structures (the chart says so).
+    signal added(int count)
     property bool searching: true
     property string refusal: ""
 
@@ -98,7 +100,20 @@ AppDialog {
                     }
                     EaElements.Label {
                         font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.85
-                        text: qsTr("indexes %1 of %2 peaks · worst misfit %3 · magnetic cell %4 parent cell(s)").arg(row.modelData.explained).arg(popup.marked.length).arg(row.modelData.misfit.toFixed(2)).arg(row.modelData.parentCells) + (row.modelData.equallyGood ? qsTr(" · equally good") : "")
+                        text: {
+                            const roles = row.modelData.roles;
+                            const forbidden = roles.filter(r => r === "forbidden").length;
+                            const satellite = roles.filter(r => r === "satellite").length;
+                            const allowed = roles.filter(r => r === "allowed").length;
+                            const parts = [];
+                            if (forbidden > 0)
+                                parts.push(qsTr("%n at forbidden reflections", "", forbidden));
+                            if (satellite > 0)
+                                parts.push(qsTr("%n as satellites", "", satellite));
+                            if (allowed > 0)
+                                parts.push(qsTr("%n on allowed reflections", "", allowed));
+                            return qsTr("indexes %1 of %2 marked peaks (%3) · worst misfit %4 · magnetic cell %5").arg(row.modelData.explained).arg(popup.marked.length).arg(parts.join(", ")).arg(row.modelData.parentCells === 1 ? qsTr("the crystal's") : qsTr("%1 parent cells").arg(row.modelData.parentCells)) + (row.modelData.equallyGood ? qsTr(" · equally good") : "");
+                        }
                     }
                 }
                 HoverHandler {
@@ -110,8 +125,10 @@ AppDialog {
                             project: popup.project,
                             structureIndex: popup.structureIndex,
                             structure: popup.project.structureAt(popup.structureIndex),
-                            initialK: row.modelData.k
-                        }) as AppDialog;
+                            initialK: row.modelData.k,
+                            selectAfterAdd: false
+                        }) as MagneticPopup;
+                        next.added.connect(count => popup.added(count));
                         popup.close();
                         next.open();
                     }
