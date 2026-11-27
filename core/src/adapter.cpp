@@ -10848,6 +10848,36 @@ MagneticPeak magnetic_peak_at(const Project& project, std::size_t experiment, st
     return {p.x, p.d, p.tolerance, 0.0, p.half_width, false, false};
 }
 
+MagneticPeak magnetic_peak_near(const Project& project, std::size_t experiment, std::size_t parent, double x) {
+    const MagneticPeak exact = magnetic_peak_at(project, experiment, parent, x);
+    const BraggPdExperiment& source = *project.experiments[experiment];
+    if (!source.data.has_value()) return exact;
+    const std::vector<double>& axis = source.data->axis();
+    const std::vector<double>& y = source.data->intensity_meas.get();
+    if (axis.size() != y.size() || axis.size() < 3) return exact;
+    const auto excluded = [&source](double at) {
+        for (const auto& region : source.excluded_regions) {
+            if (!region->axis.value().empty()) continue;
+            if (at >= std::min(region->first.get(), region->second.get()) &&
+                at <= std::max(region->first.get(), region->second.get()))
+                return true;
+        }
+        return false;
+    };
+    const double reach = std::max(exact.half_width, 1e-9);
+    std::size_t best = axis.size();
+    for (std::size_t i = 1; i + 1 < axis.size(); ++i) {
+        if (std::abs(axis[i] - x) > reach || excluded(axis[i]) || !std::isfinite(y[i])) continue;
+        // A maximum of the measured curve: above its neighbours, so a slope's edge inside the window is not one.
+        if (!(y[i] >= y[i - 1] && y[i] >= y[i + 1])) continue;
+        if (best == axis.size() || y[i] > y[best]) best = i;
+    }
+    if (best == axis.size()) return exact;
+    MagneticPeak found = magnetic_peak_at(project, experiment, parent, axis[best]);
+    found.observed = true;
+    return found;
+}
+
 std::vector<MagneticKRow> magnetic_k_search(const Project& project, std::size_t experiment, std::size_t parent,
                                             const std::vector<MagneticPeak>& peaks) {
     require_experiment(project, experiment, parent);

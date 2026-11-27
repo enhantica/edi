@@ -4515,8 +4515,9 @@ void ProjectViewModel::toggleKMarkAt(double x, double tolerance) {
     }
     if (best < 0) {
         try {
-            k_marks_.candidates.push_back(edi::magnetic_peak_at(*project_, static_cast<std::size_t>(k_marks_.experiment),
-                                                                 static_cast<std::size_t>(k_marks_.parent), x));
+            // The highest measured maximum near the click, listed by a detector or not, else the clicked position.
+            k_marks_.candidates.push_back(edi::magnetic_peak_near(*project_, static_cast<std::size_t>(k_marks_.experiment),
+                                                                   static_cast<std::size_t>(k_marks_.parent), x));
             best = static_cast<int>(k_marks_.candidates.size()) - 1;
         } catch (const std::exception&) {
             emit kSearchChanged();  // outside the calibration's range: nothing to mark there

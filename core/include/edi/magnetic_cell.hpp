@@ -160,6 +160,9 @@ std::vector<MagneticPeak> magnetic_mark_candidates(const Project& project, std::
 /// A mark the user sets at `x` where no observed maximum is near (owner decision 2026-11-27, "free marking"): its d,
 /// tolerance and half width from the experiment's calibration and instrument (crysta's peak_at).
 MagneticPeak magnetic_peak_at(const Project& project, std::size_t experiment, std::size_t parent, double x);
+/// A click's mark (review 22, F4): the highest measured maximum within the peak's half width of `x`, whether or not a
+/// detector listed it (`observed`), else `x` itself; outside the excluded regions.
+MagneticPeak magnetic_peak_near(const Project& project, std::size_t experiment, std::size_t parent, double x);
 /// The peaks the experiment's current calculated curve leaves unexplained, over its included points (crysta's
 /// unexplained_peaks), highest first. Throws std::invalid_argument naming the reason.
 std::vector<MagneticPeak> magnetic_unexplained_peaks(const Project& project, std::size_t experiment,
