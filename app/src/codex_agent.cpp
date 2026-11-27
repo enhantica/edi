@@ -146,7 +146,7 @@ void CodexAgent::processOwnerReleased(quint64 birth) noexcept {
     process_owner_alive_=false;
     maybeOwnersReleased(); // No facade access after notification.
 }
-CodexAgent::CodexAgent(QObject* parent,std::shared_ptr<const void> releaseOwner) : QObject(parent),release_owner_(std::move(releaseOwner)) {
+CodexAgent::CodexAgent(QObject* parent,std::shared_ptr<const void> releaseOwner) : AssistantProvider(parent),release_owner_(std::move(releaseOwner)) {
     clock_.start(); timer_.setInterval(100);
     connect(&timer_, &QTimer::timeout, this, [this] {
         const QPointer<CodexAgent> receiver(this); const auto scope = generation_;  // NOLINT(clang-analyzer-core.NullDereference): this is the timer's owner.
