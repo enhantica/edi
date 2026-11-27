@@ -229,13 +229,21 @@ def check_macos_load_paths(bundle: Path) -> None:
 APP_ENTITLEMENTS = {'com.apple.security.device.audio-input': True}
 
 
-def check_microphone_use(bundle: Path) -> None:
-    """Require the microphone's usage text in the bundle's Info.plist; macOS refuses without it."""
-    with (bundle / 'Contents/Info.plist').open('rb') as handle:
+APP_INFO_PLIST = ROOT / 'app/resources/macos/Info.plist.in'
+
+
+def check_microphone_use() -> None:
+    """Require the microphone's usage text in the app's Info.plist template.
+
+    macOS refuses the microphone without it. CMake makes the bundle's Info.plist from this file,
+    and Qt links its microphone permission plugin only when the text is there; the installed app's
+    smoke receipt reports that plugin.
+    """
+    with APP_INFO_PLIST.open('rb') as handle:
         text = plistlib.load(handle).get('NSMicrophoneUsageDescription')
     if not isinstance(text, str) or not text.strip():
         raise RuntimeError(
-            'The app bundle has no NSMicrophoneUsageDescription in its Info.plist; '
+            f'{APP_INFO_PLIST.relative_to(ROOT)} has no NSMicrophoneUsageDescription; '
             'macOS would refuse voice input'
         )
 
@@ -558,7 +566,7 @@ def build(
         strip_linux_cpp_debug(stage, qt / 'bin/strip')
     collect_notices(stage, qt, crysta, work / 'licence-inputs')
     if SYSTEM == 'macos':
-        check_microphone_use(stage / 'EasyDiffraction.app')
+        check_microphone_use()
         for name in drop_media_plugins(stage / 'EasyDiffraction.app'):
             print('left out with the media plugins:', name, flush=True)
         drop_macos_build_rpaths(stage / 'EasyDiffraction.app')
