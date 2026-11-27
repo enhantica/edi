@@ -639,7 +639,17 @@ Item {
             visible: chart.peakMode
             spacing: AppSizes.inputSpacing
             EaElements.Label {
+                id: stripNote
                 anchors.verticalCenter: parent.verticalCenter
+                // A long note elides in a narrow window, so the strip's buttons stay on screen; the full note is its
+                // tooltip.
+                width: Math.min(implicitWidth, Math.max(EaStyle.Sizes.fontPixelSize * 10, chart.width * 0.4))
+                elide: Text.ElideRight
+                ToolTip.visible: truncated && noteHover.hovered
+                ToolTip.text: text
+                HoverHandler {
+                    id: noteHover
+                }
                 color: chart.peakNote !== "" ? EaStyle.Colors.red : EaStyle.Colors.themeForeground
                 text: chart.addedNote !== "" ? chart.addedNote : chart.peakNote !== "" ? chart.peakNote : chart.peakMarks.length === 1 ? qsTr("1 peak marked") : qsTr("%1 peaks marked").arg(chart.peakMarks.length)
             }
