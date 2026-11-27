@@ -20,6 +20,9 @@ struct AssistantRuntimeLaunch {
     QString skillsDir;    ///< the staged, verified skills (`<workspace>/.agents/skills`)
     QStringList skills;   ///< the ids that discovery must report
     QJsonObject toolServer;  ///< the MCP stdio server entry: {command, args, env}
+    /// The tool names edi's server lists (`request_user_input` included); a process's tool readback must show
+    /// exactly these, in the runtime's own spelling, plus the skill loader.
+    QStringList expectedTools;
     quint64 toolTimeoutMs = 0;  ///< edi's longest native deadline, given to the runtime for edi's tools
     AssistantAccountRef account;
     QProcessEnvironment environment;  ///< the app's environment; the session removes and sets per ADR-0108
@@ -50,7 +53,10 @@ public:
     /// The runtime's own sign-out for the account's home. Emits `signedOut`.
     virtual void signOut(const AssistantRuntimeLaunch& launch) = 0;
 
-    /// Open a thread: new when `resumeId` is empty, else resume it. Emits `threadOpened`.
+    /// The tool names edi's server now lists, for every process started after this call (see `expectedTools`).
+    virtual void setExpectedTools(const QStringList& names) { Q_UNUSED(names); }
+    /// Open a thread: new when `resumeId` is empty, else resume it. Emits `threadOpened` only after the process that
+    /// will take the thread's input has passed its readbacks.
     virtual void openThread(const QString& resumeId, const QString& model, const QString& effort) = 0;
     /// Send one user message. While a turn runs the session steers when its runtime can, else queues.
     virtual void sendMessage(const QString& thread, const QString& clientMessageId, const QString& text) = 0;
