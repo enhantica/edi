@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "voice_input.hpp"
 
-#include "background.hpp"
 #include "speech_recogniser.hpp"
 
 #include <QCoreApplication>
@@ -11,10 +10,10 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QPointer>
-#include <QVariantMap>
 
 #include <cmath>
 #include <filesystem>
+#include <mutex>
 #include <utility>
 
 #ifndef EDI_VOICE_INSTALL_RELATIVE
@@ -22,6 +21,14 @@
 #endif
 
 namespace edi_app {
+
+// A recording handed to the worker. A cancel sets `cancelled` and drops the audio; a worker that has not started yet then
+// never opens the model.
+struct RecognitionJob {
+    std::mutex mutex;              // guards `recording` between the cancel and the worker taking it
+    std::vector<float> recording;
+    std::atomic<bool> cancelled{false};
+};
 
 namespace {
 
@@ -89,11 +96,12 @@ VoiceInput::VoiceInput(std::unique_ptr<AudioCapture> capture, QString model, QOb
     connect(capture_.get(), &AudioCapture::started, this, &VoiceInput::captureStarted);
     connect(capture_.get(), &AudioCapture::samples, this, &VoiceInput::captureSamples);
     connect(capture_.get(), &AudioCapture::failed, this, &VoiceInput::captureFailed);
+    workers_.setMaxThreadCount(1);
 }
 
 VoiceInput::~VoiceInput() {
-    if (cancel_)
-        cancel_->store(true);
+    if (job_)
+        job_->cancelled.store(true);
     capture_->disconnect(this);
     capture_->stop();
 }
@@ -107,12 +115,10 @@ void VoiceInput::setLanguage(const QString& language) {
     emit languageChanged();
 }
 
-QVariantList VoiceInput::languages() const {
-    QVariantList list{QVariantMap{{QStringLiteral("code"), QStringLiteral("detect")},
-                                  {QStringLiteral("name"), tr("Detect")}}};
+QList<SpeechLanguage> VoiceInput::languages() const {
+    QList<SpeechLanguage> list{{QStringLiteral("detect"), tr("Detect")}};
     for (const auto& language : SpeechRecogniser::languages())
-        list.append(QVariantMap{{QStringLiteral("code"), QString::fromStdString(language.code)},
-                                {QStringLiteral("name"), title_case(QString::fromStdString(language.name))}});
+        list.append({QString::fromStdString(language.code), title_case(QString::fromStdString(language.name))});
     return list;
 }
 
@@ -147,24 +153,36 @@ void VoiceInput::stop() {
     if (state_ != State::Listening)
         return;
     capture_->stop();
-    auto recording = std::make_shared<std::vector<float>>(std::exchange(recording_, {}));
+    auto job = std::make_shared<RecognitionJob>();
+    job->recording = std::exchange(recording_, {});
     dropRecording();
     setState(State::Recognising);
     const int generation = ++generation_;
-    cancel_ = std::make_shared<std::atomic<bool>>(false);
+    job_ = job;
     const QPointer<VoiceInput> receiver(this);
     // The native path, so a model folder outside the ANSI code page still opens on Windows.
     const std::filesystem::path model = QFileInfo(model_).filesystemAbsoluteFilePath();
     const auto language = language_ == QStringLiteral("detect") ? std::string() : language_.toStdString();
-    run_in_background([receiver, generation, recording, model, language, cancel = cancel_] {
+    workers_.start([receiver, generation, job, model, language] {
+        std::vector<float> recording;
+        {
+            const std::lock_guard lock(job->mutex);
+            recording.swap(job->recording);
+        }
         std::string error;
         SpeechRecogniser::Result result;
-        if (auto recogniser = SpeechRecogniser::load(model, error))
-            result = recogniser->recognise(*recording, language, cancel.get());
-        else
+        // Cancelled before this job started, or while the model loaded: no model is opened, or no inference runs.
+        if (job->cancelled.load()) {
+            result.cancelled = true;
+        } else if (auto recogniser = SpeechRecogniser::load(model, error)) {
+            if (job->cancelled.load())
+                result.cancelled = true;
+            else
+                result = recogniser->recognise(recording, language, &job->cancelled);
+        } else {
             result.error = error;
-        recording->clear();
-        recording->shrink_to_fit();
+        }
+        std::vector<float>().swap(recording);
         QMetaObject::invokeMethod(QCoreApplication::instance(), [receiver, generation, result = std::move(result)] {
             if (receiver)
                 receiver->finish(generation, QString::fromStdString(result.text), QString::fromStdString(result.error),
@@ -177,9 +195,12 @@ void VoiceInput::cancel() {
     if (state_ == State::Idle)
         return;
     capture_->stop();
-    if (cancel_)
-        cancel_->store(true);
-    cancel_.reset();
+    if (job_) {
+        job_->cancelled.store(true);
+        const std::lock_guard lock(job_->mutex);
+        std::vector<float>().swap(job_->recording);  // the audio goes now, not when the worker gets to the job
+    }
+    job_.reset();
     ++generation_;
     dropRecording();
     setState(State::Idle);
@@ -241,7 +262,7 @@ void VoiceInput::captureFailed(AudioCapture::Failure failure) {
 void VoiceInput::finish(int generation, const QString& text, const QString& error, bool cancelled) {
     if (generation != generation_ || state_ != State::Recognising)
         return;
-    cancel_.reset();
+    job_.reset();
     setState(State::Idle);
     if (cancelled) {
         dropOwner();

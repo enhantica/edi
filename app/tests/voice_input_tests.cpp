@@ -7,6 +7,8 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QRegularExpression>
+#include <QScopeGuard>
+#include <QSemaphore>
 #include <QSignalSpy>
 #include <QTemporaryDir>
 #include <QThreadPool>
@@ -66,9 +68,9 @@ Voice voiceOn(const QString& model) {
     return {raw, std::make_unique<VoiceInput>(std::move(capture), model)};
 }
 
-// Every recognition started so far has finished and its result has reached the voice input.
-[[nodiscard]] bool settle() {
-    if (!QThreadPool::globalInstance()->waitForDone(kRecognitionMs))
+// Every recognition `voice` started so far has finished and its result has reached it.
+[[nodiscard]] bool settle(VoiceInput& voice) {
+    if (!voice.workers().waitForDone(kRecognitionMs))
         return false;
     QCoreApplication::sendPostedEvents();
     QCoreApplication::processEvents();
@@ -151,7 +153,7 @@ private slots:
         delete owner;
         QCOMPARE(voice.input->state(), VoiceInput::State::Idle);
         QCOMPARE(voice.input->owner(), nullptr);
-        QVERIFY(settle());
+        QVERIFY(settle(*voice.input));
         QCOMPARE(text.count(), 0);
     }
 
@@ -167,7 +169,7 @@ private slots:
         delete owner;
         QCOMPARE(voice.input->state(), VoiceInput::State::Idle);
         QCOMPARE(voice.input->owner(), nullptr);
-        QVERIFY(settle());
+        QVERIFY(settle(*voice.input));
         QCOMPARE(text.count(), 0);
         QCOMPARE(voice.input->message(), QString());
     }
@@ -202,11 +204,37 @@ private slots:
         QCOMPARE(voice.input->state(), VoiceInput::State::Idle);
         voice.input->toggle();
         QTRY_COMPARE(voice.input->state(), VoiceInput::State::Listening);
-        QVERIFY(settle());
+        QVERIFY(settle(*voice.input));
         QCOMPARE(voice.input->state(), VoiceInput::State::Listening);
         QCOMPARE(text.count(), 0);
         QCOMPARE(voice.input->message(), QString());
         voice.input->cancel();
+    }
+
+    // Recognitions cancelled before the worker gets to them open no model and give no text, and they run one at a time.
+    void cancelBeforeTheWorkerStartsOpensNoModel() {
+        auto voice = voiceOn(tinyModel());
+        QCOMPARE(voice.input->workers().maxThreadCount(), 1);
+        QSignalSpy text(voice.input.get(), &VoiceInput::textRecognised);
+        // Hold the one worker thread, so the jobs below wait as they would behind a slow load.
+        QSemaphore gate;
+        voice.input->workers().start([&gate] { gate.acquire(); });
+        auto open = qScopeGuard([&gate] { gate.release(); });
+        const int loads = SpeechRecogniser::loads();
+        for (int round = 0; round < 2; ++round) {
+            voice.input->toggle();
+            QTRY_COMPARE(voice.input->state(), VoiceInput::State::Listening);
+            voice.capture->play(spoken_);
+            QCOMPARE(voice.input->state(), VoiceInput::State::Recognising);
+            voice.input->cancel();
+            QCOMPARE(voice.input->state(), VoiceInput::State::Idle);
+        }
+        open.dismiss();
+        gate.release();
+        QVERIFY(settle(*voice.input));
+        QCOMPARE(SpeechRecogniser::loads(), loads);
+        QCOMPARE(text.count(), 0);
+        QCOMPARE(voice.input->message(), QString());
     }
 
     // The test microphone of the app's pytest runs: a missing or refused microphone, or a recording it cannot read,

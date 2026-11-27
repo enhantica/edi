@@ -44,6 +44,10 @@ std::string trimmed(const std::string& text) {
 
 }  // namespace
 
+namespace {
+std::atomic<int> opened_models{0};
+}  // namespace
+
 std::unique_ptr<SpeechRecogniser> SpeechRecogniser::load(const std::filesystem::path& model, std::string& error) {
     if (!cpu_supported()) {
         error = "This computer's processor cannot run the speech model: it needs AVX2.";
@@ -55,6 +59,7 @@ std::unique_ptr<SpeechRecogniser> SpeechRecogniser::load(const std::filesystem::
         error = "The speech model is not installed.";
         return nullptr;
     }
+    opened_models.fetch_add(1, std::memory_order_relaxed);
     auto parameters = whisper_context_default_params();
     parameters.use_gpu = false;
     // whisper takes UTF-8 and widens it itself on Windows, where path::string() would use the ANSI code page.
@@ -119,6 +124,8 @@ SpeechRecogniser::Result SpeechRecogniser::recognise(std::span<const float> samp
         result.language = code;
     return result;
 }
+
+int SpeechRecogniser::loads() { return opened_models.load(std::memory_order_relaxed); }
 
 std::vector<SpeechRecogniser::Language> SpeechRecogniser::languages() {
     std::vector<Language> list;

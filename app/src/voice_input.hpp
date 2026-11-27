@@ -7,7 +7,8 @@
 #include <QObject>
 #include <QPointer>
 #include <QString>
-#include <QVariantList>
+#include <QThreadPool>
+#include <QList>
 #include <QtQml/qqmlregistration.h>
 
 #include <atomic>
@@ -15,6 +16,19 @@
 #include <vector>
 
 namespace edi_app {
+
+struct RecognitionJob;
+
+/// A choice of the speech language setting: "detect" or a whisper language code, and its name.
+struct SpeechLanguage {
+    Q_GADGET
+    QML_VALUE_TYPE(speechLanguage)
+    Q_PROPERTY(QString code MEMBER code CONSTANT)
+    Q_PROPERTY(QString name MEMBER name CONSTANT)
+
+public:
+    QString code, name;
+};
 
 /// Voice input for the assistant's message box (ADR-0107): records from the microphone, then turns the recording into
 /// text on this computer and hands it to the message box. Nothing is written to disk or sent anywhere.
@@ -37,8 +51,8 @@ class VoiceInput : public QObject {
     Q_PROPERTY(QString message READ message NOTIFY messageChanged)
     /// "detect", or a language code from `languages`.
     Q_PROPERTY(QString language READ language WRITE setLanguage NOTIFY languageChanged)
-    /// The choices for the language setting: maps with `code` and `name`, "detect" first.
-    Q_PROPERTY(QVariantList languages READ languages CONSTANT)
+    /// The choices for the language setting, "detect" first.
+    Q_PROPERTY(QList<edi_app::SpeechLanguage> languages READ languages CONSTANT)
 
 public:
     enum class State { Idle, Starting, Listening, Recognising };
@@ -59,7 +73,7 @@ public:
     QString message() const { return message_; }
     QString language() const { return language_; }
     void setLanguage(const QString& language);
-    QVariantList languages() const;
+    QList<SpeechLanguage> languages() const;
 
     /// Starts listening when idle, stops and recognises when listening, cancels while starting or recognising.
     /// `owner` becomes the owner of a recording this starts.
@@ -75,6 +89,10 @@ public:
     /// The installed model's file, checked against its manifest, or empty. `EDI_VOICE_MODEL` names a model file
     /// directly for development and tests.
     static QString installedModel();
+
+    /// Recognition runs here, one job at a time, so cancelled jobs cannot pile up model loads. Tests hold its thread to
+    /// cancel a job before it starts.
+    QThreadPool& workers() { return workers_; }
 
 signals:
     void stateChanged();
@@ -107,7 +125,8 @@ private:
     std::size_t silent_ = 0;    // samples of silence since the last speech
     bool heard_ = false;        // speech has been heard in this recording
     int generation_ = 0;        // a cancel or a new recording makes an earlier recognition's result stale
-    std::shared_ptr<std::atomic<bool>> cancel_;
+    std::shared_ptr<RecognitionJob> job_;  // the recognition in flight, until it finishes or is cancelled
+    QThreadPool workers_;                  // last, so it is destroyed first and waits for the job it runs
 };
 
 }  // namespace edi_app

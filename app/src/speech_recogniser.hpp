@@ -37,6 +37,9 @@ public:
     /// this processor cannot run the engine.
     static std::unique_ptr<SpeechRecogniser> load(const std::filesystem::path& model, std::string& error);
 
+    /// How many times this process has opened a model file; a test checks that a cancelled recognition opens none.
+    static int loads();
+
     /// The processor has the instructions the engine is built for. On x86-64 that is AVX2 and its companions, with no
     /// fallback at run time (cmake/EdiWhisper.cmake), so nothing may call into the engine where this is false.
     static bool cpu_supported();
