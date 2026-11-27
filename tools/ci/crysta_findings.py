@@ -1,21 +1,28 @@
 # SPDX-License-Identifier: BSD-3-Clause
-"""Say what crysta's checkers and tests found, by file, line and check name only.
+"""Say what crysta's commands found, by file, line and check name only.
 
-    python3 tools/ci/crysta_findings.py run KIND REPORT -- COMMAND...
-    python3 tools/ci/crysta_findings.py show KIND REPORT
+    python3 tools/ci/crysta_findings.py [--root DIR] run KIND REPORT -- COMMAND...
+    python3 tools/ci/crysta_findings.py [--root DIR] show KIND REPORT
 
-crysta's source is private (ADR-0083): a test's message or a checker's note can quote it, so a
-crysta job keeps the raw output on the runner and prints one line per finding. KIND is
+crysta's source is private (ADR-0083): a test's message, a compiler's note or a checker's report
+can quote it, so a crysta job keeps the raw output on the runner and prints one line per finding.
+KIND is
 
     pytest      REPORT is the file tools/ci/crysta_pytest.py writes
     doctest     REPORT is a folder searched for the C++ tier's XML reports
-    clang-tidy  REPORT is the command's own output (run writes it there)
-    cppcheck    the same
+    clang-tidy  REPORT is the command's own output (run writes it there), as for every kind below
+    cppcheck
+    build       compiler, linker and CMake errors and warnings: file:line and the -W flag
+    check       a crysta guard or contract script: its file:line lines, named after the script
+                the command runs, or after the command's last word (a pixi task)
+    ruff        ruff's concise lines: file:line and the rule code
+    perf        ab_perf's verdicts: workload, verdict and the numbers
+    quiet       nothing but the exit code
 
-`run` keeps the command's output on the runner (in REPORT for the two checkers, else in
-$RUNNER_TEMP/findings), prints the findings and exits with the command's own code; doctest reports
-older than the command are left out. A command that failed without a finding shows the end of its
-output, which the step's filter still checks line by line.
+--root makes the paths printed relative to DIR. `run` prints the findings and exits with the
+command's own code; doctest reports older than the command are left out. A command that failed
+without a finding (a warning is not one) shows the end of its output, which the step's filter still
+checks line by line.
 """
 
 from __future__ import annotations
@@ -36,6 +43,29 @@ TAIL = 40
 CHECKER = re.compile(
     r'^(?P<file>[^\s:][^:]*):(?P<line>\d+):(?:\d+:)?\s*(?P<kind>warning|error|style|performance|portability|information|note)\b.*\[(?P<check>[A-Za-z0-9_.,-]+)\]\s*$'
 )
+# A compiler's message quotes identifiers, so only the place, the level and the flag are kept.
+COMPILER = re.compile(
+    r'^(?P<file>[^\s:][^:]*):(?P<line>\d+):(?:\d+:)? (?P<level>fatal error|error|warning): '
+    r'.*?(?: \[(?P<flag>-W[^\]\s]+)\])?$'
+)
+CMAKE = re.compile(r'^CMake Error at (?P<file>[^:]+):(?P<line>\d+)')
+# A linker names the symbol it missed, so its errors are all one finding.
+LINKER = re.compile(
+    r'undefined reference|undefined symbol|Undefined symbols|multiple definition'
+    r'|symbol\(s\) not found|\bld(?:\.\w+)?: error|ld returned|linker command failed'
+)
+LOCATED = re.compile(r'^(?P<file>[^\s:]*/[^\s:]+|[^\s:/]+\.[A-Za-z]\w*):(?P<line>\d+)\b')
+RUFF = re.compile(r'^(?P<file>[^\s:][^:]*):(?P<line>\d+):\d+: (?P<code>[A-Za-z][\w-]*)')
+REFORMAT = re.compile(r'^Would reformat: (?P<file>\S.*)$')
+# ab_perf's verdicts can carry a declared delta's cause; the numbers are what the runs measured.
+VERDICT = re.compile(
+    r'^\[(?P<workload>[\w.+-]+)\] '
+    r'(?P<verdict>(?:PASS|FAIL|ADVISORY)(?: [A-Z][A-Z-]+)*)(?P<rest>.*)$'
+)
+NUMBER = re.compile(
+    r'(?:\b[a-z]+\()?\b[a-z]\w*=(?:\[[-+]?\d[\d.]*(?:, [-+]?\d[\d.]*)*\]|[-+]?\d[\d.]*)'
+)
+OUTPUT_KINDS = {'clang-tidy', 'cppcheck', 'build', 'check', 'ruff', 'perf', 'quiet'}
 
 
 def relative(path: str, root: Path | None) -> str:
@@ -56,6 +86,45 @@ def checker(log: Path, root: Path | None) -> list[str]:
         if match and match['kind'] != 'note':
             found.append(f'{relative(match["file"], root)}:{match["line"]} {match["check"]}')
     return sorted(set(found))
+
+
+def output(kind: str, log: Path, root: Path | None, name: str) -> list[str]:
+    """One line per finding in the output of a build, check, ruff or perf command."""
+    found = []
+    text = log.read_text(encoding='utf-8', errors='replace') if log.is_file() else ''
+    for raw in text.splitlines():
+        line = raw.strip()
+        if kind == 'build':
+            if match := COMPILER.match(line):
+                flag = f' {match["flag"]}' if match['flag'] else ''
+                found.append(f'{place(match, root)} {match["level"]}{flag}')
+            elif match := CMAKE.match(line):
+                found.append(f'{place(match, root)} cmake error')
+            elif LINKER.search(line):
+                found.append('link error')
+        elif kind == 'check' and (match := LOCATED.match(line)):
+            found.append(f'{place(match, root)} {name}')
+        elif kind == 'ruff':
+            if match := RUFF.match(line):
+                found.append(f'{place(match, root)} {match["code"]}')
+            elif match := REFORMAT.match(line):
+                found.append(f'{relative(match["file"], root)} format')
+        elif kind == 'perf' and (match := VERDICT.match(line)):
+            numbers = ' '.join(m.group().replace('(', ' ') for m in NUMBER.finditer(match['rest']))
+            found.append(f'{match["workload"]} {match["verdict"]} {numbers}'.rstrip())
+    # Verdicts keep their order; a header's warning repeats in every file that includes it.
+    return found if kind == 'perf' else sorted(set(found))
+
+
+def place(match: re.Match, root: Path | None) -> str:
+    """A finding's file and line."""
+    return f'{relative(match["file"], root)}:{match["line"]}'
+
+
+def named(command: list[str]) -> str:
+    """A check's name: the script the command runs, else its last word (a pixi task)."""
+    scripts = [Path(word).stem for word in command if word.endswith(('.py', '.sh'))]
+    return scripts[0] if scripts else command[-1]
 
 
 def doctest(folder: Path, since: float = 0.0) -> list[str]:
@@ -128,8 +197,10 @@ def times(report: Path, slowest: int = 15) -> None:
         print(f'pytest times: {seconds:9.1f} s  file {file}')
 
 
-def show(kind: str, report: Path, root: Path | None, since: float = 0.0) -> int:
-    """Print the findings; the count of them is the return value."""
+def show(
+    kind: str, report: Path, root: Path | None, since: float = 0.0, name: str = 'check'
+) -> int:
+    """Print the findings; the count of those that can explain a failure is the return value."""
     counts: Counter = Counter()
     if kind == 'pytest':
         found, counts = pytest(report)
@@ -138,26 +209,33 @@ def show(kind: str, report: Path, root: Path | None, since: float = 0.0) -> int:
         found = doctest(report, since)
     elif kind in {'clang-tidy', 'cppcheck'}:
         found = checker(report, root) if report.is_file() else []
+    elif kind in OUTPUT_KINDS:
+        found = output(kind, report, root, name)
     else:
         raise SystemExit(f'crysta_findings: unknown kind {kind}')
     for line in found:
         print(f'{kind}: {line}')
     tally = ', '.join(f'{n} {name}' for name, n in sorted(counts.items()))
     print(f'{kind}: {len(found)} finding(s){"; " + tally if tally else ""}')
+    # A warning or a passed workload fails nothing, so the end of the output still shows.
+    if kind == 'build':
+        return sum(' warning' not in line for line in found)
+    if kind == 'perf':
+        return sum(' FAIL' in line for line in found)
     return len(found)
 
 
 def run(kind: str, report: Path, command: list[str], root: Path | None) -> int:
     """Run the command with its output kept on the runner, then report."""
     kept = Path(os.environ.get('RUNNER_TEMP', report.parent)) / 'findings'
-    log = report if kind in {'clang-tidy', 'cppcheck'} else kept / f'{kind}.log'
+    log = report if kind in OUTPUT_KINDS else kept / f'{kind}.log'
     log.parent.mkdir(parents=True, exist_ok=True)
     started = time.time() - 1
     with log.open('wb') as sink:
         status = subprocess.run(
             command, stdout=sink, stderr=subprocess.STDOUT, check=False
         ).returncode
-    found = show(kind, report, root, started)
+    found = show(kind, report, root, started, named(command))
     if status and not found:
         print(
             f'{kind}: the command ended with exit {status} and no finding; the end of its output:'
