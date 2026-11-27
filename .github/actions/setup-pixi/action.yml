@@ -45,10 +45,11 @@ runs:
         # shared ~/.pixi/bin (which the hub VM also uses).
         pixi-bin-path: ${{ runner.temp }}/pinned-pixi/pixi${{ runner.os == 'Windows' && '.exe' || '' }}
         manifest-path: ${{ inputs.manifest-path }}
-        environments: ${{ inputs.environments }}
-        cache: ${{ inputs.cache }}
+        # setup-pixi refuses environments, a cache or a frozen lock when it installs nothing.
+        environments: ${{ inputs.install == 'true' && inputs.environments || '' }}
+        cache: ${{ inputs.install == 'true' && inputs.cache || 'false' }}
         # Pull requests restore environment caches and never write them; edi's 10 GB is shared by every job.
         cache-write: ${{ github.event_name == 'schedule' || github.event_name == 'push' && github.ref == 'refs/heads/main' }}
         run-install: ${{ inputs.install }}
-        frozen: true
+        frozen: ${{ inputs.install }}
         post-cleanup: false
