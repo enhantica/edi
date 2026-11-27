@@ -1367,7 +1367,9 @@ def package_app(  # noqa: PLR0913, PLR0914 - the stage's identity and how it shi
             '--compression',
             '1',
             '--online-only' if repository_url else '--hybrid',
-            *(['--exclude', ','.join(excluded)] if excluded else []),
+            # An online-only installer carries no component, and binarycreator refuses --exclude
+            # with it; its repository already leaves the withheld ones out.
+            *(['--exclude', ','.join(excluded)] if excluded and not repository_url else []),
             '-r',
             source / 'config/resources/resources.qrc',
             '-c',
