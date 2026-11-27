@@ -92,6 +92,7 @@
 #include "crysta/threading.hpp"
 #include "crysta/tokens.hpp"
 #include "edi/categories.hpp"
+#include "edi/edits.hpp"
 #include "edi/fittability.hpp"
 #include "edi/io.hpp"
 #include "edi/model.hpp"
@@ -818,6 +819,10 @@ std::vector<std::string> atom_types(const Project& project, const Structure& str
         return new_site_elements();
     }
     return {types.begin(), types.end()};
+}
+
+void check_deuterium_lengths(const std::map<std::string, double>& lengths, const std::string& where) {
+    crysta::check_deuterium_lengths(lengths, where);
 }
 
 namespace {

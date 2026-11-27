@@ -1241,10 +1241,14 @@ class Edit {
         });
     }
     // A structure's declared scattering length: set (declaring it when it is new) or removed. The map is
-    // one recorded field, written through its `modify`; neither callback can refuse.
+    // one recorded field, written through its `modify`. Setting refuses, before any change, a length that would give
+    // deuterium two values under its two spellings; removing cannot refuse.
     using Lengths = std::map<std::string, double>;
     static Edit scattering_length(Structure& structure, std::string symbol, double length) {
         return Edit([&structure, symbol = std::move(symbol), length] {
+            Lengths next = structure.scattering_lengths_fm;
+            next[symbol] = length;
+            check_deuterium_lengths(next, "the scattering-length table");
             structure.scattering_lengths_fm.modify([&symbol, length](Lengths& lengths) { lengths[symbol] = length; });
         });
     }
