@@ -10,6 +10,7 @@ import yaml
 
 from tests.fixtures.e09_t75_workflow import active
 from tests.fixtures.native_process import environment_bash
+from tests.fixtures.public_artifact_contract import CRYSTA_SDK_ARTIFACT
 
 ROOT = Path(__file__).resolve().parents[3]
 STORE = './.github/actions/store'
@@ -227,12 +228,13 @@ def test_failed_native_observations_are_retained_without_promoting_an_sdk():
         step
         for step in steps
         if step.get('with', {}).get('artifact')
-        == 'crysta-sdk-red-${{ matrix.platform }}-${{ needs.resolve.outputs.sha }}'
+        == (
+            'crysta-sdk-red-${{ matrix.platform }}-${{ needs.resolve.outputs.sha }}'
+            "${{ inputs.diagnostic && '-diagnostic' || '' }}"
+        )
     )
     artifact = next(
-        step
-        for step in steps
-        if step.get('with', {}).get('artifact') == 'crysta-sdk-${{ matrix.platform }}'
+        step for step in steps if step.get('with', {}).get('artifact') == CRYSTA_SDK_ARTIFACT
     )
     assert evidence['uses'] == artifact['uses'] == STORE, (
         'Failed observations and qualified SDKs undergo checked publication'

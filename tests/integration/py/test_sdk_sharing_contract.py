@@ -16,6 +16,7 @@ import yaml
 from tests.fixtures.e09_t75_workflow import active
 from tests.fixtures.fast_ci.workflow import run_shell, workflow_shell
 from tests.fixtures.native_process import environment_bash
+from tests.fixtures.public_artifact_contract import CRYSTA_SDK_ARTIFACT
 
 ROOT = Path(__file__).resolve().parents[3]
 PRODUCER = '.github/workflows/crysta-sdk.yml'
@@ -49,9 +50,10 @@ def current_run_download(action):
         'A consumer uses its producer artifact rather than cache availability'
     )
     selected = downloads[0]['with']
-    assert selected.get('name') == 'crysta-sdk-${{ inputs.platform }}', (
-        'Consumers select the exact platform SDK artifact'
-    )
+    assert selected.get('name') == (
+        'edi-crysta-sdk-${{ inputs.platform }}'
+        "${{ inputs.diagnostic == 'true' && '-diagnostic' || '' }}"
+    ), 'Consumers select the exact platform SDK artifact for the requested run mode'
     assert selected.get('path') == 'crysta-sdk-archives', (
         'Consumers download SDK archives into their declared directory'
     )
@@ -115,12 +117,12 @@ def test_sdk_cold_and_warm_producers_publish_required_artifacts_only_after_succe
         step
         for step in steps
         if step.get('uses') == './.github/actions/store'
-        and step.get('with', {}).get('artifact') == 'crysta-sdk-${{ matrix.platform }}'
+        and step.get('with', {}).get('artifact') == CRYSTA_SDK_ARTIFACT
     )
     assert steps.index(package) < steps.index(upload), (
         'SDK packaging finishes before its artifacts are uploaded'
     )
-    assert upload['with']['artifact'] == 'crysta-sdk-${{ matrix.platform }}', (
+    assert upload['with']['artifact'] == CRYSTA_SDK_ARTIFACT, (
         'Producers publish the artifact for their exact matrix platform'
     )
     assert upload['with']['path'] == 'crysta-sdk-archives', (
@@ -166,7 +168,7 @@ def test_sdk_producer_rejects_missing_empty_changed_and_misdirected_outputs(  # 
         step
         for step in steps
         if step.get('uses') == './.github/actions/store'
-        and step.get('with', {}).get('artifact') == 'crysta-sdk-${{ matrix.platform }}'
+        and step.get('with', {}).get('artifact') == CRYSTA_SDK_ARTIFACT
     )
     assert steps.index(guard) < steps.index(upload), (
         'Complete output validation precedes every SDK artifact upload'
@@ -295,7 +297,7 @@ def test_release_sdk_download_uses_the_exact_qualified_installer_run():
         step
         for step in steps
         if step.get('uses') == 'actions/download-artifact@v4'
-        and step.get('with', {}).get('pattern') == 'crysta-sdk-*'
+        and step.get('with', {}).get('pattern') == '*crysta-sdk-[low]*'
     )
     assert steps.index(promotion) < steps.index(download), (
         'Installer promotion is validated before downloading qualified SDK artifacts'

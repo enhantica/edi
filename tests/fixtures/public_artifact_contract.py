@@ -2,6 +2,10 @@
 
 from tests.fixtures.e09_t75_workflow import STORE_ACTION, artifact_options
 
+CRYSTA_SDK_ARTIFACT = (
+    "edi-crysta-sdk-${{ matrix.platform }}${{ inputs.diagnostic && '-diagnostic' || '' }}"
+)
+
 # Calendar routes are the published v2026.11.14 contract (ADRs 0071/0072).
 # Native and SDK transport extend those routes under ADR 0083.
 ROUTES = {
@@ -9,7 +13,7 @@ ROUTES = {
         {'build/edi-native-artifact'},
         ('pixi run core-build', 'tools/ci/edi_native.py pack --out build/edi-native-artifact'),
     ),
-    ('crysta-sdk.yml', 'build', 'crysta-sdk-${{ matrix.platform }}'): (
+    ('crysta-sdk.yml', 'build', CRYSTA_SDK_ARTIFACT): (
         {'crysta-sdk-archives'},
         ('cpp-ci sdk-pack', 'SDK checksum does not bind the requested archive'),
     ),
