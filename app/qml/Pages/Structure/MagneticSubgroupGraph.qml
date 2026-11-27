@@ -3,6 +3,7 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import QtQuick.Controls
+import QtQuick.Layouts
 import QtQuick.Shapes
 
 import EasyApplication.Gui.Style as EaStyle
@@ -26,6 +27,25 @@ Flickable {
     // The card clicked last stays shown, with its relatives and its details, until the pointer enters another card or
     // Esc is pressed, so the view can be scrolled to them (owner, 2026-11-27).
     property int pinned: -1
+    // The transform from the parent to the groups' magnetic cell, for each card's tooltip.
+    property string parentCell: ""
+    // A card's details, row by row, for its tooltip (owner, 2026-11-27): the group, its type and net moment, the two
+    // transforms, the domains, then each magnetic site's allowed moment components.
+    function detailsOf(n) {
+        const rows = [[qsTr("BNS"), `${n.name} ${n.bns}${n.embedding > 1 ? " #" + n.embedding : ""}`],
+                      [qsTr("Type"), ["", "I", "II", "III", "IV"][n.type] ?? ""]];
+        if (n.netMoment)
+            rows.push([qsTr("Net moment"), qsTr("yes")]);
+        rows.push([qsTr("From the parent"), parentCell]);
+        rows.push([qsTr("To the BNS standard"), n.transform]);
+        rows.push([qsTr("Domains"), String(n.domains)]);
+        for (const site of String(n.moments ?? "").split(" · ")) {
+            const at = site.indexOf(" ");
+            if (at > 0)
+                rows.push([site.slice(0, at), site.slice(at + 1)]);
+        }
+        return rows;
+    }
     onNodesChanged: pinned = -1
     readonly property int shownNode: pinned >= 0 ? pinned : hovered
 
@@ -233,6 +253,7 @@ Flickable {
                 }
             }
             MouseArea {
+                id: cardArea
                 objectName: `magnetic.node.${node.index}.card`
                 anchors.fill: parent
                 hoverEnabled: true
@@ -248,6 +269,24 @@ Flickable {
                     if (graph.selectable(node.index))
                         graph.toggled(node.index);
                     graph.pinned = node.index;
+                }
+                ToolTip {
+                    objectName: `magnetic.node.${node.index}.tooltip`
+                    visible: cardArea.containsMouse && node.data_.bns !== ""
+                    contentItem: GridLayout {
+                        columns: 2
+                        columnSpacing: EaStyle.Sizes.fontPixelSize
+                        rowSpacing: EaStyle.Sizes.fontPixelSize * 0.2
+                        Repeater {
+                            model: cardArea.containsMouse ? graph.detailsOf(node.data_).flat() : []
+                            delegate: EaElements.Label {
+                                required property string modelData
+                                required property int index
+                                color: index % 2 === 0 ? EaStyle.Colors.themeForegroundMinor : EaStyle.Colors.themeForeground
+                                text: modelData
+                            }
+                        }
+                    }
                 }
             }
         }

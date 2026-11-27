@@ -310,6 +310,7 @@ AppDialog {
                 nodes: popup.nodes
                 selected: popup.selected
                 maximalOnly: maximalOnly.checked
+                parentCell: popup.found ? popup.found.cell : ""
                 onShownNodeChanged: popup.hovered = shownNode
                 onToggled: index => popup.toggle(index)
             }
@@ -439,32 +440,8 @@ AppDialog {
             }
         }
 
-        // The details strip: the group under the pointer, or the pinned one. Its height is reserved for its three lines,
-        // so the dialog never resizes as the pointer moves (owner, 2026-11-27).
-        EaElements.Label {
-            id: details
-            objectName: "magnetic.details"
-            Layout.fillWidth: true
-            Layout.preferredHeight: 3 * detailsMetrics.lineSpacing
-            Layout.minimumHeight: Layout.preferredHeight
-            Layout.maximumHeight: Layout.preferredHeight
-            verticalAlignment: Text.AlignTop
-            wrapMode: Text.Wrap
-            maximumLineCount: 3
-            elide: Text.ElideRight
-            text: {
-                const n = popup.nodes[popup.hovered];
-                if (n === undefined)
-                    return qsTr("Point at a group for its moments and transforms.");
-                return `${n.name} ${n.bns} · ${qsTr("from the parent")} ${popup.found.cell} · ${qsTr("to the BNS standard")} ${n.transform} · ${(n.domains === 1 ? qsTr("1 domain") : qsTr("%1 domains").arg(n.domains))}\n${n.moments}`;
-            }
-        }
     }
 
-    FontMetrics {
-        id: detailsMetrics
-        font: details.font
-    }
     // Esc unpins a pinned card before it would close the dialog.
     Shortcut {
         sequence: StandardKey.Cancel
