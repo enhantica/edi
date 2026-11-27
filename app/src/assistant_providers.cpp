@@ -62,7 +62,7 @@ QString bundled_runtime(const char* runtime, bool available, const char* buildAp
                           ? QString::fromUtf8(buildDir)
                           : QDir(app).absoluteFilePath(QString::fromUtf8(installRelative));
     QFile identity(root + QStringLiteral("/edi-runtime.json"));
-    if (!identity.open(QIODevice::ReadOnly) || identity.size() > 64 * 1024) return {};
+    if (!identity.open(QIODevice::ReadOnly) || identity.size() > qint64{64} * 1024) return {};
     QJsonParseError error;
     const auto parsed = QJsonDocument::fromJson(identity.readAll(), &error);
     if (error.error != QJsonParseError::NoError || !parsed.isObject()) return {};

@@ -474,17 +474,18 @@ CopilotSession::User CopilotSession::parseUser(const QString& text) {
 }
 
 void CopilotSession::runCommand(const QString& session, const QString& command,
-                                std::function<void(const QJsonObject&, const QString&)> done) {
+                                const std::function<void(const QJsonObject&, const QString&)>& done) {
     identity_text_.insert(session, {});
     request(QStringLiteral("session/prompt"),
             {{"sessionId", session}, {"prompt", QJsonArray{QJsonObject{{"type", "text"}, {"text", command}}}}},
+            // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks): the std::function owns the lambda; the analyzer does not follow libc++'s release of it
             [this, session, done](const QJsonObject&, const QJsonObject& error) {
                 const auto text = identity_text_.take(session).join(QString());
                 done(error, text);
             });
 }
 
-void CopilotSession::checkIdentity(const QString& session, std::function<void(const QString&)> pass,
+void CopilotSession::checkIdentity(const QString& session, const std::function<void(const QString&)>& pass,
                                    std::function<void(const QString&, bool)> refused) {
     // The login lives in the system keychain and the home does not choose it, so the CLI's own account command
     // selects the record's login and reads it back in the session that takes the input. Without `/user` over ACP

@@ -54,8 +54,8 @@ std::optional<AssistantAccountRecord> AssistantAccountRecord::fromJson(Assistant
     return record;
 }
 
-AssistantAccounts::AssistantAccounts(QString settingsPath, QString accountsRoot)
-    : settings_path_(std::move(settingsPath)), accounts_root_(QDir::cleanPath(std::move(accountsRoot))) {}
+AssistantAccounts::AssistantAccounts(QString settingsPath, const QString& accountsRoot)
+    : settings_path_(std::move(settingsPath)), accounts_root_(QDir::cleanPath(accountsRoot)) {}
 
 QString AssistantAccounts::defaultAccountsRoot() {
     const auto base = QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation);

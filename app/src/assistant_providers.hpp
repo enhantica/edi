@@ -7,7 +7,7 @@ namespace edi_app {
 
 /// The MCP call timeout edi gives a runtime for its tools: a fit or a question may take hours, and edi itself sets
 /// no total limit on them, so one day plus a minute (ADR-0108 §3).
-inline constexpr quint64 assistant_tool_timeout_ms = 24ull * 60 * 60 * 1000 + 60 * 1000;
+inline constexpr quint64 assistant_tool_timeout_ms = 24ull * 60 * 60 * 1000 + 60ull * 1000;
 
 /// Whether a GitHub Copilot session may receive user input. Neither ACP nor the pinned CLI reads back a session's
 /// effective tools, so this stays false until the owner decides what proves them (ADR-0108, open question 1).

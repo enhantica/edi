@@ -350,7 +350,7 @@ QString AssistantRuntimeTranslator::request(const QString& method, const QJsonOb
     if (failed_ || !live_ || method.isEmpty() || next_id_ == std::numeric_limits<quint64>::max()) return {};
     const QPointer<AssistantRuntimeTranslator> self(this);
     const auto scope = generation_;
-    const auto id = QStringLiteral("edi-%1-%2").arg(generation_).arg(++next_id_);
+    auto id = QStringLiteral("edi-%1-%2").arg(generation_).arg(++next_id_);
     if (prepare && !prepare(id)) return {};
     if (!self || generation_ != scope || failed_ || !live_) return {};
     try {
@@ -369,7 +369,9 @@ bool AssistantRuntimeTranslator::notification(const QString& method, const QJson
 
 void AssistantRuntimeTranslator::handle(const QString& id, const QString& method, const QJsonObject& params) {
     const auto now = clock_.elapsed();
-    if (method == QLatin1StringView("initialize")) {
+    if (method == QLatin1StringView("initialize") || method == QLatin1StringView("thread/archive") ||
+        method == QLatin1StringView("thread/name/set")) {
+        // edi's records carry the archive mark and the name; the runtime has nothing to change.
         respond(id, method, {});
     } else if (method == QLatin1StringView("account/read") || method == QLatin1StringView("model/list") ||
                method == QLatin1StringView("skills/list") || method == QLatin1StringView("thread/start") ||
@@ -424,9 +426,6 @@ void AssistantRuntimeTranslator::handle(const QString& id, const QString& method
     } else if (method == QLatin1StringView("thread/list")) {
         // These runtimes keep no list for edi; edi's own records of this account's conversations are the list.
         respond(id, method, {{"data", known_threads_}, {"nextCursor", QJsonValue::Null}});
-    } else if (method == QLatin1StringView("thread/archive") || method == QLatin1StringView("thread/name/set")) {
-        // edi's records carry the archive mark and the name; the runtime has nothing to change.
-        respond(id, method, {});
     } else {
         // Anything else the runtime has no equivalent for.
         refuse(id, method, kUnsupported, tr("This assistant does not support %1.").arg(method));

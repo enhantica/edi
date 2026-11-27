@@ -27,7 +27,7 @@ struct AssistantAccountRecord {
 class AssistantAccounts {
 public:
     /// `settingsPath` is edi's settings file; `accountsRoot` the folder that holds the account homes.
-    AssistantAccounts(QString settingsPath, QString accountsRoot);
+    AssistantAccounts(QString settingsPath, const QString& accountsRoot);
 
     /// `<AppLocalData>/assistant/accounts`.
     static QString defaultAccountsRoot();

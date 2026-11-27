@@ -18216,6 +18216,7 @@ struct AssistantViewModel::State {
             QString emitted_code;
             if (incoming.value("type") == "turn_finished" && connection) {
                 const auto emitted_state = object(connection->state());
+                // cppcheck-suppress identicalConditionAfterEarlyExit ; a re-check after the call into the connection
                 if (!publication.input_current()) return;
                 const auto code = emitted_state.value("last_error_code").toString();
                 if (incoming.value("connection_id") == emitted_state.value("connection_id") &&

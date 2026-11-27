@@ -442,6 +442,7 @@ bool CodexAgent::startWith(const QString& executable, const QString& workspace, 
         if(policyPatch().isEmpty())arguments <<
             QStringLiteral("-c") << QStringLiteral("features.default_mode_request_user_input=true") <<
             QStringLiteral("-c") << QStringLiteral("tools.experimental_request_user_input.enabled=true");
+        // cppcheck-suppress nullPointerRedundantCheck ; checked again below, after calls that can delete it
         assistant_guard_prepare(*process, guard, executable, arguments, workspace, environment);
         // The runtime owns its profile and managed login. Never assign HOME/home,
         // open config/auth files, or copy provider tokens; CODEX_HOME is set only

@@ -98,10 +98,10 @@ private:
     static User parseUser(const QString& text);
     /// Run one CLI command in a session and hand over its text, or the refusal.
     void runCommand(const QString& session, const QString& command,
-                    std::function<void(const QJsonObject&, const QString&)> done);
+                    const std::function<void(const QJsonObject&, const QString&)>& done);
     /// Select the account's login with `/user switch`, then compare `/user show` with the account. `refused`
     /// defaults to `accountRefused` and a retire.
-    void checkIdentity(const QString& session, std::function<void(const QString&)> pass,
+    void checkIdentity(const QString& session, const std::function<void(const QString&)>& pass,
                        std::function<void(const QString&, bool)> refused = {});
     void finishStart(const QString& login);
     void readbackExpired();

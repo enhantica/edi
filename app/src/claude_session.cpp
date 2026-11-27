@@ -21,7 +21,7 @@ constexpr int readback_ms = 120000;
 constexpr int status_ms = 30000;
 constexpr int login_ms = 15 * 60 * 1000;
 constexpr int logout_ms = 60000;
-constexpr qsizetype login_output_cap = 64 * 1024;
+constexpr qsizetype login_output_cap = qsizetype{64} * 1024;
 
 const QString edi_server = QStringLiteral("edi");
 const QString edi_tool_prefix = QStringLiteral("mcp__edi__");
@@ -315,7 +315,7 @@ bool ClaudeSession::prepareWorkspace(QString& problem) {
 
 QProcess* ClaudeSession::runOneShot(const AssistantRuntimeLaunch& launch, const QProcessEnvironment& environment,
                                     const QStringList& arguments, int timeoutMs, QProcess::ProcessChannelMode mode,
-                                    OneShotDone done) {
+                                    const OneShotDone& done) {
     auto* process = new QProcess(this);
     process->setProgram(launch.executable);
     process->setArguments(arguments);

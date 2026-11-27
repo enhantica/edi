@@ -17,8 +17,8 @@ AssistantProcess::AssistantProcess(QObject* parent) : QObject(parent) {
     clock_.start();
     timer_.setInterval(100);
     connect(&timer_, &QTimer::timeout, this, [this] {
-        const QPointer<AssistantProcess> receiver(this);
         const auto scope = generation_;
+        const QPointer<AssistantProcess> receiver(this);
         try {
             checkDeadline();
         } catch (...) {

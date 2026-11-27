@@ -131,7 +131,7 @@ private:
     using OneShotDone = std::function<void(QProcess& process, const QString& problem, bool timedOut)>;
     QProcess* runOneShot(const AssistantRuntimeLaunch& launch, const QProcessEnvironment& environment,
                          const QStringList& arguments, int timeoutMs, QProcess::ProcessChannelMode mode,
-                         OneShotDone done);
+                         const OneShotDone& done);
 
     bool prepareWorkspace(QString& problem);
     void launch(Purpose purpose, bool resume);

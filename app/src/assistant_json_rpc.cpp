@@ -54,7 +54,7 @@ QString AssistantJsonRpc::request(const QString& method, const QJsonObject& para
     sync();
     if (!process_ || method.isEmpty() || static_cast<double>(next_id_) >= kSafeInteger) return {};
     const auto number = ++next_id_;
-    const auto id = QString::number(number);
+    auto id = QString::number(number);
     pending_.insert(id, method);
     const QJsonObject envelope{{QStringLiteral("jsonrpc"), QStringLiteral("2.0")},
                                {QStringLiteral("id"), static_cast<qint64>(number)},
