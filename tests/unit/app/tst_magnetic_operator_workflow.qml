@@ -564,8 +564,18 @@ TestCase {
         compare(children.length, 1, "The published witness has exactly one added child");
         const moments = Probe.rows(children[0].structure.atomSiteMoments);
         verify(moments.some(row => ["mx", "my", "mz"].some(axis => Math.abs(row[axis].value) > 0)), "Mn3O4 retains a nonzero seeded magnetic moment");
+        const bank = Probe.rows(Session.project.experiments)[0].experiment;
+        const started = bank.measCalcPoints().calc.slice();
+        verify(started.length > 0 && started.every(Number.isFinite), "The linked Mn3O4 starting state has a calculable powder pattern");
         const text = Probe.rows(Session.loadWarnings).map(row => row.message).join("\n") + Ui.text(app.contentItem);
         verify(!/no magnetic intensity/i.test(text), "The linked Mn3O4 positive-signal witness does not show the zero-intensity note");
+        for (const row of moments)
+            for (const axis of ["mx", "my", "mz"])
+                row[axis].value = 0;
+        tryCompare(Session.project, "calculating", false, 3000, "The zero-moment control completes its own forward calculation");
+        const nuclear = bank.measCalcPoints().calc;
+        compare(nuclear.length, started.length, "The positive-intensity control compares the identical observed powder grid");
+        verify(started.some((value, i) => value - nuclear[i] > 1e-8), "The starting Mn3O4 moments produce an observed magnetic contribution above the zero-moment control");
     }
     function test_start_unlinked_has_no_note() {
         const text = noteNodes("note-unlinked", [/[Mm]x,[Mm]y,[Mm]z/]);

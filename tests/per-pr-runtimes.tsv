@@ -10,7 +10,7 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-27T00:33:52Z
+# measured_utc = 2026-11-27T00:43:30Z
 #
 # Recorded from: measured test run (1 node(s) measured once, 187627 banked, 0 stale row(s) dropped)
 # Collected tests: 267563; with a reported duration: 86320
@@ -267674,7 +267674,7 @@ UNMEASURED:not-completed-in-this-run	tests/unit/py/test_web_science_identity.py:
 # module-cost: 6.489	tests/integration/py/test_tutorial_strategy.py
 # module-cost: 2.933	tests/integration/py/test_weight_fraction_app.py
 # module-cost: 0.951	tests/system/app/test_likes_feedback.py
-# module-cost: 1.376	tests/system/app/test_magnetic_operator_workflow.py
+# module-cost: 2.120	tests/system/app/test_magnetic_operator_workflow.py
 # module-cost: 1.325	tests/system/app/test_magnetic_structure_type_native.py
 # module-cost: 12.650	tests/system/app/test_rendered_caption_capitalisation.py
 # module-cost: 84.777	tests/system/app/test_replaced_data_drawn.py
