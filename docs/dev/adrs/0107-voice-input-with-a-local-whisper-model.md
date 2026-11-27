@@ -20,11 +20,13 @@ assistant runtime, and shows its choices as rows on the folder page instead of a
 1. **Engine.** [whisper.cpp](https://github.com/ggml-org/whisper.cpp) release `v1.9.6`, which includes ggml. CMake
    downloads the release archive once with `FetchContent` and checks its SHA-256
    (`7ab15dc88022d2425ad94dcffd8abbf1b6d7018089b4e48d6b40780738e0b445`), as `cmake/EdiGuiBase.cmake` does for
-   gui-components; `EDI_WHISPER_SRC` points at an unpacked copy for offline builds. It is built as a static library,
-   CPU only, with `GGML_NATIVE` off so an installer runs on other machines than the build machine. On x86-64 it uses
-   AVX2, FMA and F16C, present in Intel CPUs since 2013 and AMD since 2015; on Apple silicon ggml uses NEON and the
-   Accelerate framework. No GPU backend: Metal or CUDA would add shader or driver packaging for a speed the CPU already
-   gives (§Speed). It is built with the assistant (`EDI_APP_ASSISTANT`), so it is in the desktop app and not in WebAssembly.
+   gui-components; `EDI_WHISPER_SRC` points at an unpacked copy for offline builds. It is built as a static library, CPU
+   only, with `GGML_NATIVE` off so an installer runs on other machines than the build machine. On x86-64 it uses AVX2,
+   FMA and F16C, present in Intel CPUs since 2013 and AMD since 2015; on Apple silicon ggml uses NEON and the Accelerate
+   framework. ggml is built without run-time dispatch, so the app checks the processor itself (CPUID and the operating
+   system's AVX state) and shows no microphone button where those instructions are missing. No GPU backend: Metal or
+   CUDA would add shader or driver packaging for a speed the CPU already gives (§Speed). It is built with the assistant
+   (`EDI_APP_ASSISTANT`), so it is in the desktop app and not in WebAssembly.
 2. **Model.** The multilingual Whisper "small" model in whisper.cpp's format, quantized to q5_1:
    `ggml-small-q5_1.bin`, 190 085 487 bytes, SHA-256
    `ae85e4a935d7a567bd102fe55afc16bb595bdb618e11b2fc7591bc08120411bb`. The owner chose small as the middle size: tiny
@@ -33,22 +35,24 @@ assistant runtime, and shows its choices as rows on the folder page instead of a
    `ggerganov/whisper.cpp`, its size and its hash; `tools/deps/voice/fetch.py` downloads it over HTTPS into a cache and
    refuses a file whose size or hash differs. Packaging downloads it; the app never downloads anything, and the model
    is never committed. Tests use the tiny q5_1 model (32 152 673 bytes) pinned in the same file.
-3. **Optional component.** The installer component `org.easydiffraction.app.voice`, "Voice input", holds the model and
-   a small manifest (`voice-model.json`: file name, size, SHA-256) under `share/edi/voice/`; on macOS this is beside
-   the signed application bundle, like the assistant runtime. It is unticked by default and depends on EasyDiffraction.
-   Its row on the folder page comes below the AI assistant rows, with its size; its sorting priority is 90, after the
-   assistant's 100. Maintenance Tool's Change components page adds or removes it. The engine itself is part of the app
-   on every desktop system, a few megabytes; without the component the app has no model, and with no model it shows no
-   microphone button. At start the app checks that the manifest exists and that the model file has the stated size;
-   the hash was checked when the installer was built and again by the installer's payload manifest. A change takes
-   effect after a restart, as for the assistant.
+3. **Optional component.** The installer component `org.easydiffraction.app.voice`, "Voice input", holds the model and a
+   small manifest (`voice-model.json`: file name, size, SHA-256) under `share/edi/voice/`; on macOS this is beside the
+   signed application bundle, like the assistant runtime. It is unticked by default and depends on EasyDiffraction. Its
+   row on the folder page comes below the AI assistant rows, with its one-line description and its size; its sorting
+   priority is 90, after the assistant's 100. Maintenance Tool's Change components page adds or removes it. The engine
+   itself is part of the app on every desktop system, a few megabytes; without the component the app has no model, and
+   with no model it shows no microphone button. At start the app checks that the manifest exists and that the model file
+   has the stated size; packaging checks the staged model against the pin in `tools/deps/voice/models.json` and writes
+   the manifest from that pin, and the installer's payload manifest checks it again. A change takes effect after a
+   restart, as for the assistant.
 4. **Audio and privacy.** Qt Multimedia's `QAudioSource` records from the default input at 16 kHz mono; when the device
    does not offer that format the app records in the device's format and converts to 16 kHz mono in memory. The
    samples stay in memory: they are never written to a file and never sent anywhere, and they are released when the
    text is ready or the recording is cancelled. A recording stops when the user presses the button again, after two
    seconds of silence following speech, or after two minutes. Only Qt Multimedia's audio input is used; its FFmpeg
    media plugin is not shipped.
-5. **Permission.** On first use the app asks for Qt's `QMicrophonePermission`. The macOS bundle declares
+5. **Permission.** On first use the app asks for Qt's `QMicrophonePermission`. The macOS bundle's Info.plist
+   (`app/resources/macos/Info.plist.in`, given to CMake so Qt links its microphone permission plugin) declares
    `NSMicrophoneUsageDescription` ("EasyDiffraction uses the microphone only when you press the microphone button in
    the assistant, to turn your speech into text on this computer.") and the signed app has the
    `com.apple.security.device.audio-input` entitlement. Windows reports a blocked microphone through its privacy
@@ -56,12 +60,16 @@ assistant runtime, and shows its choices as rows on the folder page instead of a
    message box's place, naming what the user can do.
 6. **Recognition.** The recording is recognised in one pass after it stops, off the GUI thread through
    `run_in_background` (ADR-0020's worker is for calculations). A cancel during recognition stops whisper through its
-   abort callback. Whisper uses up to eight threads (§Speed). The text is inserted at the cursor in the message box and is never
-   sent by itself; the user edits it and sends it as typed text.
+   abort callback. Whisper uses up to eight threads (§Speed). The model path is handed to whisper as UTF-8, which it
+   turns into a wide path on Windows, so an install folder outside the code page works. The text is inserted at the
+   cursor in the message box and is never sent by itself; the user edits it and sends it as typed text. A recording
+   belongs to the message box that started it: hiding the assistant, switching or clearing the conversation, or a
+   disconnect cancels it, and a late result for another owner is dropped.
 7. **Language.** By default Whisper detects the language. The assistant preferences may fix it; the list of languages
    comes from whisper.cpp itself, so it cannot disagree with the model.
 8. **Composer button.** A round microphone button, the same component and size as the stop and send buttons, sits to
-   their left. While listening it takes the accent colour and a cancel button appears beside it; Escape also cancels.
+   their left. While listening it takes the accent colour and a cancel button appears beside it; Escape anywhere in
+   the message box also cancels.
    While recognising it shows that it is busy and stays cancellable.
 
 ## Speed
@@ -98,10 +106,14 @@ ships its audio input only, not its FFmpeg media plugin. All three are rows in `
 - The installer and Maintenance Tool have one more row, on the assistant's page, and installer qualification runs with
   and without voice input. Qt Multimedia's media plugins are never deployed: Linux and Windows skip the plugin type, and
   on macOS `tools/installer/build.py` removes them and the libraries only they load; the bundle audit refuses FFmpeg.
-- Only the installed macOS app carries the microphone usage text; a development build on macOS is refused the
-  microphone, which the message box reports.
-- x86-64 CPUs older than AVX2 cannot use voice input; the rest of the app is unaffected because whisper code runs only
-  when the button is pressed.
+- A development build on macOS is not an application bundle, so macOS refuses it the microphone and the message box
+  says so; the installed bundle carries the usage text and the permission plugin.
+- Tests never use a real microphone. Inside a pytest run the app takes a recorded clip, a model path and a simulated
+  missing device or refused permission from `EDI_TEST_ASSISTANT_VOICE_*` variables
+  (`tests/fixtures/assistant_voice/README.md`); pull request CI runs that journey and the recogniser test on the tiny
+  model, and the installed app's smoke receipt recognises a second of silence with the shipped model.
+- x86-64 CPUs older than AVX2 cannot use voice input and see no microphone button; the rest of the app is unaffected
+  because whisper code runs only after that check.
 - Recognition starts after the user stops speaking. Showing words while the user speaks is left for later.
 
 ## Alternatives considered
