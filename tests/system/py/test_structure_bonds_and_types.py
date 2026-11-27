@@ -10,6 +10,8 @@ from tests.fixtures.fast_chart_redraws.rendering import capture
 ROOT = Path(__file__).resolve().parents[3]
 CASES = [
     'test_bond_cutoffs_change_displayed_cubic_distances_and_persist',
+    'test_default_neutron_offers_both_spellings_with_one_3d_colour_and_bonds',
+    'test_xray_text_apply_agrees_with_the_table_and_scene',
     *[
         f'test_active_probe_types_and_element_colour_regression_pin:{probe}'
         for probe in ('neutron', 'neutron-sears', 'xray')
