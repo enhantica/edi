@@ -325,7 +325,7 @@ clang-22 = "==22.1.8"
 cppcheck = "==2.21.0"
 python = "3.14.*"  # run-clang-tidy is a Python script
 
-# The checks run in the Linux and macOS app jobs; conda-forge has no Windows bash.
+# The checks run on Linux and macOS only; conda-forge has no Windows bash.
 [feature.cpp-lint.target.unix.dependencies]
 bash = ">=5.2"
 
