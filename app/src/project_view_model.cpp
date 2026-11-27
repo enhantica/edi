@@ -4460,33 +4460,47 @@ void ProjectViewModel::changeKMarks() {
 }
 
 void ProjectViewModel::setKSearchActive(bool on) {
-    changeKMarks();
-    k_marks_ = KMarks{};
+    // Marking is a mode over the marks, never their owner (owner, 2026-11-27): stopping keeps every mark and row,
+    // starting again continues with them, and only Clear empties the table. Suggestions are offered only when
+    // marking starts with no marks.
+    k_marks_.roles.clear();
     if (!on) {
+        k_marks_.active = false;
+        k_marks_.note.clear();
         emit kSearchChanged();
         return;
     }
-    k_marks_.active = true;
     const int experiment = currentExperimentIndex();
+    const int parent = magneticParentOf(experiment);
+    // Marks made on another experiment are not these data's: that one's table starts afresh here.
+    if (k_marks_.experiment != experiment) {
+        changeKMarks();
+        k_marks_ = KMarks{};
+    }
+    k_marks_.active = true;
     k_marks_.experiment = experiment;
-    k_marks_.parent = magneticParentOf(experiment);
-    if (k_marks_.parent == -2) {
+    k_marks_.parent = parent;
+    k_marks_.parent_name = parent >= 0 ? project_->structures[static_cast<std::size_t>(parent)]->name.value() : std::string();
+    if (parent == -2) {
         setKNote(tr("Several crystal structures are enabled here; disable all but the one to search k for."));
         return;
     }
-    if (k_marks_.parent < 0) {
+    if (parent < 0) {
         setKNote(tr("Link and enable the crystal structure to search k for."));
         return;
     }
-    try {
-        k_marks_.candidates = edi::magnetic_mark_candidates(*project_, static_cast<std::size_t>(experiment),
-                                                            static_cast<std::size_t>(k_marks_.parent));
-    } catch (const std::exception& refusal) {
-        setKNote(QString::fromUtf8(refusal.what()));
+    if (!k_marks_.marks.empty()) {
+        changeKMarks();  // the same marks, now under this parent
+        setKNote(QString());
         return;
     }
-    if (k_marks_.candidates.empty()) {
-        setKNote(QString());  // nothing to suggest; the user marks peaks by hand
+    changeKMarks();
+    try {
+        k_marks_.candidates = edi::magnetic_mark_candidates(*project_, static_cast<std::size_t>(experiment),
+                                                            static_cast<std::size_t>(parent));
+    } catch (const std::exception& refusal) {
+        k_marks_.candidates.clear();
+        setKNote(QString::fromUtf8(refusal.what()));
         return;
     }
     // Pre-marked: every suggestion, a peak at a reflection the crystal's space group forbids or an excess the current
@@ -4500,6 +4514,10 @@ void ProjectViewModel::toggleKMarkAt(double x, double tolerance) {
     // Free marking (owner decision 2026-11-27): a click on a mark drops it; anywhere else it marks the nearest observed
     // maximum within that peak's half width, or the clicked position itself when none is near. It never refuses.
     if (!k_marks_.active || k_marks_.parent < 0) return;
+    if (!kMarkingCurrent()) {  // its parent is no longer the one enabled crystal, as after an Add: start again
+        setKSearchActive(false);
+        return;
+    }
     const auto near = [&x, tolerance](const edi::MagneticPeak& p) {
         return std::abs(p.x - x) <= std::max({p.half_width, tolerance, 1e-9});
     };
@@ -4570,17 +4588,32 @@ void ProjectViewModel::clearKMarks() {
 }
 
 void ProjectViewModel::retireKMarks() {
-    // Any edit ends marking: the parent it admitted may no longer be the one enabled crystal, or at that index, so
-    // marking starts again from a fresh admission (review 21, F4). Add's own edit keeps its marks shown.
-    if (!k_marks_.active || adding_k_) return;
+    // Any edit ends marking, keeping the marks (review 21 and 22, F4; owner, 2026-11-27): the parent it admitted may
+    // no longer be the one enabled crystal, so the next start, tap, snapshot or search admits it again
+    // (kMarkingCurrent). Every snapshot and role of the earlier state retires.
+    if (k_marks_.experiment < 0) return;
     changeKMarks();
-    k_marks_ = KMarks{};
+    if (adding_k_) return;  // Add's own edit: its marks and roles stay shown
+    k_marks_.active = false;
+    k_marks_.roles.clear();
+    k_marks_.note.clear();
     emit kSearchChanged();
 }
 
+bool ProjectViewModel::kMarkingCurrent() const {
+    return k_marks_.parent >= 0 && k_marks_.experiment == currentExperimentIndex() &&
+           magneticParentOf(k_marks_.experiment) == k_marks_.parent &&
+           project_->structures[static_cast<std::size_t>(k_marks_.parent)]->name.value() == k_marks_.parent_name;
+}
+
 QVariantMap ProjectViewModel::kSnapshot() {
-    if (!k_marks_.active || k_marks_.parent < 0 || k_marks_.marks.empty()) {
+    if (k_marks_.marks.empty()) {
         setLastError(tr("mark at least one peak"));
+        return {};
+    }
+    if (!kMarkingCurrent()) {
+        if (k_marks_.active) setKSearchActive(false);
+        setLastError(tr("the crystal structure to search k for is no longer the experiment's one enabled crystal"));
         return {};
     }
     auto snapshot = std::make_shared<KSearchSnapshot>();
@@ -4621,7 +4654,7 @@ bool ProjectViewModel::kSnapshotCurrent(qint64 id) const {
     const auto held = k_snapshots_.find(id);
     if (held == k_snapshots_.end()) return false;  // foreign, or retired with its marks
     const KSearchSnapshot& snapshot = *held->second;
-    if (snapshot.generation != k_generation_ || !k_marks_.active || k_marks_.parent != snapshot.parent ||
+    if (snapshot.generation != k_generation_ || !kMarkingCurrent() || k_marks_.parent != snapshot.parent ||
         k_marks_.experiment != snapshot.experiment)
         return false;
     if (snapshot.parent >= static_cast<int>(project_->structures.size()) ||

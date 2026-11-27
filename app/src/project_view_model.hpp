@@ -1033,16 +1033,22 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     void takeKSnapshot(int index, int experiment, std::vector<edi::MagneticPeak> peaks);
     // The current experiment's k search: its parent, candidate peaks, marks and the roles the last current search
     // gave them. Any edit retires the marks.
+    // The one owner of marking state (review 22, F4): whether marking is on, its experiment and admitted parent, the
+    // candidates and marks. Every path that acts on it, a tap, a snapshot, a search or a role update, first asks
+    // kMarkingCurrent() whether that parent is still the experiment's one enabled crystal, by index and by name; Add's
+    // own edit keeps the marks shown, and the next action finds the parent gone and ends marking.
     struct KMarks {
         bool active = false;
         int experiment = -1;
         int parent = -1;
+        std::string parent_name;
         std::vector<edi::MagneticPeak> candidates;
         std::vector<int> marks;
         QStringList roles;  // per mark, after a search on exactly these marks
         QString note;
     };
     KMarks k_marks_;
+    bool kMarkingCurrent() const;
     quint64 k_generation_ = 1;  // every change of the marks
     struct KSearchSnapshot {
         qint64 id = 0;

@@ -21,7 +21,7 @@ SideBarGroup {
     readonly property bool marking: chart !== null && chart.peakMode
     // The marked peaks in the pattern's order, each with its index in the chart's candidates.
     readonly property var rows: {
-        if (!marking)
+        if (chart === null)
             return [];
         const out = chart.peakMarks.map(i => ({
                     "index": i,
@@ -37,7 +37,7 @@ SideBarGroup {
     collapsed: !SideBarGroups.isOpen(openKey, group)
     onCollapsedChanged: SideBarGroups.setOpen(openKey, !collapsed, group)
     last: SideBarGroups.isLast(group)
-    title: group.marking ? qsTr("k-vector search (%1)").arg(group.rows.length) : qsTr("k-vector search")
+    title: group.rows.length > 0 ? qsTr("k-vector search (%1)").arg(group.rows.length) : qsTr("k-vector search")
     icon: "magnet"
 
     Column {
@@ -161,7 +161,7 @@ SideBarGroup {
             EaElements.SideBarButton {
                 objectName: "kSearch.mark"
                 fontIcon: "magnet"
-                text: group.marking ? qsTr("Stop marking peaks") : qsTr("Mark peaks")
+                text: group.marking ? qsTr("Stop marking") : qsTr("Mark peaks")
                 checkable: true
                 checked: group.marking
                 enabled: group.chart !== null
@@ -171,7 +171,7 @@ SideBarGroup {
                 objectName: "kSearch.findK"
                 fontIcon: "search"
                 text: qsTr("Find k")
-                enabled: group.marking && group.chart.peakMarks.length > 0
+                enabled: group.chart !== null && group.chart.peakMarks.length > 0
                 onClicked: group.chart.openKVectors()
             }
         }

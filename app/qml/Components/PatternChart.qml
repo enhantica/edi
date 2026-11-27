@@ -29,11 +29,15 @@ Item {
     // marks and passes clicks on; the Experiment page's k search group shows and edits the same marks.
     readonly property var kState: chart.axisProject ? chart.axisProject.kSearch : ({})
     readonly property bool peakMode: chart.findKPage && kState.active === true
-    readonly property var peakCandidates: peakMode ? kState.candidates : []
-    readonly property var peakMarks: peakMode ? kState.marks : []
+    // The marks stay drawn and listed when marking stops, for the experiment they were made on (owner, 2026-11-27):
+    // marking is a mode over them, and only Clear empties them.
+    readonly property bool marksShown: chart.findKPage && chart.axisProject !== null &&
+                                       kState.experiment === chart.axisProject.currentExperimentIndex
+    readonly property var peakCandidates: marksShown ? kState.candidates : []
+    readonly property var peakMarks: marksShown ? kState.marks : []
     readonly property string peakNote: peakMode ? kState.note : ""
     // Each marked peak's role under the best-ranked k of the last search on these marks, by candidate index.
-    readonly property var peakRoles: peakMode ? kState.roles : ({})
+    readonly property var peakRoles: marksShown ? kState.roles : ({})
     // The marked peak under the pointer or under its table row in the k search group, by candidate index, else -1: its
     // line and pin turn grey, and its row is highlighted (owner, 2026-11-27).
     property int hoveredMark: -1
@@ -56,16 +60,20 @@ Item {
         when: chart.findKPage
         restoreMode: Binding.RestoreBindingOrValue
     }
-    property string addedNote: ""
-    property string addedBase: ""
-    // A dismissed or replaced notice is not brought back by a late check.
-    onAddedNoteChanged: if (addedNote === "")
-        intensityCheck.stop()
+    // The after-Add dialog while it is open, which the intensity check reports into.
+    property MagneticAddedDialog addedDialog: null
     readonly property Component kVector: kVectorComponent
     readonly property Component analysis: analysisComponent
 
     function setPeakMode(on) {
-        addedNote = "";
+        // Marks are placed and drawn on the pattern's own axis: marking shows it, and the axis box waits until
+        // marking stops (review 22, F4).
+        if (on && controller.xAxis !== "native") {
+            if (chart.axisProject)
+                chart.axisProject.patternXAxis = "native";
+            else
+                controller.xAxis = "native";
+        }
         if (chart.axisProject)
             chart.axisProject.setKSearchActive(on);
     }
@@ -583,8 +591,8 @@ Item {
             // d, Q and sinθ/λ can be chosen once a calculation has given the experiment its d column (the owner,
             // 2026-10-22); the box shows the axis drawn, and names it as its list does; the d axis is "x: d-spacing"
             // in both (the owner, 2026-10-22). Q = 4π sinθ/λ and sinθ/λ come from d (the owner, 2026-11-14).
-            enabled: chart.experiment !== null && controller.dAvailable
-            toolTip: controller.dAvailable ? qsTr("X axis") : qsTr("X axis: d-spacing, Q and sinθ/λ can be chosen after a calculation")
+            enabled: chart.experiment !== null && controller.dAvailable && !chart.peakMode
+            toolTip: chart.peakMode ? qsTr("X axis: the pattern's own axis while peaks are marked") : controller.dAvailable ? qsTr("X axis") : qsTr("X axis: d-spacing, Q and sinθ/λ can be chosen after a calculation")
             readonly property var tokens: ["native", "d_spacing", "q", "sin_theta_over_lambda"]
             readonly property var entries: [Session.label(chart.nativeAxis === "timeOfFlight" ? "data.time_of_flight" : "data.two_theta"), qsTr("x: %1").arg(Session.optionLabel("pattern_chart.x_axis", "d_spacing")), qsTr("x: Q"), qsTr("x: %1").arg(Session.label("refln.sin_theta_over_lambda"))]
             model: entries
@@ -1161,6 +1169,8 @@ Item {
         property real pressY: 0
         property real lastX: 0
         property double lastClickAt: 0
+        property real lastClickX: 0
+        property real lastClickY: 0
 
         objectName: "chart.pointer"
         enabled: chart.interactive
@@ -1186,31 +1196,46 @@ Item {
             const still = Math.abs(mouse.x - pressX) < chart.em * 0.3 && Math.abs(mouse.y - pressY) < chart.em * 0.3;
             // A second still left click within the double-click interval resets the view, marking or not; counted here
             // from the releases themselves, so it never depends on a double-click event reaching this area.
+            // Only a second click on the same spot is a double click: one on another peak marks it too (review 22, F4).
             if (mouse.button === Qt.LeftButton && still) {
                 const now = Date.now();
-                if (now - lastClickAt <= Qt.styleHints.mouseDoubleClickInterval) {
+                const samePlace = Math.abs(mouse.x - lastClickX) < chart.em * 0.5 && Math.abs(mouse.y - lastClickY) < chart.em * 0.5;
+                if (samePlace && now - lastClickAt <= Qt.styleHints.mouseDoubleClickInterval) {
                     lastClickAt = 0;
                     markClick.stop();
                     controller.reset();
                     return;
                 }
                 lastClickAt = now;
+                lastClickX = mouse.x;
+                lastClickY = mouse.y;
             }
             if (chart.peakMode && peakLayer.native_ && mouse.button === Qt.LeftButton && still) {
+                if (markClick.running) {  // the earlier tap, elsewhere, marks now
+                    markClick.stop();
+                    markClick.fire();
+                }
                 markClick.at = controller.xMin + mouse.x / Math.max(1, width) * (controller.xMax - controller.xMin);
+                markClick.experiment = chart.axisProject ? chart.axisProject.currentExperimentIndex : -1;
                 markClick.restart();
                 return;
             }
             ApplicationInfo.patternPointer(mouse, 2);
         }
+        // A tap waiting out the double-click interval: it marks only in the context it was made in, so a change of the
+        // shown experiment or the end of marking before it fires drops it.
         Timer {
             id: markClick
             property real at: 0
+            property int experiment: -1
             interval: Qt.styleHints.mouseDoubleClickInterval
-            onTriggered: {
+            function fire() {
+                if (!chart.peakMode || chart.axisProject === null || chart.axisProject.currentExperimentIndex !== experiment)
+                    return;
                 chart.togglePeakAt(at);
                 chart.hoveredMark = -1;
             }
+            onTriggered: fire()
         }
         // On the report's preview the wheel scrolls the page, not the chart.
         onWheel: wheel => {
@@ -1285,7 +1310,8 @@ Item {
     Item {
         id: peakLayer
         objectName: "chart.peaks"
-        visible: chart.peakMode
+        // The marks stay drawn after marking stops; the unmarked candidates only while marking.
+        visible: chart.marksShown
         x: mainView.x + mainView.plotArea.x
         y: mainView.y + mainView.plotArea.y
         width: mainView.plotArea.width
@@ -1307,7 +1333,8 @@ Item {
                 x: peakLayer.px(modelData.x)
                 // Every observed peak can be marked by a click; only the marked, the forbidden-line and the suggested
                 // ones are drawn.
-                visible: x >= 0 && x <= peakLayer.width && (marked || !modelData.onAllowed || modelData.suggested)
+                visible: x >= 0 && x <= peakLayer.width &&
+                         (marked || (chart.peakMode && (!modelData.onAllowed || modelData.suggested)))
                 // A marked peak: a short tick at the top of the plot and a faint line through it; a candidate not
                 // marked: the tick alone, grey.
                 Rectangle {
