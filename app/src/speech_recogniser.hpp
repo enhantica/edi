@@ -33,8 +33,13 @@ public:
         std::string name;  ///< whisper's English name, such as "english".
     };
 
-    /// Loads the model file. Returns null and sets `error` when the file is missing or not a whisper model.
+    /// Loads the model file. Returns null and sets `error` when the file is missing or not a whisper model, or when
+    /// this processor cannot run the engine.
     static std::unique_ptr<SpeechRecogniser> load(const std::filesystem::path& model, std::string& error);
+
+    /// The processor has the instructions the engine is built for. On x86-64 that is AVX2 and its companions, with no
+    /// fallback at run time (cmake/EdiWhisper.cmake), so nothing may call into the engine where this is false.
+    static bool cpu_supported();
 
     ~SpeechRecogniser();
     SpeechRecogniser(const SpeechRecogniser&) = delete;

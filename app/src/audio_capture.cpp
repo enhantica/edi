@@ -4,11 +4,15 @@
 #include <QAudioDevice>
 #include <QAudioSource>
 #include <QCoreApplication>
+#include <QFile>
 #include <QMediaDevices>
 #include <QPermissions>
+#include <QtEndian>
 
 #include <algorithm>
 #include <cmath>
+#include <cstring>
+#include <utility>
 
 namespace edi_app {
 
@@ -144,6 +148,110 @@ void QtAudioCapture::close() {
     device_ = nullptr;
     resampler_.reset();
     carry_.clear();
+}
+
+ScriptedAudioCapture::ScriptedAudioCapture(QString mode, QString wav, QObject* parent)
+    : AudioCapture(parent), mode_(std::move(mode)), wav_(std::move(wav)) {
+    // 100 ms of silence every 100 ms, as a quiet room sounds after the recording.
+    silence_.setInterval(100);
+    connect(&silence_, &QTimer::timeout, this, [this] { emit samples(QList<float>(1600, 0.0F)); });
+}
+
+void ScriptedAudioCapture::start() {
+    stop();
+    const int request = request_;
+    // A real microphone answers later, never inside start.
+    QMetaObject::invokeMethod(this, [this, request] { play(request); }, Qt::QueuedConnection);
+}
+
+void ScriptedAudioCapture::stop() {
+    ++request_;
+    silence_.stop();
+}
+
+void ScriptedAudioCapture::play(int request) {
+    if (request != request_)
+        return;
+    if (mode_ == QStringLiteral("no-device")) {
+        emit failed(Failure::NoMicrophone);
+        return;
+    }
+    if (mode_ == QStringLiteral("permission-denied")) {
+        emit failed(Failure::PermissionRefused);
+        return;
+    }
+    const auto recording = mode_ == QStringLiteral("available") ? read_wav(wav_) : std::vector<float>();
+    if (recording.empty()) {
+        emit failed(Failure::DeviceFailed);
+        return;
+    }
+    emit started();
+    if (request != request_)
+        return;
+    emit samples(QList<float>(recording.begin(), recording.end()));
+    // The silence check may already have stopped the recording.
+    if (request == request_)
+        silence_.start();
+}
+
+std::vector<float> ScriptedAudioCapture::read_wav(const QString& path) {
+    constexpr qint64 most_bytes = qint64{256} * 1024 * 1024;
+    QFile file(path);
+    if (!file.open(QIODevice::ReadOnly) || file.size() > most_bytes)
+        return {};
+    const QByteArray bytes = file.readAll();
+    const auto* data = reinterpret_cast<const uchar*>(bytes.constData());
+    const auto size = static_cast<std::size_t>(bytes.size());
+    if (size < 12 || std::memcmp(data, "RIFF", 4) != 0 || std::memcmp(data + 8, "WAVE", 4) != 0)
+        return {};
+    unsigned format = 0, channels = 0, rate = 0, bits = 0;
+    const uchar* payload = nullptr;
+    std::size_t payload_bytes = 0;
+    for (std::size_t at = 12; at + 8 <= size;) {
+        const auto length = static_cast<std::size_t>(qFromLittleEndian<quint32>(data + at + 4));
+        const uchar* body = data + at + 8;
+        const std::size_t room = size - at - 8;
+        if (std::memcmp(data + at, "fmt ", 4) == 0 && length >= 16 && length <= room) {
+            format = qFromLittleEndian<quint16>(body);
+            channels = qFromLittleEndian<quint16>(body + 2);
+            rate = qFromLittleEndian<quint32>(body + 4);
+            bits = qFromLittleEndian<quint16>(body + 14);
+            // WAVE_FORMAT_EXTENSIBLE keeps the real format in the first two bytes of its sub-format GUID.
+            if (format == 0xFFFEU && length >= 40)
+                format = qFromLittleEndian<quint16>(body + 24);
+        } else if (std::memcmp(data + at, "data", 4) == 0) {
+            payload = body;
+            payload_bytes = std::min(length, room);
+        }
+        if (length > room)
+            break;
+        at += 8 + length + (length & 1U);  // chunks are padded to an even size
+    }
+    const bool pcm16 = format == 1 && bits == 16;
+    const bool float32 = format == 3 && bits == 32;
+    // The rate bounds the resampler's averaging window.
+    if (payload == nullptr || (!pcm16 && !float32) || channels == 0 || rate == 0 || rate > 384000)
+        return {};
+    const std::size_t width = bits / 8;
+    const std::size_t frames = payload_bytes / (width * channels);
+    std::vector<float> mono(frames);
+    for (std::size_t f = 0; f < frames; ++f) {
+        float sum = 0.0F;
+        for (std::size_t c = 0; c < channels; ++c) {
+            const uchar* sample = payload + (f * channels + c) * width;
+            if (pcm16) {
+                sum += static_cast<float>(qFromLittleEndian<qint16>(sample)) / 32768.0F;
+            } else {
+                const quint32 raw = qFromLittleEndian<quint32>(sample);
+                float value = 0.0F;
+                std::memcpy(&value, &raw, sizeof value);
+                sum += value;
+            }
+        }
+        mono[f] = sum / static_cast<float>(channels);
+    }
+    MonoResampler resampler(static_cast<int>(rate));
+    return resampler.push(mono);
 }
 
 }  // namespace edi_app

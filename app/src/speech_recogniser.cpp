@@ -8,6 +8,16 @@
 #include <mutex>
 #include <thread>
 
+#if defined(__x86_64__) || defined(_M_X64)
+#define EDI_VOICE_X86_64 1
+#if defined(_MSC_VER) && !defined(__clang__)
+#define EDI_VOICE_MSVC_CPUID 1
+#include <intrin.h>
+#else
+#include <cpuid.h>
+#endif
+#endif
+
 namespace edi_app {
 
 namespace {
@@ -35,6 +45,10 @@ std::string trimmed(const std::string& text) {
 }  // namespace
 
 std::unique_ptr<SpeechRecogniser> SpeechRecogniser::load(const std::filesystem::path& model, std::string& error) {
+    if (!cpu_supported()) {
+        error = "This computer's processor cannot run the speech model: it needs AVX2.";
+        return nullptr;
+    }
     silence_engine_log();
     std::error_code status;
     if (!std::filesystem::is_regular_file(model, status)) {
@@ -43,7 +57,10 @@ std::unique_ptr<SpeechRecogniser> SpeechRecogniser::load(const std::filesystem::
     }
     auto parameters = whisper_context_default_params();
     parameters.use_gpu = false;
-    auto* context = whisper_init_from_file_with_params(model.string().c_str(), parameters);
+    // whisper takes UTF-8 and widens it itself on Windows, where path::string() would use the ANSI code page.
+    const auto utf8 = model.u8string();
+    const std::string path(utf8.begin(), utf8.end());
+    auto* context = whisper_init_from_file_with_params(path.c_str(), parameters);
     if (context == nullptr) {
         error = "The speech model could not be read.";
         return nullptr;
@@ -112,6 +129,49 @@ std::vector<SpeechRecogniser::Language> SpeechRecogniser::languages() {
             list.push_back({code, name});
     }
     return list;
+}
+
+bool SpeechRecogniser::cpu_supported() {
+#ifdef EDI_VOICE_X86_64
+    static const bool supported = [] {
+        const auto bit = [](unsigned int value, int n) { return ((value >> n) & 1U) != 0; };
+        unsigned int leaf1 = 0;  // ECX of leaf 1
+        unsigned int leaf7 = 0;  // EBX of leaf 7, subleaf 0
+#ifdef EDI_VOICE_MSVC_CPUID
+        int registers[4] = {};
+        __cpuid(registers, 0);
+        if (registers[0] < 7)
+            return false;
+        __cpuid(registers, 1);
+        leaf1 = static_cast<unsigned int>(registers[2]);
+        __cpuidex(registers, 7, 0);
+        leaf7 = static_cast<unsigned int>(registers[1]);
+#else
+        unsigned int a = 0, b = 0, c = 0, d = 0;
+        if (__get_cpuid(1, &a, &b, &c, &d) == 0)
+            return false;
+        leaf1 = c;
+        if (__get_cpuid_count(7, 0, &a, &b, &c, &d) == 0)
+            return false;
+        leaf7 = b;
+#endif
+        // SSE4.2, AVX, FMA and F16C, and OSXSAVE, without which XGETBV below is an illegal instruction.
+        if (!bit(leaf1, 20) || !bit(leaf1, 28) || !bit(leaf1, 12) || !bit(leaf1, 29) || !bit(leaf1, 27))
+            return false;
+        // AVX also needs the system to save the YMM registers: XCR0 bits 1 (SSE) and 2 (AVX).
+#ifdef EDI_VOICE_MSVC_CPUID
+        const auto enabled = static_cast<unsigned long long>(_xgetbv(0));
+#else
+        unsigned int low = 0, high = 0;
+        __asm__ volatile("xgetbv" : "=a"(low), "=d"(high) : "c"(0U));
+        const auto enabled = (static_cast<unsigned long long>(high) << 32U) | low;
+#endif
+        return (enabled & 6U) == 6U && bit(leaf7, 5) && bit(leaf7, 8);  // and AVX2 and BMI2
+    }();
+    return supported;
+#else
+    return true;
+#endif
 }
 
 int SpeechRecogniser::threads() {

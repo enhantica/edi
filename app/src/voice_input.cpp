@@ -14,6 +14,7 @@
 #include <QVariantMap>
 
 #include <cmath>
+#include <filesystem>
 #include <utility>
 
 #ifndef EDI_VOICE_INSTALL_RELATIVE
@@ -31,15 +32,41 @@ constexpr float speech_level = 0.02F;
 constexpr qint64 manifest_bytes = 4096;
 
 QString refusal_text() {
+    const QString refused = QCoreApplication::translate("VoiceInput", "Permission to use the microphone was refused.");
 #if defined(Q_OS_MACOS)
-    return QCoreApplication::translate("VoiceInput",
-        "EasyDiffraction may not use the microphone. Allow it in System Settings, Privacy & Security, Microphone.");
+    return refused + u' ' +
+           QCoreApplication::translate("VoiceInput",
+                                       "Allow EasyDiffraction in System Settings, Privacy & Security, Microphone.");
 #elif defined(Q_OS_WIN)
-    return QCoreApplication::translate("VoiceInput",
-        "EasyDiffraction may not use the microphone. Allow it in Settings, Privacy & security, Microphone.");
+    return refused + u' ' +
+           QCoreApplication::translate("VoiceInput", "Allow EasyDiffraction in Settings, Privacy & security, Microphone.");
 #else
-    return QCoreApplication::translate("VoiceInput", "EasyDiffraction may not use the microphone.");
+    return refused + u' ' +
+           QCoreApplication::translate("VoiceInput",
+                                       "Allow EasyDiffraction to use the microphone in the system settings.");
 #endif
+}
+
+// Inside a pytest run the app may take a recording, a model and a microphone outcome from the environment
+// (tests/fixtures/assistant_voice/README.md); a user's run never does.
+bool scripted() {
+    return !qEnvironmentVariableIsEmpty("PYTEST_CURRENT_TEST") &&
+           !qEnvironmentVariableIsEmpty("EDI_TEST_ASSISTANT_VOICE_CAPTURE");
+}
+
+std::unique_ptr<AudioCapture> app_capture() {
+    if (scripted())
+        return std::make_unique<ScriptedAudioCapture>(qEnvironmentVariable("EDI_TEST_ASSISTANT_VOICE_CAPTURE"),
+                                                      qEnvironmentVariable("EDI_TEST_ASSISTANT_VOICE_WAV"));
+    return std::make_unique<QtAudioCapture>();
+}
+
+QString app_model() {
+    if (!scripted())
+        return VoiceInput::installedModel();
+    // A missing file stands for a computer without the model.
+    const QFileInfo model(qEnvironmentVariable("EDI_TEST_ASSISTANT_VOICE_MODEL"));
+    return model.isFile() ? model.absoluteFilePath() : QString();
 }
 
 QString title_case(const QString& name) {
@@ -55,7 +82,7 @@ QString title_case(const QString& name) {
 
 }  // namespace
 
-VoiceInput::VoiceInput(QObject* parent) : VoiceInput(std::make_unique<QtAudioCapture>(), installedModel(), parent) {}
+VoiceInput::VoiceInput(QObject* parent) : VoiceInput(app_capture(), app_model(), parent) {}
 
 VoiceInput::VoiceInput(std::unique_ptr<AudioCapture> capture, QString model, QObject* parent)
     : QObject(parent), capture_(std::move(capture)), model_(std::move(model)) {
@@ -70,6 +97,8 @@ VoiceInput::~VoiceInput() {
     capture_->disconnect(this);
     capture_->stop();
 }
+
+bool VoiceInput::available() const { return !model_.isEmpty() && SpeechRecogniser::cpu_supported(); }
 
 void VoiceInput::setLanguage(const QString& language) {
     if (language == language_)
@@ -87,13 +116,20 @@ QVariantList VoiceInput::languages() const {
     return list;
 }
 
-void VoiceInput::toggle() {
+void VoiceInput::toggle(QObject* owner) {
     switch (state_) {
     case State::Idle:
         if (!available())
             return;
         setMessage({});
         dropRecording();
+        dropOwner();
+        if (owner != nullptr) {
+            owner_ = owner;
+            owned_ = true;
+            ownerGone_ = connect(owner, &QObject::destroyed, this, &VoiceInput::cancel);
+            emit ownerChanged();
+        }
         setState(State::Starting);
         capture_->start();
         return;
@@ -117,7 +153,8 @@ void VoiceInput::stop() {
     const int generation = ++generation_;
     cancel_ = std::make_shared<std::atomic<bool>>(false);
     const QPointer<VoiceInput> receiver(this);
-    const auto model = model_.toStdString();
+    // The native path, so a model folder outside the ANSI code page still opens on Windows.
+    const std::filesystem::path model = QFileInfo(model_).filesystemAbsoluteFilePath();
     const auto language = language_ == QStringLiteral("detect") ? std::string() : language_.toStdString();
     run_in_background([receiver, generation, recording, model, language, cancel = cancel_] {
         std::string error;
@@ -146,6 +183,12 @@ void VoiceInput::cancel() {
     ++generation_;
     dropRecording();
     setState(State::Idle);
+    dropOwner();
+}
+
+void VoiceInput::release(QObject* owner) {
+    if (state_ != State::Idle && owner != nullptr && owner == owner_)
+        cancel();
 }
 
 void VoiceInput::clearMessage() { setMessage({}); }
@@ -184,14 +227,15 @@ void VoiceInput::captureFailed(AudioCapture::Failure failure) {
     switch (failure) {
     case AudioCapture::Failure::NoMicrophone:
         setMessage(tr("No microphone was found. Connect one and try again."));
-        return;
+        break;
     case AudioCapture::Failure::PermissionRefused:
         setMessage(refusal_text());
-        return;
+        break;
     case AudioCapture::Failure::DeviceFailed:
         setMessage(tr("The microphone stopped recording. Try again, or choose another microphone in the system settings."));
-        return;
+        break;
     }
+    dropOwner();
 }
 
 void VoiceInput::finish(int generation, const QString& text, const QString& error, bool cancelled) {
@@ -199,14 +243,19 @@ void VoiceInput::finish(int generation, const QString& text, const QString& erro
         return;
     cancel_.reset();
     setState(State::Idle);
-    if (cancelled)
+    if (cancelled) {
+        dropOwner();
         return;
+    }
     if (!error.isEmpty())
         setMessage(error);
     else if (text.isEmpty())
         setMessage(tr("No speech was recognised. Try again, closer to the microphone."));
     else
-        emit textRecognised(text);
+        emit textRecognised(text);  // with the owner still set, so only its message box takes the text
+    // A handler may have started the next recording, which keeps its own owner.
+    if (state_ == State::Idle)
+        dropOwner();
 }
 
 void VoiceInput::setState(State state) {
@@ -221,6 +270,16 @@ void VoiceInput::setMessage(const QString& message) {
         return;
     message_ = message;
     emit messageChanged();
+}
+
+void VoiceInput::dropOwner() {
+    if (!owned_)
+        return;
+    disconnect(ownerGone_);
+    ownerGone_ = {};
+    owner_ = nullptr;
+    owned_ = false;
+    emit ownerChanged();
 }
 
 void VoiceInput::dropRecording() {

@@ -7,6 +7,8 @@
 #include <QObject>
 #include <QByteArray>
 #include <QPointer>
+#include <QString>
+#include <QTimer>
 
 #include <memory>
 #include <span>
@@ -76,6 +78,30 @@ private:
     std::unique_ptr<MonoResampler> resampler_;
     QByteArray carry_;  // a partial frame left from the last read
     int request_ = 0;  // a stop or a later start makes an earlier permission answer stale
+};
+
+/// A microphone that plays a recording, for the app's own pytest runs (tests/fixtures/assistant_voice/README.md).
+/// `mode` is "available", "no-device" or "permission-denied". When available, `start` plays the recording at once and
+/// then real-time silence until `stop`, so the silence check ends the recording as it would after the user stops.
+class ScriptedAudioCapture final : public AudioCapture {
+    Q_OBJECT
+public:
+    ScriptedAudioCapture(QString mode, QString wav, QObject* parent = nullptr);
+
+    void start() override;
+    void stop() override;
+
+    /// A RIFF WAV file of 16-bit PCM or 32-bit float samples, at any rate and channel count, as 16 kHz mono; empty
+    /// when the file cannot be read.
+    static std::vector<float> read_wav(const QString& path);
+
+private:
+    void play(int request);
+
+    QString mode_;
+    QString wav_;
+    QTimer silence_;
+    int request_ = 0;  // a stop or a later start makes an earlier queued start stale
 };
 
 }  // namespace edi_app

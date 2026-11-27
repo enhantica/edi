@@ -4,9 +4,11 @@
 #include <QDir>
 #include <QDirIterator>
 #include <QFile>
+#include <QFileInfo>
 #include <QImageReader>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QPluginLoader>
 #include <QProcess>
 #include <QQuickWindow>
 #include <QSvgRenderer>
@@ -14,13 +16,49 @@
 #include <QTimer>
 #include <cmath>
 #include <stdexcept>
+#include <string>
+#include <vector>
 
 #include "build_version.hpp"
 #include "codex_agent.hpp"
 #include "desktop_updates.hpp"
 #include "edi/io.hpp"
 #if EDI_APP_VOICE
+#include "speech_recogniser.hpp"
 #include "voice_input.hpp"
+#endif
+
+#if EDI_APP_VOICE
+namespace {
+
+// The installed model loads and recognises a second of silence; the text may be empty (ADR-0107).
+bool voice_recognises(const QString& model) {
+    if (model.isEmpty())
+        return false;
+    std::string error;
+    auto recogniser = edi_app::SpeechRecogniser::load(QFileInfo(model).filesystemAbsoluteFilePath(), error);
+    if (!recogniser)
+        return false;
+    const std::vector<float> silence(edi_app::SpeechRecogniser::sample_rate, 0.0F);
+    return recogniser->recognise(silence, {}).error.empty();
+}
+
+// Qt links its macOS microphone permission plugin only when the bundle's Info.plist declares the microphone at build
+// time; without it every request is refused.
+bool microphone_permission_backend() {
+#if defined(Q_OS_MACOS)
+    for (const auto& plugin : QPluginLoader::staticPlugins()) {
+        if (plugin.metaData().value(QStringLiteral("className")).toString().contains(QStringLiteral("Microphone"),
+                                                                                       Qt::CaseInsensitive))
+            return true;
+    }
+    return false;
+#else
+    return true;
+#endif
+}
+
+}  // namespace
 #endif
 
 void start_installer_smoke(QQuickWindow& window, const QString& output) {
@@ -103,11 +141,18 @@ void start_installer_smoke(QQuickWindow& window, const QString& output) {
                 QMetaObject::invokeMethod(dialog, "close");
             }
             report.insert("assistant_available", assistantAvailable);
-            // The voice component's model, found and of its stated size (ADR-0107).
+            // The voice component's model, found and of its stated size on a processor that can run it, whether it
+            // recognises, and whether macOS can be asked for the microphone (ADR-0107).
 #if EDI_APP_VOICE
-            report.insert("voice_available", !edi_app::VoiceInput::installedModel().isEmpty());
+            const auto voiceModel = edi_app::VoiceInput::installedModel();
+            report.insert("voice_available",
+                          !voiceModel.isEmpty() && edi_app::SpeechRecogniser::cpu_supported());
+            report.insert("voice_recognition", voice_recognises(voiceModel));
+            report.insert("microphone_permission_backend", microphone_permission_backend());
 #else
             report.insert("voice_available", false);
+            report.insert("voice_recognition", false);
+            report.insert("microphone_permission_backend", false);
 #endif
             if (!helper.isEmpty()) {
                 QProcess process;

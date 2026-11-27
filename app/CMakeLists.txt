@@ -519,6 +519,12 @@ if(APPLE)
 endif()
 target_link_libraries(edi_app PRIVATE edi_app_module edi_app_moduleplugin ${EDI_GUI_BASE_TARGETS} Qt6::Svg)
 set_target_properties(edi_app PROPERTIES MACOSX_BUNDLE FALSE WIN32_EXECUTABLE TRUE)
+# Qt links its macOS microphone permission plugin when the target is finalized, and only if this Info.plist already
+# has the microphone's usage text (ADR-0107).
+if(APPLE AND NOT EMSCRIPTEN AND EDI_APP_VOICE)
+    set_target_properties(edi_app PROPERTIES
+        MACOSX_BUNDLE_INFO_PLIST ${CMAKE_CURRENT_SOURCE_DIR}/resources/macos/Info.plist.in)
+endif()
 if(NOT EMSCRIPTEN)
     qt_add_executable(edi_scan_refresh_tests EXCLUDE_FROM_ALL tests/scan_refresh_tests.cpp
         src/scan_view_model.hpp src/scan_view_model.cpp src/scan_session.hpp src/scan_session.cpp)
@@ -801,6 +807,19 @@ add_dependencies(edi_load_attempt_tests edi_app_build_commit)
 set_target_properties(edi_load_attempt_tests PROPERTIES AUTOMOC ON WIN32_EXECUTABLE FALSE MACOSX_BUNDLE FALSE)
 if(TARGET edi_assistant_native)
     target_link_libraries(edi_load_attempt_tests PRIVATE edi_assistant_native)
+endif()
+
+# Voice input from a recorded speech through the tiny model, with no microphone (ADR-0107).
+if(EDI_APP_VOICE)
+    qt_add_executable(edi_voice_input_tests EXCLUDE_FROM_ALL tests/voice_input_tests.cpp)
+    target_link_libraries(edi_voice_input_tests PRIVATE edi_app_module edi_app_moduleplugin ${EDI_GUI_BASE_TARGETS} Qt6::Test)
+    target_compile_definitions(edi_voice_input_tests PRIVATE EDI_SOURCE_DIR="${PROJECT_SOURCE_DIR}")
+    target_sources(edi_voice_input_tests PRIVATE "${EDI_APP_BUILD_COMMIT_CPP}")
+    add_dependencies(edi_voice_input_tests edi_app_build_commit)
+    set_target_properties(edi_voice_input_tests PROPERTIES AUTOMOC ON WIN32_EXECUTABLE FALSE MACOSX_BUNDLE FALSE)
+    if(TARGET edi_assistant_native)
+        target_link_libraries(edi_voice_input_tests PRIVATE edi_assistant_native)
+    endif()
 endif()
 
 qt_add_executable(edi_assistant_ui_tests tests/assistant_ui_tests.cpp)

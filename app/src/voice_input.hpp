@@ -5,6 +5,7 @@
 #include "audio_capture.hpp"
 
 #include <QObject>
+#include <QPointer>
 #include <QString>
 #include <QVariantList>
 #include <QtQml/qqmlregistration.h>
@@ -20,13 +21,18 @@ namespace edi_app {
 ///
 /// The states run Idle → Starting (asking for the microphone) → Listening → Recognising → Idle. `toggle` starts and
 /// stops; `cancel` drops the recording or its recognition from any state. A failure returns to Idle with `message`.
+/// The item that started a recording is its `owner` until the text arrives; only that item inserts it, and the
+/// recording is dropped when the owner goes away.
 class VoiceInput : public QObject {
     Q_OBJECT
     QML_ELEMENT
     QML_SINGLETON
-    /// The speech model is installed: without it the message box shows no microphone button.
+    /// The speech model is installed and this processor can run it: otherwise the message box shows no microphone
+    /// button.
     Q_PROPERTY(bool available READ available CONSTANT)
     Q_PROPERTY(State state READ state NOTIFY stateChanged)
+    /// The item that started the current recording or recognition; null when idle or started without one.
+    Q_PROPERTY(QObject* owner READ owner NOTIFY ownerChanged)
     /// Why the last recording gave no text, in plain words; empty otherwise.
     Q_PROPERTY(QString message READ message NOTIFY messageChanged)
     /// "detect", or a language code from `languages`.
@@ -47,19 +53,23 @@ public:
     VoiceInput(std::unique_ptr<AudioCapture> capture, QString model, QObject* parent = nullptr);
     ~VoiceInput() override;
 
-    bool available() const { return !model_.isEmpty(); }
+    bool available() const;
     State state() const { return state_; }
+    QObject* owner() const { return owner_; }
     QString message() const { return message_; }
     QString language() const { return language_; }
     void setLanguage(const QString& language);
     QVariantList languages() const;
 
     /// Starts listening when idle, stops and recognises when listening, cancels while starting or recognising.
-    Q_INVOKABLE void toggle();
+    /// `owner` becomes the owner of a recording this starts.
+    Q_INVOKABLE void toggle(QObject* owner = nullptr);
     /// Stops listening and recognises what was recorded.
     Q_INVOKABLE void stop();
     /// Drops the recording or its recognition; no text follows.
     Q_INVOKABLE void cancel();
+    /// Cancels the current recording or recognition if `owner` started it.
+    Q_INVOKABLE void release(QObject* owner);
     Q_INVOKABLE void clearMessage();
 
     /// The installed model's file, checked against its manifest, or empty. `EDI_VOICE_MODEL` names a model file
@@ -68,6 +78,7 @@ public:
 
 signals:
     void stateChanged();
+    void ownerChanged();
     void messageChanged();
     void languageChanged();
     /// The recognised text, to insert at the cursor in the message box. It is never sent by itself.
@@ -81,10 +92,14 @@ private:
     void setState(State state);
     void setMessage(const QString& message);
     void dropRecording();
+    void dropOwner();
 
     std::unique_ptr<AudioCapture> capture_;
     QString model_;
     State state_ = State::Idle;
+    QPointer<QObject> owner_;
+    QMetaObject::Connection ownerGone_;  // the owner's destroyed() to cancel()
+    bool owned_ = false;                 // owner_ was set; it reads null once the owner is being destroyed
     QString message_;
     QString language_ = QStringLiteral("detect");
     std::vector<float> recording_;
