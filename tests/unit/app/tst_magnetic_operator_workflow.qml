@@ -485,21 +485,36 @@ TestCase {
         }, 2000, "The current experiment owns the visible live powder chart");
         return chart;
     }
-    function startMarking() {
+    function startMarking(chart) {
         if (!Ui.find(Ui.page(app), "group.k_search", true))
             Ui.click(test, Probe, app, "sideBar.tab.basic");
         Ui.expandGroup(test, Probe, app, "group.k_search");
         const sidebar = Ui.find(Ui.page(app), "group.k_search", true);
-        verify(/^Propagation vector \(k\) search(?: \(\d+\))?$/.test(sidebar.title), "The Experiment sidebar names the propagation vector search group");
-        const toggle = chartControl("chart.toolbar.findK");
-        verify(toggle.checkable && !toggle.checked, "The chart toolbar offers a Mark peaks toggle initially off");
-        pressChart(toggle);
-        tryCompare(toggle, "checked", true, 2000, "The chart toolbar toggle turns peak marking on");
+        compare(sidebar.title, "Propagation vector (k) search", "The Experiment sidebar names the inactive search group");
+        const tools = Render.descendants(chart.imageToolbar).filter(item => item.visible && (/findK|kSearch/i.test(item.objectName) || ["Find k", "Clear", "Mark peaks"].includes(item.text)));
+        compare(tools.length, 0, "The chart toolbar has no propagation-vector search controls");
+        const items = ["list", "findK", "clear"].map(name => findChild(sidebar, "kSearch." + name));
+        const toggle = findChild(sidebar, "kSearch.mark");
+        verify(toggle && toggle.checkable && toggle.enabled && !toggle.checked, "The search group initially offers an enabled unchecked Mark peaks toggle");
+        compare(toggle.text, "Mark peaks", "The sidebar uses the owner-approved marking label");
+        verify(items.every(item => !item || !item.visible), "The table and search actions are hidden until marking starts");
+        const visibleContent = Array.from(toggle.parent.children).filter(item => item.visible && item.width > 0 && item.height > 0);
+        compare(visibleContent, [toggle], "The visible group content initially consists of the toggle alone");
+        press(toggle);
+        tryCompare(toggle, "checked", true, 2000, "The group toggle starts chart marking");
+        tryVerify(() => ["list", "findK", "clear"].every(name => {
+                const item = findChild(sidebar, "kSearch." + name);
+                return item && item.visible;
+            }), 2000, "Marking reveals the peak table, Find k and Clear in the same group");
+        compare(sidebarControl("findK").text, "Find k", "The revealed search button uses its visible label");
+        compare(sidebarControl("clear").text, "Clear", "The revealed Clear button uses its visible label");
         return sidebar;
     }
     function sidebarControl(name) {
-        const control = Ui.find(Ui.page(app), "kSearch." + name, true);
-        verify(control, "The active Experiment sidebar exposes the k search " + name + " control");
+        const sidebar = Ui.find(Ui.page(app), "group.k_search", true);
+        verify(sidebar, "The Experiment sidebar owns the propagation vector search group");
+        const control = findChild(sidebar, "kSearch." + name);
+        verify(control && control.visible, "The active search group exposes its " + name + " control");
         return control;
     }
     function sidebarPeak(table, index, angle, role) {
@@ -522,11 +537,45 @@ TestCase {
     function markedPeaks(chart) {
         return Array.from(chart.peakMarks, index => chart.peakCandidates[index]);
     }
-    function clickPeak(x) {
+    function chartAxis(chart) {
+        const axis = findChild(chart, "chart.axis.x");
+        verify(axis && axis.max > axis.min, "The real rendered chart has a usable horizontal axis");
+        return axis;
+    }
+    function clickPeak(chart, x) {
         const layer = chartControl("chart.peaks");
-        const point = layer.px(x);
-        verify(point > 0 && point < layer.width, "The reference peak falls on the visible native chart axis");
+        const point = Math.round(layer.px(x));
+        verify(point > 0 && point < layer.width, "The reference position falls on the visible native chart axis");
+        const axis = chartAxis(chart);
+        const clicked = axis.min + point / layer.width * (axis.max - axis.min);
         mouseClick(layer, point, layer.height / 2);
+        return clicked;
+    }
+    function checkMarkingNavigation(chart) {
+        const layer = chartControl("chart.peaks");
+        const axis = chartAxis(chart);
+        const full = [axis.min, axis.max];
+        const marks = () => JSON.stringify(markedPeaks(chart).map(peak => peak.x));
+        const before = marks();
+        mouseWheel(layer, layer.width * .4, layer.height * .55, 0, 120);
+        tryVerify(() => axis.max - axis.min < .85 * (full[1] - full[0]), 2000, "The wheel zooms the real chart while marking");
+        compare(marks(), before, "Wheel zoom changes no marks");
+        pressChart(chartControl("chart.toolbar.zoom"));
+        const wheelSpan = axis.max - axis.min;
+        mouseDrag(layer, layer.width * .2, layer.height * .2, layer.width * .55, layer.height * .55, Qt.LeftButton);
+        tryVerify(() => axis.max - axis.min < .65 * wheelSpan, 2000, "Dragging a zoom box still narrows the chart while marking");
+        compare(marks(), before, "A zoom drag does not add a mark");
+        pressChart(chartControl("chart.toolbar.pan"));
+        const zoomed = axis.min;
+        mouseDrag(layer, layer.width * .5, layer.height * .55, layer.width * .12, 0, Qt.LeftButton);
+        tryVerify(() => axis.min < zoomed - .1, 2000, "Dragging in pan mode moves the zoomed range while marking");
+        compare(marks(), before, "A pan drag does not add a mark");
+        mouseDoubleClickSequence(layer, layer.width * .55, layer.height * .55, Qt.LeftButton);
+        verify(waitForRendering(app.contentItem), "The chart remains rendered after a double-click with marking on");
+        compare(marks(), before, "A double-click is not treated as a single marking tap");
+        mouseClick(layer, layer.width * .5, layer.height * .55, Qt.RightButton);
+        tryVerify(() => Math.abs(axis.min - full[0]) < .01 && Math.abs(axis.max - full[1]) < .01, 2000, "The normal chart reset restores the initial range with marking enabled");
+        compare(marks(), before, "Reset leaves the same marks at their measured angles");
     }
     function runSearch() {
         const findK = sidebarControl("findK");
@@ -544,7 +593,7 @@ TestCase {
         const chart = openPattern();
         verify(!Session.project.fit.canUndo, "No fit has been kept for this measured bank");
         const before = snapshot();
-        startMarking();
+        startMarking(chart);
         const peaks = markedPeaks(chart);
         const satellite = 13.285477100052015;
         const index = peaks.findIndex(peak => Math.abs(peak.x - satellite) < .051);
@@ -554,22 +603,35 @@ TestCase {
         Ui.scrollIntoView(table.headerItem);
         const headings = Render.texts(table.headerItem).filter(Ui.rendered).map(label => label.text);
         compare(headings, ["2θ (°)", "d (Å)", "Role"], "The table identifies the observed angle, spacing and indexing role");
-        const searchControls = Render.descendants(chart.imageToolbar).filter(item => item.visible && (/findK|kSearch/i.test(item.objectName) || ["Find k", "Clear"].includes(item.text)));
-        compare(searchControls.map(item => item.objectName), ["chart.toolbar.findK"], "Only Mark peaks sits in the chart toolbar");
+        checkMarkingNavigation(chart);
         const x = peaks[index].x;
         const rowIndex = peaks.filter(peak => peak.x < x).length;
-        const row = sidebarPeak(table, rowIndex, satellite, "pre-marked");
+        const row = sidebarPeak(table, rowIndex, satellite, "forbidden reflection");
         const remove = findChild(row, "kSearch.remove." + rowIndex);
-        verify(remove, "The pre-marked peak row offers its own remove button");
+        verify(remove, "The suggested row offers its own remove button");
         press(remove);
         compare(table.count, peaks.length - 1, "Removing the suggested row drops exactly one sidebar entry");
         verify(!markedPeaks(chart).some(peak => peak.x === x), "Removing the suggested row unmarks that exact peak on the chart");
-        clickPeak(x);
-        compare(table.count, peaks.length, "Clicking the observed peak adds its sidebar row again");
-        sidebarPeak(table, rowIndex, satellite, "pre-marked");
-        clickPeak(x);
-        compare(table.count, peaks.length - 1, "Clicking a marked peak drops its row from the sidebar");
-        clickPeak(x);
+
+        const layer = chartControl("chart.peaks");
+        const axis = chartAxis(chart);
+        mouseWheel(layer, layer.px(x), layer.height * .55, 0, 960);
+        tryVerify(() => (axis.max - axis.min) / layer.width < .035, 2000, "Zoom resolves the offset tap from the measured maximum");
+        const offset = clickPeak(chart, x + .07);
+        verify(Math.abs(offset - x) > .04 && Math.abs(offset - x) < .1, "The tap falls beside the maximum within the fixture's known half width");
+        tryCompare(table, "count", peaks.length, 2000, "An offset tap restores the observed peak to the sidebar");
+        verify(markedPeaks(chart).some(peak => Math.abs(peak.x - x) < 1e-8), "The offset tap lands at the measured maximum");
+        clickPeak(chart, x);
+        tryCompare(table, "count", peaks.length - 1, 2000, "Clicking a mark directly drops its sidebar row");
+
+        const blank = 16.2;
+        const clicked = clickPeak(chart, blank);
+        tryCompare(table, "count", peaks.length, 2000, "A click on a flat interval still creates a mark");
+        const free = markedPeaks(chart).findIndex(peak => Math.abs(peak.x - clicked) < .02);
+        verify(free >= 0, "With no maximum nearby the chart keeps the clicked angle");
+        sidebarPeak(table, free, blank, "added by hand");
+        clickPeak(chart, clicked);
+        tryCompare(table, "count", peaks.length - 1, 2000, "Clicking the new free mark removes it");
         const clear = sidebarControl("clear");
         compare(clear.text, "Clear", "The Experiment group has a Clear button");
         press(clear);
@@ -577,6 +639,10 @@ TestCase {
         compare(markedPeaks(chart).length, 0, "Clear removes all chart marks");
         compare(snapshot(), before, "Transient marking changes neither the saved model nor Undo history");
         verify(!sidebarControl("findK").enabled && !clear.enabled, "An empty sidebar disables Find k and Clear");
+        const toggle = sidebarControl("mark");
+        press(toggle);
+        tryCompare(toggle, "checked", false, 2000, "The same sidebar toggle stops marking");
+        verify(!table.visible && !clear.visible, "Stopping marking folds the table and actions back into the toggle");
     }
     function test_find_k_mask_excludes_observed_peak() {
         const chart = openPattern();
@@ -584,7 +650,7 @@ TestCase {
         mask.append();
         const row = Probe.rows(mask).length - 1;
         verify(mask.setStart(row, 13) && mask.setEnd(row, 13.6), "The mask covers the independent first satellite");
-        startMarking();
+        startMarking(chart);
         const peaks = markedPeaks(chart);
         verify(peaks.length > 0, "Other unmasked peaks still reach the chart");
         verify(peaks.every(peak => peak.x < 13 || peak.x > 13.6), "An excluded strong peak is not pre-marked");
@@ -592,7 +658,7 @@ TestCase {
     function test_find_k_disabled_parent_refuses() {
         const chart = openPattern();
         verify(Session.project.currentExperiment.linkedStructures.setEnabled(0, false), "The real edit disables the sole Crystal link");
-        const sidebar = startMarking();
+        const sidebar = startMarking(chart);
         compare(markedPeaks(chart).length, 0, "A disabled parent produces no chart marks");
         Ui.scrollIntoView(sidebarControl("list"));
         verify(/link.*enable.*crystal/i.test(Ui.text(sidebar)), "The sidebar explains that an enabled Crystal link is required");
@@ -602,7 +668,7 @@ TestCase {
         const links = Probe.rows(Session.project.currentExperiment.linkedStructures);
         verify(links.some(link => link.structureId === "parent" && link.enabled) && links.some(link => link.structureId === "unrelated" && link.enabled), "The measured experiment has two enabled Crystal phases");
         const before = snapshot();
-        const sidebar = startMarking();
+        const sidebar = startMarking(chart);
         compare(markedPeaks(chart).length, 0, "Link order cannot choose a Crystal target when both links are enabled");
         Ui.scrollIntoView(sidebarControl("list"));
         verify(/several.*crystal/i.test(Ui.text(sidebar)), "The sidebar identifies the ambiguous Crystal target");
@@ -611,18 +677,17 @@ TestCase {
     }
     function test_find_k_gamma_labels_forbidden_and_allowed_marks() {
         const chart = openPattern("find-k-gamma");
-        startMarking();
+        const bank = Session.project.currentExperiment;
+        tryVerify(() => !Session.project.calculating && bank.measCalcPoints().calc.some(value => Number.isFinite(value) && value > 0), 3000, "The two-label control uses a current calculated curve");
+        startMarking(chart);
         const bragg = d => 360 / Math.PI * Math.asin(1.54 / (2 * d));
-        const peaks = markedPeaks(chart);
-        compare(peaks.length, 1, "Only the Pnma glide absence is pre-marked");
-        verify(Math.abs(peaks[0].x - bragg(8)) <= .051, "The pre-mark is the independently positioned forbidden 001");
+        const peaks = markedPeaks(chart).sort((a, b) => a.x - b.x);
         const allowedPosition = bragg(1 / Math.hypot(1 / 6, 1 / 8));
-        clickPeak(allowedPosition);
-        const allowed = markedPeaks(chart).find(peak => Math.abs(peak.x - allowedPosition) <= .051);
-        verify(allowed, "Clicking the observed allowed 101 adds it manually");
         const table = sidebarControl("list");
-        compare(table.count, 2, "The sidebar shows the forbidden suggestion and the manually added allowed peak");
-        sidebarPeak(table, 1, allowedPosition, "added by hand");
+        compare(table.count, 2, "The isolated forbidden 001 and allowed 101 excess are both suggested");
+        sidebarPeak(table, 0, bragg(8), "forbidden reflection");
+        sidebarPeak(table, 1, allowedPosition, "excess on an allowed reflection");
+        const allowed = peaks[1];
         const results = runSearch();
         const index = results.rows.findIndex(row => row.k === "0,0,0");
         verify(index >= 0, "Gamma indexes both Pnma lattice peaks");
@@ -649,7 +714,7 @@ TestCase {
         const project = Session.project;
         const bank = project.currentExperiment;
         const page = Ui.page(app);
-        startMarking();
+        startMarking(chart);
         const table = sidebarControl("list");
         const peaks = markedPeaks(chart).sort((a, b) => a.x - b.x);
         const satellite = 13.285477100052015;
@@ -705,8 +770,8 @@ TestCase {
         tryVerify(() => Ui.page(app) !== page && chartControl("appBar.tab.structure").checked, 2000, "The explicit Open in Structure action opens the Structure page");
     }
     function staleRowChoice(kind) {
-        openPattern();
-        startMarking();
+        const chart = openPattern();
+        startMarking(chart);
         const results = runSearch();
         const project = Session.project;
         const bank = project.currentExperiment;
