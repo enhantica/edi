@@ -808,11 +808,16 @@ function applyAssistantChoice() {
         installer.deselectComponent(assistantComponent);
 }
 
-// The voice row is there only where the installer has the component (a marker installer may not).
+// The voice row is there only where the installer has the component (a marker installer may not). Its description is
+// the component's own, as package.py writes it, under the check box.
 function showVoiceRow(page) {
     var row = page ? gui.findChild(page, "VoiceBox") : null;
+    var held = installer.componentByName(voiceComponent);
     if (row)
-        row.visible = !!installer.componentByName(voiceComponent);
+        row.visible = !!held;
+    var description = page ? gui.findChild(page, "VoiceDescription") : null;
+    if (description && held)
+        description.text = String(held.value("Description") || "");
 }
 
 function voiceChosen() {
@@ -1304,11 +1309,12 @@ var licenseRefused = false;
 // The third field is the row's group: the first row shown of a group stands one group gap under the group before.
 // On the install page: the folder with the space it needs right under it, then what is installed, then the licence
 // and the shortcut, then any notice. A component row is measured by its box alone: the size beside it is no taller,
-// and its text arrives as the page opens, which moved it while the rows were being measured.
+// and its text arrives as the page opens, which moved it while the rows were being measured. Voice input's row also
+// holds its description under the box, so the row ends below it.
 var formRows = [["Logo", ["FormLogo"], 0], ["Folder", ["FolderLineEdit", "FolderBrowseButton"], 1],
                 ["Space", ["SpaceLabel"], 1],
                 ["App", ["AppCheckBox"], 2], ["Maintenance", ["MaintenanceCheckBox"], 2],
-                ["Assistant", ["AssistantCheckBox"], 2], ["Voice", ["VoiceCheckBox"], 2],
+                ["Assistant", ["AssistantCheckBox"], 2], ["Voice", ["VoiceCheckBox", "VoiceDescription"], 2],
                 ["License", ["LicenseCheckBox", "LicenseLink"], 3], ["Shortcut", ["ShortcutCheckBox"], 3],
                 ["Notice", ["NoticeLabel"], 4]];
 

@@ -368,8 +368,9 @@ def write_metadata(
             # and shortcut rows: 309 px on Windows. An installation already in the folder adds its
             # two-line warning and 24 (62 on Windows). Qt's margins around the page and its buttons
             # (11 and 9 px, the buttons 39) add 101: 472 on Windows with the warning. The voice
-            # input row adds a line and 8 (27).
-            'WizardDefaultHeight': '507',
+            # input row adds a line and 8 (27), and its description under the box a 16 px line of
+            # 12 px text and 2 (18).
+            'WizardDefaultHeight': '525',
             # One centred column, no step list (the owner's three-page design, edi ADR-0071).
             'WizardShowPageList': 'false',
             'ControlScript': 'Installer.qs',
@@ -484,39 +485,59 @@ def write_voice_metadata(meta: Path, version: str) -> None:
     )
 
 
+def release_voice_pin() -> dict:
+    """The committed pin of the model the voice component ships (models.json).
+
+    Tests replace this function to package placeholder bytes; packaging always checks against it.
+    """
+    return voice_models.pins()['models']['small']
+
+
+def write_voice_manifest(folder: Path, pin: dict) -> None:
+    """Write the voice-model.json the app reads beside the model, from the pin."""
+    manifest = {
+        'schema': voice_models.MANIFEST_SCHEMA,
+        'file': pin['file'],
+        'bytes': pin['bytes'],
+        'sha256': pin['sha256'],
+    }
+    path = folder / voice_models.MANIFEST
+    # A staged manifest is replaced, never written through (it could be a link).
+    path.unlink(missing_ok=True)
+    path.write_text(json.dumps(manifest, indent=2) + '\n', encoding='utf-8')
+
+
 def stage_voice_model(stage: Path) -> Path:
     """Put the pinned speech model and its manifest under share/edi/voice in the stage.
 
     The model is downloaded once into the shared cache and checked against its pin there; the app
     never downloads it.
     """
+    pin = release_voice_pin()
     model = voice_models.fetch('small')
     folder = stage / VOICE_MODEL
     folder.mkdir(parents=True)
     shutil.copy2(model, folder / model.name)
-    (folder / voice_models.MANIFEST).write_text(
-        json.dumps(voice_models.manifest('small'), indent=2) + '\n', encoding='utf-8'
-    )
-    check_voice_model(folder)
+    check_voice_model(folder, pin)
+    write_voice_manifest(folder, pin)
     return folder
 
 
-def check_voice_model(folder: Path) -> None:
-    """Require the manifest and the model it names, at the size it states, and nothing else."""
-    manifest = json.loads((folder / voice_models.MANIFEST).read_text(encoding='utf-8'))
-    name = manifest.get('file', '')
-    if (
-        manifest.get('schema') != voice_models.MANIFEST_SCHEMA
-        or not name
-        or Path(name).name != name
-        or name == voice_models.MANIFEST
-    ):
-        raise RuntimeError('The voice model manifest is malformed')
+def check_voice_model(folder: Path, pin: dict) -> None:
+    """Require the pinned model at its pinned size and SHA-256, and nothing else but a manifest.
+
+    A staged manifest is not trusted: packaging writes it again from the pin.
+    """
+    name = pin.get('file', '')
+    if not name or Path(name).name != name or name == voice_models.MANIFEST:
+        raise RuntimeError('The voice model pin names no plain model file')
     model = folder / name
-    if model.is_symlink() or not model.is_file() or model.stat().st_size != manifest.get('bytes'):
-        raise RuntimeError('The voice model differs from its manifest')
-    if sorted(path.name for path in folder.iterdir()) != sorted([name, voice_models.MANIFEST]):
+    if model.is_symlink() or not model.is_file():
+        raise RuntimeError(f'The stage has no voice model {name}')
+    if not {path.name for path in folder.iterdir()} <= {name, voice_models.MANIFEST}:
         raise RuntimeError('The voice model folder holds other files')
+    if model.stat().st_size != pin.get('bytes') or sha256(model) != pin.get('sha256'):
+        raise RuntimeError(f'The staged {name} differs from its pinned size or SHA-256')
 
 
 def write_maintenance_tool_metadata(meta: Path, version: str) -> None:
@@ -1250,7 +1271,9 @@ def installerbase_bytes(tools: Path) -> int:
 
 def prepare_voice_component(data: Path, package: Path, version: str) -> None:
     """Move the staged model from the app's payload into the voice component, with a manifest."""
-    check_voice_model(data / VOICE_MODEL)
+    pin = release_voice_pin()
+    check_voice_model(data / VOICE_MODEL, pin)
+    write_voice_manifest(data / VOICE_MODEL, pin)
     voice_data = package / 'data'
     (package / 'meta').mkdir(parents=True)
     (voice_data / VOICE_MODEL).parent.mkdir(parents=True)
@@ -1763,6 +1786,17 @@ def exercise_installer(
             or not (output / 'smoke/window.png').is_file()
         ):
             raise RuntimeError('Installed application smoke check failed')
+        # With voice input the installed model must load and recognise a second of silence, and
+        # macOS needs its microphone permission plugin linked (true elsewhere).
+        if with_voice and not (
+            receipt.get('voice_recognition') is True
+            and receipt.get('microphone_permission_backend') is True
+        ):
+            raise RuntimeError(
+                'Installed voice input failed: no recognition or no microphone permission plugin'
+            )
+        if not with_voice and receipt.get('voice_recognition') is not False:
+            raise RuntimeError('Installed application recognises speech without voice input')
         if windows_signing():
             verify_windows_signature(app)
         if SYSTEM == 'linux':

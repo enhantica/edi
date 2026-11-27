@@ -23,7 +23,6 @@ from package import (
     run,
     sha256,
     verify_installed_maintenance_tool,
-    voice_models,
 )
 
 
@@ -50,11 +49,20 @@ def check(tools: Path, output: Path) -> None:
     assistant_marker.parent.mkdir(parents=True)
     assistant_marker.write_text('optional assistant marker\n')
     voice_marker = write_voice_marker(stage / VOICE_MODEL)
+    # The marker stands in for the speech model, so packaging checks it against its own pin.
+    marker_pin = {
+        'file': voice_marker.name,
+        'bytes': voice_marker.stat().st_size,
+        'sha256': sha256(voice_marker),
+    }
     repository = (output / 'online/repository').as_uri() + '/'
     # Substitute only the endpoint; install and maintenance use the real embedded configuration.
     # The update goes from the last old-form version to the first YY.N, which sorts lower by its
     # numbers: the repository offers it by content checksum (edi ADR-0106).
-    with patch('package.repository_urls', return_value=(repository,)):
+    with (
+        patch('package.repository_urls', return_value=(repository,)),
+        patch('package.release_voice_pin', return_value=marker_pin),
+    ):
         offline = package_app(stage, tools, output / 'offline', '2026.11.31')
     marker.write_text('second marker\n')
     # The new release's tool gets other bytes, so the update has a tool to replace. On Linux the
@@ -64,7 +72,8 @@ def check(tools: Path, output: Path) -> None:
         if SYSTEM in {'macos', 'windows'}
         else None
     )
-    online = package_app(stage, tools, output / 'online', '26.17', repository, (), new_tool)
+    with patch('package.release_voice_pin', return_value=marker_pin):
+        online = package_app(stage, tools, output / 'online', '26.17', repository, (), new_tool)
     (output / 'isolated home').mkdir()
     for kind, bootstrap in [('offline', offline), ('online', online)]:
         exercise(
@@ -81,17 +90,10 @@ def check(tools: Path, output: Path) -> None:
 
 
 def write_voice_marker(folder: Path) -> Path:
-    """A small stand-in for the speech model, with the manifest package.py checks it against."""
+    """A small stand-in for the speech model; packaging writes its manifest."""
     folder.mkdir(parents=True)
     model = folder / 'voice.txt'
     model.write_text('optional voice marker\n', encoding='utf-8')
-    manifest = {
-        'schema': voice_models.MANIFEST_SCHEMA,
-        'file': model.name,
-        'bytes': model.stat().st_size,
-        'sha256': sha256(model),
-    }
-    (folder / voice_models.MANIFEST).write_text(json.dumps(manifest) + '\n', encoding='utf-8')
     return model
 
 

@@ -369,9 +369,10 @@
      <property name="visible">
       <bool>false</bool>
      </property>
-     <layout class="QHBoxLayout" name="VoiceRow">
+     <!-- The check box row, then the component's one-line description under its text (Installer.qs). -->
+     <layout class="QVBoxLayout" name="VoiceColumn">
       <property name="spacing">
-       <number>8</number>
+       <number>2</number>
       </property>
       <property name="leftMargin">
        <number>0</number>
@@ -386,21 +387,43 @@
        <number>0</number>
       </property>
       <item>
-       <widget class="QCheckBox" name="VoiceCheckBox">
-        <property name="text">
-         <string>Voice input</string>
+       <layout class="QHBoxLayout" name="VoiceRow">
+        <property name="spacing">
+         <number>8</number>
+        </property>
+        <item>
+         <widget class="QCheckBox" name="VoiceCheckBox">
+          <property name="text">
+           <string>Voice input</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <spacer name="VoiceSizeSpacer">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+         </spacer>
+        </item>
+        <item>
+         <widget class="QLabel" name="VoiceSizeLabel"/>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <widget class="QLabel" name="VoiceDescription">
+        <!-- 12 px text, one 16 px line on Windows (package.py, WizardDefaultHeight). Indented to the check box's
+             text: its 6 px margin, the 16 px box and the 7 px spacing (Installer.qss). -->
+        <property name="styleSheet">
+         <string notr="true">font-size: 12px;</string>
+        </property>
+        <property name="indent">
+         <number>29</number>
+        </property>
+        <property name="wordWrap">
+         <bool>true</bool>
         </property>
        </widget>
-      </item>
-      <item>
-       <spacer name="VoiceSizeSpacer">
-        <property name="orientation">
-         <enum>Qt::Horizontal</enum>
-        </property>
-       </spacer>
-      </item>
-      <item>
-       <widget class="QLabel" name="VoiceSizeLabel"/>
       </item>
      </layout>
     </widget>

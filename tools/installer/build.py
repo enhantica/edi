@@ -224,23 +224,20 @@ def check_macos_load_paths(bundle: Path) -> None:
         )
 
 
-# What macOS shows when the app first asks for the microphone, and the signature's permission to
-# use it (ADR-0107).
-MICROPHONE_USE = (
-    'EasyDiffraction uses the microphone only when you press the microphone button in the '
-    'assistant, to turn your speech into text on this computer.'
-)
+# The signature's permission to use the microphone (ADR-0107). The text macOS shows when the app
+# first asks for it comes from the app's own Info.plist (app/resources/macos/Info.plist.in).
 APP_ENTITLEMENTS = {'com.apple.security.device.audio-input': True}
 
 
-def declare_microphone_use(bundle: Path) -> None:
-    """Add the microphone's usage text to the bundle's Info.plist, before it is signed."""
-    info = bundle / 'Contents/Info.plist'
-    with info.open('rb') as handle:
-        values = plistlib.load(handle)
-    values['NSMicrophoneUsageDescription'] = MICROPHONE_USE
-    with info.open('wb') as handle:
-        plistlib.dump(values, handle)
+def check_microphone_use(bundle: Path) -> None:
+    """Require the microphone's usage text in the bundle's Info.plist; macOS refuses without it."""
+    with (bundle / 'Contents/Info.plist').open('rb') as handle:
+        text = plistlib.load(handle).get('NSMicrophoneUsageDescription')
+    if not isinstance(text, str) or not text.strip():
+        raise RuntimeError(
+            'The app bundle has no NSMicrophoneUsageDescription in its Info.plist; '
+            'macOS would refuse voice input'
+        )
 
 
 # Qt Multimedia's media plugins play and record media files through FFmpeg and its codecs. The app
@@ -561,7 +558,7 @@ def build(
         strip_linux_cpp_debug(stage, qt / 'bin/strip')
     collect_notices(stage, qt, crysta, work / 'licence-inputs')
     if SYSTEM == 'macos':
-        declare_microphone_use(stage / 'EasyDiffraction.app')
+        check_microphone_use(stage / 'EasyDiffraction.app')
         for name in drop_media_plugins(stage / 'EasyDiffraction.app'):
             print('left out with the media plugins:', name, flush=True)
         drop_macos_build_rpaths(stage / 'EasyDiffraction.app')
