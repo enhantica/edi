@@ -8,6 +8,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -71,10 +72,11 @@ struct PreparedMagneticCandidates {
     struct Bank {
         std::size_t experiment = 0;
         std::string name;
-        std::uint64_t inputs = 0;
+        std::optional<std::uint64_t> inputs;  // none: a bank without measured data
     };
     std::vector<Bank> banks;
-    std::vector<std::shared_ptr<Structure>> structures;
+    // Immutable once prepared (review 18, F3): the batch is handed out as const, its children as const structures.
+    std::vector<std::shared_ptr<const Structure>> structures;
     struct Link {
         std::size_t experiment = 0;
         std::string structure;
@@ -111,7 +113,7 @@ std::vector<std::string> magnetic_candidates_without_intensity(const Project& pr
 /// with its axis in the child's basis. Throws std::invalid_argument, naming the reason, when the
 /// parent is linked to a single-crystal experiment, a texture axis cannot be carried, or a child
 /// cannot be built. Nothing in `project` changes.
-std::shared_ptr<PreparedMagneticCandidates> prepare_magnetic_candidates(
+std::shared_ptr<const PreparedMagneticCandidates> prepare_magnetic_candidates(
     const Project& project, std::size_t parent, const MagneticCandidateGraph& graph,
     const std::vector<std::size_t>& nodes, bool start_moments);
 

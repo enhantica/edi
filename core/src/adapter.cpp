@@ -642,6 +642,22 @@ void check_completed_structure(const Structure& structure, const crysta::Structu
 void adopt_completed_structure(Structure& structure, const crysta::Structure& engine);
 // A fit's publication of its type IV structures, rebuilt whole from crysta's finalized result.
 void publish_completed_type_iv(Project& host, crysta::Project& work, std::vector<detail::RefinedValue>& refined);
+// One fit's publication as a transaction (review 18, F2): `publish` (the values, the completed type IV structures, the
+// dependents, the refreshed pattern) and `measure` (the fit's quality and correlations, which can refuse) run first on a
+// copy of the host, with `restage` resolving the fit's values in that copy; only when all of it succeeds does `publish`
+// run on the host itself. A refusal leaves the host and its fit record as they were.
+template <typename Publish, typename Restage, typename Measure>
+auto publish_fit_transaction(Project& host, std::vector<detail::RefinedValue>& refined, const Publish& publish,
+                             const Restage& restage, const Measure& measure) {
+    {
+        Project trial(host);
+        std::vector<detail::RefinedValue> staged = restage(trial);
+        publish(trial, staged);
+    }
+    auto measured = measure();
+    publish(host, refined);
+    return measured;
+}
 
 void complete_atom_site_moments(Structure& structure) {
     if (structure.magnetic->operations.empty()) {
@@ -734,71 +750,22 @@ void adopt_completed_structure(Structure& structure, const crysta::Structure& en
     }
 }
 
-namespace {
-// Every parameter of a structure in one fixed order, so a copy's parameter answers its original's.
-std::vector<Parameter*> structure_parameters(Structure& s) {
-    std::vector<Parameter*> out = s.cell.parameters();
-    const auto add = [&out](auto& rows) {
-        for (const auto& row : rows) {
-            for (Parameter* p : row->parameters()) out.push_back(p);
-        }
-    };
-    add(s.atom_sites);
-    add(s.atom_site_aniso);
-    add(s.atom_site_moment);
-    add(s.magnetic_form_factors);
-    return out;
-}
-}  // namespace
 
 void publish_completed_type_iv(Project& host, crysta::Project& work, std::vector<detail::RefinedValue>& refined) {
-    // Each type IV structure is rebuilt whole before anything is written (review 17, F2): a copy of the host structure
-    // takes the fit's values and uncertainties, then every field crysta's finalized structure owns (coordinates,
-    // letters, moments and their forms, tensors), and replaces the host structure in one assignment. No coordinate of
-    // it is written on its own; the fit's other values are written as before.
-    struct Replacement {
-        Structure* held;
-        Structure next;
-        std::vector<std::size_t> items;  // indices into `refined`
-        std::vector<std::size_t> slots;  // their parameters' places in structure_parameters
-    };
-    std::vector<std::unique_ptr<Replacement>> replacements;
-    std::vector<bool> taken(refined.size(), false);
+    // Each type IV structure takes crysta's finalized state: every row checked to resolve before anything is written,
+    // then the fit's values and every field completion owns (coordinates, letters, moments and their forms, tensors)
+    // copied into the host's own rows, which keep their identity for anything holding them (review 18, F2). The fit
+    // routes run this inside one transaction: first on a copy of the project, then on the live one.
+    std::vector<std::pair<Structure*, const crysta::Structure*>> completed;
     for (const auto& held : host.structures) {
         for (const crysta::Structure& engine : work.structures) {
             if (engine.name.value() != held->name.value() || !crysta::type_iv_route(engine)) continue;
             check_completed_structure(*held, engine);
-            std::unique_ptr<Replacement> replacement(new Replacement{held.get(), *held, {}, {}});
-            const std::vector<Parameter*> from = structure_parameters(*held);
-            const std::vector<Parameter*> to = structure_parameters(replacement->next);
-            for (std::size_t i = 0; i < refined.size(); ++i) {
-                const auto at = std::find(from.begin(), from.end(), refined[i].resolved.target);
-                if (at == from.end()) continue;
-                const std::size_t slot = static_cast<std::size_t>(at - from.begin());
-                detail::RefinedValue moved = refined[i];
-                moved.resolved.target = to.at(slot);
-                detail::write_back({moved});
-                taken[i] = true;
-                replacement->items.push_back(i);
-                replacement->slots.push_back(slot);
-            }
-            adopt_completed_structure(replacement->next, engine);
-            replacements.push_back(std::move(replacement));
+            completed.emplace_back(held.get(), &engine);
         }
     }
-    std::vector<detail::RefinedValue> rest;
-    for (std::size_t i = 0; i < refined.size(); ++i) {
-        if (!taken[i]) rest.push_back(refined[i]);
-    }
-    detail::write_back(rest);
-    for (const auto& replacement : replacements) {
-        *replacement->held = replacement->next;  // Structure assigns by copy: the whole structure at once
-        // The fit's own record of what it wrote now names the replaced structure's parameters.
-        const std::vector<Parameter*> now = structure_parameters(*replacement->held);
-        for (std::size_t k = 0; k < replacement->items.size(); ++k) {
-            refined[replacement->items[k]].resolved.target = now.at(replacement->slots[k]);
-        }
-    }
+    detail::write_back(refined);
+    for (const auto& [held, engine] : completed) adopt_completed_structure(*held, *engine);
 }
 
 LetterSource letter_source(const Structure& structure) {
@@ -1568,7 +1535,8 @@ void set_magnetic_space_group(Structure& s, const std::string& number_bns) {
     }
     Structure trial = s;
     set_magnetic_symmetry(trial, numbered(elements), numbered({"x,y,z,+1"}), name);
-    (void)crysta::admit_magnetic_edit(to_crysta_structure(s), to_crysta_structure(trial));
+    // The checked, completed proposal is what is published (review 18, F6).
+    adopt_completed_structure(trial, crysta::admit_magnetic_edit(to_crysta_structure(s), to_crysta_structure(trial)));
     s = trial;  // Structure assigns by copy
 }
 
@@ -2187,7 +2155,8 @@ void set_magnetic_setting(Structure& s, const std::string& transform) {
     }
     // The same admission as a group pick (A10; review 17, F6), on the whole proposal: the current structure against the
     // trial in the new setting with its new rows, the one that is published.
-    (void)crysta::admit_magnetic_edit(to_crysta_structure(s), to_crysta_structure(trial));
+    // The checked, completed proposal is what is published (review 18, F6).
+    adopt_completed_structure(trial, crysta::admit_magnetic_edit(to_crysta_structure(s), to_crysta_structure(trial)));
     s = trial;  // Structure assigns by copy
 }
 
@@ -8479,15 +8448,33 @@ FitResultBase Project::fit(const std::vector<double>& grid, const std::vector<do
             // number the engine never produced.
 
             // Write the refined value/esd back onto the edi model Parameters (all labels resolved above).
-            // The fit's values, its type IV structures replaced whole from crysta's finalized result (review 17, F2).
-            publish_completed_type_iv(*this, project, refined);
-            crysta::write_fit_result_into(project, result);  // crysta completes the dependents
-            publish_fit_state(*this, project, refined);
-            record_fit_result(*this, outcome, considered, crysta_correlations(project, result),
-                              fitted_quality(project,
-                                             single_crystal ? std::deque<crysta::PdDataBase>{}
-                                                            : std::deque<crysta::PdDataBase>{crysta::PdDataBase(grid, observed, sigma)},
-                                             outcome.values.size()));
+            // One transaction (review 18, F2): proven on a copy, then published, then recorded.
+            const auto publish = [&](Project& host, std::vector<detail::RefinedValue>& items) {
+                publish_completed_type_iv(host, project, items);
+                crysta::write_fit_result_into(project, result);  // crysta completes the dependents
+                publish_fit_state(host, project, items);
+            };
+            const auto restage = [&](Project& trial) {
+                std::vector<detail::RefinedValue> staged;
+                for (const auto& [label, value] : result.values) {
+                    std::optional<detail::ResolvedParameter> resolved =
+                        detail::resolve_project_label(trial, trial.experiment(), label);
+                    if (!resolved) throw std::invalid_argument("edi fit: crysta result label '" + label + "' does not resolve");
+                    const auto found = result.uncertainty.find(label);
+                    staged.push_back({std::move(*resolved), value,
+                                      found != result.uncertainty.end() ? found->second : 0.0});
+                }
+                return staged;
+            };
+            const auto measure = [&] {
+                return std::make_pair(crysta_correlations(project, result),
+                                      fitted_quality(project,
+                                                     single_crystal ? std::deque<crysta::PdDataBase>{}
+                                                                    : std::deque<crysta::PdDataBase>{crysta::PdDataBase(grid, observed, sigma)},
+                                                     outcome.values.size()));
+            };
+            const auto [correlations, quality] = publish_fit_transaction(*this, refined, publish, restage, measure);
+            record_fit_result(*this, outcome, considered, correlations, quality);
             return outcome;
         };
         if (single_crystal) {
@@ -9419,15 +9406,32 @@ FitResultBase Project::fit_joint(const std::vector<PdDataBase>& patterns,
                     outcome.start[resolved->path] = value;
                 }
             }
-            // The fit's values, its type IV structures replaced whole from crysta's finalized result (review 17, F2).
-            publish_completed_type_iv(*this, project, refined);
-            crysta::write_fit_result_into(project, result);  // crysta completes the dependents
-            publish_fit_state(*this, project, refined);
+            // One transaction (review 18, F2): proven on a copy, then published, then recorded.
             std::deque<crysta::PdDataBase> fitted_patterns;
             for (const PdDataBase& pattern : patterns) {
                 fitted_patterns.emplace_back(pattern.axis(), pattern.intensity_meas.get(), pattern.intensity_meas_su.get());
             }
-            crysta::FitQuality quality = fitted_quality(project, fitted_patterns, outcome.values.size());
+            const auto publish = [&](Project& host, std::vector<detail::RefinedValue>& items) {
+                publish_completed_type_iv(host, project, items);
+                crysta::write_fit_result_into(project, result);  // crysta completes the dependents
+                publish_fit_state(host, project, items);
+            };
+            const auto restage = [&](Project& trial) {
+                std::vector<detail::RefinedValue> staged;
+                for (const auto& [label, value] : result.values) {
+                    std::optional<detail::ResolvedParameter> resolved = detail::resolve_joint_project_label(trial, label);
+                    if (!resolved) throw std::invalid_argument("edi fit: crysta result label '" + label + "' does not resolve");
+                    const auto found = result.uncertainty.find(label);
+                    staged.push_back({std::move(*resolved), value,
+                                      found != result.uncertainty.end() ? found->second : 0.0});
+                }
+                return staged;
+            };
+            const auto measure = [&] {
+                return std::make_pair(crysta_correlations(project, result),
+                                      fitted_quality(project, fitted_patterns, outcome.values.size()));
+            };
+            auto [correlations, quality] = publish_fit_transaction(*this, refined, publish, restage, measure);
             // After an orbit change the provider's banks describe the start's orbits: each bank's
             // figures come from the completed, published model instead.
             if (orbit_changed) {
@@ -9436,7 +9440,7 @@ FitResultBase Project::fit_joint(const std::vector<PdDataBase>& patterns,
                     outcome.banks.push_back({bank.experiment, bank.n_points, bank.rwp, bank.chi_square});
                 }
             }
-            record_fit_result(*this, outcome, considered, crysta_correlations(project, result), quality);
+            record_fit_result(*this, outcome, considered, correlations, quality);
             // Before shared items this copied bank 0 into the single-bank mirror (the loader set it
             // up that way), so `experiment` never reports stale values after a joint refinement.
             // `experiment()` IS the first bank now, so nothing is copied back: that
@@ -10260,6 +10264,12 @@ std::string magnetic_parent_key(const Structure& structure) {
         for (const auto& [id, text] : *rows) key += id + "=" + text + ";";
     }
     key += "|" + s.magnetic_group->number_bns;
+    // The declared neutron scattering lengths the conversion carries and a calculation reads (review 18, F3).
+    key += "|";
+    for (const auto& [symbol, length] : s.scattering_lengths_fm.get()) {
+        key += symbol + "=";
+        number(length);
+    }
     return key;
 }
 
@@ -10316,17 +10326,16 @@ std::string magnetic_candidate_moments(const MagneticCandidateGraph& graph, std:
 }
 
 namespace {
-// An experiment's inputs for a magnetic batch's binding; zero when it has none to hash (no data).
-std::uint64_t bank_inputs(const Project& project, std::size_t experiment) {
-    try {
-        return magnetic_fit_inputs_hash(project, experiment);
-    } catch (const std::exception&) {
-        return 0;
-    }
+// An experiment's inputs for a magnetic batch's binding (review 18, F3): its hash, none for a bank with no measured
+// data, and a refusal, never a stand-in value, for a bank whose inputs cannot be read.
+std::optional<std::uint64_t> bank_inputs(const Project& project, std::size_t experiment) {
+    const auto& bank = *project.experiments[experiment];
+    if (!bank.data.has_value() || bank.data->intensity_meas.get().empty()) return std::nullopt;
+    return magnetic_fit_inputs_hash(project, experiment);
 }
 }  // namespace
 
-std::shared_ptr<PreparedMagneticCandidates> prepare_magnetic_candidates(
+std::shared_ptr<const PreparedMagneticCandidates> prepare_magnetic_candidates(
     const Project& project, std::size_t parent_index, const MagneticCandidateGraph& candidates,
     const std::vector<std::size_t>& nodes, bool start_moments) {
     if (!candidates.engine) {
