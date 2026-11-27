@@ -918,17 +918,6 @@ jobs:
       - name: Voice input recogniser, request owner and Unicode install path
         if: ${{ runner.os != 'Windows' && (!cancelled() && steps.apphost.outcome == 'success') }}
         run: pixi run -e app --skip-deps app-test-voice
-      # One timing of the shipped small model on Apple silicon for ADR-0107's speed table: the same worker and language
-      # detection as the app, on the 11 s fixture. It records a number and asserts none.
-      - name: Time the shipped speech model on Apple silicon
-        if: ${{ runner.os == 'macOS' && (!cancelled() && steps.apphost.outcome == 'success') }}
-        continue-on-error: true
-        run: |
-          pixi run --skip-deps voice-models
-          start=$(date +%s)
-          QT_QPA_PLATFORM=offscreen EDI_VOICE_TEST_MODEL="$PWD/build/voice-models/ggml-small-q5_1.bin" \
-            build/app/app/edi_voice_input_tests recognisesFromUnicodeFolder
-          echo "Small q5_1 model, 11 s fixture, $(sysctl -n hw.ncpu) cores: $(( $(date +%s) - start )) s"
       - name: Voice input journey in the app (tests/system/app/test_assistant_voice_input.py)
         id: voicejourney
         if: ${{ runner.os != 'Windows' && (!cancelled() && steps.apphost.outcome == 'success') }}
