@@ -40,6 +40,8 @@ CREDENTIALS = {
     'GITHUB_TOKEN',
     'GH_HOST',
 }
+CLAUDE_KEY = 'ANTHROPIC_API_KEY'
+KEY_SENTINEL = 'fixture-api-key-never-displayed'
 
 
 def observe(event, **fields):
@@ -165,12 +167,16 @@ def claude(argv, identity, skills, tools, request):
                 },
             })
             if initialization:
+                observe('claude-readback', identity=identity, session=session)
                 write({
                     'type': 'system',
                     'subtype': 'init',
                     'session_id': session,
                     'tools': ['Skill', *(f'mcp__edi__{name}' for name in tools)],
                     'mcp_servers': [{'name': 'edi', 'status': 'connected'}],
+                    'plugins': [{'name': 'edi', 'path': option(argv, '--plugin-dir')}],
+                    'skills': [f'edi:{skill}' for skill in skills],
+                    'apiKeySource': 'user' if CLAUDE_KEY in os.environ else 'none',
                     'model': 'sonnet',
                     'cwd': str(Path.cwd()),
                 })
@@ -188,6 +194,7 @@ def claude(argv, identity, skills, tools, request):
         write({
             'type': 'assistant',
             'session_id': session,
+            'parent_tool_use_id': None,
             'message': {
                 'id': 'msg_offline_fixture',
                 'type': 'message',
@@ -215,6 +222,26 @@ def acp_update(session, **update):
         'method': 'session/update',
         'params': {'sessionId': session, 'update': update},
     })
+
+
+def copilot_prompt(session, identity, mcp_request, prompt):
+    if prompt in {f'/user switch {identity}', '/user show'}:
+        observe('account-command', text=prompt, session=session)
+        if prompt == '/user show':
+            acp_update(
+                session,
+                sessionUpdate='agent_message_chunk',
+                content={'type': 'text', 'text': f'Signed in as @{identity} on github.com'},
+            )
+        return
+    observe('prompt', identity=identity, text=prompt, session=session)
+    if mcp_request is None:
+        raise ValueError('ACP prompt arrived before MCP discovery')
+    acp_update(
+        session,
+        sessionUpdate='agent_message_chunk',
+        content={'type': 'text', 'text': call_tool(mcp_request, prompt)},
+    )
 
 
 def copilot(argv, identity, skills, resources):
@@ -250,7 +277,8 @@ def copilot(argv, identity, skills, resources):
                 session,
                 sessionUpdate='available_commands_update',
                 availableCommands=[
-                    {'name': skill, 'description': 'Bundled skill'} for skill in skills
+                    {'name': 'user', 'description': 'Account actions'},
+                    *({'name': skill, 'description': 'Bundled skill'} for skill in skills),
                 ],
             )
             continue
@@ -260,14 +288,7 @@ def copilot(argv, identity, skills, resources):
             if params['sessionId'] != session:
                 raise ValueError('ACP prompt used a different account session')
             prompt = ' '.join(part['text'] for part in params['prompt'] if part['type'] == 'text')
-            observe('prompt', identity=identity, text=prompt, session=session)
-            if mcp_request is None:
-                raise ValueError('ACP prompt arrived before MCP discovery')
-            acp_update(
-                session,
-                sessionUpdate='agent_message_chunk',
-                content={'type': 'text', 'text': call_tool(mcp_request, prompt)},
-            )
+            copilot_prompt(session, identity, mcp_request, prompt)
             result = {'stopReason': 'end_turn'}
         elif 'id' in request:
             write({
@@ -302,6 +323,7 @@ def main():
         argv=argv,
         home=home,
         credentials=sorted(CREDENTIALS.intersection(os.environ)),
+        fixture_key_intact=os.environ.get(CLAUDE_KEY) == KEY_SENTINEL,
         updates_disabled=os.environ.get('DISABLE_UPDATES'),
         gh_config_empty=bool(
             gh_config and Path(gh_config).is_dir() and not any(Path(gh_config).iterdir())
@@ -309,7 +331,11 @@ def main():
         skills=skills,
     )
     if argv[:2] == ['auth', 'status']:
-        write({'loggedIn': True, 'authMethod': 'claude.ai', 'email': identity})
+        write({
+            'loggedIn': True,
+            'authMethod': 'api-key' if CLAUDE_KEY in os.environ else 'claude.ai',
+            'configDirectory': home,
+        })
     elif argv[:2] == ['auth', 'login'] or argv[:1] == ['login']:
         return
     else:

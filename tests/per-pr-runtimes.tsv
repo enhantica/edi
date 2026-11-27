@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-26T15:07:07Z
+# measured_utc = 2026-11-27T11:20:26Z
 #
-# Recorded from: measured yearly release cases with the existing bank
-# Collected tests: 267537; with a reported duration: 86290
+# Recorded from: measured test run (7 node(s) measured once, 187599 banked, 2 stale row(s) dropped)
+# Collected tests: 267544; with a reported duration: 86295
 # Module-scoped fixture costs recorded: 221
 #
 # Breaches are decided PER TIER against the table
@@ -29,12 +29,12 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 267537
+# inventory_python = 267544
 # inventory_cpp = 0
-# inventory_measured = 187602
-# inventory_unmeasured = 79935
+# inventory_measured = 187605
+# inventory_unmeasured = 79939
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
-# inventory_pr_python = 92626
+# inventory_pr_python = 92633
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -639,9 +639,8 @@ UNMEASURED:failed-in-this-run	tests/integration/app/test_phase_scan_state.py::te
 0.580	tests/integration/app/test_phase_scan_state.py::test_description_tab_keeps_literal_authors_including_cif_nulls[.]
 0.690	tests/integration/app/test_phase_scan_state.py::test_description_tab_keeps_literal_authors_including_cif_nulls[?]
 0.580	tests/integration/app/test_phase_scan_state.py::test_description_tab_keeps_literal_authors_including_cif_nulls[A. Author; B. Author]
-UNMEASURED:failed-in-this-run	tests/integration/app/test_provider_runtime.py::test_claude_identity_mismatch_refuses_before_a_prompt
-UNMEASURED:failed-in-this-run	tests/integration/app/test_provider_runtime.py::test_selected_provider_runs_only_the_edi_tool[claude]
-UNMEASURED:failed-in-this-run	tests/integration/app/test_provider_runtime.py::test_selected_provider_runs_only_the_edi_tool[copilot]
+0.540	tests/integration/app/test_provider_runtime.py::test_claude_identity_mismatch_refuses_before_a_prompt
+0.530	tests/integration/app/test_provider_runtime.py::test_copilot_refuses_user_input_without_tool_proof
 0.000	tests/integration/app/test_report_deferred_save.py::test_real_save_route_keeps_finished_content_and_completed_rows[deferred-excluded]
 0.000	tests/integration/app/test_report_deferred_save.py::test_real_save_route_keeps_finished_content_and_completed_rows[deferred-html]
 0.000	tests/integration/app/test_report_deferred_save.py::test_real_save_route_keeps_finished_content_and_completed_rows[deferred-pdf]
@@ -181861,13 +181860,13 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_independent_heidi_case.p
 0.000	tests/integration/py/test_installer_identity.py::test_metadata_preserves_existing_component_updates[linux]
 0.000	tests/integration/py/test_installer_identity.py::test_metadata_preserves_existing_component_updates[macos]
 0.000	tests/integration/py/test_installer_identity.py::test_metadata_preserves_existing_component_updates[windows]
-0.000	tests/integration/py/test_installer_identity.py::test_release_signs_assistant_executables_outside_the_app[macos]
-0.000	tests/integration/py/test_installer_identity.py::test_release_signs_assistant_executables_outside_the_app[windows]
+0.010	tests/integration/py/test_installer_identity.py::test_release_signs_assistant_executables_outside_the_app[macos]
+0.040	tests/integration/py/test_installer_identity.py::test_release_signs_assistant_executables_outside_the_app[windows]
 0.000	tests/integration/py/test_installer_identity.py::test_signing_enablement_keeps_pr_builds_unsigned[macos-1]
 0.000	tests/integration/py/test_installer_identity.py::test_signing_enablement_keeps_pr_builds_unsigned[macos-]
 0.000	tests/integration/py/test_installer_identity.py::test_signing_enablement_keeps_pr_builds_unsigned[windows-1]
 0.000	tests/integration/py/test_installer_identity.py::test_signing_enablement_keeps_pr_builds_unsigned[windows-]
-0.680	tests/integration/py/test_installer_identity.py::test_three_page_install_choices_gate_components_license_and_sizes
+0.120	tests/integration/py/test_installer_identity.py::test_three_page_install_choices_gate_components_license_and_sizes
 0.000	tests/integration/py/test_installer_identity.py::test_windows_installation_defaults[AdminTargetDir-@ApplicationsDirX64@/EasyDiffraction]
 0.000	tests/integration/py/test_installer_identity.py::test_windows_installation_defaults[StartMenuDir-EasyDiffraction]
 0.000	tests/integration/py/test_installer_identity.py::test_windows_installation_defaults[TargetDir-@ApplicationsDirUser@/EasyDiffraction]
@@ -187208,6 +187207,8 @@ UNMEASURED:not-completed-in-this-run	tests/system/app/test_assistant_cif_attachm
 UNMEASURED:failed-in-this-run	tests/system/app/test_assistant_project_replacement.py::test_saved_project_awaits_user_confirmation[quiet]
 UNMEASURED:failed-in-this-run	tests/system/app/test_assistant_project_replacement.py::test_saved_project_awaits_user_confirmation[shown]
 UNMEASURED:failed-in-this-run	tests/system/app/test_assistant_step_folding.py::test_different_finished_steps_share_one_expandable_row
+UNMEASURED:failed-in-this-run	tests/system/app/test_claude_account_journey.py::test_claude_discloses_inherited_credential_before_input
+1.610	tests/system/app/test_claude_account_journey.py::test_claude_shows_edi_tool_reply_and_switches_accounts
 UNMEASURED:not-completed-in-this-run	tests/system/app/test_feedback_attachment_typing.py::test_typing_with_a_real_attachment_stays_responsive
 UNMEASURED:not-completed-in-this-run	tests/system/app/test_large_collection_open.py::test_collection_first_open[large_offline]
 UNMEASURED:not-completed-in-this-run	tests/system/app/test_large_collection_open.py::test_collection_first_open[large_online]

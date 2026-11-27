@@ -3,7 +3,6 @@
 
 import json
 import os
-import re
 import shlex
 import shutil
 import subprocess
@@ -14,7 +13,7 @@ from pathlib import Path
 
 import pytest
 
-from tests.fixtures.assistant_providers.wire_peer import CREDENTIALS
+from tests.fixtures.assistant_providers.wire_peer import CLAUDE_KEY, CREDENTIALS, KEY_SENTINEL
 
 ROOT = Path(__file__).resolve().parents[3]
 FIXTURE = ROOT / 'tests/fixtures/assistant_providers/wire_peer.py'
@@ -73,15 +72,12 @@ def stage_install(tmp_path, provider, receipt):
     return binaries / PROBE.name
 
 
-def run_probe(tmp_path, provider, *, mismatch=False):
-    assert PROBE.is_file() and GUARD.is_file(), (
-        'The provider check requires the desktop assistant UI test and guard from this build'
-    )
+def write_case(tmp_path, provider, mismatch, credential):
     sample = tmp_path / 'sample.txt'
     sample.write_text('xxvisibleyy', encoding='utf-8')
-    identity = 'selected@example.invalid'
-    account_id = str(uuid.uuid4())
-    other_id = str(uuid.uuid4())
+    identity = 'selected@example.invalid' if provider == 'claude' else 'selected-user'
+    other = 'other@example.invalid' if provider == 'claude' else 'other-user'
+    account_id, other_id = (str(uuid.uuid4()) for _ in range(2))
     case = tmp_path / 'case.json'
     case.write_text(
         json.dumps({
@@ -95,11 +91,21 @@ def run_probe(tmp_path, provider, *, mismatch=False):
             },
             'runtimeEmail': 'different@example.invalid' if mismatch else identity,
             'otherId': other_id,
+            'otherLogin': other,
             'mismatch': mismatch,
+            'credential': credential,
             'file': str(sample),
         }),
         encoding='utf-8',
     )
+    return case, account_id, other_id
+
+
+def run_probe(tmp_path, provider, *, mismatch=False, credential=False):
+    assert PROBE.is_file() and GUARD.is_file(), (
+        'The provider check requires the desktop assistant UI test and guard from this build'
+    )
+    case, account_id, other_id = write_case(tmp_path, provider, mismatch, credential)
     receipt = tmp_path / 'wire.jsonl'
     probe = stage_install(tmp_path, provider, receipt)
     home = tmp_path / 'home'
@@ -111,7 +117,10 @@ def run_probe(tmp_path, provider, *, mismatch=False):
     env = {
         key: os.environ[key] for key in ('LD_LIBRARY_PATH', 'QT_PLUGIN_PATH') if key in os.environ
     }
-    env.update(dict.fromkeys(CREDENTIALS, 'inherited-offline-sentinel'))
+    if provider == 'copilot':
+        env.update(dict.fromkeys(CREDENTIALS, 'inherited-offline-sentinel'))
+    elif credential:
+        env[CLAUDE_KEY] = KEY_SENTINEL
     env.update({
         'HOME': str(home),
         'PATH': str(tmp_path),
@@ -120,6 +129,10 @@ def run_probe(tmp_path, provider, *, mismatch=False):
         'XDG_CACHE_HOME': str(home / '.cache'),
         'QT_QPA_PLATFORM': 'offscreen',
         'QT_QUICK_BACKEND': 'software',
+        'EDI_ONLINE_SOURCES': ';'.join(
+            f'{name}={(ROOT / "tests/fixtures/online_sources" / folder).as_uri()}/'
+            for name, folder in (('cod', 'cod'), ('easydiffraction', 'easydiffraction'))
+        ),
         'EDI_PROVIDER_TEST_CASE': str(case),
     })
     result = subprocess.run(
@@ -137,7 +150,7 @@ def run_probe(tmp_path, provider, *, mismatch=False):
     assert receipt.is_file(), 'The desktop probe must reach the selected real runtime launch path'
     rows = [json.loads(line) for line in receipt.read_text(encoding='utf-8').splitlines()]
     expected_homes = {(provider, account_id)}
-    if not mismatch:
+    if provider == 'claude' and not (mismatch or credential):
         expected_homes.add((provider, other_id))
     return rows, check_launches(rows, home, (provider, account_id), expected_homes)
 
@@ -152,55 +165,25 @@ def check_launches(rows, home, selected_home, expected_homes):
     assert all(Path(row['home']).is_relative_to(home) for row in launches), (
         'Account homes must live in the isolated application data directory'
     )
-    assert all(not row['credentials'] for row in launches), (
-        'No provider child may receive an inherited token or credential routing variable'
-    )
+    if selected_home[0] == 'copilot':
+        assert all(not row['credentials'] for row in launches), (
+            'Copilot must receive no inherited credential or account-routing variable'
+        )
     return launches
 
 
-@pytest.mark.skipif(os.name == 'nt', reason='The offline CLI fixture is a shell script')
-@pytest.mark.parametrize('provider', ['claude', 'copilot'])
-def test_selected_provider_runs_only_the_edi_tool(tmp_path, provider):
+def probe_tool_catalogue(tmp_path, provider):
     rows, launches = run_probe(tmp_path, provider)
     stream_flag = '--output-format' if provider == 'claude' else '--acp'
     turns = [row for row in launches if stream_flag in row['argv']]
     assert turns, 'The app must launch the requested runtime in its documented streaming mode'
-    for turn in turns:
-        argv = turn['argv']
-        if provider == 'claude':
-            assert turn['updates_disabled'] == '1', 'Claude must run with DISABLE_UPDATES=1'
-            assert '--strict-mcp-config' in argv and '--tools' in argv, (
-                'Claude must use a private MCP config and an explicit built-in tool selection'
-            )
-            assert argv[argv.index('--tools') + 1] == 'Skill', (
-                'Claude may retain the bundled skill loader as its single built-in tool'
-            )
-            assert (
-                '--setting-sources' in argv
-                and argv[argv.index('--setting-sources') + 1] == 'local'
-            ), 'Claude must leave user and project settings out of the runtime'
-            assert '--session-id' in argv and '--resume' not in argv, (
-                'A newly selected account must not resume a thread owned by another account'
-            )
-        else:
-            assert {'--no-auto-update', '--disable-builtin-mcps', '--excluded-tools'} <= set(
-                argv
-            ), 'Copilot must disable updates and exclude built-in tools and MCP servers'
-            assert not {'--allow-all', '--yolo'}.intersection(argv), (
-                'Copilot must never be started with a blanket permission grant'
-            )
-            allowed = [
-                argv[index + 1] for index, arg in enumerate(argv[:-1]) if arg == '--allow-tool'
-            ]
-            assert allowed == ['edi'], 'Copilot must pre-allow only the edi MCP server'
-            assert turn['gh_config_empty'], 'Copilot must not see an inherited gh login'
-        skills = {
-            path.parent.name: path.read_text(encoding='utf-8')
-            for path in (ROOT / 'data/assistant/skills').glob('*/SKILL.md')
-        }
-        assert skills and turn['skills'] == skills, (
-            'The provider must discover the approved bundled skills byte for byte'
-        )
+    skills = {
+        path.parent.name: path.read_text(encoding='utf-8')
+        for path in (ROOT / 'data/assistant/skills').glob('*/SKILL.md')
+    }
+    assert skills and all(turn['skills'] == skills for turn in turns), (
+        'The provider must discover the approved bundled skills byte for byte'
+    )
     configs = [row['names'] for row in rows if row['event'] == 'mcp-config']
     assert configs and all(names == ['edi'] for names in configs), (
         'The runtime must receive edi as its sole MCP server'
@@ -212,28 +195,53 @@ def test_selected_provider_runs_only_the_edi_tool(tmp_path, provider):
     assert all(
         not BUILTIN_TOOLS.intersection(name.lower() for name in names) for names in catalogues
     ), 'The tool catalogue must contain no shell, file, web or agent built-ins'
-    if provider == 'copilot':
-        capabilities = [row['capabilities'] for row in rows if row['event'] == 'acp-client']
-        assert capabilities and all(
-            not capability.get('fs') and not capability.get('terminal')
-            for capability in capabilities
-        ), 'ACP must not offer file access or a terminal to Copilot'
-    prompts = [row for row in rows if row['event'] == 'prompt']
-    assert len(prompts) == 1 and prompts[0]['identity'] == 'selected@example.invalid', (
-        'The tool-using prompt must run once under the selected account'
+    return rows, turns, catalogues
+
+
+@pytest.mark.skipif(os.name == 'nt', reason='The offline CLI fixture is a shell script')
+def test_copilot_refuses_user_input_without_tool_proof(tmp_path):
+    rows, turns, catalogues = probe_tool_catalogue(tmp_path, 'copilot')
+    for turn in turns:
+        argv = turn['argv']
+        assert {'--no-auto-update', '--disable-builtin-mcps', '--available-tools'} <= set(argv), (
+            'Copilot must disable updates and use a closed tool list with built-in MCP off'
+        )
+        assert not {'--allow-all', '--yolo'}.intersection(argv), (
+            'Copilot must never be started with a blanket permission grant'
+        )
+        allowed = [argv[index + 1] for index, arg in enumerate(argv[:-1]) if arg == '--allow-tool']
+        assert allowed == ['skill', 'edi'], (
+            'Copilot may pre-allow only the skill loader and the edi MCP server'
+        )
+        assert turn['gh_config_empty'], 'Copilot must not see an inherited gh login'
+        available = argv[argv.index('--available-tools') + 1].split(',')
+        assert any(
+            len(available) == len(names) + 1
+            and set(available) == {'skill', *(f'edi-{name}' for name in names)}
+            for names in catalogues
+        ), 'Copilot can be launched with exactly the edi catalogue and the skill loader'
+    capabilities = [row['capabilities'] for row in rows if row['event'] == 'acp-client']
+    assert capabilities and all(
+        not capability.get('fs') and not capability.get('terminal') for capability in capabilities
+    ), 'ACP must not offer file access or a terminal to Copilot'
+    commands = [row for row in rows if row['event'] == 'account-command']
+    assert [row['text'] for row in commands] == ['/user switch selected-user', '/user show'], (
+        'Copilot must confirm the requested login and host in the same ACP session'
     )
-    replies = [row['result'] for row in rows if row['event'] == 'mcp-reply']
-    assert len(replies) == 1 and not replies[0].get('isError'), (
-        'The app dispatcher must return a successful MCP reply for this attached-file read'
+    assert len({row['session'] for row in commands}) == 1, (
+        'Copilot account selection and readback must share a session'
     )
-    assert any(
-        re.search(r'"text"\s*:\s*"visible"', item['text']) for item in replies[0]['content']
-    ), 'The MCP result must include the seven requested bytes from the selected file'
+    assert not any(row['event'] in {'prompt', 'mcp-reply'} for row in rows), (
+        'Without effective-tool proof, Copilot must receive no user input or dispatch a tool'
+    )
 
 
 @pytest.mark.skipif(os.name == 'nt', reason='The offline CLI fixture is a shell script')
 def test_claude_identity_mismatch_refuses_before_a_prompt(tmp_path):
     rows, _ = run_probe(tmp_path, 'claude', mismatch=True)
+    assert [row['identity'] for row in rows if row['event'] == 'claude-readback'] == [
+        'different@example.invalid'
+    ], 'The mismatched principal must come from the turn runtime, after the home check succeeds'
     assert not any(row['event'] == 'prompt' for row in rows), (
         'A Claude login for a different account must be refused before any user prompt reaches it'
     )

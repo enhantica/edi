@@ -171,7 +171,10 @@ def copy_bundles(command, **_):
 
 
 @pytest.mark.parametrize('channel', ['stable', 'testing'])
-def test_offline_installer_retains_default_update_repositories(tmp_path, channel, monkeypatch):
+@pytest.mark.parametrize('internal', [False, True], ids=['public', 'internal'])
+def test_offline_installer_retains_default_update_repositories(
+    tmp_path, channel, internal, monkeypatch
+):
     monkeypatch.delenv('EDI_CODESIGN', raising=False)
     stage = tmp_path / 'stage'
     marker = stage / (
@@ -181,9 +184,10 @@ def test_offline_installer_retains_default_update_repositories(tmp_path, channel
     )
     marker.parent.mkdir(parents=True)
     marker.write_text('application marker')
-    assistant = stage / PACKAGE.ASSISTANT_RUNTIME / 'assistant.txt'
-    assistant.parent.mkdir(parents=True)
-    assistant.write_text('optional marker')
+    for runtime in ('codex', 'claude', 'copilot'):
+        assistant = stage / 'libexec/edi' / runtime / 'assistant.txt'
+        assistant.parent.mkdir(parents=True)
+        assistant.write_text(runtime, encoding='utf-8')
     if channel == 'stable':
         (stage / 'build-inputs.json').write_text(json.dumps({'release_history_sha256': 'fixture'}))
     archive = tmp_path / 'installer.zip'
@@ -209,6 +213,7 @@ def test_offline_installer_retains_default_update_repositories(tmp_path, channel
             output,
             '2026.11.0',
             maintenance_tool=signed_bundle(tmp_path),
+            internal=internal,
         )
     repositories = ElementTree.parse(output / 'source/config/config.xml').findall(
         'RemoteRepositories/Repository'
@@ -227,6 +232,23 @@ def test_offline_installer_retains_default_update_repositories(tmp_path, channel
     ]
     assert len(creators) == 1, 'Offline packaging builds one installer.'
     assert '--hybrid' in creators[0], 'Offline maintenance permits updates.'
+    policy = json.loads((PACKAGE.ROOT / 'data/distribution.json').read_text(encoding='utf-8'))
+    claude = 'org.easydiffraction.app.claude'
+    expected = {'org.easydiffraction.app.assistant', 'org.easydiffraction.app.copilot'}
+    if internal or policy['claude_distribution'] == 'public':
+        expected.add(claude)
+        assert '--exclude' not in creators[0], (
+            'The authorised installer carries all three providers.'
+        )
+    else:
+        assert (
+            '--exclude' in creators[0]
+            and creators[0][creators[0].index('--exclude') + 1] == claude
+        ), 'A public installer excludes only Claude while its distribution is internal.'
+    metadata = json.loads((output / 'installer.json').read_text(encoding='utf-8'))
+    assert set(metadata['assistants']) == expected, (
+        'The installer identifies every carried provider.'
+    )
     packages = output / 'source/packages'
     if PACKAGE.SYSTEM in {'macos', 'windows'}:
         tool = packages / PACKAGE.MAINTENANCE_COMPONENT / 'data/maintenancetool'

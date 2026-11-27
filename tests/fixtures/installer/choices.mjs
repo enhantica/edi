@@ -6,6 +6,7 @@ import {join} from 'node:path';
 import {createContext, runInContext} from 'node:vm';
 
 const root = process.argv[2];
+const carriesClaude = process.argv.includes('--with-claude');
 const source = name => readFileSync(join(root, name), 'utf8');
 const ui = source('AssistantForm.ui');
 for (const name of ['AssistantCheckBox', 'ClaudeCheckBox', 'CopilotCheckBox', 'LicenseCheckBox'])
@@ -34,6 +35,7 @@ const fields = {
   AssistantCheckBox: {checked: false, toggled: signal()},
   ClaudeBox: {},
   ClaudeCheckBox: {checked: false, toggled: signal()},
+  ClaudeSizeLabel: {},
   CopilotBox: {},
   CopilotCheckBox: {checked: false, toggled: signal()},
   CopilotSizeLabel: {},
@@ -80,7 +82,7 @@ let mode = 'install';
 const records = [
   [appName, 'EasyDiffraction', 123500000],
   [assistantName, 'ChatGPT', 27500000],
-  // Claude is not carried while its distribution is internal (data/distribution.json).
+  ...(carriesClaude ? [[claudeName, 'Claude', 40000000]] : []),
   [copilotName, 'GitHub Copilot', 60000000],
 ];
 const components = records.map(([name, displayName, bytes]) => ({
@@ -173,7 +175,12 @@ assert.equal(fields.AssistantCheckBox.text, 'ChatGPT', 'The first assistant row 
 assert.equal(fields.CopilotCheckBox.checked, false, 'GitHub Copilot starts unselected');
 assert.equal(fields.CopilotCheckBox.text, 'GitHub Copilot', 'The Copilot row names it');
 assert.equal(fields.CopilotBox.visible, true, 'A carried assistant has its row');
-assert.equal(fields.ClaudeBox.visible, false, 'An assistant the installer does not carry has no row');
+assert.equal(fields.ClaudeBox.visible, carriesClaude, 'The Claude row follows component availability');
+if (carriesClaude) {
+  assert.equal(fields.ClaudeCheckBox.checked, false, 'Claude starts unselected');
+  assert.equal(fields.ClaudeCheckBox.text, 'Claude', 'The Claude row names it');
+  assert.equal(fields.ClaudeSizeLabel.text, '40.00 MB', 'Claude has its own size');
+}
 assert.equal(fields.CopilotSizeLabel.text, '60.00 MB', 'Each assistant row shows its own size');
 assert.match(fields.SpaceLabel.text, /^151\.00 MB needed/, 'Install space counts only the ticked assistants');
 assert.match(fields.LicenseLink.text, /https:\/\/www\.gnu\.org\/licenses\/gpl-3\.0\.html/, 'The checkbox has a link to the GPL');
@@ -193,7 +200,7 @@ fields.LicenseCheckBox.checked = true;
 wizard.ReadyForInstallationPageCallback();
 assert.deepEqual(buttonClicks.splice(0), ['Commit'], 'An accepted license permits commit');
 assert.match(summary.RemoveAllMsgLabel.text, /EasyDiffraction<\/td><td[^>]*>123\.50 MB/, 'The summary lists the base size');
-assert.doesNotMatch(summary.RemoveAllMsgLabel.text, /ChatGPT|Copilot/, 'The summary omits the unchecked assistants');
+assert.doesNotMatch(summary.RemoveAllMsgLabel.text, /ChatGPT|Claude|Copilot/, 'The summary omits the unchecked assistants');
 assert.equal(summary.InstallComponentsWidget.visible, false, 'The install component tree is hidden from the summary');
 assert.equal(summary.UninstallComponentsWidget.visible, false, 'The uninstall component tree is hidden from the summary');
 
@@ -215,7 +222,20 @@ buttonClicks.splice(0);
 assert.deepEqual([...selected], [appName, assistantName, copilotName], 'Each ticked assistant is requested');
 assert.match(summary.RemoveAllMsgLabel.text, /ChatGPT<\/td>.*GitHub Copilot<\/td><td[^>]*>60\.00 MB/,
   'The summary lists the assistants in the rows\' order');
-assert.ok(!selected.has(claudeName), 'An absent component is never requested');
+assert.ok(!selected.has(claudeName), 'An unchecked or absent Claude component is never requested');
+
+if (carriesClaude) {
+  fields.ClaudeCheckBox.checked = true;
+  fields.ClaudeCheckBox.toggled.emit(true);
+  assert.match(fields.SpaceLabel.text, /^251\.00 MB needed/, 'Every selected assistant adds its own bytes');
+  pages.TargetDirectoryPage.left.emit();
+  wizard.ReadyForInstallationPageCallback();
+  buttonClicks.splice(0);
+  assert.deepEqual([...selected].sort(), [appName, assistantName, claudeName, copilotName].sort(),
+    'All three assistants can be installed together');
+  assert.match(summary.RemoveAllMsgLabel.text, /ChatGPT<\/td>.*Claude<\/td><td[^>]*>40\.00 MB.*GitHub Copilot<\/td>/,
+    'The summary lists all selected providers in page order');
+}
 
 wizard.PerformInstallationPageCallback();
 wizard.FinishedPageCallback();

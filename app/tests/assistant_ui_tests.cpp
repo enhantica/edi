@@ -288,6 +288,7 @@ private slots:
         const auto provider = test.value("provider").toString();
         auto account = test.value("account").toObject();
         const auto id = account.value("id").toString();
+        const auto otherLogin = test.value("otherLogin").toString();
         const auto accountParent = QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation)
             + "/assistant/accounts/" + provider + "/";
         const auto home = accountParent + id;
@@ -321,12 +322,12 @@ private slots:
         const auto otherId = test.value("otherId").toString();
         const auto otherHome = accountParent + otherId;
         other.insert("id", otherId);
-        other.insert("email", "other@example.invalid");
+        other.insert("email", otherLogin);
         other.insert("home", otherHome);
         QVERIFY2(QDir().mkpath(otherHome), "The other signed-in account must have a separate home");
         QFile otherIdentity(otherHome + "/fixture-account.txt");
         QVERIFY2(otherIdentity.open(QIODevice::WriteOnly), "Set the other account's offline identity");
-        otherIdentity.write("other@example.invalid");
+        otherIdentity.write(otherLogin.toUtf8());
         otherIdentity.close();
         const auto key = "Assistant/Providers/" + provider;
         settings.setValue(key + "/accounts",
@@ -346,42 +347,87 @@ private slots:
         auto* session = engine.singletonInstance<edi_app::Session*>("edi.app", "Session");
         QVERIFY2(session, "The probe must reach the application's normal desktop session");
         auto* assistant = session->assistant();
-        const auto providers = assistant->property("providers").toList();
         QStringList available;
         QStringList offered;
-        for (const auto& entry : providers) {
-            const auto facts = entry.toMap();
-            const auto providerKey = facts.value("provider").toString();
-            offered.append(providerKey);
-            if (facts.value("installed").toBool()) available.append(providerKey);
+        for (const auto& entry : assistant->providers()) {
+            offered.append(entry.provider);
+            if (entry.installed) available.append(entry.provider);
         }
         offered.sort();
         QVERIFY2((offered == QStringList{"chatgpt", "claude", "copilot"}),
                  "The Account dialog must get one availability record for each provider");
         QVERIFY2((available == QStringList{provider}),
                  "An installed runtime must be usable without enabling the other providers");
-        QVERIFY2(assistant->resumeConnection(), "A selected, signed-in provider must be available");
         if (test.value("mismatch").toBool()) {
-            QTRY_VERIFY2_WITH_TIMEOUT(!assistant->lastError().isEmpty(),
-                                     "The wrong runtime identity must surface as an error", 3000);
+            QVERIFY2(assistant->resumeConnection(), "The recorded Claude account must be available to reconnect");
+            QTRY_VERIFY2_WITH_TIMEOUT(assistant->lastError().contains(test.value("runtimeEmail").toString()),
+                                     qPrintable(assistant->lastError()), 3000);
             QVERIFY2(!assistant->connected(), "A mismatched runtime must not connect");
             assistant->send("Do not send this prompt");
             return;
         }
-        QTRY_VERIFY2_WITH_TIMEOUT(assistant->connected() && assistant->draftAdmissionReady(),
+        if (test.value("credential").toBool()) {
+            QVERIFY2(assistant->resumeConnection(), "The recorded Claude account must be available to reconnect");
+            QTRY_VERIFY2_WITH_TIMEOUT(assistant->connected() && assistant->draftAdmissionReady(),
+                                     qPrintable(assistant->lastError()), 3000);
+            QQmlComponent component(&engine);
+            component.setData("import edi.app\nMain { width: 1400; height: 1000; visible: true }", QUrl());
+            QScopedPointer<QObject> root(component.create());
+            auto* window = qobject_cast<QQuickWindow*>(root.data());
+            QVERIFY2(window, qPrintable(component.errorString()));
+            auto* dialog = root->findChild<QObject*>("assistant.accountDialog");
+            QVERIFY2(dialog && dialog->setProperty("parent", QVariant::fromValue(window->contentItem())) &&
+                            QMetaObject::invokeMethod(dialog, "open"),
+                     "The desktop Account dialog must open on the test window");
+            const auto showsCredentialSource = [&] {
+                for (const auto* item : dialog->findChildren<QQuickItem*>()) {
+                    if (!item->isVisible()) continue;
+                    const auto text = item->property("text").toString();
+                    if (text.contains("ANTHROPIC_API_KEY") ||
+                        text.contains("API key", Qt::CaseInsensitive)) return true;
+                }
+                return false;
+            };
+            QTRY_VERIFY2_WITH_TIMEOUT(dialog->property("visible").toBool(),
+                                      "The Account dialog must actually open", 500);
+            for (const auto* child : dialog->findChildren<QObject*>())
+                QVERIFY2(!child->property("text").toString().contains("fixture-api-key-never-displayed"),
+                         "Account details must never display the key value");
+            QVERIFY2(showsCredentialSource(), "The Account dialog must identify the active Claude environment key");
+            return;
+        }
+        assistant->switchAccount(provider, id);
+        QVERIFY2(assistant->activeProvider().provider == provider,
+                 "The connection offer must use the installed provider the user selected");
+        const auto selection = assistant->beginFileSelection();
+        QVERIFY2(!selection.isEmpty(), "The assistant must accept file selection before the connection offer");
+        QVERIFY2(assistant->addSelectedFiles(selection, {QUrl::fromLocalFile(test.value("file").toString())}),
+                 qPrintable(assistant->lastError()));
+        const auto fileId = assistant->selectedFiles()->text(0, "id");
+        QVERIFY2(!fileId.isEmpty(), "The attached sample must have an edi file identity");
+        const auto consent = assistant->contextConsentIdentity();
+        QVERIFY2(!consent.isEmpty() && assistant->contextConsentRequired(),
+                 "The newly attached sample must be covered by the user's outgoing context approval");
+        const auto approval = assistant->acceptConnectionOffer(consent);
+        QVERIFY2(approval == "submitted", qPrintable(assistant->lastError() + " Approval: " + approval));
+        const auto prompt = "Read the attached sample. fixture-file-id=" + fileId;
+        if (provider == "copilot") {
+            QTRY_VERIFY2_WITH_TIMEOUT(assistant->lastError().contains("thread/start"),
+                                     qPrintable(assistant->lastError()), 3000);
+            QVERIFY2(assistant->submitDraft(prompt).isEmpty(),
+                     "Copilot must refuse a user draft without effective-tool proof");
+            return;
+        }
+        QTRY_VERIFY2_WITH_TIMEOUT(assistant->state() == "idle" && assistant->draftAdmissionReady(),
                                  qPrintable(assistant->lastError()), 3000);
+        assistant->setSelectedModel("sonnet");
+        QVERIFY2(assistant->selectedModel() == "sonnet", "The selected model must come from Claude's readback");
         assistant->refreshSessions();
         QTRY_VERIFY2_WITH_TIMEOUT(!assistant->sessionsLoading(), "The account thread list must settle", 1000);
         const auto* sessions = assistant->sessions();
         for (int row = 0; row < sessions->rowCount(); ++row)
             QVERIFY2(sessions->text(row, "id") != foreignThread, "Another account's thread must stay out of this list");
-        const auto selection = assistant->beginFileSelection();
-        QVERIFY2(!selection.isEmpty(), "The signed-in assistant must accept file selection");
-        QVERIFY2(assistant->addSelectedFiles(selection, {QUrl::fromLocalFile(test.value("file").toString())}),
-                 qPrintable(assistant->lastError()));
-        const auto fileId = assistant->selectedFiles()->text(0, "id");
-        QVERIFY2(!fileId.isEmpty(), "The attached sample must have an edi file identity");
-        assistant->send("Read the attached sample. fixture-file-id=" + fileId);
+        assistant->send(prompt);
         const auto appearsInTranscript = [&] {
             auto* rows = assistant->messages();
             for (int row = 0; row < rows->rowCount(); ++row)
@@ -392,7 +438,9 @@ private slots:
         QTRY_COMPARE_WITH_TIMEOUT(assistant->state(), QString("idle"), 3000);
         QVERIFY2(QMetaObject::invokeMethod(assistant, "switchAccount", Q_ARG(QString, provider), Q_ARG(QString, otherId)),
                  "Switch account must reach the view model's normal account action");
-        QTRY_VERIFY2_WITH_TIMEOUT(assistant->connected() && assistant->account().email == "other@example.invalid",
+        if (!assistant->connected() && assistant->state() != "connecting")
+            QVERIFY2(assistant->resumeConnection(), "The newly selected saved account must be available to reconnect");
+        QTRY_VERIFY2_WITH_TIMEOUT(assistant->connected() && assistant->account().email == otherLogin,
                                  "Switching must connect using the other account's own identity", 3000);
         QVERIFY2(!appearsInTranscript(), "Switch account must not carry over the previous account's reply");
 #if defined(Q_OS_LINUX)
