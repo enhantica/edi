@@ -19,6 +19,9 @@
 #include "codex_agent.hpp"
 #include "desktop_updates.hpp"
 #include "edi/io.hpp"
+#if EDI_APP_VOICE
+#include "voice_input.hpp"
+#endif
 
 void start_installer_smoke(QQuickWindow& window, const QString& output) {
     QTimer::singleShot(1500, &window, [&window, output] {
@@ -100,6 +103,12 @@ void start_installer_smoke(QQuickWindow& window, const QString& output) {
                 QMetaObject::invokeMethod(dialog, "close");
             }
             report.insert("assistant_available", assistantAvailable);
+            // The voice component's model, found and of its stated size (ADR-0107).
+#if EDI_APP_VOICE
+            report.insert("voice_available", !edi_app::VoiceInput::installedModel().isEmpty());
+#else
+            report.insert("voice_available", false);
+#endif
             if (!helper.isEmpty()) {
                 QProcess process;
                 process.start(helper, {QStringLiteral("--version")});

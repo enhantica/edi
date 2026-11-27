@@ -14,6 +14,8 @@ from package import (
     ASSISTANT_RUNTIME,
     SUFFIX,
     SYSTEM,
+    VOICE_COMPONENT,
+    VOICE_MODEL,
     build_maintenance_tool,
     clean_environment,
     installer_from_download,
@@ -21,6 +23,7 @@ from package import (
     run,
     sha256,
     verify_installed_maintenance_tool,
+    voice_models,
 )
 
 
@@ -46,6 +49,7 @@ def check(tools: Path, output: Path) -> None:
     assistant_marker = stage / ASSISTANT_RUNTIME / 'assistant.txt'
     assistant_marker.parent.mkdir(parents=True)
     assistant_marker.write_text('optional assistant marker\n')
+    voice_marker = write_voice_marker(stage / VOICE_MODEL)
     repository = (output / 'online/repository').as_uri() + '/'
     # Substitute only the endpoint; install and maintenance use the real embedded configuration.
     # The update goes from the last old-form version to the first YY.N, which sorts lower by its
@@ -64,15 +68,40 @@ def check(tools: Path, output: Path) -> None:
     (output / 'isolated home').mkdir()
     for kind, bootstrap in [('offline', offline), ('online', online)]:
         exercise(
-            kind, bootstrap, output, marker.relative_to(stage), assistant_marker.relative_to(stage)
+            kind,
+            bootstrap,
+            output,
+            marker.relative_to(stage),
+            assistant_marker.relative_to(stage),
+            voice_marker.relative_to(stage),
         )
     (output / 'passed.json').write_text(
         json.dumps({'passed': True, 'transport': 'file', 'application_test': False}) + '\n'
     )
 
 
+def write_voice_marker(folder: Path) -> Path:
+    """A small stand-in for the speech model, with the manifest package.py checks it against."""
+    folder.mkdir(parents=True)
+    model = folder / 'voice.txt'
+    model.write_text('optional voice marker\n', encoding='utf-8')
+    manifest = {
+        'schema': voice_models.MANIFEST_SCHEMA,
+        'file': model.name,
+        'bytes': model.stat().st_size,
+        'sha256': sha256(model),
+    }
+    (folder / voice_models.MANIFEST).write_text(json.dumps(manifest) + '\n', encoding='utf-8')
+    return model
+
+
 def exercise(
-    kind: str, bootstrap: Path, output: Path, marker: Path, assistant_marker: Path
+    kind: str,
+    bootstrap: Path,
+    output: Path,
+    marker: Path,
+    assistant_marker: Path,
+    voice_marker: Path,
 ) -> None:
     env = clean_environment(output / 'isolated home' / kind)
     metadata = json.loads((bootstrap.parent / 'installer.json').read_text())
@@ -108,8 +137,9 @@ def exercise(
             if installed.read_text() != expected:
                 raise RuntimeError('Installer did not install the expected component')
             installed_assistant = target / assistant_marker
-            if installed_assistant.exists():
-                raise RuntimeError('Default installation selected the optional component')
+            installed_voice = target / voice_marker
+            if installed_assistant.exists() or installed_voice.exists():
+                raise RuntimeError('Default installation selected an optional component')
             if kind == 'offline':
                 user_file = target / 'user-project.edi'
                 user_file.write_text('keep the project\n')
@@ -149,16 +179,27 @@ def exercise(
                 '--default-answer',
                 '--confirm-command',
             ]
-            run([*maintenance_args, 'install', ASSISTANT_COMPONENT], **options)
-            if installed_assistant.read_text() != 'optional assistant marker\n':
-                raise RuntimeError('Maintenance tool did not install the assistant')
-            run([*maintenance_args, 'remove', ASSISTANT_COMPONENT], **options)
-            if installed_assistant.exists() or installed.read_text() != 'second marker\n':
-                raise RuntimeError('Removing the assistant changed the required application')
+            for component, optional, text in [
+                (ASSISTANT_COMPONENT, installed_assistant, 'optional assistant marker\n'),
+                (VOICE_COMPONENT, installed_voice, 'optional voice marker\n'),
+            ]:
+                add_and_remove(maintenance_args, component, optional, text, installed, options)
         finally:
             run([maintenance, '--default-answer', '--confirm-command', 'purge'], **options)
         if installed.exists():
             raise RuntimeError('Maintenance tool left the component installed')
+
+
+def add_and_remove(
+    maintenance_args: list, component: str, optional: Path, text: str, app: Path, options: dict
+) -> None:
+    """Maintenance Tool adds an optional component, then removes it and leaves the app alone."""
+    run([*maintenance_args, 'install', component], **options)
+    if not optional.is_file() or optional.read_text(encoding='utf-8') != text:
+        raise RuntimeError(f'Maintenance tool did not install {component}')
+    run([*maintenance_args, 'remove', component], **options)
+    if optional.exists() or app.read_text(encoding='utf-8') != 'second marker\n':
+        raise RuntimeError(f'Removing {component} changed the required application')
 
 
 def nothing_offered(maintenance: Path, env: dict) -> None:

@@ -92,10 +92,14 @@ ships its audio input only, not its FFmpeg media plugin. All three are rows in `
 
 ## Consequences
 
-- Users who want voice input download 190 MB more; everyone else gets the same installer size, apart from the engine's
-  few megabytes in the app.
+- Users who want voice input download 190 MB more; everyone else gets the same online installer, apart from the engine's
+  few megabytes in the app. The offline installer carries every component and grows by the model's 190 MB.
 - The desktop build needs Qt Multimedia and downloads the whisper.cpp archive once per build directory.
-- The installer and Maintenance Tool have one more row, and installer qualification runs with and without voice input.
+- The installer and Maintenance Tool have one more row, on the assistant's page, and installer qualification runs with
+  and without voice input. Qt Multimedia's media plugins are never deployed: Linux and Windows skip the plugin type, and
+  on macOS `tools/installer/build.py` removes them and the libraries only they load; the bundle audit refuses FFmpeg.
+- Only the installed macOS app carries the microphone usage text; a development build on macOS is refused the
+  microphone, which the message box reports.
 - x86-64 CPUs older than AVX2 cannot use voice input; the rest of the app is unaffected because whisper code runs only
   when the button is pressed.
 - Recognition starts after the user stops speaking. Showing words while the user speaks is left for later.

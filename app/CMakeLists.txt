@@ -866,6 +866,11 @@ if(EDI_DEPLOY_APP)
         list(APPEND edi_deploy_filters POST_EXCLUDE_REGEXES "^/lib/" "^/lib64/" "^/usr/lib/"
             INCLUDE_PLUGINS qoffscreen qwayland)
     endif()
+    # Voice input records through Qt Multimedia's own audio input; its media plugins and their FFmpeg are not shipped
+    # (ADR-0107). macdeployqt cannot skip a plugin type, so tools/installer/build.py removes them on macOS.
+    if(NOT APPLE)
+        list(APPEND edi_deploy_filters EXCLUDE_PLUGIN_TYPES multimedia)
+    endif()
     qt_generate_deploy_qml_app_script(TARGET edi_app OUTPUT_SCRIPT edi_deploy_script ${edi_deploy_filters})
     install(SCRIPT ${edi_deploy_script} COMPONENT desktop)
     edi_install_assistant_runtime("${EDI_ASSISTANT_RUNTIME_INSTALL_CHECK}" "${EDI_ASSISTANT_RUNTIME_INSTALL_ROOT}")

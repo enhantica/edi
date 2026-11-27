@@ -317,7 +317,8 @@ the space line, after EasyDiffraction's and the Maintenance Tool's boxes (both t
 tool's tooltip "Updates and uninstalls EasyDiffraction"), each with its size on the right, as the
 update summary lists them; then the licence and, on Windows and Linux, the desktop shortcut boxes.
 Every page and list orders the components EasyDiffraction, Maintenance Tool, AI assistant (their
-sorting priorities 200, 150, 100). The tool's component has no payload on Linux, so its row shows
+sorting priorities 200, 150, 100). The optional voice input component (ADR-0107) follows as a fourth row on the
+same page and in the same Change components page, unticked, with sorting priority 90. The tool's component has no payload on Linux, so its row shows
 the size of the Framework's binary the installation writes as the tool. In Maintenance Tool's Change components flow
 it is a page of its own whose box shows whether the assistant is installed; Update has no such page and goes straight
 to Ready to update, updating everything installed (owner, 2026-11-26). Ready to update lists the tool only when the update

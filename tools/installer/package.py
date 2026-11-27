@@ -21,12 +21,18 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'tools/release'))
+sys.path.insert(0, str(ROOT / 'tools/deps/voice'))
+import fetch as voice_models  # noqa: E402
 import versions  # noqa: E402
 
 SYSTEM = {'Linux': 'linux', 'Darwin': 'macos', 'Windows': 'windows'}[platform.system()]
 APP_COMPONENT = 'org.easydiffraction.app'
 ASSISTANT_COMPONENT = 'org.easydiffraction.app.assistant'
 ASSISTANT_RUNTIME = Path('libexec/edi/codex')
+# The speech model for voice input and its manifest, an optional component (ADR-0107). On macOS
+# it sits beside the signed application bundle, as the assistant runtime does.
+VOICE_COMPONENT = 'org.easydiffraction.app.voice'
+VOICE_MODEL = Path('share/edi/voice')
 # macOS and Windows ship their maintenance tool as a signed, app-versioned component (ADR-0091).
 MAINTENANCE_COMPONENT = 'org.easydiffraction.app.maintenancetool'
 # The id each component replaced, so an install made before edi ADR-0091 updates in place.
@@ -361,8 +367,9 @@ def write_metadata(
             # folder 39, 8, the space line, 24, two check box rows with 8 between, 24, the licence
             # and shortcut rows: 309 px on Windows. An installation already in the folder adds its
             # two-line warning and 24 (62 on Windows). Qt's margins around the page and its buttons
-            # (11 and 9 px, the buttons 39) add 101: 472 on Windows with the warning.
-            'WizardDefaultHeight': '480',
+            # (11 and 9 px, the buttons 39) add 101: 472 on Windows with the warning. The voice
+            # input row adds a line and 8 (27).
+            'WizardDefaultHeight': '507',
             # One centred column, no step list (the owner's three-page design, edi ADR-0071).
             'WizardShowPageList': 'false',
             'ControlScript': 'Installer.qs',
@@ -454,6 +461,62 @@ def write_assistant_metadata(meta: Path, version: str) -> None:
     root.write(meta / 'package.xml', encoding='utf-8', xml_declaration=True)
     for name in ('assistantscript.qs', 'AssistantForm.ui', 'ProgressForm.ui', 'DoneForm.ui'):
         shutil.copy2(ROOT / 'tools/installer' / name, meta / name)
+
+
+def write_voice_metadata(meta: Path, version: str) -> None:
+    """Voice input's component; its row is on the assistant's form (Installer.qs)."""
+    xml_file(
+        meta / 'package.xml',
+        'Package',
+        {
+            'DisplayName': 'Voice input',
+            'Description': (
+                'Speak to the AI assistant instead of typing; '
+                'speech is recognised on this computer.'
+            ),
+            'Version': version,
+            'ReleaseDate': datetime.datetime.now(datetime.UTC).date().isoformat(),
+            'Dependencies': APP_COMPONENT,
+            'Default': 'false',
+            'RequiresAdminRights': 'false',
+            'SortingPriority': '90',  # after the AI assistant
+        },
+    )
+
+
+def stage_voice_model(stage: Path) -> Path:
+    """Put the pinned speech model and its manifest under share/edi/voice in the stage.
+
+    The model is downloaded once into the shared cache and checked against its pin there; the app
+    never downloads it.
+    """
+    model = voice_models.fetch('small')
+    folder = stage / VOICE_MODEL
+    folder.mkdir(parents=True)
+    shutil.copy2(model, folder / model.name)
+    (folder / voice_models.MANIFEST).write_text(
+        json.dumps(voice_models.manifest('small'), indent=2) + '\n', encoding='utf-8'
+    )
+    check_voice_model(folder)
+    return folder
+
+
+def check_voice_model(folder: Path) -> None:
+    """Require the manifest and the model it names, at the size it states, and nothing else."""
+    manifest = json.loads((folder / voice_models.MANIFEST).read_text(encoding='utf-8'))
+    name = manifest.get('file', '')
+    if (
+        manifest.get('schema') != voice_models.MANIFEST_SCHEMA
+        or not name
+        or Path(name).name != name
+        or name == voice_models.MANIFEST
+    ):
+        raise RuntimeError('The voice model manifest is malformed')
+    model = folder / name
+    if model.is_symlink() or not model.is_file() or model.stat().st_size != manifest.get('bytes'):
+        raise RuntimeError('The voice model differs from its manifest')
+    if sorted(path.name for path in folder.iterdir()) != sorted([name, voice_models.MANIFEST]):
+        raise RuntimeError('The voice model folder holds other files')
 
 
 def write_maintenance_tool_metadata(meta: Path, version: str) -> None:
@@ -1185,6 +1248,23 @@ def installerbase_bytes(tools: Path) -> int:
     return base.stat().st_size if base.exists() else 0
 
 
+def prepare_voice_component(data: Path, package: Path, version: str) -> None:
+    """Move the staged model from the app's payload into the voice component, with a manifest."""
+    check_voice_model(data / VOICE_MODEL)
+    voice_data = package / 'data'
+    (package / 'meta').mkdir(parents=True)
+    (voice_data / VOICE_MODEL).parent.mkdir(parents=True)
+    shutil.move(data / VOICE_MODEL, voice_data / VOICE_MODEL)
+    # Where share/edi held only the model, no empty folder stays in the app's payload.
+    for folder in [data / VOICE_MODEL.parent, data / VOICE_MODEL.parent.parent]:
+        if folder.is_dir() and not any(folder.iterdir()):
+            folder.rmdir()
+    (voice_data / 'voice-payload-manifest.json').write_text(
+        json.dumps(payload_manifest(voice_data), indent=2) + '\n'
+    )
+    write_voice_metadata(package / 'meta', version)
+
+
 def prepare_installer_source(
     stage: Path,
     tools: Path,
@@ -1215,6 +1295,10 @@ def prepare_installer_source(
         json.dumps(payload_manifest(assistant_data), indent=2) + '\n'
     )
     write_assistant_metadata(assistant_meta, version)
+    # Voice input comes from build.py's stage; a marker stage without it makes an installer
+    # without the component, which the qualification run with --with-voice refuses.
+    if (data / VOICE_MODEL).exists():
+        prepare_voice_component(data, packages / VOICE_COMPONENT, version)
     template_args, tool_environment = [], None
     runtime = None
     if SYSTEM == 'linux':
@@ -1580,13 +1664,20 @@ def installer_from_download(download: Path, output: Path) -> Path:
     return download
 
 
-def verify_installed_payload(target: Path, *, with_assistant: bool) -> None:
+def verify_installed_payload(
+    target: Path, *, with_assistant: bool, with_voice: bool = False
+) -> None:
     manifest = json.loads((target / 'payload-manifest.json').read_text(encoding='utf-8'))
     optional_manifest = target / 'assistant-payload-manifest.json'
     if with_assistant:
         manifest.update(json.loads(optional_manifest.read_text(encoding='utf-8')))
     elif optional_manifest.exists() or (target / ASSISTANT_RUNTIME).exists():
         raise RuntimeError('The default installation includes the optional assistant')
+    voice_manifest = target / 'voice-payload-manifest.json'
+    if with_voice:
+        manifest.update(json.loads(voice_manifest.read_text(encoding='utf-8')))
+    elif voice_manifest.exists() or (target / VOICE_MODEL).exists():
+        raise RuntimeError('The installation includes voice input without asking for it')
     for name, expected in manifest.items():
         path = target / name
         if 'sha256' in expected and (not path.is_file() or sha256(path) != expected['sha256']):
@@ -1607,7 +1698,12 @@ def verify_installed_identity(metadata: dict, receipt: dict) -> None:
 
 
 def exercise_installer(
-    installer: Path, output: Path, repository: str | None = None, *, with_assistant: bool = False
+    installer: Path,
+    output: Path,
+    repository: str | None = None,
+    *,
+    with_assistant: bool = False,
+    with_voice: bool = False,
 ) -> None:
     output = output.resolve()
     output.mkdir(parents=True, exist_ok=True)
@@ -1637,6 +1733,7 @@ def exercise_installer(
                 '--confirm-command',
                 'install',
                 *([ASSISTANT_COMPONENT] if with_assistant else []),
+                *([VOICE_COMPONENT] if with_voice else []),
             ],
             env=env,
             stdout=log,
@@ -1649,7 +1746,7 @@ def exercise_installer(
         else 'bin/EasyDiffraction' + SUFFIX
     )
     try:
-        verify_installed_payload(target, with_assistant=with_assistant)
+        verify_installed_payload(target, with_assistant=with_assistant, with_voice=with_voice)
         app = target / (
             'EasyDiffraction.app/Contents/MacOS/EasyDiffraction'
             if SYSTEM == 'macos'
@@ -1661,6 +1758,7 @@ def exercise_installer(
         if (
             not receipt.get('passed')
             or receipt.get('assistant_available') is not with_assistant
+            or receipt.get('voice_available') is not with_voice
             or not receipt.get('svg_images')
             or not (output / 'smoke/window.png').is_file()
         ):
@@ -1773,8 +1871,8 @@ def main() -> None:
     test.add_argument('--output', type=Path, required=True)
     test.add_argument('--repository')
     test.add_argument('--with-assistant', action='store_true')
-    seal = commands.add_parser('seal')
-    seal.add_argument('--output', type=Path, required=True)
+    test.add_argument('--with-voice', action='store_true')
+    commands.add_parser('seal').add_argument('--output', type=Path, required=True)
     args = parser.parse_args()
     if args.command == 'relocate-linux':
         relocate_linux(args.stage, args.patchelf, args.qt_prefix)
@@ -1808,7 +1906,11 @@ def main() -> None:
         seal_installer(args.output)
     else:
         exercise_installer(
-            args.installer, args.output, args.repository, with_assistant=args.with_assistant
+            args.installer,
+            args.output,
+            args.repository,
+            with_assistant=args.with_assistant,
+            with_voice=args.with_voice,
         )
 
 
