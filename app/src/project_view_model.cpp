@@ -7669,23 +7669,21 @@ void ProjectViewModel::syncCategories() {
 }
 
 void ProjectViewModel::showStructureView() {
-    // The view shows each structure as that structure saved it (the owner, 2026-10-10): its options come from
-    // the structure, and a change is saved with it.
-    const StructureViewModel* shown = currentStructure();
+    // One set of view settings for every structure, the project's (owner decision 2026-11-27): switching structures
+    // keeps them, and a change is saved in project.edi.
     showing_view_ = true;
-    structure_view_options_->setFromView(shown != nullptr ? shown->structure()->view.get() : std::map<std::string, std::string>{});
+    structure_view_options_->setFromView(project_->structure_view.get());
     showing_view_ = false;
 }
 
 void ProjectViewModel::keepStructureView() {
     const PublicationScope publication(*this);
-    if (showing_view_ || current_structure_ < 0 || static_cast<std::size_t>(current_structure_) >= project_->structures.size()) {
+    if (showing_view_) {
         return;
     }
-    edi::Structure& shown = *project_->structures[static_cast<std::size_t>(current_structure_)];
     std::map<std::string, std::string> view = structure_view_options_->toView();
     // A setting the file does not save yet (a polyhedra item crysta's dictionary lacks) changes nothing here.
-    if (view == shown.view.get()) {
+    if (view == project_->structure_view.get()) {
         return;
     }
     if (const auto refusal = criticalEditRefusal(); !refusal.isEmpty()) {
@@ -7697,7 +7695,7 @@ void ProjectViewModel::keepStructureView() {
     const auto release = qScopeGuard([this] { editing_ = false; });
     notifyProjectEdited();
     if (retired_) return;
-    shown.view = std::move(view);
+    project_->structure_view = std::move(view);
     saved_files_.reset();
     discovered_files_.reset();
     invalidateTexts();

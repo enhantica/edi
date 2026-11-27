@@ -4806,6 +4806,7 @@ void with_saved_project(const Project& model, const std::function<void(crysta::P
 #if __has_include("crysta/su_format.hpp")  // drop the guard when the pin moves
     // The delegated writer spells every value with an s.u. by the project's rule.
     cproject.su_rule = model.su_rule;
+    cproject.structure_view = model.structure_view.get();
 #endif
 #if __has_include("crysta/report_settings.hpp")  // drop the guard when the pin moves
     // And writes the report's settings and saved-report rows, and the two Analysis view items.

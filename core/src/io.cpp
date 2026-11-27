@@ -4883,6 +4883,18 @@ static Project load_project_folder(const std::string& directory, const WarningSi
                     declared_plot_renderer = lexical_value(item.value, 0, renderer_tag);
                     continue;
                 }
+                // The project's Structure view settings (owner decision 2026-11-27), each checked as a structure's.
+                if (item.tag.starts_with("_structure_view.")) {
+                    const std::string name = item.tag.substr(std::string_view("_structure_view.").size());
+                    const std::string value = lexical_value(item.value, 0, item.tag);
+                    if (const std::string why = detail::structure_view_refusal(name, value); !why.empty()) {
+                        throw IoError("project.edi: " + why + ": " + record_where);
+                    }
+                    std::map<std::string, std::string> view = project.structure_view.get();
+                    view[name] = value;
+                    project.structure_view = std::move(view);
+                    continue;
+                }
                 if (tag_is(item, su_rule_tag)) {
                     if (declared_su_rule.has_value()) {
                         throw IoError(std::string("project.edi declares ").append(su_rule_tag).append(" more than once: ").append(record_where));
@@ -4980,6 +4992,10 @@ static Project load_project_folder(const std::string& directory, const WarningSi
                               "', expected iucr_19 or iucr_99: " + record_where);
             }
             project.su_rule = *declared_su_rule;
+        }
+        // A project saved before the view was the project's: its first structure's settings, once.
+        if (project.structure_view.get().empty() && !project.structures.empty()) {
+            project.structure_view = project.structures.front()->view.get();
         }
         restore("created", project.metadata.created);
         restore("last_modified", project.metadata.last_modified);

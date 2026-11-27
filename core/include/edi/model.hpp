@@ -5419,6 +5419,10 @@ class Project : public detail::ProjectAnchor {
     // `iucr_99` (always two digits, the default since the owner's record of 2026-10-24) or `iucr_19` (IUCr
     // recommendation 12), by crysta's rule.
     std::string su_rule = kDefaultSuRule;
+    // `project.edi` `_structure_view` (owner decision 2026-11-27): how the Structure view shows every structure, one
+    // set for the project, by item name; switching structures keeps it. A project saved before reads its first
+    // structure's items once. Camera and zoom are per structure and never saved.
+    detail::Written<std::map<std::string, std::string>> structure_view;
     // `reports/report.edi` `_report` (ADR-0036 §7): the report's settings, each absent until the file or the app
     // states it: whether Save report writes the HTML, the PDF and the CIF report, whether the HTML embeds its chart
     // libraries, and the groups the report leaves out (their keys separated by spaces; empty leaves out none). Its
@@ -6025,6 +6029,16 @@ struct SuFormatCategory {
     static constexpr std::array items{"rule"};
 };
 static_assert(detail::one_entry_per_column(SuFormatCategory::columns, SuFormatCategory::items));
+// The project's Structure view settings: the `_structure_view` items of project.edi, which its reader and crysta's
+// writer place there by hand. Named apart from a structure's own `_structure_view`, which a project saved before
+// still carries and loads read once.
+struct ProjectStructureViewCategory {
+    using Owner = Project;
+    static constexpr const char* name = "project_structure_view";
+    static constexpr auto columns = std::tuple{&Project::structure_view};
+    static constexpr std::array items{"adp_probability atom_scale atom_view atoms axes bonds cell colour_scheme labels"};
+};
+static_assert(detail::one_entry_per_column(ProjectStructureViewCategory::columns, ProjectStructureViewCategory::items));
 
 struct ReportSettingsCategory {
     using Owner = Project;

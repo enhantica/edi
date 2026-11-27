@@ -31,9 +31,14 @@ without computing any of them itself.
   Messages center, never as a lasting label. Setting shows the dictionary default `a,b,c;0,0,0` when a file gives no
   transform.
 - **Viewer.** The structure view draws each magnetic atom's moment as an arrow, from the moments in the cell crysta
-  computed. The toolbar shows or hides them (`_structure_view.show_moments`, saved with the structure only when
-  stated). Appearance sets the arrow length per Bohr magneton and where the arrow sits (`_structure_view.moment_view`:
-  through the atom, from its centre or from its surface). The shaft has one thickness at every length; the head is
+  computed. The toolbar shows or hides them (`_structure_view.show_moments`, saved only when stated). Appearance sets
+  the arrow length per Bohr magneton (1 Å by default; it was 0.75 until the owner's decision of 2026-11-27) and where
+  the arrow sits (`_structure_view.moment_view`: through the atom, from its centre or from its surface).
+- **One view for the project** (owner decision 2026-11-27, "global structure-view settings"; it replaces the
+  per-structure settings above). The `_structure_view` items (which atoms, bonds, polyhedra, moments shown, the moment
+  scale, the arrow position and the appearance) are one set for the whole project, saved in `project.edi` and in no
+  structure file, so switching structures keeps the view. Camera and zoom stay per structure and are not saved. A
+  project saved before reads its first structure's items once as the project's; a scale a project saved keeps. The shaft has one thickness at every length; the head is
   the standard one (0.6 Å long, 0.3 Å wide) shortened to at most 35 % of the arrow and narrowed with it, never below
   1.6 times the shaft, so a 1 μB arrow at the default scale keeps a visible shaft and a long arrow the standard head.
   The toolbar's Atoms choice draws every atom, the crystal's asymmetric unit (for a magnetic structure, its parent
