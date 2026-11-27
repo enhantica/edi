@@ -227,9 +227,9 @@ def current_feed(releases: Path, channel: str) -> Path:
 def overlay_release(site: Path, incoming: Path) -> None:
     """Publish one release's Pages copy (tools/release/distribution.py) in one site deployment.
 
-    The copy holds the component repositories, the feed, the package index with the current wheels,
-    every release file under releases/<version>/ and SHA256SUMS. Pages keeps the current release
-    only, so other versions' folders go.
+    The copy holds the component repositories, both update feeds, the package index with the
+    current wheels, every release file under releases/<version>/ and SHA256SUMS. Pages keeps the
+    current release only, so other versions' folders go.
     """
     expected = {'repository', 'releases', 'pypi', 'SHA256SUMS'}
     if {item.name for item in incoming.iterdir()} != expected:

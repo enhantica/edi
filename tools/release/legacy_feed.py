@@ -10,7 +10,8 @@ content checksum.
 
 The checker follows the old apps' parser, ``release_changes`` as ``fetchNext`` calls it, read with
 ``git show v2026.11.31:app/src/desktop_updates.cpp``; the line numbers below are that file's. It
-is stricter in two places the release tools never write: a byte-order mark and a repeated key.
+refuses a little more, in bytes the release tools never write: a byte-order mark, a repeated
+key and a number out of range.
 
     python tools/release/legacy_feed.py check releases/stable.json
     python tools/release/legacy_feed.py write --history release-history.json --output releases
