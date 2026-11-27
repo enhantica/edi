@@ -619,20 +619,21 @@ void set_parametric_shared(Project& project, Parameter& parameter, bool shared) 
         row.parameter_unique_name = key;
         project.sequential_fit.shared.push_back(std::move(row));
     }
-    // One value and one free flag for the group: the shown row's (only where sharing takes effect).
+    // One value and one free flag for the group (only where sharing takes effect): the shown row's value, and free if
+    // any copy was free (owner decision 2026-11-27, ADR-0107 decision 5).
     if (!active(project)) {
         return;
     }
     const std::vector<Parameter*> members = group_members(project, key);
     const Parameter& source = parameter;
     const double value = source.value.get();
-    const bool free = source.free.get();
+    bool free = source.free.get();
+    for (const Parameter* member : members) free = free || member->free.get();
     for (Parameter* member : members) {
-        if (member != &source) {
-            assign_value(*member, value);
-            member->free = free;
-        }
+        if (member != &source) assign_value(*member, value);
+        if (member->free.get() != free) member->free = free;
     }
+    if (parameter.free.get() != free) parameter.free = free;
 }
 
 bool set_group_free(Project& project, Parameter& parameter, bool free) {
@@ -678,8 +679,8 @@ std::vector<std::string> settle_parametric_shared(Project& project) {
         ParametricSharedParameter row;
         row.parameter_unique_name = key;
         project.sequential_fit.shared.push_back(std::move(row));
-        // The group takes the listed parameter's value and free flag (one of each per group; owner record 61961fe49),
-        // where sharing takes effect.
+        // The group takes the listed parameter's value (owner record 61961fe49), and is free if any copy is (owner
+        // decision 2026-11-27), where sharing takes effect.
         const std::vector<Parameter*> members = group_members(project, key);
         // The listed parameter is the member whose name the group is kept under.
         Parameter* listed = nullptr;
@@ -690,7 +691,8 @@ std::vector<std::string> settle_parametric_shared(Project& project) {
             }
         }
         if (active(project) && members.size() > 1 && listed != nullptr) {
-            const bool free = listed->free.get();
+            bool free = false;
+            for (const Parameter* member : members) free = free || member->free.get();
             const double value = listed->value.get();
             for (Parameter* member : members) {
                 if (member->free.get() != free || member->value.get() != value) {

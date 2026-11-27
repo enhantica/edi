@@ -18,7 +18,7 @@ modes, and the sidebar widens by its width so no other column gives way:
 
 Shared and Free are separate: a shared parameter can be fixed, and then keeps its one value. A shared group has one
 Free box, so freeing or fixing one of its parameters does it for all of them, and editing its value changes it in
-every experiment. Free boxes are green, Shared boxes and shared values indigo, and a value a constraint computes is
+every experiment. A new group starts free if any of its parameters was free, with the value of the row you ticked. Free boxes are green, Shared boxes and shared values indigo, and a value a constraint computes is
 shown in magenta on the Structure and Experiment pages.
 
 The Shared header opens a menu with **Shared**, **Not shared** and, when the rows differ, **Mixed**, as the Free header

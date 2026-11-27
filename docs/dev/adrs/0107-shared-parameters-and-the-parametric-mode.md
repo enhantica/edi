@@ -42,8 +42,9 @@ equality (TOPAS, GSAS-II, FullProf, Jana); general fitting tools put a Share col
    - Shared never adds, changes or removes a user constraint. A parameter any of whose copies a user constraint sets
      (a dependent) cannot be shared: its Shared box is disabled and its tooltip names the constraint, as Free does for
      a parameter it cannot free. To share it, the user removes the constraint first.
-5. **Values.** Checking Shared sets every member to the value of the row it was checked on. Unchecking leaves each
-   member that value as its own.
+5. **Values.** Checking Shared sets every member to the value of the row it was checked on, and the group starts free
+   if any member was free (owner decision 2026-11-27); a file listing a shared name whose copies differ does the same.
+   Afterwards Shared and Free stay independent. Unchecking leaves each member that value and flag as its own.
 6. **File.** `analysis.edi` keeps the shared names in one `_parametric_fit_shared` loop, written in every mode when not
    empty. Nothing is written as alias or constraint rows. Loading drops names the project does not hold or that a
    relation sets, and gives a group the listed parameter's value and Free flag (owner record 61961fe49).
