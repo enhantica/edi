@@ -154,21 +154,34 @@ Flickable {
             y: at.y
             width: graph.nodeWidth
             height: graph.nodeHeight
-            radius: 4
-            color: chosen ? EaStyle.Colors.themeAccentMinor : EaStyle.Colors.themeBackground
-            border.width: chosen || near ? 2 : 1
-            border.color: chosen || near ? EaStyle.Colors.themeAccent : EaStyle.Colors.themeForegroundMinor
+            // A card selects as the list's rows do, by its check box; its border marks the group under the pointer and
+            // its covering relatives (conductor seq 48).
+            radius: 2
+            color: EaStyle.Colors.contentBackground
+            border.width: near || graph.hovered === index ? 2 : 1
+            border.color: near || graph.hovered === index ? EaStyle.Colors.themeAccent : EaStyle.Colors.chartAxis
 
             Column {
                 anchors.fill: parent
                 anchors.margins: 4
                 // A group that cannot be chosen reads faded, while its card stays opaque over the edges.
                 opacity: graph.selectable(node.index) ? 1.0 : 0.45
-                EaElements.Label {
+                Row {
                     width: parent.width
-                    elide: Text.ElideRight
-                    font.bold: true
-                    text: node.data_.bns === "" ? qsTr("not identified") : `${node.chosen ? "✓ " : ""}${node.data_.name}`
+                    EaElements.CheckBox {
+                        objectName: `magnetic.node.${node.index}.check`
+                        height: nameLabel.implicitHeight
+                        padding: 0
+                        enabled: graph.selectable(node.index)
+                        checked: node.chosen
+                    }
+                    EaElements.Label {
+                        id: nameLabel
+                        width: parent.width - parent.children[0].width
+                        elide: Text.ElideRight
+                        font.bold: true
+                        text: node.data_.bns === "" ? qsTr("not identified") : node.data_.name
+                    }
                 }
                 EaElements.Label {
                     width: parent.width

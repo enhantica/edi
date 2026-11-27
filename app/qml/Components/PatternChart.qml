@@ -665,16 +665,19 @@ Item {
                 color: chart.peakNote !== "" ? EaStyle.Colors.red : EaStyle.Colors.themeForeground
                 text: chart.peakNote !== "" ? chart.peakNote : chart.peakMarks.length === 1 ? qsTr("1 peak marked") : qsTr("%1 peaks marked").arg(chart.peakMarks.length)
             }
-            StripButton {
+            // Bordered icon buttons, as the rest of the toolbar (conductor seq 48).
+            ChartToolButton {
                 objectName: "chart.findK"
                 enabled: chart.peakMarks.length > 0
-                text: qsTr("Find k")
+                fontIcon: "search"
+                toolTip: qsTr("Find k: rank the propagation vectors the marked peaks allow")
                 onClicked: chart.openKVectors()
             }
-            StripButton {
+            ChartToolButton {
                 objectName: "chart.findK.clear"
                 enabled: chart.peakMarks.length > 0
-                text: qsTr("Clear")
+                fontIcon: "times"
+                toolTip: qsTr("Clear the marked peaks")
                 onClicked: chart.peakMarks = []
             }
         }

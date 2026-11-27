@@ -31,8 +31,12 @@ AppDialog {
     property string refusal: ""
 
     title: qsTr("Possible propagation vectors")
+    // As tall as its rows, up to the height that keeps the navigation bar and the status bar clear, centred on the
+    // window as the app's other dialogs are (conductor seq 48).
+    readonly property real maximumHeight: parent ? parent.height - 2 * (EaStyle.Sizes.appBarHeight + EaStyle.Sizes.fontPixelSize) : 480
     width: parent ? Math.min(Math.round(parent.width * 0.6), 760) : 700
-    height: parent ? Math.min(Math.round(parent.height * 0.6), 520) : 480
+    height: Math.round(Math.min(maximumHeight, implicitHeight))
+    anchors.centerIn: parent
     onClosed: destroy()
 
     Component.onCompleted: project.findPropagationVectors(structureIndex, experimentIndex, marked)
@@ -93,6 +97,7 @@ AppDialog {
             objectName: "chart.kVectors"
             Layout.fillWidth: true
             Layout.fillHeight: true
+            Layout.preferredHeight: Math.max(contentHeight, EaStyle.Sizes.fontPixelSize * 3.2)
             clip: true
             currentIndex: popup.rows.length > 0 ? 0 : -1
             ScrollBar.vertical: EaElements.ScrollBar {}
@@ -141,7 +146,9 @@ AppDialog {
                                 allowed: qsTr("allowed reflection"),
                                 "": qsTr("not indexed")
                             };
-                            return popup.markedPeaks.map((p, i) => `${p.x.toFixed(2)}°: ${names[row.modelData.roles[i] ?? ""] ?? row.modelData.roles[i]}`).join(" · ") + (row.modelData.equallyGood ? qsTr(" · equally good") : "");
+                            // In the pattern's order, by position (conductor seq 48).
+                            const order = popup.markedPeaks.map((p, i) => i).sort((a, b) => popup.markedPeaks[a].x - popup.markedPeaks[b].x);
+                            return order.map(i => `${popup.markedPeaks[i].x.toFixed(2)}°: ${names[row.modelData.roles[i] ?? ""] ?? row.modelData.roles[i]}`).join(" · ") + (row.modelData.equallyGood ? qsTr(" · equally good") : "");
                         }
                     }
                 }
@@ -172,19 +179,28 @@ AppDialog {
         chosen(k);
     }
 
-    footer: EaElements.DialogButtonBox {
-        EaElements.Button {
-            objectName: "chart.kVectorPopup.analyse"
-            fontIcon: "magnet"
-            text: qsTr("Analyse")
-            enabled: list.currentIndex >= 0 && !popup.searching
-            DialogButtonBox.buttonRole: DialogButtonBox.ApplyRole
-            onClicked: popup.analyse()
-        }
-        EaElements.Button {
-            objectName: "chart.kVectorPopup.cancel"
-            text: qsTr("Cancel")
-            DialogButtonBox.buttonRole: DialogButtonBox.RejectRole
+    // Cancel and the primary Analyse at the right, as the app's other dialogs place their actions.
+    footer: Item {
+        implicitHeight: actions.implicitHeight + 2 * EaStyle.Sizes.fontPixelSize
+        Row {
+            id: actions
+            anchors.right: parent.right
+            anchors.rightMargin: EaStyle.Sizes.fontPixelSize
+            anchors.verticalCenter: parent.verticalCenter
+            spacing: EaStyle.Sizes.fontPixelSize
+            EaElements.Button {
+                objectName: "chart.kVectorPopup.cancel"
+                fontIcon: "times"
+                text: qsTr("Cancel")
+                onClicked: popup.close()
+            }
+            EaElements.Button {
+                objectName: "chart.kVectorPopup.analyse"
+                fontIcon: "magnet"
+                text: qsTr("Analyse")
+                enabled: list.currentIndex >= 0 && !popup.searching
+                onClicked: popup.analyse()
+            }
         }
     }
 }

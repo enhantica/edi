@@ -39,8 +39,12 @@ AppDialog {
     readonly property var nodes: found ? found.nodes : []
 
     title: qsTr("Magnetic structures from %1").arg(structure ? structure.name : "")
+    // As tall as its content, up to the height that keeps the navigation bar and the status bar clear, centred as the
+    // app's other dialogs are (owner, 2026-11-27, conductor seq 48).
+    readonly property real maximumHeight: parent ? parent.height - 2 * (EaStyle.Sizes.appBarHeight + EaStyle.Sizes.fontPixelSize) : 800
     width: parent ? Math.round(parent.width * 0.9) : 1000
-    height: parent ? Math.round(parent.height * 0.9) : 800
+    height: Math.round(Math.min(maximumHeight, implicitHeight))
+    anchors.centerIn: parent
     onClosed: destroy()
 
     readonly property string k: kChoice.currentIndex >= 0 && kChoice.currentIndex < presets.length ? presets[kChoice.currentIndex].k : [0, 1, 2].map(i => kFields.itemAt(i) ? (kFields.itemAt(i) as EaElements.TextField).text : "0").join(",")
@@ -247,6 +251,8 @@ AppDialog {
             Layout.fillWidth: true
             Layout.fillHeight: true
             Layout.minimumHeight: EaStyle.Sizes.fontPixelSize * 8
+            // Its content's own height, so the dialog fits what it shows.
+            Layout.preferredHeight: listMode.checked ? listPane.implicitHeight : graphView.contentHeight
             currentIndex: listMode.checked ? 1 : 0
 
             MagneticSubgroupGraph {
@@ -267,8 +273,9 @@ AppDialog {
                 // Each site's name, from the first group's moments (`Co1 0,0,0 · Co2 Mx,0,Mz`).
                 readonly property var sites: popup.nodes.length > 0 ? String(popup.nodes[0].moments).split(" · ").map(m => m.split(" ")[0]) : []
                 readonly property var widths: [0.18, 0.1, 0.06, 0.1, 0.1]
+                // A site's column is as wide as a moment form needs, so the sites stand side by side.
                 function siteWidth() {
-                    return sites.length > 0 ? 0.46 / sites.length : 0;
+                    return sites.length > 0 ? Math.min(0.46 / sites.length, EaStyle.Sizes.fontPixelSize * 11 / Math.max(1, listView.width)) : 0;
                 }
                 function columns(n) {
                     // A site split in a subgroup (`Co1_1`, `Co1_2`) goes under its parent site's column, its
@@ -305,6 +312,7 @@ AppDialog {
                     objectName: "magnetic.list"
                     Layout.fillWidth: true
                     Layout.fillHeight: true
+                    Layout.preferredHeight: contentHeight
                     clip: true
                     ScrollBar.vertical: EaElements.ScrollBar {}
                     model: {
@@ -327,6 +335,8 @@ AppDialog {
                             anchors.verticalCenter: parent.verticalCenter
                             EaElements.CheckBox {
                                 objectName: `magnetic.row.${listRow.modelData}`
+                                // The row's height, as its labels have, so the box and name share their line.
+                                height: listRow.height
                                 width: listView.width * listPane.widths[0]
                                 enabled: popup.selectable(listRow.modelData)
                                 checked: listRow.chosen
@@ -376,44 +386,57 @@ AppDialog {
         }
     }
 
-    // The fixed footer, as the app's other dialogs have it.
-    footer: EaElements.DialogButtonBox {
-        EaElements.Button {
-            objectName: "magnetic.selectAll"
-            fontIcon: "check-double"
-            text: qsTr("Select all")
-            enabled: popup.found !== null
-            DialogButtonBox.buttonRole: DialogButtonBox.ActionRole
-            onClicked: popup.selectAll()
-        }
-        EaElements.Button {
-            objectName: "magnetic.clear"
-            fontIcon: "eraser"
-            text: qsTr("Clear")
-            enabled: popup.selected.length > 0
-            DialogButtonBox.buttonRole: DialogButtonBox.ActionRole
-            onClicked: popup.selected = []
-        }
-        EaElements.Button {
-            objectName: "magnetic.add"
-            fontIcon: "plus-circle"
-            text: popup.selected.length > 1 ? qsTr("Add %1 structures").arg(popup.selected.length) : qsTr("Add")
-            enabled: popup.selected.length > 0 && !popup.busy
-            DialogButtonBox.buttonRole: DialogButtonBox.ApplyRole
-            onClicked: {
-                const count = popup.selected.length;
-                if (popup.project.addMagneticCandidates(popup.structureIndex, popup.selected, startMoments.checked, popup.selectAfterAdd)) {
-                    popup.added(count);
-                    popup.close();
-                } else {
-                    popup.refusal = popup.project.lastError;
-                }
+    // The fixed footer, as the app's other dialogs place their actions: the selection's own actions at the left, then
+    // Cancel and the primary Add at the right.
+    footer: Item {
+        implicitHeight: actions.implicitHeight + 2 * EaStyle.Sizes.fontPixelSize
+        Row {
+            anchors.left: parent.left
+            anchors.leftMargin: EaStyle.Sizes.fontPixelSize
+            anchors.verticalCenter: parent.verticalCenter
+            spacing: EaStyle.Sizes.fontPixelSize
+            EaElements.Button {
+                objectName: "magnetic.selectAll"
+                fontIcon: "check-double"
+                text: qsTr("Select all")
+                enabled: popup.found !== null
+                onClicked: popup.selectAll()
+            }
+            EaElements.Button {
+                objectName: "magnetic.clear"
+                fontIcon: "eraser"
+                text: qsTr("Clear")
+                enabled: popup.selected.length > 0
+                onClicked: popup.selected = []
             }
         }
-        EaElements.Button {
-            objectName: "magnetic.cancel"
-            text: qsTr("Cancel")
-            DialogButtonBox.buttonRole: DialogButtonBox.RejectRole
+        Row {
+            id: actions
+            anchors.right: parent.right
+            anchors.rightMargin: EaStyle.Sizes.fontPixelSize
+            anchors.verticalCenter: parent.verticalCenter
+            spacing: EaStyle.Sizes.fontPixelSize
+            EaElements.Button {
+                objectName: "magnetic.cancel"
+                fontIcon: "times"
+                text: qsTr("Cancel")
+                onClicked: popup.close()
+            }
+            EaElements.Button {
+                objectName: "magnetic.add"
+                fontIcon: "plus-circle"
+                text: popup.selected.length > 1 ? qsTr("Add %1 structures").arg(popup.selected.length) : qsTr("Add")
+                enabled: popup.selected.length > 0 && !popup.busy
+                onClicked: {
+                    const count = popup.selected.length;
+                    if (popup.project.addMagneticCandidates(popup.structureIndex, popup.selected, startMoments.checked, popup.selectAfterAdd)) {
+                        popup.added(count);
+                        popup.close();
+                    } else {
+                        popup.refusal = popup.project.lastError;
+                    }
+                }
+            }
         }
     }
 }
