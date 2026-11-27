@@ -75,12 +75,14 @@ static bool kept_by_live_update(const QString& mark_file) {
     return started.isEmpty() || QString::fromUtf8(ps.readAllStandardOutput()).simplified() == started;
 #endif
 }
+#ifndef __EMSCRIPTEN__
 // A kept tool beside the bundle holding `executable`: a swap is running or stopped, and the installation is managed.
 static bool kept_maintenance_tool(const QString& executable) {
     const QString bundle = QDir::cleanPath(executable + QStringLiteral("/../../.."));
     return bundle.endsWith(QStringLiteral(".app")) &&
            QFileInfo(bundle + QStringLiteral(".old/Contents/MacOS/") + QFileInfo(executable).fileName()).isFile();
 }
+#endif
 bool restore_kept_maintenance_tool(const QString& executable) {
     const QString bundle = QDir::cleanPath(executable + QStringLiteral("/../../.."));
     const QString tail = QStringLiteral("/Contents/MacOS/") + QFileInfo(executable).fileName();
