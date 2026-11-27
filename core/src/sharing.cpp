@@ -614,10 +614,21 @@ void set_parametric_shared(Project& project, Parameter& parameter, bool shared) 
         }
         return;
     }
-    if (!shared_row(project, key)) {
+    // A group already shared stays as it is: ticking Shared again, or on another of its copies, takes no value from
+    // the copy (a bulk edit reaches every copy of a group it has just shared).
+    if (shared_row(project, key)) {
+        return;
+    }
+    {
         ParametricSharedParameter row;
         row.parameter_unique_name = key;
         project.sequential_fit.shared.push_back(std::move(row));
+    }
+    // A shared parameter has one value, the template's: the points' own starts for it go (Undo keeps them).
+    for (std::size_t i = project.sequential_fit.starts.size(); i-- > 0;) {
+        if (project.sequential_fit.starts[i]->parameter_unique_name.value() == key) {
+            project.sequential_fit.starts.erase_at(i);
+        }
     }
     // One value and one free flag for the group (only where sharing takes effect): the shown row's value, and free if
     // any copy was free (owner decision 2026-11-27, ADR-0107 decision 5).
@@ -665,6 +676,19 @@ std::vector<std::string> settle_parametric_shared(Project& project) {
             continue;
         }
         const std::string key = group_key(project, named, name);
+        // A joint group is admitted whole or not at all (owner record 2026-11-26): a copy missing from an experiment,
+        // or one a user constraint or symmetry sets, drops it, and no copy is changed.
+        if (!project.sequential_fit.declared()) {
+            const Parameter* listed = nullptr;
+            for (const NamedParameter& each : named) {
+                if (each.unique_name == key) listed = each.parameter;
+            }
+            const std::string refusal = listed != nullptr ? share_refusal(project, *listed) : "it is not in the project";
+            if (!refusal.empty()) {
+                notes.push_back("shared parameter '" + name + "' dropped: " + refusal);
+                continue;
+            }
+        }
         if (key != name) {
             notes.push_back("shared parameter '" + name + "' is kept under its group's first experiment, '" + key + "'");
         }

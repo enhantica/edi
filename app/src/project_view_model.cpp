@@ -6055,6 +6055,29 @@ std::shared_ptr<ProjectViewModel::WidgetParameterInput> ProjectViewModel::prepar
 void ProjectViewModel::finishWidgetInput(const std::shared_ptr<WidgetParameterInput>& input) noexcept {
     if (widget_input_ == input) widget_input_.reset(); // Never detach a replacement input.
 }
+bool ProjectViewModel::showingParametricPoint() const {
+    // ADR-0107: a point of a parametric scan other than the template's own file is shown.
+    if (!scan_ || !scan_template_ || scan_template_->fitting_mode != "parametric" || current_dataset_ < 0) return false;
+    const std::vector<std::string>& files = scan_session_->datasets().files;
+    if (current_dataset_ >= static_cast<int>(files.size())) return false;
+    return files[static_cast<std::size_t>(current_dataset_)] != edi::effective_scan_template_file(*scan_template_);
+}
+
+edi::Edit ProjectViewModel::valueEdit(edi::Parameter& parameter, double value) {
+    if (edi::shared_group(*project_, parameter).size() > 1) return edi::Edit::group_value(*project_, parameter, value);
+    // At a point of a parametric scan a value is that point's own start, kept by its file or series key; a shared
+    // parameter's one value is the template's, taken by the edit below as before (ADR-0107).
+    if (showingParametricPoint() && !edi::parametric_shared(*project_, parameter)) {
+        for (const edi::NamedParameter& named : edi::named_parameters(*project_)) {
+            if (named.parameter != &parameter) continue;
+            return edi::Edit::point_start(*project_, parameter,
+                                          scan_session_->datasets().files[static_cast<std::size_t>(current_dataset_)],
+                                          named.unique_name, value);
+        }
+    }
+    return edi::Edit::value(parameter, value);
+}
+
 QString ProjectViewModel::assign_parameter_value(edi::Parameter& parameter, double value) {
     if (const auto refusal = value_refusal(parameter); !refusal.isEmpty()) return refusal;
     const PublicationScope publication(*this);
@@ -6073,7 +6096,7 @@ QString ProjectViewModel::assign_parameter_value(edi::Parameter& parameter, doub
             if (!retired_) setLastError(refusal);
             return refusal;
         }
-        const EditOutcome result = applyRecordedEdit(edi::shared_group(*project_, parameter).size() > 1 ? edi::Edit::group_value(*project_, parameter, value) : edi::Edit::value(parameter, value), false);
+        const EditOutcome result = applyRecordedEdit(valueEdit(parameter, value), false);
         if (!retired_ && !result.applied) setLastError(result.message);
         return result.applied ? QString{} : result.message;
     }
@@ -6087,7 +6110,7 @@ QString ProjectViewModel::assign_parameter_value(edi::Parameter& parameter, doub
     widget_input_executing_ = true;
     const QPointer<ProjectViewModel> self(this);
     const auto release = qScopeGuard([self] { if (self) self->widget_input_executing_ = false; });
-    input->outcome = applyRecordedEdit(edi::shared_group(*project_, parameter).size() > 1 ? edi::Edit::group_value(*project_, parameter, value) : edi::Edit::value(parameter, value), false);
+    input->outcome = applyRecordedEdit(valueEdit(parameter, value), false);
     return input->outcome.applied ? QString{} : input->outcome.message;
 }
 
@@ -6287,6 +6310,13 @@ ProjectViewModel::EditOutcome ProjectViewModel::applyEdit(const edi::Edit& chang
             } else if (scan_template_ && adjusting_ && !structural) {
                 // A drag step: the template takes the shown values once, on release (edi ADR-0070).
                 template_promotion_held_ = true;
+            } else if (scan_template_ && showingParametricPoint() && !structural) {
+                // A value at a parametric point is the point's own start (ADR-0107): the template takes the starts and
+                // the shared names, never the point's other values.
+                scan_template_->sequential_fit.starts = project_->sequential_fit.starts;
+                scan_template_->sequential_fit.shared = project_->sequential_fit.shared;
+                identityMemoFor(&*scan_template_).reset();
+                template_snapshot_.reset();
             } else if (scan_template_) {
                 promoteShownToTemplate();
             }

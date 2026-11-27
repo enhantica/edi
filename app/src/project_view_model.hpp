@@ -1452,6 +1452,8 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     bool modified_held_ = false;  // a drag step changed the project: modified and `edited` are announced on release  // a drag step changed a scan's template: its identity is hashed on release
     bool template_promotion_held_ = false;  // a drag step changed a shown dataset: the template takes it on release
     void promoteShownToTemplate();
+    bool showingParametricPoint() const;
+    edi::Edit valueEdit(edi::Parameter& parameter, double value);
     // What a held slider deferred, done once (release, or a save during the hold).
     void settleHeld();
     // On release the edit's and the calculation's publications run as one: the fields, texts and report once.

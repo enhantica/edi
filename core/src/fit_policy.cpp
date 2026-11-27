@@ -24,6 +24,7 @@
 #include "edi/io.hpp"
 #include "edi/parameter_walk.hpp"
 #include "edi/selectors.hpp"
+#include "edi/sharing.hpp"
 
 // Lifted verbatim out of adapter.cpp; see the header for what this file is.
 
@@ -628,7 +629,8 @@ std::vector<std::string> clear_unfittable_free(Project& project) {
     for (const auto& [parameter, name] : parameter_names(project)) {
         if (parameter->free.get() && !parameter->fit_idle && !free_refusal(*parameter).empty()) {
             notes.push_back(name + " " + free_refusal(*parameter) + "; loaded fixed");
-            parameter->free = false;
+            // A shared group keeps one flag (ADR-0107): a copy no fit can vary fixes the group.
+            for (Parameter* member : shared_group(project, *parameter)) member->free = false;
         }
     }
     return notes;

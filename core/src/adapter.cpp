@@ -4384,6 +4384,17 @@ void append_shared_ties(const Project& model, crysta::Project& converted) {
     for (const NamedParameter& named : named_parameters(model)) {
         held.insert(named.unique_name);
     }
+    // The generated ids must not meet a user's alias or constraint id: one that would refuses the fit.
+    std::set<std::string> taken;
+    for (const auto& alias : model.aliases) taken.insert(alias->id.value());
+    for (const auto& constraint : model.constraints) taken.insert(constraint->id.value());
+    const auto fresh = [&taken](const std::string& id) {
+        if (taken.contains(id)) {
+            throw std::invalid_argument("the joint fit's shared groups need the id '" + id +
+                                        "', which the project's relations already use; rename that alias or constraint");
+        }
+        return id;
+    };
     std::size_t group = 0;
     for (const auto& row : model.sequential_fit.shared) {
         const std::string& leader = row->parameter_unique_name.value();
@@ -4395,15 +4406,21 @@ void append_shared_ties(const Project& model, crysta::Project& converted) {
         if (path.empty()) {
             continue;
         }
-        const std::string leader_alias = "shared_tie_" + std::to_string(group) + "_0";
+        const std::string leader_alias = fresh("shared_tie_" + std::to_string(group) + "_0");
         converted.aliases.push_back({leader_alias, leader});
         std::size_t member = 1;
         for (const auto& experiment : model.experiments) {
             const std::string name = experiment->name + "." + path;
-            if (name == leader || !held.contains(name)) {
+            if (name == leader) {
                 continue;
             }
-            const std::string alias = "shared_tie_" + std::to_string(group) + "_" + std::to_string(member++);
+            // Every experiment holds the group's copy as a parameter a fit can vary (the load admits a group only
+            // whole): a copy missing here is a group no longer whole, refused rather than tied in part.
+            if (!held.contains(name)) {
+                throw std::invalid_argument("the shared parameter '" + leader + "' has no free copy '" + name +
+                                            "'; share it again or remove it from Shared");
+            }
+            const std::string alias = fresh("shared_tie_" + std::to_string(group) + "_" + std::to_string(member++));
             converted.aliases.push_back({alias, name});
             converted.constraints.push_back({alias, alias + " = " + leader_alias, true});
             // The member follows the leader in this fit; its own free flag (the group's) stays in edi's model.

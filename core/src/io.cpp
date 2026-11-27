@@ -3900,6 +3900,23 @@ void rename_experiment(Project& project, ExperimentBase& experiment, const std::
             set->template_experiment_id = name;
         }
     }
+    // ADR-0107: the shared names and the points' starts name the experiment's parameters by unique name.
+    const std::string prefix = experiment.name.value() + ".";
+    const auto renamed = [&prefix, &name](const std::string& unique_name) {
+        return unique_name.rfind(prefix, 0) == 0 ? name + "." + unique_name.substr(prefix.size()) : unique_name;
+    };
+    // The shared names are the rows' keys, so the rows are made again, admitted whole before the live write.
+    std::vector<std::shared_ptr<ParametricSharedParameter>> shared_rows;
+    for (const auto& row : project.sequential_fit.shared) {
+        auto copy = std::make_shared<ParametricSharedParameter>();
+        copy->parameter_unique_name = renamed(row->parameter_unique_name.value());
+        shared_rows.push_back(std::move(copy));
+    }
+    ItemVec<ParametricSharedParameter> prepared_shared(std::move(shared_rows));
+    project.sequential_fit.shared = std::move(prepared_shared);
+    for (const auto& row : project.sequential_fit.starts) {
+        row->parameter_unique_name = renamed(row->parameter_unique_name.value());
+    }
     experiment.name = name;
 }
 
@@ -5149,13 +5166,14 @@ static Project load_project_folder(const std::string& directory, const WarningSi
     }
     // A free mark a fit could not honour (a descriptor, a value this fit's data cannot determine, one crysta cannot
     // differentiate) loads fixed, its value and s.u. kept, and is said (ADR-0053).
+    // ADR-0107: a shared parameter counts as free; a name that cannot be shared is dropped. Settled first, so the
+    // unfittable marks are cleared from the flags the groups end with, and a group stays one flag (the group rule).
     source.clear();
-    for (const std::string& note : clear_unfittable_free(project)) {
-        warn("crysta.domain.unfittable_free_ignored: " + note);
-    }
-    // ADR-0107: a shared parameter counts as free; a name that cannot be shared is dropped.
     for (const std::string& note : settle_parametric_shared(project)) {
         warn("crysta.domain.shared_ignored: " + note);
+    }
+    for (const std::string& note : clear_unfittable_free(project)) {
+        warn("crysta.domain.unfittable_free_ignored: " + note);
     }
     // ADR-0107: a start for a point the scan does not list is dropped (an unreadable folder checks nothing here).
     if (project.sequential_fit.declared() && !project.sequential_fit.starts.empty()) {
