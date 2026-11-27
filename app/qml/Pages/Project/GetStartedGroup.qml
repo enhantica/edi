@@ -551,8 +551,9 @@ SideBarGroup {
     // A project already at the chosen location (the owner, 2026-11-04): Replace writes the new one over it through
     // the ordinary save, so a refused write leaves the old project; Cancel returns to the form as typed. A question is
     // made for each asking and goes with it, so an answer reaches only the showing that asked, once, and only while
-    // its Create life is the current one.
-    // `replaceAsk`: the current question, `{dialog, location, untitledId, life}`, or null.
+    // its Create life is the current one. An answered question stays tracked until its exit has ended (closed): a
+    // handoff during that exit still retires it, so its focus restore cannot land on the next project.
+    // `replaceAsk`: the current question, `{dialog, location, untitledId, life, answered}`, or null.
     property var replaceAsk: null
     function askReplace(name, folder) {
         group.retireReplaceAsk();
@@ -565,7 +566,8 @@ SideBarGroup {
             dialog: question,
             location: createDialog.chosenLocation(),
             untitledId: createDialog.untitledId,
-            life: group.createLife
+            life: group.createLife,
+            answered: false
         };
         // Each handler names its own question.
         question.accepted.connect(() => group.answerReplace(ask, true));
@@ -575,9 +577,9 @@ SideBarGroup {
         question.open();
     }
     function answerReplace(ask, accepted) {
-        if (ask !== group.replaceAsk)
+        if (ask !== group.replaceAsk || ask.answered)
             return;
-        group.replaceAsk = null;
+        ask.answered = true;
         if (!accepted || ask.life !== group.createLife || !ask.life.alive)
             return;
         // Replace confirms the folder it showed, for the request it asked for: once the form names another location or
@@ -590,11 +592,12 @@ SideBarGroup {
         createDialog.replaceExisting = true;
         createDialog.accept();
     }
-    // A question closed without an answer (Escape) asks nothing any more.
+    // Its exit has ended, answered or not: nothing of it is left to retire.
     function forgetReplaceAsk(ask) {
         if (group.replaceAsk === ask)
             group.replaceAsk = null;
     }
+    // Ends the question at once, also one answered and still closing (AppState.retirePopup finishes its exit).
     function retireReplaceAsk() {
         const ask = group.replaceAsk;
         if (ask === null)
