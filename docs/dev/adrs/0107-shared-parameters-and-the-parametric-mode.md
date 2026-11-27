@@ -23,9 +23,11 @@ equality (TOPAS, GSAS-II, FullProf, Jana); general fitting tools put a Share col
 2. **Mode.** The Fitting mode selector offers "Parametric: all as one fit" where a scan is declared, beside Sequential and
    Independent.
 3. **Where it is offered.**
-   - The Parameters table shows a Shared column beside Free in the Parametric and Joint modes only.
-   - A ▾ menu on its title shares or unshares the shown rows, or only the peak profile and instrument rows, as one undo
-     step.
+   - The Parameters table shows a Shared column, left of Free, in the Parametric and Joint modes only, so Free keeps its
+     place at the table's right edge (owner record 1b0c100d3).
+   - The Shared title is a copy of Free's: its ▾ menu shares or unshares the shown rows (Shared, Not shared, and Mixed
+     when they differ), as one undo step.
+   - Any parameter a fit can vary can be shared, the scale and the background included.
 4. **Groups.**
    - In a scan, a parameter is shared across the points (per bank in a series of joint fits).
    - In a joint fit, the same parameter is shared across every experiment, stored under the parameter Shared was
@@ -40,17 +42,26 @@ equality (TOPAS, GSAS-II, FullProf, Jana); general fitting tools put a Share col
    - Shared never adds, changes or removes a user constraint. A parameter any of whose copies a user constraint sets
      (a dependent) cannot be shared: its Shared box is disabled and its tooltip names the constraint, as Free does for
      a parameter it cannot free. To share it, the user removes the constraint first.
-5. **Values.** Checking Shared sets every member to the value shown. Unchecking leaves each member that value as its
-   own.
+5. **Values.** Checking Shared sets every member to the value of the row it was checked on. Unchecking leaves each
+   member that value as its own.
 6. **File.** `analysis.edi` keeps the shared names in one `_parametric_fit_shared` loop, written in every mode when not
    empty. Nothing is written as alias or constraint rows. Loading drops names the project does not hold or that a
-   relation sets, and gives a group the listed parameter's Free flag.
+   relation sets, and gives a group the listed parameter's value and Free flag (owner record 61961fe49).
 7. **Evolution.**
    - A parameter shared across the series has one value, so it is not offered as a curve.
    - In a series of joint fits, a parameter of every experiment tied the same for all is listed once under Common,
      read from its first experiment's rows.
    - The words follow the app's: Evolution's box reads "Common" / "Per experiment", and the selector above the charts
      names experiments, never banks.
+
+8. **Colours** (owner records 1b0c100d3, 8b4e6f965). Free check boxes take the free value's green; Shared's check boxes
+   and its values on every page and popup are indigo; a value a user constraint computes is magenta on every page that
+   shows it (the Analysis page hides those rows). Each has a light and a dark tone and does not depend on the palette.
+9. **Sidebar** (owner record 453d6ae49). While the table shows Shared, the sidebar's Auto and Full widths grow by that
+   column, from the same width rule, so no other column gives way.
+10. **A running fit.** A Parametric fit redraws the selected pattern, Meas vs calc and Evolution from each iteration
+    (at most four times a second, the last always); the status bar shows its iterations and joint χ², and the results
+    window its one outcome, never files converged or failed.
 
 ## Consequences
 
@@ -60,6 +71,8 @@ equality (TOPAS, GSAS-II, FullProf, Jana); general fitting tools put a Share col
   saved or listed with the user's constraints; the result is the constrained fit's.
 - The Parametric fit of a scan of one experiment is crysta's (its ADR-0136); a series of joint fits with shared
   parameters refuses until crysta supports it.
+- The owner's checks of the app removed what the first design added beside Shared: the Differences group, a second
+  axis and "Compare with" in Evolution, and the many-bank map (records of 2026-11-26).
 
 ## Alternatives considered
 

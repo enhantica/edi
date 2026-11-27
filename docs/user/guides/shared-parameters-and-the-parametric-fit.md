@@ -6,17 +6,20 @@ every pattern it belongs to, instead of once per pattern.
 
 ## Sharing a parameter
 
-The Parameters table on the Analysis page has a **Shared** column next to **Free**. It is shown in two fitting modes:
+The Parameters table on the Analysis page has a **Shared** column just left of **Free**. It is shown in two fitting
+modes, and the sidebar widens by its width so no other column gives way:
 
 - **Joint**, for a project with several experiments. Sharing a parameter of one experiment gives the same parameter
-  of every experiment one value. A parameter only one experiment has is already one value for all of them, so its box
-  is disabled.
+  of every experiment that row's value. The row you ticked stays in the table and stands for the group; the other
+  experiments' copies leave the table, as a constraint's dependents do. A parameter that is not in every experiment
+  cannot be shared, and its box is disabled.
 - **Parametric**, for a scan. Sharing a parameter gives it one value for every pattern of the scan; the parameters
   you leave unshared are fitted per pattern, as in a sequential fit.
 
 Shared and Free are separate: a shared parameter can be fixed, and then keeps its one value. A shared group has one
 Free box, so freeing or fixing one of its parameters does it for all of them, and editing its value changes it in
-every experiment.
+every experiment. Free boxes are green, Shared boxes and shared values indigo, and a value a constraint computes is
+shown in magenta on the Structure and Experiment pages.
 
 The Shared header opens a menu with **Shared**, **Not shared** and, when the rows differ, **Mixed**, as the Free header
 does.
