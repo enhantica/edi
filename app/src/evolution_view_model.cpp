@@ -93,12 +93,23 @@ void EvolutionViewModel::finishRow() {
 }
 
 void EvolutionViewModel::showIterate(const edi::ParametricIterate& iterate) {
-    if (session_ == nullptr || per_experiment_ || current_ < 0 || current_ >= names_.size()) {
-        return;
+    live_ = iterate;
+    finishRow();
+}
+
+void EvolutionViewModel::clearIterate() {
+    if (!live_) return;
+    live_.reset();
+    rebuild();
+}
+
+std::vector<EvolutionViewModel::Point> EvolutionViewModel::livePoints() const {
+    std::vector<Point> live;
+    if (!live_ || session_ == nullptr || per_experiment_ || current_ < 0 || current_ >= names_.size()) {
+        return live;
     }
     const std::string name = names_[current_].toStdString();
-    std::vector<Point> live;
-    for (const edi::ParametricIterate::IteratePoint& each : iterate.points) {
+    for (const edi::ParametricIterate::IteratePoint& each : live_->points) {
         const auto value = each.values.find(name);
         const int dataset = session_->place(each.name);
         if (value == each.values.end() || dataset < 0) {
@@ -115,12 +126,7 @@ void EvolutionViewModel::showIterate(const edi::ParametricIterate& iterate) {
         point.x = *x;
         live.push_back(point);
     }
-    if (live.empty()) {
-        return;
-    }
-    template_point_.reset();
-    points_ = std::move(live);
-    finishRow();
+    return live;
 }
 
 void EvolutionViewModel::setScan(const ScanSession* session, const edi::Project* project,
@@ -637,6 +643,11 @@ void EvolutionViewModel::thin() {
 }
 
 bool EvolutionViewModel::finish() {
+    // A running parametric fit's latest iterate is what the chart shows, also right after it is opened or rebuilt.
+    if (std::vector<Point> live = livePoints(); !live.empty()) {
+        template_point_.reset();
+        points_ = std::move(live);
+    }
     thin();
     double x_min = 0.0, x_max = 1.0, y_min = 0.0, y_max = 1.0;
     if (!points_.empty()) {

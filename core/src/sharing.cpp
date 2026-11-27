@@ -436,16 +436,14 @@ std::string group_key(const Project& project, const std::vector<NamedParameter>&
     if (!part) {
         return name;
     }
-    // Where sharing takes no effect, a group keeps the name it is listed under while that copy can lead it, so an
-    // inactive declaration is saved as written whatever order the experiments come back in.
-    if (!active(project)) {
-        for (const auto& row : project.sequential_fit.shared) {
-            const std::string& listed = row->parameter_unique_name.value();
-            const auto other = experiment_part(project, listed);
-            if (!other || other->second != part->second) continue;
-            for (const NamedParameter& each : named) {
-                if (each.unique_name == listed) return listed;
-            }
+    // A group is the parameter Shared was ticked on (owner record 61961fe49): it keeps the name it is listed under
+    // while that copy exists, in every mode.
+    for (const auto& row : project.sequential_fit.shared) {
+        const std::string& listed = row->parameter_unique_name.value();
+        const auto other = experiment_part(project, listed);
+        if (!other || other->second != part->second) continue;
+        for (const NamedParameter& each : named) {
+            if (each.unique_name == listed) return listed;
         }
     }
     for (const auto& experiment : project.experiments) {
@@ -540,6 +538,8 @@ std::string share_refusal(const Project& project, const Parameter& parameter) {
     }
     const auto part = experiment_part(project, *name);
     if (!part || holders_of(project, part->second) < 2) return "already one value for all experiments";
+    // No pair, no Shared (owner record 2026-11-26): every experiment must have the parameter.
+    if (holders_of(project, part->second) < project.experiments.size()) return "not in every experiment";
     // Shared never changes a user constraint (owner, 2026-11-26): a copy any of them sets keeps the whole group out.
     for (const NamedParameter& dependent : named_dependents(project)) {
         const auto other = experiment_part(project, dependent.unique_name);
@@ -574,6 +574,23 @@ std::vector<Parameter*> shared_group(Project& project, Parameter& parameter) {
     return {&parameter};
 }
 
+const Parameter* shared_leader(const Project& project, const Parameter& parameter) {
+    if (project.sequential_fit.shared.empty() || !active(project)) {
+        return nullptr;
+    }
+    const std::vector<NamedParameter> named = named_parameters(project);
+    for (const NamedParameter& each : named) {
+        if (each.parameter != &parameter) continue;
+        const std::string key = group_key(project, named, each.unique_name);
+        if (!shared_row(project, key)) return nullptr;
+        for (const NamedParameter& other : named) {
+            if (other.unique_name == key) return other.parameter;
+        }
+        return nullptr;
+    }
+    return nullptr;
+}
+
 void set_parametric_shared(Project& project, Parameter& parameter, bool shared) {
     if (shared) {
         if (const std::string refusal = share_refusal(project, parameter); !refusal.empty()) {
@@ -588,7 +605,9 @@ void set_parametric_shared(Project& project, Parameter& parameter, bool shared) 
         }
         return;
     }
-    const std::string key = group_key(project, named_parameters(project), *name);
+    std::string key = group_key(project, named_parameters(project), *name);
+    // A new group is listed under the row Shared was ticked on, which then carries it (owner record 61961fe49).
+    if (shared && !shared_row(project, key)) key = *name;
     if (!shared) {
         if (const std::optional<std::size_t> row = shared_row(project, key)) {
             project.sequential_fit.shared.erase_at(*row);

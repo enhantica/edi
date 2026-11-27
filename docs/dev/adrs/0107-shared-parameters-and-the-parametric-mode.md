@@ -28,7 +28,10 @@ equality (TOPAS, GSAS-II, FullProf, Jana); general fitting tools put a Share col
      step.
 4. **Groups.**
    - In a scan, a parameter is shared across the points (per bank in a series of joint fits).
-   - In a joint fit, the same parameter is shared across every experiment, stored under the first experiment holding it.
+   - In a joint fit, the same parameter is shared across every experiment, stored under the parameter Shared was
+     ticked on. That row stays in the Analysis table and carries the group; the other members' copies leave it, as a
+     user constraint's dependents do (owner records 1b0c100d3, 61961fe49).
+   - A parameter that is not in every experiment cannot be shared: its Shared box is disabled and says so.
    - A shared group has one value and one Free flag: editing either on any member changes all members, as one undo
      step.
    - In a joint fit, a parameter with no copy in another experiment (every structure parameter, or one only one
@@ -41,7 +44,7 @@ equality (TOPAS, GSAS-II, FullProf, Jana); general fitting tools put a Share col
    own.
 6. **File.** `analysis.edi` keeps the shared names in one `_parametric_fit_shared` loop, written in every mode when not
    empty. Nothing is written as alias or constraint rows. Loading drops names the project does not hold or that a
-   relation sets, and gives a group its first member's Free flag.
+   relation sets, and gives a group the listed parameter's Free flag.
 7. **Evolution.**
    - A parameter shared across the series has one value, so it is not offered as a curve.
    - In a series of joint fits, a parameter of every experiment tied the same for all is listed once under Common,

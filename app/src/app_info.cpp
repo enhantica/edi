@@ -8442,6 +8442,12 @@ QJSValue ApplicationInfo::statusFitValues() const {
     const auto values = panelUsageMemberCall(f, shown, "map", {projectGuardedClosure(f, 175, 1)});
     return panelUsageMemberCall(f, values, "join", {QJSValue(QStringLiteral(" "))});
 }
+int ApplicationInfo::sharedColourOption() const {
+    bool ok = false;
+    const int option = qEnvironmentVariableIntValue("EDI_SHARED_COLOUR_OPTION", &ok);
+    return ok ? option : 0;
+}
+
 QJSValue ApplicationInfo::statusProgressText() const {
     const auto f = panelUsageEngine(this);
     if (panelUsageTruth(assistantContextField(f, "fitArea", "scanning"))) return panelUsageRead(f, assistantContextField(f, "bar", "fit"), "scanText");

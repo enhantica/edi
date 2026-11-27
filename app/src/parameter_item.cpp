@@ -377,6 +377,11 @@ int ParameterItem::publish(bool formatted) {
         shared_ = shared;
         changed |= SharedField;
     }
+    if (const edi::Parameter* leader = own_ == nullptr ? editor_.parameter_shared_leader(*parameter_) : nullptr;
+        (leader != nullptr && leader != parameter_) != shared_follower_) {
+        shared_follower_ = !shared_follower_;
+        changed |= SharedField;
+    }
     if (const QString reason = own_ == nullptr ? editor_.parameter_share_refusal(*parameter_) : tr("a setting");
         reason != share_reason_) {
         share_reason_ = reason;

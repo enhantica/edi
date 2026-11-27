@@ -63,6 +63,7 @@ class ProjectEditor {
     }
     // ADR-0107: whether the parametric fit shares the parameter, and the edit that shares or unshares it.
     virtual bool parameter_shared(const edi::Parameter&) const { return false; }
+    virtual const edi::Parameter* parameter_shared_leader(const edi::Parameter&) const { return nullptr; }
     // Why the parameter cannot be shared, empty when it can (edi ADR-0107).
     virtual QString parameter_share_refusal(const edi::Parameter&) const { return {}; }
     virtual QString assign_parameter_shared(edi::Parameter&, bool) {

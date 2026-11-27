@@ -30,6 +30,8 @@ class ParameterItem : public QObject {
     Q_PROPERTY(bool shared READ isShared WRITE setShared NOTIFY sharedChanged)
     // Why it cannot be shared ("already one value for all experiments"), empty when it can.
     Q_PROPERTY(QString shareReason READ shareReason NOTIFY sharedChanged)
+    // Shared, and not its group's leader: the Analysis page shows the group as the leader's one row.
+    Q_PROPERTY(bool sharedFollower READ isSharedFollower NOTIFY sharedChanged)
     // False while the space group fixes the parameter or ties it to another (edi ADR-0019), and for a
     // descriptor that is no parameter: a page shows it disabled, with the value symmetry implies.
     Q_PROPERTY(bool refinable READ isRefinable NOTIFY refinableChanged)
@@ -112,6 +114,7 @@ class ParameterItem : public QObject {
     bool isFree() const { return free_; }
     void setFree(bool free);
     bool isShared() const { return shared_; }
+    bool isSharedFollower() const { return shared_follower_; }
     QString shareReason() const { return share_reason_; }
     void setShared(bool shared);
     bool isRefinable() const { return refinable_; }
@@ -246,6 +249,7 @@ class ParameterItem : public QObject {
     std::optional<double> uncertainty_;
     bool free_;
     bool shared_ = false;
+    bool shared_follower_ = false;
     QString share_reason_;
     bool refinable_;
     bool fittable_ = true;

@@ -54,6 +54,10 @@ void set_parametric_shared(Project& project, Parameter& parameter, bool shared);
 /// experiment, when shared; otherwise the parameter alone.
 std::vector<Parameter*> shared_group(Project& project, Parameter& parameter);
 
+/// The parameter that carries `parameter`'s shared group where sharing takes effect: the one Shared was ticked on, whose
+/// name the project lists (owner record 61961fe49), the one row the Analysis page shows; null when it is not shared.
+const Parameter* shared_leader(const Project& project, const Parameter& parameter);
+
 /// ADR-0107: one free flag per shared group: sets it on every member. Returns false when a member is a dependent.
 bool set_group_free(Project& project, Parameter& parameter, bool free);
 

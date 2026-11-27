@@ -636,7 +636,7 @@ SideBarGroup {
             // Past one column spacing the spare is an empty column before Free (or the row's right end without it);
             // up to one spacing the name holds it (the owner, 2026-11-23: at most one spacing past the widest name).
             // The row without the spare: the name at the smaller of its content and its room.
-            readonly property var baseColumns: [shows(0) ? numberColumnWidth : 0, Math.min(nameRoom, Math.ceil(nameContent))].concat(fittedColumns.map(column => fittedColumn(column))).concat(group.measured ? [freeWidth] : []).concat(group.sharedShown ? [group.sharedColumnWidth] : [])
+            readonly property var baseColumns: [shows(0) ? numberColumnWidth : 0, Math.min(nameRoom, Math.ceil(nameContent))].concat(fittedColumns.map(column => fittedColumn(column))).concat(group.sharedShown ? [group.sharedColumnWidth] : []).concat(group.measured ? [freeWidth] : [])
             // What the row leaves of the table's inner width, its spacings counted between the columns that take width.
             readonly property real leftOver: {
                 const taking = baseColumns.filter(column => column > 0.5);
@@ -652,7 +652,7 @@ SideBarGroup {
             readonly property bool spares: afterName > EaStyle.Sizes.tableColumnSpacing + 1
             readonly property real spareWidth: group.measured && spares ? afterName - EaStyle.Sizes.tableColumnSpacing : 0
             readonly property real nameWidth: baseColumns[1] + nameGrow + (spares ? 0 : Math.max(0, afterName))
-            readonly property var wantedColumns: [shows(0) ? numberColumnWidth : 0, nameWidth].concat(fittedColumns.map(column => fittedColumn(column))).concat(group.measured ? [spareWidth, freeWidth] : []).concat(group.sharedShown ? [group.sharedColumnWidth] : [])
+            readonly property var wantedColumns: [shows(0) ? numberColumnWidth : 0, nameWidth].concat(fittedColumns.map(column => fittedColumn(column))).concat(group.measured ? [spareWidth] : []).concat(group.sharedShown ? [group.sharedColumnWidth] : []).concat(group.measured ? [freeWidth] : [])
             // Applied a moment later: new widths remake rows and measure them again, which would otherwise feed back
             // into the widths while they are being worked out.
             function applyColumns() {
@@ -735,6 +735,50 @@ SideBarGroup {
                     visible: group.measured && table.spareWidth > 0
                     height: 1
                 }
+                // Shared (edi ADR-0107) copies Free's title: the same word-and-arrow button, colours and menu kind.
+                EaComponents.ListViewLabel {
+                    id: sharedTitle
+                    elide: Text.ElideRight
+                    readonly property bool keepsAlignment: true
+                    objectName: "parameters.sharedHeader"
+                    visible: group.sharedShown
+                    horizontalAlignment: Text.AlignRight
+                    rightPadding: sharedArrow.width + group.freeGap + group.freeInset
+                    color: group.sharedTitleColor
+                    text: qsTr("Shared")
+
+                    readonly property SharedHeaderMenu menu: sharedMenu
+
+                    EaElements.Label {
+                        id: sharedArrow
+                        x: sharedTitle.width - sharedTitle.rightPadding + group.freeGap
+                        anchors.verticalCenter: parent.verticalCenter
+                        font: freeArrowProbe.font
+                        color: group.sharedTitleColor
+                        text: freeArrowProbe.text
+                    }
+
+                    MouseArea {
+                        id: sharedArea
+                        parent: sharedTitle.parent ? sharedTitle.parent.parent : sharedTitle
+                        z: 1
+                        x: sharedTitle.parent ? sharedTitle.parent.x + sharedTitle.x : 0
+                        y: sharedTitle.y
+                        width: sharedTitle.width
+                        height: sharedTitle.height
+                        enabled: group.sharedShown
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onContainsMouseChanged: group.sharedTitleHovered = containsMouse
+                        onClicked: sharedMenu.open()
+                    }
+                    SharedHeaderMenu {
+                        id: sharedMenu
+                        header: sharedTitle
+                        project: group.project
+                        filter: parameterFilter
+                    }
+                }
                 // The title is a button, marked by the combo boxes' arrow: a click frees or fixes every row the
                 // filters show, as one Undo step (the owner, 2026-10-11). The arrow ends where the right-aligned check
                 // boxes do; its menu opens centred, so the title is as wide as itself.
@@ -784,50 +828,6 @@ SideBarGroup {
                     FreeHeaderMenu {
                         id: freeMenu
                         header: freeTitle
-                        project: group.project
-                        filter: parameterFilter
-                    }
-                }
-                // Shared (edi ADR-0107) copies Free's title: the same word-and-arrow button, colours and menu kind.
-                EaComponents.ListViewLabel {
-                    id: sharedTitle
-                    elide: Text.ElideRight
-                    readonly property bool keepsAlignment: true
-                    objectName: "parameters.sharedHeader"
-                    visible: group.sharedShown
-                    horizontalAlignment: Text.AlignRight
-                    rightPadding: sharedArrow.width + group.freeGap + group.freeInset
-                    color: group.sharedTitleColor
-                    text: qsTr("Shared")
-
-                    readonly property SharedHeaderMenu menu: sharedMenu
-
-                    EaElements.Label {
-                        id: sharedArrow
-                        x: sharedTitle.width - sharedTitle.rightPadding + group.freeGap
-                        anchors.verticalCenter: parent.verticalCenter
-                        font: freeArrowProbe.font
-                        color: group.sharedTitleColor
-                        text: freeArrowProbe.text
-                    }
-
-                    MouseArea {
-                        id: sharedArea
-                        parent: sharedTitle.parent ? sharedTitle.parent.parent : sharedTitle
-                        z: 1
-                        x: sharedTitle.parent ? sharedTitle.parent.x + sharedTitle.x : 0
-                        y: sharedTitle.y
-                        width: sharedTitle.width
-                        height: sharedTitle.height
-                        enabled: group.sharedShown
-                        hoverEnabled: true
-                        cursorShape: Qt.PointingHandCursor
-                        onContainsMouseChanged: group.sharedTitleHovered = containsMouse
-                        onClicked: sharedMenu.open()
-                    }
-                    SharedHeaderMenu {
-                        id: sharedMenu
-                        header: sharedTitle
                         project: group.project
                         filter: parameterFilter
                     }
@@ -1000,6 +1000,28 @@ SideBarGroup {
                     visible: group.measured && table.spareWidth > 0
                     height: 1
                 }
+                Item {
+                    property int horizontalAlignment: Text.AlignRight
+                    visible: group.sharedShown
+                    height: parent.height
+
+                    // Enabled where the parameter can be shared, its reason otherwise, as Free shows one that cannot be fitted.
+                    EaComponents.ListViewCheckBox {
+                        id: sharedBox
+                        anchors.right: parent.right
+                        horizontalAlignment: Text.AlignRight
+                        objectName: `parameters.shared.${row.index}`
+                        color: AppColors.shared
+                        enabled: group.measured && row.parameter !== null && (row.parameter.shareReason === "" || row.parameter.shared)
+                        checked: row.parameter ? row.parameter.shared : false
+                        // The row Shared is ticked on stays and carries the group (owner record 61961fe49).
+                        onToggled: {
+                            row.parameter.shared = checked;
+                            checked = Qt.binding(() => row.parameter ? row.parameter.shared : false);
+                        }
+                        ToolTip.text: row.parameter && row.parameter.shareReason !== "" ? qsTr("Cannot be shared: %1").arg(row.parameter.shareReason) : ""
+                    }
+                }
                 // Enabled where a fit can vary the value, or while it is free so a flag set before a change can be
                 // cleared; otherwise disabled, its tooltip naming why (edi ADR-0053). Without measured data every box
                 // is disabled.
@@ -1014,30 +1036,12 @@ SideBarGroup {
                         anchors.right: parent.right
                         horizontalAlignment: Text.AlignRight
                         objectName: `parameters.free.${row.index}`
+                        // The free value's green (owner record 2026-11-26).
+                        color: EaStyle.Colors.green
                         enabled: group.measured && row.parameter !== null && (row.parameter.fittable || row.parameter.free)
                         checked: row.parameter ? row.parameter.free : false
                         onToggled: row.parameter.free = checked
                         ToolTip.text: row.parameter && !row.parameter.fittable ? qsTr("Cannot be fitted: %1").arg(row.parameter.fitReason) : ""
-                    }
-                }
-                Item {
-                    property int horizontalAlignment: Text.AlignRight
-                    visible: group.sharedShown
-                    height: parent.height
-
-                    // Enabled where the parameter can be shared, its reason otherwise, as Free shows one that cannot be fitted.
-                    EaComponents.ListViewCheckBox {
-                        id: sharedBox
-                        anchors.right: parent.right
-                        horizontalAlignment: Text.AlignRight
-                        objectName: `parameters.shared.${row.index}`
-                        enabled: group.measured && row.parameter !== null && (row.parameter.shareReason === "" || row.parameter.shared)
-                        checked: row.parameter ? row.parameter.shared : false
-                        onToggled: {
-                            row.parameter.shared = checked;
-                            checked = Qt.binding(() => row.parameter ? row.parameter.shared : false);
-                        }
-                        ToolTip.text: row.parameter && row.parameter.shareReason !== "" ? qsTr("Cannot be shared: %1").arg(row.parameter.shareReason) : ""
                     }
                 }
             }

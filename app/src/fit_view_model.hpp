@@ -39,6 +39,11 @@ QString recorded_outcome(const edi::FitResultRecord& result);
 // What a scan's results say about the run as a whole: the files, those fitted, converged and not, the χ² range,
 // the run's outcome (its own Failed or Stopped, else the worst file's) and its time (negative: not known).
 struct ScanSummary {
+    // A parametric fit (ADR-0107): one fit of every pattern, shown with its one outcome, its iterations and its
+    // joint χ², never as files converged or failed.
+    bool parametric = false;
+    QString iterations;
+    QString joint_chi;
     int files = 0;
     int fitted = 0;
     int ok = 0;
@@ -200,6 +205,7 @@ class FitViewModel : public QObject {
     bool scanMode() const { return scan_mode_; }
     bool scanning() const { return scanning_; }
     bool parametric() const { return parametric_; }
+    ScanSummary jointView(const ScanSummary& summary) const;
     // The completed files (fitted or skipped) of all the scan's files.
     double scanProgress() const {
         return scan_.files > 0 ? static_cast<double>(scan_.processed()) / scan_.files : 0.0;

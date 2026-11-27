@@ -4892,16 +4892,13 @@ void ProjectViewModel::startViewRead() {
         if (live_iterate_ && index >= 0 && index < static_cast<int>(files.size())) {
             for (const edi::ParametricIterate::IteratePoint& point : live_iterate_->points) {
                 if (point.name != files[static_cast<std::size_t>(index)]) continue;
-                for (const auto& [name, value] : point.values) {
-                    bool found = false;
-                    for (edi::Edit::ScanValue& each : values) {
-                        if (each.unique_name == name) {
-                            each.value = value;
-                            each.uncertainty.reset();
-                            found = true;
-                        }
+                // Only the values the view already holds: a name it does not know would make the view refuse,
+                // leaving the pattern without its calculated curve.
+                for (edi::Edit::ScanValue& each : values) {
+                    if (const auto found = point.values.find(each.unique_name); found != point.values.end()) {
+                        each.value = found->second;
+                        each.uncertainty.reset();
                     }
-                    if (!found) values.push_back({name, value, std::nullopt, std::nullopt});
                 }
             }
         }
@@ -6009,6 +6006,10 @@ QString ProjectViewModel::assign_parameter_free(edi::Parameter& parameter, bool 
 
 bool ProjectViewModel::parameter_shared(const edi::Parameter& parameter) const {
     return edi::parametric_shared(*project_, parameter);
+}
+
+const edi::Parameter* ProjectViewModel::parameter_shared_leader(const edi::Parameter& parameter) const {
+    return edi::shared_leader(*project_, parameter);
 }
 
 QString ProjectViewModel::parameter_share_refusal(const edi::Parameter& parameter) const {

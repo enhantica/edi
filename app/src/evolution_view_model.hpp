@@ -88,6 +88,8 @@ class EvolutionViewModel : public QObject {
     // A parametric fit's latest iterate (ADR-0107): the chosen parameter's every point redrawn from it, without s.u.
     // A parameter the iterate does not carry keeps its points. The fit's end or cancel rebuilds from the files.
     void showIterate(const edi::ParametricIterate& iterate);
+    // The fit has ended: the chart goes back to the results files.
+    void clearIterate();
     // A row a run just appended: its point joins the chart without reading the file again.
     void addRow(int dataset, const std::vector<std::string>& cells);
     // After an edit: a parameter freed or fixed joins or leaves the selector.
@@ -231,6 +233,8 @@ class EvolutionViewModel : public QObject {
     QTimer row_redraw_;
     bool row_redraw_due_ = false;
     void finishRow();
+    std::vector<Point> livePoints() const;
+    std::optional<edi::ParametricIterate> live_;
     // The x of a dataset: its first extracted value, or its place in the scan from 1; nullopt when not finite.
     std::optional<double> xOf(int dataset, const std::vector<std::string>* extracted) const;
     // Publishes the points; false when an observer deleted this view meanwhile (nothing may touch it then).

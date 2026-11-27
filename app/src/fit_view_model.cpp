@@ -353,9 +353,18 @@ void FitResultListModel::setScan(const ScanSummary& summary) {
     if (summary.seconds >= 0.0) {
         row(QStringLiteral("stopwatch"), tr("Fitting time"), seconds(summary.seconds));
     }
-    row(QStringLiteral("copy"), tr("Files fitted"), QStringLiteral("%1/%2").arg(summary.fitted).arg(summary.files));
-    row(QStringLiteral("check-circle"), tr("Converged"), QString::number(summary.ok));
-    row(QStringLiteral("times-circle"), tr("Failed"), QString::number(summary.failed));
+    if (summary.parametric) {
+        // One fit of every pattern: its size, iterations and joint χ², never files converged or failed.
+        row(QStringLiteral("copy"), tr("Patterns fitted together"), QString::number(summary.fitted));
+        if (!summary.iterations.isEmpty()) row(QStringLiteral("sync-alt"), tr("Iterations"), summary.iterations);
+        if (!summary.joint_chi.isEmpty()) {
+            row(QStringLiteral("thumbs-up"), tr("Joint %1").arg(chi_label()), summary.joint_chi);
+        }
+    } else {
+        row(QStringLiteral("copy"), tr("Files fitted"), QStringLiteral("%1/%2").arg(summary.fitted).arg(summary.files));
+        row(QStringLiteral("check-circle"), tr("Converged"), QString::number(summary.ok));
+        row(QStringLiteral("times-circle"), tr("Failed"), QString::number(summary.failed));
+    }
     if (summary.skipped > 0) {
         row(QStringLiteral("minus-circle"), tr("Skipped (no intensity above zero)"), QString::number(summary.skipped));
     }
@@ -470,7 +479,7 @@ void FitViewModel::showScan(const ScanSummary& summary, bool scan_last) {
         setProgress(QString(), QString(), scan_.outcome.isEmpty() ? QString() : outcome_word(scan_.outcome),
                     scan_.outcome);
         setElapsed(scan_.seconds >= 0.0 ? duration(scan_.seconds) : QString());
-        results_->setScan(scan_);
+        results_->setScan(jointView(scan_));
         return;
     }
     // A parametric fit is one fit: its last iteration and joint χ² stay, with its one outcome.
@@ -480,7 +489,7 @@ void FitViewModel::showScan(const ScanSummary& summary, bool scan_last) {
         setProgress(QString(), chi_range(scan_), outcome_word(scan_.outcome), scan_.outcome);
     }
     setElapsed(scan_.seconds >= 0.0 ? duration(scan_.seconds) : QString());
-    results_->setScan(scan_);
+    results_->setScan(jointView(scan_));
 }
 
 void FitViewModel::showScanRefused(const QString& error, const QString& run_outcome, double seconds) {
@@ -492,7 +501,7 @@ void FitViewModel::showScanRefused(const QString& error, const QString& run_outc
     emit scanSummaryChanged();
     setProgress(QString(), QString(), outcome_word(scan_.outcome), scan_.outcome);
     setElapsed(seconds >= 0.0 ? duration(seconds) : QString());
-    results_->setScan(scan_);
+    results_->setScan(jointView(scan_));
     if (!scan_index_refused_) {
         scan_index_refused_ = true;
         emit refused(error);
@@ -970,6 +979,17 @@ void FitViewModel::scanStarted(const edi::ScanPreamble& preamble) {
     }
 }
 
+// The summary the results window shows: a parametric fit's with its iterations and joint χ² (ADR-0107).
+ScanSummary FitViewModel::jointView(const ScanSummary& summary) const {
+    ScanSummary view = summary;
+    view.parametric = parametric_;
+    if (parametric_) {
+        view.iterations = iterations_;
+        view.joint_chi = goodness_of_fit_;
+    }
+    return view;
+}
+
 void FitViewModel::fileCompleted(const edi::ScanFileRecord& record) {
     // The index holds this file's row and the notes of the files skipped before it (a skipped file sends no event
     // of its own), retained rows of an earlier run included: fitted and skipped are its counts.
@@ -1313,6 +1333,7 @@ void FitViewModel::scanEnded(const edi::FitReport& report, bool automatic_result
         if (owner_.retired_) return;
         return;
     }
+    if (owner_.evolution() != nullptr) owner_.evolution()->clearIterate();
     emit scanFinished();
     if (owner_.retired_) return;
     if (automatic_results) emit automaticResultsRequested();

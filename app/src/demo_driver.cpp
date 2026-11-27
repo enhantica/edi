@@ -2002,6 +2002,25 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
                                                      "open-project:jointshared", analysis, basic,
                                                      "parameters.nameFilter", "type:coefficient"}});
     }
+    // The Shared column and the parameter colours (owner record 2026-11-26): the joint taurine's shared extinction on the
+    // Analysis page in both themes and both palettes, and a constrained project's Experiment page. Run once per Shared
+    // colour candidate (EDI_SHARED_COLOUR_OPTION) when asked (`--demo-only sharedcolour-`).
+    if (only.startsWith(QLatin1String("sharedcolour-"))) {
+        const auto palette = [](const QString& name) {
+            return QStringList{"appBar.button.preferences", "preferences.tab.appearance", "preferences.colours",
+                               "choose:" + name, "choose:OK"};
+        };
+        steps_.push_back({"sharedcolour-1-main-light",
+                          QStringList{"resize:1480x900", "theme:light"} + start
+                              + QStringList{"open-project:" + qEnvironmentVariable("EDI_DEMO_JOINT_PROJECT"), analysis,
+                                            basic, "parameters.nameFilter", "type:coefficient"}});
+        steps_.push_back({"sharedcolour-2-main-dark", {"theme:dark"}});
+        steps_.push_back({"sharedcolour-3-safe-dark", palette(QStringLiteral("Colour-blind safe"))});
+        steps_.push_back({"sharedcolour-4-safe-light", {"theme:light"}});
+        steps_.push_back({"sharedcolour-5-constrained-experiment",
+                          palette(QStringLiteral("Main")) + QStringList{"open-project:" + qEnvironmentVariable("EDI_DEMO_TIED_PROJECT"),
+                                                                 "appBar.tab.experiment"}});
+    }
     // The Evolution tab of a scan before and after its fit, with the parameter list open. Run only when asked
     // (`--demo-only evolution-`).
     if (only.startsWith(QLatin1String("evolution-"))) {
