@@ -43,6 +43,26 @@ std::optional<ReleaseKey> release_version_key(const QString& value) {
     if (!y || !m || !n || *y < 2000) return {};
     return ReleaseKey{*y, 0, *m, *n};
 }
+bool restore_kept_maintenance_tool(const QString& executable) {
+    const QString bundle = QDir::cleanPath(executable + QStringLiteral("/../../.."));
+    const QString tail = QStringLiteral("/Contents/MacOS/") + QFileInfo(executable).fileName();
+    const QString kept = bundle + QStringLiteral(".old");
+    const QString drop = bundle + QStringLiteral(".drop");
+    // Only a macOS bundle has a kept copy. A tool counts as there when its file is, as in maintenance_swap.sh.
+    if (!bundle.endsWith(QStringLiteral(".app")) || QFileInfo(bundle + tail).isFile() ||
+        !QFileInfo(kept + tail).isFile())
+        return false;
+    // Part of a bundle in the tool's place leaves it in one rename first, as in the swap. MaintenanceTool.app.new
+    // stays: the retried update finishes the swap with it.
+    if (QFileInfo(bundle).exists() || QFileInfo(bundle).isSymLink()) {
+        QDir(drop).removeRecursively();
+        if (!QDir().rename(bundle, drop)) return false;
+    }
+    if (!QDir().rename(kept, bundle)) return false;
+    QFile::remove(bundle + QStringLiteral(".old-token"));
+    QDir(drop).removeRecursively();
+    return true;
+}
 namespace {
 QString maintenance_path() {
 #ifdef __EMSCRIPTEN__
@@ -145,7 +165,9 @@ DesktopUpdates::DesktopUpdates(QObject* parent)
 DesktopUpdates::DesktopUpdates(QString version, QString maintenance, QList<QUrl> feeds, bool automatic, QObject* parent)
     : QObject(parent), version_(std::move(version)), maintenance_(std::move(maintenance)), feeds_(std::move(feeds)) {
 #ifndef __EMSCRIPTEN__
-    managed_ = release_version_key(version_).has_value() && QFileInfo(maintenance_).isExecutable();
+    const bool release = release_version_key(version_).has_value();
+    if (release) restore_kept_maintenance_tool(maintenance_);
+    managed_ = release && QFileInfo(maintenance_).isExecutable();
 #endif
     status_ = managed_ ? tr("Updates have not been checked yet.") : tr("Updates are available for installed desktop releases.");
     if (managed_ && automatic && !QCoreApplication::arguments().contains(QStringLiteral("--testmode")) &&
@@ -247,6 +269,8 @@ void DesktopUpdates::fetchNext() {
 }
 bool DesktopUpdates::startMaintenance() {
 #ifndef __EMSCRIPTEN__
+    // The tool may have been left aside since the app started (see restore_kept_maintenance_tool).
+    if (managed_) restore_kept_maintenance_tool(maintenance_);
     if (managed_ && QProcess::startDetached(maintenance_, {}, QFileInfo(maintenance_).absolutePath())) return true;
 #endif
     status_ = tr("The Maintenance Tool could not be opened.");
@@ -257,6 +281,8 @@ bool DesktopUpdates::startMaintenance() {
 
 bool DesktopUpdates::startUpdate() {
 #ifndef __EMSCRIPTEN__
+    // The tool may have been left aside since the app started (see restore_kept_maintenance_tool).
+    if (managed_) restore_kept_maintenance_tool(maintenance_);
     if (managed_ && available() && QProcess::startDetached(maintenance_, {QStringLiteral("--start-updater")}, QFileInfo(maintenance_).absolutePath())) return true;
 #endif
     status_ = tr("The updater could not be opened. Your project is still open.");
