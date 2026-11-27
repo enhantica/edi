@@ -892,15 +892,34 @@ EaComponents.ApplicationWindow {
                 if (WebFiles.available)
                     Session.openWebProject(zip ? "file" : "folder");
                 else
-                    Qt.callLater(() => (zip ? openZipDialog : openFolderDialog).open());
+                    window.openChooser(zip ? openZipDialog : openFolderDialog);
             });
         }
         function onImportProjectRequested(importer) {
             AppState.afterChanges(() => {
                 importDialog.importer = importer;
-                Qt.callLater(() => importDialog.open());
+                window.openChooser(importDialog);
             });
         }
+    }
+    // A Load chooser opens on the next turn for the project whose changes were just dealt with, and what it chooses
+    // opens only while that project is still open: another one published meanwhile was never asked about. The
+    // browser's chooser carries its request the same way (Session.openWebProject).
+    function openChooser(chooser) {
+        const owner = Session.projectGeneration();
+        Qt.callLater(() => {
+            if (Session.projectGeneration() !== owner)
+                return;
+            chooser.ownerGeneration = owner;
+            chooser.open();
+        });
+    }
+    function openChosen(location) {
+        const owner = Session.projectGeneration();
+        Qt.callLater(() => {
+            if (Session.projectGeneration() === owner)
+                Session.openProject(location);
+        });
     }
 
     // Unsaved changes are saved or discarded before the project is replaced, closed or the app quits (edi ADR-0052): a
@@ -1029,7 +1048,12 @@ EaComponents.ApplicationWindow {
     AppDialog {
         id: saveAsChoice
         objectName: "saveAs.choice"
+        // The project it asks about, from when it shows or Get started's menu chose a format (saveWith); -2 once
+        // answered or retired. Its answers act only for that project (ApplicationInfo.takeOwnedAnswer).
+        property real ownerGeneration: -1
         onRejected: {
+            if (!ApplicationInfo.takeOwnedAnswer())
+                return;
             Session.setNextSaveData("");
             window.cancelAssistantSaveAs();
         }
@@ -1056,6 +1080,8 @@ EaComponents.ApplicationWindow {
             ApplicationInfo.prepareProjectSaveChoice();
         }
         onAccepted: {
+            if (!ApplicationInfo.takeOwnedAnswer())
+                return;
             Session.setNextSaveData(linkedData ? dataChoice : "");
             ApplicationInfo.acceptProjectSaveChoice();
         }
@@ -1069,6 +1095,7 @@ EaComponents.ApplicationWindow {
             dataChoice = Session.project.presetSaveData();
             zip = asZip || !diskWritable;
             copy = asCopy || !diskWritable;
+            ownerGeneration = Session.projectGeneration();
             accept();
         }
 
@@ -1149,46 +1176,63 @@ EaComponents.ApplicationWindow {
     // project read replaces the current one on the next turn.
     FolderDialog {
         id: openFolderDialog
+        objectName: "load.folderChooser"
+        // The project it was opened over (window.openChooser); -2 once answered or retired.
+        property real ownerGeneration: -1
         title: qsTr("Open an edi project folder")
         acceptLabel: qsTr("Open")
         currentFolder: DialogFolders.folder("openProject", "")
         onAccepted: {
+            if (!ApplicationInfo.takeOwnedAnswer())
+                return;
             DialogFolders.remember("openProject", selectedFolder);
-            Qt.callLater(Session.openProject, selectedFolder);
+            window.openChosen(selectedFolder);
         }
+        onRejected: ApplicationInfo.takeOwnedAnswer()
     }
     FileDialog {
         id: openZipDialog
+        objectName: "load.zipChooser"
+        property real ownerGeneration: -1
         title: qsTr("Open an edi project archive")
         nameFilters: [qsTr("edi project archives (*.zip)")]
         currentFolder: DialogFolders.folder("openProject", "")
         onAccepted: {
+            if (!ApplicationInfo.takeOwnedAnswer())
+                return;
             DialogFolders.remember("openProject", selectedFile);
-            Qt.callLater(Session.openProject, selectedFile);
+            window.openChosen(selectedFile);
         }
+        onRejected: ApplicationInfo.takeOwnedAnswer()
     }
     // An import opens as a new, unsaved project, as Open does.
     FileDialog {
         id: importDialog
+        objectName: "load.importChooser"
         property var importer: null
+        property real ownerGeneration: -1
         title: importer !== null ? qsTr("Import a %1 project").arg(importer.program) : ""
         nameFilters: importer !== null ? [importer.nameFilter] : []
         currentFolder: DialogFolders.folder("importProject", "")
         onAccepted: {
+            if (!ApplicationInfo.takeOwnedAnswer())
+                return;
             DialogFolders.remember("importProject", selectedFile);
-            Qt.callLater(Session.openProject, selectedFile);
+            window.openChosen(selectedFile);
         }
+        onRejected: ApplicationInfo.takeOwnedAnswer()
     }
 
     // The project's folder by its name, as a file is named: the dialog is filled with the project's own name, in the
     // folder it is in (owner, 2026-10-25); the folder is made if it is new.
     FileDialog {
         id: saveFolder
+        objectName: "saveAs.folderPicker"
         // The project it was opened over (ApplicationInfo.openProjectSavePicker): an answer after another one replaced it
         // is ignored, that Save As having ended at the handoff.
         property real ownerGeneration: -1
         onRejected: {
-            if (!ApplicationInfo.takeProjectSavePicker())
+            if (!ApplicationInfo.takeOwnedAnswer())
                 return;
             Session.setNextSaveData("");
             window.cancelAssistantSaveAs();
@@ -1201,7 +1245,7 @@ EaComponents.ApplicationWindow {
         fileMode: FileDialog.SaveFile
         acceptLabel: qsTr("Save")
         onAccepted: {
-            if (!ApplicationInfo.takeProjectSavePicker())
+            if (!ApplicationInfo.takeOwnedAnswer())
                 return;
             DialogFolders.remember("saveProject", selectedFile);
             ApplicationInfo.acceptProjectSavePicker(false);
@@ -1210,11 +1254,12 @@ EaComponents.ApplicationWindow {
 
     FileDialog {
         id: saveZip
+        objectName: "saveAs.zipPicker"
         // The project it was opened over (ApplicationInfo.openProjectSavePicker): an answer after another one replaced it
         // is ignored, that Save As having ended at the handoff.
         property real ownerGeneration: -1
         onRejected: {
-            if (!ApplicationInfo.takeProjectSavePicker())
+            if (!ApplicationInfo.takeOwnedAnswer())
                 return;
             Session.setNextSaveData("");
             window.cancelAssistantSaveAs();
@@ -1229,7 +1274,7 @@ EaComponents.ApplicationWindow {
         nameFilters: [qsTr("Zip archives (*.zip)")]
         acceptLabel: qsTr("Save")
         onAccepted: {
-            if (!ApplicationInfo.takeProjectSavePicker())
+            if (!ApplicationInfo.takeOwnedAnswer())
                 return;
             DialogFolders.remember("saveProject", selectedFile);
             ApplicationInfo.acceptProjectSavePicker(true);
@@ -1281,6 +1326,8 @@ EaComponents.ApplicationWindow {
         enterAccepts: true
         property var warnedFor: null
         property bool kept: true
+        // The project the warning is about (ApplicationInfo.windowWebSaved); its Save project as… acts only for it.
+        property real ownerGeneration: -1
         parent: Overlay.overlay
         title: kept ? qsTr("Saved in this browser only") : qsTr("Not saved")
         standardButtons: Dialog.Apply | Dialog.Ok

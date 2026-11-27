@@ -2464,24 +2464,24 @@ bool Session::setProjectAside() {
     return aside_.has_value();
 }
 
-void Session::restoreProjectSetAside() {
+bool Session::restoreProjectSetAside() {
     if (!aside_) {
-        return;
+        return false;
     }
     if (const QString refusal = replacementRefusal(); !refusal.isEmpty()) {
         setLastError(refusal);
-        return;
+        return false;
     }
     SetAside aside = *std::move(aside_);
     aside_.reset();
     const QPointer<Session> receiver(this);
     const QPointer<ProjectViewModel> wanted(aside.project);
     const bool replaced = replaceProject(aside.project.data(), {}, aside.example);
-    if (!receiver) return;
+    if (!receiver) return false;
     if (!replaced) {
         // Refused before it took the project: it stays set aside, as it was.
         if (wanted && project_ != wanted && !aside_) aside_ = std::move(aside);
-        return;
+        return false;
     }
     // Every publication below can reenter: each goes on only while the restored project is still the open one
     // (ADR-0100), so a project opened meanwhile never takes the set-aside one's places.
@@ -2490,28 +2490,29 @@ void Session::restoreProjectSetAside() {
     const auto current = [&] {
         return receiver && restored && project_ == restored && replacement_generation_ == replacement;
     };
-    if (!current()) return;
+    if (!current()) return false;
     temporary_folder_ = aside.temporary_folder;
     archive_location_ = aside.archive_location;
     setOpenedArchive(aside.opened_archive);
-    if (!current()) return;
+    if (!current()) return false;
     read_only_source_ = aside.read_only_source;
     read_only_copy_ = aside.read_only_copy;
     web_copy_ = aside.web_copy;
     web_from_file_ = aside.web_from_file;
     setWebPlace(aside.web_place);
-    if (!current()) return;
+    if (!current()) return false;
     emit projectLocationChanged();
-    if (!current()) return;
+    if (!current()) return false;
     emit locationTextChanged();
-    if (!current()) return;
+    if (!current()) return false;
     emit needsSaveAsChanged();
-    if (!current()) return;
+    if (!current()) return false;
     emit projectSetAsideChanged();
-    if (!current()) return;
+    if (!current()) return false;
     emit projectSetAsideNameChanged();
-    if (!current()) return;
+    if (!current()) return false;
     emit projectSetAsideModifiedChanged();
+    return current();
 }
 
 void Session::dropProjectSetAside() {

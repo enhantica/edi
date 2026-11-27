@@ -279,8 +279,10 @@ class Session : public QObject {
     // Sets the open project aside, as the two above do, and leaves no project open: a tutorial whose user creates its
     // project (edi ADR-0064).
     Q_INVOKABLE bool setProjectAside();
-    // The set-aside project back in place of the tutorial's, which is closed; with none set aside, no project.
-    Q_INVOKABLE void restoreProjectSetAside();
+    // The set-aside project back in place of the tutorial's, which is closed; with none set aside, no project. True
+    // only when the set-aside project is the open one at the end: false when there was none, or when a save holding
+    // the open project refused it (`lastError` says why) or another project took its place meanwhile.
+    Q_INVOKABLE bool restoreProjectSetAside();
     // The tutorial's project is kept: the set-aside project is closed.
     Q_INVOKABLE void dropProjectSetAside();
     bool hasProjectSetAside() const { return aside_.has_value(); }

@@ -211,8 +211,9 @@ EaComponents.SideBarColumn {
     AppDialog {
         id: discardDialog
 
-        // What each answer runs (askLeave).
+        // What each answer runs (askLeave), and the project it was asked over (Session.projectGeneration).
         property var actions: ({})
+        property real ownerGeneration: -1
 
         function answer(name: string, argument): void {
             ApplicationInfo.textTabAnswer(name, argument);
@@ -231,6 +232,14 @@ EaComponents.SideBarColumn {
         EaElements.Label {
             id: discardText
             text: qsTr("The edited text has not been applied.")
+        }
+    }
+    // Every replacement starts with this signal, the assistant's own one included: the question goes before the next
+    // project shows, and no answer reaches it.
+    Connections {
+        target: Session
+        function onProjectReplacing() {
+            ApplicationInfo.textDiscardRetire();
         }
     }
 }
