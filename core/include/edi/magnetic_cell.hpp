@@ -117,7 +117,10 @@ struct MagneticPeak {
     double tolerance = 0.0;
     double significance = 0.0;
     double half_width = 0.0;  ///< half the local FWHM on the experiment's axis
-    bool on_allowed_reflection = false;  ///< a suggestion on a reflection the crystal group allows
+    bool on_allowed_reflection = false;  ///< on a reflection the crystal group allows
+    /// Offered to the user: at no allowed reflection, or on one the experiment's current calculation leaves
+    /// unexplained. Every observed peak stays a target for marking by hand either way (review 16, F4).
+    bool suggested = false;
 };
 /// Find k's candidate peaks on the pattern chart (owner, 2026-11-27): the observed peaks at no reflection the parent's
 /// space group allows, from the measured data alone, then, when the experiment holds a calculated curve, its

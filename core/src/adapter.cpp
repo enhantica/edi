@@ -635,6 +635,12 @@ void check_magnetic_acceptance(const Structure& structure) {
     crysta::check_magnetic_acceptance(to_crysta_structure(structure));
 }
 
+// The fields crysta's completion owns (coordinates, letters, moments and their forms, tensors), copied from a completed
+// crysta structure: the one route by which a completion reaches the host, from an edit and from a fit alike. The check
+// refuses before anything is written when a row of the host has no counterpart.
+void check_completed_structure(const Structure& structure, const crysta::Structure& engine);
+void adopt_completed_structure(Structure& structure, const crysta::Structure& engine);
+
 void complete_atom_site_moments(Structure& structure) {
     if (structure.magnetic->operations.empty()) {
         return;
@@ -642,7 +648,34 @@ void complete_atom_site_moments(Structure& structure) {
     // crysta's one completion of a magnetic edit (ADR-0137 B8): it refuses, naming why, a structure its acceptance
     // rule refuses, before anything here changes.
     const crysta::CompletedMagnetic completed = crysta::complete_magnetic(to_crysta_structure(structure));
-    const crysta::Structure& engine = completed.structure;
+    adopt_completed_structure(structure, completed.structure);
+}
+
+void check_completed_structure(const Structure& structure, const crysta::Structure& engine) {
+    const auto has = [](const auto& rows, const std::string& id) {
+        return std::any_of(rows.begin(), rows.end(), [&](const auto& row) { return row.site_id.value() == id; });
+    };
+    for (const auto& site : structure.atom_sites) {
+        if (!has(engine.atom_sites, site->id.value())) {
+            throw std::invalid_argument("the completed structure " + structure.id.value() + " has no site " +
+                                        site->id.value());
+        }
+    }
+    for (const auto& row : structure.atom_site_moment) {
+        if (!has(engine.atom_site_moment, row->id.value())) {
+            throw std::invalid_argument("the completed structure " + structure.id.value() + " has no moment for " +
+                                        row->id.value());
+        }
+    }
+    for (const auto& tensor : structure.atom_site_aniso) {
+        if (!has(engine.atom_site_aniso, tensor->id.value())) {
+            throw std::invalid_argument("the completed structure " + structure.id.value() + " has no tensor for " +
+                                        tensor->id.value());
+        }
+    }
+}
+
+void adopt_completed_structure(Structure& structure, const crysta::Structure& engine) {
     for (const crysta::AtomSiteMoment& done : engine.atom_site_moment) {
         for (const auto& row : structure.atom_site_moment) {
             if (row->id.value() != done.site_id.value()) {
@@ -8356,13 +8389,22 @@ FitResultBase Project::fit(const std::vector<double>& grid, const std::vector<do
             // number the engine never produced.
 
             // Write the refined value/esd back onto the edi model Parameters (all labels resolved above).
+            // The fit's completed type IV structures, paired with the host's and checked before any write.
+            std::vector<std::pair<Structure*, const crysta::Structure*>> completed_type_iv;
+            for (const auto& held : structures) {
+                for (const crysta::Structure& engine : project.structures) {
+                    if (engine.name.value() == held->id.value() && crysta::type_iv_route(engine)) {
+                        check_completed_structure(*held, engine);
+                        completed_type_iv.emplace_back(held.get(), &engine);
+                    }
+                }
+            }
             detail::write_back(refined);
             crysta::write_fit_result_into(project, result);  // crysta completes the dependents
             publish_fit_state(*this, project, refined);
-            // A type IV structure as crysta completed it: projected sites, letters, moment forms, tensors.
-            for (const auto& held : structures) {
-                if (letter_source(*held) == LetterSource::Magnetic) complete_atom_site_moments(*held);
-            }
+            // Each type IV structure as the fit's own finalizer completed it, every coordinate included, never
+            // completed again on the host (review 16, F2).
+            for (const auto& [held, engine] : completed_type_iv) adopt_completed_structure(*held, *engine);
             record_fit_result(*this, outcome, considered, crysta_correlations(project, result),
                               fitted_quality(project,
                                              single_crystal ? std::deque<crysta::PdDataBase>{}
@@ -9299,13 +9341,22 @@ FitResultBase Project::fit_joint(const std::vector<PdDataBase>& patterns,
                     outcome.start[resolved->path] = value;
                 }
             }
+            // The fit's completed type IV structures, paired with the host's and checked before any write.
+            std::vector<std::pair<Structure*, const crysta::Structure*>> completed_type_iv;
+            for (const auto& held : structures) {
+                for (const crysta::Structure& engine : project.structures) {
+                    if (engine.name.value() == held->id.value() && crysta::type_iv_route(engine)) {
+                        check_completed_structure(*held, engine);
+                        completed_type_iv.emplace_back(held.get(), &engine);
+                    }
+                }
+            }
             detail::write_back(refined);
             crysta::write_fit_result_into(project, result);  // crysta completes the dependents
             publish_fit_state(*this, project, refined);
-            // A type IV structure as crysta completed it: projected sites, letters, moment forms, tensors.
-            for (const auto& held : structures) {
-                if (letter_source(*held) == LetterSource::Magnetic) complete_atom_site_moments(*held);
-            }
+            // Each type IV structure as the fit's own finalizer completed it, every coordinate included, never
+            // completed again on the host (review 16, F2).
+            for (const auto& [held, engine] : completed_type_iv) adopt_completed_structure(*held, *engine);
             std::deque<crysta::PdDataBase> fitted_patterns;
             for (const PdDataBase& pattern : patterns) {
                 fitted_patterns.emplace_back(pattern.axis(), pattern.intensity_meas.get(), pattern.intensity_meas_su.get());
@@ -10325,37 +10376,101 @@ void check_magnetic_candidates(const Project& project, const PreparedMagneticCan
         }
         check_magnetic_acceptance(*structure);  // every candidate, enabled or not
     }
-    std::map<std::size_t, int> enabled;
-    for (const auto& link : prepared.links) {
-        if (link.experiment >= project.experiments.size() || !powder(link.experiment)) {
-            throw std::invalid_argument("a candidate link names no powder experiment of the project");
+    // The exact batch the live parent implies (review 16, F3), derived from the parent and the candidates' own cells,
+    // never from the prepared rows: for each powder experiment linking the parent, one link per candidate at the
+    // parent's scale over N², enabled for the first candidate only; for each of the parent's texture rows, one row per
+    // candidate with its values and flags and the axis in the candidate's cell. The prepared rows must be exactly these.
+    if (prepared.structures.empty()) {
+        throw std::invalid_argument("the batch adds no magnetic structure");
+    }
+    const Structure& parent = [&]() -> const Structure& {
+        for (const auto& held : project.structures) {
+            if (held->name.value() == prepared.parent) return *held;
         }
-        if (!names.contains(link.structure)) {
-            throw std::invalid_argument("a candidate link names '" + link.structure + "', which is not in the batch");
+        throw std::invalid_argument("the parent structure '" + prepared.parent + "' is not in the project");
+    }();
+    const std::array<double, 3> parent_lengths{parent.cell.length_a.value.get(), parent.cell.length_b.value.get(),
+                                               parent.cell.length_c.value.get()};
+    std::array<long long, 3> m{0, 0, 0};
+    for (const auto& structure : prepared.structures) {
+        const std::array<double, 3> lengths{structure->cell.length_a.value.get(), structure->cell.length_b.value.get(),
+                                            structure->cell.length_c.value.get()};
+        std::array<long long, 3> mine{};
+        for (std::size_t i = 0; i < 3; ++i) {
+            const double ratio = lengths[i] / parent_lengths[i];
+            mine[i] = std::llround(ratio);
+            if (!(mine[i] >= 1) || std::abs(ratio - static_cast<double>(mine[i])) > 1e-9 * ratio) {
+                throw std::invalid_argument("'" + structure->name.value() +
+                                            "' is not in a magnetic cell of the parent's");
+            }
         }
-        if (!std::isfinite(link.scale) || link.scale <= 0.0) {
-            throw std::invalid_argument("the link to '" + link.structure + "' needs a positive scale");
+        if (m != std::array<long long, 3>{0, 0, 0} && mine != m) {
+            throw std::invalid_argument("the candidates of one batch share one magnetic cell");
         }
-        if (link.enabled && ++enabled[link.experiment] > 1) {
-            throw std::invalid_argument("only one candidate link per experiment can be enabled");
+        m = mine;
+    }
+    const double n = static_cast<double>(m[0] * m[1] * m[2]);
+    using LinkKey = std::tuple<std::size_t, std::string, bool>;
+    std::multiset<LinkKey> expected_links;
+    std::map<LinkKey, double> expected_scale;
+    using TextureKey = std::tuple<std::size_t, std::string, double, double, bool, bool, std::array<int, 3>>;
+    std::multiset<TextureKey> expected_textures;
+    for (std::size_t e = 0; e < project.experiments.size(); ++e) {
+        const auto& experiment = project.experiments[e];
+        for (const auto& link : experiment->linked_structures) {
+            if (link->structure_id.value() != prepared.parent) continue;
+            for (std::size_t i = 0; i < prepared.structures.size(); ++i) {
+                const LinkKey key{e, prepared.structures[i]->name.value(), i == 0};
+                expected_links.insert(key);
+                expected_scale[key] = link->scale.value.get() / (n * n);
+            }
+        }
+        for (const auto& row : experiment->preferred_orientation) {
+            if (row->structure_id.value() != prepared.parent) continue;
+            std::array<long long, 3> h{m[0] * row->index_h.get(), m[1] * row->index_k.get(),
+                                       m[2] * row->index_l.get()};
+            const long long g = std::gcd(std::gcd(std::llabs(h[0]), std::llabs(h[1])), std::llabs(h[2]));
+            for (long long& x : h) x /= g == 0 ? 1 : g;
+            for (const auto& structure : prepared.structures) {
+                expected_textures.insert({e, structure->name.value(), row->march_r.value.get(),
+                                          row->march_random_fract.value.get(), row->march_r.free.get(),
+                                          row->march_random_fract.free.get(),
+                                          {static_cast<int>(h[0]), static_cast<int>(h[1]), static_cast<int>(h[2])}});
+            }
         }
     }
+    std::multiset<LinkKey> links;
+    for (const auto& link : prepared.links) {
+        const LinkKey key{link.experiment, link.structure, link.enabled};
+        const auto scale = expected_scale.find(key);
+        if (scale == expected_scale.end() || !(std::abs(link.scale - scale->second) <= 1e-12 * scale->second)) {
+            throw std::invalid_argument("the link of '" + link.structure + "' to experiment " +
+                                        std::to_string(link.experiment + 1) +
+                                        " is not one the parent's links give");
+        }
+        links.insert(key);
+    }
+    if (links != expected_links) {
+        throw std::invalid_argument("the batch's links are not one per candidate for each experiment linking the "
+                                    "parent, the first candidate's enabled");
+    }
+    std::multiset<TextureKey> textures;
     for (const auto& texture : prepared.textures) {
-        if (texture.experiment >= project.experiments.size() || !powder(texture.experiment)) {
-            throw std::invalid_argument("a carried texture row names no powder experiment of the project");
+        textures.insert({texture.experiment, texture.structure, texture.march_r, texture.march_random_fract,
+                         texture.march_r_free, texture.march_random_fract_free, texture.axis});
+    }
+    if (textures != expected_textures) {
+        throw std::invalid_argument("the batch's texture rows are not the parent's, carried to each candidate's cell");
+    }
+    for (const auto& [e, name, march_r, random, r_free, random_free, axis] : expected_textures) {
+        if (axis == std::array<int, 3>{0, 0, 0}) {
+            throw std::invalid_argument("the texture axis of '" + name + "' is zero");
         }
-        if (!names.contains(texture.structure)) {
-            throw std::invalid_argument("a carried texture row names '" + texture.structure +
-                                        "', which is not in the batch");
-        }
-        if (texture.axis == std::array<int, 3>{0, 0, 0}) {
-            throw std::invalid_argument("the texture axis of '" + texture.structure + "' is zero");
-        }
-        for (const int x : texture.axis) {
+        for (const int x : axis) {
             if (std::abs(x) > 1000) {
-                throw std::invalid_argument("the texture axis of '" + texture.structure + "' is (" +
-                                            std::to_string(texture.axis[0]) + "," + std::to_string(texture.axis[1]) +
-                                            "," + std::to_string(texture.axis[2]) + "), beyond the 1000 limit");
+                throw std::invalid_argument("the texture axis of '" + name + "' is (" + std::to_string(axis[0]) + "," +
+                                            std::to_string(axis[1]) + "," + std::to_string(axis[2]) +
+                                            "), beyond the 1000 limit");
             }
         }
     }
@@ -10412,7 +10527,7 @@ std::vector<MagneticPeak> magnetic_unexplained_peaks(const Project& project, std
     std::vector<MagneticPeak> out;
     for (const crysta::UnexplainedPeak& p : crysta::unexplained_peaks(structure, k.engine.experiments.at(experiment), x,
                                                                       observed, calculated, sigma, included)) {
-        out.push_back({p.x, p.d, p.tolerance, p.significance, p.half_width, false});
+        out.push_back({p.x, p.d, p.tolerance, p.significance, p.half_width, false, true});
     }
     return out;
 }
@@ -10477,7 +10592,7 @@ std::vector<MagneticPeak> magnetic_mark_candidates(const Project& project, std::
     // of the calculation the experiment holds, at the same inputs (review 15, F4). Without one, only forbidden-line
     // peaks are offered; any observed peak can still be marked by hand.
     std::vector<crysta::UnexplainedPeak> residual;
-    if (!data.intensity_calc.empty() && data.intensity_calc.values().size() == x.size()) {
+    if (source.computed_current() && data.intensity_calc.values().size() == x.size()) {
         try {
             residual = crysta::unexplained_peaks(structure, k.engine.experiments.at(experiment), x,
                                                  data.intensity_meas.get(), data.intensity_calc.values(),
@@ -10490,13 +10605,12 @@ std::vector<MagneticPeak> magnetic_mark_candidates(const Project& project, std::
     for (const crysta::UnexplainedPeak& p : crysta::forbidden_peaks(structure, k.engine.experiments.at(experiment), x,
                                                                     data.intensity_meas.get(),
                                                                     data.intensity_meas_su.get(), included, others)) {
-        if (p.on_allowed_reflection &&
-            std::none_of(residual.begin(), residual.end(), [&p](const crysta::UnexplainedPeak& r) {
+        const bool unexplained =
+            std::any_of(residual.begin(), residual.end(), [&p](const crysta::UnexplainedPeak& r) {
                 return std::abs(r.d - p.d) <= std::max(r.tolerance, p.tolerance);
-            })) {
-            continue;
-        }
-        out.push_back({p.x, p.d, p.tolerance, p.significance, p.half_width, p.on_allowed_reflection});
+            });
+        out.push_back({p.x, p.d, p.tolerance, p.significance, p.half_width, p.on_allowed_reflection,
+                       !p.on_allowed_reflection || unexplained});
     }
     return out;
 }
