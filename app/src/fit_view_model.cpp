@@ -206,9 +206,11 @@ void FitAgreementModel::setRecord(const edi::Project& project) {
         const std::string& linked = link.structure_id.value();
         return linked.empty() && !project.structures.empty() ? project.structures.front()->name.value() : linked;
     };
+    // A disabled link appears nowhere (owner decision 2026-11-27): only enabled links give columns.
     std::vector<std::string> structures;
     for (const auto& experiment : project.experiments) {
         for (const auto& link : experiment->linked_structures) {
+            if (!link->enabled.get()) continue;
             const std::string name = structure_of(*link);
             if (std::find(structures.begin(), structures.end(), name) == structures.end()) {
                 structures.push_back(name);
@@ -227,7 +229,7 @@ void FitAgreementModel::setRecord(const edi::Project& project) {
     std::vector<std::string> magnetic;
     for (const auto& experiment : project.experiments) {
         for (const auto& link : experiment->linked_structures) {
-            if (link->fit_magnetic_r_factor.has_value() &&
+            if (link->enabled.get() && link->fit_magnetic_r_factor.has_value() &&
                 std::find(magnetic.begin(), magnetic.end(), structure_of(*link)) == magnetic.end()) {
                 magnetic.push_back(structure_of(*link));
             }
@@ -287,7 +289,7 @@ void FitAgreementModel::setRecord(const edi::Project& project) {
         for (const auto& [name, place] : ordered) {
             QString bragg, f, mag;
             for (const auto& link : experiment.linked_structures) {
-                if (structure_of(*link) == name) {
+                if (link->enabled.get() && structure_of(*link) == name) {
                     bragg = percent("fit_result_phase.bragg_r_factor", link->fit_bragg_r_factor);
                     f = percent("fit_result_phase.f_r_factor", link->fit_f_r_factor);
                     mag = percent("fit_result_phase.magnetic_r_factor", link->fit_magnetic_r_factor);
