@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-26T15:07:07Z
+# measured_utc = 2026-11-27T04:26:10Z
 #
-# Recorded from: measured yearly release cases with the existing bank
-# Collected tests: 267537; with a reported duration: 86290
+# Recorded from: focused red-first run e04-t65-seq3-scope.out
+# Collected tests: 267550; with a reported duration: 86290
 # Module-scoped fixture costs recorded: 221
 #
 # Breaches are decided PER TIER against the table
@@ -29,12 +29,12 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 267537
+# inventory_python = 267550
 # inventory_cpp = 0
 # inventory_measured = 187602
-# inventory_unmeasured = 79935
+# inventory_unmeasured = 79948
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
-# inventory_pr_python = 92626
+# inventory_pr_python = 92639
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -189,6 +189,8 @@ UNMEASURED:failed-in-this-run	tests/integration/app/test_assistant_trial_retirem
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_separate_adp_table_and_isotropic_controls]
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_space_group_name_and_number_choose_new_default]
 0.000	tests/integration/app/test_c13_t2_gui.py::test_gui_owner_decisions_pass_in_the_production_host
+UNMEASURED:failed-in-this-run	tests/integration/app/test_capture_data_import.py::test_capture_import_outcome_follows_its_own_read[import-data]
+UNMEASURED:failed-in-this-run	tests/integration/app/test_capture_data_import.py::test_capture_import_outcome_follows_its_own_read[import-scan]
 0.000	tests/integration/app/test_collection_downloads.py::test_a_cached_project_folder_is_reused_only_when_it_holds_a_plain_project[child-link]
 0.000	tests/integration/app/test_collection_downloads.py::test_a_cached_project_folder_is_reused_only_when_it_holds_a_plain_project[empty-folder]
 0.000	tests/integration/app/test_collection_downloads.py::test_a_cached_project_folder_is_reused_only_when_it_holds_a_plain_project[loose-file]
@@ -181873,6 +181875,13 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_ionic_xray_factors.py::t
 UNMEASURED:failed-in-this-run	tests/integration/py/test_ionic_xray_factors.py::test_ionic_site_intensity_ratio_matches_published_factors[it1992-O2-]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_ionic_xray_factors.py::test_ionic_site_intensity_ratio_matches_published_factors[wk1995-Fe3+]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_ionic_xray_factors.py::test_ionic_site_intensity_ratio_matches_published_factors[wk1995-O2-]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_issue_forms.py::test_forms_start_with_the_approved_public_labels
+UNMEASURED:failed-in-this-run	tests/integration/py/test_issue_forms.py::test_issue_form_validator_refuses_one_damaged_field[bad-id]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_issue_forms.py::test_issue_form_validator_refuses_one_damaged_field[bad-type]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_issue_forms.py::test_issue_form_validator_refuses_one_damaged_field[bad-yaml]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_issue_forms.py::test_issue_form_validator_refuses_one_damaged_field[feedback-only-label]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_issue_forms.py::test_issue_form_validator_refuses_one_damaged_field[legacy-label]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_issue_forms.py::test_issue_ownership_policy_uses_the_project_column
 0.000	tests/integration/py/test_latp_reference.py::test_latp_reference_quantities_are_fullprof_values_not_scan_regression_pins
 0.000	tests/integration/py/test_legacy_project_load.py::test_old_engine_start_state_is_refused_with_its_name[chebyshev]
 0.000	tests/integration/py/test_legacy_project_load.py::test_old_engine_start_state_is_refused_with_its_name[line-segment]
@@ -249985,6 +249994,10 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_cosio_heidi_case.py::test_act
 UNMEASURED:failed-in-this-run	tests/system/py/test_cosio_heidi_case.py::test_python_tutorial_explicitly_loads_and_links_three_datasets_in_stages[ipynb]
 UNMEASURED:failed-in-this-run	tests/system/py/test_cosio_heidi_case.py::test_python_tutorial_explicitly_loads_and_links_three_datasets_in_stages[py]
 UNMEASURED:failed-in-this-run	tests/system/py/test_cosio_heidi_case.py::test_three_temperature_case_links_three_distinct_structures_and_datasets
+UNMEASURED:failed-in-this-run	tests/system/py/test_crysta_workflow_boundary.py::test_crysta_job_group_receives_subject_and_reports_it_in_each_job
+UNMEASURED:failed-in-this-run	tests/system/py/test_crysta_workflow_boundary.py::test_diagnostic_dispatch_is_a_distinct_non_pin_workflow
+UNMEASURED:failed-in-this-run	tests/system/py/test_crysta_workflow_boundary.py::test_sdk_producer_is_called_with_one_explicit_crysta_subject
+UNMEASURED:failed-in-this-run	tests/system/py/test_crysta_workflow_boundary.py::test_skip_input_covers_files_the_edi_verification_reads
 0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[about.components-passive-dark]
 0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[about.components-passive-light]
 UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[aliases.list-background-dark]
