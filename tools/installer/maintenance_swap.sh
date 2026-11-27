@@ -16,7 +16,7 @@ old="$cur.old"
 owner="$cur.old-token"
 new="$cur.new"
 staged="$t/maintenancetool/MaintenanceTool.app"
-mark="$token $PPID $(ps -o lstart= -p "$PPID" 2>/dev/null)"
+mark="$token $PPID $(LC_ALL=C ps -o lstart= -p "$PPID" 2>/dev/null)"
 usable() { [ -f "$1/Contents/MacOS/MaintenanceTool" ]; }
 ours() { [ -d "$old" ] && [ "$(cat "$owner" 2>/dev/null)" = "$mark" ]; }
 # Whatever is in the tool's place leaves it in one rename, so a removal cut short never leaves part of a bundle there

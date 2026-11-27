@@ -22,8 +22,8 @@ using ReleaseKey = std::array<quint64, 4>;
 std::optional<ReleaseKey> release_version_key(const QString& value);
 /// macOS: an update stopped between moving the installed Maintenance Tool aside and moving the new one in leaves the
 /// only copy as MaintenanceTool.app.old (ADR-0106). When the bundle holding `executable` has no tool and the kept one
-/// has, put the kept one back and drop its mark. Returns whether it did; anything else, or a path outside a .app
-/// bundle, changes nothing.
+/// has, put the kept one back and drop its mark. Returns whether it did; anything else, a path outside a .app bundle,
+/// or an update still running (its mark names a live process), changes nothing.
 bool restore_kept_maintenance_tool(const QString& executable);
 
 /// Managed desktop release availability and maintenance-tool launch (ADR-0072, versions ADR-0106).
