@@ -290,9 +290,21 @@ crysta::Structure to_crysta_structure(const Structure& s) {
                                  built.geom.bond_distance_inc = s.geom.bond_distance_inc.get();
                                  built.atom_site_aniso = detail::to_crysta_atom_site_aniso(s);
                                  detail::to_crysta_magnetic(s, built);
-                                 // The symmetry the host states (its letters, else its coordinates
-                                 // as they stand) kept on the copy, for every expansion, fit and
-                                 // save of it (owner decision 2026-11-27).
+                                 // The symmetry the host states (its saved site symmetry, else its
+                                 // letters, else its coordinates as they stand) kept on the copy, for
+                                 // every expansion, fit and save of it (owner decision 2026-11-27).
+                                 std::map<std::string, crysta::AdmittedSite> stated;
+                                 for (const auto& site : s.atom_sites) {
+                                     const std::string text = site->signed_site_symmetry.value();
+                                     if (text.empty()) continue;
+                                     auto& kept = stated[site->id.value()];
+                                     for (std::size_t start = 0; start <= text.size();) {
+                                         const std::size_t end = std::min(text.find(';', start), text.size());
+                                         kept.signed_stabiliser.push_back(text.substr(start, end - start));
+                                         start = end + 1;
+                                     }
+                                 }
+                                 if (!stated.empty()) built.kept_sites = std::move(stated);
                                  crysta::keep_type_iv_symmetry(built);
                              });
 }
@@ -704,6 +716,12 @@ void adopt_completed_structure(Structure& structure, const crysta::Structure& en
                 }
                 const std::string letter = done.wyckoff_letter.get().empty() ? "." : done.wyckoff_letter.get();
                 if (site->wyckoff_letter.value() != letter) site->wyckoff_letter = letter;
+                // The admitted symmetry crysta keeps for the site, saved with it (crysta review 21).
+                std::string symmetry;
+                if (const auto kept = engine.kept_sites->find(done.site_id.value()); kept != engine.kept_sites->end()) {
+                    for (const std::string& op : kept->second.signed_stabiliser) symmetry += (symmetry.empty() ? "" : ";") + op;
+                }
+                if (site->signed_site_symmetry.value() != symmetry) site->signed_site_symmetry = symmetry;
             }
         }
         // And crysta's tied displacement tensors (B3): the same completion ties them.

@@ -788,7 +788,7 @@ const std::set<std::string>& known_covered_tags() {
         // _atom_site
         "_atom_site.adp_iso", "_atom_site.adp_type", "_atom_site.fract_x", "_atom_site.fract_y",
         "_atom_site.fract_z", "_atom_site.id", "_atom_site.multiplicity", "_atom_site.occupancy",
-        "_atom_site.type_symbol", "_atom_site.wyckoff_letter",
+        "_atom_site.type_symbol", "_atom_site.wyckoff_letter", "_atom_site.signed_site_symmetry",
         // _atom_site_aniso
         "_atom_site_aniso.adp_11", "_atom_site_aniso.adp_12", "_atom_site_aniso.adp_13",
         "_atom_site_aniso.adp_22", "_atom_site_aniso.adp_23", "_atom_site_aniso.adp_33",
@@ -1242,6 +1242,11 @@ Structure structure_from_block(const Block& block, const std::string& where) {
         const int wyckoff = loop->column("_atom_site.wyckoff_letter");
         if (wyckoff >= 0) {
             site.wyckoff_letter = row[static_cast<std::size_t>(wyckoff)];
+        }
+        // A type IV site's saved symmetry, restored as written (crysta review 21).
+        if (const int symmetry = loop->column("_atom_site.signed_site_symmetry"); symmetry >= 0) {
+            const std::string& stated = row[static_cast<std::size_t>(symmetry)];
+            if (stated != "." && stated != "?") site.signed_site_symmetry = stated;
         }
         read_into(site.fract_x,
                   parse_parameter(

@@ -2701,6 +2701,9 @@ struct AtomSite : std::enable_shared_from_this<AtomSite> {
     // Scattering type symbol, e.g. "Ca". A geometry input: it records its own writes.
     detail::WrittenText type_symbol;
     detail::WrittenText wyckoff_letter = "";  // Wyckoff letter (optional; "" = general)
+    // A type IV site's signed stabiliser as its file saved it (`;`-joined signed triplets), so a load restores the
+    // site's symmetry as written and never detects it again (crysta review 21; owner decision 2026-11-27).
+    detail::WrittenText signed_site_symmetry = "";
     // `_atom_site.adp_type`, the type the site's values are in: Biso, Uiso, Bani, Uani or beta
     // (ADR-0027). A file that declares none reads as Biso; a save writes it. A geometry
     // input: it records its own writes.
@@ -2904,8 +2907,8 @@ namespace crysta {
 template <>
 struct RowSchema<edi::AtomSite> {
     static constexpr const char* name = "_atom_site";
-    static constexpr auto fields = std::tuple{&edi::AtomSite::id, &edi::AtomSite::type_symbol, &edi::AtomSite::wyckoff_letter, &edi::AtomSite::adp_type, &edi::AtomSite::fract_x, &edi::AtomSite::fract_y, &edi::AtomSite::fract_z, &edi::AtomSite::occupancy, &edi::AtomSite::adp_iso};
-    static constexpr std::array items{"id", "type_symbol", "wyckoff_letter", "adp_type", "fract_x", "fract_y", "fract_z", "occupancy", "adp_iso"};
+    static constexpr auto fields = std::tuple{&edi::AtomSite::id, &edi::AtomSite::type_symbol, &edi::AtomSite::wyckoff_letter, &edi::AtomSite::signed_site_symmetry, &edi::AtomSite::adp_type, &edi::AtomSite::fract_x, &edi::AtomSite::fract_y, &edi::AtomSite::fract_z, &edi::AtomSite::occupancy, &edi::AtomSite::adp_iso};
+    static constexpr std::array items{"id", "type_symbol", "wyckoff_letter", "signed_site_symmetry", "adp_type", "fract_x", "fract_y", "fract_z", "occupancy", "adp_iso"};
 };
 
 // The columns of the `_atom_site_aniso` table.

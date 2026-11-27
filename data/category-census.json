@@ -36,6 +36,16 @@
           ]
         },
         {
+          "member": "AtomSite::signed_site_symmetry",
+          "type": "detail::WrittenText",
+          "items": [
+            "signed_site_symmetry"
+          ],
+          "storage": [
+            "crysta::Column<std::string>"
+          ]
+        },
+        {
           "member": "AtomSite::adp_type",
           "type": "detail::WrittenText",
           "items": [
@@ -3524,6 +3534,11 @@
     },
     {
       "member": "AtomSite::wyckoff_letter",
+      "type": "detail::WrittenText",
+      "category": "_atom_site"
+    },
+    {
+      "member": "AtomSite::signed_site_symmetry",
       "type": "detail::WrittenText",
       "category": "_atom_site"
     },
