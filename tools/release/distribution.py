@@ -4,12 +4,12 @@
 
 One distribution scheme for every download (edi ADR-0071 as amended): the wheels and their index,
 the command-line zips, the installers, the installer components and the update feeds share one
-layout, published three times on two providers:
+layout, written as three copies:
 
 - ``release/``: every file attached to the GitHub release, the component repositories as one
   archive per channel and platform, and ``SHA256SUMS`` over all of them;
 - ``pages/``: the layout as GitHub Pages serves it at the current release;
-- ``offsite/``: the same tree for the copy behind ``download.easydiffraction.org``.
+- ``offsite/``: the same tree, kept as the publish run's ``offsite`` artifact.
 
 The layout of ``pages/`` and ``offsite/``: ``pypi/simple/easydiffraction/`` the package index with
 the current wheels beside it and older versions linked to their GitHub releases (the docs build
@@ -17,6 +17,10 @@ writes the same index, website/render_package_index.py), ``releases/<version>/``
 ``repository/<channel>/<platform>/`` the installers' component repositories,
 ``releases/stable-v2.json`` the update feed, ``releases/stable.json`` the feed apps up to
 v2026.11.31 read (legacy_feed.py), and ``SHA256SUMS`` over the whole tree.
+
+The apps' feed bases (data/distribution.json) do not serve ``pages/`` or ``offsite/``: the site
+behind both is built by enhantica/edi-download from the GitHub release's assets with these tools,
+its two feeds with ``legacy_feed.write_feeds``.
 
     python tools/release/distribution.py --publication publication --output copies --repo <repo>
     python tools/release/distribution.py --dry-run --output copies   # a fixture, then the checks
