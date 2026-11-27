@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-27T03:56:04Z
+# measured_utc = 2026-11-27T17:35:55Z
 #
-# Recorded from: measured test run (1 node(s) measured once, 187612 banked, 0 stale row(s) dropped)
-# Collected tests: 267576; with a reported duration: 86301
+# Recorded from: Banked rows and fixed-symmetry native pre-fix replay
+# Collected tests: 267589; with a reported duration: 86301
 # Module-scoped fixture costs recorded: 223
 #
 # Breaches are decided PER TIER against the table
@@ -30,9 +30,9 @@
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
 # inventory_python = 267576
-# inventory_cpp = 11
+# inventory_cpp = 13
 # inventory_measured = 187613
-# inventory_unmeasured = 79974
+# inventory_unmeasured = 79976
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
 # inventory_pr_python = 92665
 
@@ -1350,6 +1350,8 @@ UNMEASURED:failed-in-this-run	tests/integration/cpp/test_magnetic_candidate_tran
 0.034	tests/integration/cpp/test_magnetic_candidate_transaction.cpp::The candidate transaction accepts three independently valid staged rows
 0.064	tests/integration/cpp/test_magnetic_legacy_editor.cpp::Regression pin preserves type I native and FullProf editor paths
 0.023	tests/integration/cpp/test_magnetic_legacy_editor.cpp::Regression pin preserves type III native and FullProf editor paths
+UNMEASURED:failed-in-this-run	tests/integration/cpp/test_type_iv_site_symmetry.cpp::Edi save and reopen preserve a type IV site's written general position
+UNMEASURED:failed-in-this-run	tests/integration/cpp/test_type_iv_site_symmetry.cpp::Edi type IV CIF loading detects a mirror only when its letter is absent
 UNMEASURED:expected-red-on-499909374	tests/integration/cpp/test_type_iv_site_symmetry.cpp::Equivalent type IV signed rows retain verified metadata in the native editor
 UNMEASURED:expected-red-on-499909374	tests/integration/cpp/test_type_iv_site_symmetry.cpp::Native type IV ADP conversion and new atoms use magnetic site geometry
 UNMEASURED:expected-red-on-499909374	tests/integration/cpp/test_type_iv_site_symmetry.cpp::The native structure page accepts verified type IV Wyckoff letters

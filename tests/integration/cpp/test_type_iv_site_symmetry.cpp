@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <array>
+#include <chrono>
 #include <filesystem>
 #include <fstream>
 #include <iterator>
@@ -126,4 +127,85 @@ TEST_CASE("Native type IV ADP conversion and new atoms use magnetic site geometr
     const auto added = edi::new_atom_site(model, [] { return .137; });
     CHECK_MESSAGE(added.wyckoff_letter != ".",
                   "A new atom in a verified type IV setting receives its derived magnetic letter");
+}
+
+TEST_CASE("Edi save and reopen preserve a type IV site's written general position") {
+    auto project = edi::empty_project("saved_general", "");
+    auto structure =
+        std::make_shared<edi::Structure>(edi::structure_from_edi_text(input("pnma-e")));
+    auto& site = *structure->atom_sites[0];
+    const auto original = edi::structure_ties(*structure);
+    REQUIRE_MESSAGE((original.size() >= 9 && original[7].kind == edi::TieKind::Independent),
+                    "The written general site begins with a free y coordinate");
+    // The value takes the place of a published fit result at the save boundary.
+    site.fract_y.value = .2500001;
+    site.fract_y.free = true;
+    project.structures.push_back(structure);
+    const auto folder =
+        std::filesystem::temp_directory_path() /
+        ("edi-saved-magnetic-position-" +
+         std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
+    struct Cleanup {
+        std::filesystem::path path;
+        ~Cleanup() { std::filesystem::remove_all(path); }
+    } cleanup{folder};
+    edi::save_project(project, folder.string());
+    const auto reopened = edi::load_project(folder.string());
+    const auto& restored = reopened.structure();
+    const auto& atom = *restored.atom_sites[0];
+    CHECK_MESSAGE(atom.wyckoff_letter == "e",
+                  "The fitted site reopens at its written general letter");
+    CHECK_MESSAGE(atom.fract_y.value.get() == .2500001,
+                  "The fitted coordinate reopens at the saved value close to the mirror");
+    CHECK_MESSAGE(atom.fract_y.free.get(), "Reopen retains the saved free flag beside the mirror");
+    const auto ties = edi::structure_ties(restored);
+    REQUIRE_MESSAGE(ties.size() >= 9, "Reopen exposes all three positional ties");
+    for (std::size_t axis = 6; axis < 9; ++axis)
+        CHECK_MESSAGE(ties[axis].kind == edi::TieKind::Independent,
+                      "Reopening a saved general site keeps all three coordinates independent");
+}
+
+TEST_CASE("Edi type IV CIF loading detects a mirror only when its letter is absent") {
+    auto cif = input("pnma-e");
+    const auto replace = [&cif](const std::string& from, const std::string& to) {
+        const auto offset = cif.find(from);
+        REQUIRE_MESSAGE(offset != std::string::npos,
+                        "The independent reference contains the CIF conversion field");
+        cif.replace(offset, from.size(), to);
+    };
+    replace("_edi.schema_version 3\n", "");
+    replace("_space_group.name_h_m", "_space_group_name_H-M_alt");
+    replace("_parent_space_group.reference_setting standard\n", "");
+    replace("_parent_space_group.derived true\n", "");
+    replace(
+        "loop_\n_space_group_magn_transforms.id\n_space_group_magn_transforms.Pp_abc\n"
+        "_space_group_magn_transforms.source\n1 'a,b,c;0,0,0' BNS\n",
+        "_space_group_magn.transform_BNS_Pp_abc 'a,b,c;0,0,0'\n");
+    replace("_atom_site.id", "_atom_site_label");
+    replace("_atom_site.wyckoff_letter", "_atom_site_Wyckoff_symbol");
+    replace("_atom_site.adp_iso", "_atom_site_B_iso_or_equiv");
+    const auto extras = cif.find("loop_\n_magnetic_form_factor.");
+    REQUIRE_MESSAGE(extras != std::string::npos,
+                    "The independent reference includes optional moment metadata");
+    cif.erase(extras);
+    replace("Co1 Co e 0.13 0.23 0.31", "Co1 Co e 0.13 0.2500001 0.31");
+    const auto declared = edi::structure_from_edi_text(cif, "declared.mcif");
+    CHECK_MESSAGE(declared.atom_sites[0]->wyckoff_letter == "e",
+                  "A CIF's supplied general letter is preserved by the edi reader");
+    CHECK_MESSAGE(declared.atom_sites[0]->fract_y.value.get() == .2500001,
+                  "A supplied general letter prevents projecting the near-mirror value");
+    const auto declared_ties = edi::structure_ties(declared);
+    REQUIRE_MESSAGE(declared_ties.size() >= 9, "The declared site has three positional ties");
+    CHECK_MESSAGE(declared_ties[7].kind == edi::TieKind::Independent,
+                  "The declared general group's near-mirror y stays independent");
+    replace("_atom_site_Wyckoff_symbol\n", "");
+    replace("Co1 Co e 0.13 0.2500001 0.31", "Co1 Co 0.13 0.2500001 0.31");
+    const auto detected = edi::structure_from_edi_text(cif, "missing.mcif");
+    CHECK_MESSAGE(
+        detected.atom_sites[0]->wyckoff_letter == "d",
+        "Without a CIF declaration the edi reader detects the independent mirror letter");
+    const auto ties = edi::structure_ties(detected);
+    REQUIRE_MESSAGE(ties.size() >= 9, "The detected site has three positional ties");
+    CHECK_MESSAGE((ties[7].kind == edi::TieKind::Fixed && ties[7].fixed_value == .25),
+                  "Detection of the undeclared site ties y to the exact mirror value");
 }
