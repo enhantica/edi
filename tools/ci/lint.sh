@@ -26,10 +26,10 @@ if [ "${1:-all}" != style ]; then
         status=1
         failed+=(source-publishers)
     fi
-    # The workflows take the app key from edi's own secret, EDI_APP_KEY. An older branch must not bring
+    # The workflows take the app key from edi's own secret, CRYSTA_READ_KEY. An older branch must not bring
     # back the organisation secret's name.
     if grep -rn ENHANTICA_APP_KEY .github; then
-        echo "lint: use secrets.EDI_APP_KEY, not ENHANTICA_APP_KEY" >&2
+        echo "lint: use secrets.CRYSTA_READ_KEY, not ENHANTICA_APP_KEY" >&2
         status=1
         failed+=(app-key-name)
     fi

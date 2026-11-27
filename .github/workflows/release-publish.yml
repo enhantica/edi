@@ -88,7 +88,7 @@ jobs:
         with:
           sha: ${{ steps.crysta.outputs.sha }}
           app-id: ${{ vars.ENHANTICA_APP_ID }}
-          private-key: ${{ secrets.EDI_APP_KEY }}
+          private-key: ${{ secrets.CRYSTA_READ_KEY }}
           history: 'true'
           receipts: source-checks
       - name: Check every file that is published
@@ -133,7 +133,7 @@ jobs:
         uses: actions/create-github-app-token@v2
         with:
           app-id: ${{ vars.ENHANTICA_APP_ID }}
-          private-key: ${{ secrets.EDI_APP_KEY }}
+          private-key: ${{ secrets.CRYSTA_READ_KEY }}
           owner: enhantica
           repositories: edi-sites
       - name: Unpack the released web app
@@ -182,7 +182,7 @@ jobs:
         uses: actions/create-github-app-token@v2
         with:
           app-id: ${{ vars.ENHANTICA_APP_ID }}
-          private-key: ${{ secrets.EDI_APP_KEY }}
+          private-key: ${{ secrets.CRYSTA_READ_KEY }}
           owner: enhantica
           repositories: edi-download
       - name: Publish this release's download repositories
