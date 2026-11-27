@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-27T03:53:31Z
+# measured_utc = 2026-11-27T03:56:04Z
 #
-# Recorded from: measured test run (9 node(s) measured once, 187607 banked, 8 stale row(s) dropped)
-# Collected tests: 267576; with a reported duration: 86295
+# Recorded from: measured test run (1 node(s) measured once, 187612 banked, 0 stale row(s) dropped)
+# Collected tests: 267576; with a reported duration: 86301
 # Module-scoped fixture costs recorded: 223
 #
 # Breaches are decided PER TIER against the table
@@ -31,8 +31,8 @@
 # measurement nobody took and which passes every tier threshold.
 # inventory_python = 267576
 # inventory_cpp = 11
-# inventory_measured = 187607
-# inventory_unmeasured = 79980
+# inventory_measured = 187613
+# inventory_unmeasured = 79974
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
 # inventory_pr_python = 92665
 
@@ -187237,7 +187237,7 @@ UNMEASURED:not-completed-in-this-run	tests/system/app/test_likes_feedback.py::te
 UNMEASURED:not-completed-in-this-run	tests/system/app/test_likes_feedback.py::test_likes_bar_actions[h_opt_out_survives_a_new_bar_instance]
 UNMEASURED:not-completed-in-this-run	tests/system/app/test_likes_feedback.py::test_likes_bar_actions[i_preferences_offer_both_feedback_switches:likes]
 UNMEASURED:not-completed-in-this-run	tests/system/app/test_likes_feedback.py::test_likes_bar_actions[i_preferences_offer_both_feedback_switches:survey]
-UNMEASURED:failed-in-this-run	tests/system/app/test_magnetic_operator_workflow.py::test_magnetic_workflow_in_the_real_qt_application[a10_refusal_ignores_renamed_and_reused_parent_name]
+0.550	tests/system/app/test_magnetic_operator_workflow.py::test_magnetic_workflow_in_the_real_qt_application[a10_refusal_ignores_renamed_and_reused_parent_name]
 UNMEASURED:failed-in-this-run	tests/system/app/test_magnetic_operator_workflow.py::test_magnetic_workflow_in_the_real_qt_application[a_setting_presets]
 UNMEASURED:failed-in-this-run	tests/system/app/test_magnetic_operator_workflow.py::test_magnetic_workflow_in_the_real_qt_application[add_links_and_undo]
 UNMEASURED:failed-in-this-run	tests/system/app/test_magnetic_operator_workflow.py::test_magnetic_workflow_in_the_real_qt_application[add_unlinked]
@@ -187246,14 +187246,14 @@ UNMEASURED:failed-in-this-run	tests/system/app/test_magnetic_operator_workflow.p
 UNMEASURED:failed-in-this-run	tests/system/app/test_magnetic_operator_workflow.py::test_magnetic_workflow_in_the_real_qt_application[candidate_toggle_preserves_profile_and_free_set]
 UNMEASURED:failed-in-this-run	tests/system/app/test_magnetic_operator_workflow.py::test_magnetic_workflow_in_the_real_qt_application[equivalent_signed_rows_retain_derived_identity]
 UNMEASURED:failed-in-this-run	tests/system/app/test_magnetic_operator_workflow.py::test_magnetic_workflow_in_the_real_qt_application[f_cubic_presets]
-UNMEASURED:failed-in-this-run	tests/system/app/test_magnetic_operator_workflow.py::test_magnetic_workflow_in_the_real_qt_application[find_k_disabled_parent_refuses]
-UNMEASURED:failed-in-this-run	tests/system/app/test_magnetic_operator_workflow.py::test_magnetic_workflow_in_the_real_qt_application[find_k_gamma_labels_forbidden_and_allowed_marks]
+3.240	tests/system/app/test_magnetic_operator_workflow.py::test_magnetic_workflow_in_the_real_qt_application[find_k_disabled_parent_refuses]
+3.920	tests/system/app/test_magnetic_operator_workflow.py::test_magnetic_workflow_in_the_real_qt_application[find_k_gamma_labels_forbidden_and_allowed_marks]
 UNMEASURED:failed-in-this-run	tests/system/app/test_magnetic_operator_workflow.py::test_magnetic_workflow_in_the_real_qt_application[find_k_late_choice_after_calibration_edit_refuses]
 UNMEASURED:failed-in-this-run	tests/system/app/test_magnetic_operator_workflow.py::test_magnetic_workflow_in_the_real_qt_application[find_k_late_choice_after_link_edit_refuses]
 UNMEASURED:failed-in-this-run	tests/system/app/test_magnetic_operator_workflow.py::test_magnetic_workflow_in_the_real_qt_application[find_k_late_choice_after_mask_edit_refuses]
-UNMEASURED:failed-in-this-run	tests/system/app/test_magnetic_operator_workflow.py::test_magnetic_workflow_in_the_real_qt_application[find_k_marks_without_kept_fit]
-UNMEASURED:failed-in-this-run	tests/system/app/test_magnetic_operator_workflow.py::test_magnetic_workflow_in_the_real_qt_application[find_k_mask_excludes_observed_peak]
-UNMEASURED:failed-in-this-run	tests/system/app/test_magnetic_operator_workflow.py::test_magnetic_workflow_in_the_real_qt_application[find_k_multiple_crystal_links_refuse]
+4.190	tests/system/app/test_magnetic_operator_workflow.py::test_magnetic_workflow_in_the_real_qt_application[find_k_marks_without_kept_fit]
+4.380	tests/system/app/test_magnetic_operator_workflow.py::test_magnetic_workflow_in_the_real_qt_application[find_k_mask_excludes_observed_peak]
+3.800	tests/system/app/test_magnetic_operator_workflow.py::test_magnetic_workflow_in_the_real_qt_application[find_k_multiple_crystal_links_refuse]
 UNMEASURED:failed-in-this-run	tests/system/app/test_magnetic_operator_workflow.py::test_magnetic_workflow_in_the_real_qt_application[find_k_table_analyse_add_stays_on_pattern]
 UNMEASURED:failed-in-this-run	tests/system/app/test_magnetic_operator_workflow.py::test_magnetic_workflow_in_the_real_qt_application[half_graph]
 1.190	tests/system/app/test_magnetic_operator_workflow.py::test_magnetic_workflow_in_the_real_qt_application[k_field_refusal_is_atomic]
@@ -267690,7 +267690,7 @@ UNMEASURED:not-completed-in-this-run	tests/unit/py/test_web_science_identity.py:
 # module-cost: 2.933	tests/integration/py/test_weight_fraction_app.py
 # module-cost: 4.815	tests/system/app/test_assistant_cif_attachment.py
 # module-cost: 0.951	tests/system/app/test_likes_feedback.py
-# module-cost: 2.230	tests/system/app/test_magnetic_operator_workflow.py
+# module-cost: 1.390	tests/system/app/test_magnetic_operator_workflow.py
 # module-cost: 1.325	tests/system/app/test_magnetic_structure_type_native.py
 # module-cost: 12.650	tests/system/app/test_rendered_caption_capitalisation.py
 # module-cost: 84.777	tests/system/app/test_replaced_data_drawn.py
