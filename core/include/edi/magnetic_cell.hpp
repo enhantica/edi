@@ -65,6 +65,15 @@ std::string magnetic_candidate_moments(const MagneticCandidateGraph& graph, std:
 /// Everything an Add changes, built and validated before anything is applied.
 struct PreparedMagneticCandidates {
     std::string parent;
+    /// The sources the batch was built from (review 17, F3): the parent's content key and each experiment linking
+    /// it, by row, name and inputs. Apply refuses when any of them is no longer what the project holds.
+    std::string parent_key;
+    struct Bank {
+        std::size_t experiment = 0;
+        std::string name;
+        std::uint64_t inputs = 0;
+    };
+    std::vector<Bank> banks;
     std::vector<std::shared_ptr<Structure>> structures;
     struct Link {
         std::size_t experiment = 0;

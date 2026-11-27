@@ -640,6 +640,8 @@ void check_magnetic_acceptance(const Structure& structure) {
 // refuses before anything is written when a row of the host has no counterpart.
 void check_completed_structure(const Structure& structure, const crysta::Structure& engine);
 void adopt_completed_structure(Structure& structure, const crysta::Structure& engine);
+// A fit's publication of its type IV structures, rebuilt whole from crysta's finalized result.
+void publish_completed_type_iv(Project& host, crysta::Project& work, std::vector<detail::RefinedValue>& refined);
 
 void complete_atom_site_moments(Structure& structure) {
     if (structure.magnetic->operations.empty()) {
@@ -657,19 +659,19 @@ void check_completed_structure(const Structure& structure, const crysta::Structu
     };
     for (const auto& site : structure.atom_sites) {
         if (!has(engine.atom_sites, site->id.value())) {
-            throw std::invalid_argument("the completed structure " + structure.id.value() + " has no site " +
+            throw std::invalid_argument("the completed structure " + structure.name.value() + " has no site " +
                                         site->id.value());
         }
     }
     for (const auto& row : structure.atom_site_moment) {
         if (!has(engine.atom_site_moment, row->id.value())) {
-            throw std::invalid_argument("the completed structure " + structure.id.value() + " has no moment for " +
+            throw std::invalid_argument("the completed structure " + structure.name.value() + " has no moment for " +
                                         row->id.value());
         }
     }
     for (const auto& tensor : structure.atom_site_aniso) {
         if (!has(engine.atom_site_aniso, tensor->id.value())) {
-            throw std::invalid_argument("the completed structure " + structure.id.value() + " has no tensor for " +
+            throw std::invalid_argument("the completed structure " + structure.name.value() + " has no tensor for " +
                                         tensor->id.value());
         }
     }
@@ -728,6 +730,73 @@ void adopt_completed_structure(Structure& structure, const crysta::Structure& en
                     site->wyckoff_letter = done.wyckoff_letter.get();
                 }
             }
+        }
+    }
+}
+
+namespace {
+// Every parameter of a structure in one fixed order, so a copy's parameter answers its original's.
+std::vector<Parameter*> structure_parameters(Structure& s) {
+    std::vector<Parameter*> out = s.cell.parameters();
+    const auto add = [&out](auto& rows) {
+        for (const auto& row : rows) {
+            for (Parameter* p : row->parameters()) out.push_back(p);
+        }
+    };
+    add(s.atom_sites);
+    add(s.atom_site_aniso);
+    add(s.atom_site_moment);
+    add(s.magnetic_form_factors);
+    return out;
+}
+}  // namespace
+
+void publish_completed_type_iv(Project& host, crysta::Project& work, std::vector<detail::RefinedValue>& refined) {
+    // Each type IV structure is rebuilt whole before anything is written (review 17, F2): a copy of the host structure
+    // takes the fit's values and uncertainties, then every field crysta's finalized structure owns (coordinates,
+    // letters, moments and their forms, tensors), and replaces the host structure in one assignment. No coordinate of
+    // it is written on its own; the fit's other values are written as before.
+    struct Replacement {
+        Structure* held;
+        Structure next;
+        std::vector<std::size_t> items;  // indices into `refined`
+        std::vector<std::size_t> slots;  // their parameters' places in structure_parameters
+    };
+    std::vector<std::unique_ptr<Replacement>> replacements;
+    std::vector<bool> taken(refined.size(), false);
+    for (const auto& held : host.structures) {
+        for (const crysta::Structure& engine : work.structures) {
+            if (engine.name.value() != held->name.value() || !crysta::type_iv_route(engine)) continue;
+            check_completed_structure(*held, engine);
+            auto replacement = std::make_unique<Replacement>(Replacement{held.get(), *held, {}, {}});
+            const std::vector<Parameter*> from = structure_parameters(*held);
+            const std::vector<Parameter*> to = structure_parameters(replacement->next);
+            for (std::size_t i = 0; i < refined.size(); ++i) {
+                const auto at = std::find(from.begin(), from.end(), refined[i].resolved.target);
+                if (at == from.end()) continue;
+                const std::size_t slot = static_cast<std::size_t>(at - from.begin());
+                detail::RefinedValue moved = refined[i];
+                moved.resolved.target = to.at(slot);
+                detail::write_back({moved});
+                taken[i] = true;
+                replacement->items.push_back(i);
+                replacement->slots.push_back(slot);
+            }
+            adopt_completed_structure(replacement->next, engine);
+            replacements.push_back(std::move(replacement));
+        }
+    }
+    std::vector<detail::RefinedValue> rest;
+    for (std::size_t i = 0; i < refined.size(); ++i) {
+        if (!taken[i]) rest.push_back(refined[i]);
+    }
+    detail::write_back(rest);
+    for (const auto& replacement : replacements) {
+        *replacement->held = replacement->next;  // Structure assigns by copy: the whole structure at once
+        // The fit's own record of what it wrote now names the replaced structure's parameters.
+        const std::vector<Parameter*> now = structure_parameters(*replacement->held);
+        for (std::size_t k = 0; k < replacement->items.size(); ++k) {
+            refined[replacement->items[k]].resolved.target = now.at(replacement->slots[k]);
         }
     }
 }
@@ -1484,9 +1553,22 @@ void set_magnetic_space_group(Structure& s, const std::string& number_bns) {
     // crysta ADR-0137 A10: the group only within this structure's cell, through its held BNS transform, with its
     // propagation vectors and its atoms; a refusal names the reason and points to Crystal → Magnetic. The admitted
     // elements are the group in the structure's own setting, so the held transform stays.
-    const std::vector<std::string> elements = crysta::admit_magnetic_space_group(to_crysta_structure(s), number_bns);
+    // One proposal (review 17, F6): the group's elements in the held setting, assembled into the trial that crysta
+    // compares with the current structure and that is then published.
+    std::string transform = "a,b,c;0,0,0";
+    for (const auto& row : s.magnetic->transforms) {
+        if (row.second.source == "BNS" && !row.second.pp_abc.empty()) transform = row.second.pp_abc;
+    }
+    std::vector<std::string> elements;
+    try {
+        elements = crysta::magnetic_group_in_setting(entry, transform);
+    } catch (const std::invalid_argument& e) {
+        throw std::invalid_argument(entry.name_bns + " needs another magnetic cell: " + e.what() + "; " +
+                                    crysta::kMagneticAnalysisRoutes);
+    }
     Structure trial = s;
     set_magnetic_symmetry(trial, numbered(elements), numbered({"x,y,z,+1"}), name);
+    (void)crysta::admit_magnetic_edit(to_crysta_structure(s), to_crysta_structure(trial));
     s = trial;  // Structure assigns by copy
 }
 
@@ -1588,11 +1670,19 @@ bool bns_transform_consistent(const MagneticDescription& magnetic) {
     if (!transform || magnetic.operations.empty() || bns.empty()) {
         return true;  // nothing a setting is claimed for, or descriptive text
     }
-    int number = 0;
-    try {
-        number = std::stoi(bns.substr(0, bns.find('.')));
-    } catch (const std::exception&) {
-        return true;
+    // A claimed setting needs a well-formed BNS number, both halves whole digit strings and the family one of the 230
+    // (review 17, F6): a malformed one with a BNS transform is refused, never read by its numeric prefix.
+    const std::size_t dot = bns.find('.');
+    const auto digits = [](const std::string& text) {
+        return !text.empty() && text.size() <= 6 &&
+               std::all_of(text.begin(), text.end(), [](unsigned char c) { return std::isdigit(c) != 0; });
+    };
+    if (dot == std::string::npos || !digits(bns.substr(0, dot)) || !digits(bns.substr(dot + 1))) {
+        return false;
+    }
+    const int number = std::stoi(bns.substr(0, dot));
+    if (number < 1 || number > 230) {
+        return false;
     }
     for (const SpaceGroupSettingName& setting : space_group_settings()) {
         if (setting.it_number != number || setting.setting != 0) continue;
@@ -2084,9 +2174,6 @@ void set_magnetic_setting(Structure& s, const std::string& transform) {
     const crysta::MagneticSpaceGroupEntry& entry = crysta::magnetic_space_group(s.magnetic->group.number_bns);
     Structure trial = s;
     trial.magnetic.modify([&transform](MagneticDescription& magnetic) { set_bns_transform(magnetic, transform); });
-    // The same admission as a group pick (A10; review 15, F6): the group in the new setting must hold the structure's
-    // propagation vectors and generate the same atoms, or the edit refuses naming both routes to the analysis.
-    (void)crysta::admit_magnetic_space_group(to_crysta_structure(trial), entry.number_bns);
     if (entry.magnetic_type == 4) {
         // A type IV group in a setting is crysta's signed group carried by the transform, the one B4 verifies against.
         std::vector<std::pair<std::string, std::string>> operations;
@@ -2098,6 +2185,9 @@ void set_magnetic_setting(Structure& s, const std::string& transform) {
         set_magnetic_symmetry(trial, magnetic_rows_in_setting(entry.operations, *parsed),
                               magnetic_rows_in_setting(entry.centerings, *parsed), trial.magnetic->group);
     }
+    // The same admission as a group pick (A10; review 17, F6), on the whole proposal: the current structure against the
+    // trial in the new setting with its new rows, the one that is published.
+    (void)crysta::admit_magnetic_edit(to_crysta_structure(s), to_crysta_structure(trial));
     s = trial;  // Structure assigns by copy
 }
 
@@ -8389,22 +8479,10 @@ FitResultBase Project::fit(const std::vector<double>& grid, const std::vector<do
             // number the engine never produced.
 
             // Write the refined value/esd back onto the edi model Parameters (all labels resolved above).
-            // The fit's completed type IV structures, paired with the host's and checked before any write.
-            std::vector<std::pair<Structure*, const crysta::Structure*>> completed_type_iv;
-            for (const auto& held : structures) {
-                for (const crysta::Structure& engine : project.structures) {
-                    if (engine.name.value() == held->id.value() && crysta::type_iv_route(engine)) {
-                        check_completed_structure(*held, engine);
-                        completed_type_iv.emplace_back(held.get(), &engine);
-                    }
-                }
-            }
-            detail::write_back(refined);
+            // The fit's values, its type IV structures replaced whole from crysta's finalized result (review 17, F2).
+            publish_completed_type_iv(*this, project, refined);
             crysta::write_fit_result_into(project, result);  // crysta completes the dependents
             publish_fit_state(*this, project, refined);
-            // Each type IV structure as the fit's own finalizer completed it, every coordinate included, never
-            // completed again on the host (review 16, F2).
-            for (const auto& [held, engine] : completed_type_iv) adopt_completed_structure(*held, *engine);
             record_fit_result(*this, outcome, considered, crysta_correlations(project, result),
                               fitted_quality(project,
                                              single_crystal ? std::deque<crysta::PdDataBase>{}
@@ -9341,22 +9419,10 @@ FitResultBase Project::fit_joint(const std::vector<PdDataBase>& patterns,
                     outcome.start[resolved->path] = value;
                 }
             }
-            // The fit's completed type IV structures, paired with the host's and checked before any write.
-            std::vector<std::pair<Structure*, const crysta::Structure*>> completed_type_iv;
-            for (const auto& held : structures) {
-                for (const crysta::Structure& engine : project.structures) {
-                    if (engine.name.value() == held->id.value() && crysta::type_iv_route(engine)) {
-                        check_completed_structure(*held, engine);
-                        completed_type_iv.emplace_back(held.get(), &engine);
-                    }
-                }
-            }
-            detail::write_back(refined);
+            // The fit's values, its type IV structures replaced whole from crysta's finalized result (review 17, F2).
+            publish_completed_type_iv(*this, project, refined);
             crysta::write_fit_result_into(project, result);  // crysta completes the dependents
             publish_fit_state(*this, project, refined);
-            // Each type IV structure as the fit's own finalizer completed it, every coordinate included, never
-            // completed again on the host (review 16, F2).
-            for (const auto& [held, engine] : completed_type_iv) adopt_completed_structure(*held, *engine);
             std::deque<crysta::PdDataBase> fitted_patterns;
             for (const PdDataBase& pattern : patterns) {
                 fitted_patterns.emplace_back(pattern.axis(), pattern.intensity_meas.get(), pattern.intensity_meas_su.get());
@@ -10249,6 +10315,17 @@ std::string magnetic_candidate_moments(const MagneticCandidateGraph& graph, std:
     return out;
 }
 
+namespace {
+// An experiment's inputs for a magnetic batch's binding; zero when it has none to hash (no data).
+std::uint64_t bank_inputs(const Project& project, std::size_t experiment) {
+    try {
+        return magnetic_fit_inputs_hash(project, experiment);
+    } catch (const std::exception&) {
+        return 0;
+    }
+}
+}  // namespace
+
 std::shared_ptr<PreparedMagneticCandidates> prepare_magnetic_candidates(
     const Project& project, std::size_t parent_index, const MagneticCandidateGraph& candidates,
     const std::vector<std::size_t>& nodes, bool start_moments) {
@@ -10270,6 +10347,15 @@ std::shared_ptr<PreparedMagneticCandidates> prepare_magnetic_candidates(
     }
     auto prepared = std::make_shared<PreparedMagneticCandidates>();
     prepared->parent = parent_name;
+    prepared->parent_key = candidates.parent_key;
+    for (std::size_t e = 0; e < project.experiments.size(); ++e) {
+        for (const auto& link : project.experiments[e]->linked_structures) {
+            if (link->structure_id.value() == parent_name) {
+                prepared->banks.push_back({e, project.experiments[e]->name, bank_inputs(project, e)});
+                break;
+            }
+        }
+    }
     // Powder only (relay decision 2026-11-26, "C18-T3 adds magnetic candidates for powder
     // experiments only"): a single-crystal link, enabled or not, refuses the whole Add.
     for (const auto& experiment : project.experiments) {
@@ -10389,19 +10475,54 @@ void check_magnetic_candidates(const Project& project, const PreparedMagneticCan
         }
         throw std::invalid_argument("the parent structure '" + prepared.parent + "' is not in the project");
     }();
-    const std::array<double, 3> parent_lengths{parent.cell.length_a.value.get(), parent.cell.length_b.value.get(),
-                                               parent.cell.length_c.value.get()};
+    // Bound to the sources it was built from (review 17, F3): the parent's content, and the same experiments linking
+    // it, each by row, name and inputs, so a parent edited or a bank replaced at the same row refuses.
+    if (magnetic_parent_key(parent) != prepared.parent_key) {
+        throw std::invalid_argument("the structure changed since its magnetic groups were found; find them again");
+    }
+    std::vector<PreparedMagneticCandidates::Bank> banks;
+    for (std::size_t e = 0; e < project.experiments.size(); ++e) {
+        for (const auto& link : project.experiments[e]->linked_structures) {
+            if (link->structure_id.value() == prepared.parent) {
+                banks.push_back({e, project.experiments[e]->name, bank_inputs(project, e)});
+                break;
+            }
+        }
+    }
+    const auto same_bank = [](const PreparedMagneticCandidates::Bank& a, const PreparedMagneticCandidates::Bank& b) {
+        return a.experiment == b.experiment && a.name == b.name && a.inputs == b.inputs;
+    };
+    if (!std::equal(banks.begin(), banks.end(), prepared.banks.begin(), prepared.banks.end(), same_bank)) {
+        throw std::invalid_argument("the experiments linking the structure changed since the batch was built; add again");
+    }
+    const std::array<double, 6> parent_cell{parent.cell.length_a.value.get(),   parent.cell.length_b.value.get(),
+                                            parent.cell.length_c.value.get(),   parent.cell.angle_alpha.value.get(),
+                                            parent.cell.angle_beta.value.get(), parent.cell.angle_gamma.value.get()};
     std::array<long long, 3> m{0, 0, 0};
     for (const auto& structure : prepared.structures) {
-        const std::array<double, 3> lengths{structure->cell.length_a.value.get(), structure->cell.length_b.value.get(),
-                                            structure->cell.length_c.value.get()};
+        // A candidate is a magnetic structure in a magnetic cell of the parent's: the parent's angles, each length an
+        // integer multiple of the parent's, at most 24 parent cells in all (crysta ADR-0137 A2).
+        if (structure->magnetic->operations.empty()) {
+            throw std::invalid_argument("'" + structure->name.value() + "' is not a magnetic structure");
+        }
+        const std::array<double, 6> cell{structure->cell.length_a.value.get(),   structure->cell.length_b.value.get(),
+                                         structure->cell.length_c.value.get(),   structure->cell.angle_alpha.value.get(),
+                                         structure->cell.angle_beta.value.get(), structure->cell.angle_gamma.value.get()};
         std::array<long long, 3> mine{};
+        long long cells = 1;
         for (std::size_t i = 0; i < 3; ++i) {
-            const double ratio = lengths[i] / parent_lengths[i];
-            mine[i] = std::llround(ratio);
-            if (!(mine[i] >= 1) || std::abs(ratio - static_cast<double>(mine[i])) > 1e-9 * ratio) {
+            const double ratio = cell[i] / parent_cell[i];
+            const double whole = std::round(ratio);
+            if (!std::isfinite(ratio) || whole < 1.0 || whole > 24.0 || std::abs(ratio - whole) > 1e-9 * ratio ||
+                std::abs(cell[3 + i] - parent_cell[3 + i]) > 1e-9 * parent_cell[3 + i]) {
                 throw std::invalid_argument("'" + structure->name.value() +
                                             "' is not in a magnetic cell of the parent's");
+            }
+            mine[i] = static_cast<long long>(whole);
+            cells *= mine[i];
+            if (cells > 24) {
+                throw std::invalid_argument("'" + structure->name.value() +
+                                            "' needs a magnetic cell of more than 24 parent cells");
             }
         }
         if (m != std::array<long long, 3>{0, 0, 0} && mine != m) {
