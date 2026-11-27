@@ -33,8 +33,9 @@ Component.prototype.createOperations = function () {
     if (!installer.isUpdater() || stagedTool() === "")
         return;
     if (systemInfo.kernelType === "darwin") {
-        // One token for this operation: its undo puts back only the backup this operation kept, never one an earlier
-        // update left behind.
+        // One token for this operation. The scripts mark the backup with it and with the running tool's process, so
+        // the undo puts back only a backup this operation kept in this run: a later update that undoes the saved,
+        // committed operation leaves the tools alone.
         var token = String(Date.now()) + "-" + String(Math.floor(Math.random() * 1e9));
         component.addOperation("Execute", "/bin/sh", "-c", SWAP_SCRIPT, "sh", "@TargetDir@", token,
                                "UNDOEXECUTE", "/bin/sh", "-c", RESTORE_SCRIPT, "sh", "@TargetDir@", token);
