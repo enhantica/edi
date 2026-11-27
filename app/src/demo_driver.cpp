@@ -1998,13 +1998,13 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
         const bool parametric = only.startsWith(QLatin1String("parametriclive-"));
         const QString prefix = parametric ? QStringLiteral("parametriclive") : QStringLiteral("jointlive");
         const QStringList opened = parametric
-            ? QStringList{"resize:1480x900", "theme:light"} + start + open_cli_project("pd-neut-cwl_cosio-d20_parametric") +
-                  QStringList{"wait-settled", analysis, basic}
-            : QStringList{"resize:1480x900", "theme:light"} + start +
-                  QStringList{"open-project:" + qEnvironmentVariable("EDI_DEMO_JOINT_PROJECT"), "wait-settled", analysis, basic};
+            ? QStringList{"resize:1920x1080", "theme:light"} + start + open_cli_project("pd-neut-cwl_cosio-d20_parametric") +
+                  QStringList{"wait-settled", analysis}
+            : QStringList{"resize:1920x1080", "theme:light"} + start +
+                  QStringList{"open-project:" + qEnvironmentVariable("EDI_DEMO_JOINT_PROJECT"), "wait-settled", analysis};
         every_tab(prefix, 2, opened + QStringList{"statusBar.fit.button"});
         every_tab(prefix, 3, {});
-        steps_.push_back({prefix + "-ended-status", {"wait-fit", "choose:OK", "mainArea.tab.pattern"}});
+        steps_.push_back({prefix + "-ended-status", {"wait-fit", "key:Escape", "mainArea.tab.pattern"}});
         steps_.push_back({prefix + "-ended-results", {"statusBar.fit.outcome"}});
     }
     // The sidebar's Auto and Full widths with the Shared column (owner record 453d6ae49): the joint taurine and the

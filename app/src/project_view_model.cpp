@@ -4768,7 +4768,9 @@ void ProjectViewModel::viewDataset(int index, bool refresh) {
     }
     // The dataset already shown, with nothing pending: only its results row changed (a new row, Reset, Undo, a
     // run's end), so it is shown again at once from its row, with no file to read.
-    if (index == current_dataset_ && view_applied_ == view_request_ && projected_dataset_ == index) {
+    // A running parametric fit's iterate is drawn by a read, which calculates the pattern at its values (ADR-0107).
+    const bool live = live_iterate_.has_value() && fit_ != nullptr && fit_->running();
+    if (!live && index == current_dataset_ && view_applied_ == view_request_ && projected_dataset_ == index) {
         viewDatasetNow(index, false);
         return;
     }
@@ -5461,6 +5463,14 @@ void ProjectViewModel::showParametricIterate(const edi::ParametricIterate& itera
         evolution_->showIterate(iterate);
     }
     live_iterate_ = iterate;
+    // Evolution places each point on its dataset's extracted value (a temperature, say), read only when asked: the
+    // points of a running parametric fit ask for theirs, and the chart redraws as they come in (metadataLoaded).
+    if (scan_session_ != nullptr) {
+        for (const edi::ParametricIterate::IteratePoint& point : iterate.points) {
+            const int dataset = scan_session_->place(point.name);
+            if (dataset >= 0 && scan_session_->extracted(dataset) == nullptr) scan_session_->want(dataset, true);
+        }
+    }
     // The selection stays where it is: the shown dataset is drawn again with its point's values from this iterate.
     if (scan_session_ != nullptr && current_dataset_ >= 0 && patternShown()) {
         const auto& files = scan_session_->datasets().files;
