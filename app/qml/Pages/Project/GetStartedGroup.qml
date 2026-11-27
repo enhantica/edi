@@ -71,7 +71,12 @@ SideBarGroup {
                 text: "caret-down"
             }
             ToolTip.text: qsTr("Open an EasyDiffraction project or import one from another program")
-            onClicked: loadMenu.open()
+            // Closed first: a menu the page kept across a replacement could still count itself open, and open() would then do
+            // nothing.
+            onClicked: {
+                loadMenu.close();
+                loadMenu.open();
+            }
 
             EaElements.Menu {
                 id: loadMenu
