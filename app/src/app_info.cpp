@@ -3032,11 +3032,11 @@ void ApplicationInfo::connectionUpdateAcceptButton() const {
         auto connected = assistantContextField(f, "assistant", "connected");
         if (!panelUsageReady(f)) return;
         if (auto* qml = qobject_cast<QQmlEngine*>(f.data())) qml->markCurrentFunctionAsTranslationBinding();
-        const auto provider = assistantContextField(f, "assistant", "activeProviderName");
+        const auto provider = assistantContextField(f, "assistant", "activeProvider");
         if (!panelUsageReady(f)) return;
         const auto text = QJSValue(panelUsageTruth(connected)
             ? QCoreApplication::translate("AssistantConnectionDialog", "Share project information")
-            : QCoreApplication::translate("AssistantConnectionDialog", "Connect %1").arg(provider.toString()));
+            : QCoreApplication::translate("AssistantConnectionDialog", "Connect %1").arg(provider.property("name").toString()));
         assistantMemberWrite(f, accept, "text", text);
         connected = assistantContextField(f, "assistant", "connected");
         assistantMemberWrite(f, accept, "fontIcon", QJSValue(panelUsageTruth(connected) ? QStringLiteral("check") : QStringLiteral("comment-dots")));

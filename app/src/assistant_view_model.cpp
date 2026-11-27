@@ -15696,10 +15696,11 @@ struct AssistantViewModel::State {
                     if(email.toString()!=resume_checkpoint->email)throw std::runtime_error("The current managed account differs; the previous session was not resumed");
                 }
                 accountStage("ACCOUNT_RECORD");
-                identity_unidentified=!emailProof && account.value("organization").toString().isEmpty() &&
-                    active_provider_account.provider==AssistantProviderId::Claude;
+                // Only an e-mail names the person; an organisation or a key's source does not (ADR-0108 §4).
+                identity_unidentified=!emailProof && active_provider_account.provider==AssistantProviderId::Claude;
                 record_signed_in_account(emailProof?email.toString():QString(),account.value("planType").toString());
                 update_managed_notice(account);
+                emit owner.managedSettingsNoticeChanged();
                 accountStage("ACCOUNT_PUBLIC_METADATA");
                 account_bootstrap_verified=true;usage_read_epoch=usage_epoch;
                 Object public_account;
@@ -15991,6 +15992,12 @@ struct AssistantViewModel::State {
         else if (method == "account/logout") {
             if (!generic_revoke_workspace(&publication, true)) return;
             generic_blocked = false; error.clear();
+            if (active_provider_account.provider == AssistantProviderId::Copilot && !active_provider_account.id.isEmpty()) {
+                // Copilot's account was removed from edi, not signed out of GitHub (ADR-0108 §5).
+                try { account_store().remove(AssistantProviderId::Copilot, active_provider_account.id); } catch (...) {}
+                error = QObject::tr("The GitHub Copilot account was removed from edi. Its GitHub sign-in stays in the system keychain until you remove it there or revoke it on GitHub.");
+                emit owner.accountsChanged();
+            }
         }
         reason_code = "BOOTSTRAP_PUBLICATION";
         if (!publication.input_current()) return;
@@ -21057,6 +21064,7 @@ bool AssistantViewModel::resumeConnection() {
                     s->agent.release()->deleteLater();  // queued replies fence on a QPointer to it
                     s->generic_initialize();
                     emit accountsChanged();
+                    emit activeProviderChanged();
                 }
             }
             bool known=false;
@@ -21306,25 +21314,13 @@ QVariantList AssistantViewModel::providers() const {
 #endif
     return result;
 }
-QString AssistantViewModel::activeProvider() const {
+QVariantMap AssistantViewModel::activeProvider() const {
 #ifndef __EMSCRIPTEN__
-    return assistant_provider_key(state_->active_provider_account.provider);
+    const auto id = state_->active_provider_account.provider;
+    return {{"provider", assistant_provider_key(id)}, {"name", assistant_provider_name(id)},
+            {"company", assistant_provider_company(id)}};
 #else
-    return QStringLiteral("chatgpt");
-#endif
-}
-QString AssistantViewModel::activeProviderName() const {
-#ifndef __EMSCRIPTEN__
-    return assistant_provider_name(state_->active_provider_account.provider);
-#else
-    return QStringLiteral("ChatGPT");
-#endif
-}
-QString AssistantViewModel::activeProviderCompany() const {
-#ifndef __EMSCRIPTEN__
-    return assistant_provider_company(state_->active_provider_account.provider);
-#else
-    return QStringLiteral("OpenAI");
+    return {{"provider", "chatgpt"}, {"name", "ChatGPT"}, {"company", "OpenAI"}};
 #endif
 }
 QString AssistantViewModel::managedSettingsNotice() const {
@@ -21343,7 +21339,7 @@ void AssistantViewModel::acknowledgeManagedSettings() {
     settings.setValue(QLatin1StringView(State::acknowledged_key), ids);
     settings.sync();
     state_->managed_notice.clear();
-    emit accountsChanged();
+    emit managedSettingsNoticeChanged();
 #endif
 }
 QVariantList AssistantViewModel::accounts() const {
@@ -21395,6 +21391,7 @@ void AssistantViewModel::switchAccount(const QString& provider, const QString& i
     }
     state_->generic_initialize();
     emit accountsChanged();
+    emit activeProviderChanged();
     emit accountChanged();
     state_->sync();
 #else
@@ -21429,6 +21426,7 @@ void AssistantViewModel::addAccount(const QString& provider, const QString& host
     }
     state_->generic_initialize();
     emit accountsChanged();
+    emit activeProviderChanged();
     emit accountChanged();
     state_->sync();
 #else

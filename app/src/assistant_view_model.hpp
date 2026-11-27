@@ -108,14 +108,12 @@ class AssistantViewModel : public QObject {
     /// Every recorded account: {provider, providerName, id, email, plan, host, active, installed} (ADR-0108 §8, §9).
     Q_PROPERTY(QVariantList accounts READ accounts NOTIFY accountsChanged)
     /// The providers edi offers, in order: {provider, name, company, installed}.
-    Q_PROPERTY(QVariantList providers READ providers NOTIFY accountsChanged)
+    Q_PROPERTY(QVariantList providers READ providers CONSTANT)
     /// Non-empty while the active Claude account runs under an organisation's managed settings or hooks that the user
     /// has not acknowledged yet; Send waits for acknowledgeManagedSettings() (ADR-0108 §4).
-    Q_PROPERTY(QString managedSettingsNotice READ managedSettingsNotice NOTIFY accountsChanged)
-    /// The active account's provider: its key (chatgpt, claude, copilot), name and the company receiving the data.
-    Q_PROPERTY(QString activeProvider READ activeProvider NOTIFY accountsChanged)
-    Q_PROPERTY(QString activeProviderName READ activeProviderName NOTIFY accountsChanged)
-    Q_PROPERTY(QString activeProviderCompany READ activeProviderCompany NOTIFY accountsChanged)
+    Q_PROPERTY(QString managedSettingsNotice READ managedSettingsNotice NOTIFY managedSettingsNoticeChanged)
+    /// The active account's provider: {provider (chatgpt, claude, copilot), name, company receiving the data}.
+    Q_PROPERTY(QVariantMap activeProvider READ activeProvider NOTIFY activeProviderChanged)
     Q_PROPERTY(QString contextPreview READ contextPreview NOTIFY contextPreviewChanged)
     Q_PROPERTY(QString contextConsentIdentity READ contextConsentIdentity NOTIFY contextConsentIdentityChanged)
     Q_PROPERTY(bool draftAdmissionReady READ draftAdmissionReady NOTIFY draftAdmissionReadyChanged)
@@ -263,9 +261,7 @@ class AssistantViewModel : public QObject {
     Q_INVOKABLE void addAccount(const QString& provider, const QString& host = {});
     QVariantList accounts() const;
     QString managedSettingsNotice() const;
-    QString activeProvider() const;
-    QString activeProviderName() const;
-    QString activeProviderCompany() const;
+    QVariantMap activeProvider() const;
     /// The user read the managed-settings notice for the active account; remembered per account.
     Q_INVOKABLE void acknowledgeManagedSettings();
     QVariantList providers() const;
@@ -300,6 +296,8 @@ class AssistantViewModel : public QObject {
     void workReportReceiptChanged();
     void accountChanged();
     void accountsChanged();
+    void managedSettingsNoticeChanged();
+    void activeProviderChanged();
     /// A saved conversation of another account was asked for; the panel offers Switch account and Cancel.
     void sessionAccountSwitchRequested(const QString& threadId, const QString& account, const QString& provider);
     void showActionsChanged();
