@@ -105,6 +105,10 @@ class AssistantViewModel : public QObject {
     Q_PROPERTY(QString lastError READ lastError NOTIFY lastErrorChanged)
     Q_PROPERTY(QVariantMap usage READ usage NOTIFY usageChanged)
     Q_PROPERTY(edi_app::AssistantAccount account READ account NOTIFY accountChanged)
+    /// Every recorded account: {provider, providerName, id, email, plan, host, active, installed} (ADR-0108 §8, §9).
+    Q_PROPERTY(QVariantList accounts READ accounts NOTIFY accountsChanged)
+    /// The providers edi offers, in order: {provider, name, company, installed}.
+    Q_PROPERTY(QVariantList providers READ providers NOTIFY accountsChanged)
     Q_PROPERTY(QString contextPreview READ contextPreview NOTIFY contextPreviewChanged)
     Q_PROPERTY(QString contextConsentIdentity READ contextConsentIdentity NOTIFY contextConsentIdentityChanged)
     Q_PROPERTY(bool draftAdmissionReady READ draftAdmissionReady NOTIFY draftAdmissionReadyChanged)
@@ -245,6 +249,13 @@ class AssistantViewModel : public QObject {
     Q_INVOKABLE void signIn();
     Q_INVOKABLE QString acceptConnectionOffer(const QString& identity);
     Q_INVOKABLE void signOut();
+    /// Make another recorded account the active one: the current runtime stops without signing out and a new,
+    /// empty conversation starts with the other account. Refused while a turn or trial runs.
+    Q_INVOKABLE void switchAccount(const QString& provider, const QString& id);
+    /// Start an account of `provider` in a fresh config home; it is recorded once its sign-in succeeds.
+    Q_INVOKABLE void addAccount(const QString& provider, const QString& host = {});
+    QVariantList accounts() const;
+    QVariantList providers() const;
     Q_INVOKABLE void clearHistory();
     Q_INVOKABLE QString beginFileSelection(bool requireSignedIn = false);
     Q_INVOKABLE bool addSelectedFiles(const QString& requestId, const QList<QUrl>& urls);
@@ -275,6 +286,9 @@ class AssistantViewModel : public QObject {
     void workReportFinished(QVariantMap receipt);
     void workReportReceiptChanged();
     void accountChanged();
+    void accountsChanged();
+    /// A saved conversation of another account was asked for; the panel offers Switch account and Cancel.
+    void sessionAccountSwitchRequested(const QString& threadId, const QString& account, const QString& provider);
     void showActionsChanged();
     void showingActionsChanged();
     void actionControlsRequested(); // Original control reveal request, including repeated true requests.
@@ -338,5 +352,7 @@ class AssistantViewModel : public QObject {
     bool resultSettledReady() const;
     struct State;
     std::unique_ptr<State> state_;
+    // Sign-out and account switching share one retirement; only sign-out asks the runtime to log out.
+    void retireConnection(bool logout);
 };
 }  // namespace edi_app

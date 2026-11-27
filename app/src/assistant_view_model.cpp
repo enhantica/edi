@@ -116,6 +116,7 @@
 #include "native_chatgpt_provider.hpp"
 #include "codex_agent.hpp"
 #include "assistant_providers.hpp"
+#include "assistant_accounts.hpp"
 #include "assistant_outgoing.hpp"
 #include "build_version.hpp"
 #include "assistant_native_tools.hpp"
@@ -1722,6 +1723,58 @@ struct AssistantViewModel::State {
     AssistantAccountRef active_provider_account;
     QString runtime_policy_patch() const { return agent ? agent->runtimePolicyPatch() : CodexAgent::policyPatch(); }
     QString runtime_executable() const { return agent ? agent->runtimeExecutable() : CodexAgent::executable(); }
+    AssistantAccounts account_store() const { return {settings_file_path(), AssistantAccounts::defaultAccountsRoot()}; }
+    // An added account whose sign-in has not finished; recorded once its identity is read.
+    std::optional<AssistantAccountRecord> pending_account;
+    // The account a saved conversation belongs to: empty for the default ChatGPT login.
+    QString conversation_account() const { return active_provider_account.home.isEmpty() ? QString() : active_provider_account.id; }
+    void resolve_active_account() noexcept {
+        if (!active_provider_account.id.isEmpty() || !active_provider_account.home.isEmpty()) return;
+        try {
+            if (const auto active = account_store().active(); active && assistant_provider_available(active->provider))
+                active_provider_account = active->ref();
+        } catch (...) {}
+    }
+    // The signed-in identity of the active (or just added) account, read from the runtime. A home reporting
+    // another identity than its record stops the connection; the default ChatGPT login is the user's own
+    // Codex login, which may change outside edi, so its record follows it (ADR-0108 §8).
+    void record_signed_in_account(const QString& email, const QString& plan) {
+        auto store = account_store();
+        if (pending_account) {
+            auto record = *pending_account;
+            for (const auto& other : store.accounts(record.provider))
+                if (other.id != record.id && !email.isEmpty() && other.email == email && other.host == record.host) {
+                    store.removeHome(record.home);
+                    pending_account.reset();
+                    throw std::runtime_error("This account is already added; switch to it instead");
+                }
+            record.email = email;
+            record.plan = plan;
+            store.save(record);
+            store.setActive(record.provider, record.id);
+            active_provider_account = record.ref();
+            pending_account.reset();
+        } else if (active_provider_account.provider == AssistantProviderId::ChatGpt && active_provider_account.home.isEmpty()) {
+            auto record = store.defaultChatGpt().value_or(store.createDefaultChatGpt());
+            if (record.email != email || record.plan != plan || store.accounts(record.provider).isEmpty() ||
+                !store.find(record.provider, record.id)) {
+                record.email = email;
+                record.plan = plan;
+                store.save(record);
+            }
+            if (!store.active()) store.setActive(record.provider, record.id);
+            active_provider_account = record.ref();
+        } else if (auto record = store.find(active_provider_account.provider, active_provider_account.id)) {
+            if (!record->email.isEmpty() && !email.isEmpty() && record->email != email)
+                throw std::runtime_error("This account's sign-in now belongs to someone else; sign in again with the right account");
+            if (record->email != email || record->plan != plan) {
+                record->email = email;
+                record->plan = plan;
+                store.save(*record);
+            }
+        }
+        emit owner.accountsChanged();
+    }
     QString generic_workspace, generic_thread, generic_turn, generic_login, generic_terminal_turn;
     bool generic_login_attempted = false;
     QString genuine_objective_row;
@@ -2117,11 +2170,13 @@ struct AssistantViewModel::State {
         return {};
 #endif
     }
-    static constexpr auto session_settings_key="Assistant/Providers/chatgpt/sessions";
+    QString session_settings_key() const {
+        return QStringLiteral("Assistant/Providers/%1/sessions").arg(assistant_provider_key(active_provider_account.provider));
+    }
     Object session_associations() const {
         const auto path=settings_file_path();if(path.isEmpty())return {};
         QSettings settings(path,QSettings::IniFormat);
-        const auto bytes=settings.value(QLatin1StringView(session_settings_key)).toByteArray();
+        const auto bytes=settings.value(session_settings_key()).toByteArray();
         if(settings.status()!=QSettings::NoError)throw std::runtime_error("The local session associations could not be read");
         if(bytes.isEmpty())return {};
         QJsonParseError parseError;const auto document=QJsonDocument::fromJson(bytes,&parseError);
@@ -2132,7 +2187,7 @@ struct AssistantViewModel::State {
     void store_session_associations(const Object& value) {
         const auto path=settings_file_path();if(path.isEmpty())throw std::runtime_error("The local settings store is unavailable");
         const auto bytes=QJsonDocument(value).toJson(QJsonDocument::Compact);
-        QSettings settings(path,QSettings::IniFormat);settings.setValue(QLatin1StringView(session_settings_key),bytes);settings.sync();
+        QSettings settings(path,QSettings::IniFormat);settings.setValue(session_settings_key(),bytes);settings.sync();
         if(settings.status()!=QSettings::NoError)throw std::runtime_error("The local session association could not be saved");
     }
     Object saved_session(const QString& id) const noexcept {
@@ -2199,6 +2254,7 @@ struct AssistantViewModel::State {
             auto index=session_associations();auto records=index.value("threads").toObject();
             Object record{{"cacheCleared",session_history_explicit_target==id?false:records.value(id).toObject().value("cacheCleared").toBool()},{"thread",id},{"originator","edi"},{"email",viewed.email},
                 {"model",model},{"effort",effort},{"draft",session_draft}};
+            if(!conversation_account().isEmpty())record["account"]=conversation_account();
             const QPointer<Session> session(qobject_cast<Session*>(owner.parent()));
             if(session && session->assistant()==&owner && session->project()==project && project && !session->needsSaveAs()) {
                 const auto location=session->projectLocation();const auto canonical=QFileInfo(location).canonicalFilePath();
@@ -2467,6 +2523,19 @@ struct AssistantViewModel::State {
         if(automatic && record.value("archived").toBool())return false;
         saved_session_refusal=QObject::tr("It is no longer saved on this computer.");
         if(record.isEmpty() && !owned_session(session_metadata.value(id)))return false;
+        if(!record.isEmpty() && record.value("account").toString()!=conversation_account()) {
+            // Another account's conversation: offer to switch instead of mixing histories (ADR-0108 §8).
+            saved_session_refusal=QObject::tr("It belongs to another account.");
+            const auto belongs=record.value("account").toString();
+            QString label;
+            try {
+                const auto store=account_store();
+                const auto other=belongs.isEmpty()?store.defaultChatGpt():store.find(active_provider_account.provider,belongs);
+                if(other)label=other->email;
+            } catch(...) {}
+            emit owner.sessionAccountSwitchRequested(id,label,assistant_provider_name(active_provider_account.provider));
+            return false;
+        }
         const auto previous=viewed_session && viewed_session_current(*viewed_session)?viewed_session->thread:generic_thread;
         session_selection_target=id;sessions_loading=true;
         if(session_history_thread!=id)session_history_loading=false;
@@ -14900,7 +14969,12 @@ struct AssistantViewModel::State {
         // Browser settlement may release the existing accepted Send while a
         // same-conversation context waits. No new intent or request is created here.
         QObject::connect(&owner,&AssistantViewModel::sessionsChanged,&owner,&AssistantViewModel::draftAdmissionReadyChanged,Qt::UniqueConnection);
+        resolve_active_account();
         agent = make_assistant_provider(active_provider_account,&owner,work_reports.releaseOwner());
+        if (!agent) {  // a provider this build cannot drive falls back to the default ChatGPT login
+            active_provider_account = {};
+            agent = make_assistant_provider(active_provider_account,&owner,work_reports.releaseOwner());
+        }
         QObject::connect(agent.get(), &AssistantProvider::started, &owner, [this] {
             account_read_ready=false;account_bootstrap_verified=false;account_read_rpc.clear();
             const auto publication = file_projection();
@@ -15543,6 +15617,8 @@ struct AssistantViewModel::State {
                     accountStage("ACCOUNT_SAVED_MISMATCH");
                     if(email.toString()!=resume_checkpoint->email)throw std::runtime_error("The current managed account differs; the previous session was not resumed");
                 }
+                accountStage("ACCOUNT_RECORD");
+                record_signed_in_account(emailProof?email.toString():QString(),account.value("planType").toString());
                 accountStage("ACCOUNT_PUBLIC_METADATA");
                 account_bootstrap_verified=true;usage_read_epoch=usage_epoch;
                 Object public_account;
@@ -21038,7 +21114,8 @@ void AssistantViewModel::signIn() {
 #endif
     state_->sync();
 }
-void AssistantViewModel::signOut() {
+void AssistantViewModel::signOut() { retireConnection(true); }
+void AssistantViewModel::retireConnection(bool logout) {
 #ifndef __EMSCRIPTEN__
     // Disconnecting ends this session's trial: its candidate goes back to the accepted fit first (edi ADR-0055).
     (void)state_->settle_trial(state_->project,state_->generation,true);
@@ -21088,6 +21165,7 @@ void AssistantViewModel::signOut() {
         if (!current()) return;
         state_->generic_rpc_rows.clear(); state_->generic_rpc_turns.clear(); state_->generic_turn.clear();
         try {
+            if (!logout) throw std::runtime_error("switching accounts keeps the sign-in");
             state_->agent->beginOperation(State::Limits::revoke_ms, 0);
             if (!current()) return;
             state_->generic_request("account/logout");
@@ -21106,6 +21184,104 @@ void AssistantViewModel::signOut() {
     state_->controller->cancel();
     if (!current()) return;
     state_->sync();
+}
+QVariantList AssistantViewModel::providers() const {
+    QVariantList result;
+#ifndef __EMSCRIPTEN__
+    for (const auto id : {AssistantProviderId::ChatGpt, AssistantProviderId::Claude, AssistantProviderId::Copilot})
+        result.append(QVariantMap{{"provider", assistant_provider_key(id)}, {"name", assistant_provider_name(id)},
+                                  {"company", assistant_provider_company(id)},
+                                  {"installed", assistant_provider_available(id)}});
+#endif
+    return result;
+}
+QVariantList AssistantViewModel::accounts() const {
+    QVariantList result;
+#ifndef __EMSCRIPTEN__
+    const auto& active = state_->active_provider_account;
+    for (const auto id : {AssistantProviderId::ChatGpt, AssistantProviderId::Claude, AssistantProviderId::Copilot}) {
+        QList<AssistantAccountRecord> records;
+        try { records = state_->account_store().accounts(id); } catch (...) { continue; }
+        const bool installed = assistant_provider_available(id);
+        for (const auto& record : records)
+            result.append(QVariantMap{{"provider", assistant_provider_key(id)}, {"providerName", assistant_provider_name(id)},
+                                      {"id", record.id}, {"email", record.email}, {"plan", record.plan}, {"host", record.host},
+                                      {"active", record.provider == active.provider && record.id == active.id},
+                                      {"installed", installed}});
+    }
+#endif
+    return result;
+}
+void AssistantViewModel::switchAccount(const QString& provider, const QString& id) {
+#ifndef __EMSCRIPTEN__
+    const auto which = assistant_provider_from_key(provider);
+    std::optional<AssistantAccountRecord> record;
+    try { if (which) record = state_->account_store().find(*which, id); } catch (...) {}
+    if (!record) { state_->error = tr("That account is no longer saved on this computer."); state_->notify(); return; }
+    if (!assistant_provider_available(record->provider)) {
+        state_->error = tr("%1 is not installed. Add it with the Maintenance Tool.").arg(assistant_provider_name(record->provider));
+        state_->notify(); return;
+    }
+    const auto& active = state_->active_provider_account;
+    if (record->provider == active.provider && record->id == active.id) return;
+    // Switching waits for an open trial or a running turn, as Clear does (edi ADR-0055).
+    if ((state_->project && state_->project->fit()->trialOpen()) || state_->generic_busy) {
+        state_->error = tr("The assistant is trying a change. Let it finish or press Stop before switching accounts.");
+        state_->notify(); return;
+    }
+    if (!state_->generic_mode) return;
+    const QPointer<AssistantViewModel> receiver(this);
+    retireConnection(false);
+    if (!receiver) return;
+    try { state_->account_store().setActive(record->provider, record->id); }
+    catch (const std::exception& failure) { state_->error = QString::fromUtf8(failure.what()); state_->notify(); return; }
+    state_->pending_account.reset();
+    state_->active_provider_account = record->ref();
+    if (state_->agent) {
+        state_->agent->retire();
+        state_->agent.release()->deleteLater();  // queued replies fence on a QPointer to it
+    }
+    state_->generic_initialize();
+    emit accountsChanged();
+    emit accountChanged();
+    state_->sync();
+#else
+    Q_UNUSED(provider); Q_UNUSED(id);
+#endif
+}
+void AssistantViewModel::addAccount(const QString& provider, const QString& host) {
+#ifndef __EMSCRIPTEN__
+    const auto which = assistant_provider_from_key(provider);
+    if (!which) return;
+    if (!assistant_provider_available(*which)) {
+        state_->error = tr("%1 is not installed. Add it with the Maintenance Tool.").arg(assistant_provider_name(*which));
+        state_->notify(); return;
+    }
+    if ((state_->project && state_->project->fit()->trialOpen()) || state_->generic_busy) {
+        state_->error = tr("The assistant is trying a change. Let it finish or press Stop before adding an account.");
+        state_->notify(); return;
+    }
+    if (!state_->generic_mode) return;
+    AssistantAccountRecord record;
+    try { record = state_->account_store().create(*which, host); }
+    catch (const std::exception& failure) { state_->error = QString::fromUtf8(failure.what()); state_->notify(); return; }
+    const QPointer<AssistantViewModel> receiver(this);
+    retireConnection(false);
+    if (!receiver) return;
+    if (state_->pending_account) (void)state_->account_store().removeHome(state_->pending_account->home);
+    state_->pending_account = record;
+    state_->active_provider_account = record.ref();
+    if (state_->agent) {
+        state_->agent->retire();
+        state_->agent.release()->deleteLater();  // queued replies fence on a QPointer to it
+    }
+    state_->generic_initialize();
+    emit accountsChanged();
+    emit accountChanged();
+    state_->sync();
+#else
+    Q_UNUSED(provider); Q_UNUSED(host);
+#endif
 }
 void AssistantViewModel::clearHistory() {
     const auto publication = state_->file_projection();
