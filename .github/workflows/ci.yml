@@ -809,7 +809,7 @@ jobs:
       - name: Build the app with MSVC, warnings as errors
         id: windows-build
         if: runner.os == 'Windows'
-        run: pixi run --manifest-path tools/installer/pixi.toml python tools/ci/app-windows-build.py --crysta-source .crysta --work build/app-windows --tests
+        run: pixi run --manifest-path tools/installer/pixi.toml python tools/ci/app-windows-build.py --crysta-source .crysta --work build/app-windows
       - name: Save the compiler cache (Windows)
         if: ${{ always() && runner.os == 'Windows' }}
         uses: ./.github/actions/store
@@ -825,7 +825,7 @@ jobs:
         timeout-minutes: 60
         run: >-
           pixi run --manifest-path tools/installer/pixi.toml python tools/ci/windows_app_cases.py
-          --runner build/app-windows/app/app/edi_app_tests.exe --cases tests/windows-app-cases.txt
+          --runner build/app-windows/app/edi_app_tests.exe --cases tests/windows-app-cases.txt
           --dumps build/app-windows/cases/dumps --logs build/app-windows/cases/logs
       - name: Upload the Windows app cases' logs and crash dumps
         if: ${{ runner.os == 'Windows' && !cancelled() && steps.windows-cases.outcome != 'skipped' }}

@@ -2,12 +2,12 @@
 # SPDX-License-Identifier: BSD-3-Clause
 """Compile the app with MSVC and edi's warnings as errors (ADR-0093): CI's `app · Windows` job.
 
-    python tools/ci/app-windows-build.py --crysta-source DIR --work DIR [--tests]
+    python tools/ci/app-windows-build.py --crysta-source DIR --work DIR
 
 It takes Qt, the crysta SDK and the compiler settings from the installer's own build
 (tools/installer/build.py), so the app compiles as the Windows installer compiles it, and stops
-once edi_app and the CLI are built and carry the UTF-8 code page (ADR-0109): nothing is staged.
---tests also builds edi_app_tests, the Qt Quick Test runner tools/ci/windows_app_cases.py runs.
+once edi_app, the CLI and edi_app_tests (the Qt Quick Test runner tools/ci/windows_app_cases.py
+runs) are built and carry the UTF-8 code page (ADR-0109): nothing is staged.
 """
 
 from __future__ import annotations
@@ -26,7 +26,6 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.split('\n\n', 1)[0])
     parser.add_argument('--crysta-source', type=Path, required=True)
     parser.add_argument('--work', type=Path, required=True)
-    parser.add_argument('--tests', action='store_true', help='also build edi_app_tests')
     args = parser.parse_args()
     if not (args.crysta_source / 'include/crysta/model.hpp').is_file():
         raise SystemExit('app-windows-build: the crysta source checkout is missing')
@@ -51,16 +50,14 @@ def main() -> None:
         f'-DCMAKE_PREFIX_PATH={prefix.as_posix()};{qt.as_posix()}',
     ])
     # Every file compiles even after one fails, so one run lists every warning made an error.
-    targets = ['--target', 'edi_app', 'easydiffraction']
-    if args.tests:
-        targets.append('edi_app_tests')
+    targets = ['--target', 'edi_app', 'easydiffraction', 'edi_app_tests']
     build.run(['cmake', '--build', app, *targets, '--parallel', '4', '--', '-k', '0'])
     # The programs' own embedded manifests, and Python's, which must fail the same check.
     check = Path(__file__).resolve().parent / 'windows_manifest.py'
-    programs = [app / 'app/edi_app.exe', app / 'cli/easydiffraction.exe']
-    if args.tests:
-        # The runner opens the same non-ASCII paths the app does, so it needs the same code page.
-        programs.append(app / 'app/edi_app_tests.exe')
+    # qt_standard_project_setup puts the programs of every directory added after it, the app's,
+    # in the build's top folder on Windows; the CLI is added before it and keeps its own. The
+    # test runner opens the same non-ASCII paths the app does, so it needs the same code page.
+    programs = [app / 'edi_app.exe', app / 'cli/easydiffraction.exe', app / 'edi_app_tests.exe']
     subprocess.run([sys.executable, check, *programs], check=True)
     subprocess.run([sys.executable, check, '--refused', sys.executable], check=True)
 
