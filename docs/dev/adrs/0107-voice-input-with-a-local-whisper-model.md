@@ -50,7 +50,8 @@ assistant runtime, and shows its choices as rows on the folder page instead of a
    samples stay in memory: they are never written to a file and never sent anywhere, and they are released when the
    text is ready or the recording is cancelled. A recording stops when the user presses the button again, after two
    seconds of silence following speech, or after two minutes. Only Qt Multimedia's audio input is used; its FFmpeg
-   media plugin is not shipped.
+   media plugin is not shipped. The run log (category `edi.voice`) records each step, why a recording stopped or was
+   cancelled and how long recognition took, never audio or text.
 5. **Permission.** On first use the app asks for Qt's `QMicrophonePermission`. The macOS bundle's Info.plist
    (`app/resources/macos/Info.plist.in`, given to CMake so Qt links its microphone permission plugin) declares
    `NSMicrophoneUsageDescription` ("EasyDiffraction uses the microphone only when you press the microphone button in

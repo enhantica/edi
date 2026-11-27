@@ -460,6 +460,8 @@ Rectangle {
             // Text from a recording this composer did not start, or one finishing after it was hidden, is dropped.
             if (VoiceInput.owner === composer && composer.visible)
                 composer.insertRecognisedText(text);
+            else
+                console.info("Voice input text dropped: owner", VoiceInput.owner === composer, "visible", composer.visible);
         }
     }
     Connections {

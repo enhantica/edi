@@ -9,6 +9,7 @@
 #include <QFileInfo>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QLoggingCategory>
 #include <QPointer>
 
 #include <cmath>
@@ -33,6 +34,9 @@ struct RecognitionJob {
 };
 
 namespace {
+
+// States and timings only, never audio or text: enough to tell from a run log why no text arrived.
+Q_LOGGING_CATEGORY(lcVoice, "edi.voice")
 
 constexpr int rate = SpeechRecogniser::sample_rate;
 constexpr auto block = static_cast<std::size_t>(rate * 30 / 1000);  // the silence check reads 30 ms at a time
@@ -149,6 +153,7 @@ void VoiceInput::toggle(QObject* owner) {
         return;
     case State::Recognising:
         // A press just after the silence stop means "I'm done", not "throw it away"; Cancel and Escape cancel.
+        qCInfo(lcVoice) << "Press while recognising ignored";
         return;
     }
 }
@@ -157,6 +162,8 @@ void VoiceInput::stop() {
     if (state_ != State::Listening)
         return;
     capture_->stop();
+    qCInfo(lcVoice).nospace() << "Recognising " << static_cast<double>(recording_.size()) / rate << " s of audio";
+    recognising_.start();
     auto job = std::make_shared<RecognitionJob>();
     job->recording = std::exchange(recording_, {});
     dropRecording();
@@ -208,6 +215,7 @@ void VoiceInput::stop() {
 void VoiceInput::cancel() {
     if (state_ == State::Idle)
         return;
+    qCInfo(lcVoice) << "Cancelled while" << state_;
     capture_->stop();
     if (job_) {
         job_->cancelled.store(true);
@@ -222,15 +230,19 @@ void VoiceInput::cancel() {
 }
 
 void VoiceInput::release(QObject* owner) {
-    if (state_ != State::Idle && owner != nullptr && owner == owner_)
+    if (state_ != State::Idle && owner != nullptr && owner == owner_) {
+        qCInfo(lcVoice) << "Released by its owner";
         cancel();
+    }
 }
 
 void VoiceInput::clearMessage() { setMessage({}); }
 
 void VoiceInput::captureStarted() {
-    if (state_ == State::Starting)
+    if (state_ == State::Starting) {
+        qCInfo(lcVoice) << "Listening";
         setState(State::Listening);
+    }
 }
 
 void VoiceInput::captureSamples(const QList<float>& chunk) {
@@ -249,14 +261,18 @@ void VoiceInput::captureSamples(const QList<float>& chunk) {
             silent_ += block;
         }
     }
-    if ((heard_ && silent_ >= static_cast<std::size_t>(silence_seconds) * static_cast<std::size_t>(rate)) ||
-        recording_.size() >= static_cast<std::size_t>(max_seconds) * static_cast<std::size_t>(rate))
+    const bool pause =
+        heard_ && silent_ >= static_cast<std::size_t>(silence_seconds) * static_cast<std::size_t>(rate);
+    if (pause || recording_.size() >= static_cast<std::size_t>(max_seconds) * static_cast<std::size_t>(rate)) {
+        qCInfo(lcVoice) << (pause ? "Silence stops the recording" : "Time limit stops the recording");
         stop();
+    }
 }
 
 void VoiceInput::captureFailed(AudioCapture::Failure failure) {
     if (state_ != State::Starting && state_ != State::Listening)
         return;
+    qCInfo(lcVoice) << "Microphone failed:" << failure;
     dropRecording();
     setState(State::Idle);
     switch (failure) {
@@ -276,6 +292,9 @@ void VoiceInput::captureFailed(AudioCapture::Failure failure) {
 void VoiceInput::finish(int generation, const QString& text, const QString& error, bool cancelled) {
     if (generation != generation_ || state_ != State::Recognising)
         return;
+    const char* outcome = cancelled ? "cancelled" : !error.isEmpty() ? "failed" : text.isEmpty() ? "no speech" : "text";
+    qCInfo(lcVoice).nospace() << "Recognition took " << recognising_.elapsed() << " ms: " << outcome
+                              << (owner_ ? "" : ", no owner");
     job_.reset();
     setState(State::Idle);
     if (cancelled) {

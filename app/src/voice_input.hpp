@@ -4,6 +4,7 @@
 
 #include "audio_capture.hpp"
 
+#include <QElapsedTimer>
 #include <QObject>
 #include <QPointer>
 #include <QString>
@@ -126,6 +127,7 @@ private:
     bool heard_ = false;        // speech has been heard in this recording
     int generation_ = 0;        // a cancel or a new recording makes an earlier recognition's result stale
     std::shared_ptr<RecognitionJob> job_;  // the recognition in flight, until it finishes or is cancelled
+    QElapsedTimer recognising_;            // how long the recognition took, for the run log
     QThreadPool workers_;                  // last, so it is destroyed first and waits for the job it runs
 };
 
