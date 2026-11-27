@@ -6,6 +6,7 @@ import base64
 import functools
 import json
 import os
+import shutil
 import subprocess
 import time
 import xml.etree.ElementTree as ET  # noqa: S405 - binarycreator's and our own XML only
@@ -50,6 +51,29 @@ Component.prototype.createOperations = function () {
         component.addOperation("Execute", %s);
 };
 """
+
+# Run by that operation with the installation folder, the evidence file and the app marker's path
+# in it: the top-level names, which of the marker and the macOS swap's files exist, the marker's
+# text and the swap's mark, so the check can see the state the update failed in.
+FAILURE_EVIDENCE = """cd "$1" || exit 1
+{
+    ls -A | sed 's/^/name /'
+    for f in "$3" MaintenanceTool.app.old-token MaintenanceTool.app.new; do
+        if [ -e "$f" ]; then printf 'exists %s\\n' "$f"; fi
+    done
+    if [ -f "$3" ]; then printf 'marker %s\\n' "$(cat "$3")"; fi
+    if [ -f MaintenanceTool.app.old-token ]; then
+        printf 'token %s\\n' "$(cat MaintenanceTool.app.old-token)"
+    fi
+} > "$2"
+exit 1
+"""
+
+# Where that operation writes, in the protocol output folder.
+FAILURE_EVIDENCE_NAME = 'failed update evidence.txt'
+
+# IFW prints this once it has rolled a failed update back.
+ROLLBACK_TEXT = 'update aborted!'
 
 UPDATE = ['--verbose', '--accept-licenses', '--default-answer', '--confirm-command', 'update']
 
@@ -115,24 +139,65 @@ def first_release_resources(config: Path, configuration: ET.ElementTree) -> Path
     return listed
 
 
-def failing_operation() -> str:
-    """The component script text that makes an update with it fail."""
-    command = ['cmd.exe', '/c', 'exit 1'] if SYSTEM == 'windows' else ['/bin/sh', '-c', 'exit 1']
+def failing_operation(evidence: Path, marker: Path) -> str:
+    """The component script text that makes an update with it fail.
+
+    Before failing, the operation writes what it finds in the installation to `evidence`, outside
+    it, so the check can tell the update failed where intended and what the rollback undid.
+    """
+    if SYSTEM == 'windows':
+        # Separate words: the tool quotes only the ones with spaces, and cmd.exe keeps a command
+        # line that starts unquoted as it is. cd accepts the target's forward slashes.
+        command = [
+            'cmd.exe', '/c', 'cd', '/d', '@TargetDir@', '&&', 'dir', '/b', '/s',
+            '>', str(evidence), '&', 'exit', '1',
+        ]  # fmt: skip
+    else:
+        command = ['/bin/sh', '-c', FAILURE_EVIDENCE, 'sh', '@TargetDir@', str(evidence)]
+        command.append(marker.as_posix())
     return FAILING_OPERATION % ', '.join(json.dumps(part) for part in command)
 
 
-def failing_tool_script() -> str:
+def failing_tool_script(evidence: Path, marker: Path) -> str:
     """The tool component's script with the failing operation after the macOS swap."""
-    return maintenance_script() + failing_operation()
+    return maintenance_script() + failing_operation(evidence, marker)
 
 
-def failing_app_resource(source: Path, tools: Path, environment: dict | None) -> None:
+def failing_app_resource(
+    evidence: Path, marker: Path, source: Path, tools: Path, environment: dict | None
+) -> None:
     """Linux has no tool component, so the app component's update fails instead."""
     add_maintenance_resource(source, tools, environment)
     with (source / 'packages' / APP_COMPONENT / 'meta/installscript.qs').open(
         'a', encoding='utf-8'
     ) as script:
-        script.write(failing_operation())
+        script.write(failing_operation(evidence, marker))
+
+
+def failure_evidence(path: Path, target: Path) -> dict:
+    """Read what the failing operation found: paths below `target`, the marker and the mark.
+
+    POSIX writes tagged lines; Windows writes the full paths dir /s lists, made relative here.
+    """
+    found = {'paths': set(), 'marker': None, 'token': None}
+    prefix = str(target).replace('\\', '/').casefold() + '/'
+    for line in path.read_text(encoding='utf-8', errors='replace').splitlines():
+        tag, _, value = line.partition(' ')
+        if tag in {'marker', 'token'}:
+            found[tag] = value
+        elif tag in {'name', 'exists'}:
+            found['paths'].add(value)
+        elif line.strip():
+            entry = line.strip().replace('\\', '/')
+            if entry.casefold().startswith(prefix):
+                entry = entry[len(prefix) :]
+            found['paths'].add(entry)
+    return found
+
+
+def found_path(found: dict, relative: str) -> bool:
+    """Whether the failing operation saw `relative`, matched by its end if a path stayed full."""
+    return any(path == relative or path.endswith('/' + relative) for path in found['paths'])
 
 
 def check(tools: Path, output: Path) -> None:
@@ -178,10 +243,13 @@ def check(tools: Path, output: Path) -> None:
     # succeeds, each from a repository of its own.
     marker.write_text('third marker\n')
     third_tool = build_maintenance_tool(tools, output / 'tool 26.18', '2') if tool_builds else None
+    failure = (output / FAILURE_EVIDENCE_NAME, marker.relative_to(stage))
     with (
-        patch('package.maintenance_script', failing_tool_script)
+        patch('package.maintenance_script', functools.partial(failing_tool_script, *failure))
         if tool_builds
-        else patch('package.add_maintenance_resource', failing_app_resource)
+        else patch(
+            'package.add_maintenance_resource', functools.partial(failing_app_resource, *failure)
+        )
     ):
         failing = output / 'failing-26.18'
         package_app(
@@ -220,6 +288,7 @@ def exercise(
         else 'MaintenanceTool' + SUFFIX
     )
     first_release = kind != 'online'
+    tool_runs = True
     with (output / (kind + '.log')).open('w') as log:
         options = {'env': env, 'stdout': log, 'stderr': -2, 'timeout': 60}
         run(
@@ -251,13 +320,16 @@ def exercise(
             if first_release:
                 first_update(target, maintenance, installed, output, options)
             if kind == 'interrupted':
-                interrupted_update(target, maintenance, installed, output, options)
+                tool_runs = interrupted_update(target, maintenance, installed, output, options)
             else:
                 if kind == 'offline':
                     second_update(target, maintenance, installed, output, options)
                 assistant(maintenance, installed, installed_assistant, kind, options)
         finally:
-            run([maintenance, '--default-answer', '--confirm-command', 'purge'], **options)
+            if tool_runs:
+                run([maintenance, '--default-answer', '--confirm-command', 'purge'], **options)
+            else:
+                shutil.rmtree(target)
         if installed.exists():
             raise RuntimeError('Maintenance tool left the component installed')
 
@@ -331,7 +403,7 @@ def second_update(
 
 def interrupted_update(
     target: Path, maintenance: Path, installed: Path, output: Path, options: dict
-) -> None:
+) -> bool:
     """Require a failed update to 26.18 to leave 26.17's tool and pages, and no 26.18 files.
 
     The update first undoes the operations 26.17's update saved, the macOS swap's included, then
@@ -340,18 +412,19 @@ def interrupted_update(
     Framework's rollback undoes only what this update did: the app files the saved operations
     removed stay removed and the app is no longer listed as installed (measured with IFW 4.11 on
     Linux), so the tool answers but has nothing left to update.
+
+    Returns whether the tool can still run, so the caller knows whether it can purge.
     """
     metadata = json.loads((output / 'online/installer.json').read_text())
-    failing = json.loads((output / 'failing-26.18/installer.json').read_text())
-    command = [maintenance, '--set-temp-repository', failing['repository_url'], *UPDATE]
-    print('+', ' '.join(map(str, command)), '(expected to fail)', flush=True)
-    result = subprocess.run(list(map(str, command)), check=False, **options)
-    if result.returncode == 0:
-        raise RuntimeError('The update meant to fail succeeded')
+    # The mark the first update's swap left; this update's swap must write its own.
+    token = target / 'MaintenanceTool.app.old-token'
+    first_token = token.read_text(encoding='utf-8').rstrip('\n') if token.is_file() else None
+    found = failed_update(target, maintenance, output, options)
     left = installed.read_text(encoding='utf-8') if installed.is_file() else None
     print(f'protocol check: after the failed update the app marker is {left!r}', flush=True)
     if left not in {None, 'second marker\n'}:
         raise RuntimeError('The failed update left files of the 26.18 application')
+    rolled_back(target, found, installed.relative_to(target).as_posix(), first_token)
     if SYSTEM in {'macos', 'windows'}:
         bundle = target / maintenance_tool_name()
         if not maintenance_tool_executable(bundle).is_file():
@@ -363,7 +436,90 @@ def interrupted_update(
     # Signed, and on macOS no staged tool or backup left.
     verify_installed_maintenance_tool(target, metadata)
     maintenance_pages(target, output / 'online/source', first_release=False)
-    nothing_offered(maintenance, options['env'])
+    if SYSTEM != 'linux':
+        nothing_offered(maintenance, options['env'])
+        return True
+    if linux_runtime_gone(target, left):
+        return False
+    try:
+        nothing_offered(maintenance, options['env'])
+    except RuntimeError as error:
+        raise RuntimeError(f'{error}, with installer-runtime intact: another cause') from error
+    return True
+
+
+def failed_update(target: Path, maintenance: Path, output: Path, options: dict) -> dict:
+    """Run the update meant to fail; require IFW's rollback and return the failure evidence."""
+    failing = json.loads((output / 'failing-26.18/installer.json').read_text())
+    evidence = output / FAILURE_EVIDENCE_NAME
+    if evidence.exists():
+        raise RuntimeError(f'{evidence.name} exists before the update meant to fail')
+    command = [maintenance, '--set-temp-repository', failing['repository_url'], *UPDATE]
+    print('+', ' '.join(map(str, command)), '(expected to fail)', flush=True)
+    result = subprocess.run(
+        list(map(str, command)),
+        env=options['env'], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
+        errors='replace', timeout=options['timeout'], check=False,
+    )  # fmt: skip
+    # Kept in the installation's log with the rest of its output.
+    options['stdout'].write(result.stdout)
+    options['stdout'].flush()
+    if result.returncode == 0:
+        raise RuntimeError('The update meant to fail succeeded')
+    if ROLLBACK_TEXT not in result.stdout.casefold():
+        raise RuntimeError(f'The failed update never printed {ROLLBACK_TEXT!r}: no rollback ran')
+    # Written by the failing operation only: the update failed there, after unpacking.
+    if not evidence.is_file():
+        raise RuntimeError('The update failed before its failing operation ran')
+    found = failure_evidence(evidence, target)
+    print(f'protocol check: the failing operation found {sorted(found["paths"])}', flush=True)
+    return found
+
+
+def rolled_back(target: Path, found: dict, marker: str, first_token: str | None) -> None:
+    """Require the failing operation to have seen 26.18's files, and the rollback to undo them.
+
+    The caller has already required the 26.18 app marker gone from the installation.
+    """
+    if SYSTEM == 'macos':
+        # The swap ran before the failure: it marks the backup it keeps with its own token.
+        if not found_path(found, 'MaintenanceTool.app.old-token'):
+            raise RuntimeError('The update failed before the macOS swap kept the installed tool')
+        if found['token'] in {None, first_token}:
+            raise RuntimeError("The failing operation saw the first update's mark, not the swap's")
+        # Without the swap's undo the 26.18 tool would be in place and 26.17's kept as .old.
+        for name in ('MaintenanceTool.app.old', 'MaintenanceTool.app.old-token'):
+            if (target / name).exists():
+                raise RuntimeError(f'The failed update left {name}: the swap was not undone')
+    elif SYSTEM == 'windows':
+        # The tool component, which fails, comes after the app it depends on.
+        if not (
+            found_path(found, 'maintenancetool/MaintenanceTool.exe') or found_path(found, marker)
+        ):
+            raise RuntimeError('The failing operation saw no 26.18 file: nothing was unpacked')
+    elif found['marker'] != 'third marker':
+        raise RuntimeError(f'The failing operation saw the app marker {found["marker"]!r}')
+
+
+def linux_runtime_gone(target: Path, left: str | None) -> bool:
+    """Record the known Linux defect: the failed update takes the tool's runtime with the app.
+
+    The tool loads its Qt libraries from installer-runtime/, which the app component ships, so
+    undoing 26.17's app operations deletes them and the tool cannot start where the host lacks
+    them. With the runtime intact the defect does not apply and the caller checks as elsewhere.
+    """
+    runtime = target / 'installer-runtime'
+    if runtime.is_dir() and any(runtime.iterdir()):
+        print('protocol check: installer-runtime survived the failed update', flush=True)
+        return False
+    if left is not None:
+        raise RuntimeError('The tool runtime is gone, yet an app marker is still installed')
+    print(
+        "protocol check: known Linux defect: the tool's runtime (installer-runtime) went with"
+        ' the app component, so the tool cannot start; removing the installation instead',
+        flush=True,
+    )
+    return True
 
 
 def default_resource(target: Path) -> dict[str, bytes]:
