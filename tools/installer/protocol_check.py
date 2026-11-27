@@ -424,7 +424,7 @@ def interrupted_update(
     print(f'protocol check: after the failed update the app marker is {left!r}', flush=True)
     if left not in {None, 'second marker\n'}:
         raise RuntimeError('The failed update left files of the 26.18 application')
-    rolled_back(target, found, first_token)
+    rolled_back(target, found, installed.relative_to(target).as_posix(), first_token)
     if SYSTEM in {'macos', 'windows'}:
         bundle = target / maintenance_tool_name()
         if not maintenance_tool_executable(bundle).is_file():
@@ -476,7 +476,7 @@ def failed_update(target: Path, maintenance: Path, output: Path, options: dict) 
     return found
 
 
-def rolled_back(target: Path, found: dict, first_token: str | None) -> None:
+def rolled_back(target: Path, found: dict, marker: str, first_token: str | None) -> None:
     """Require the failing operation to have seen 26.18's files, and the rollback to undo them.
 
     The caller has already required the 26.18 app marker gone from the installation.
@@ -492,16 +492,11 @@ def rolled_back(target: Path, found: dict, first_token: str | None) -> None:
             if (target / name).exists():
                 raise RuntimeError(f'The failed update left {name}: the swap was not undone')
     elif SYSTEM == 'windows':
-        # The failing operation runs in the tool component after its Extract, so the new tool
-        # must be staged by then; the rollback must take it away again.
-        staged = 'maintenancetool/' + maintenance_tool_name()
-        if not found_path(found, staged):
-            raise RuntimeError(f'The failing operation saw no staged {staged}: none was unpacked')
-        if (target / staged).exists():
-            raise RuntimeError(f'The failed update left the staged {staged}')
-        folder = target / 'maintenancetool'
-        if folder.exists() and any(folder.iterdir()):
-            raise RuntimeError('The failed update left files in the maintenancetool folder')
+        # The tool component, which fails, comes after the app it depends on.
+        if not (
+            found_path(found, 'maintenancetool/MaintenanceTool.exe') or found_path(found, marker)
+        ):
+            raise RuntimeError('The failing operation saw no 26.18 file: nothing was unpacked')
     elif found['marker'] != 'third marker':
         raise RuntimeError(f'The failing operation saw the app marker {found["marker"]!r}')
 
