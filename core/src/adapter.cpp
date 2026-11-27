@@ -768,7 +768,7 @@ void publish_completed_type_iv(Project& host, crysta::Project& work, std::vector
         for (const crysta::Structure& engine : work.structures) {
             if (engine.name.value() != held->name.value() || !crysta::type_iv_route(engine)) continue;
             check_completed_structure(*held, engine);
-            auto replacement = std::make_unique<Replacement>(Replacement{held.get(), *held, {}, {}});
+            std::unique_ptr<Replacement> replacement(new Replacement{held.get(), *held, {}, {}});
             const std::vector<Parameter*> from = structure_parameters(*held);
             const std::vector<Parameter*> to = structure_parameters(replacement->next);
             for (std::size_t i = 0; i < refined.size(); ++i) {
