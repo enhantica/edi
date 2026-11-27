@@ -866,7 +866,8 @@ std::vector<std::string> atom_types(const Project& project, const Structure& str
     std::set<std::string> types;
     for (const auto& [xray, source] : sources) {
         try {
-            const std::vector<std::string>& held = source_atom_types(xray, source_or_default(xray, source));
+            const std::string chosen = source_or_default(xray, source);
+            const std::vector<std::string>& held = source_atom_types(xray, chosen);
             types.insert(held.begin(), held.end());
         } catch (const std::exception&) {
             // A source crysta does not know adds nothing: the loader has already reported it.
