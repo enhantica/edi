@@ -177,13 +177,16 @@ QtObject {
             close();
         popup.close();
         popup.exit = exit;
+        if (!popup.visible)
+            return;
         // Still visible: an exit that started earlier (an Escape just before) is running, and Qt starts no second one.
-        // Its item, the content's parent, leaves the overlay now, as it would at the exit's end: the overlay then passes
-        // it no press, hover or touch, and it loses the focus. The next opening puts it back.
-        const item = popup.visible && popup.contentItem !== null ? popup.contentItem.parent : null;
-        if (item !== null) {
-            item.visible = false;
-            item.parent = null;
-        }
+        // Without a window, Qt ends a running exit at once when the popup loses its parent, and it then leaves the
+        // overlay and restores no focus, so nothing of it happens later. The parent comes back with the popup closed.
+        const parent = popup.parent;
+        popup.parent = retiredPopupHolder;
+        popup.parent = null;
+        popup.parent = parent;
     }
+    // An item in no window, which a retiring popup is given as its parent first (retirePopup).
+    readonly property Item retiredPopupHolder: Item {}
 }

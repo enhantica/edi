@@ -458,9 +458,10 @@ SideBarGroup {
         // OK. Escape still closes it.
         closePolicy: AppState.tutorialRunning ? Popup.CloseOnEscape : Popup.CloseOnEscape | Popup.CloseOnPressOutside
         readonly property string assistantIntentId: group.createIntent !== null && group.createIntent.assistant !== null ? group.createIntent.assistant.id : ""
-        // The base's dialog (edi's copy joins the location cleanly), placed on whole pixels as AppDialog is.
-        x: Math.round((parent.width - width) / 2)
-        y: Math.round((parent.height - height) / 2)
+        // The base's dialog (edi's copy joins the location cleanly), placed on whole pixels as AppDialog is; it has no
+        // parent for a moment while it retires (AppState.retirePopup).
+        x: parent ? Math.round((parent.width - width) / 2) : 0
+        y: parent ? Math.round((parent.height - height) / 2) : 0
         visible: EaGlobals.Vars.showProjectDescriptionDialog
         // A tutorial's project, made by the user in a tutorial that set theirs aside, is not saved until they keep
         // it (edi ADR-0064).
