@@ -45,7 +45,12 @@ struct MagneticCandidateGraph {
     std::vector<MagneticCandidateNode> nodes;
     std::vector<std::string> sites;  ///< the ticked sites it was built for
     std::shared_ptr<const MagneticEngineGraph> engine;
+    std::string parent_key;  ///< magnetic_parent_key of the parent it was built from
 };
+/// Everything of `structure` a magnetic search or Add reads (name, cell, group, sites, tensors and its magnetic
+/// description), exactly, as one text: two structures with the same key give the same graph and candidates
+/// (review 15, F4).
+std::string magnetic_parent_key(const Structure& structure);
 /// The k-compatible magnetic groups of `parent` (crysta::magnetic_subgroups); it takes seconds for
 /// a large group, so the app calls it off the GUI thread on a copy of the parent. Throws
 /// std::invalid_argument with crysta's one message for a k it does not build.
@@ -79,6 +84,18 @@ struct PreparedMagneticCandidates {
     };
     std::vector<Texture> textures;
 };
+/// The whole batch checked against `project` before any of it is published (review 15, F3): the
+/// parent present and linked to powder experiments only, candidate names new and distinct, every
+/// candidate accepted by crysta's magnetic rule (the disabled ones too), and every link and
+/// texture row naming a powder experiment and a candidate of the batch, with a positive scale, at
+/// most one enabled link per experiment, and a texture axis that is not zero and stays within
+/// 1000. Throws std::invalid_argument naming the first fault.
+void check_magnetic_candidates(const Project& project, const PreparedMagneticCandidates& prepared);
+/// A7 (review 15, F5): the candidates of the batch that give no magnetic intensity at the reflections of every
+/// powder experiment with data linking the parent (crysta's lacks_magnetic_intensity); none when no such
+/// experiment exists.
+std::vector<std::string> magnetic_candidates_without_intensity(const Project& project,
+                                                               const PreparedMagneticCandidates& prepared);
 /// Builds the selected nodes' structures and their links and texture rows, all or none (edi
 /// ADR-0078): each powder experiment linking the parent links every child at scale S/N², only the
 /// first enabled, and the parent's link disabled; a March-Dollase row of the parent is carried

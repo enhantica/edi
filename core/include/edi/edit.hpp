@@ -1309,14 +1309,7 @@ class Edit {
     // them with only the first enabled, its parent's link disabled, and the carried texture rows, all or none.
     static Edit add_magnetic_candidates(Project& project, std::shared_ptr<const PreparedMagneticCandidates> prepared) {
         return Edit([&project, prepared = std::move(prepared)] {
-            for (const auto& structure : prepared->structures) {
-                for (const auto& held : project.structures) {
-                    if (held->name.value() == structure->name.value()) {
-                        throw std::invalid_argument("a structure named '" + structure->name.value() +
-                                                    "' is already in the project");
-                    }
-                }
-            }
+            check_magnetic_candidates(project, *prepared);  // the whole batch, before any of it lands
             std::vector<ItemVec<Structure>::Ptr> structures(project.structures.begin(), project.structures.end());
             for (const auto& structure : prepared->structures) structures.push_back(std::make_shared<Structure>(*structure));
             std::vector<std::vector<ItemVec<LinkedStructure>::Ptr>> links;

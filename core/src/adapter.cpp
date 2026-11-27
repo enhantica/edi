@@ -704,9 +704,11 @@ LetterSource letter_source(const Structure& structure) {
         return LetterSource::Table;
     }
     try {
+        // The anti-translation decides the type IV route first, a family-equal group included (crysta ADR-0137 B1;
+        // review 15, F1).
         const crysta::Structure engine = to_crysta_structure(structure);
-        if (!crysta::operator_defined_symmetry(engine)) return LetterSource::Table;
-        return crysta::type_iv_route(engine) ? LetterSource::Magnetic : LetterSource::None;
+        if (crysta::type_iv_route(engine)) return LetterSource::Magnetic;
+        return crysta::operator_defined_symmetry(engine) ? LetterSource::None : LetterSource::Table;
     } catch (const std::exception&) {
         return LetterSource::Table;  // a structure crysta refuses keeps its letters as written
     }
@@ -717,7 +719,9 @@ bool takes_wyckoff_letter(const Structure& structure) {
         return true;
     }
     try {
-        return !crysta::operator_defined_symmetry(to_crysta_structure(structure));
+        // A type IV site's letter is crysta's derived one, never a table choice, family-equal groups included.
+        const crysta::Structure engine = to_crysta_structure(structure);
+        return !crysta::type_iv_route(engine) && !crysta::operator_defined_symmetry(engine);
     } catch (const std::exception&) {
         return true;  // a structure crysta refuses keeps its letters as written
     }
@@ -1262,62 +1266,32 @@ void set_propagation_vectors(Structure& s, std::vector<std::pair<std::string, st
     trial.magnetic.modify([&rows](MagneticDescription& magnetic) { magnetic.propagation_vectors = rows; });
     // crysta's one completion, on the structure as it would become (ADR-0137 B8): a refusal leaves the prior model.
     // A k with no operators yet has nothing to complete, but its values are still checked.
-    if (trial.magnetic->operations.empty()) check_magnetic_acceptance(trial);
-    complete_atom_site_moments(trial);
+    if (trial.magnetic->operations.empty()) {
+        check_magnetic_acceptance(trial);
+    } else {
+        try {
+            complete_atom_site_moments(trial);
+        } catch (const std::invalid_argument& error) {
+            // A k this cell and group do not hold is set by the analysis instead (A10).
+            throw std::invalid_argument(std::string(error.what()) + "; " + crysta::kMagneticAnalysisRoutes);
+        }
+    }
     s = trial;  // Structure assigns by copy
 }
 
 namespace {
 
-// The rotation part of an operation such as `-x+y,z,1/2+x,-1`: the coefficient of x, y and z in each of its first
-// three components.
-std::array<std::array<double, 3>, 3> rotation_of(const std::string& xyz) {
-    std::array<std::array<double, 3>, 3> r{};
-    std::size_t row = 0;
-    double sign = 1.0;
-    for (const char ch : xyz) {
-        if (ch == ',') {
-            if (++row == 3) {
-                break;
-            }
-            sign = 1.0;
-        } else if (ch == '+' || ch == '-') {
-            sign = ch == '-' ? -1.0 : 1.0;
-        } else if (ch == 'x' || ch == 'y' || ch == 'z' || ch == 'X' || ch == 'Y' || ch == 'Z') {
-            r[row][static_cast<std::size_t>(std::tolower(static_cast<unsigned char>(ch)) - 'x')] += sign;
-            sign = 1.0;
-        }
-    }
-    return r;
-}
-
-// Refuses a set of operations whose rotations do not keep this cell's metric, R^T G R = G.
+// Refuses a set of operations whose rotations do not keep this cell's metric, R^T G R = G, read by crysta's exact
+// operator reader, so a sheared operation such as `-x-2y` keeps its coefficient (review 15, F6).
 void require_operations_keep_metric(const Cell& cell, const std::vector<std::pair<std::string, std::string>>& operations) {
-    constexpr double kDegree = std::numbers::pi / 180.0;
-    const double a = cell.length_a.value, b = cell.length_b.value, c = cell.length_c.value;
-    const double ca = std::cos(cell.angle_alpha.value * kDegree), cb = std::cos(cell.angle_beta.value * kDegree),
-                 cg = std::cos(cell.angle_gamma.value * kDegree);
-    const std::array<std::array<double, 3>, 3> g{{{a * a, a * b * cg, a * c * cb},
-                                                 {a * b * cg, b * b, b * c * ca},
-                                                 {a * c * cb, b * c * ca, c * c}}};
-    const double scale = std::max({a * a, b * b, c * c});
+    std::vector<std::string> triplets;
+    triplets.reserve(operations.size());
     for (const auto& [id, xyz] : operations) {
-        const auto r = rotation_of(xyz);
-        for (std::size_t i = 0; i < 3; ++i) {
-            for (std::size_t j = 0; j < 3; ++j) {
-                double kept = 0.0;
-                for (std::size_t k = 0; k < 3; ++k) {
-                    for (std::size_t l = 0; l < 3; ++l) {
-                        kept += r[k][i] * g[k][l] * r[l][j];
-                    }
-                }
-                if (std::abs(kept - g[i][j]) > 1e-6 * scale) {
-                    throw std::invalid_argument("a magnetic operation's rotation does not preserve the cell's metric (" +
-                                                xyz + ")");
-                }
-            }
-        }
+        triplets.push_back(xyz);
     }
+    crysta::check_cell_metric(triplets, {"x,y,z,+1"},
+                              {cell.length_a.value, cell.length_b.value, cell.length_c.value, cell.angle_alpha.value,
+                               cell.angle_beta.value, cell.angle_gamma.value});
 }
 
 }  // namespace
@@ -2077,6 +2051,9 @@ void set_magnetic_setting(Structure& s, const std::string& transform) {
     const crysta::MagneticSpaceGroupEntry& entry = crysta::magnetic_space_group(s.magnetic->group.number_bns);
     Structure trial = s;
     trial.magnetic.modify([&transform](MagneticDescription& magnetic) { set_bns_transform(magnetic, transform); });
+    // The same admission as a group pick (A10; review 15, F6): the group in the new setting must hold the structure's
+    // propagation vectors and generate the same atoms, or the edit refuses naming both routes to the analysis.
+    (void)crysta::admit_magnetic_space_group(to_crysta_structure(trial), entry.number_bns);
     if (entry.magnetic_type == 4) {
         // A type IV group in a setting is crysta's signed group carried by the transform, the one B4 verifies against.
         std::vector<std::pair<std::string, std::string>> operations;
@@ -8297,12 +8274,16 @@ FitResultBase Project::fit(const std::vector<double>& grid, const std::vector<do
             // `separable_linear=true` exactly (crysta descent.hpp).
             crysta::DescentRequest request =
                 declared_request(*this);
-            const crysta::FitResultBase result = [&] {
+            crysta::FitResultBase result = [&] {
                 request.on_iteration =
                     collector.callback(to_engine_callback(on_iteration, dof, fit_start, paths));
                 request.should_cancel = should_cancel;
                 return crysta::fit_problem(provider, request);
             }();
+            // crysta's type IV finalisation before any outcome or live write (ADR-0137 F17; review 15,
+            // F2): the completed structure, and the completed model's own evaluation when an orbit
+            // changed. A refusal throws here and leaves the model as it was.
+            if (!result.cancelled) crysta::finalize_fit(project, result);
             const double elapsed_ms = std::chrono::duration<double, std::milli>(
                                           std::chrono::steady_clock::now() - fit_start)
                                           .count();
@@ -8378,6 +8359,10 @@ FitResultBase Project::fit(const std::vector<double>& grid, const std::vector<do
             detail::write_back(refined);
             crysta::write_fit_result_into(project, result);  // crysta completes the dependents
             publish_fit_state(*this, project, refined);
+            // A type IV structure as crysta completed it: projected sites, letters, moment forms, tensors.
+            for (const auto& held : structures) {
+                if (letter_source(*held) == LetterSource::Magnetic) complete_atom_site_moments(*held);
+            }
             record_fit_result(*this, outcome, considered, crysta_correlations(project, result),
                               fitted_quality(project,
                                              single_crystal ? std::deque<crysta::PdDataBase>{}
@@ -9233,12 +9218,15 @@ FitResultBase Project::fit_joint(const std::vector<PdDataBase>& patterns,
             // single-bank path above.
             crysta::DescentRequest request =
                 declared_request(*this);
-            const crysta::FitResultBase result = [&] {
+            crysta::FitResultBase result = [&] {
                 request.on_iteration =
                     collector.callback(to_engine_callback(on_iteration, dof, fit_start, paths));
                 request.should_cancel = should_cancel;
                 return crysta::fit_problem(provider, request);
             }();
+            // crysta's type IV finalisation before any outcome or live write (ADR-0137 F17; review 15,
+            // F2); a refusal throws here and leaves the model as it was.
+            const bool orbit_changed = !result.cancelled && crysta::finalize_fit(project, result);
             const double elapsed_ms = std::chrono::duration<double, std::milli>(
                                           std::chrono::steady_clock::now() - fit_start)
                                           .count();
@@ -9246,10 +9234,13 @@ FitResultBase Project::fit_joint(const std::vector<PdDataBase>& patterns,
             // Per-bank metrics, read from the provider while it is STILL ALIVE — it owns the per-bank
             // sub-residuals and is destroyed when this scope ends, so this must happen here and cannot
             // be recovered afterwards from the FitResultBase. Every number is the engine's; edi only
-            // renames the fields into its own value type.
+            // renames the fields into its own value type. After an orbit change they come from the
+            // completed model instead (below).
             std::vector<BankMetric> bank_metrics;
-            for (const crysta::BankMetric& metric : provider.bank_metrics(provider.values())) {
-                bank_metrics.push_back({metric.name, metric.n_points, metric.rwp, metric.chi_square});
+            if (!orbit_changed) {
+                for (const crysta::BankMetric& metric : provider.bank_metrics(provider.values())) {
+                    bank_metrics.push_back({metric.name, metric.n_points, metric.rwp, metric.chi_square});
+                }
             }
 
             // Translate EVERY joint label to an edi-owned parameter FIRST — total and fail-closed. Only
@@ -9311,12 +9302,24 @@ FitResultBase Project::fit_joint(const std::vector<PdDataBase>& patterns,
             detail::write_back(refined);
             crysta::write_fit_result_into(project, result);  // crysta completes the dependents
             publish_fit_state(*this, project, refined);
+            // A type IV structure as crysta completed it: projected sites, letters, moment forms, tensors.
+            for (const auto& held : structures) {
+                if (letter_source(*held) == LetterSource::Magnetic) complete_atom_site_moments(*held);
+            }
             std::deque<crysta::PdDataBase> fitted_patterns;
             for (const PdDataBase& pattern : patterns) {
                 fitted_patterns.emplace_back(pattern.axis(), pattern.intensity_meas.get(), pattern.intensity_meas_su.get());
             }
-            record_fit_result(*this, outcome, considered, crysta_correlations(project, result),
-                              fitted_quality(project, fitted_patterns, outcome.values.size()));
+            crysta::FitQuality quality = fitted_quality(project, fitted_patterns, outcome.values.size());
+            // After an orbit change the provider's banks describe the start's orbits: each bank's
+            // figures come from the completed, published model instead.
+            if (orbit_changed) {
+                outcome.banks.clear();
+                for (const crysta::ProfileFactors& bank : quality.experiments) {
+                    outcome.banks.push_back({bank.experiment, bank.n_points, bank.rwp, bank.chi_square});
+                }
+            }
+            record_fit_result(*this, outcome, considered, crysta_correlations(project, result), quality);
             // Before shared items this copied bank 0 into the single-bank mirror (the loader set it
             // up that way), so `experiment` never reports stale values after a joint refinement.
             // `experiment()` IS the first bank now, so nothing is copied back: that
@@ -10115,6 +10118,34 @@ struct MagneticEngineGraph {
     crysta::MagneticSubgroupGraph graph;
 };
 
+std::string magnetic_parent_key(const Structure& structure) {
+    const crysta::Structure s = to_crysta_structure(structure);
+    std::string key;
+    const auto number = [&key](double v) {
+        char buffer[64];
+        std::snprintf(buffer, sizeof(buffer), "%a;", v);
+        key += buffer;
+    };
+    key += s.name.value() + "|" + s.space_group->name_h_m + "|" + s.space_group->coord_system_code + "|";
+    for (const auto& p : s.cell.parameters) number(p.value());
+    for (const crysta::AtomSite& site : s.atom_sites) {
+        key += "|" + site.site_id.value() + "," + site.type_symbol.get() + "," + site.adp_type.get() + ",";
+        for (const auto& f : site.fract) number(f.value());
+        number(site.occupancy.value());
+        number(site.adp_iso.value());
+    }
+    for (const crysta::AtomSiteAniso& row : s.atom_site_aniso) {
+        key += "|" + row.site_id.value() + ",";
+        for (const auto& u : row.adp) number(u.value());
+    }
+    for (const auto* rows : {&s.magnetic_operations.get(), &s.magnetic_centerings.get(), &s.propagation_vectors.get()}) {
+        key += "|";
+        for (const auto& [id, text] : *rows) key += id + "=" + text + ";";
+    }
+    key += "|" + s.magnetic_group->number_bns;
+    return key;
+}
+
 MagneticCandidateGraph magnetic_candidate_graph(const Structure& parent, const std::string& k,
                                                 const std::vector<std::string>& sites,
                                                 bool with_zero_moment_groups) {
@@ -10124,6 +10155,7 @@ MagneticCandidateGraph magnetic_candidate_graph(const Structure& parent, const s
     out.cell = engine->graph.cell.child_transform;
     out.parent_cells = engine->graph.cell.parent_cells;
     out.sites = sites;
+    out.parent_key = magnetic_parent_key(parent);
     std::map<std::string, std::size_t> seen;
     for (const crysta::MagneticSubgroupClass& c : engine->graph.classes) {
         MagneticCandidateNode node;
@@ -10180,6 +10212,11 @@ std::shared_ptr<PreparedMagneticCandidates> prepare_magnetic_candidates(
     }
     const Structure& parent = *project.structures[parent_index];
     const std::string parent_name = parent.name.value();
+    // The graph is bound to the parent it was built from: a parent edited, undone, renamed or replaced at the same row
+    // since then refuses rather than building children of another model (review 15, F4).
+    if (magnetic_parent_key(parent) != candidates.parent_key) {
+        throw std::invalid_argument("the structure changed since its magnetic groups were found; find them again");
+    }
     auto prepared = std::make_shared<PreparedMagneticCandidates>();
     prepared->parent = parent_name;
     // Powder only (relay decision 2026-11-26, "C18-T3 adds magnetic candidates for powder
@@ -10254,7 +10291,74 @@ std::shared_ptr<PreparedMagneticCandidates> prepare_magnetic_candidates(
             }
         }
     }
+    check_magnetic_candidates(project, *prepared);
     return prepared;
+}
+
+void check_magnetic_candidates(const Project& project, const PreparedMagneticCandidates& prepared) {
+    const auto powder = [&project](std::size_t index) {
+        return project.experiments[index]->experiment_type.effective_sample_form() == SampleFormEnum::POWDER;
+    };
+    if (std::none_of(project.structures.begin(), project.structures.end(),
+                     [&prepared](const auto& held) { return held->name.value() == prepared.parent; })) {
+        throw std::invalid_argument("the parent structure '" + prepared.parent + "' is not in the project");
+    }
+    for (std::size_t e = 0; e < project.experiments.size(); ++e) {
+        for (const auto& link : project.experiments[e]->linked_structures) {
+            if (link->structure_id.value() == prepared.parent && !powder(e)) {
+                throw std::invalid_argument(
+                    "the parent is linked to a single-crystal experiment, whose reflections are indexed "
+                    "in the parent cell; adding magnetic candidates to it is not supported yet");
+            }
+        }
+    }
+    std::set<std::string> names;
+    for (const auto& structure : prepared.structures) {
+        const std::string& name = structure->name.value();
+        if (name.empty() || !names.insert(name).second) {
+            throw std::invalid_argument("the candidates need distinct names; '" + name + "' is empty or repeated");
+        }
+        for (const auto& held : project.structures) {
+            if (held->name.value() == name) {
+                throw std::invalid_argument("a structure named '" + name + "' is already in the project");
+            }
+        }
+        check_magnetic_acceptance(*structure);  // every candidate, enabled or not
+    }
+    std::map<std::size_t, int> enabled;
+    for (const auto& link : prepared.links) {
+        if (link.experiment >= project.experiments.size() || !powder(link.experiment)) {
+            throw std::invalid_argument("a candidate link names no powder experiment of the project");
+        }
+        if (!names.contains(link.structure)) {
+            throw std::invalid_argument("a candidate link names '" + link.structure + "', which is not in the batch");
+        }
+        if (!std::isfinite(link.scale) || link.scale <= 0.0) {
+            throw std::invalid_argument("the link to '" + link.structure + "' needs a positive scale");
+        }
+        if (link.enabled && ++enabled[link.experiment] > 1) {
+            throw std::invalid_argument("only one candidate link per experiment can be enabled");
+        }
+    }
+    for (const auto& texture : prepared.textures) {
+        if (texture.experiment >= project.experiments.size() || !powder(texture.experiment)) {
+            throw std::invalid_argument("a carried texture row names no powder experiment of the project");
+        }
+        if (!names.contains(texture.structure)) {
+            throw std::invalid_argument("a carried texture row names '" + texture.structure +
+                                        "', which is not in the batch");
+        }
+        if (texture.axis == std::array<int, 3>{0, 0, 0}) {
+            throw std::invalid_argument("the texture axis of '" + texture.structure + "' is zero");
+        }
+        for (const int x : texture.axis) {
+            if (std::abs(x) > 1000) {
+                throw std::invalid_argument("the texture axis of '" + texture.structure + "' is (" +
+                                            std::to_string(texture.axis[0]) + "," + std::to_string(texture.axis[1]) +
+                                            "," + std::to_string(texture.axis[2]) + "), beyond the 1000 limit");
+            }
+        }
+    }
 }
 
 namespace {
@@ -10313,6 +10417,35 @@ std::vector<MagneticPeak> magnetic_unexplained_peaks(const Project& project, std
     return out;
 }
 
+std::vector<std::string> magnetic_candidates_without_intensity(const Project& project,
+                                                               const PreparedMagneticCandidates& prepared) {
+    std::vector<std::size_t> experiments;
+    for (std::size_t e = 0; e < project.experiments.size(); ++e) {
+        const auto& experiment = project.experiments[e];
+        if (experiment->experiment_type.effective_sample_form() != SampleFormEnum::POWDER) continue;
+        if (!experiment->data.has_value() || experiment->data->axis().empty()) continue;
+        for (const auto& link : experiment->linked_structures) {
+            if (link->structure_id.value() == prepared.parent) {
+                experiments.push_back(e);
+                break;
+            }
+        }
+    }
+    std::vector<std::string> out;
+    if (experiments.empty()) return out;
+    const KEngine k(project);
+    for (const auto& candidate : prepared.structures) {
+        const crysta::Structure engine = to_crysta_structure(*candidate);
+        bool none = true;
+        for (const std::size_t e : experiments) {
+            none = none && crysta::lacks_magnetic_intensity(engine, k.engine.experiments.at(e),
+                                                            project.experiments[e]->data->axis());
+        }
+        if (none) out.push_back(candidate->name.value());
+    }
+    return out;
+}
+
 std::vector<MagneticPeak> magnetic_mark_candidates(const Project& project, std::size_t experiment, std::size_t parent) {
     require_experiment(project, experiment, parent);
     const BraggPdExperiment& source = *project.experiments[experiment];
@@ -10340,10 +10473,29 @@ std::vector<MagneticPeak> magnetic_mark_candidates(const Project& project, std::
         if (!link->enabled.get() || link->structure_id.value() == parent_name) continue;
         others.push_back(&engine_structure(k.engine, link->structure_id.value()));
     }
+    // A peak on an allowed reflection is suggested only where a calculated curve leaves it unexplained: the residual
+    // of the calculation the experiment holds, at the same inputs (review 15, F4). Without one, only forbidden-line
+    // peaks are offered; any observed peak can still be marked by hand.
+    std::vector<crysta::UnexplainedPeak> residual;
+    if (!data.intensity_calc.empty() && data.intensity_calc.values().size() == x.size()) {
+        try {
+            residual = crysta::unexplained_peaks(structure, k.engine.experiments.at(experiment), x,
+                                                 data.intensity_meas.get(), data.intensity_calc.values(),
+                                                 data.intensity_meas_su.get(), included);
+        } catch (const std::invalid_argument&) {
+            residual.clear();  // a curve that cannot be read offers no suggestion
+        }
+    }
     std::vector<MagneticPeak> out;
     for (const crysta::UnexplainedPeak& p : crysta::forbidden_peaks(structure, k.engine.experiments.at(experiment), x,
                                                                     data.intensity_meas.get(),
                                                                     data.intensity_meas_su.get(), included, others)) {
+        if (p.on_allowed_reflection &&
+            std::none_of(residual.begin(), residual.end(), [&p](const crysta::UnexplainedPeak& r) {
+                return std::abs(r.d - p.d) <= std::max(r.tolerance, p.tolerance);
+            })) {
+            continue;
+        }
         out.push_back({p.x, p.d, p.tolerance, p.significance, p.half_width, p.on_allowed_reflection});
     }
     return out;
