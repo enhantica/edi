@@ -2,6 +2,7 @@
 #include <QCoreApplication>
 #include <QProcess>
 #include <QByteArray>
+#include <QFile>
 #include <QLocalSocket>
 #include <QMetaObject>
 #include <atomic>
@@ -56,8 +57,14 @@ int runToolBridge(int argc, char** argv) {
     };
     if (argc != 2) return fail("takes no further arguments");
     const QByteArray name = qgetenv("EDI_ASSISTANT_TOOLS");
-    const QByteArray key = qgetenv("EDI_ASSISTANT_TOOLS_KEY");
-    if (name.isEmpty() || key.isEmpty()) return fail("EDI_ASSISTANT_TOOLS and EDI_ASSISTANT_TOOLS_KEY must be set");
+    const QString keyPath = qEnvironmentVariable("EDI_ASSISTANT_TOOLS_FILE");
+    if (name.isEmpty() || keyPath.isEmpty()) return fail("EDI_ASSISTANT_TOOLS and EDI_ASSISTANT_TOOLS_FILE must be set");
+    // The key comes from a file because runtimes scrub credential-looking variables from MCP server environments.
+    QFile keyFile(keyPath);
+    if (!keyFile.open(QIODevice::ReadOnly)) return fail("cannot read the key file");
+    const QByteArray key = keyFile.read(256).trimmed();
+    keyFile.close();
+    if (key.isEmpty() || key.contains('\n')) return fail("the key file holds no key");
     QCoreApplication app(argc, argv);
     QLocalSocket socket;
     socket.connectToServer(QString::fromLocal8Bit(name));

@@ -24,14 +24,17 @@ public:
     explicit AssistantToolServer(QObject* parent = nullptr);
     ~AssistantToolServer() override;
 
-    /// Listens on a new random, owner-only local name with a new random key.
-    bool listen();
+    /// Listens on a new random, owner-only local name and writes a new random key to an owner-only file in
+    /// keyFolder. False, with nothing listening, when either fails.
+    bool listen(const QString& keyFolder);
     /// The local server name the bridge connects to; empty before listen().
     QString name() const;
     /// The key the bridge sends as its first line; empty before listen().
     QByteArray key() const;
+    /// The file holding the key; empty before listen().
+    QString keyFile() const;
     /// The stdio server entry for a runtime's MCP config:
-    /// `{"command": guard, "args": ["mcp"], "env": {"EDI_ASSISTANT_TOOLS": …, "EDI_ASSISTANT_TOOLS_KEY": …}}`.
+    /// `{"command": guard, "args": ["mcp"], "env": {"EDI_ASSISTANT_TOOLS": name, "EDI_ASSISTANT_TOOLS_FILE": keyFile}}`.
     QJsonObject mcpServerEntry(const QString& guardExecutable) const;
 
     /// The MCP tool list `tools/list` answers with (see assistant_native_mcp_tools()).
@@ -76,6 +79,7 @@ private:
     void readPending(QLocalSocket* socket);
     void readConnection();
     void dropPending(QLocalSocket* socket);
+    void removeKeyFile();
     void closeConnection(bool notify);
     void handle(const QJsonObject& message);
     bool send(const QJsonObject& message);
@@ -89,6 +93,7 @@ private:
     QByteArray buffer_;
     QString name_;
     QByteArray key_;
+    QString keyFile_;
     QJsonArray tools_;
     QSet<QString> toolNames_;
     QSet<QString> calls_;

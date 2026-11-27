@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "assistant_tool_server.hpp"
 #include <QCoreApplication>
+#include <QDir>
+#include <QFile>
 #include <QJsonDocument>
 #include <QLocalServer>
 #include <QLocalSocket>
@@ -56,11 +58,13 @@ AssistantToolServer::AssistantToolServer(QObject* parent) : QObject(parent) {}
 
 AssistantToolServer::~AssistantToolServer() {
     retire();
+    removeKeyFile();
     if (server_) server_->disconnect(this);
 }
 
-bool AssistantToolServer::listen() {
+bool AssistantToolServer::listen(const QString& keyFolder) {
     retire();
+    removeKeyFile();
     if (server_) {
         server_->disconnect(this);
         server_->close();
@@ -69,13 +73,33 @@ bool AssistantToolServer::listen() {
     server_ = new QLocalServer(this);
     server_->setSocketOptions(QLocalServer::UserAccessOption);
     connect(server_, &QLocalServer::newConnection, this, &AssistantToolServer::accept);
-    name_ = QStringLiteral("edi-tools-") + QString::fromLatin1(randomHex<4>());
-    key_ = randomHex<8>();
-    if (server_->listen(name_)) return true;
     name_.clear();
     key_.clear();
+    if (keyFolder.isEmpty()) return false;
+    const QString name = QStringLiteral("edi-tools-") + QString::fromLatin1(randomHex<4>());
+    const QByteArray key = randomHex<8>();
+    const QString path = QDir(keyFolder).filePath(name + QStringLiteral(".key"));
+    QFile file(path);
+    // Created owner-only, so the key is never readable by others, even for a moment.
+    if (!file.open(QIODevice::WriteOnly | QIODevice::NewOnly, QFileDevice::ReadOwner | QFileDevice::WriteOwner)) return false;
+    keyFile_ = path;
+    const bool written = file.write(key + '\n') == key.size() + 1 && file.flush();
+    file.close();
+    if (written && server_->listen(name)) {
+        name_ = name;
+        key_ = key;
+        return true;
+    }
+    removeKeyFile();
     return false;
 }
+
+void AssistantToolServer::removeKeyFile() {
+    if (!keyFile_.isEmpty()) QFile::remove(keyFile_);
+    keyFile_.clear();
+}
+
+QString AssistantToolServer::keyFile() const { return keyFile_; }
 
 QString AssistantToolServer::name() const { return name_; }
 
@@ -84,7 +108,7 @@ QByteArray AssistantToolServer::key() const { return key_; }
 QJsonObject AssistantToolServer::mcpServerEntry(const QString& guardExecutable) const {
     return {{"command", guardExecutable},
             {"args", QJsonArray{"mcp"}},
-            {"env", QJsonObject{{"EDI_ASSISTANT_TOOLS", name_}, {"EDI_ASSISTANT_TOOLS_KEY", QString::fromLatin1(key_)}}}};
+            {"env", QJsonObject{{"EDI_ASSISTANT_TOOLS", name_}, {"EDI_ASSISTANT_TOOLS_FILE", keyFile_}}}};
 }
 
 void AssistantToolServer::setTools(const QJsonArray& mcpTools) {
