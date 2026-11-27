@@ -639,8 +639,9 @@ void complete_atom_site_moments(Structure& structure) {
     if (structure.magnetic->operations.empty()) {
         return;
     }
-    crysta::Structure engine = to_crysta_structure(structure);
-    engine.complete_atom_site_moment();
+    // crysta's one completion of a magnetic edit (ADR-0137 B8): it refuses, naming why, a structure its acceptance
+    // rule refuses, before anything here changes.
+    const crysta::Structure engine = crysta::complete_magnetic(to_crysta_structure(structure)).structure;
     for (const crysta::AtomSiteMoment& done : engine.atom_site_moment) {
         for (const auto& row : structure.atom_site_moment) {
             if (row->id.value() != done.site_id.value()) {
@@ -1230,10 +1231,11 @@ void set_propagation_vectors(Structure& s, std::vector<std::pair<std::string, st
     }
     Structure trial = s;
     trial.magnetic.modify([&rows](MagneticDescription& magnetic) { magnetic.propagation_vectors = rows; });
-    // crysta's one acceptance rule, on the structure as it would become (edi ADR-0078).
-    crysta::check_magnetic_acceptance(to_crysta_structure(trial));
-    s.magnetic.modify([&rows](MagneticDescription& magnetic) { magnetic.propagation_vectors = std::move(rows); });
-    complete_atom_site_moments(s);  // the accepted state, as crysta completes it
+    // crysta's one completion, on the structure as it would become (ADR-0137 B8): a refusal leaves the prior model.
+    // A k with no operators yet has nothing to complete, but its values are still checked.
+    if (trial.magnetic->operations.empty()) check_magnetic_acceptance(trial);
+    complete_atom_site_moments(trial);
+    s = trial;  // Structure assigns by copy
 }
 
 namespace {
@@ -1363,15 +1365,14 @@ void set_magnetic_symmetry(Structure& s, std::vector<std::pair<std::string, std:
     (void)adopt_magnetic_family_setting(trial, true);
     // crysta's one acceptance rule, as a load applies it, on the structure as it would become: the
     // signed group, the exact family, k, the moment ties, the anisotropic refusal and the metric.
-    const crysta::Structure converted = to_crysta_structure(trial);
-    crysta::check_magnetic_acceptance(converted);
     // A chosen group is always held to the cell as it is now: the acceptance rule reads the cell through the nuclear
     // group's ties, which an edit the previous operators allowed may have left.
     if (group) {
         require_operations_keep_metric(s.cell, operations);
     }
-    s = trial;  // Structure assigns by copy
-    complete_atom_site_moments(s);  // the accepted state, as crysta completes it
+    if (trial.magnetic->operations.empty()) check_magnetic_acceptance(trial);
+    complete_atom_site_moments(trial);  // crysta's one completion (ADR-0137 B8); a refusal keeps the prior model
+    s = trial;                          // Structure assigns by copy
 }
 
 // The transforms loop's BNS row set to `transform`: the replaced row keeps its id, a new one takes the first free
@@ -6552,6 +6553,11 @@ void complete_relations(Project& project) {
         RelationProject converted = relation_project(project);
         copy_dependents(*converted.project, project, Completion::Values);
         mark_dependents(project, crysta::compile_relations(*converted.project, false), {});
+        // A type IV structure's coordinate, cell and ADP edits end in crysta's one completion too (ADR-0137 B8): its
+        // letters, admitted coordinates and moment ties follow the edited values. Types I-III keep today's path.
+        for (auto& structure : project.structures) {
+            if (letter_source(*structure) == LetterSource::Magnetic) complete_atom_site_moments(*structure);
+        }
     } catch (const std::exception& error) {
         raise_coded(error);
         throw;
