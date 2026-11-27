@@ -123,8 +123,9 @@ EaComponents.ListViewParameter {
     }
     onTextChanged: ApplicationInfo.editorTextChanged()
     // A free value is in the status bar's green, the one green token (EaStyle.Colors.green; the owner, 2026-10-22).
-    // A value a user constraint computes is in orange, a shared one in Shared's colour (owner record 2026-11-26).
-    color: warned ? EaStyle.Colors.red : item && item.fitGroup === 3 ? AppColors.constrained : !enabled || readOnly ? EaStyle.Colors.themeForegroundMinor : item && item.shared ? AppColors.shared : item && item.free && canFit ? EaStyle.Colors.green : EaStyle.Colors.themeForeground
+    // A value a user constraint computes is in the constrained colour, a shared one in Shared's, read-only or not (owner
+    // record 2026-11-26).
+    color: warned ? EaStyle.Colors.red : item && item.fitGroup === 3 ? AppColors.constrained : item && item.shared ? AppColors.shared : !enabled || readOnly ? EaStyle.Colors.themeForegroundMinor : item && item.free && canFit ? EaStyle.Colors.green : EaStyle.Colors.themeForeground
 
     // The menu opens under the cell, where the tooltips would cover it.
     readonly property bool popupOpen: contextMenu?.visible ?? false
