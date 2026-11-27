@@ -29,12 +29,14 @@ AppDialog {
     // any cell or by Up and Down, the app table's own selection (owner, 2026-11-27).
     // Named `current`, not `chosen`: the signal below is `chosen`, and a property of the same name hid it, so the chart
     // could not connect and the dialog never opened (owner, 2026-11-27).
-    property int current: -1
+    // The table's own current row, which a click, Up and Down move (the base row sets the list's currentIndex), so
+    // nothing here binds it: a bound currentIndex was replaced by the first click and the choice stayed on row 1.
+    readonly property int current: list.currentIndex
     // The marks show their roles under the row selected here, and only once the dialog lists its rows.
     onCurrentChanged: if (current >= 0 && current < rows.length)
         project.showKRoles(snapshot.id, rows[current].rank)
     onRowsChanged: {
-        current = rows.length > 0 ? 0 : -1;
+        list.currentIndex = rows.length > 0 ? 0 : -1;
         Qt.callLater(() => list.forceActiveFocus());  // Up and Down move the choice at once
     }
     // The chosen k; the chart opens the analysis with it.
@@ -106,8 +108,6 @@ AppDialog {
             Layout.fillHeight: true
             clip: true
             marksCurrentRow: true
-            currentIndex: popup.current
-            onRowActivated: row => popup.current = row
             sourceModel: popup.rows
             defaultInfoText: popup.searching ? qsTr("Searching…") : qsTr("No propagation vector")
             columnKinds: ["index", "short", "text", "number", "number", "text"]
@@ -143,7 +143,7 @@ AppDialog {
                 // only listens (a passive grab).
                 TapHandler {
                     onDoubleTapped: {
-                        popup.current = row.index;
+                        list.currentIndex = row.index;
                         popup.analyse();
                     }
                 }
@@ -163,8 +163,41 @@ AppDialog {
                     text: `(${row.modelData.k})`
                 }
                 EaComponents.ListViewLabel {
+                    id: indexedCell
                     horizontalAlignment: Text.AlignHCenter
                     text: qsTr("%1 of %2").arg(row.modelData.explained).arg(popup.markedPeaks.length)
+                    // Hovered, every marked reflection with its role for this k: the app's check when the k indexes
+                    // it, its cross when not (owner, 2026-11-27).
+                    HoverHandler {
+                        id: indexedHover
+                    }
+                    ToolTip {
+                        objectName: `chart.kVector.${row.index}.indexed`
+                        parent: indexedCell
+                        visible: indexedHover.hovered
+                        delay: Qt.styleHints.mousePressAndHoldInterval
+                        contentItem: Column {
+                            spacing: EaStyle.Sizes.fontPixelSize * 0.25
+                            Repeater {
+                                model: popup.markRoles(row.modelData)
+                                delegate: Row {
+                                    id: roleRow
+                                    required property var modelData
+                                    spacing: EaStyle.Sizes.fontPixelSize * 0.4
+                                    IconCell {
+                                        width: EaStyle.Sizes.fontPixelSize * 1.2
+                                        height: roleText.height
+                                        icon: roleRow.modelData.indexed ? "check-circle" : "times-circle"
+                                        iconColor: String(roleRow.modelData.indexed ? EaStyle.Colors.green : EaStyle.Colors.red)
+                                    }
+                                    EaElements.Label {
+                                        id: roleText
+                                        text: roleRow.modelData.text
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
                 EaComponents.ListViewLabel {
                     horizontalAlignment: Text.AlignHCenter
@@ -177,27 +210,24 @@ AppDialog {
                 }
             }
         }
-        // The details strip, as the symmetry popup's (owner, 2026-11-27): what the chosen k explains, each marked peak in
-        // the pattern's order (by 2θ) with its role, in the normal text colour.
-        EaElements.Label {
-            objectName: "chart.kVectorRoles"
-            Layout.fillWidth: true
-            wrapMode: Text.Wrap
-            text: {
-                const r = popup.rows[popup.current];
-                if (r === undefined)
-                    return "";
-                const names = {
-                    satellite: qsTr("satellite"),
-                    forbidden: qsTr("forbidden reflection"),
-                    allowed: qsTr("allowed reflection"),
-                    "": qsTr("not indexed")
-                };
-                const order = popup.markedPeaks.map((p, i) => i).sort((a, b) => popup.markedPeaks[a].x - popup.markedPeaks[b].x);
-                const point = r.label === "" ? `(${r.k})` : `${r.label} (${r.k})`;
-                return qsTr("%1 explains: %2").arg(point).arg(order.map(i => `${popup.markedPeaks[i].x.toFixed(2)}° ${names[r.roles[i] ?? ""] ?? r.roles[i]}`).join(", ")) + (r.equallyGood ? qsTr(" · equally good") : "");
-            }
-        }
+    }
+
+    // Each marked reflection of row `r` in the pattern's order (by 2θ): its 2θ and role, and whether the k indexes it.
+    function markRoles(r) {
+        const names = {
+            satellite: qsTr("satellite"),
+            forbidden: qsTr("forbidden reflection"),
+            allowed: qsTr("allowed reflection"),
+            "": qsTr("not indexed")
+        };
+        const order = markedPeaks.map((p, i) => i).sort((a, b) => markedPeaks[a].x - markedPeaks[b].x);
+        return order.map(i => {
+            const role = r.roles[i] ?? "";
+            return {
+                "indexed": role !== "",
+                "text": `${markedPeaks[i].x.toFixed(2)}° ${names[role] ?? role}`
+            };
+        });
     }
 
     // Analyse the chosen k: the data, links and marks the search ran on must still hold (review 12, F19).
