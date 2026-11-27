@@ -5104,8 +5104,10 @@ bool DemoDriver::perform(const QString& action) {
             QMouseEvent event(type, to, window_.mapToGlobal(to), Qt::LeftButton, buttons, Qt::NoModifier);
             QCoreApplication::sendEvent(&window_, &event);
         };
+        // The order a real mouse gives: the second press comes before the double-click event.
         send(QEvent::MouseButtonPress, Qt::LeftButton);
         send(QEvent::MouseButtonRelease, Qt::NoButton);
+        send(QEvent::MouseButtonPress, Qt::LeftButton);
         send(QEvent::MouseButtonDblClick, Qt::LeftButton);
         send(QEvent::MouseButtonRelease, Qt::NoButton);
         return true;
