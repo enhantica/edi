@@ -189,8 +189,7 @@ def test_offline_installer_retains_default_update_repositories(tmp_path, channel
         (stage / 'build-inputs.json').write_text(json.dumps({'release_history_sha256': 'fixture'}))
     archive = tmp_path / 'installer.zip'
     archive.write_bytes(b'archive fixture')
-    runtime = tmp_path / 'runtime'
-    runtime.mkdir()
+    runtime = installer_runtime(tmp_path)
     output = tmp_path / 'output'
     with (
         mock.patch.object(
@@ -235,10 +234,37 @@ def test_offline_installer_retains_default_update_repositories(tmp_path, channel
             tool / PACKAGE.maintenance_tool_name()
         ).is_file(), 'The installer carries the separately built maintenance tool.'
     else:
-        assert not (packages / PACKAGE.MAINTENANCE_COMPONENT).exists(), (
-            'Only macOS and Windows ship the maintenance tool component.'
+        # Linux: the tool component carries only the tool's runtime, staged for the swap, and the
+        # app component no longer does (ADR-0108).
+        data = packages / PACKAGE.MAINTENANCE_COMPONENT / 'data'
+        assert sorted(path.relative_to(data).as_posix() for path in data.rglob('*')) == [
+            'maintenancetool',
+            'maintenancetool/installer-runtime',
+            'maintenancetool/installer-runtime/dependencies.json',
+            'maintenancetool/installer-runtime/lib',
+            'maintenancetool/installer-runtime/lib/library.so',
+        ], 'The Linux tool component carries only the staged runtime.'
+        app_data = packages / PACKAGE.APP_COMPONENT / 'data'
+        assert not (app_data / 'installer-runtime').exists(), (
+            'The app component does not carry the tool runtime.'
+        )
+        manifest = json.loads((app_data / 'payload-manifest.json').read_text())
+        assert not any(name.startswith('installer-runtime/') for name in manifest), (
+            'The app payload manifest lists no tool runtime file.'
         )
     assert not (output / 'repository').exists(), 'Offline packaging publishes no repository.'
+
+
+def installer_runtime(folder):
+    """A Linux tool runtime as linux_installer_runtime leaves it: one library and its listing."""
+    runtime = folder / 'installer-runtime'
+    (runtime / 'lib').mkdir(parents=True)
+    library = runtime / 'lib/library.so'
+    library.write_bytes(b'portable dependency')
+    (runtime / 'dependencies.json').write_text(
+        json.dumps({library.name: PACKAGE.sha256(library)}) + '\n'
+    )
+    return runtime
 
 
 def test_download_archive_keeps_bootstrap_libraries_and_permissions(tmp_path):
@@ -722,6 +748,58 @@ def test_installed_maintenance_tool_check_passes_for_the_shipped_tool(tmp_path, 
     with mock.patch.object(PACKAGE, 'run') as verify:
         PACKAGE.verify_installed_maintenance_tool(tmp_path, {'maintenance_tool_sha256': expected})
     assert verify.call_args.args[0][:3] == ['codesign', '--verify', '--strict']
+
+
+@pytest.mark.parametrize('damage', [None, 'library', 'listing', 'staged', 'backup'])
+def test_installed_linux_tool_needs_its_whole_runtime(tmp_path, monkeypatch, damage):
+    # Linux has no signed tool: the check is the runtime the tool loads, swapped in (ADR-0108).
+    monkeypatch.setattr(PACKAGE, 'SYSTEM', 'linux')
+    (tmp_path / 'MaintenanceTool').write_bytes(b'tool')
+    runtime = installer_runtime(tmp_path)
+    if damage == 'library':
+        (runtime / 'lib/library.so').write_bytes(b'changed')
+    elif damage == 'listing':
+        (runtime / 'dependencies.json').unlink()
+    elif damage == 'staged':
+        (tmp_path / 'maintenancetool').mkdir()
+    elif damage == 'backup':
+        (tmp_path / 'installer-runtime.old').mkdir()
+    if damage is None:
+        PACKAGE.verify_installed_maintenance_tool(tmp_path, {})
+    else:
+        with pytest.raises(RuntimeError, match='maintenance tool'):
+            PACKAGE.verify_installed_maintenance_tool(tmp_path, {})
+
+
+# After an update Windows keeps only the staged copy of the installed tool, which the app's next
+# start removes (edi ADR-0108); anything else in the staging folder is refused.
+@pytest.mark.parametrize(
+    ('updated', 'staged', 'refused'),
+    [
+        (False, 'other', False),
+        (True, 'installed', False),
+        (True, 'other', True),
+        (True, 'extra', True),
+    ],
+)
+def test_windows_staged_tool_after_an_update_is_the_installed_one(
+    tmp_path, monkeypatch, updated, staged, refused
+):
+    monkeypatch.setattr(PACKAGE, 'SYSTEM', 'windows')
+    monkeypatch.delenv('EDI_CODESIGN', raising=False)
+    bundle = signed_bundle(tmp_path)
+    staging = tmp_path / 'maintenancetool'
+    staging.mkdir()
+    copy = staging / bundle.name
+    copy.write_bytes(bundle.read_bytes() if staged != 'other' else b'older tool')
+    if staged == 'extra':
+        (staging / 'leftover.txt').write_text('debris\n')
+    metadata = {'maintenance_tool_sha256': PACKAGE.sha256(bundle)}
+    if refused:
+        with pytest.raises(RuntimeError, match='maintenance tool'):
+            PACKAGE.verify_installed_maintenance_tool(tmp_path, metadata, updated=updated)
+    else:
+        PACKAGE.verify_installed_maintenance_tool(tmp_path, metadata, updated=updated)
 
 
 # The installed app's smoke run: two minutes, one more try after a timeout, never after a failure.

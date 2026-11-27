@@ -36,7 +36,8 @@ ASSISTANT_RUNTIME = Path('libexec/edi/codex')
 # it sits beside the signed application bundle, as the assistant runtime does.
 VOICE_COMPONENT = 'org.easydiffraction.app.voice'
 VOICE_MODEL = Path('share/edi/voice')
-# macOS and Windows ship their maintenance tool as a signed, app-versioned component (ADR-0091).
+# macOS and Windows ship their maintenance tool as a signed, app-versioned component (ADR-0091);
+# Linux ships only the tool's runtime in it (ADR-0108).
 MAINTENANCE_COMPONENT = 'org.easydiffraction.app.maintenancetool'
 # The id each component replaced, so an install made before edi ADR-0091 updates in place.
 REPLACED_COMPONENTS = {
@@ -312,8 +313,9 @@ def write_resources(config: Path, configuration: ET.ElementTree) -> Path:
 def write_controller(config: Path, tool_bytes: int = 0) -> None:
     """Write the window's stylesheet and the controller, holding both wordmarks and page themes.
 
-    `tool_bytes` is the maintenance tool's size, which its component (it has no payload on Linux)
-    cannot say: the pages show it on the tool's row.
+    `tool_bytes` is the size of the Framework's binary, which the installation writes as the tool
+    on Linux and on a fresh install elsewhere. No component holds it: on Linux the tool's component
+    carries only its runtime. The pages show it on the tool's row.
 
     The Framework loads one stylesheet for the whole app, before scripts run, so the window around
     the pages follows the system palette (InstallerChrome.qss); the controller gives each page
@@ -565,12 +567,16 @@ def write_maintenance_tool_metadata(meta: Path, version: str) -> None:
 
 
 def maintenance_script() -> str:
-    """The tool component's script, the macOS swap and its undo written in as string literals."""
+    """The tool component's script, its shell scripts written in as string literals.
+
+    They are the swap, its undo and the cleanup after a successful update (ADR-0108).
+    """
     folder = ROOT / 'tools/installer'
     script = (folder / 'maintenancescript.qs').read_text(encoding='utf-8')
     for marker, name in (
         ('EDI_SWAP_SCRIPT', 'maintenance_swap.sh'),
         ('EDI_RESTORE_SCRIPT', 'maintenance_restore.sh'),
+        ('EDI_CLEANUP_SCRIPT', 'maintenance_cleanup.sh'),
     ):
         quoted = f'"@{marker}@"'
         if script.count(quoted) != 1:
@@ -581,6 +587,20 @@ def maintenance_script() -> str:
 
 def maintenance_tool_name() -> str:
     return 'MaintenanceTool.app' if SYSTEM == 'macos' else 'MaintenanceTool.exe'
+
+
+def maintenance_item() -> str:
+    """The folder an update swaps in place of the installed one (maintenance_swap.sh, ADR-0108).
+
+    Windows swaps no folder; the Framework replaces the tool there.
+    """
+    return {'macos': 'MaintenanceTool.app', 'linux': 'installer-runtime'}.get(SYSTEM, '')
+
+
+def maintenance_probe() -> str:
+    """The file inside the swapped folder that makes it usable."""
+    probes = {'macos': 'Contents/MacOS/MaintenanceTool', 'linux': 'dependencies.json'}
+    return probes.get(SYSTEM, '')
 
 
 def maintenance_tool_executable(bundle: Path) -> Path:
@@ -723,6 +743,36 @@ def add_maintenance_tool(
     return sha256(maintenance_tool_executable(target))
 
 
+def add_maintenance_runtime(packages: Path, runtime: Path, version: str) -> None:
+    """Linux: put the tool's runtime into the tool component, staged for the swap (ADR-0108).
+
+    The app component no longer carries it, so undoing the app's operations never takes the
+    libraries the tool loads through its rpath ($ORIGIN/installer-runtime/lib).
+    """
+    meta = packages / MAINTENANCE_COMPONENT / 'meta'
+    meta.mkdir(parents=True)
+    write_maintenance_tool_metadata(meta, version)
+    target = meta.parent / 'data/maintenancetool' / maintenance_item()
+    target.parent.mkdir(parents=True)
+    shutil.copytree(runtime, target, symlinks=True)
+    if not (target / maintenance_probe()).is_file():
+        raise RuntimeError(f'The tool runtime has no {maintenance_probe()}')
+
+
+def check_maintenance_runtime(target: Path) -> None:
+    """Linux: require the tool and every library its runtime lists, with the listed bytes."""
+    if not (target / 'MaintenanceTool').is_file():
+        raise RuntimeError(f'Maintenance tool is missing: {target / "MaintenanceTool"}')
+    runtime = target / maintenance_item()
+    listing = runtime / maintenance_probe()
+    if not listing.is_file():
+        raise RuntimeError(f'The maintenance tool has no runtime: {listing} is missing')
+    for name, expected in json.loads(listing.read_text(encoding='utf-8')).items():
+        library = runtime / 'lib' / name
+        if not library.is_file() or sha256(library) != expected:
+            raise RuntimeError(f'The maintenance tool runtime lacks or changed lib/{name}')
+
+
 def add_maintenance_resource(source: Path, tools: Path, environment: dict | None) -> None:
     """Ship the maintenance tool's pages with the app component, for updates to put in place."""
     meta = source / 'packages' / APP_COMPONENT / 'meta'
@@ -743,20 +793,38 @@ def add_maintenance_resource(source: Path, tools: Path, environment: dict | None
     script.write_text(text.replace(unnamed, named), encoding='utf-8')
 
 
-def verify_installed_maintenance_tool(target: Path, metadata: dict) -> None:
-    """Before running it, require the installed tool to be the shipped one (edi ADR-0091)."""
-    if SYSTEM not in {'macos', 'windows'}:
-        return
-    bundle = target / maintenance_tool_name()
-    check_maintenance_tool(bundle)
-    expected = metadata.get('maintenance_tool_sha256')
-    if expected and sha256(maintenance_tool_executable(bundle)) != expected:
-        raise RuntimeError(
-            'The installer wrote its own maintenance tool instead of the signed one'
-        )
-    if SYSTEM == 'macos' and (target / 'maintenancetool').exists():
+def verify_installed_maintenance_tool(
+    target: Path, metadata: dict, *, updated: bool = False
+) -> None:
+    """Before running it, require the installed tool to be the shipped one (edi ADR-0091).
+
+    Linux has no signed tool: its runtime must be complete instead. No staging folder and no
+    backup may be left (ADR-0108). Windows keeps the staged tool after a fresh install, and after
+    an update until the app's next start removes it: the Framework writes the installed tool only
+    after the update's last signal. So once `updated`, the staged tool must be the installed one.
+    """
+    if SYSTEM == 'linux':
+        check_maintenance_runtime(target)
+    else:
+        bundle = target / maintenance_tool_name()
+        check_maintenance_tool(bundle)
+        expected = metadata.get('maintenance_tool_sha256')
+        if expected and sha256(maintenance_tool_executable(bundle)) != expected:
+            raise RuntimeError(
+                'The installer wrote its own maintenance tool instead of the signed one'
+            )
+    staging = target / 'maintenancetool'
+    if SYSTEM == 'windows' and updated and staging.exists():
+        staged = [path.name for path in staging.iterdir()]
+        installed = target / maintenance_tool_name()
+        if staged != [installed.name] or sha256(staging / installed.name) != sha256(installed):
+            raise RuntimeError(
+                f'The update left a staged maintenance tool the app keeps: {staged}'
+            )
+    elif staging.exists() and SYSTEM != 'windows':
         raise RuntimeError('The installer left the shipped maintenance tool in place')
-    if SYSTEM == 'macos' and (target / 'MaintenanceTool.app.old').exists():
+    item = maintenance_item()
+    if item and any((target / (item + suffix)).exists() for suffix in ('.old', '.old-token')):
         raise RuntimeError('The update left the replaced maintenance tool behind')
 
 
@@ -1352,7 +1420,6 @@ def prepare_installer_source(
     if SYSTEM == 'linux':
         template, runtime, tool_environment = linux_installer_runtime(tools, output)
         template_args = ['-t', template]
-        shutil.copytree(runtime, data / runtime.name)
     elif SYSTEM == 'macos':
         template_args = ['-t', macos_installer_template(tools, output)]
     (data / 'update-channel.txt').write_text(channel + '\n', encoding='utf-8')
@@ -1407,11 +1474,13 @@ def package_app(
     source, template_args, tool_environment, runtime = prepare_installer_source(
         stage, tools, output, version, repository_url, mirrors, channel
     )
-    maintenance_sha256 = (
-        add_maintenance_tool(source / 'packages', maintenance_tool, tools, output, version)
-        if SYSTEM in {'macos', 'windows'}
-        else None
-    )
+    maintenance_sha256 = None
+    if SYSTEM in {'macos', 'windows'}:
+        maintenance_sha256 = add_maintenance_tool(
+            source / 'packages', maintenance_tool, tools, output, version
+        )
+    else:
+        add_maintenance_runtime(source / 'packages', runtime, version)
     if repository_url:
         # Every online release, Linux included: only an update can refresh the tool's pages.
         add_maintenance_resource(source, tools, tool_environment)
