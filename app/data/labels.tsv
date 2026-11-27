@@ -23,12 +23,14 @@ appBar.tab.project	Project		archive
 appBar.tab.report	Report		clipboard-list
 appBar.tab.structure	Structure		layer-group
 assistant.accountDialog	Account		
+assistant.acknowledgeManagedSettings	I understand		check
 assistant.clear	New session		plus
-assistant.connectionFailure	ChatGPT connection was not completed		
+assistant.connection.hostMessage	Enter github.com or a GitHub Enterprise host such as name.ghe.com.		
 assistant.desktopOnly	AI assistant		
 assistant.desktopOnly.download	Open the desktop download page		external-link-alt
 assistant.desktopOnly.updates	Open Updates in Preferences to add the AI assistant		cog
 assistant.files.dialog	Add files to the assistant		
+assistant.managedClaudeNotice	If your organisation manages Claude, its settings can run their own commands when Claude starts and before each message. Those commands are outside edi's tools.		
 assistant.modelEffort.popup	Model and reasoning effort		
 assistant.plan.approve	Approve plan		
 assistant.reportPageUnavailable	Report page unavailable		
@@ -38,6 +40,7 @@ assistant.sessionsDialog	Assistant sessions
 assistant.showActions	Show actions		eye
 assistant.signOut	Sign out		sign-out-alt
 assistant.stop	Stop		stop
+assistant.switchAccount	Switch		exchange-alt
 assistant.usageDialog	Usage		
 atomSites.append	Append new atom site	Append	plus-circle
 atomSites.duplicate	Duplicate selected atom site	Duplicate	clone
