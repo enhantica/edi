@@ -7,5 +7,6 @@
     "stable": "repository/{platform}/",
     "testing": "repository/testing/{platform}/"
   },
-  "third_party_path": "third-party/"
+  "third_party_path": "third-party/",
+  "claude_distribution": "internal"
 }

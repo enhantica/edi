@@ -22,11 +22,42 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'tools/release'))
 import versions  # noqa: E402
+from assistants import (  # noqa: E402
+    CHATGPT_COMPONENT,
+    CLAUDE_COMPONENT,
+    COPILOT_COMPONENT,
+    distributed_assistants,
+)
 
 SYSTEM = {'Linux': 'linux', 'Darwin': 'macos', 'Windows': 'windows'}[platform.system()]
 APP_COMPONENT = 'org.easydiffraction.app'
-ASSISTANT_COMPONENT = 'org.easydiffraction.app.assistant'
+ASSISTANT_COMPONENT = CHATGPT_COMPONENT
 ASSISTANT_RUNTIME = Path('libexec/edi/codex')
+# The optional assistant components, one per provider, in the pages' order (edi ADR-0108): the
+# runtime each holds, the name the pages show, its payload manifest and its sorting priority.
+ASSISTANT_COMPONENTS = {
+    ASSISTANT_COMPONENT: {
+        'runtime': ASSISTANT_RUNTIME,
+        'name': 'ChatGPT',
+        'description': 'Optional runtime for the ChatGPT assistant in EasyDiffraction.',
+        'manifest': 'assistant-payload-manifest.json',
+        'priority': '100',
+    },
+    CLAUDE_COMPONENT: {
+        'runtime': Path('libexec/edi/claude'),
+        'name': 'Claude',
+        'description': 'Optional runtime for the Claude assistant in EasyDiffraction.',
+        'manifest': 'claude-payload-manifest.json',
+        'priority': '90',
+    },
+    COPILOT_COMPONENT: {
+        'runtime': Path('libexec/edi/copilot'),
+        'name': 'GitHub Copilot',
+        'description': 'Optional runtime for the GitHub Copilot assistant in EasyDiffraction.',
+        'manifest': 'copilot-payload-manifest.json',
+        'priority': '80',
+    },
+}
 # macOS and Windows ship their maintenance tool as a signed, app-versioned component (ADR-0091).
 MAINTENANCE_COMPONENT = 'org.easydiffraction.app.maintenancetool'
 # The id each component replaced, so an install made before edi ADR-0091 updates in place.
@@ -428,32 +459,37 @@ def write_metadata(
     root.write(meta / 'package.xml', encoding='utf-8', xml_declaration=True)
 
 
-def write_assistant_metadata(meta: Path, version: str) -> None:
-    root = xml_file(
-        meta / 'package.xml',
-        'Package',
-        {
-            'DisplayName': 'AI assistant',
-            'Description': 'Optional runtime for the ChatGPT assistant in EasyDiffraction.',
-            'Version': version,
-            'ReleaseDate': datetime.datetime.now(datetime.UTC).date().isoformat(),
-            'Dependencies': APP_COMPONENT,
-            'Default': 'false',
-            'RequiresAdminRights': 'false',
-            'Replaces': REPLACED_COMPONENTS[ASSISTANT_COMPONENT],
-            'SortingPriority': '100',  # after EasyDiffraction
-            'Script': 'assistantscript.qs',
-        },
-    )
-    # The checkbox that replaces the component tree (edi ADR-0071).
-    interfaces = ET.SubElement(root.getroot(), 'UserInterfaces')
-    ET.SubElement(interfaces, 'UserInterface').text = 'AssistantForm.ui'
-    ET.SubElement(interfaces, 'UserInterface').text = 'ProgressForm.ui'
-    ET.SubElement(interfaces, 'UserInterface').text = 'DoneForm.ui'
+def write_assistant_metadata(
+    meta: Path, version: str, component: str = ASSISTANT_COMPONENT
+) -> None:
+    """One optional assistant component; ChatGPT's carries the pages' forms and their script."""
+    details = ASSISTANT_COMPONENTS[component]
+    fields = {
+        'DisplayName': details['name'],
+        'Description': details['description'],
+        'Version': version,
+        'ReleaseDate': datetime.datetime.now(datetime.UTC).date().isoformat(),
+        'Dependencies': APP_COMPONENT,
+        'Default': 'false',
+        'RequiresAdminRights': 'false',
+    }
+    if component in REPLACED_COMPONENTS:
+        fields['Replaces'] = REPLACED_COMPONENTS[component]
+    fields['SortingPriority'] = details['priority']  # after EasyDiffraction
+    if component == ASSISTANT_COMPONENT:
+        fields['Script'] = 'assistantscript.qs'
+    root = xml_file(meta / 'package.xml', 'Package', fields)
+    if component == ASSISTANT_COMPONENT:
+        # The checkboxes that replace the component tree (edi ADR-0071).
+        interfaces = ET.SubElement(root.getroot(), 'UserInterfaces')
+        ET.SubElement(interfaces, 'UserInterface').text = 'AssistantForm.ui'
+        ET.SubElement(interfaces, 'UserInterface').text = 'ProgressForm.ui'
+        ET.SubElement(interfaces, 'UserInterface').text = 'DoneForm.ui'
     ET.indent(root)
     root.write(meta / 'package.xml', encoding='utf-8', xml_declaration=True)
-    for name in ('assistantscript.qs', 'AssistantForm.ui', 'ProgressForm.ui', 'DoneForm.ui'):
-        shutil.copy2(ROOT / 'tools/installer' / name, meta / name)
+    if component == ASSISTANT_COMPONENT:
+        for name in ('assistantscript.qs', 'AssistantForm.ui', 'ProgressForm.ui', 'DoneForm.ui'):
+            shutil.copy2(ROOT / 'tools/installer' / name, meta / name)
 
 
 def write_maintenance_tool_metadata(meta: Path, version: str) -> None:
@@ -469,7 +505,7 @@ def write_maintenance_tool_metadata(meta: Path, version: str) -> None:
             'ForcedInstallation': 'true',
             'RequiresAdminRights': 'false',
             'Replaces': REPLACED_COMPONENTS[MAINTENANCE_COMPONENT],
-            # Between EasyDiffraction (200) and the AI assistant (100) where a capture lists it.
+            # Between EasyDiffraction (200) and the assistants (100 and lower) in a capture.
             'SortingPriority': '150',
             'Script': 'maintenancescript.qs',
         },
@@ -1140,13 +1176,17 @@ def deliver_installer(installer: Path, runtime: Path | None, *, ad_hoc: bool = T
     return archive
 
 
-def write_repository(tools: Path, packages: Path, repository: Path, environment: dict) -> None:
+def write_repository(
+    tools: Path, packages: Path, repository: Path, environment: dict, excluded: list[str] = ()
+) -> None:
     """The online repository, every component with its content checksum (edi ADR-0106).
 
     repogen takes the argument after --sha-update as the components to checksum: every package of
-    this platform's repository, by its id.
+    this platform's repository, by its id. Excluded components (withheld_components) stay out.
     """
-    names = sorted(path.name for path in packages.iterdir() if path.is_dir())
+    names = sorted(
+        path.name for path in packages.iterdir() if path.is_dir() and path.name not in excluded
+    )
     run(
         [
             tools / ('bin/repogen' + SUFFIX),
@@ -1156,6 +1196,7 @@ def write_repository(tools: Path, packages: Path, repository: Path, environment:
             '--component-metadata',
             '--compression',
             '5',
+            *(['--exclude', ','.join(excluded)] if excluded else []),
             '-p',
             packages,
             repository,
@@ -1179,6 +1220,17 @@ def require_content_checksums(updates: Path, packages: list) -> None:
         )
 
 
+def withheld_components(packages: Path, *, internal: bool = False) -> list[str]:
+    """Built components this installer and its repository leave out.
+
+    That is Claude until its distribution is public, except in an internal build.
+    """
+    carried = distributed_assistants(internal=internal)
+    return [
+        name for name in ASSISTANT_COMPONENTS if name not in carried and (packages / name).is_dir()
+    ]
+
+
 def installerbase_bytes(tools: Path) -> int:
     """The Framework's installerbase, which the installation writes as its maintenance tool."""
     base = tools / 'bin' / ('installerbase.exe' if SYSTEM == 'windows' else 'installerbase')
@@ -1194,7 +1246,11 @@ def prepare_installer_source(
     mirrors: tuple[str, ...],
     channel: str,
 ) -> tuple:
-    """Prepare the payload and platform bootstrap runtime before framework packaging."""
+    """Prepare the payload and platform bootstrap runtime before framework packaging.
+
+    Each assistant runtime in the stage becomes its own optional component and never stays in
+    the required one. Every component is built; package_app decides which ones ship.
+    """
     source = output / 'source'
     if source.exists():
         raise RuntimeError('Installer source already exists; choose a fresh output directory')
@@ -1202,19 +1258,24 @@ def prepare_installer_source(
     packages = source / 'packages'
     meta = packages / APP_COMPONENT / 'meta'
     data = meta.parent / 'data'
-    assistant_meta = packages / ASSISTANT_COMPONENT / 'meta'
-    assistant_data = assistant_meta.parent / 'data'
     config.mkdir(parents=True)
     meta.mkdir(parents=True)
     shutil.copytree(stage, data, symlinks=True)
-    assistant_meta.mkdir(parents=True)
-    optional_runtime = assistant_data / ASSISTANT_RUNTIME
-    optional_runtime.parent.mkdir(parents=True)
-    shutil.move(data / ASSISTANT_RUNTIME, optional_runtime)
-    (assistant_data / 'assistant-payload-manifest.json').write_text(
-        json.dumps(payload_manifest(assistant_data), indent=2) + '\n'
-    )
-    write_assistant_metadata(assistant_meta, version)
+    for component, details in ASSISTANT_COMPONENTS.items():
+        runtime = data / details['runtime']
+        if not runtime.is_dir():
+            if component == ASSISTANT_COMPONENT:
+                raise RuntimeError('Stage does not contain the ChatGPT assistant runtime')
+            continue
+        component_meta = packages / component / 'meta'
+        component_data = component_meta.parent / 'data'
+        component_meta.mkdir(parents=True)
+        (component_data / details['runtime']).parent.mkdir(parents=True)
+        shutil.move(runtime, component_data / details['runtime'])
+        (component_data / details['manifest']).write_text(
+            json.dumps(payload_manifest(component_data), indent=2) + '\n'
+        )
+        write_assistant_metadata(component_meta, version, component)
     template_args, tool_environment = [], None
     runtime = None
     if SYSTEM == 'linux':
@@ -1242,7 +1303,7 @@ def prepare_installer_source(
     return source, template_args, tool_environment, runtime
 
 
-def package_app(
+def package_app(  # noqa: PLR0913, PLR0914 - the stage's identity and how it ships
     stage: Path,
     tools: Path,
     output: Path,
@@ -1250,7 +1311,10 @@ def package_app(
     repository_url: str | None = None,
     mirrors: tuple[str, ...] = (),
     maintenance_tool: Path | None = None,
+    *,
+    internal: bool = False,
 ) -> Path:
+    """Package the stage; an internal build carries Claude before its distribution is public."""
     if not re.fullmatch(r'[0-9]+(?:[.-][0-9]+)*', version):
         raise RuntimeError('Installer version must contain only numeric components')
     stage, tools, output = stage.resolve(), tools.resolve(), output.resolve()
@@ -1275,6 +1339,7 @@ def package_app(
     source, template_args, tool_environment, runtime = prepare_installer_source(
         stage, tools, output, version, repository_url, mirrors, channel
     )
+    excluded = withheld_components(source / 'packages', internal=internal)
     maintenance_sha256 = (
         add_maintenance_tool(source / 'packages', maintenance_tool, tools, output, version)
         if SYSTEM in {'macos', 'windows'}
@@ -1286,7 +1351,9 @@ def package_app(
         # one with a higher version. That is how 2026.11.x installs take 26.17, a lower number
         # (edi ADR-0106). So a component with the same content in two releases is not offered,
         # one rebuilt with other bytes but the same content is, and Version is only shown.
-        write_repository(tools, source / 'packages', output / 'repository', tool_environment)
+        write_repository(
+            tools, source / 'packages', output / 'repository', tool_environment, excluded
+        )
     kind = 'online' if repository_url else 'offline'
     name = installer_stem(version, kind)
     installer = output / (
@@ -1300,6 +1367,7 @@ def package_app(
             '--compression',
             '1',
             '--online-only' if repository_url else '--hybrid',
+            *(['--exclude', ','.join(excluded)] if excluded else []),
             '-r',
             source / 'config/resources/resources.qrc',
             '-c',
@@ -1337,6 +1405,14 @@ def package_app(
                 'edi_commit': inputs.get('edi_commit'),
                 'release_history_sha256': inputs.get('release_history_sha256'),
                 'maintenance_tool_sha256': maintenance_sha256,
+                # An internal build may carry Claude before its distribution is public, so
+                # publication refuses it (tools/release/assistants.py).
+                'internal': internal,
+                'assistants': [
+                    name
+                    for name in ASSISTANT_COMPONENTS
+                    if (source / 'packages' / name).is_dir() and name not in excluded
+                ],
             },
             indent=2,
         )
@@ -1580,13 +1656,20 @@ def installer_from_download(download: Path, output: Path) -> Path:
     return download
 
 
-def verify_installed_payload(target: Path, *, with_assistant: bool) -> None:
+def verify_installed_payload(
+    target: Path, *, with_assistant: bool = False, assistants: tuple[str, ...] = ()
+) -> None:
+    """The installed bytes with exactly the chosen assistants (with_assistant: ChatGPT)."""
+    chosen = set(assistants) | ({ASSISTANT_COMPONENT} if with_assistant else set())
     manifest = json.loads((target / 'payload-manifest.json').read_text(encoding='utf-8'))
-    optional_manifest = target / 'assistant-payload-manifest.json'
-    if with_assistant:
-        manifest.update(json.loads(optional_manifest.read_text(encoding='utf-8')))
-    elif optional_manifest.exists() or (target / ASSISTANT_RUNTIME).exists():
-        raise RuntimeError('The default installation includes the optional assistant')
+    for component, details in ASSISTANT_COMPONENTS.items():
+        optional_manifest = target / details['manifest']
+        if component in chosen:
+            manifest.update(json.loads(optional_manifest.read_text(encoding='utf-8')))
+        elif optional_manifest.exists() or (target / details['runtime']).exists():
+            raise RuntimeError(
+                f'The installation includes the unselected {details["name"]} assistant'
+            )
     for name, expected in manifest.items():
         path = target / name
         if 'sha256' in expected and (not path.is_file() or sha256(path) != expected['sha256']):
@@ -1607,8 +1690,18 @@ def verify_installed_identity(metadata: dict, receipt: dict) -> None:
 
 
 def exercise_installer(
-    installer: Path, output: Path, repository: str | None = None, *, with_assistant: bool = False
+    installer: Path,
+    output: Path,
+    repository: str | None = None,
+    *,
+    with_assistant: bool = False,
+    assistants: tuple[str, ...] = (),
 ) -> None:
+    chosen = tuple(
+        name
+        for name in ASSISTANT_COMPONENTS
+        if name in assistants or (with_assistant and name == ASSISTANT_COMPONENT)
+    )
     output = output.resolve()
     output.mkdir(parents=True, exist_ok=True)
     metadata_path = installer.parent / 'installer.json'
@@ -1636,7 +1729,7 @@ def exercise_installer(
                 '--default-answer',
                 '--confirm-command',
                 'install',
-                *([ASSISTANT_COMPONENT] if with_assistant else []),
+                *chosen,
             ],
             env=env,
             stdout=log,
@@ -1649,7 +1742,7 @@ def exercise_installer(
         else 'bin/EasyDiffraction' + SUFFIX
     )
     try:
-        verify_installed_payload(target, with_assistant=with_assistant)
+        verify_installed_payload(target, assistants=chosen)
         app = target / (
             'EasyDiffraction.app/Contents/MacOS/EasyDiffraction'
             if SYSTEM == 'macos'
@@ -1660,7 +1753,7 @@ def exercise_installer(
         verify_installed_identity(metadata, receipt)
         if (
             not receipt.get('passed')
-            or receipt.get('assistant_available') is not with_assistant
+            or receipt.get('assistant_available') is not (ASSISTANT_COMPONENT in chosen)
             or not receipt.get('svg_images')
             or not (output / 'smoke/window.png').is_file()
         ):
@@ -1735,7 +1828,11 @@ def relocate_linux(stage: Path, patchelf: Path, qt_prefix: Path) -> None:
     for path in sorted(stage.rglob('*')):
         if path.is_symlink() or not path.is_file():
             continue
-        if path.is_relative_to(stage / 'libexec/edi/codex'):
+        # The assistant runtimes keep their published bytes (edi ADR-0108).
+        if any(
+            path.is_relative_to(stage / details['runtime'])
+            for details in ASSISTANT_COMPONENTS.values()
+        ):
             continue
         with path.open('rb') as stream:
             if stream.read(4) != b'\x7fELF':
@@ -1744,7 +1841,7 @@ def relocate_linux(stage: Path, patchelf: Path, qt_prefix: Path) -> None:
         run([patchelf, '--set-rpath', '$ORIGIN/' + relative, path])
 
 
-def main() -> None:
+def main() -> None:  # noqa: PLR0915 - one parser and one branch per subcommand
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest='command', required=True)
     relocate = commands.add_parser('relocate-linux')
@@ -1765,6 +1862,11 @@ def main() -> None:
     package.add_argument('--repository-url')
     package.add_argument('--channel', choices=['testing', 'stable'])
     package.add_argument('--maintenance-tool', type=Path)
+    package.add_argument(
+        '--internal',
+        action='store_true',
+        help='Also carry Claude while its distribution is internal; never published',
+    )
     maintenance = commands.add_parser('maintenance-tool')
     for option in ['--tools', '--output']:
         maintenance.add_argument(option, type=Path, required=True)
@@ -1772,7 +1874,14 @@ def main() -> None:
     test.add_argument('--installer', type=Path, required=True)
     test.add_argument('--output', type=Path, required=True)
     test.add_argument('--repository')
-    test.add_argument('--with-assistant', action='store_true')
+    test.add_argument('--with-assistant', action='store_true', help='Install ChatGPT')
+    test.add_argument(
+        '--assistant',
+        action='append',
+        default=[],
+        choices=list(ASSISTANT_COMPONENTS),
+        help='Install this assistant component too (repeatable)',
+    )
     seal = commands.add_parser('seal')
     seal.add_argument('--output', type=Path, required=True)
     args = parser.parse_args()
@@ -1801,6 +1910,7 @@ def main() -> None:
             (args.repository_url or urls[0]) if args.kind == 'online' else None,
             urls[1:] if args.kind == 'online' else (),
             args.maintenance_tool,
+            internal=args.internal,
         )
     elif args.command == 'maintenance-tool':
         build_maintenance_tool(args.tools, args.output)
@@ -1808,7 +1918,11 @@ def main() -> None:
         seal_installer(args.output)
     else:
         exercise_installer(
-            args.installer, args.output, args.repository, with_assistant=args.with_assistant
+            args.installer,
+            args.output,
+            args.repository,
+            with_assistant=args.with_assistant,
+            assistants=tuple(args.assistant),
         )
 
 
