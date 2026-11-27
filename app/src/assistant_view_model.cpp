@@ -21001,6 +21001,17 @@ bool AssistantViewModel::resumeConnection() {
 #ifndef __EMSCRIPTEN__
     auto* s=state_.get();const QPointer<AssistantViewModel> receiver(this);const auto operation=s->session_operation;const auto target=s->session_selection_target;
     try {
+        if(!s->resume_checkpoint && s->generic_mode && !s->generic_authenticated && !s->generic_connecting) {
+            // No retained conversation: reconnect the active account when it has signed in before (ADR-0108 §8).
+            bool known=false;
+            try {
+                const auto& active=s->active_provider_account;
+                known=!active.id.isEmpty() && s->account_store().find(active.provider,active.id).has_value();
+            } catch(...) {}
+            if(!known)return false;
+            signIn();
+            return receiver && state_.get()==s;
+        }
         if(!s->resume_identity_current() || !s->resume_checkpoint) {
             const auto selectionTarget=s->session_selection_target;
             s->fail_session_operation(s->session_operation,selectionTarget,tr("The original conversation scope changed before reconnecting."));
