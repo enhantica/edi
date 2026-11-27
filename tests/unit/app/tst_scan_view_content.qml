@@ -1551,6 +1551,36 @@ Rectangle {
             tryVerify(hasFitData, 4000, "The chart shows the completed fit without reselection: " + data.tag);
             verify(drawnWhileFitting, "The first chart opening displays live fitted data: " + data.tag);
         }
+        function test_scan_reset_replays_first_fit_data() {
+            return [{tag: "sequential"}, {tag: "independent"}, {tag: "parametric"}];
+        }
+        function test_scan_reset_replays_first_fit(data) {
+            const root = SettingsProof.copyProject(Probe.repoUrl("tests/fixtures/parametric_series/cubic"));
+            verify(Session.openProject(root), "The app opens the frozen scan through the real project loader");
+            const project = Session.project;
+            project.analysis.fittingMode = data.tag;
+            const fit = project.fit;
+            function rows() {
+                const receipt = SettingsProof.fileObservation(root, "analysis/results.csv");
+                verify(!receipt.error, "The results file observation remains readable");
+                if (!receipt.exists)
+                    return [];
+                return SettingsProof.text(root, "analysis/results.csv")
+                    .split(/\r?\n/).filter(line => line.length && !line.startsWith("#"));
+            }
+            fit.start();
+            tryVerify(() => !fit.running && fit.canReset && rows().length === 6, 12000,
+                "The first fit publishes one header and every point");
+            const first = rows();
+            verify(Session.save(), "The app saves the project with results before Reset");
+            fit.reset();
+            tryVerify(() => !fit.canReset && rows().length === 0, 5000,
+                "The real Reset discards the completed result generation");
+            fit.start();
+            tryVerify(() => !fit.running && fit.canReset && rows().length === 6, 12000,
+                "Fit after Reset processes the complete scan again");
+            compare(rows(), first, "Fit after the app Reset reproduces the first fitted rows");
+        }
         function test_parametric_fit_reports_one_outcome() {
             const root = SettingsProof.copyProject(Probe.repoUrl("tests/fixtures/parametric_series/cubic"));
             verify(Session.openProject(root), "The status test opens an actual multi-file scan");

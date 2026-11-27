@@ -10,11 +10,11 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-27T02:49:21Z
+# measured_utc = 2026-11-27T08:54:38Z
 #
-# Recorded from: measured test run (1 node(s) measured once, 187640 banked, 0 stale row(s) dropped)
-# Collected tests: 268843; with a reported duration: 86331
-# Module-scoped fixture costs recorded: 220
+# Recorded from: measured test run (13 node(s) measured once, 187620 banked, 0 stale row(s) dropped)
+# Collected tests: 268868; with a reported duration: 86305
+# Module-scoped fixture costs recorded: 222
 #
 # Breaches are decided PER TIER against the table
 # below, which the loader validates against the code constants - a manifest must state
@@ -29,12 +29,12 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 268843
+# inventory_python = 268868
 # inventory_cpp = 0
-# inventory_measured = 187641
-# inventory_unmeasured = 81202
+# inventory_measured = 187620
+# inventory_unmeasured = 81248
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
-# inventory_pr_python = 92972
+# inventory_pr_python = 92997
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -256358,6 +256358,16 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_operation_contracts.py::test_
 2.330	tests/system/py/test_parameter_loop_filters.py::test_every_offered_category_retains_its_complete_real_loop_rows[numeric-5-line-segment-points]
 2.110	tests/system/py/test_parameter_loop_filters.py::test_every_offered_category_retains_its_complete_real_loop_rows[numeric-5-polynomial-polynomial]
 UNMEASURED:failed-in-this-run	tests/system/py/test_parametric_cubic.py::test_five_cubic_patterns_recover_shared_profile_and_local_parameters
+UNMEASURED:failed-in-this-run	tests/system/py/test_parametric_cubic.py::test_parametric_refit_uses_the_common_value_and_each_points_row
+UNMEASURED:failed-in-this-run	tests/system/py/test_parametric_cubic.py::test_scan_fit_and_save_preserve_template[independent]
+UNMEASURED:failed-in-this-run	tests/system/py/test_parametric_cubic.py::test_scan_fit_and_save_preserve_template[parametric]
+UNMEASURED:failed-in-this-run	tests/system/py/test_parametric_cubic.py::test_scan_fit_and_save_preserve_template[sequential]
+UNMEASURED:failed-in-this-run	tests/system/py/test_parametric_cubic.py::test_scan_refit_uses_only_each_files_latest_row[independent]
+UNMEASURED:failed-in-this-run	tests/system/py/test_parametric_cubic.py::test_scan_refit_uses_only_each_files_latest_row[parametric]
+UNMEASURED:failed-in-this-run	tests/system/py/test_parametric_cubic.py::test_scan_refit_uses_only_each_files_latest_row[sequential]
+UNMEASURED:failed-in-this-run	tests/system/py/test_parametric_cubic.py::test_scan_with_results_removed_replays_first_fit[independent]
+UNMEASURED:failed-in-this-run	tests/system/py/test_parametric_cubic.py::test_scan_with_results_removed_replays_first_fit[parametric]
+UNMEASURED:failed-in-this-run	tests/system/py/test_parametric_cubic.py::test_scan_with_results_removed_replays_first_fit[sequential]
 UNMEASURED:failed-in-this-run	tests/system/py/test_parametric_linear.py::test_cancel_preserves_the_prior_published_generation
 0.140	tests/system/py/test_parametric_linear.py::test_independent_control_matches_the_authored_linear_reference
 UNMEASURED:failed-in-this-run	tests/system/py/test_parametric_linear.py::test_iteration_delivery_has_one_series_record_per_round
@@ -260066,6 +260076,9 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_scan_owner_additions.py::test
 UNMEASURED:failed-in-this-run	tests/system/py/test_scan_owner_additions.py::test_scan_owner_addition[test_scan_axis_fonts:map-light]
 UNMEASURED:failed-in-this-run	tests/system/py/test_scan_owner_additions.py::test_scan_owner_addition[test_scan_axis_fonts:stacked-dark]
 UNMEASURED:failed-in-this-run	tests/system/py/test_scan_owner_additions.py::test_scan_owner_addition[test_scan_axis_fonts:stacked-light]
+UNMEASURED:failed-in-this-run	tests/system/py/test_scan_owner_additions.py::test_scan_owner_addition[test_scan_reset_replays_first_fit:independent]
+UNMEASURED:failed-in-this-run	tests/system/py/test_scan_owner_additions.py::test_scan_owner_addition[test_scan_reset_replays_first_fit:parametric]
+UNMEASURED:failed-in-this-run	tests/system/py/test_scan_owner_additions.py::test_scan_owner_addition[test_scan_reset_replays_first_fit:sequential]
 0.000	tests/system/py/test_scan_owner_additions.py::test_scan_owner_addition[test_stacked_height_changes_rise_not_rows:file]
 0.000	tests/system/py/test_scan_owner_additions.py::test_scan_owner_addition[test_stacked_height_changes_rise_not_rows:value]
 0.000	tests/system/py/test_scan_owner_additions.py::test_scan_owner_addition[test_stacked_height_default_and_memory]
