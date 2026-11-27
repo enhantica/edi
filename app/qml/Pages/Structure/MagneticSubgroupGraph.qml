@@ -24,8 +24,8 @@ Flickable {
     property var selected: []
     property bool maximalOnly: true
     property int hovered: -1
-    // The card clicked last keeps its relatives highlighted until another card is clicked or Esc is pressed; hovering
-    // another card does not change it, so the view can be scrolled to them (owner, 2026-11-27).
+    // Hovering a card shows its relatives; its pin (shown on the hovered card) keeps them shown while other cards are
+    // hovered, until the pin is clicked again or Esc is pressed (owner, 2026-11-27). Pinning does not select.
     property int pinned: -1
     // The transform from the parent to the groups' magnetic cell, for each card's tooltip.
     property string parentCell: ""
@@ -261,10 +261,34 @@ Flickable {
                 onEntered: graph.hovered = node.index
                 onExited: if (graph.hovered === node.index)
                     graph.hovered = -1
-                onClicked: {
-                    if (graph.selectable(node.index))
-                        graph.toggled(node.index);
-                    graph.pinned = node.index;
+                onClicked: if (graph.selectable(node.index))
+                    graph.toggled(node.index)
+
+                // The sidebar groups' pin, in the card's top-right corner while the card is hovered, and always while
+                // it is pinned: grey, upright in the accent colour when on.
+                EaElements.Label {
+                    id: pin
+                    objectName: `magnetic.node.${node.index}.pin`
+                    readonly property bool on: graph.pinned === node.index
+                    visible: on || cardArea.containsMouse
+                    x: parent.width - width - graph.cardMargin * 0.5
+                    y: graph.cardMargin * 0.5
+                    width: EaStyle.Sizes.fontPixelSize * 1.5
+                    height: width
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                    font.family: EaStyle.Fonts.iconsFamily
+                    font.pixelSize: EaStyle.Sizes.fontPixelSize
+                    rotation: on ? 0 : 45
+                    color: on ? (node.chosen ? "white" : EaStyle.Colors.themeAccent) : pinArea.containsMouse ? EaStyle.Colors.themeForegroundHovered : node.textColor
+                    text: "thumbtack"
+                    MouseArea {
+                        id: pinArea
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: graph.pinned = pin.on ? -1 : node.index
+                    }
                 }
                 ToolTip {
                     objectName: `magnetic.node.${node.index}.tooltip`
