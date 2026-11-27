@@ -394,6 +394,12 @@ QString CodexAgent::executable() {
 }
 
 bool CodexAgent::start(const QString& executable, const QString& workspace) {
+    return startWith(executable, workspace, nullptr);
+}
+bool CodexAgent::start(const QString& executable, const QString& workspace, const QProcessEnvironment& environment) {
+    return startWith(executable, workspace, &environment);
+}
+bool CodexAgent::startWith(const QString& executable, const QString& workspace, const QProcessEnvironment* environment) {
     if ((release_owner_ && process_owner_alive_) || process_ || retired_process_ || active_frames_ || reading_ || executable.isEmpty() || !QFileInfo(workspace).isAbsolute() || !QFileInfo(workspace).isDir())
         return false;
     const QPointer<CodexAgent> receiver(this);
@@ -431,9 +437,10 @@ bool CodexAgent::start(const QString& executable, const QString& workspace) {
         if(policyPatch().isEmpty())arguments <<
             QStringLiteral("-c") << QStringLiteral("features.default_mode_request_user_input=true") <<
             QStringLiteral("-c") << QStringLiteral("tools.experimental_request_user_input.enabled=true");
-        assistant_guard_prepare(*process, guard, executable, arguments, workspace);
-        // The runtime owns its ordinary profile and managed login. Never assign
-        // HOME/home/CODEX_HOME, open config/auth files, or copy provider tokens.
+        assistant_guard_prepare(*process, guard, executable, arguments, workspace, environment);
+        // The runtime owns its profile and managed login. Never assign HOME/home,
+        // open config/auth files, or copy provider tokens; CODEX_HOME is set only
+        // through the given environment, for an added account's empty home (ADR-0108 §8).
         connect(process, &QProcess::started, this, [this, original = prepared, scope] {
             const QPointer<CodexAgent> alive(this);
             const auto stillCurrent = [&] { return alive && original && process_ == original.data() && generation_ == scope; };

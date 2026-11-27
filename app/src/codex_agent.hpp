@@ -9,6 +9,7 @@
 #include <QJsonObject>
 #include <QJsonValue>
 #include <QProcess>
+#include <QProcessEnvironment>
 #include <QPointer>
 #include <QTimer>
 #include <QElapsedTimer>
@@ -34,7 +35,10 @@ public:
     QString runtimePolicyPatch() const override { return policyPatch(); }
     QJsonObject threadPolicy() const override;
     ~CodexAgent() override;
+    /// Start with the app's own environment: the runtime's ordinary profile and login.
     bool start(const QString& executable, const QString& workspace) override;
+    /// Start with exactly `environment`, which names an added account's own CODEX_HOME (ADR-0108 §8).
+    bool start(const QString& executable, const QString& workspace, const QProcessEnvironment& environment);
     QString request(const QString& method, const QJsonObject& params, const std::function<bool(const QString&)>& prepare = {}) override;
     bool notification(const QString& method, const QJsonObject& params = {}) override;
     // Borrowed synchronous preparation runs only after the original wire peak fits.
@@ -72,6 +76,7 @@ private:
     bool process_owner_alive_=false;
     void processOwnerReleased(quint64) noexcept;
     void maybeOwnersReleased() noexcept;
+    bool startWith(const QString& executable, const QString& workspace, const QProcessEnvironment* environment);
     using Limits = edi::assistant::Limits;
     QProcess* process_ = nullptr;
     QPointer<QProcess> retired_process_;
