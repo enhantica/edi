@@ -113,7 +113,9 @@
 #include "parameter_table_model.hpp"
 #ifndef __EMSCRIPTEN__
 #include "chatgpt_connection.hpp"
+#include "native_chatgpt_provider.hpp"
 #include "codex_agent.hpp"
+#include "assistant_providers.hpp"
 #include "assistant_outgoing.hpp"
 #include "build_version.hpp"
 #include "assistant_native_tools.hpp"
@@ -1153,7 +1155,7 @@ struct AssistantViewModel::State {
         if(!receiver || receiver->state_.get()!=this)return work_report_capacity_variant();
         const bool projectionBlocked=work_failure.stage==WorkFailureStage::Building ||
             (work_failure.stage==WorkFailureStage::Completing && !work_failure.facts_ready) ||
-            (agent && agent->outputOwnerState()==CodexAgent::OutputOwnerState::Releasing);
+            (agent && agent->outputOwnerState()==AssistantProvider::OutputOwnerState::Releasing);
 #else
         const bool projectionBlocked=false;
 #endif
@@ -1213,7 +1215,7 @@ struct AssistantViewModel::State {
     std::unique_ptr<edi::work::Worker> idle_worker;
     std::unique_ptr<edi::assistant::Controller> controller;
 #ifndef __EMSCRIPTEN__
-    std::unique_ptr<edi::assistant::native::ChatGptConnection> connection;
+    std::unique_ptr<NativeChatGptProvider> connection;  // ChatGPT through the direct connection (ADR-0108 §1)
 #endif
     QJsonArray history;
     QString history_session;
@@ -1312,9 +1314,9 @@ struct AssistantViewModel::State {
     enum class WorkFailureStage { Empty,Building,Awaiting,Completing };
     struct WorkFailureTerminal {
         WorkFailureStage stage=WorkFailureStage::Empty;
-        CodexAgent::FailureKind kind=CodexAgent::FailureKind::Other;
+        AssistantProvider::FailureKind kind=AssistantProvider::FailureKind::Other;
         FileProjection proof;
-        QPointer<CodexAgent> transport;
+        QPointer<AssistantProvider> transport;
         quint64 original_output=0,retired_output=0;
         QString scope,attempt,thread,turn,explanation;
         QSet<QString> rows;
@@ -1326,9 +1328,9 @@ struct AssistantViewModel::State {
             work_reports.scope()==work_failure.scope && work_reports.attempt()==work_failure.attempt &&
             work_failure.transport && agent.get()==work_failure.transport.data();
     }
-    bool work_open_failure(const FileProjection& proof,CodexAgent::FailureKind kind) noexcept {
+    bool work_open_failure(const FileProjection& proof,AssistantProvider::FailureKind kind) noexcept {
         if(work_failure.stage!=WorkFailureStage::Empty || !work_reports.available() || !work_scope_bound || work_reports.attempt().isEmpty() || !agent ||
-           agent->outputOwnerState()==CodexAgent::OutputOwnerState::Unobserved)return false;
+           agent->outputOwnerState()==AssistantProvider::OutputOwnerState::Unobserved)return false;
         work_failure.stage=WorkFailureStage::Building;work_failure.kind=kind;work_failure.proof=proof;
         work_failure.transport=agent.get();work_failure.original_output=agent->outputGeneration();
         work_failure.scope=work_reports.scope();work_failure.attempt=work_reports.attempt();
@@ -1715,7 +1717,11 @@ struct AssistantViewModel::State {
     bool generic_context_retention_pending = false;
     QString generic_context_retention_error;
     QString generic_interrupt_rpc, generic_interrupt_thread, generic_interrupt_turn;
-    std::unique_ptr<CodexAgent> agent;
+    std::unique_ptr<AssistantProvider> agent;
+    // The account the next provider runs as; the default ChatGPT login until accounts are chosen (ADR-0108 §8).
+    AssistantAccountRef active_provider_account;
+    QString runtime_policy_patch() const { return agent ? agent->runtimePolicyPatch() : CodexAgent::policyPatch(); }
+    QString runtime_executable() const { return agent ? agent->runtimeExecutable() : CodexAgent::executable(); }
     QString generic_workspace, generic_thread, generic_turn, generic_login, generic_terminal_turn;
     bool generic_login_attempted = false;
     QString genuine_objective_row;
@@ -1744,7 +1750,7 @@ struct AssistantViewModel::State {
     // One bounded latest diagnostic value, never settings/admission authority.
     struct SettingsObservation {
         FileProjection proof;
-        QPointer<CodexAgent> transport;
+        QPointer<AssistantProvider> transport;
         quint64 output=0,serial=0;
         bool request_in_flight=false;
         Object fields,provisional_receipt;
@@ -1852,13 +1858,13 @@ struct AssistantViewModel::State {
             settings_observation->provisional_receipt={};
         }catch(...){settings_observation_unavailable=true;}
     }
-    void settings_observe_terminal(CodexAgent::FailureKind kind) noexcept {
+    void settings_observe_terminal(AssistantProvider::FailureKind kind) noexcept {
         try {
             const auto serial=settings_observation_current();if(!serial || !settings_observation)return;
             const auto& fields=settings_observation->fields;
             if(fields.value("settlement")=="ordinary_settle_returned" || fields.value("terminal")!="not_observed")return;
-            settings_observe(serial,"terminal",kind==CodexAgent::FailureKind::OperationDeadline?"operation_deadline":
-                kind==CodexAgent::FailureKind::LocalCapacity?"local_capacity":"transport_or_processing_failure");
+            settings_observe(serial,"terminal",kind==AssistantProvider::FailureKind::OperationDeadline?"operation_deadline":
+                kind==AssistantProvider::FailureKind::LocalCapacity?"local_capacity":"transport_or_processing_failure");
         }catch(...){settings_observation_unavailable=true;}
     }
     Object settings_readiness_observation() const {
@@ -1874,8 +1880,8 @@ struct AssistantViewModel::State {
         if(agent) {
             result["current_output_generation"]=QString::number(agent->outputGeneration());
             const auto output=agent->outputOwnerState();
-            result["current_output_owner"]=output==CodexAgent::OutputOwnerState::Live?"live":
-                output==CodexAgent::OutputOwnerState::Releasing?"releasing":output==CodexAgent::OutputOwnerState::Released?"released":"unobserved";
+            result["current_output_owner"]=output==AssistantProvider::OutputOwnerState::Live?"live":
+                output==AssistantProvider::OutputOwnerState::Releasing?"releasing":output==AssistantProvider::OutputOwnerState::Released?"released":"unobserved";
         } else result["current_output_owner"]="no_transport";
         if(settings_observation) {
             auto seen=settings_observation->fields;
@@ -1918,7 +1924,7 @@ struct AssistantViewModel::State {
                 generic_retiring?"retiring":generic_thread.isEmpty()?"no_thread":generic_busy?"busy":"already_connecting");return;
         }
         if (policy_current()) {settings_observe(observation,"admission","effective_policy_already_current");return;}
-        if(!CodexAgent::policyPatch().isEmpty()) {
+        if(!runtime_policy_patch().isEmpty()) {
             settings_observe(observation,"admission","dedicated_context_reprepare");
             generic_retire_context(false);
             if(!publication.input_current())return;
@@ -2506,13 +2512,13 @@ struct AssistantViewModel::State {
     }
     void start_session_account_check() {
         if(!session_account_preflight || session_account_operation!=session_operation || session_restore_target!=session_account_target ||
-            generic_connecting || generic_busy || generic_retiring || !agent || agent->outputOwnerState()!=CodexAgent::OutputOwnerState::Released)return;
+            generic_connecting || generic_busy || generic_retiring || !agent || agent->outputOwnerState()!=AssistantProvider::OutputOwnerState::Released)return;
         const auto root=QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation)+"/assistant";
         if(!QDir().mkpath(root))throw std::runtime_error("The account-check workspace is unavailable");
         session_account_workspace=std::make_unique<QTemporaryDir>(root+"/account-check-XXXXXX");
         if(!session_account_workspace->isValid())throw std::runtime_error("The account-check workspace is unavailable");
         const auto proof=file_projection();generic_connecting=true;
-        if(!agent->start(CodexAgent::executable(),session_account_workspace->path()) && proof.input_current())
+        if(!agent->start(agent->runtimeExecutable(),session_account_workspace->path()) && proof.input_current())
             throw std::runtime_error("The original account could not be checked before opening the saved project");
     }
     struct SessionRequest {
@@ -2538,7 +2544,7 @@ struct AssistantViewModel::State {
             (!native_call || (native_call->resolved && native_call->record->answered));
     }
     bool session_idle() const {
-        return session_switch_idle() && generic_authenticated && agent && agent->outputOwnerState()==CodexAgent::OutputOwnerState::Live;
+        return session_switch_idle() && generic_authenticated && agent && agent->outputOwnerState()==AssistantProvider::OutputOwnerState::Live;
     }
     static QJsonArray session_source_kinds() {
         return {"cli","vscode","exec","appServer","subAgent","subAgentReview","subAgentCompact","subAgentThreadSpawn","subAgentOther","unknown"};
@@ -2605,7 +2611,7 @@ struct AssistantViewModel::State {
     void name_current_session(const QString& semanticTitle={}) noexcept {
         if(account_confirmation_pending)return;
         const QPointer<AssistantViewModel> receiver(&owner);
-        const QPointer<CodexAgent> transport(agent.get());
+        const QPointer<AssistantProvider> transport(agent.get());
         const auto proof=file_projection();
         try {
             if(!generic_authenticated || generic_retiring || generic_thread.isEmpty() || !transport)return;
@@ -2730,7 +2736,7 @@ struct AssistantViewModel::State {
     }
     QString session_request(const QString& method,const Object& params,const QString& kind,const QString& target={}) {
         const QPointer<AssistantViewModel> receiver(&owner);
-        const QPointer<CodexAgent> transport(agent.get());
+        const QPointer<AssistantProvider> transport(agent.get());
         SessionRequest request{.kind=kind,.target=target,.cursor=params.value("cursor").toString(),.currentThread=generic_thread,
             .email=generic_native.value("account").toObject().value("email").toString(),.name=params.value("name").toString(),
             .binding=generation,.account=usage_epoch,.transport=transport?transport->outputGeneration():0,.epoch=sessions_epoch,
@@ -2778,7 +2784,7 @@ struct AssistantViewModel::State {
         (void)session_request("thread/list",params,"list");
     }
     bool settle_archived_session(const QString& id) {
-        const QPointer<AssistantViewModel> receiver(&owner);const QPointer<CodexAgent> transport(agent.get());
+        const QPointer<AssistantViewModel> receiver(&owner);const QPointer<AssistantProvider> transport(agent.get());
         const auto proof=file_projection();const auto output=transport?transport->outputGeneration():0;
         const auto current=[&]{return receiver && receiver->state_.get()==this && proof.retirement_current() && transport && agent.get()==transport && transport->outputGeneration()==output;};
         if(!current())return false;
@@ -2836,7 +2842,7 @@ struct AssistantViewModel::State {
             it->account_reply=reply;it->account_method=method;return;
         }
         const auto request=it.value();session_requests.erase(it);  // NOLINT(performance-unnecessary-copy-initialization): the entry is erased next
-        const QPointer<AssistantViewModel> receiver(&owner);const QPointer<CodexAgent> transport(agent.get());
+        const QPointer<AssistantViewModel> receiver(&owner);const QPointer<AssistantProvider> transport(agent.get());
         const auto current=[&] {return receiver && receiver->state_.get()==this && transport && agent.get()==transport && session_request_current(request);};
         if(!current())return;
         const auto retireName=[&] {
@@ -2973,7 +2979,7 @@ struct AssistantViewModel::State {
     void schedule_resume_connection() noexcept {
         try {
             if(!resume_checkpoint || resume_checkpoint->attempted || generic_connecting || generic_retiring || generic_busy ||
-                native_call || native_fit || native_worker_admitted() || !agent || agent->outputOwnerState()!=CodexAgent::OutputOwnerState::Released)return;
+                native_call || native_fit || native_worker_admitted() || !agent || agent->outputOwnerState()!=AssistantProvider::OutputOwnerState::Released)return;
             const bool identity_current=resume_identity_current();
             if(!resume_checkpoint)return;
             if(!identity_current) {
@@ -3048,7 +3054,7 @@ struct AssistantViewModel::State {
         if(work_failure.stage!=WorkFailureStage::Awaiting)return;
         if(!work_failure_binding() || !work_failure.proof.input_current() ||
            work_failure.transport->outputGeneration()!=work_failure.retired_output){work_cancel_failure();return;}
-        if(work_failure.transport->outputOwnerState()!=CodexAgent::OutputOwnerState::Released)return;
+        if(work_failure.transport->outputOwnerState()!=AssistantProvider::OutputOwnerState::Released)return;
         const auto ownerLease=work_reports.releaseOwner();
         work_failure.stage=WorkFailureStage::Completing;work_automatic_terminal=true; // Consume BEFORE callbacks.
         const auto receiver=work_failure.proof.receiver;
@@ -3069,8 +3075,8 @@ struct AssistantViewModel::State {
                 work_failure.rows_retained=retained;
                 if(!retained)std::fprintf(stderr,"Edi terminal history stage=RELEASED_RECONCILIATION class=UNAVAILABLE\n");
             }
-            const auto code=work_failure.kind==CodexAgent::FailureKind::LocalCapacity?QStringLiteral("codex.local_capacity"):
-                work_failure.kind==CodexAgent::FailureKind::OperationDeadline?QStringLiteral("codex.operation_deadline"):QStringLiteral("codex.other");
+            const auto code=work_failure.kind==AssistantProvider::FailureKind::LocalCapacity?QStringLiteral("codex.local_capacity"):
+                work_failure.kind==AssistantProvider::FailureKind::OperationDeadline?QStringLiteral("codex.operation_deadline"):QStringLiteral("codex.other");
             if(!work_failure.rows_retained || work_failure.explanation.isEmpty())work_reports.missEvidence();
             if(!work_failure.explanation.isEmpty())work_failure_row(code,work_failure.explanation);
             if(!current())return;
@@ -3089,7 +3095,7 @@ struct AssistantViewModel::State {
     }
 #endif
     Object verified_runtime_policy(const QJsonValue& value,const QString& thread,const QJsonValue& turn) {
-        if(CodexAgent::policyPatch().isEmpty())return {};
+        if(runtime_policy_patch().isEmpty())return {};
         if(!value.isObject())throw std::runtime_error("Dedicated Edi policy proof is unavailable");
         const auto proof=value.toObject();
         const std::array<QLatin1StringView,17> fields{QLatin1StringView{"schema"},QLatin1StringView{"flavour"},QLatin1StringView{"upstreamVersion"},QLatin1StringView{"upstreamCommit"},QLatin1StringView{"sourcePatchSha256"},QLatin1StringView{"threadId"},QLatin1StringView{"turnId"},QLatin1StringView{"isolation"},QLatin1StringView{"toolMode"},QLatin1StringView{"sandbox"},QLatin1StringView{"approvalPolicy"},QLatin1StringView{"modelNetwork"},QLatin1StringView{"requestedTools"},QLatin1StringView{"advertisedTools"},QLatin1StringView{"dispatchEqualsAdvertisement"},QLatin1StringView{"model"},QLatin1StringView{"reasoningEffort"}};
@@ -3097,7 +3103,7 @@ struct AssistantViewModel::State {
         for(auto at=proof.constBegin();at!=proof.constEnd();++at)if(std::none_of(fields.begin(),fields.end(),[&](auto key){return at.key()==key;}))throw std::runtime_error("Dedicated Edi policy proof is malformed");
         if(proof.value("schema")!="edi.runtime-policy/1" || proof.value("flavour")!="edi-app-server/1" ||
             proof.value("upstreamVersion")!=QString::fromLatin1(EDI_CODEX_RUNTIME_VERSION) || proof.value("upstreamCommit")!="092d3acd6bec3e3a14bdc7e7a2810ab628ab759d" ||
-            proof.value("sourcePatchSha256")!=CodexAgent::policyPatch() || proof.value("threadId")!=thread || proof.value("turnId")!=turn ||
+            proof.value("sourcePatchSha256")!=runtime_policy_patch() || proof.value("threadId")!=thread || proof.value("turnId")!=turn ||
             proof.value("isolation")!="isolated" || proof.value("toolMode")!="direct" || proof.value("sandbox")!="readOnly" ||
             proof.value("approvalPolicy")!="never" || proof.value("modelNetwork")!=QJsonValue(false) ||
             proof.value("dispatchEqualsAdvertisement")!=QJsonValue(true) || proof.value("model")!=generic_settings_model ||
@@ -3739,7 +3745,7 @@ struct AssistantViewModel::State {
             const auto source = value.toObject();
             return source.value("enabled").toBool() && !source.value("builtin").toBool();
         })) return skill_inventory;
-        const QPointer<CodexAgent> transport(agent.get());
+        const QPointer<AssistantProvider> transport(agent.get());
 
         auto next=capture_skill_sources(skill_source_rows);
         if(!proof.input_current() || skill_source_serial!=serial)throw std::runtime_error("Skill source owner changed during capture");
@@ -3757,7 +3763,7 @@ struct AssistantViewModel::State {
         validate_source_configuration(rows);
         const auto path=settings_file_path();if(path.isEmpty() || path!=skill_source_store)throw std::runtime_error("The original settings store changed");
         // Validate/stage from a closed snapshot before persisting the selection.
-        const QPointer<CodexAgent> transport(agent.get());
+        const QPointer<AssistantProvider> transport(agent.get());
 
         auto snapshot=capture_skill_sources(rows);
         const auto rows_bytes=generic_size(rows,Limits::context_bytes);
@@ -3818,7 +3824,7 @@ struct AssistantViewModel::State {
     }
     Object outgoing_context(std::shared_ptr<const AssistantSkillInventory> captured = {}) {
         const auto original=file_projection();
-        const QPointer<CodexAgent> context_transport(agent.get());
+        const QPointer<AssistantProvider> context_transport(agent.get());
 
         QElapsedTimer elapsed;
         const bool observeElapsed=lcAssistantElapsed().isDebugEnabled();
@@ -5453,7 +5459,7 @@ struct AssistantViewModel::State {
                 if (!settle_owed_aliases()) { if (receiver && receiver->state_.get() == this) schedule_owed_aliases(); return; }
                 // Requests that waited for the removal run now, in order (the same replay an account check uses).
                 if (!receiver || receiver->state_.get() != this || account_confirmation_pending || !agent) return;
-                const QPointer<CodexAgent> transport(agent.get());
+                const QPointer<AssistantProvider> transport(agent.get());
                 if (transport) transport->resumeDeferredRequests(transport->outputGeneration());
             });
         } catch (...) { owed_alias_timer = false; }
@@ -9189,7 +9195,7 @@ struct AssistantViewModel::State {
     }
     Object native_response(bool success, const Object& outcome) {
         const auto publication=file_projection();
-        const QPointer<CodexAgent> transport(agent.get());
+        const QPointer<AssistantProvider> transport(agent.get());
         const auto transport_generation=transport?transport->outputGeneration():0;
         const auto record=native_call && native_call->finishing?native_call->record:nullptr;
         const auto receipt=record && native_call?native_call->receipt:nullptr;
@@ -9214,7 +9220,7 @@ struct AssistantViewModel::State {
     }
     void native_reply(const QJsonValue& id, bool success, const Object& outcome, const QString& callId, const Object& expected, const QString& expectedThread, const QString& expectedTurn) {
         const auto publication = file_projection();
-        const QPointer<CodexAgent> transport(agent.get());
+        const QPointer<AssistantProvider> transport(agent.get());
         const auto transport_generation=transport?transport->outputGeneration():0;
         // Direct refusals have no pending NativeRecord destination slot.
         // Complete original conversion before admitting capture-only owners.
@@ -9373,7 +9379,7 @@ struct AssistantViewModel::State {
                 return;
             }
             auto call = std::move(*native_call); native_call.reset();
-            const QPointer<CodexAgent> transport(agent.get());const auto transport_generation=transport?transport->outputGeneration():0;
+            const QPointer<AssistantProvider> transport(agent.get());const auto transport_generation=transport?transport->outputGeneration():0;
             if(transport)(void)transport->endNativeWork(call.rpc,transport_generation);
             if(!receiver || receiver->state_.get()!=this || generation!=binding || native_serial!=serial || usage_epoch!=account || native_call ||
                 !transport || agent.get()!=transport.data() || transport->outputGeneration()!=transport_generation)return;
@@ -9388,7 +9394,7 @@ struct AssistantViewModel::State {
         if(!publication.input_current() || widget_input.get()!=helper.data() || action_window!=window || !native_call || !agent)return;
         const auto call=*native_call;
         const auto widget=native_widget;const auto creation=native_create_widget;
-        const QPointer<CodexAgent> transport(agent.get());const auto transport_generation=transport->outputGeneration();
+        const QPointer<AssistantProvider> transport(agent.get());const auto transport_generation=transport->outputGeneration();
         const bool input_owner=(widget && widget_owned(widget) && widget->window==window && widget->call.record==call.record && widget->call.receipt==call.receipt && widget->call.rpc==call.rpc) ||
             (creation && create_widget_owned(creation) && creation->window==window && creation->call.record==call.record && creation->call.receipt==call.receipt && creation->call.rpc==call.rpc);
         bool eligible=show_actions && input_owner && helper && window && helper->active() && !window->isActive() &&
@@ -9417,7 +9423,7 @@ struct AssistantViewModel::State {
         try {
             std::optional<edi::WorkStamps> stamps;
 
-            const QPointer<CodexAgent> transport(agent.get());
+            const QPointer<AssistantProvider> transport(agent.get());
 
             if (project) {
                 stamps = edi::work_stamps(*project->assistantProject());
@@ -9574,7 +9580,7 @@ struct AssistantViewModel::State {
         const QPointer<AssistantViewModel> receiver(&owner);
         auto call = *native_call; // Stable owner across synchronous transport failure/reentrant retirement.
         auto record = call.record;
-        const QPointer<CodexAgent> original_transport(agent.get());
+        const QPointer<AssistantProvider> original_transport(agent.get());
         const auto original_transport_generation=original_transport?original_transport->outputGeneration():0;
         const auto finishProjection=file_projection();
         const auto work_scope=native_settlement_scope(call);
@@ -10579,7 +10585,7 @@ struct AssistantViewModel::State {
             if(!originalOwner || originalOwner->state_.get()!=this || !publication.input_current())return;
             if(!native_current(original_receipt)) {reply(false,{{"status","refused"},{"code","request_stale"},{"message","The original request changed while revealing the ordinary app sidebar; inspect current state."}});return;}
         }
-        const QPointer<CodexAgent> work_transport(agent.get());
+        const QPointer<AssistantProvider> work_transport(agent.get());
         const auto work_generation=work_transport?work_transport->outputGeneration():0;
         if(!work_transport || !work_transport->beginNativeWork(rpc,work_generation)) {
             if(publication.input_current() && work_transport && agent.get()==work_transport.data() && work_transport->outputGeneration()==work_generation)
@@ -10803,7 +10809,7 @@ struct AssistantViewModel::State {
             generic_retiring || usage_starting || !usage_rpc.isEmpty() || !agent || usage_pending_epoch!=usage_epoch ||
             usage_pending_output!=agent->outputGeneration())return;
         const QPointer<AssistantViewModel> receiver(&owner);
-        const QPointer<CodexAgent> transport(agent.get());
+        const QPointer<AssistantProvider> transport(agent.get());
         const auto account=usage_epoch, output=transport->outputGeneration();
         const auto owned=[&] {
             return receiver && receiver->state_.get()==this && transport && agent.get()==transport.data() &&
@@ -11070,7 +11076,7 @@ struct AssistantViewModel::State {
                     native_call->receipt == creation->receipt && native_current(creation->receipt); };
                 if (!current()) throw std::runtime_error("The original creation attachment retired");
 
-                const QPointer<CodexAgent> transport(agent.get());
+                const QPointer<AssistantProvider> transport(agent.get());
 
                 auto attachment = std::make_unique<NativeAttachment>();
                 attachment->creation = creation; attachment->target = target; attachment->active = std::make_shared<bool>(false);
@@ -11083,7 +11089,7 @@ struct AssistantViewModel::State {
                 if(!current())throw std::runtime_error("The original selected proof handoff retired");
 
                 const auto context_publication=file_projection();
-                const QPointer<CodexAgent> context_transport(agent.get());
+                const QPointer<AssistantProvider> context_transport(agent.get());
 
                 auto context = object(attachment->prepared_controller->context());
                 if (!current()) throw std::runtime_error("The original creation attachment retired");
@@ -14319,7 +14325,7 @@ struct AssistantViewModel::State {
             return QStringLiteral("The official agent event could not be processed; its diagnostic capture is unavailable. The original task is retained.");
         }
     }
-    void generic_fail(const QString& explanation, CodexAgent::FailureKind kind = CodexAgent::FailureKind::Other) noexcept {
+    void generic_fail(const QString& explanation, AssistantProvider::FailureKind kind = AssistantProvider::FailureKind::Other) noexcept {
         // A disconnect ends the session's trial too: its candidate goes back to the accepted fit once the failure is
         // settled, or when a still running fit ends (edi ADR-0055).
         const QPointer<ProjectViewModel> trial(project);const auto trialOwner=generation;
@@ -14372,9 +14378,9 @@ struct AssistantViewModel::State {
             if(ownsTerminal && work_failure.stage==WorkFailureStage::Building)work_failure.rows_retained=terminalRows;
             else if(!terminalRows)std::fprintf(stderr,"Edi terminal history stage=RELEASE_OBSERVATION class=UNAVAILABLE\n");
             if (!projection.retirement_current()) return;
-            if (kind == CodexAgent::FailureKind::LocalCapacity)
+            if (kind == AssistantProvider::FailureKind::LocalCapacity)
                 error = bounded_error(original_explanation + QObject::tr(" This is a local data-capacity limit, not evidence that your login expired. Your task messages and project changes remain retained; inspect them before continuing after reconnecting."));
-            else if (kind == CodexAgent::FailureKind::OperationDeadline)
+            else if (kind == AssistantProvider::FailureKind::OperationDeadline)
                 error = bounded_error(original_explanation + QObject::tr(" This is the local operation-time budget, not evidence that your login expired. Your task messages and project changes remain retained; inspect actual outcomes before continuing."));
             else error = bounded_error(original_explanation);
             if(ownsTerminal && work_failure.stage==WorkFailureStage::Building)work_failure.explanation=error;
@@ -14820,7 +14826,7 @@ struct AssistantViewModel::State {
     void resume_account_admissions() {
         const auto proof=file_projection();const QPointer<AssistantViewModel> receiver(&owner);
         if(account_confirmation_pending || !generic_authenticated || generic_retiring)return;
-        const QPointer<CodexAgent> usageTransport(agent.get());
+        const QPointer<AssistantProvider> usageTransport(agent.get());
         const auto usageAccount=usage_epoch,usageOutput=usageTransport?usageTransport->outputGeneration():0;
         const auto usageReady=qScopeGuard([this,receiver,usageTransport,usageAccount,usageOutput] {
             // Continue the original logical read only after required admissions unwind.
@@ -14841,7 +14847,7 @@ struct AssistantViewModel::State {
         });
         emit owner.draftAdmissionReadyChanged();
         if(!proof.input_current() || !receiver || receiver->state_.get()!=this || account_confirmation_pending)return;
-        const QPointer<CodexAgent> transport(agent.get());const auto output=transport?transport->outputGeneration():0;
+        const QPointer<AssistantProvider> transport(agent.get());const auto output=transport?transport->outputGeneration():0;
         if(transport)transport->resumeDeferredRequests(output);
         if(!receiver || receiver->state_.get()!=this || !proof.input_current() || account_confirmation_pending)return;
         const auto replies=session_requests.keys();
@@ -14877,7 +14883,7 @@ struct AssistantViewModel::State {
         }
     }
     void request_account_read() {
-        const auto proof=file_projection();const QPointer<AssistantViewModel> receiver(&owner);const QPointer<CodexAgent> transport(agent.get());
+        const auto proof=file_projection();const QPointer<AssistantViewModel> receiver(&owner);const QPointer<AssistantProvider> transport(agent.get());
         const auto output=transport?transport->outputGeneration():0;
         const auto current=[&]{return receiver && receiver->state_.get()==this && proof.input_current() && transport && agent.get()==transport && transport->outputGeneration()==output;};
         if(!current() || !account_read_ready)return;
@@ -14894,29 +14900,29 @@ struct AssistantViewModel::State {
         // Browser settlement may release the existing accepted Send while a
         // same-conversation context waits. No new intent or request is created here.
         QObject::connect(&owner,&AssistantViewModel::sessionsChanged,&owner,&AssistantViewModel::draftAdmissionReadyChanged,Qt::UniqueConnection);
-        agent = std::make_unique<CodexAgent>(&owner,work_reports.releaseOwner());
-        QObject::connect(agent.get(), &CodexAgent::started, &owner, [this] {
+        agent = make_assistant_provider(active_provider_account,&owner,work_reports.releaseOwner());
+        QObject::connect(agent.get(), &AssistantProvider::started, &owner, [this] {
             account_read_ready=false;account_bootstrap_verified=false;account_read_rpc.clear();
             const auto publication = file_projection();
             try {
                 generic_request("initialize", {{"clientInfo", Object{{"name", "edi"}, {"title", "Edi"}, {"version", "1"}}}, {"capabilities", Object{{"experimentalApi", true}}}});
             } catch (...) { if (publication.input_current()) generic_fail(QObject::tr("The official agent could not be initialized.")); }
         });
-        const QPointer<CodexAgent> originalTransport(agent.get());
+        const QPointer<AssistantProvider> originalTransport(agent.get());
         const QPointer<AssistantViewModel> usageReceiver(&owner);
-        QObject::connect(agent.get(), &CodexAgent::optionalUsageUnavailable, &owner,
-                         [this,usageReceiver,originalTransport](const QString& id,CodexAgent::UsageDisposition disposition) {
+        QObject::connect(agent.get(), &AssistantProvider::optionalUsageUnavailable, &owner,
+                         [this,usageReceiver,originalTransport](const QString& id,AssistantProvider::UsageDisposition disposition) {
             if(!usageReceiver || usageReceiver->state_.get()!=this || !originalTransport || agent.get()!=originalTransport.data() || id!=usage_rpc ||
                 usage_pending_epoch!=usage_epoch || usage_pending_output!=originalTransport->outputGeneration())return;
-            if(disposition==CodexAgent::UsageDisposition::Preempted) {
+            if(disposition==AssistantProvider::UsageDisposition::Preempted) {
                 usage_rpc.clear();usage_wait(); // Fresh ID only after a genuine queued drain/account-ready continuation.
             } else usage_unavailable(); // A real deadline is terminal; later idle hints cannot recreate its intent.
         });
-        QObject::connect(agent.get(), &CodexAgent::optionalUsageReady, &owner, [this,usageReceiver,originalTransport] {
+        QObject::connect(agent.get(), &AssistantProvider::optionalUsageReady, &owner, [this,usageReceiver,originalTransport] {
             if(usageReceiver && usageReceiver->state_.get()==this && originalTransport && agent.get()==originalTransport.data() &&
                 usage_refresh_pending && !usage_starting && !originalTransport->optionalUsageBackpressured())usage_attempt();
         },Qt::QueuedConnection); // Recheck after the original write callback has unwound.
-        QObject::connect(agent.get(), &CodexAgent::outputOwnersReleased, &owner, [this,originalTransport] {
+        QObject::connect(agent.get(), &AssistantProvider::outputOwnersReleased, &owner, [this,originalTransport] {
             const QPointer<AssistantViewModel> receiver(&owner);
             const auto resume=qScopeGuard([this,receiver]{if(!receiver || receiver->state_.get()!=this)return;
                 schedule_resume_connection();
@@ -14926,11 +14932,11 @@ struct AssistantViewModel::State {
             });
             if(originalTransport && agent.get()==originalTransport.data())work_complete_failure();
         });
-        QObject::connect(agent.get(), &CodexAgent::failed, &owner, [this,originalTransport](const QString& message) {
+        QObject::connect(agent.get(), &AssistantProvider::failed, &owner, [this,originalTransport](const QString& message) {
             if (originalTransport && agent.get() == originalTransport.data() && originalTransport->failureActive())
                 generic_fail(message, originalTransport->failureKind());
         });
-        QObject::connect(agent.get(), &CodexAgent::response, &owner,
+        QObject::connect(agent.get(), &AssistantProvider::response, &owner,
             [this,originalTransport](const QString& id, const QString& method, const Object& reply) {
                 auto publication = file_projection();
                 quint64 settingsObservation=0;
@@ -14944,7 +14950,7 @@ struct AssistantViewModel::State {
                     generic_response_failure(method, reason);
                 } }
             });
-        QObject::connect(agent.get(), qOverload<const QString&, const QJsonObject&>(&CodexAgent::event), &owner, [this,originalTransport](const QString& method, const Object& params) {
+        QObject::connect(agent.get(), qOverload<const QString&, const QJsonObject&>(&AssistantProvider::event), &owner, [this,originalTransport](const QString& method, const Object& params) {
             const auto publication = file_projection();
             EventFailure diagnostic;
             try {
@@ -14979,7 +14985,7 @@ struct AssistantViewModel::State {
                 }
             }
         });
-        QObject::connect(agent.get(), &CodexAgent::serverRequest, &owner,
+        QObject::connect(agent.get(), &AssistantProvider::serverRequest, &owner,
             [this,originalTransport](const QJsonValue& id, const QString& method, const Object& params) {
                 const auto publication = file_projection();
                 const auto transportGeneration = originalTransport ? originalTransport->outputGeneration() : 0;
@@ -15009,7 +15015,7 @@ struct AssistantViewModel::State {
                             diagnostic.method, diagnostic.first_stage, diagnostic.first_class, secondary_stage, secondary_class);
                         // A local request-processing failure is not account revocation.
                         // Keep the original channel/task; actual transport failure still
-                        // arrives through CodexAgent::failed and its existing owner.
+                        // arrives through AssistantProvider::failed and its existing owner.
                         const auto message=QObject::tr("The app could not retain this request [%1: %2]. Inspect its actual outcome before continuing; no account expiration was established.")
                             .arg(QLatin1StringView(diagnostic.first_stage),QLatin1StringView(diagnostic.first_class));
                         try {
@@ -15073,7 +15079,7 @@ struct AssistantViewModel::State {
         generic_prepare_workspace();
         if(!projection.input_current())return;
         generic_catalog_bytes = 2;
-        const auto executable = CodexAgent::executable();
+        const auto executable = runtime_executable();
         if (executable.isEmpty()) {
             generic_fail(QObject::tr("The bundled official agent is unavailable. Rebuild or reinstall this Edi candidate.")); return;
         }
@@ -15118,7 +15124,7 @@ struct AssistantViewModel::State {
         const bool staged=staged_skills_match(registration_scope);
         if(!inventory || !staged || staged_skill_inventory!=inventory)throw std::runtime_error("Captured skill inventory changed");
 
-        const QPointer<CodexAgent> transport(agent.get());
+        const QPointer<AssistantProvider> transport(agent.get());
 
         auto catalog=std::make_shared<NativeSkillCatalog>();
         for(const auto& value:inventory->declarations) {
@@ -15149,13 +15155,13 @@ struct AssistantViewModel::State {
         const auto publication = file_projection();
         // Only a session that had input exists in the runtime to resume; an empty one is started afresh.
         const auto viewed=generic_thread.isEmpty() && viewed_session && viewed_session->had_input?viewed_session:std::optional<ViewedSession>{};
-        const QPointer<CodexAgent> originalTransport(agent.get());
+        const QPointer<AssistantProvider> originalTransport(agent.get());
         const auto originalOutput=originalTransport?originalTransport->outputGeneration():0;
         const auto originalTransportCurrent=[&] {
             return originalTransport && agent.get()==originalTransport.data() && originalTransport->outputGeneration()==originalOutput;
         };
         if(viewed && (!viewed_session_current(*viewed) || !session_switch_idle() || sessions_loading || !originalTransportCurrent() ||
-            originalTransport->outputOwnerState()!=CodexAgent::OutputOwnerState::Live))return false;
+            originalTransport->outputOwnerState()!=AssistantProvider::OutputOwnerState::Live))return false;
         // Internal instruction-stage preparation is a definite pre-RPC refusal;
         // failure is not evidence of an account failure or a missing user grant.
         try {
@@ -15195,7 +15201,7 @@ struct AssistantViewModel::State {
             generic_connecting = true;
             agent->beginOperation(Limits::sign_in_ms, 0);
             if (!publication.input_current()) return false;
-            if(!CodexAgent::policyPatch().isEmpty()) {
+            if(!runtime_policy_patch().isEmpty()) {
                 if(prepare_dedicated_skills() && publication.input_current())generic_start_thread();
             } else generic_request("skills/list", {{"cwds", QJsonArray{generic_workspace}}, {"forceReload", true}});
             return publication.input_current();
@@ -15239,7 +15245,7 @@ struct AssistantViewModel::State {
         params["config"] = Object{{"model_reasoning_effort",generic_settings_effort},{"web_search","live"},
             {"features.shell_tool",false},{"features.view_image",false},{"features.stable_environment_tools",false},{"features.apps",false},{"features.plugins",false},{"features.remote_plugin",false},
             {"features.multi_agent",false},{"orchestrator.mcp.enabled",false}};
-        if(CodexAgent::policyPatch().isEmpty()) {
+        if(runtime_policy_patch().isEmpty()) {
             auto config=params.value("config").toObject();
             config["features.default_mode_request_user_input"]=true;
             config["tools.experimental_request_user_input.enabled"]=true;
@@ -15256,7 +15262,7 @@ struct AssistantViewModel::State {
                 {"count",work_report_observed(QString::number(offered.toArray().size()))},{"body",work_report_observed(offered)}};
             work_registration=std::move(registration);
         }catch(...){work_reports.missEvidence();}
-        if(!CodexAgent::policyPatch().isEmpty()) {
+        if(!runtime_policy_patch().isEmpty()) {
             // Reuse the original ordinary registry construction already needed
             // by thread/start. Verification never reconstructs that catalogue.
             const auto requested=params.value("dynamicTools").toArray();
@@ -15601,7 +15607,7 @@ struct AssistantViewModel::State {
                 native = generic_native; sync();
                 if (!publication.input_current()) return;
                 if (!usage_epoch_exhausted && usage_read_epoch == usage_epoch) usage_account_ready = true;
-                if(!CodexAgent::policyPatch().isEmpty()) {
+                if(!runtime_policy_patch().isEmpty()) {
                 if(prepare_dedicated_skills() && publication.input_current())generic_start_thread();
             } else generic_request("skills/list", {{"cwds", QJsonArray{generic_workspace}}, {"forceReload", true}});
             }
@@ -15615,7 +15621,7 @@ struct AssistantViewModel::State {
             const auto declarations=generic_skill_declarations;
             const auto inventory=staged_skill_inventory;
 
-            const QPointer<CodexAgent> transport(agent.get());
+            const QPointer<AssistantProvider> transport(agent.get());
 
             auto catalog=std::make_shared<NativeSkillCatalog>();
             quint64 catalog_bytes=2;
@@ -15807,7 +15813,7 @@ struct AssistantViewModel::State {
             settings_observe_receipt(settingsObservation,id,"ack_validation","empty_queue_ack_validated");
         } else if (method == "turn/start") {
             const auto turn = result.value("turn").toObject();
-            if(!CodexAgent::policyPatch().isEmpty())(void)verified_runtime_policy(result.value("ediPolicy"),generic_thread,turn.value("id"));
+            if(!runtime_policy_patch().isEmpty())(void)verified_runtime_policy(result.value("ediPolicy"),generic_thread,turn.value("id"));
             if(!publication.input_current())return;
             const auto turnId = generic_id(turn.value("id"));
             if (!generic_turn.isEmpty() && generic_turn != turnId) throw std::runtime_error("Agent turn identity changed");
@@ -16216,7 +16222,7 @@ struct AssistantViewModel::State {
         const auto publication = file_projection();
         if(method=="thread/archived") {
             diagnostic.stage="THREAD_ARCHIVED";
-            if(!generic_authenticated || generic_retiring || !agent || agent->outputOwnerState()!=CodexAgent::OutputOwnerState::Live)return;
+            if(!generic_authenticated || generic_retiring || !agent || agent->outputOwnerState()!=AssistantProvider::OutputOwnerState::Live)return;
             const auto id=generic_id(params.value("threadId"));
             if(!settle_archived_session(id) || !publication.input_current())return;
             publish_sessions(); // Notification is not the ACK of another outstanding operation.
@@ -17000,7 +17006,7 @@ struct AssistantViewModel::State {
         userInput.append(Object{{"type","text"},{"text",contextData}});
         (void)generic_measured_size(userInput);
         Object params{{"threadId", generic_thread}, {"input", userInput}};
-        if(!CodexAgent::policyPatch().isEmpty()) {
+        if(!runtime_policy_patch().isEmpty()) {
             if(generic_runtime_policy.isEmpty())throw std::runtime_error("Dedicated Edi policy is unavailable");
             params["ediPolicy"]=generic_runtime_policy;
         }
@@ -17597,7 +17603,7 @@ struct AssistantViewModel::State {
                 if (!projection.current()) return;
 #ifndef __EMSCRIPTEN__
                 if (generic_mode && agent) {
-                    const QPointer<CodexAgent> transport(agent.get());
+                    const QPointer<AssistantProvider> transport(agent.get());
                     // Existing queued archive presentation follows settlement
                     // stack unwinding; no timer or new scheduling owner.
                     generic_release_settled();
@@ -17958,7 +17964,7 @@ struct AssistantViewModel::State {
             QMetaObject::invokeMethod(&owner, [this,receiver,delivery=std::move(delivery)]() mutable {
                 if(!receiver || receiver->state_.get()!=this)return;
                 const auto publication=file_projection();
-                const QPointer<CodexAgent> transport(agent.get());
+                const QPointer<AssistantProvider> transport(agent.get());
 
                 // Destroy the actual callback and its task captures BEFORE
                 // reconciling the original transport's retained-output role.
@@ -18036,7 +18042,7 @@ struct AssistantViewModel::State {
                 }
             }, Qt::QueuedConnection);
         };
-        if (dependencies) connection = std::make_unique<edi::assistant::native::ChatGptConnection>(sink, std::move(*dependencies));
+        if (dependencies) connection = std::make_unique<NativeChatGptProvider>(sink, std::move(*dependencies));
         else { generic_mode = true; generic_initialize(); }
 #endif
         timer.setInterval(200);
@@ -19473,7 +19479,7 @@ void AssistantViewModel::selectSession(const QString& threadId) {
     const QPointer<AssistantViewModel> receiver(this);auto* const original=state_.get();const auto proof=original->file_projection();
     const auto current=[&]{return receiver && receiver->state_.get()==original && proof.input_current();};
     try {
-        if(QThread::currentThread()!=thread() || (!original->session_switch_idle(false) || !original->generic_authenticated || !original->agent || original->agent->outputOwnerState()!=CodexAgent::OutputOwnerState::Live) || original->sessions_loading)return;
+        if(QThread::currentThread()!=thread() || (!original->session_switch_idle(false) || !original->generic_authenticated || !original->agent || original->agent->outputOwnerState()!=AssistantProvider::OutputOwnerState::Live) || original->sessions_loading)return;
         if(!original->owned_session(original->session_metadata.value(threadId)))return;
         if(original->session_operation==UINT64_MAX)return;
         ++original->session_operation;
@@ -19820,7 +19826,7 @@ bool AssistantViewModel::addSkillSource(const QString& token,const QUrl& folder)
         if(!state_->skill_source_loaded || serial!=state_->skill_source_serial || canCancel())return false;
 #if defined(Q_OS_UNIX)
 
-        const QPointer<CodexAgent> transport(state_->agent.get());
+        const QPointer<AssistantProvider> transport(state_->agent.get());
 
         auto source=selected_skill_source(folder);
         auto rows=state_->skill_source_rows;

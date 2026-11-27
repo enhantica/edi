@@ -357,6 +357,11 @@ QString CodexAgent::idKey(const QJsonValue& value) {
 
 QString CodexAgent::policyPatch() { return QString::fromLatin1(EDI_CODEX_SOURCE_PATCH_SHA256); }
 
+QJsonObject CodexAgent::threadPolicy() const {
+    return {{"sandbox", "read-only"}, {"approvalPolicy", "never"}, {"approvalsReviewer", "user"},
+            {"modelProvider", "openai"}};
+}
+
 QString CodexAgent::executable() {
     if (qEnvironmentVariableIsSet("EDI_CODEX_DEVELOPMENT_EXECUTABLE")) {
         const auto path = qEnvironmentVariable("EDI_CODEX_DEVELOPMENT_EXECUTABLE");
