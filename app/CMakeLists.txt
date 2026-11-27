@@ -734,6 +734,7 @@ endif()
 if(NOT EMSCRIPTEN)
     target_sources(edi_app_module PRIVATE src/assistant_provider.hpp src/codex_agent.hpp src/codex_agent.cpp
         src/assistant_providers.hpp src/assistant_providers.cpp
+        src/assistant_accounts.hpp src/assistant_accounts.cpp
         src/native_chatgpt_provider.hpp src/native_chatgpt_provider.cpp
         src/assistant_native_tools.hpp src/assistant_native_tools.cpp
         src/assistant_native_create.hpp src/assistant_native_create.cpp)
