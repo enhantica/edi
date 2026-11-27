@@ -13,7 +13,7 @@ none (edi ADR-0106).
 import struct
 import subprocess
 import tempfile
-import xml.etree.ElementTree as ET  # noqa: S405 - our own .qrc only
+import xml.etree.ElementTree as ET  # noqa: S405 - our own .qrc files only
 import zlib
 from pathlib import Path
 
@@ -113,13 +113,14 @@ def build(
             target = tree / name
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_bytes(content)
-        entries = ''.join(
-            f'<file alias="{name}">{(tree / name).as_posix()}</file>'
-            for name in sorted(str(p.relative_to(tree).as_posix()) for p in tree.rglob('*'))
-            if (tree / name).is_file()
-        )
+        # Written by the XML writer: the scratch path may hold any character, an ampersand too.
+        default = ET.Element('RCC')
+        listed = ET.SubElement(default, 'qresource', prefix='/')
+        for path in sorted(p for p in tree.rglob('*') if p.is_file()):
+            entry = ET.SubElement(listed, 'file', alias=path.relative_to(tree).as_posix())
+            entry.text = path.as_posix()
         default_qrc = work / 'default.qrc'
-        default_qrc.write_text(f'<RCC><qresource prefix="/">{entries}</qresource></RCC>\n')
+        ET.ElementTree(default).write(default_qrc, encoding='utf-8')
         # Absolute paths for the -r files too, so both lists compile from one directory.
         added = ET.parse(resources)  # noqa: S314 - written by package.py
         for element in added.iter('file'):
@@ -128,9 +129,11 @@ def build(
         added_qrc = work / 'added.qrc'
         added.write(added_qrc, encoding='utf-8')
         output.parent.mkdir(parents=True, exist_ok=True)
-        # Uncompressed: the tool's Qt reads it whatever compression it was built with.
+        # Uncompressed, so the tool's Qt reads it whatever compression it was built with, and in
+        # the first format, which holds no file times: the same pages give the same bytes.
         subprocess.run(
-            [rcc, '--binary', '--no-compress', '-o', output, default_qrc, added_qrc],
+            [rcc, '--binary', '--no-compress', '--format-version', '1', '-o', output,
+             default_qrc, added_qrc],
             check=True, capture_output=True,
         )  # fmt: skip
     files = read_rcc(output.read_bytes())
