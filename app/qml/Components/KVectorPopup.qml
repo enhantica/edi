@@ -164,6 +164,7 @@ AppDialog {
                 }
                 EaComponents.ListViewLabel {
                     id: indexedCell
+                    objectName: `chart.kVector.${row.index}.indexedCell`
                     horizontalAlignment: Text.AlignHCenter
                     text: qsTr("%1 of %2").arg(row.modelData.explained).arg(popup.markedPeaks.length)
                     // Hovered, every marked reflection with its role for this k: the app's check when the k indexes
