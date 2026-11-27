@@ -10,9 +10,10 @@ import EasyApplication.Gui.Elements as EaElements
 
 import edi.app
 
-// Crystal → Magnetic (edi ADR-0078 "The magnetic popup", crysta ADR-0137): pick a propagation vector, the magnetic
-// sites and the magnetic groups to add; each picked group becomes a new structure linked where the parent is. Cancel
-// changes nothing.
+// Crystal → Magnetic (edi ADR-0078 "The magnetic popup", crysta ADR-0137): pick a propagation vector and the magnetic
+// sites, then the magnetic groups to add; each picked group becomes a new structure linked where the parent is. The
+// layout follows the owner's decision of 2026-11-27: at most about 90 % of the window, a fixed footer, Maximal only by
+// default, a header per level, a Graph / List switch and a details strip. Cancel changes nothing.
 AppDialog {
     id: popup
     objectName: "structures.magneticPopup"
@@ -20,78 +21,68 @@ AppDialog {
     property ProjectViewModel project: null
     property int structureIndex: -1
     property StructureViewModel structure: null
+    // A k to start from (the k-vector popup's choice), else the first preset.
+    property string initialK: ""
 
     property var presets: []
     property var sites: []
     property var found: null
+    property var selected: []
+    property int hovered: -1
     property string refusal: ""
     property bool busy: false
 
+    readonly property var nodes: found ? found.nodes : []
+
     title: qsTr("Magnetic structures from %1").arg(structure ? structure.name : "")
-    standardButtons: Dialog.Cancel
-    width: Math.min(parent ? parent.width - 80 : 1000, 1100)
-    height: Math.min(parent ? parent.height - 80 : 800, 860)
+    width: parent ? Math.round(parent.width * 0.9) : 1000
+    height: parent ? Math.round(parent.height * 0.9) : 800
     onClosed: destroy()
 
     readonly property string k: kChoice.currentIndex >= 0 && kChoice.currentIndex < presets.length ? presets[kChoice.currentIndex].k : [0, 1, 2].map(i => kFields.itemAt(i) ? (kFields.itemAt(i) as EaElements.TextField).text : "0").join(",")
 
-    // Find k from data (crysta ADR-0137 A11): the experiments a kept fit covers, its unexplained peaks and the
-    // ranked k.
-    property var dataChoices: []
-    property var peaks: []
-    property var peakTicks: []
-    property var kRows: []
-    property bool searching: false
-    property bool findKShown: false
-    property string kRefusal: ""
-
+    function selectable(i) {
+        const n = nodes[i];
+        return n !== undefined && n.bns !== "" && n.momentAllowed && (!maximalOnly.checked || Math.max(1, n.row) === 1);
+    }
+    function toggle(i) {
+        if (!selectable(i))
+            return;
+        const next = selected.slice();
+        const at = next.indexOf(i);
+        if (at >= 0)
+            next.splice(at, 1);
+        else
+            next.push(i);
+        next.sort((a, b) => a - b);
+        selected = next;
+    }
+    function setMany(indices, on) {
+        const next = selected.filter(i => indices.indexOf(i) < 0);
+        if (on)
+            for (const i of indices)
+                if (selectable(i))
+                    next.push(i);
+        next.sort((a, b) => a - b);
+        selected = next;
+    }
+    function selectAll() {
+        const all = [];
+        for (let i = 0; i < nodes.length; ++i)
+            all.push(i);
+        setMany(all, true);
+    }
     function setK(text) {
-        const parts = text.split(",");
         const preset = presets.findIndex(p => p.k === text);
         if (preset >= 0) {
             kChoice.currentIndex = preset;
-        } else {
-            kChoice.currentIndex = presets.length;
-            for (let i = 0; i < 3; ++i)
-                (kFields.itemAt(i) as EaElements.TextField).text = parts[i];
-        }
-        find();
-    }
-    function loadPeaks() {
-        kRows = [];
-        kRefusal = "";
-        peaks = [];
-        peakTicks = [];
-        if (dataChoice.currentIndex < 0 || dataChoice.currentIndex >= dataChoices.length)
-            return;
-        const choice = dataChoices[dataChoice.currentIndex];
-        if (!choice.eligible) {
-            kRefusal = choice.reason;
             return;
         }
-        peaks = project.magneticPeaks(structureIndex, choice.index);
-        if (peaks.length === 0)
-            kRefusal = project.lastError !== "" ? project.lastError : qsTr("the fit leaves no peak unexplained");
-        peakTicks = peaks.map(() => true);
+        kChoice.currentIndex = presets.length;
+        const parts = text.split(",");
+        for (let i = 0; i < 3; ++i)
+            (kFields.itemAt(i) as EaElements.TextField).text = parts[i];
     }
-    function searchK() {
-        kRows = [];
-        kRefusal = "";
-        const ticked = [];
-        for (let i = 0; i < peakTicks.length; ++i)
-            if (peakTicks[i])
-                ticked.push(i);
-        searching = true;
-        project.findPropagationVectors(structureIndex, dataChoices[dataChoice.currentIndex].index, ticked);
-    }
-    function chooseRow(row) {
-        if (!project.propagationSearchCurrent(dataChoices[dataChoice.currentIndex].index)) {
-            kRefusal = qsTr("the data or the peaks changed; search again");
-            return;
-        }
-        setK(row.k);
-    }
-
     function tickedSites() {
         const out = [];
         for (let i = 0; i < siteRepeater.count; ++i) {
@@ -104,7 +95,8 @@ AppDialog {
     function find() {
         found = null;
         refusal = "";
-        graphView.selected = [];
+        selected = [];
+        hovered = -1;
         const ticked = tickedSites();
         if (ticked.length === 0) {
             refusal = qsTr("tick at least one magnetic site");
@@ -116,9 +108,12 @@ AppDialog {
 
     Component.onCompleted: {
         presets = project.magneticPresets(structureIndex);
-        dataChoices = project.magneticDataChoices(structureIndex);
         sites = project.magneticSites(structureIndex);
-        Qt.callLater(find);
+        Qt.callLater(() => {
+            if (popup.initialK !== "")
+                popup.setK(popup.initialK);
+            popup.find();
+        });
     }
 
     Connections {
@@ -131,37 +126,26 @@ AppDialog {
             popup.busy = false;
             popup.refusal = message;
         }
-        function onPropagationVectorsFound(rows) {
-            popup.searching = false;
-            popup.kRows = rows;
-            if (rows.length === 0)
-                popup.kRefusal = qsTr("No k explains the ticked peaks (not found by this search).");
-        }
-        function onPropagationVectorsRefused(message) {
-            popup.searching = false;
-            popup.kRefusal = message;
-        }
     }
 
-    // Bounded to the dialog's own area, so the graph takes what the other rows leave and the
-    // footer stays inside the dialog.
+    // The dialog's own area: the choices on top, the groups in the middle (the one part that scrolls), the details
+    // strip and the footer at the bottom.
     ColumnLayout {
         id: content
         width: popup.availableWidth
         height: popup.availableHeight
-        spacing: EaStyle.Sizes.fontPixelSize * 0.6
+        spacing: EaStyle.Sizes.fontPixelSize * 0.5
 
-        // 1. The propagation vector.
-        Row {
+        // The propagation vector.
+        RowLayout {
             spacing: EaStyle.Sizes.fontPixelSize * 0.6
             EaElements.Label {
-                anchors.verticalCenter: parent.verticalCenter
                 text: qsTr("Propagation vector k")
             }
             EaElements.ComboBox {
                 id: kChoice
                 objectName: "magnetic.k"
-                width: EaStyle.Sizes.fontPixelSize * 16
+                Layout.preferredWidth: EaStyle.Sizes.fontPixelSize * 16
                 model: popup.presets.map(p => p.label === "" ? `(${p.k})` : `${p.label}  (${p.k})`).concat([qsTr("Other…")])
                 onActivated: if (currentIndex < popup.presets.length)
                     popup.find()
@@ -172,117 +156,20 @@ AppDialog {
                 delegate: EaElements.TextField {
                     required property int index
                     visible: kChoice.currentIndex === popup.presets.length
-                    width: EaStyle.Sizes.fontPixelSize * 5
+                    Layout.preferredWidth: EaStyle.Sizes.fontPixelSize * 5
                     placeholderText: ["k₁", "k₂", "k₃"][index]
                     text: "0"
                     onEditingFinished: popup.find()
                 }
             }
             EaElements.Label {
-                anchors.verticalCenter: parent.verticalCenter
+                Layout.fillWidth: true
+                elide: Text.ElideRight
                 text: popup.found ? qsTr("Magnetic cell: %1").arg(popup.found.cell.replace(";0,0,0", "").split(",").join(", ")) : ""
             }
         }
-        // Find k from data.
-        Row {
-            spacing: EaStyle.Sizes.fontPixelSize * 0.6
-            visible: popup.dataChoices.length > 0
-            EaElements.Button {
-                id: findK
-                objectName: "magnetic.findK"
-                text: popup.findKShown ? qsTr("Hide Find k") : qsTr("Find k from data")
-                onClicked: {
-                    popup.findKShown = !popup.findKShown;
-                    if (popup.findKShown)
-                        popup.loadPeaks();
-                }
-            }
-            EaElements.Label {
-                anchors.verticalCenter: parent.verticalCenter
-                visible: popup.findKShown
-                text: qsTr("Data")
-            }
-            EaElements.ComboBox {
-                id: dataChoice
-                objectName: "magnetic.data"
-                visible: popup.findKShown
-                width: EaStyle.Sizes.fontPixelSize * 14
-                model: popup.dataChoices.map(c => c.eligible ? c.name : `${c.name} (${c.reason})`)
-                currentIndex: {
-                    const eligible = popup.dataChoices.filter(c => c.eligible);
-                    return eligible.length === 1 ? popup.dataChoices.indexOf(eligible[0]) : 0;
-                }
-                onActivated: popup.loadPeaks()
-            }
-            EaElements.Button {
-                objectName: "magnetic.searchK"
-                visible: popup.findKShown
-                enabled: popup.peaks.length > 0 && !popup.searching
-                text: popup.searching ? qsTr("Searching…") : qsTr("Search")
-                onClicked: popup.searchK()
-            }
-        }
-        Flow {
-            Layout.fillWidth: true
-            visible: popup.findKShown && popup.peaks.length > 0
-            spacing: EaStyle.Sizes.fontPixelSize * 0.4
-            EaElements.Label {
-                text: qsTr("Unexplained peaks")
-            }
-            Repeater {
-                model: popup.peaks
-                delegate: EaElements.CheckBox {
-                    required property var modelData
-                    required property int index
-                    objectName: `magnetic.peak.${index}`
-                    text: `${modelData.x.toFixed(3)} (d ${modelData.d.toFixed(4)} Å)`
-                    checked: popup.peakTicks[index] ?? true
-                    onToggled: {
-                        const next = popup.peakTicks.slice();
-                        next[index] = checked;
-                        popup.peakTicks = next;
-                        popup.kRows = [];
-                    }
-                }
-            }
-        }
-        EaElements.Label {
-            Layout.fillWidth: true
-            wrapMode: Text.Wrap
-            visible: popup.findKShown && text !== ""
-            color: EaStyle.Colors.red
-            text: popup.kRefusal
-        }
-        ListView {
-            id: kList
-            objectName: "magnetic.kRows"
-            visible: popup.findKShown && popup.kRows.length > 0
-            Layout.fillWidth: true
-            Layout.preferredHeight: Math.min(contentHeight, EaStyle.Sizes.fontPixelSize * 9)
-            clip: true
-            model: popup.kRows
-            delegate: EaElements.Label {
-                id: kRow
-                required property var modelData
-                required property int index
-                readonly property bool choosable: modelData.verdict === "buildable"
-                width: kList.width
-                enabled: choosable
-                text: {
-                    const r = modelData;
-                    const name = r.label === "" ? `(${r.k})` : `${r.label} (${r.k})`;
-                    const state = r.verdict === "buildable" ? "" : r.verdict === "over the limit" ? qsTr(" · needs %1 parent cells: not built").arg(r.parentCells) : r.verdict === "underdetermined" ? qsTr(" · underdetermined in %1 directions").arg(r.undetermined) : qsTr(" · incommensurate at this resolution");
-                    return `${name} · ${qsTr("%1 peaks explained").arg(r.explained)} · ${qsTr("worst misfit %1").arg(r.misfit.toFixed(2))}${r.equallyGood ? qsTr(" · equally good") : ""}${state}`;
-                }
-                MouseArea {
-                    anchors.fill: parent
-                    enabled: kRow.choosable
-                    onClicked: popup.chooseRow(kRow.modelData)
-                }
-            }
-        }
 
-        // 2. The magnetic sites; 3. starting moments; the zero-moment switch.
+        // The magnetic sites.
         Flow {
             Layout.fillWidth: true
             spacing: EaStyle.Sizes.fontPixelSize * 0.6
@@ -302,19 +189,17 @@ AppDialog {
                 }
             }
         }
-        Row {
+
+        // What is shown and how.
+        Flow {
+            Layout.fillWidth: true
             spacing: EaStyle.Sizes.fontPixelSize
             EaElements.CheckBox {
-                id: startMoments
-                objectName: "magnetic.startMoments"
-                text: qsTr("Add non-zero starting moments")
+                id: maximalOnly
+                objectName: "magnetic.maximalOnly"
+                text: qsTr("Maximal only")
                 checked: true
-            }
-            EaElements.CheckBox {
-                id: allSubgroups
-                objectName: "magnetic.allSubgroups"
-                text: qsTr("Show all subgroups")
-                checked: false
+                onToggled: popup.selected = popup.selected.filter(i => popup.selectable(i))
             }
             EaElements.CheckBox {
                 id: zeroMoment
@@ -322,6 +207,23 @@ AppDialog {
                 text: qsTr("Show groups without moments")
                 checked: false
                 onToggled: popup.find()
+            }
+            EaElements.CheckBox {
+                id: startMoments
+                objectName: "magnetic.startMoments"
+                text: qsTr("Add non-zero starting moments")
+                checked: true
+            }
+            EaElements.RadioButton {
+                id: graphMode
+                objectName: "magnetic.graphView"
+                text: qsTr("Graph")
+                checked: true
+            }
+            EaElements.RadioButton {
+                id: listMode
+                objectName: "magnetic.listView"
+                text: qsTr("List")
             }
         }
 
@@ -337,42 +239,116 @@ AppDialog {
             text: qsTr("Finding the magnetic groups…")
         }
 
-        // 4. The graph.
-        MagneticSubgroupGraph {
-            id: graphView
+        // The groups, as a graph or a list; the only part that scrolls.
+        StackLayout {
             Layout.fillWidth: true
             Layout.fillHeight: true
             Layout.minimumHeight: EaStyle.Sizes.fontPixelSize * 8
-            showAll: allSubgroups.checked
-            nodes: popup.found ? popup.found.nodes : []
-            cell: popup.found ? popup.found.cell : ""
-            parentName: popup.structure ? popup.structure.spaceGroup.nameHM : ""
+            currentIndex: listMode.checked ? 1 : 0
+
+            MagneticSubgroupGraph {
+                id: graphView
+                nodes: popup.nodes
+                selected: popup.selected
+                maximalOnly: maximalOnly.checked
+                onHoveredChanged: popup.hovered = hovered
+                onToggled: index => popup.toggle(index)
+                onLevelToggled: (level, on) => popup.setMany(graphView.levels[level], on)
+            }
+
+            ListView {
+                id: listView
+                objectName: "magnetic.list"
+                clip: true
+                ScrollBar.vertical: EaElements.ScrollBar {}
+                model: {
+                    const rows = [];
+                    for (let i = 0; i < popup.nodes.length; ++i)
+                        if (!maximalOnly.checked || Math.max(1, popup.nodes[i].row) === 1)
+                            rows.push(i);
+                    rows.sort((a, b) => Math.max(1, popup.nodes[a].row) - Math.max(1, popup.nodes[b].row) || a - b);
+                    return rows;
+                }
+                delegate: Item {
+                    id: listRow
+                    required property int modelData
+                    readonly property var data_: popup.nodes[modelData]
+                    width: listView.width
+                    height: EaStyle.Sizes.fontPixelSize * 2.2
+                    Row {
+                        x: (Math.max(1, listRow.data_.row) - 1) * EaStyle.Sizes.fontPixelSize * 1.5
+                        anchors.verticalCenter: parent.verticalCenter
+                        spacing: EaStyle.Sizes.fontPixelSize * 0.8
+                        EaElements.CheckBox {
+                            objectName: `magnetic.row.${listRow.modelData}`
+                            enabled: popup.selectable(listRow.modelData)
+                            checked: popup.selected.indexOf(listRow.modelData) >= 0
+                            onToggled: popup.toggle(listRow.modelData)
+                            text: listRow.data_.bns === "" ? qsTr("not identified") : `${listRow.data_.name}  ${listRow.data_.bns}${listRow.data_.embedding > 1 ? " #" + listRow.data_.embedding : ""}`
+                        }
+                        EaElements.Label {
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: `${qsTr("type")} ${["", "I", "II", "III", "IV"][listRow.data_.type] ?? ""} · ${Math.max(1, listRow.data_.row) === 1 ? qsTr("maximal") : qsTr("level %1").arg(listRow.data_.row)}${listRow.data_.netMoment ? " · FM" : ""} · ${listRow.data_.moments}`
+                        }
+                    }
+                    MouseArea {
+                        anchors.fill: parent
+                        acceptedButtons: Qt.NoButton
+                        hoverEnabled: true
+                        onEntered: popup.hovered = listRow.modelData
+                    }
+                }
+            }
         }
 
-        // 5. Select all, Clear, Add.
-        Row {
-            id: buttons
+        // The details strip: the group under the pointer.
+        EaElements.Label {
+            objectName: "magnetic.details"
+            Layout.fillWidth: true
+            wrapMode: Text.Wrap
+            maximumLineCount: 3
+            elide: Text.ElideRight
+            text: {
+                const n = popup.nodes[popup.hovered];
+                if (n === undefined)
+                    return qsTr("Point at a group for its moments and transforms.");
+                return `${n.name} ${n.bns} · ${qsTr("from the parent")} ${popup.found.cell} · ${qsTr("to the BNS standard")} ${n.transform} · ${qsTr("%n domain(s)", "", n.domains)}\n${n.moments}`;
+            }
+        }
+
+        // The fixed footer.
+        RowLayout {
             spacing: EaStyle.Sizes.fontPixelSize * 0.6
             EaElements.Button {
+                objectName: "magnetic.selectAll"
                 text: qsTr("Select all")
                 enabled: popup.found !== null
-                onClicked: graphView.selectAll()
+                onClicked: popup.selectAll()
             }
             EaElements.Button {
+                objectName: "magnetic.clear"
                 text: qsTr("Clear")
-                enabled: graphView.selected.length > 0
-                onClicked: graphView.selected = []
+                enabled: popup.selected.length > 0
+                onClicked: popup.selected = []
+            }
+            Item {
+                Layout.fillWidth: true
             }
             EaElements.Button {
                 objectName: "magnetic.add"
-                text: graphView.selected.length > 1 ? qsTr("Add %1 structures").arg(graphView.selected.length) : qsTr("Add")
-                enabled: graphView.selected.length > 0 && !popup.busy
+                text: popup.selected.length > 1 ? qsTr("Add %1 structures").arg(popup.selected.length) : qsTr("Add")
+                enabled: popup.selected.length > 0 && !popup.busy
                 onClicked: {
-                    if (popup.project.addMagneticCandidates(popup.structureIndex, graphView.selected, startMoments.checked))
+                    if (popup.project.addMagneticCandidates(popup.structureIndex, popup.selected, startMoments.checked))
                         popup.close();
                     else
                         popup.refusal = popup.project.lastError;
                 }
+            }
+            EaElements.Button {
+                objectName: "magnetic.cancel"
+                text: qsTr("Cancel")
+                onClicked: popup.close()
             }
         }
     }
