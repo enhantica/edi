@@ -381,7 +381,7 @@ def legacy_followups(nodes, paths):
     return kept, errors
 
 
-def violations(sources, graph=None):  # noqa: PLR0914, PLR0912 — source graph and admission witnesses
+def violations(sources, graph=None):  # noqa: PLR0914, PLR0912, PLR0915 — source graph and admission witnesses
     nodes, edges, roots, reached = census(sources) if graph is None else graph
     errors = []
     for key in sorted(roots):
@@ -412,6 +412,9 @@ def violations(sources, graph=None):  # noqa: PLR0914, PLR0912 — source graph 
             'src/core/kept_iso.cpp:kept_token_value',
             'src/core/kept_iso.cpp:stored_token',
         }
+        if decoder_site == 'core/src/adapter.cpp:adopt_magnetic_family_setting':
+            # The completed nuclear Wyckoff field can still carry its legacy missing sentinel.
+            active_body = active_body.replace('site->wyckoff_letter.value() == "."', '')
         if not shared_decoder and key not in legacy and LOCAL_DECODE.search(active_body):
             errors.append(key + ': local marker/delimiter decision outside the shared decoder')
         if NUMERIC_ALIAS.search(active_clean):
@@ -471,8 +474,21 @@ def violations(sources, graph=None):  # noqa: PLR0914, PLR0912 — source graph 
                 # A strict parser may consume each numeric atom up to its separator.
                 continue
             if row['name'] == 'read_operator' and 'strtod' in numeric[0]:
-                # This is the structured xyz grammar: its cursor consumes the whole expression.
-                # Behaviour witnesses exercise junk after every whole operator, not numeric atoms.
+                # The xyz grammar checks the complete numeric atom and the full expression.
+                continue
+            if (
+                decoder_site == 'src/core/structure_factor.cpp:read_operator'
+                and 'stoi' in numeric[0]
+                and args == 'number'
+                and re.search(
+                    r'if\s*\(\s*!number\.empty\(\).*?&&\s*'
+                    r'number\.find_first_not_of\("0123456789"\)\s*==\s*std::string::npos\)\s*'
+                    r'\{[^{}]*sign\s*\*\s*std::stoi\(number\)',
+                    row['body'],
+                    re.DOTALL,
+                )
+            ):
+                # The branch admits only a nonempty run of ASCII digits for this coefficient.
                 continue
             if not whole or (not finite and not integer):
                 errors.append(key + ': numeric conversion lacks whole-token/finite admission')

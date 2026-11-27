@@ -174,23 +174,30 @@ def test_independent_magnetic_positions_remain_fittable(tmp_path, name, axis):
 @pytest.mark.parametrize('scalar', [False, True], ids=['loop', 'scalar'])
 @pytest.mark.parametrize('shifted', [False, True], ids=['standard', 'quarter-origin'])
 def test_both_transform_inputs_write_the_bns_loop_on_two_saves(tmp_path, scalar, shifted):
-    model = load(tmp_path, shifted=shifted, scalar=scalar)
+    text = source(shifted=shifted, scalar=scalar)
     expected = 'a,b,c;1/4,0,0' if shifted else 'a,b,c;0,0,0'
-    for index in range(2):
-        folder = tmp_path / f'saved-{index}'
-        values = saved_columns(model, folder)
-        sources = values.get('_space_group_magn_transforms.source', [])
-        transforms = values.get('_space_group_magn_transforms.pp_abc', [])
-        assert len(sources) == len(transforms) and sources.count('BNS') == 1, (
-            'Either dictionary transform input writes one unambiguous BNS transform loop row'
+    inputs = {'authored': text}
+    if scalar:
+        inputs['lowercase'] = text.replace(
+            '_space_group_magn.transform_BNS_Pp_abc', '_space_group_magn.transform_bns_pp_abc'
         )
-        assert transforms[sources.index('BNS')] == expected, (
-            'The BNS transform loop retains the independent nontrivial origin as well as identity'
-        )
-        assert '_space_group_magn.transform_bns_pp_abc' not in values, (
-            'Native saving uses the ISODISTORT loop representation for the setting'
-        )
-        model = api.Project.load(folder)
+    for spelling, authored in inputs.items():
+        model = api.Project.load(project(tmp_path / spelling / 'input', authored))
+        for index in range(2):
+            folder = tmp_path / spelling / f'saved-{index}'
+            values = saved_columns(model, folder)
+            sources = values.get('_space_group_magn_transforms.source', [])
+            transforms = values.get('_space_group_magn_transforms.pp_abc', [])
+            assert len(sources) == len(transforms) and sources.count('BNS') == 1, (
+                'Either dictionary transform input writes one unambiguous BNS transform loop row'
+            )
+            assert transforms[sources.index('BNS')] == expected, (
+                'The BNS transform loop retains both the shifted origin and identity'
+            )
+            assert '_space_group_magn.transform_bns_pp_abc' not in values, (
+                'Native saving uses the ISODISTORT loop representation for the setting'
+            )
+            model = api.Project.load(folder)
 
 
 def test_magnetic_native_file_has_no_crystal_space_group(tmp_path):
