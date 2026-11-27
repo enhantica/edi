@@ -245,7 +245,7 @@ jobs:
           path: crysta-sdk-archives
       - uses: ./.github/actions/store
         with:
-          artifact: crysta-sdk-${{ matrix.platform }}${{ inputs.diagnostic && '-diagnostic' || '' }}
+          artifact: edi-crysta-sdk-${{ matrix.platform }}${{ inputs.diagnostic && '-diagnostic' || '' }}
           path: crysta-sdk-archives
           retention-days: 30
           if-no-files-found: error

@@ -14,7 +14,7 @@ runs:
   steps:
     - uses: actions/download-artifact@v4
       with:
-        name: crysta-sdk-${{ inputs.platform }}${{ inputs.diagnostic == 'true' && '-diagnostic' || '' }}
+        name: edi-crysta-sdk-${{ inputs.platform }}${{ inputs.diagnostic == 'true' && '-diagnostic' || '' }}
         path: crysta-sdk-archives
     - shell: bash
       run: echo "CRYSTA_SDK_ARCHIVES=$GITHUB_WORKSPACE/crysta-sdk-archives" >>"$GITHUB_ENV"
