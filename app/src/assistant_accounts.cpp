@@ -6,6 +6,7 @@
 #include <QFileInfo>
 #include <QJsonArray>
 #include <QJsonDocument>
+#include <QRegularExpression>
 #include <QSettings>
 #include <QStandardPaths>
 #include <QUuid>
@@ -33,13 +34,21 @@ QJsonObject AssistantAccountRecord::toJson() const {
 
 std::optional<AssistantAccountRecord> AssistantAccountRecord::fromJson(AssistantProviderId provider,
                                                                       const QJsonObject& value) {
-    for (const auto* field : {"id", "provider", "home", "email", "plan", "host"})
-        if (!value.value(QLatin1StringView(field)).isString()) return std::nullopt;
-    if (value.value("provider").toString() != assistant_provider_key(provider)) return std::nullopt;
+    // id is required; the other fields may be absent but never of another type.
+    if (!value.value("id").isString()) return std::nullopt;
+    for (const auto* field : {"provider", "home", "email", "plan", "host"}) {
+        const auto member = value.value(QLatin1StringView(field));
+        if (!member.isUndefined() && !member.isString()) return std::nullopt;
+    }
+    if (value.contains("provider") && value.value("provider").toString() != assistant_provider_key(provider))
+        return std::nullopt;
     AssistantAccountRecord record{value.value("id").toString(), provider, value.value("home").toString(),
                                   value.value("email").toString(), value.value("plan").toString(),
                                   value.value("host").toString()};
-    if (QUuid::fromString(record.id).isNull()) return std::nullopt;
+    // The id names a folder and a settings key, so it is one plain path segment.
+    static const QRegularExpression safe(QStringLiteral("^[A-Za-z0-9._-]{1,64}$"));
+    if (!safe.match(record.id).hasMatch() || record.id == QLatin1String(".") || record.id == QLatin1String(".."))
+        return std::nullopt;
     // Only the default ChatGPT login runs without a home of its own.
     if (record.home.isEmpty() && provider != AssistantProviderId::ChatGpt) return std::nullopt;
     return record;
