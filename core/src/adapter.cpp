@@ -7879,8 +7879,12 @@ void publish_fit_state(Project& project, crysta::Project& converted, const std::
         record_fitted_background(*experiment);
     }
     // The pattern follows the model it describes. A fit's trial publication raises a Calculate the model refuses
-    // instead of clearing it, so the fit refuses before the live model is touched (review 19, F2).
-    if (surface_refusal) {
+    // instead of clearing it, so the fit refuses before the live model is touched (review 19, F2). It is owed only
+    // when every experiment carries its own pattern: a fit on supplied patterns of a model without one publishes its
+    // values with no computed result, as before (review 20, F2).
+    const bool owed = std::all_of(project.experiments.begin(), project.experiments.end(),
+                                  [](const auto& experiment) { return experiment->data.has_value(); });
+    if (surface_refusal && owed) {
         project.calculate();
     } else {
         project.refresh_calculated_pattern();
@@ -8476,9 +8480,9 @@ FitResultBase Project::fit(const std::vector<double>& grid, const std::vector<do
                 return staged;
             };
             const auto measure = [&] {
-                crysta::Project measured(project);  // the engine project itself stays as the trial left it
+                crysta::Project engine_copy(project);  // the engine project itself stays as the trial left it
                 return std::make_pair(crysta_correlations(project, result),
-                                      fitted_quality(measured,
+                                      fitted_quality(engine_copy,
                                                      single_crystal ? std::deque<crysta::PdDataBase>{}
                                                                     : std::deque<crysta::PdDataBase>{crysta::PdDataBase(grid, observed, sigma)},
                                                      outcome.values.size()));
@@ -9438,9 +9442,9 @@ FitResultBase Project::fit_joint(const std::vector<PdDataBase>& patterns,
                 return staged;
             };
             const auto measure = [&] {
-                crysta::Project measured(project);  // the engine project itself stays as the trial left it
+                crysta::Project engine_copy(project);  // the engine project itself stays as the trial left it
                 return std::make_pair(crysta_correlations(project, result),
-                                      fitted_quality(measured, fitted_patterns, outcome.values.size()));
+                                      fitted_quality(engine_copy, fitted_patterns, outcome.values.size()));
             };
             auto [correlations, quality] = publish_fit_transaction(*this, refined, publish, restage, measure);
             // After an orbit change the provider's banks describe the start's orbits: each bank's
