@@ -10122,7 +10122,7 @@ std::vector<MagneticPeak> magnetic_unexplained_peaks(const Project& project, std
     std::vector<MagneticPeak> out;
     for (const crysta::UnexplainedPeak& p : crysta::unexplained_peaks(structure, k.engine.experiments.at(experiment), x,
                                                                       observed, calculated, sigma, included)) {
-        out.push_back({p.x, p.d, p.tolerance, p.significance});
+        out.push_back({p.x, p.d, p.tolerance, p.significance, p.half_width});
     }
     return out;
 }
@@ -10133,7 +10133,7 @@ std::vector<MagneticKRow> magnetic_k_search(const Project& project, std::size_t 
     const KEngine k(project);
     const crysta::Structure& structure = engine_structure(k.engine, project.structures[parent]->name.value());
     std::vector<crysta::UnexplainedPeak> in;
-    for (const MagneticPeak& p : peaks) in.push_back({p.x, p.d, p.tolerance, p.significance});
+    for (const MagneticPeak& p : peaks) in.push_back({p.x, p.d, p.tolerance, p.significance, p.half_width});
     std::vector<MagneticKRow> out;
     for (const crysta::PropagationVectorRow& r :
          crysta::search_propagation_vectors(structure, k.engine.experiments.at(experiment), in)) {

@@ -565,6 +565,11 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // Find k from data: each experiment linking structure `index`, {index, name, eligible, reason}; eligible while a
     // kept fit's inputs still match (recordFitAdoption).
     Q_INVOKABLE QVariantList magneticDataChoices(int index) const;
+    // Find k on the pattern chart (owner, 2026-11-27): the Crystal structure experiment `experiment` links and enables,
+    // the parent of its k search, or -1.
+    Q_INVOKABLE int magneticParentOf(int experiment) const;
+    // The structure model at `index`, or null.
+    Q_INVOKABLE edi_app::StructureViewModel* structureAt(int index) const { return structure_models_.value(index); }
     // The peaks experiment `experiment`'s kept fit leaves unexplained, {x, d, tolerance, significance}; empty and
     // `refused` on a refusal.
     Q_INVOKABLE QVariantList magneticPeaks(int index, int experiment);

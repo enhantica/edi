@@ -4185,6 +4185,20 @@ void ProjectViewModel::recordFitAdoption() {
     }
 }
 
+int ProjectViewModel::magneticParentOf(int experiment) const {
+    if (experiment < 0 || experiment >= static_cast<int>(project_->experiments.size())) return -1;
+    for (const auto& link : project_->experiments[static_cast<std::size_t>(experiment)]->linked_structures) {
+        if (!link->enabled.get()) continue;
+        for (std::size_t s = 0; s < project_->structures.size(); ++s) {
+            const auto& structure = project_->structures[s];
+            if (structure->name.value() == link->structure_id.value() && structure->magnetic->operations.empty() &&
+                !structure->atom_sites.empty())
+                return static_cast<int>(s);
+        }
+    }
+    return -1;
+}
+
 QVariantList ProjectViewModel::magneticDataChoices(int index) const {
     QVariantList out;
     if (index < 0 || index >= static_cast<int>(project_->structures.size())) return out;
@@ -4243,7 +4257,8 @@ QVariantList ProjectViewModel::magneticPeaks(int index, int experiment) {
         out.push_back(QVariantMap{{QStringLiteral("x"), p.x},
                                   {QStringLiteral("d"), p.d},
                                   {QStringLiteral("tolerance"), p.tolerance},
-                                  {QStringLiteral("significance"), p.significance}});
+                                  {QStringLiteral("significance"), p.significance},
+                                  {QStringLiteral("halfWidth"), p.half_width}});
     }
     return out;
 }

@@ -99,6 +99,7 @@ struct MagneticPeak {
     double d = 0.0;
     double tolerance = 0.0;
     double significance = 0.0;
+    double half_width = 0.0;  ///< half the local FWHM on the experiment's axis
 };
 /// The peaks the experiment's current calculated curve leaves unexplained, over its included points (crysta's
 /// unexplained_peaks), highest first. Throws std::invalid_argument naming the reason.

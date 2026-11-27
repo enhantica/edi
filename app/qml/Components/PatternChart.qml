@@ -2,6 +2,7 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
+import QtQuick.Controls
 import QtQuick.Window
 import QtQml.Models
 import QtGraphs
@@ -18,6 +19,63 @@ import edi.app
 // the presentation and replaces the series below; this file only lays them out and passes the pointer on.
 Item {
     id: chart
+
+    // Find k on the chart (owner, 2026-11-27; crysta ADR-0137 A11): the peaks the parent's kept fit leaves unexplained,
+    // the strongest marked to start with; a click marks or drops the one nearest it, and Find k ranks the propagation
+    // vectors the marked ones allow.
+    property bool peakMode: false
+    property var peakCandidates: []
+    property var peakMarks: []
+    property int peakParent: -1
+    property string peakNote: ""
+    readonly property Component kVector: kVectorComponent
+
+    function setPeakMode(on) {
+        peakNote = "";
+        peakCandidates = [];
+        peakMarks = [];
+        peakMode = on;
+        if (!on || !chart.axisProject)
+            return;
+        const project = chart.axisProject;
+        const experiment = project.currentExperimentIndex;
+        peakParent = project.magneticParentOf(experiment);
+        if (peakParent < 0) {
+            peakNote = qsTr("Link and enable the crystal structure to search k for.");
+            return;
+        }
+        const peaks = project.magneticPeaks(peakParent, experiment);
+        if (peaks.length === 0) {
+            peakNote = project.lastError !== "" ? project.lastError : qsTr("The kept fit leaves no peak unexplained.");
+            return;
+        }
+        peakCandidates = peaks;
+        const strong = [];
+        for (let i = 0; i < peaks.length && strong.length < 8; ++i)
+            if (peaks[i].significance >= 5)
+                strong.push(i);
+        peakMarks = strong;
+    }
+    function togglePeakAt(x) {
+        let best = -1;
+        for (let i = 0; i < peakCandidates.length; ++i) {
+            const gap = Math.abs(peakCandidates[i].x - x);
+            if (gap <= peakCandidates[i].halfWidth && (best < 0 || gap < Math.abs(peakCandidates[best].x - x)))
+                best = i;
+        }
+        if (best < 0) {
+            peakNote = qsTr("No unexplained peak there.");
+            return;
+        }
+        peakNote = "";
+        const next = peakMarks.slice();
+        const at = next.indexOf(best);
+        if (at >= 0)
+            next.splice(at, 1);
+        else
+            next.push(best);
+        peakMarks = next;
+    }
 
     // One accessible part in the browser, where Qt reads a flat page again for each of its items.
     Accessible.role: Accessible.Grouping
@@ -527,6 +585,9 @@ Item {
             onResetClicked: controller.reset()
             onIncludedOnlyToggled: ApplicationInfo.chartToolbarAction(5)
             onSubtractBackgroundToggled: ApplicationInfo.chartToolbarAction(6)
+            findKAvailable: !chart.report && !chart.singleCrystal && controller.hasCalculated && chart.axisProject !== null
+            findKActive: chart.peakMode
+            onFindKToggled: chart.setPeakMode(!chart.peakMode)
         }
     }
 
@@ -1125,6 +1186,86 @@ Item {
     }
 
     // The hover read-out, beside the pointer: diffraction-lib's lines, each value in its series' colour
+    // Find k's marks over the main plot area, on the native axis, and the clicks that mark and drop them.
+    Item {
+        id: peakLayer
+        objectName: "chart.peaks"
+        visible: chart.peakMode
+        x: mainView.x + mainView.plotArea.x
+        y: mainView.y + mainView.plotArea.y
+        width: mainView.plotArea.width
+        height: mainView.plotArea.height
+        readonly property bool native_: controller.xAxis === "native"
+        function px(value) {
+            return (value - controller.xMin) / Math.max(1e-12, controller.xMax - controller.xMin) * width;
+        }
+
+        Repeater {
+            model: peakLayer.native_ ? chart.peakCandidates : []
+            delegate: Rectangle {
+                id: mark
+                required property var modelData
+                required property int index
+                readonly property bool marked: chart.peakMarks.indexOf(index) >= 0
+                objectName: `chart.peak.${index}`
+                x: peakLayer.px(modelData.x) - width / 2
+                y: 0
+                width: marked ? 3 : 1
+                height: peakLayer.height
+                visible: x >= -width && x <= peakLayer.width
+                color: marked ? EaStyle.Colors.themeAccent : EaStyle.Colors.themeForegroundDisabled
+                opacity: marked ? 0.9 : 0.5
+            }
+        }
+        MouseArea {
+            anchors.fill: parent
+            enabled: chart.peakMode && peakLayer.native_
+            onClicked: mouse => chart.togglePeakAt(controller.xMin + mouse.x / Math.max(1, width) * (controller.xMax - controller.xMin))
+        }
+        // The marked count, Find k and Done.
+        Rectangle {
+            x: chart.em * 0.5
+            y: chart.em * 0.5
+            width: peakBar.implicitWidth + chart.em
+            height: peakBar.implicitHeight + chart.em * 0.5
+            color: chart.colors.mainContentBackgroundHalfTransparent
+            border.color: chart.colors.chartGridLine
+            Row {
+                id: peakBar
+                anchors.centerIn: parent
+                spacing: chart.em * 0.5
+                EaElements.Label {
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: !peakLayer.native_ ? qsTr("Show the native x axis to mark peaks") : chart.peakNote !== "" ? chart.peakNote : qsTr("%n peak(s) marked; click a peak to mark or drop it", "", chart.peakMarks.length)
+                }
+                EaElements.Button {
+                    objectName: "chart.findK"
+                    text: qsTr("Find k")
+                    enabled: chart.peakMarks.length > 0
+                    onClicked: {
+                        const popup = chart.kVector.createObject(Overlay.overlay, {
+                            project: chart.axisProject,
+                            structureIndex: chart.peakParent,
+                            experimentIndex: chart.axisProject.currentExperimentIndex,
+                            marked: chart.peakMarks
+                        }) as AppDialog;
+                        popup.open();
+                    }
+                }
+                EaElements.Button {
+                    objectName: "chart.findK.done"
+                    text: qsTr("Done")
+                    onClicked: chart.setPeakMode(false)
+                }
+            }
+        }
+    }
+
+    Component {
+        id: kVectorComponent
+        KVectorPopup {}
+    }
+
     // (PatternChartController.hoverReadout).
     Rectangle {
         id: hoverLabel
