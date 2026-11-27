@@ -8,6 +8,7 @@
 #include <QJsonDocument>
 #include <QRegularExpression>
 #include <QSet>
+#include <QSettings>
 #include <QUrl>
 #include <QUuid>
 #include "assistant_process.hpp"
@@ -111,6 +112,36 @@ bool sign_in_url(const QString& text) {
         if (host == domain || host.endsWith(u'.' + domain)) return true;
     return false;
 }
+
+}  // namespace
+
+QString claude_managed_settings() {
+    // Existence only: edi never reads what an organisation's policy says (ADR-0108 §4, managed settings).
+#if defined(Q_OS_WIN)
+    for (const auto& root : {QStringLiteral("HKEY_LOCAL_MACHINE"), QStringLiteral("HKEY_CURRENT_USER")}) {
+        const QSettings policy(root + QStringLiteral("\\SOFTWARE\\Policies\\ClaudeCode"), QSettings::Registry64Format);
+        if (policy.contains(QStringLiteral("Settings"))) return QStringLiteral("policy");
+    }
+    const auto folder = QDir(qEnvironmentVariable("ProgramFiles", QStringLiteral("C:\\Program Files")))
+                            .filePath(QStringLiteral("ClaudeCode"));
+#elif defined(Q_OS_MACOS)
+    // The documented com.anthropic.claudecode domain, as macOS stores a configuration profile's managed preferences.
+    const auto domain = QStringLiteral("com.anthropic.claudecode.plist");
+    const QString managed = QStringLiteral("/Library/Managed Preferences/");
+    if (QFileInfo::exists(managed + domain) ||
+        QFileInfo::exists(managed + qEnvironmentVariable("USER") + u'/' + domain))
+        return QStringLiteral("policy");
+    const auto folder = QStringLiteral("/Library/Application Support/ClaudeCode");
+#else
+    const auto folder = QStringLiteral("/etc/claude-code");
+#endif
+    if (QFileInfo::exists(QDir(folder).filePath(QStringLiteral("managed-settings.json"))) ||
+        QFileInfo::exists(QDir(folder).filePath(QStringLiteral("managed-settings.d"))))
+        return QStringLiteral("file");
+    return {};
+}
+
+namespace {
 
 // A sorted, comma-separated list for an error message; "none" when empty.
 QString listed(QStringList names) {
@@ -319,6 +350,7 @@ void ClaudeSession::launch(Purpose purpose, bool resume) {
     const auto generation = generation_;
     launching_ = true;
     purpose_ = purpose;
+    managed_settings_ = claude_managed_settings();
     if (purpose == Purpose::Probe) {
         session_id_ = new_uuid();
         process_model_.clear();
@@ -615,6 +647,7 @@ void ClaudeSession::maybeReadbacksDone() {
                  {QStringLiteral("apiKeySource"), api_key_source_},
                  {QStringLiteral("tokenSource"), text("tokenSource")},
                  {QStringLiteral("host"), launch_.account.host}};
+    if (!managed_settings_.isEmpty()) identity_.insert(QStringLiteral("managedSettings"), managed_settings_);
     // Every field the record holds must be reported, and the same, by this process.
     for (auto it = principal_.constBegin(); it != principal_.constEnd(); ++it) {
         const auto recorded = it.value().toString();

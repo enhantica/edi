@@ -39,6 +39,11 @@ QProcessEnvironment claude_runtime_environment(const QProcessEnvironment& app, c
 QStringList claude_runtime_arguments(const QString& workspace, const QString& model, const QString& effort,
                                      const QString& sessionId, bool resume);
 
+/// Where an organisation's managed Claude settings are found at the documented locations: "policy" for a device
+/// policy (Windows registry, macOS configuration profile), "file" for a managed settings file or folder, else
+/// empty. Only existence is checked; settings Anthropic's servers deliver cannot be seen beforehand.
+QString claude_managed_settings();
+
 /// Claude's runtime session: `claude -p` in stream-json mode, one process per open thread (ADR-0108 §4).
 ///
 /// `start` stages the plugin, the MCP config and the instructions and starts a first process with a fresh session
@@ -46,6 +51,7 @@ QStringList claude_runtime_arguments(const QString& workspace, const QString& mo
 /// process's `initialize` reply and `system/init` give the identity, the skills, the model list and the tool set;
 /// `ready` follows. `openThread` starts a new process for each thread (and an effort change restarts it); each
 /// process passes the same readbacks before any input, and no input is written before its `system/init`.
+/// `ready`'s identity adds `managedSettings` ("policy" or "file") when an organisation's settings were found.
 /// `usageChanged` may carry `status: {status: allowed_warning|rejected, window?, resetsAt?}` beside the buckets.
 class ClaudeSession final : public AssistantRuntimeSession {
     Q_OBJECT
@@ -82,7 +88,7 @@ private:
     AssistantRuntimeLaunch launch_;
     QProcessEnvironment environment_;
     QJsonObject principal_, account_info_;
-    QString auth_method_, api_key_source_;
+    QString auth_method_, api_key_source_, managed_settings_;
     quint64 generation_ = 0;
 
     QPointer<AssistantProcess> process_;
