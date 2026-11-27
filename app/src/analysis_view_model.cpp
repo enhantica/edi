@@ -363,7 +363,10 @@ void FitStartListModel::setRegistry(const ParameterRegistry* registry) {
 
 void FitStartListModel::sync() {
     QList<Row> rows;
+    const std::vector<const edi::Parameter*> hidden = const_cast<edi::Project&>(project_).hidden_parameters();
     for (const edi::FitStartRow& start : edi::fit_start_rows(project_)) {
+        // A disabled linked structure's or link's parameter is in no view (owner decision 2026-11-27).
+        if (std::find(hidden.begin(), hidden.end(), start.parameter) != hidden.end()) continue;
         const edi::Parameter& parameter = *start.parameter;
         rows.append({start.parameter,
                      {QString::fromStdString(start.id), parameter.start_value.value_or(0.0),

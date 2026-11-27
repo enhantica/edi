@@ -119,6 +119,9 @@ class ParameterItem : public QObject {
     // Set by the registry at each rebuild and publish: a space-group edit changes it while the parameter
     // stays shown.
     void setRefinable(bool refinable);
+    // A parameter of a disabled linked structure or link, which no parameters view lists (edi::Project::hidden_parameters).
+    bool isHidden() const { return hidden_; }
+    void setHidden(bool hidden) { hidden_ = hidden; }
     bool isEstimated() const { return estimated_; }
     // Set by the registry at each publish, as the mode changes while the parameter stays shown.
     void setEstimated(bool estimated);
@@ -238,6 +241,7 @@ class ParameterItem : public QObject {
     std::optional<double> uncertainty_;
     bool free_;
     bool refinable_;
+    bool hidden_ = false;
     bool fittable_ = true;
     QString fit_reason_;
     int fit_group_ = NoGroup;

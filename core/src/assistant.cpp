@@ -41,7 +41,10 @@ J parameters(Project& project) {
     std::map<const Parameter*, std::string> names;
     for (const auto& slot : named_slots(project)) names[slot.parameter] = slot.unique_name;
     A rows;
+    // A disabled linked structure's or link's parameter is in no view (owner decision 2026-11-27).
+    const std::vector<const Parameter*> hidden = project.hidden_parameters();
     for (const auto& entry : parameter_entries(project)) {
+        if (std::find(hidden.begin(), hidden.end(), entry.parameter) != hidden.end()) continue;
         const Parameter& p = *entry.parameter;
         const auto named = names.find(&p);
         const std::string unique_name = named == names.end() ? std::string() : named->second;

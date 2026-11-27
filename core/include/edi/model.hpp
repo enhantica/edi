@@ -5530,6 +5530,11 @@ class Project : public detail::ProjectAnchor {
     // `Project.parameters` / `Project.free_parameters`).
     std::vector<Parameter*> parameters();
     std::vector<Parameter*> free_parameters();
+    // A disabled linked structure appears nowhere but the Structures and Linked structures tables (owner decision
+    // 2026-11-27): a structure some link names while no enabled link does, and the parameters views leave out, its
+    // own and each disabled link's scale and texture. One rule for every view; files keep them all.
+    bool structure_hidden(const std::string& name) const;
+    std::vector<const Parameter*> hidden_parameters();
 
     // An admitted edit through an editor transaction. The app's one write door
     // (ProjectEditor::apply) calls it after every change it runs, so every GUI edit — any field,
@@ -6660,6 +6665,41 @@ inline std::vector<Parameter*> Project::parameters() {
         }
     }
     return out;
+}
+inline bool Project::structure_hidden(const std::string& name) const {
+    bool named = false;
+    for (const std::shared_ptr<BraggPdExperiment>& experiment : experiments) {
+        for (const std::shared_ptr<LinkedStructure>& link : experiment->linked_structures) {
+            const std::string& linked = link->structure_id.value();
+            // A lone link with no name reads as the lone structure, as crysta resolves it.
+            const bool names = linked == name || (linked.empty() && structures.size() == 1 &&
+                                                  structures.front()->name.value() == name);
+            if (!names) continue;
+            if (link->enabled.get()) return false;
+            named = true;
+        }
+    }
+    return named;
+}
+inline std::vector<const Parameter*> Project::hidden_parameters() {
+    std::vector<const Parameter*> hidden;
+    for (const std::shared_ptr<BraggPdExperiment>& experiment : experiments) {
+        for (const std::shared_ptr<LinkedStructure>& link : experiment->linked_structures) {
+            if (link->enabled.get()) continue;
+            hidden.push_back(&link->scale);
+            for (const std::shared_ptr<PrefOrient>& row : experiment->preferred_orientation) {
+                if (row->structure_id.value() == link->structure_id.value()) {
+                    hidden.push_back(&row->march_r);
+                    hidden.push_back(&row->march_random_fract);
+                }
+            }
+        }
+    }
+    for (const std::shared_ptr<Structure>& structure : structures) {
+        if (!structure_hidden(structure->name.value())) continue;
+        for (Parameter* parameter : structure->parameters()) hidden.push_back(parameter);
+    }
+    return hidden;
 }
 // The free parameters a fit refines: what no enabled phase reads is left out — a disabled link's
 // scale and texture, and every parameter of a structure no enabled link names (crysta's rule).

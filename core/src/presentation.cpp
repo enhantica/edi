@@ -622,7 +622,8 @@ PatternSource single_crystal_pattern(const Project& project, std::size_t experim
     // The linked structure's ticks, in its colour and named by it, as a powder pattern's phase. With a magnetic part,
     // two rows and two components, as a powder pattern's magnetic structure has (edi ADR-0078): the nuclear
     // reflections and part, and the magnetic ones in the colour of the next structure, its part stacked on the nuclear.
-    if (!experiment.linked_structures.empty()) {
+    // A disabled link gives no ticks (owner decision 2026-11-27).
+    if (!experiment.linked_structures.empty() && experiment.linked_structures[0]->enabled.get()) {
         PatternSource::Phase phase;
         phase.structure_id = experiment.linked_structures[0]->structure_id;
         phase.label = phase.structure_id;
@@ -744,6 +745,18 @@ PatternSource capture_pattern(const Project& project, std::size_t experiment_ind
     source.components = structure_components(data.component_order.values(), data.component_intensities_net.values(),
                                               data.axis().size(), names, data.component_intensities_magnetic.values(),
                                               data.component_intensities_nuclear.values());
+    // Computed rows cached before a link was disabled still name its structure: a disabled link shows no ticks or
+    // component (owner decision 2026-11-27).
+    const auto disabled = [&experiment](const std::string& structure) {
+        return std::none_of(experiment.linked_structures.begin(), experiment.linked_structures.end(),
+                            [&structure, &experiment](const auto& link) {
+                                return link->enabled.get() &&
+                                       (link->structure_id.value() == structure ||
+                                        (link->structure_id.value().empty() && experiment.linked_structures.size() == 1));
+                            });
+    };
+    std::erase_if(source.phases, [&](const PatternSource::Phase& phase) { return disabled(phase.structure_id); });
+    std::erase_if(source.components, [&](const PatternSource::Component& part) { return disabled(part.structure_id); });
     if (axis != PatternAxis::Native) {
         to_d_axis(source, data, refln);
         return pattern_on_axis(std::move(source), axis);

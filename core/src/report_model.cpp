@@ -773,6 +773,7 @@ ReportExperiment experiment_of(const BraggPdExperiment& experiment, const std::s
         } else if (listed.id == "linked_structure") {
             next.table.columns = {header("linked_structure.structure_id"), header("linked_structure.scale")};
             for (const auto& link : experiment.linked_structures) {
+                if (!link->enabled.get()) continue;  // a disabled link is in no report table (owner decision 2026-11-27)
                 next.table.rows.push_back({link->structure_id.value(), value_of(link->scale, rule).text});
             }
         } else if (listed.id == "excluded_region") {
@@ -789,6 +790,12 @@ ReportExperiment experiment_of(const BraggPdExperiment& experiment, const std::s
             next.table.columns = {header("preferred_orientation.structure_id"), header("preferred_orientation.march_r"),
                                   header("preferred_orientation.march_random_fract")};
             for (const auto& row : experiment.preferred_orientation) {
+                // A disabled link's texture is in no report table (owner decision 2026-11-27).
+                const bool enabled = std::any_of(
+                    experiment.linked_structures.begin(), experiment.linked_structures.end(), [&row](const auto& link) {
+                        return link->enabled.get() && link->structure_id.value() == row->structure_id.value();
+                    });
+                if (!enabled) continue;
                 next.table.rows.push_back({row->structure_id.value(), value_of(row->march_r, rule).text,
                                            value_of(row->march_random_fract, rule).text});
             }
@@ -1245,7 +1252,10 @@ ReportModel build_report(const Project& input, const ReportOptions& options) {
     const std::string& authors = project.metadata.authors;
     model.authors = authors == "." || authors == "?" ? std::string() : authors;
     model.description = project.metadata.description;
+    // A disabled linked structure appears nowhere in the report (owner decision 2026-11-27).
+    const std::vector<const Parameter*> hidden = const_cast<Project&>(project).hidden_parameters();
     for (const auto& structure : project.structures) {
+        if (project.structure_hidden(structure->name.value())) continue;
         model.structure_ids.push_back(structure->name.value());
     }
     for (const auto& experiment : project.experiments) {
@@ -1277,6 +1287,7 @@ ReportModel build_report(const Project& input, const ReportOptions& options) {
     };
     const std::unordered_map<const Parameter*, SuMarks> marks = su_marks(project);
     for (const NamedParameter& named : named_parameters(project)) {
+        if (std::find(hidden.begin(), hidden.end(), named.parameter) != hidden.end()) continue;
         const Parameter& parameter = *named.parameter;
         const std::optional<double>& su = parameter.uncertainty.get();
         const auto variant = variants.find(&parameter);
@@ -1330,6 +1341,7 @@ ReportModel build_report(const Project& input, const ReportOptions& options) {
     }
     model.relations = relations_of(project);
     for (const auto& structure : project.structures) {
+        if (project.structure_hidden(structure->name.value())) continue;
         ReportStructure built = structure_of(*structure, rule);
         if (charts) {
             add_scene(built, *structure, options.element_colours);

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "parameter_registry.hpp"
 #include <QPointer>
+#include <algorithm>
 #include <QScopeGuard>
 
 #include "edi/background_estimate.hpp"
@@ -31,6 +32,7 @@ void ParameterRegistry::rebuild(edi::Project& project) {
     // Each parameter's name in the .edi files, which an alias refers to it by.
     std::unordered_map<const edi::Parameter*, QString> names;
     for (const edi::NamedSlot& slot : edi::named_slots(project)) names.emplace(slot.parameter, QString::fromStdString(slot.unique_name));
+    const std::vector<const edi::Parameter*> hidden = project.hidden_parameters();
     for (const edi::ParameterEntry& entry : edi::parameter_entries(project)) {
         // A renamed block re-keys its items, so every constant an item carries stays true.
         const auto key = std::make_pair(static_cast<const edi::Parameter*>(entry.parameter),
@@ -47,6 +49,7 @@ void ParameterRegistry::rebuild(edi::Project& project) {
         const auto place = indices.find(entry.block_name);
         item->setBlockIndex(place != indices.end() ? place->second : -1);
         item->setRefinable(entry.refinable);
+        item->setHidden(std::find(hidden.begin(), hidden.end(), entry.parameter) != hidden.end());
         if (const auto named = names.find(entry.parameter); named != names.end()) item->setFullName(named->second);
         items.append(item);
         by_key.emplace(key, item);

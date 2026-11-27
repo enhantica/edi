@@ -5269,7 +5269,9 @@ void ProjectViewModel::syncPatternBraggRows() {
     int most = 0;
     for (const auto& experiment : project_->experiments) {
         int rows = 0;
-        for (const auto& link : experiment->linked_structures) rows += magnetic.contains(QString::fromStdString(link->structure_id.value())) ? 2 : 1;
+        // A disabled link reserves no tick row (owner decision 2026-11-27).
+        for (const auto& link : experiment->linked_structures)
+            if (link->enabled.get()) rows += magnetic.contains(QString::fromStdString(link->structure_id.value())) ? 2 : 1;
         most = std::max(most, rows);
     }
     if (most == pattern_bragg_rows_) return;

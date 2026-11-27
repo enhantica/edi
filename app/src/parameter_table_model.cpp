@@ -57,6 +57,7 @@ void ParameterTableModel::sync() {
             item->blockName() != experiment_scope_) {
             continue;  // a scan mode fits one experiment at a time: another experiment's parameter
         }
+        if (item->isHidden()) continue;  // a disabled linked structure's or link's (owner decision 2026-11-27)
         free_count += item->isFree() ? 1 : 0;
         // An s.u. the column would show: one read or fitted, above zero (an unset or zero one shows nothing).
         any_uncertainty = any_uncertainty || (item->hasUncertainty() && std::isfinite(item->uncertainty()) && item->uncertainty() > 0.0);

@@ -3851,6 +3851,26 @@ std::vector<std::string> read_scan_row(const Project& project, std::int64_t offs
     return split_scan_row(line);
 }
 
+namespace {
+// Whether a series column names a structure no enabled link names: it is in no view, even read back from a file
+// written before its link was disabled (owner decision 2026-11-27).
+bool names_hidden_structure(const Project& project, const std::string& column) {
+    std::vector<std::string> hidden;
+    for (const auto& structure : project.structures) {
+        if (!project.structure_hidden(structure->name.value())) continue;
+        hidden.push_back(structure->name.value());
+        hidden.push_back(datablock_key(structure->name, "structure"));
+    }
+    if (hidden.empty()) return false;
+    for (std::size_t start = 0; start <= column.size();) {
+        const std::size_t end = std::min(column.find('.', start), column.size());
+        if (std::find(hidden.begin(), hidden.end(), column.substr(start, end - start)) != hidden.end()) return true;
+        start = end + 1;
+    }
+    return false;
+}
+}  // namespace
+
 std::vector<std::string> evolution_parameters(const Project& project, const ScanResultIndex& index) {
     std::vector<std::string> names;
     std::set<std::string> columns;
@@ -3862,16 +3882,20 @@ std::vector<std::string> evolution_parameters(const Project& project, const Scan
             experiment_blocks.insert(datablock_key(experiment->name, "experiment"));
         }
     }
+    const std::vector<const Parameter*> hidden = const_cast<Project&>(project).hidden_parameters();
     for (const NamedParameter& parameter : named_parameters(project)) {
         if (experiment_blocks.contains(parameter.unique_name.substr(0, parameter.unique_name.find('.')))) {
             continue;
         }
+        // A disabled linked structure's or link's parameter is in no view (owner decision 2026-11-27).
+        if (std::find(hidden.begin(), hidden.end(), parameter.parameter) != hidden.end()) continue;
         if (parameter.parameter->free) {
             names.push_back(parameter.unique_name);
             columns.insert(scan_results_column(parameter.unique_name));
         }
     }
     for (const ScanParameterColumns& parameter : index.parameters) {
+        if (names_hidden_structure(project, parameter.name)) continue;
         if (columns.insert(parameter.name).second) {
             names.push_back(parameter.name);
         }
@@ -3881,6 +3905,7 @@ std::vector<std::string> evolution_parameters(const Project& project, const Scan
         names.emplace_back("fit_result.reduced_chi_square");
     }
     for (const ScanFactorColumn& factor : index.factors) {
+        if (names_hidden_structure(project, factor.name)) continue;
         names.push_back(factor.name);
     }
     return names;
@@ -4294,6 +4319,7 @@ std::vector<std::string> evolution_experiment_parameters(const Project& project)
     names.emplace_back("fit_result.chi_square");
     constexpr std::size_t kFixed = 7;  // point, experiment, file_path, file_size, file_modified, chi_square, n_data_points
     for (std::size_t i = kFixed; i < header.size(); ++i) {
+        if (names_hidden_structure(project, header[i])) continue;
         if ((!header[i].ends_with(".uncertainty") && cells.contains(header[i] + ".uncertainty")) ||
             is_scan_factor_column(header[i])) {
             names.push_back(header[i]);
