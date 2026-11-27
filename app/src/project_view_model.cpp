@@ -4444,6 +4444,7 @@ void ProjectViewModel::changeKMarks() {
     ++k_search_;  // a search still running belongs to marks that are about to change
     k_snapshots_.clear();  // every snapshot of the earlier marks is retired
     k_rows_.clear();
+    k_row_roles_.clear();
 }
 
 void ProjectViewModel::setKSearchActive(bool on) {
@@ -4483,11 +4484,13 @@ void ProjectViewModel::setKSearchActive(bool on) {
     setKNote(QString());
 }
 
-void ProjectViewModel::toggleKMarkAt(double x) {
+void ProjectViewModel::toggleKMarkAt(double x, double tolerance) {
     // Free marking (owner decision 2026-11-27): a click on a mark drops it; anywhere else it marks the nearest observed
     // maximum within that peak's half width, or the clicked position itself when none is near. It never refuses.
     if (!k_marks_.active || k_marks_.parent < 0) return;
-    const auto near = [&x](const edi::MagneticPeak& p) { return std::abs(p.x - x) <= std::max(p.half_width, 1e-9); };
+    const auto near = [&x, tolerance](const edi::MagneticPeak& p) {
+        return std::abs(p.x - x) <= std::max({p.half_width, tolerance, 1e-9});
+    };
     int on_mark = -1;
     for (const int m : k_marks_.marks) {
         const edi::MagneticPeak& p = k_marks_.candidates[static_cast<std::size_t>(m)];
@@ -4523,6 +4526,15 @@ void ProjectViewModel::toggleKMarkAt(double x) {
     std::sort(k_marks_.marks.begin(), k_marks_.marks.end(), [this](int a, int b) {
         return k_marks_.candidates[static_cast<std::size_t>(a)].x < k_marks_.candidates[static_cast<std::size_t>(b)].x;
     });
+    emit kSearchChanged();
+}
+
+void ProjectViewModel::showKRoles(qint64 id, int rank) {
+    const auto rows = k_row_roles_.find(id);
+    if (!kSnapshotCurrent(id) || rows == k_row_roles_.end() || rank < 0 ||
+        rank >= static_cast<int>(rows->second.size()))
+        return;
+    k_marks_.roles = rows->second[static_cast<std::size_t>(rank)];
     emit kSearchChanged();
 }
 
@@ -4582,6 +4594,8 @@ QVariantMap ProjectViewModel::kSnapshot() {
     // A newer Find k retires every older snapshot and the rows ranked for it (review 18, F4).
     k_snapshots_.clear();
     k_rows_.clear();
+    k_row_roles_.clear();
+    k_marks_.roles.clear();
     k_snapshots_[snapshot->id] = snapshot;
     return {{QStringLiteral("id"), snapshot->id},
             {QStringLiteral("parent"), snapshot->parent},
@@ -4732,13 +4746,16 @@ void ProjectViewModel::findPropagationVectors(qint64 id) {
                                         }()}});
         }
         std::vector<std::string>& ranked = k_rows_[id];
+        std::vector<QStringList>& ranked_roles = k_row_roles_[id];
         ranked.clear();
-        for (const edi::MagneticKRow& r : found) ranked.push_back(r.k);
-        // The best row's roles, for the marks this search ran on.
-        k_marks_.roles.clear();
-        if (!found.empty())
-            for (const std::string& role : found.front().roles) k_marks_.roles.append(QString::fromStdString(role));
-        emit kSearchChanged();
+        ranked_roles.clear();
+        for (const edi::MagneticKRow& r : found) {
+            ranked.push_back(r.k);
+            QStringList roles;
+            for (const std::string& role : r.roles) roles.append(QString::fromStdString(role));
+            ranked_roles.push_back(roles);
+        }
+        // No role is shown until the k dialog selects a row (showKRoles).
         emit propagationVectorsFound(rows, id);
     });
     watcher->setFuture(QtConcurrent::run(magneticPool(), [project, experiment, index, peaks]() -> Result {

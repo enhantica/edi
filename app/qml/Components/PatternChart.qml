@@ -34,6 +34,20 @@ Item {
     readonly property string peakNote: peakMode ? kState.note : ""
     // Each marked peak's role under the best-ranked k of the last search on these marks, by candidate index.
     readonly property var peakRoles: peakMode ? kState.roles : ({})
+    // The marked peak under the pointer or under its table row in the k search group, by candidate index, else -1: its
+    // line is drawn thicker in the current-row blue, and its row is highlighted (owner, 2026-11-27).
+    property int hoveredMark: -1
+    // A few pixels on the chart's axis: how near a line a click drops its mark, and the pointer finds it.
+    readonly property real markReach: 4 * (controller.xMax - controller.xMin) / Math.max(1, pointer.width)
+    function markAt(x) {
+        let best = -1;
+        for (const index of chart.peakMarks) {
+            const p = chart.peakCandidates[index];
+            if (p !== undefined && Math.abs(p.x - x) <= chart.markReach && (best < 0 || Math.abs(p.x - x) < Math.abs(chart.peakCandidates[best].x - x)))
+                best = index;
+        }
+        return best;
+    }
     // The Experiment page's chart is the one the sidebar's k search group edits.
     Binding {
         target: AppState
@@ -99,7 +113,7 @@ Item {
     }
     function togglePeakAt(x) {
         addedNote = "";
-        chart.axisProject.toggleKMarkAt(x);
+        chart.axisProject.toggleKMarkAt(x, chart.markReach);
     }
 
     // One accessible part in the browser, where Qt reads a flat page again for each of its items.
@@ -1195,10 +1209,18 @@ Item {
         width: mainView.plotArea.width
         height: mainView.plotArea.height
         acceptedButtons: Qt.LeftButton | Qt.RightButton
-        hoverEnabled: toolbar.hoverShown
+        hoverEnabled: toolbar.hoverShown || chart.peakMode
+        // Over a marked line while marking: a pointing hand and what a click does.
+        cursorShape: chart.peakMode && chart.hoveredMark >= 0 ? Qt.PointingHandCursor : Qt.ArrowCursor
+        ToolTip.visible: chart.peakMode && chart.hoveredMark >= 0 && !pressed
+        ToolTip.text: chart.hoveredMark >= 0 && chart.peakCandidates[chart.hoveredMark] !== undefined ? qsTr("Click to remove %1°").arg(chart.peakCandidates[chart.hoveredMark].x.toFixed(2)) : ""
 
         onPressed: mouse => ApplicationInfo.patternPointer(mouse, 0)
-        onPositionChanged: mouse => ApplicationInfo.patternPointer(mouse, 1)
+        onPositionChanged: mouse => {
+            if (chart.peakMode && peakLayer.native_ && !pressed)
+                chart.hoveredMark = chart.markAt(controller.xMin + mouse.x / Math.max(1, width) * (controller.xMax - controller.xMin));
+            ApplicationInfo.patternPointer(mouse, 1);
+        }
         // While marking peaks for k, a click that does not move marks or drops a peak; a drag still zooms or pans and
         // the wheel still zooms, through this one pointer, so no layer above it takes the gesture (owner, 2026-11-27).
         // The mark waits for the double-click interval, so a double click resets the view instead.
@@ -1221,7 +1243,10 @@ Item {
             id: markClick
             property real at: 0
             interval: Qt.styleHints.mouseDoubleClickInterval
-            onTriggered: chart.togglePeakAt(at)
+            onTriggered: {
+                chart.togglePeakAt(at);
+                chart.hoveredMark = -1;
+            }
         }
         // On the report's preview the wheel scrolls the page, not the chart.
         onWheel: wheel => {
@@ -1231,7 +1256,10 @@ Item {
             }
             controller.wheelAt(wheel.x, wheel.angleDelta.y);
         }
-        onExited: hoverLabel.show("", 0, 0)
+        onExited: {
+            hoverLabel.show("", 0, 0);
+            chart.hoveredMark = -1;
+        }
 
         // The box being dragged, as the base's chart draws it (gui-components QtCharts1dBase.qml, easydiffractionbeta's
         // charts): a border in the theme's app-border colour, filled with the same colour half transparent (the
@@ -1310,6 +1338,7 @@ Item {
                 required property var modelData
                 required property int index
                 readonly property bool marked: chart.peakMarks.indexOf(index) >= 0
+                readonly property bool hovered: marked && chart.hoveredMark === index
                 objectName: `chart.peak.${index}`
                 x: peakLayer.px(modelData.x)
                 // Every observed peak can be marked by a click; only the marked, the forbidden-line and the suggested
@@ -1319,11 +1348,11 @@ Item {
                 // marked: the tick alone, grey.
                 Rectangle {
                     x: -width / 2
-                    width: 1
+                    width: mark.hovered ? 3 : 1
                     height: peakLayer.height
                     visible: mark.marked
                     color: EaStyle.Colors.themeAccent
-                    opacity: 0.35
+                    opacity: mark.hovered ? 1 : 0.35
                 }
                 Rectangle {
                     x: -width / 2

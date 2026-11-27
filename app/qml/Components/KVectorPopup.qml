@@ -27,9 +27,14 @@ AppDialog {
     property var rows: []
     // The chosen row: the first when the search answers, then wherever the user moves it in the table, by a click on
     // any cell or by Up and Down, the app table's own selection (owner, 2026-11-27).
-    property int chosen: -1
+    // Named `current`, not `chosen`: the signal below is `chosen`, and a property of the same name hid it, so the chart
+    // could not connect and the dialog never opened (owner, 2026-11-27).
+    property int current: -1
+    // The marks show their roles under the row selected here, and only once the dialog lists its rows.
+    onCurrentChanged: if (current >= 0 && current < rows.length)
+        project.showKRoles(snapshot.id, rows[current].rank)
     onRowsChanged: {
-        chosen = rows.length > 0 ? 0 : -1;
+        current = rows.length > 0 ? 0 : -1;
         Qt.callLater(() => list.forceActiveFocus());  // Up and Down move the choice at once
     }
     // The chosen k; the chart opens the analysis with it.
@@ -101,8 +106,8 @@ AppDialog {
             Layout.fillHeight: true
             clip: true
             marksCurrentRow: true
-            currentIndex: popup.chosen
-            onRowActivated: row => popup.chosen = row
+            currentIndex: popup.current
+            onRowActivated: row => popup.current = row
             sourceModel: popup.rows
             defaultInfoText: popup.searching ? qsTr("Searching…") : qsTr("No propagation vector")
             columnKinds: ["index", "short", "text", "number", "number", "text"]
@@ -138,7 +143,7 @@ AppDialog {
                 // only listens (a passive grab).
                 TapHandler {
                     onDoubleTapped: {
-                        popup.chosen = row.index;
+                        popup.current = row.index;
                         popup.analyse();
                     }
                 }
@@ -179,7 +184,7 @@ AppDialog {
             Layout.fillWidth: true
             wrapMode: Text.Wrap
             text: {
-                const r = popup.rows[popup.chosen];
+                const r = popup.rows[popup.current];
                 if (r === undefined)
                     return "";
                 const names = {
@@ -197,14 +202,14 @@ AppDialog {
 
     // Analyse the chosen k: the data, links and marks the search ran on must still hold (review 12, F19).
     function analyse() {
-        if (chosen < 0 || chosen >= rows.length)
+        if (current < 0 || current >= rows.length)
             return;
         if (!project.kSnapshotCurrent(snapshot.id)) {
             refusal = qsTr("The data, the structures or the marked peaks changed; mark the peaks again.");
             return;
         }
-        const k = rows[chosen].k;
-        const rank = rows[chosen].rank;
+        const k = rows[current].k;
+        const rank = rows[current].rank;
         close();
         chosen(k, rank);
     }
@@ -228,7 +233,7 @@ AppDialog {
                 objectName: "chart.kVectorPopup.analyse"
                 fontIcon: "magnet"
                 text: qsTr("Analyse")
-                enabled: popup.chosen >= 0 && !popup.searching
+                enabled: popup.current >= 0 && !popup.searching
                 onClicked: popup.analyse()
             }
         }

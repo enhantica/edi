@@ -99,6 +99,20 @@ SideBarGroup {
                 id: row
 
                 required property var modelData
+                // The row and its line on the chart highlight together (owner, 2026-11-27): hovering the row marks the
+                // line, and a hovered line shows its row in the current-row blue.
+                readonly property bool lineHovered: group.chart !== null && group.chart.hoveredMark === row.modelData.index
+                readonly property color textColor: lineHovered ? EaStyle.Colors.themeAccent : EaStyle.Colors.themeForeground
+                HoverHandler {
+                    onHoveredChanged: {
+                        if (group.chart === null)
+                            return;
+                        if (hovered)
+                            group.chart.hoveredMark = row.modelData.index;
+                        else if (group.chart.hoveredMark === row.modelData.index)
+                            group.chart.hoveredMark = -1;
+                    }
+                }
 
                 EaComponents.ListViewLabel {
                     horizontalAlignment: Text.AlignHCenter
@@ -108,16 +122,19 @@ SideBarGroup {
                 EaComponents.ListViewLabel {
                     horizontalAlignment: Text.AlignHCenter
                     objectName: `kSearch.x.${row.index}`
+                    color: row.textColor
                     text: row.modelData.peak.x.toFixed(2)
                 }
                 EaComponents.ListViewLabel {
                     horizontalAlignment: Text.AlignHCenter
+                    color: row.textColor
                     text: row.modelData.peak.d.toFixed(4)
                 }
                 EaComponents.ListViewLabel {
                     horizontalAlignment: Text.AlignLeft
                     elide: Text.ElideRight
-                    // After a search, the role the best-ranked k gives this peak.
+                    color: row.textColor
+                    // Once the k dialog lists its rows, the role its selected row gives this peak.
                     text: {
                         const names = {
                             satellite: qsTr("satellite"),

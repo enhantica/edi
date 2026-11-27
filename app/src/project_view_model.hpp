@@ -579,7 +579,11 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // Turns marking on for the current experiment (its parent, its candidate peaks, the pre-marks) or off.
     Q_INVOKABLE void setKSearchActive(bool on);
     // Marks or unmarks the candidate peak nearest `x` within its half width; drops candidate `index`; drops them all.
-    Q_INVOKABLE void toggleKMarkAt(double x);
+    // `tolerance`: how near a mark, on the axis, a click drops it (a few pixels on the chart).
+    Q_INVOKABLE void toggleKMarkAt(double x, double tolerance = 0.0);
+    // The marks' roles under row `rank` of snapshot `id`'s search, the row the k dialog shows selected (owner,
+    // 2026-11-27): until a row is selected the marks show why they were marked.
+    Q_INVOKABLE void showKRoles(qint64 id, int rank);
     Q_INVOKABLE void removeKMark(int index);
     Q_INVOKABLE void clearKMarks();
     // Find k's snapshot, taken when the user presses Find k (review 17, F4): one immutable object the project keeps,
@@ -1051,6 +1055,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     std::map<qint64, std::shared_ptr<const KSearchSnapshot>> k_snapshots_;
     // The rows each snapshot's search ranked, by their k, kept with the snapshot (review 18, F4).
     std::map<qint64, std::vector<std::string>> k_rows_;
+    std::map<qint64, std::vector<QStringList>> k_row_roles_;  // each ranked row's roles for the snapshot's marks
     qint64 k_next_snapshot_ = 0;
     // The last Add from a Find k snapshot: the snapshot, its first child and its experiment.
     struct KAdded {
