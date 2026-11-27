@@ -557,10 +557,21 @@ class ExperimentViewModel : public QObject {
         QString use_model = QStringLiteral("auto"), model_choice, model_reason;
     };
     // The counts a blank anchor points or most terms field shows run the estimate itself, on the shown data: worked out
-    // at a sync only while something listens for them, else when next read (ADR-0102 rule 1).
+    // at a sync only while something listens for them, else when next read (ADR-0102 rule 1). Everything an estimate
+    // derives is worked out off the GUI thread on a copy of the experiment (ADR-0102 rule 3, ADR-0110): on a long
+    // pattern one estimate takes minutes. The declared settings change at once; the derived values when ready.
+    struct EstimateDerived {
+        QString method, note, model_choice, model_reason;
+        double width = qQNaN(), smoothness = qQNaN();
+        int points = 0, terms = 0;
+    };
     mutable EstimateSettings estimate_;
     mutable bool estimate_counts_owed_ = false;
-    EstimateSettings read_estimate_settings(bool counts = true) const;
+    mutable quint64 estimate_request_ = 0;
+    EstimateSettings declared_estimate_settings() const;
+    static EstimateDerived derive_estimate(const edi::ExperimentBase& experiment, bool counts);
+    void requestEstimate(bool counts) const;
+    void publishEstimate(const EstimateDerived& derived, bool counts);
     void settle_estimate_counts() const;
     CategoryListModel* categories_;
     ParameterListModel* instrument_;

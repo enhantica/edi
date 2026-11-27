@@ -44,6 +44,13 @@ view's data.
    folder chooser, over every file's size. It also drops its own copy of a file once the file is in the page's file
    system. The desktop has no such bound.
 
+5. **What the background estimate derives is worked out off the GUI thread too.** A measured profile of the web app
+   loading a 10 MB file put most of its frozen time in the automatic background estimate, whose cost grows faster than
+   the pattern; one route was the Background group working out its derived values (the method, width and smoothness an
+   estimate would take, and how many points or terms it places) on the GUI thread whenever the data changed. The
+   experiment's view-model now works them out on a copy of the experiment in a background job, newest request wins,
+   and announces them when ready; the declared settings still change at once.
+
 ## Consequences
 
 - The window answers while a large file is read; the read itself is not faster, and there is no percentage, which

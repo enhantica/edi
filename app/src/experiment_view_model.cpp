@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "experiment_view_model.hpp"
+#include "background.hpp"
 #include <QPointer>
+#include <QCoreApplication>
 #include <QMetaMethod>
 #include <QScopeGuard>
 #include <string_view>
@@ -412,7 +414,7 @@ void ExperimentViewModel::setInstrument(const QString& instrument) {
         false));
 }
 // The declared model, now that edi computes more than one.
-ExperimentViewModel::EstimateSettings ExperimentViewModel::read_estimate_settings(bool counts) const {
+ExperimentViewModel::EstimateSettings ExperimentViewModel::declared_estimate_settings() const {
     EstimateSettings out;
     out.mode = QString::fromStdString(edi::background_estimate_mode(experiment_));
     out.method = QString::fromStdString(experiment_.background_estimate_method.value_or("auto"));
@@ -422,22 +424,30 @@ ExperimentViewModel::EstimateSettings ExperimentViewModel::read_estimate_setting
     out.tolerance = experiment_.background_estimate_tolerance.value_or(qQNaN());
     out.use_model = QString::fromStdString(experiment_.background_estimate_use_model.value_or("auto"));
     out.max_terms = experiment_.background_estimate_max_terms.value_or(0);
+    return out;
+}
+
+// What an estimate derives from `experiment`: its method, width, smoothness and model choice, and with `counts` how many
+// points or terms it places (the estimate itself). Pure: it runs off the GUI thread on a copy.
+ExperimentViewModel::EstimateDerived ExperimentViewModel::derive_estimate(const edi::ExperimentBase& experiment,
+                                                                         bool counts) {
+    EstimateDerived out;
     try {
-        const edi::BackgroundEstimateOptions options = edi::background_estimate_options(experiment_);
-        const edi::BackgroundEstimate defaults = edi::background_estimate_defaults(experiment_, options);
-        out.derived_method = QString::fromStdString(defaults.method);
-        out.derived_width = defaults.width;
-        out.derived_smoothness = defaults.smoothness.value_or(qQNaN());
+        const edi::BackgroundEstimateOptions options = edi::background_estimate_options(experiment);
+        const edi::BackgroundEstimate defaults = edi::background_estimate_defaults(experiment, options);
+        out.method = QString::fromStdString(defaults.method);
+        out.width = defaults.width;
+        out.smoothness = defaults.smoothness.value_or(qQNaN());
         out.model_choice = QString::fromStdString(defaults.model_choice);
         out.model_reason = QString::fromStdString(defaults.model_reason);
         // A blank most points or most terms has no value to derive, so the field shows how many Estimate places.
         if (!counts) {
-        } else if (experiment_.background_type == "line-segment") {
+        } else if (experiment.background_type == "line-segment") {
             if (!options.n_points) {
-                out.derived_points = static_cast<int>(edi::estimate_background(experiment_, options).points.size());
+                out.points = static_cast<int>(edi::estimate_background(experiment, options).points.size());
             }
         } else if (!options.max_terms) {
-            out.derived_terms = static_cast<int>(edi::estimate_background(experiment_, options).terms.size());
+            out.terms = static_cast<int>(edi::estimate_background(experiment, options).terms.size());
         }
         QStringList warnings;
         for (const std::string& warning : defaults.warnings) {
@@ -448,6 +458,49 @@ ExperimentViewModel::EstimateSettings ExperimentViewModel::read_estimate_setting
         out.note = QString::fromUtf8(error.what());
     }
     return out;
+}
+
+void ExperimentViewModel::requestEstimate(bool counts) const {
+    // Newest wins: a request superseded while it runs is dropped on arrival (ADR-0102 rule 3). The copy holds what an
+    // estimate reads: the measured pattern, the background and its settings.
+    const quint64 request = ++estimate_request_;
+    const auto snapshot = std::make_shared<const edi::ExperimentBase>(experiment_);
+    const QPointer<ExperimentViewModel> self(const_cast<ExperimentViewModel*>(this));
+    run_in_background([self, request, snapshot, counts] {
+        EstimateDerived derived = derive_estimate(*snapshot, counts);
+        QMetaObject::invokeMethod(
+            QCoreApplication::instance(),
+            [self, request, counts, derived = std::move(derived)] {
+                if (self && request == self->estimate_request_) self->publishEstimate(derived, counts);
+            },
+            Qt::QueuedConnection);
+    });
+}
+
+void ExperimentViewModel::publishEstimate(const EstimateDerived& derived, bool counts) {
+    const EstimateSettings before = estimate_;
+    estimate_.derived_method = derived.method;
+    estimate_.derived_width = derived.width;
+    estimate_.derived_smoothness = derived.smoothness;
+    estimate_.model_choice = derived.model_choice;
+    estimate_.model_reason = derived.model_reason;
+    if (counts) {
+        estimate_.derived_points = derived.points;
+        estimate_.derived_terms = derived.terms;
+        estimate_.note = derived.note;
+    }
+    const auto notify = [this](bool changed, void (ExperimentViewModel::*signal)()) {
+        if (changed) emit(this->*signal)();
+    };
+    const auto moved = [](double a, double b) { return !(qIsNaN(a) && qIsNaN(b)) && a != b; };
+    notify(estimate_.model_choice != before.model_choice, &ExperimentViewModel::estimateModelChoiceChanged);
+    notify(estimate_.model_reason != before.model_reason, &ExperimentViewModel::estimateModelReasonChanged);
+    notify(estimate_.derived_method != before.derived_method, &ExperimentViewModel::estimateMethodChanged);
+    notify(moved(estimate_.derived_width, before.derived_width), &ExperimentViewModel::estimateWidthChanged);
+    notify(moved(estimate_.derived_smoothness, before.derived_smoothness), &ExperimentViewModel::estimateSmoothnessChanged);
+    notify(estimate_.derived_points != before.derived_points, &ExperimentViewModel::estimatePointsChanged);
+    notify(estimate_.derived_terms != before.derived_terms, &ExperimentViewModel::estimateTermsChanged);
+    notify(estimate_.note != before.note, &ExperimentViewModel::estimateNoteChanged);
 }
 
 void ExperimentViewModel::setBackgroundEstimateMode(const QString& mode) {
@@ -712,11 +765,9 @@ void ExperimentViewModel::setLastError(const QString& error) {
 }
 
 void ExperimentViewModel::settle_estimate_counts() const {
+    // Read for the first time since they were owed: worked out off the GUI thread, announced when ready.
     if (!std::exchange(estimate_counts_owed_, false)) return;
-    const EstimateSettings full = read_estimate_settings();
-    estimate_.derived_points = full.derived_points;
-    estimate_.derived_terms = full.derived_terms;
-    estimate_.note = full.note;
+    requestEstimate(true);
 }
 
 void ExperimentViewModel::syncEstimate() {
@@ -726,14 +777,18 @@ void ExperimentViewModel::syncEstimate() {
     const bool counts = listened(&ExperimentViewModel::estimatePointsChanged) ||
                         listened(&ExperimentViewModel::estimateTermsChanged) ||
                         listened(&ExperimentViewModel::estimateNoteChanged);
-    // Every value is stored before any signal, so a handler reads the new settings throughout. Unread counts keep
-    // what was last worked out until read, so no change of theirs is announced to no one.
-    EstimateSettings next = read_estimate_settings(counts);
-    if (!counts) {
-        next.derived_points = estimate_.derived_points;
-        next.derived_terms = estimate_.derived_terms;
-        next.note = estimate_.note;
-    }
+    // Every value is stored before any signal, so a handler reads the new settings throughout. The derived values keep
+    // what was last worked out until the background estimate answers; unread counts are worked out when read, so no
+    // change of theirs is announced to no one.
+    EstimateSettings next = declared_estimate_settings();
+    next.derived_method = estimate_.derived_method;
+    next.derived_width = estimate_.derived_width;
+    next.derived_smoothness = estimate_.derived_smoothness;
+    next.model_choice = estimate_.model_choice;
+    next.model_reason = estimate_.model_reason;
+    next.derived_points = estimate_.derived_points;
+    next.derived_terms = estimate_.derived_terms;
+    next.note = estimate_.note;
     const EstimateSettings before = std::exchange(estimate_, next);
     estimate_counts_owed_ = !counts;
     const auto notify = [this](bool changed, void (ExperimentViewModel::*signal)()) {
@@ -758,6 +813,7 @@ void ExperimentViewModel::syncEstimate() {
     notify(estimate_.max_terms != before.max_terms, &ExperimentViewModel::backgroundEstimateMaxTermsChanged);
     notify(estimate_.derived_terms != before.derived_terms, &ExperimentViewModel::estimateTermsChanged);
     notify(estimate_.note != before.note, &ExperimentViewModel::estimateNoteChanged);
+    requestEstimate(counts);
 }
 
 bool ExperimentViewModel::madeForType() const {
