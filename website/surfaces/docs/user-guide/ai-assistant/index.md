@@ -57,6 +57,20 @@ Inspect the resulting pattern and fitted parameters before relying on the result
 
 **Show actions**, in the chat's composer, shows each action the assistant takes in the app as it works, on the control it uses. Off, the assistant works in the background and reports in the chat.
 
+### Voice input
+
+Speak to the assistant instead of typing. Voice input is an optional part of the desktop app, about 190 MB: tick
+**Voice input** in the [desktop installer](../../application/desktop.md#download), or add it later in the Maintenance
+Tool (**Preferences → Updates → Open Maintenance Tool**, **Add or remove components**), then restart the application.
+
+Select the microphone button beside **Send** and speak. Select it again, or pause for two seconds, and the text appears
+in the message box at the cursor. It is never sent by itself, so you can correct it first. The × button beside the
+microphone, or Esc, cancels. The first time, your system asks whether EasyDiffraction may use the microphone.
+
+Speech is recognised on your computer. The recording stays in memory, is never saved or sent anywhere, and is
+discarded once the text is ready. The language is detected from what you say; to fix it, choose it in
+**Preferences → AI assistance → Speech language**, which also makes recognition faster.
+
 ## Your own assistant
 
 ChatGPT or Claude, in their desktop apps or command-line tools, can write what each interface uses, given the documentation, the tutorials and your files:

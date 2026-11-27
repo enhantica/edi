@@ -191,12 +191,12 @@ QLabel#InformationLabel {
 
 /* A label given a margin by a stylesheet also indents its text by half an "x" unless told otherwise. */
 QLabel#SpaceLabel, QLabel#NoticeLabel, QLabel#EdiProgressStatus, QLabel#AppSizeLabel, QLabel#AssistantSizeLabel,
-QLabel#MaintenanceSizeLabel, QLabel#InformationLabel {
+QLabel#MaintenanceSizeLabel, QLabel#VoiceSizeLabel, QLabel#InformationLabel {
     qproperty-indent: 0;
 }
 
 QPushButton#FolderBrowseButton, QLabel#AppSizeLabel, QLabel#AssistantSizeLabel, QLabel#MaintenanceSizeLabel,
-QLabel#NoticeLabel {
+QLabel#VoiceSizeLabel, QLabel#NoticeLabel {
     margin-right: 6px;
 }
 

@@ -37,6 +37,7 @@ Each surface lists only its own column: the application's About window reads thi
 | Qt Graphs | 6.11.2 | GPL-3.0-only | linked | compiled in | — | — | the pattern chart; linking it makes the distributed application a GPL-3.0 work (COPYING) |
 | Qt Quick 3D | 6.11.2 | GPL-3.0-only | linked | compiled in | — | — | the structure view's 3D scene, and the 3D module Qt Graphs loads; GPL-3.0 (COPYING) |
 | Qt Shader Tools | 6.11.2 | GPL-3.0-only | linked | compiled in | — | — | the shader tooling Qt Quick 3D uses; GPL-3.0 (COPYING) |
+| Qt Multimedia | 6.11.2 | LGPL-3.0-only | linked | — | — | — | microphone recording for voice input in the assistant; only its audio input, without its FFmpeg media plugin |
 | EasyScience gui-components |  | BSD-3-Clause | compiled in | compiled in | — | — | the base QML components and styles of the application |
 | pymatgen |  | MIT | compiled in | compiled in | compiled in | — | VESTA element colours and Shannon ionic radii in the element table, compiled into edi |
 | Scientific colour maps |  | MIT | compiled in | compiled in | compiled in | — | Fabio Crameri's batlow and lapaz, two of the scan views' colour maps |
@@ -60,6 +61,15 @@ transitive attribution, corresponding-source delivery or platform installer qual
 | rusty-V8 | 150.4.0 | MIT | bundled | — | — | — | Deno Rust bindings embedded in the code-mode host |
 | V8 (Codex code-mode host) | ac1e2398 | BSD-3-Clause AND additional notices | bundled | — | — | — | the V8 engine embedded in the code-mode host; distinct from Qt V8 |
 | ICU data (deno_core_icudata) | 0.77.0 / ee5f27ad | Unicode-3.0 AND additional notices | bundled | — | — | — | the ICU data embedded in the code-mode host via deno_core_icudata |
+
+## Voice input components
+
+The engine is part of the desktop app; the model is installed only with the optional voice input component.
+
+| Component | Version | Licence | Desktop app | Web app | Python package | CLI | In edi |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| whisper.cpp | 1.9.6 | MIT | compiled in | — | — | — | speech recognition for voice input, with the ggml tensor library it includes |
+| Whisper small model | ggml-small-q5_1 (5359861c) | MIT | bundled | — | — | — | OpenAI's multilingual Whisper small weights in whisper.cpp's format, quantized to q5_1; the voice input component only |
 
 ## HTML report libraries
 

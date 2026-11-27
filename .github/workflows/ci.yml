@@ -854,6 +854,11 @@ jobs:
         id: apphost
         if: ${{ runner.os != 'Windows' && (steps.inputs.outputs.run == 'true') }}
         run: pixi run -e app app-build
+      # The voice input tests read the tiny Whisper model from build/voice-models; it is downloaded and checked here,
+      # never inside a test (ADR-0107).
+      - name: Fetch the tiny speech model for the voice input tests
+        if: ${{ runner.os != 'Windows' && (steps.inputs.outputs.run == 'true') }}
+        run: pixi run --skip-deps voice-models --test
       - name: Compiler cache statistics
         if: ${{ runner.os != 'Windows' && (steps.inputs.outputs.run == 'true') }}
         run: pixi run -e app ccache --show-stats
@@ -909,6 +914,34 @@ jobs:
         run: pixi run --skip-deps native-wiring
         env:
           EDI_APP_TEST_RUNNER: ${{ github.workspace }}/build/app/app/edi_app_tests
+      # Voice input on every run (ADR-0107): the recogniser on the tiny model, then the whole journey in the app with a
+      # recorded clip in place of the microphone. Neither touches a real microphone.
+      - name: Voice input recogniser, request owner and Unicode install path
+        if: ${{ runner.os != 'Windows' && (!cancelled() && steps.apphost.outcome == 'success') }}
+        run: |
+          pixi run -e app --skip-deps app-test-audio-capture
+          pixi run -e app --skip-deps app-test-voice
+      - name: Voice input journey in the app (tests/system/app/test_assistant_voice_input.py)
+        id: voicejourney
+        if: ${{ runner.os != 'Windows' && (!cancelled() && steps.apphost.outcome == 'success') }}
+        run: >-
+          pixi run --skip-deps python -m pytest tests/system/app/test_assistant_voice_input.py -vv
+          --basetemp build/voice-journey
+        env:
+          EDI_APP_TEST_RUNNER: ${{ github.workspace }}/build/app/app/edi_app_tests
+      # The app's last state and logs, which the failure message only points at.
+      - name: Keep the voice input journey's receipts
+        if: ${{ !cancelled() && steps.voicejourney.outcome == 'failure' }}
+        uses: ./.github/actions/store
+        with:
+          artifact: voice-journey-${{ env.APP_PLATFORM }}
+          withhold: 'true'
+          path: |
+            build/voice-journey/**/*.json
+            build/voice-journey/**/*.log
+            build/voice-journey/**/*.txt
+          if-no-files-found: ignore
+          retention-days: 7
       - name: qmllint over edi's QML (zero warnings)
         if: ${{ runner.os != 'Windows' && (!cancelled() && steps.inputs.outputs.run == 'true') }}
         run: pixi run -e app --skip-deps app-lint

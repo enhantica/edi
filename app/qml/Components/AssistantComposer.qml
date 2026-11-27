@@ -2,6 +2,7 @@
 pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls
+import QtQuick.Controls.impl as ControlsImpl
 import QtQuick.Dialogs
 import QtQuick.Layouts
 import EasyApplication.Gui.Globals as EaGlobals
@@ -38,7 +39,10 @@ Rectangle {
     function openChoices() {
         ApplicationInfo.assistantOpenChoices();
     }
-    onAssistantChanged: ApplicationInfo.composerOwnerChanged()
+    onAssistantChanged: {
+        VoiceInput.release(composer);
+        ApplicationInfo.composerOwnerChanged();
+    }
     onChoicesEnabledChanged: ApplicationInfo.composerChoicesEnabledChanged()
     Connections {
         target: composer.assistant
@@ -47,6 +51,10 @@ Rectangle {
         }
         function onConnectionLabelChanged() {
             composer.closeChoices();
+        }
+        function onConnectedChanged() {
+            if (!composer.assistant.connected)
+                VoiceInput.release(composer);
         }
     }
     FontMetrics {
@@ -360,6 +368,7 @@ Rectangle {
     Connections {
         target: composer.assistant
         function onSessionSelectionStarted(threadId) {
+            VoiceInput.release(composer);
             ApplicationInfo.composerSessionSelectionStarted(composer, editor, threadId);
         }
         function onSessionDraftRestored(threadId, text) {
@@ -367,12 +376,15 @@ Rectangle {
             ApplicationInfo.composerTakeReturnedMessages(composer, editor);
         }
         function onConversationClearRequested(intent) {
+            VoiceInput.release(composer);
             ApplicationInfo.composerConversationClearRequested(composer, editor, intent);
         }
         function onConversationClearCommitted(intent) {
+            VoiceInput.release(composer);
             ApplicationInfo.composerConversationClearCommitted(composer, editor, intent);
         }
         function onConversationRetired() {
+            VoiceInput.release(composer);
             ApplicationInfo.composerConversationRetired(composer);
         }
         function onWorkReportFinished(receipt) {
@@ -407,6 +419,62 @@ Rectangle {
     }
     function submit(approvedDraft) {
         return ApplicationInfo.composerSubmit(approvedDraft);
+    }
+    // Voice input (edi ADR-0107): the recognised text goes in at the cursor and is never sent by itself.
+    readonly property bool voiceBusy: VoiceInput.state === VoiceInput.Starting || VoiceInput.state === VoiceInput.Recognising
+    readonly property bool voiceActive: VoiceInput.state !== VoiceInput.Idle
+    readonly property bool voiceListening: VoiceInput.state === VoiceInput.Listening && VoiceInput.owner === composer
+    // What the recording is doing, shown where the placeholder is while the box is empty and beside the level meter
+    // once the box holds text, so it never hides what was typed.
+    readonly property string voiceStatus: VoiceInput.owner !== composer ? "" : VoiceInput.state === VoiceInput.Listening ? qsTr("Listening…") : VoiceInput.state === VoiceInput.Recognising ? qsTr("Recognising…") : ""
+    readonly property bool editorEmpty: editor.length === 0 && editor.preeditText.length === 0
+    // The panel stays loaded while hidden: a recording must not go on without its controls or its conversation.
+    onVisibleChanged: {
+        if (!composer.visible)
+            VoiceInput.release(composer);
+    }
+    Component.onDestruction: VoiceInput.release(composer)
+    // Escape from anywhere in the composer stops voice input; otherwise it goes on to the usual Escape action.
+    Keys.onEscapePressed: event => {
+        event.accepted = composer.voiceActive && VoiceInput.owner === composer;
+        if (event.accepted)
+            VoiceInput.release(composer);
+    }
+    Binding {
+        target: VoiceInput
+        property: "language"
+        value: Preferences.assistantSpeechLanguage
+    }
+    // An edit made here goes through the editor's own text change, so the draft is saved as typed text is.
+    function insertRecognisedText(text) {
+        // Without a selection both ends are the cursor.
+        const position = Math.min(editor.selectionStart, editor.selectionEnd);
+        const end = Math.max(editor.selectionStart, editor.selectionEnd);
+        if (end > position)
+            editor.remove(position, end);
+        const before = position > 0 ? editor.getText(position - 1, position) : "";
+        const after = editor.getText(position, position + 1);
+        const spaced = (before.length && !/\s/.test(before) ? " " : "") + text + (after.length && !/\s/.test(after) ? " " : "");
+        editor.insert(position, spaced);
+        editor.cursorPosition = position + spaced.length;
+        editor.forceActiveFocus();
+    }
+    Connections {
+        target: VoiceInput
+        function onTextRecognised(text) {
+            // Text from a recording this composer did not start, or one finishing after it was hidden, is dropped.
+            if (VoiceInput.owner === composer && composer.visible)
+                composer.insertRecognisedText(text);
+            else
+                console.info("Voice input text dropped: owner", VoiceInput.owner === composer, "visible", composer.visible);
+        }
+    }
+    Connections {
+        target: editor
+        function onTextChanged() {
+            if (VoiceInput.message.length > 0)
+                VoiceInput.clearMessage();
+        }
     }
     Column {
         id: composerContent
@@ -477,7 +545,7 @@ Rectangle {
             TextArea {
                 id: editor
                 objectName: "assistant.composer"
-                placeholderText: qsTr("Ask about your project or describe a fitting plan…")
+                placeholderText: composer.voiceStatus.length > 0 ? "" : qsTr("Ask about your project or describe a fitting plan…")
                 wrapMode: TextEdit.Wrap
                 selectByMouse: true
                 persistentSelection: true
@@ -502,7 +570,34 @@ Rectangle {
                 background: null
                 Accessible.name: qsTr("Message to the assistant")
                 Keys.onReturnPressed: event => ApplicationInfo.composerReturnPressed(event)
+                EaElements.Label {
+                    objectName: "assistant.voiceStatus"
+                    x: editor.leftPadding
+                    y: editor.topPadding
+                    width: Math.max(0, editor.width - editor.leftPadding - editor.rightPadding)
+                    visible: composer.voiceStatus.length > 0 && composer.editorEmpty
+                    text: composer.voiceStatus
+                    textFormat: Text.PlainText
+                    elide: Text.ElideRight
+                    font.family: editor.font.family
+                    font.pixelSize: editor.font.pixelSize
+                    font.italic: true
+                    color: editor.placeholderTextColor
+                    Accessible.name: text
+                }
             }
+        }
+        // Why the last recording gave no text.
+        EaElements.Label {
+            objectName: "assistant.voiceMessage"
+            width: parent.width
+            leftPadding: editor.leftPadding
+            rightPadding: editor.rightPadding
+            text: VoiceInput.message
+            visible: text.length > 0
+            textFormat: Text.PlainText
+            wrapMode: Text.Wrap
+            color: EaStyle.Colors.red
         }
         ScrollView {
             id: selectedFilesScroll
@@ -574,7 +669,7 @@ Rectangle {
         }
         RowLayout {
             id: composerToolbar
-            readonly property real choiceWidth: Math.max(0, width - addFilesButton.implicitWidth - showActionsControl.implicitWidth - (sendButton.visible ? sendButton.implicitWidth : 0) - (stopButton.visible ? stopButton.implicitWidth : 0) - previousUserButton.implicitWidth - nextUserButton.implicitWidth - spacing * (5 + (sendButton.visible ? 1 : 0) + (stopButton.visible ? 1 : 0)))
+            readonly property real choiceWidth: Math.max(0, width - addFilesButton.implicitWidth - showActionsControl.implicitWidth - (sendButton.visible ? sendButton.implicitWidth : 0) - (stopButton.visible ? stopButton.implicitWidth : 0) - (voiceButton.visible ? voiceButton.implicitWidth : 0) - (voiceIndicator.visible ? voiceIndicator.implicitWidth : 0) - previousUserButton.implicitWidth - nextUserButton.implicitWidth - spacing * (5 + (sendButton.visible ? 1 : 0) + (stopButton.visible ? 1 : 0) + (voiceButton.visible ? 1 : 0) + (voiceIndicator.visible ? 1 : 0)))
             width: parent.width
             spacing: AppSizes.unit * 0.5
             EaElements.ToolButton {
@@ -752,8 +847,96 @@ Rectangle {
                 Accessible.name: ToolTip.text
                 KeyNavigation.priority: KeyNavigation.BeforeItem
                 KeyNavigation.backtab: previousUserButton
-                KeyNavigation.tab: stopButton.visible ? stopButton : sendButton
+                KeyNavigation.tab: voiceButton.visible ? voiceButton : stopButton.visible ? stopButton : sendButton
                 onClicked: composer.nextUserRequested()
+            }
+            // The microphone level while listening; the state in words too once the box holds text.
+            Row {
+                id: voiceIndicator
+                objectName: "assistant.voiceIndicator"
+                Layout.alignment: Qt.AlignVCenter
+                spacing: AppSizes.unit * 0.5
+                visible: composer.voiceListening || (composer.voiceStatus.length > 0 && !composer.editorEmpty)
+                EaElements.Label {
+                    anchors.verticalCenter: parent.verticalCenter
+                    visible: composer.voiceStatus.length > 0 && !composer.editorEmpty
+                    text: composer.voiceStatus
+                    textFormat: Text.PlainText
+                    font.italic: true
+                    color: EaStyle.Colors.themeForegroundMinor
+                    Accessible.name: text
+                }
+                AssistantVoiceMeter {
+                    objectName: "assistant.voiceLevel"
+                    anchors.verticalCenter: parent.verticalCenter
+                    visible: composer.voiceListening
+                    running: composer.voiceListening
+                    level: VoiceInput.level
+                }
+            }
+            // One button starts and stops: listening takes the accent colour; while the microphone starts or the speech is
+            // recognised it shows the assistant's spinner. A press while it starts cancels; a press while it recognises
+            // does nothing, and Escape cancels.
+            EaElements.ToolButton {
+                id: voiceButton
+                Layout.minimumWidth: composer.actionSize
+                Layout.maximumWidth: composer.actionSize
+                Layout.minimumHeight: composer.actionSize
+                Layout.maximumHeight: composer.actionSize
+                implicitWidth: composer.actionSize
+                implicitHeight: composer.actionSize
+                font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.75
+                readonly property bool listening: VoiceInput.state === VoiceInput.Listening
+                background: Rectangle {
+                    border.width: 0
+                    implicitWidth: composer.actionSize
+                    implicitHeight: implicitWidth
+                    radius: width * 0.5
+                    color: voiceButton.listening ? EaStyle.Colors.themeAccent : voiceButton.pressed ? EaStyle.Colors.sideBarButtonBackgroundPressed : voiceButton.visualFocus ? EaStyle.Colors.themeRowHovered : composer.actionBackground
+                }
+                contentItem: Item {
+                    EaElements.Label {
+                        anchors.fill: parent
+                        visible: !composer.voiceBusy
+                        text: voiceButton.fontIcon
+                        font.family: EaStyle.Fonts.iconsFamily
+                        font.pixelSize: voiceButton.font.pixelSize * 1.25
+                        color: voiceButton.listening ? (EaStyle.Colors.isDarkPalette ? "black" : "white") : voiceButton.foregroundColor()
+                        horizontalAlignment: Text.AlignHCenter
+                        verticalAlignment: Text.AlignVCenter
+                        Accessible.ignored: true
+                    }
+                    ControlsImpl.IconImage {
+                        id: voiceSpinner
+                        anchors.centerIn: parent
+                        width: voiceButton.font.pixelSize * 1.25
+                        height: width
+                        visible: composer.voiceBusy
+                        source: "../../resources/logo/AssistantSpinner.svg"
+                        sourceSize: Qt.size(width, height)
+                        color: EaStyle.Colors.themeAccent
+                        fillMode: Image.PreserveAspectFit
+                        Accessible.ignored: true
+                    }
+                    RotationAnimator {
+                        target: voiceSpinner
+                        running: voiceSpinner.visible && EaStyle.Times.translationChange > 0
+                        loops: Animation.Infinite
+                        from: 0
+                        to: 360
+                        duration: 1600
+                    }
+                }
+                KeyNavigation.priority: KeyNavigation.BeforeItem
+                KeyNavigation.tab: stopButton.visible ? stopButton : sendButton
+                KeyNavigation.backtab: nextUserButton
+                objectName: "assistant.voice"
+                fontIcon: "microphone"
+                text: VoiceInput.state === VoiceInput.Listening ? qsTr("Stop and insert the text") : VoiceInput.state === VoiceInput.Starting ? qsTr("Starting the microphone. Press to cancel") : VoiceInput.state === VoiceInput.Recognising ? qsTr("Recognising speech") : qsTr("Voice input")
+                ToolTip.text: text
+                visible: VoiceInput.available
+                Accessible.name: text
+                onClicked: VoiceInput.toggle(composer)
             }
             EaElements.ToolButton {
                 id: stopButton
@@ -784,7 +967,7 @@ Rectangle {
                 }
                 KeyNavigation.priority: KeyNavigation.BeforeItem
                 KeyNavigation.tab: sendButton.visible ? sendButton : composer.toggleControl
-                KeyNavigation.backtab: nextUserButton
+                KeyNavigation.backtab: voiceButton.visible ? voiceButton : nextUserButton
                 objectName: "assistant.stop"
                 fontIcon: "stop"
                 text: qsTr("Stop")
@@ -820,7 +1003,7 @@ Rectangle {
                 }
                 KeyNavigation.priority: KeyNavigation.BeforeItem
                 KeyNavigation.tab: composer.toggleControl
-                KeyNavigation.backtab: nextUserButton
+                KeyNavigation.backtab: stopButton.visible ? stopButton : voiceButton.visible ? voiceButton : nextUserButton
                 objectName: "assistant.send"
                 fontIcon: "arrow-up"
                 text: qsTr("Send")

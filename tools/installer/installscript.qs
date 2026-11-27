@@ -2,7 +2,10 @@
 
 // Shortcuts to the installed program: the Start menu and the desktop on Windows, the applications menu and the
 // desktop (when the home folder has one) on Linux. The installer undoes these operations when the app is removed.
-function Component() {}
+// On Linux an update also keeps the maintenance tool's runtime (keepsRuntime below).
+function Component() {
+    installer.installationFinished.connect(this, Component.prototype.settleRuntime);
+}
 
 // What EasyDiffraction is, as the installer's pages say it (Installer.qs): the shortcut's and the menu entry's comment.
 var DESCRIPTION = "Calculate diffraction patterns and fit a structural model to your data.";
@@ -13,7 +16,44 @@ var DESCRIPTION = "Calculate diffraction patterns and fit a structural model to 
 // file instead and the Framework deletes it (edi ADR-0106).
 var MAINTENANCE_RESOURCE = "";
 
+// The first Linux update off a release whose app component carried the tool's runtime (installer-runtime/, edi
+// ADR-0108). The Framework undoes that release's operations of this component, which deletes the runtime, before
+// any operation of this update runs, and a rollback never brings it back. So the update keeps a copy first and
+// settles it at the end: back in place when no usable runtime is there, dropped otherwise. maintenance_swap.sh and
+// maintenance_restore.sh, written in by package.py, do it with copy as their last argument, under the lock and with
+// a mark naming this run.
+var SWAP_SCRIPT = "@EDI_SWAP_SCRIPT@";
+var RESTORE_SCRIPT = "@EDI_RESTORE_SCRIPT@";
+var RUNTIME_TOKEN = "runtime-" + String(Date.now()) + "-" + String(Math.floor(Math.random() * 1e9));
+
+function keepsRuntime() {
+    return systemInfo.kernelType === "linux" && installer.isUpdater();
+}
+
+function runtimeCommand(script) {
+    return ["-c", script, script, installer.value("TargetDir"), RUNTIME_TOKEN, "installer-runtime",
+            "dependencies.json", "copy"];
+}
+
+// IFW 4.11 calls this for each component it is about to install, before it undoes the installed release's
+// operations.
+Component.prototype.beginInstallation = function () {
+    if (keepsRuntime() && installer.value("TargetDir") !== "")
+        installer.execute("/bin/sh", runtimeCommand(SWAP_SCRIPT));
+};
+
+// After a success or a rollback.
+Component.prototype.settleRuntime = function () {
+    if (keepsRuntime() && installer.value("TargetDir") !== "")
+        installer.execute("/bin/sh", runtimeCommand(RESTORE_SCRIPT));
+};
+
 Component.prototype.createOperations = function () {
+    // First, so that any later failure of this component undoes it: the copy goes back when the runtime is gone.
+    if (keepsRuntime()) {
+        var settle = ["/bin/sh"].concat(runtimeCommand(RESTORE_SCRIPT));
+        component.addOperation("Execute", settle.concat(["UNDOEXECUTE"], settle));
+    }
     component.createOperations();
     holdProgress();
     var target = installer.value("TargetDir");

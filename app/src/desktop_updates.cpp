@@ -16,6 +16,13 @@
 #ifndef __EMSCRIPTEN__
 #include <QProcess>
 #endif
+#if !defined(__EMSCRIPTEN__) && !defined(Q_OS_WIN)
+#define EDI_TOOL_LOCK 1
+#include <cerrno>
+#include <fcntl.h>
+#include <sys/file.h>
+#include <unistd.h>
+#endif
 #include <algorithm>
 #include <array>
 #include <optional>
@@ -43,66 +50,164 @@ std::optional<ReleaseKey> release_version_key(const QString& value) {
     if (!y || !m || !n || *y < 2000) return {};
     return ReleaseKey{*y, 0, *m, *n};
 }
-// The mark beside a kept bundle names the update that kept it: its token, the process running it and that process's
-// start time as `LC_ALL=C ps -o lstart=` gives it (maintenance_swap.sh). While that process lives, the swap or its undo
-// may be between its two renames, so the kept bundle is not the app's to take. A process with that number but another
-// start time is a later one. When it cannot tell, it says live: the tool is put back once the update has ended.
-static bool kept_by_live_update(const QString& mark_file) {
-#if defined(__EMSCRIPTEN__) || defined(Q_OS_WIN)
-    Q_UNUSED(mark_file);
-    return false;
+namespace {
+// The lock every writer of the Maintenance Tool's files takes (ADR-0108). The kernel drops it when its holder exits, so
+// an update stopped by a crash or a power cut never leaves it taken. The app never waits for it: busy means an update
+// is changing the files right now. Windows has no swap and so no lock: there it is never held.
+class ToolLock {
+public:
+    explicit ToolLock(const QString& target) {
+#ifdef EDI_TOOL_LOCK
+        const QByteArray path = QFile::encodeName(target + QStringLiteral("/.MaintenanceTool.lock"));
+        fd_ = ::open(path.constData(), O_RDWR | O_CREAT | O_CLOEXEC, 0644);
+        if (fd_ < 0) return;
+        int result = 0;
+        do result = ::flock(fd_, LOCK_EX | LOCK_NB);
+        while (result != 0 && errno == EINTR);
+        if (result != 0) {
+            ::close(fd_);
+            fd_ = -1;
+        }
 #else
+        Q_UNUSED(target);
+#endif
+    }
+    ~ToolLock() {
+#ifdef EDI_TOOL_LOCK
+        if (fd_ >= 0) ::close(fd_);
+#endif
+    }
+    ToolLock(const ToolLock&) = delete;
+    ToolLock& operator=(const ToolLock&) = delete;
+    bool held() const { return fd_ >= 0; }
+
+private:
+    int fd_ = -1;
+};
+// The folder an update swaps in for the installed one (ADR-0108), or an empty string: the bundle holding `executable`
+// on macOS, the Qt runtime beside the tool on Linux. Windows has none, the Framework writes the tool itself.
+QString swapped_item(const QString& executable) {
+    if (executable.isEmpty() || executable.endsWith(QStringLiteral(".exe"), Qt::CaseInsensitive)) return {};
+    QString bundle = QDir::cleanPath(executable + QStringLiteral("/../../.."));
+    if (bundle.endsWith(QStringLiteral(".app"))) return bundle;
+    return QFileInfo(executable).absolutePath() + QStringLiteral("/installer-runtime");
+}
+// Whether `folder`, the item or its kept copy, has the file that makes the item usable, as the scripts test it.
+bool usable_item(const QString& folder, const QString& item, const QString& executable) {
+    const QString probe = item.endsWith(QStringLiteral(".app"))
+                              ? QStringLiteral("/Contents/MacOS/") + QFileInfo(executable).fileName()
+                              : QStringLiteral("/dependencies.json");
+    return QFileInfo(folder + probe).isFile();
+}
+bool present(const QString& path) {
+    const QFileInfo info(path);
+    return info.exists() || info.isSymLink();
+}
+bool remove_path(const QString& path) {
+    const QFileInfo info(path);
+    return info.isDir() && !info.isSymLink() ? QDir(path).removeRecursively() : QFile::remove(path);
+}
+// Compared byte by byte: equal files mean the Framework has already written the staged tool in place.
+bool same_bytes(const QString& a, const QString& b) {
+    QFile first(a), second(b);
+    if (!first.open(QIODevice::ReadOnly) || !second.open(QIODevice::ReadOnly) || first.size() != second.size())
+        return false;
+    while (!first.atEnd()) {
+        const QByteArray chunk = first.read(qint64{1} << 16);
+        if (chunk.isEmpty() || chunk != second.read(chunk.size())) return false;
+    }
+    return true;
+}
+// Whether the tool named in a kept item's mark, "<token> <pid> <start>", still runs: the same process number with the
+// same start time, read as the scripts read it (ADR-0108). Only the cleanup asks, so a wrong yes merely leaves the
+// backup to the next start; when it cannot tell, it says yes.
+bool marked_tool_running(const QString& mark_file) {
+#ifdef EDI_TOOL_LOCK
     QFile file(mark_file);
     if (!file.open(QIODevice::ReadOnly)) return false;
-    const QStringList fields = QString::fromUtf8(file.readAll()).simplified().split(QLatin1Char(' '));
+    const QStringList fields = QString::fromUtf8(file.read(4096)).simplified().split(QLatin1Char(' '));
     bool number = false;
     const qint64 pid = fields.value(1).toLongLong(&number);
     if (!number || pid <= 0) return false;
-    const QString started = fields.mid(2).join(QLatin1Char(' '));
     QProcess ps;
     QProcessEnvironment environment = QProcessEnvironment::systemEnvironment();
+    environment.insert(QStringLiteral("TZ"), QStringLiteral("UTC0"));
     environment.insert(QStringLiteral("LC_ALL"), QStringLiteral("C"));
     ps.setProcessEnvironment(environment);
-    ps.start(QStringLiteral("/bin/ps"), {QStringLiteral("-o"), QStringLiteral("lstart="), QStringLiteral("-p"),
-                                         QString::number(pid)});
+    ps.start(QStringLiteral("/bin/ps"),
+             {QStringLiteral("-o"), QStringLiteral("lstart="), QStringLiteral("-p"), QString::number(pid)});
     if (!ps.waitForFinished(3000)) {
         ps.kill();
         ps.waitForFinished(1000);
         return true;
     }
     if (ps.exitStatus() != QProcess::NormalExit) return true;
-    if (ps.exitCode() != 0) return false;  // no such process: the update has ended
-    return started.isEmpty() || QString::fromUtf8(ps.readAllStandardOutput()).simplified() == started;
+    if (ps.exitCode() != 0) return false;  // no such process
+    return QString::fromUtf8(ps.readAllStandardOutput()).simplified() == fields.mid(2).join(QLatin1Char(' '));
+#else
+    Q_UNUSED(mark_file);
+    return false;
 #endif
 }
+}  // namespace
 #ifndef __EMSCRIPTEN__
-// A kept tool beside the bundle holding `executable`: a swap is running or stopped, and the installation is managed.
+// A kept tool beside the one holding `executable`: a swap is running or stopped, and the installation is managed.
 static bool kept_maintenance_tool(const QString& executable) {
-    const QString bundle = QDir::cleanPath(executable + QStringLiteral("/../../.."));
-    return bundle.endsWith(QStringLiteral(".app")) &&
-           QFileInfo(bundle + QStringLiteral(".old/Contents/MacOS/") + QFileInfo(executable).fileName()).isFile();
+    const QString item = swapped_item(executable);
+    return !item.isEmpty() && usable_item(item + QStringLiteral(".old"), item, executable);
 }
 #endif
 bool restore_kept_maintenance_tool(const QString& executable) {
-    const QString bundle = QDir::cleanPath(executable + QStringLiteral("/../../.."));
-    const QString tail = QStringLiteral("/Contents/MacOS/") + QFileInfo(executable).fileName();
-    const QString kept = bundle + QStringLiteral(".old");
-    const QString drop = bundle + QStringLiteral(".drop");
-    // Only a macOS bundle has a kept copy. A tool counts as there when its file is, as in maintenance_swap.sh.
-    if (!bundle.endsWith(QStringLiteral(".app")) || QFileInfo(bundle + tail).isFile() ||
-        !QFileInfo(kept + tail).isFile())
-        return false;
-    if (kept_by_live_update(bundle + QStringLiteral(".old-token"))) return false;
-    // Part of a bundle in the tool's place leaves it in one rename first, as in the swap. MaintenanceTool.app.new
-    // stays: the retried update finishes the swap with it.
-    if (QFileInfo(bundle).exists() || QFileInfo(bundle).isSymLink()) {
+    const QString item = swapped_item(executable);
+    if (item.isEmpty()) return false;
+    const QString kept = item + QStringLiteral(".old");
+    const QString drop = item + QStringLiteral(".drop");
+    const auto needed = [&] { return !usable_item(item, item, executable) && usable_item(kept, item, executable); };
+    if (!needed()) return false;
+    // Busy, an update is between its renames and finishes or undoes them itself; the launch actions try again later.
+    // Held, the state is read again: the update may have ended just before.
+    const ToolLock lock(QFileInfo(item).absolutePath());
+    if (!lock.held() || !needed()) return false;
+    // Part of an item in its place leaves it in one rename first, as in the swap. The staged item stays: the retried
+    // update finishes the swap with it.
+    if (present(item)) {
         QDir(drop).removeRecursively();
-        if (!QDir().rename(bundle, drop)) return false;
+        if (!QDir().rename(item, drop)) return false;
     }
-    if (!QDir().rename(kept, bundle)) return false;
-    QFile::remove(bundle + QStringLiteral(".old-token"));
+    if (!QDir().rename(kept, item)) {
+        if (!present(item)) QDir().rename(drop, item);
+        return false;
+    }
+    QFile::remove(item + QStringLiteral(".old-token"));
     QDir(drop).removeRecursively();
     return true;
+}
+bool remove_maintenance_tool_leftovers(const QString& executable) {
+    if (executable.endsWith(QStringLiteral(".exe"), Qt::CaseInsensitive)) {
+        // The staged copy is what the Framework writes the tool from (ADR-0091), so it goes only once it is in place.
+        const QString staging = QFileInfo(executable).absolutePath() + QStringLiteral("/maintenancetool");
+        return same_bytes(executable, staging + QStringLiteral("/MaintenanceTool.exe")) &&
+               QDir(staging).removeRecursively();
+    }
+    const QString item = swapped_item(executable);
+    if (item.isEmpty()) return false;
+    const QString target = QFileInfo(item).absolutePath();
+    const QString staging = target + QStringLiteral("/maintenancetool");
+    const QString mark = item + QStringLiteral(".old-token");
+    QStringList leftovers{item + QStringLiteral(".old"), mark, staging};
+    if (!usable_item(item, item, executable) || std::none_of(leftovers.cbegin(), leftovers.cend(), present))
+        return false;
+    const ToolLock lock(target);
+    if (!lock.held() || !usable_item(item, item, executable)) return false;
+    // A usable staged item is a swap still to come in a running update, and the backup is its undo's until the tool
+    // that kept it has exited. Anything else is left over from an update that has ended.
+    if (usable_item(staging + QLatin1Char('/') + QFileInfo(item).fileName(), item, executable)) leftovers.removeLast();
+    if (marked_tool_running(mark)) leftovers.remove(0, 2);
+    bool removed = false;
+    for (const QString& path : leftovers) {
+        if (present(path) && remove_path(path)) removed = true;
+    }
+    return removed;
 }
 namespace {
 QString maintenance_path() {
@@ -209,7 +314,10 @@ DesktopUpdates::DesktopUpdates(QString version, QString maintenance, QList<QUrl>
     : QObject(parent), version_(std::move(version)), maintenance_(std::move(maintenance)), feeds_(std::move(feeds)) {
 #ifndef __EMSCRIPTEN__
     const bool release = release_version_key(version_).has_value();
-    if (release) restore_kept_maintenance_tool(maintenance_);
+    if (release) {
+        restore_kept_maintenance_tool(maintenance_);
+        remove_maintenance_tool_leftovers(maintenance_);
+    }
     // While an update still runs, the tool may be aside: the launch actions put it back once that update has ended.
     managed_ = release && (QFileInfo(maintenance_).isExecutable() || kept_maintenance_tool(maintenance_));
 #endif

@@ -5,6 +5,9 @@
 - **Implementation:** ✅ Implemented
 - **Priority:** High
 
+**Amended 2026-11-27 ([ADR-0108](0108-replacing-the-maintenance-tools-own-files.md)):** Linux has the maintenance
+tool's component too, carrying only the tool's runtime and no separately signed binary.
+
 ## Context
 
 The installers from [ADR-0071](0071-desktop-installers.md) are unsigned. macOS refuses to open them until the
@@ -30,7 +33,7 @@ secrets with `CODESIGN_<OS>_` names, listed in its organisation discussion on Gi
 | macOS bundle id (`app/CMakeLists.txt`) | `org.easyscience.easydiffraction` | `org.easydiffraction.app` |
 | Installer component, app (`tools/installer/package.py`) | `org.easyscience.edi` | `org.easydiffraction.app` |
 | Installer component, AI assistant | `org.easyscience.edi.assistant` | `org.easydiffraction.app.assistant` |
-| Installer component, maintenance tool (macOS, Windows) | `org.easyscience.edi.maintenancetool` | `org.easydiffraction.app.maintenancetool` |
+| Installer component, maintenance tool (macOS, Windows; on Linux its runtime only) | `org.easyscience.edi.maintenancetool` | `org.easydiffraction.app.maintenancetool` |
 | Settings organisation (`app/main.cpp`) | `EasyScience` | `EasyDiffraction` |
 
 Existing users keep their preferences and update in place. On its first start the app copies the old settings
@@ -130,13 +133,13 @@ them, and the installed payload is checked against the signed bytes.
    release, preview and Pages repository checks hold; the pages show it as the Maintenance Tool row, ticked and
    fixed, ADR-0071), whose script calls `installer.setInstallerBaseBinary`
    on the bundle; for a bundle the Framework moves it to the installation root unchanged instead of writing
-   its own. An update unpacks the new tool as well and its script asks for it again, so the Framework replaces
-   the installed tool once the update is done (on Windows after it quits); an update that does not include the
-   component keeps the installed tool (ADR-0106). Packaging refuses an unsigned tool when signing is on, and each
-   test installation checks the installed tool with `codesign --verify --strict`, its Developer ID authority
-   on release builds, and its checksum against the shipped one, before running it to uninstall. Unsigned
-   builds sign the tool ad hoc and take the same path. EasyDiffractionBeta shipped a separately built tool
-   the same way on Windows.
+   its own. An update unpacks the new tool as well; on macOS an operation of the component swaps the bundle in,
+   and on Windows the Framework replaces the tool once it quits; an update that does not include the component
+   keeps the installed tool (ADR-0106, [ADR-0108](0108-replacing-the-maintenance-tools-own-files.md)).
+   Packaging refuses an unsigned tool when signing is on, and each test installation checks the installed
+   tool with `codesign --verify --strict`, its Developer ID authority on release builds, and its checksum
+   against the shipped one, before running it to uninstall. Unsigned builds sign the tool ad hoc and take the
+   same path. EasyDiffractionBeta shipped a separately built tool the same way on Windows.
 5. Qt Installer Framework builds the installer app. `tools/installer/package.py seal` signs it with
    `codesign --options runtime --timestamp`, notarises it the same way, staples the ticket with
    `xcrun stapler staple` and checks it with `codesign --verify` and `spctl --assess`. It then puts the app into
@@ -162,6 +165,11 @@ them, and the installed payload is checked against the signed bytes.
    `MaintenanceTool.exe`. Each test installation checks that the installed tool is the shipped one (checksum)
    and, on release builds, its signature with `signtool verify /pa`.
 4. `signtool verify /pa` checks each signed file and the installed app of each test installation.
+
+**Linux** has no separately signed tool: Linux installers are not signed, and the Framework writes the tool from
+its own binary. The tool's component exists on Linux too, but carries only `installer-runtime/`, the libraries the
+tool loads, so an update swaps them like the macOS bundle and a failed update puts them back (ADR-0071,
+[ADR-0108](0108-replacing-the-maintenance-tools-own-files.md)).
 
 **When signing runs.** Only for release builds of the installer workflow on `main` in this repository: a manual
 run with a release plan or a preview-release preparation. `EDI_CODESIGN` is set for those runs and every signing

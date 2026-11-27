@@ -9,6 +9,10 @@
 - **Supersedes:** the version scheme of [ADR-0072](0072-calendar-releases-and-application-updates.md) (its
   `YYYY.MM.SEQUENCE`); the rest of ADR-0072 stands.
 
+**Amended 2026-11-27 ([ADR-0108](0108-replacing-the-maintenance-tools-own-files.md)):** how the Maintenance Tool's
+files are swapped, recovered and cleaned up (decision 5) moved there, and Linux now updates the tool's runtime the same
+way.
+
 ## Context
 
 ADR-0072 numbered releases `YYYY.MM.SEQUENCE`. Users read a name such as `Installer-2026.11.30` as a date, and the
@@ -45,25 +49,14 @@ Once the tool was replaced, it still showed the old release's pages, which the f
 5. **An update replaces the Maintenance Tool** on macOS and Windows. The component that carries the signed tool
    unpacks it on an update too, from operations that run only for a component being updated. On Windows its script
    calls `installer.setInstallerBaseBinary` and the framework swaps the tool once it quits. On macOS the framework
-   leaves the staged bundle in place on an update, so an operation of the component runs `maintenance_swap.sh`: it
-   can run again after any failure, never leaves the tool's place empty except between two renames, keeps the
-   installed bundle as `MaintenanceTool.app.old`, and puts it back if it fails; its undo (`maintenance_restore.sh`)
-   puts it back after a rollback. Qt IFW saves the operation and, in the next update, runs its undo before it unpacks
-   the component again, so the backup carries a mark: the operation's token and the process running the update with
-   its start time. The undo restores only in the run that kept the backup and otherwise touches nothing, so undoing a
-   committed operation is harmless even after an update run by the released 2026.11 control script, which leaves its
-   backup behind. The next swap drops a backup with another mark only while a usable tool is in place; when an
-   update stopped between the renames left the backup as the only tool, the swap keeps it as its own until the new
-   tool is in place or it is put back. Such an update saves no operation, and the app opens the tool only at
-   `MaintenanceTool.app`, so the app puts the backup back itself: on start, and before Maintenance or Update opens
-   the tool, a missing tool with a kept one beside it is renamed back and its mark removed, leaving any
-   `MaintenanceTool.app.new` for the retried update to finish the swap with. It does so only once the process the
-   mark names has ended (its number and start time, read with `ps` in the C locale by the scripts and the app alike),
-   so an app opened while an update runs never takes the backup from a swap or undo between its renames; that
-   installation still counts as managed, and the launch actions put the tool back when the update has ended. The control script removes the kept
-   bundle once the update has succeeded with the new tool in place. An update that leaves the component alone keeps the installed tool. Linux has no separate
-   tool and is unchanged. The installer protocol check updates a 2026.11.31 install from a 26.17 repository and
-   checks the tool's checksum afterwards.
+   leaves the staged bundle in place on an update, so an operation of the component swaps it in, keeping the installed
+   bundle until the update has succeeded, and its undo puts that bundle back after a rollback. On Linux, where the
+   Framework writes the tool from its own binary, the same component carries the runtime the tool loads its libraries
+   from, swapped in the same way. The swap, its undo, the lock they share with the app, the cleanup after a successful
+   update and the app's recovery after an interrupted one are
+   [ADR-0108](0108-replacing-the-maintenance-tools-own-files.md). An update that leaves the component alone keeps the
+   installed tool. The installer protocol check updates a 2026.11.31 install from a 26.17 repository and checks the
+   tool's checksum afterwards.
 6. **An update also replaces the Maintenance Tool's pages**, on every platform. The framework keeps the tool's
    configuration, control script, style sheet and the `-r` resources (the English text and the images) in
    `MaintenanceTool.dat`, which the running tool writes at the end of every update by copying the resources the old

@@ -883,6 +883,9 @@ AppDialog {
             id: aiPage
             implicitHeight: Math.min(aiContent.implicitHeight, Math.max(0, dialog.parent.height - bar.implicitHeight - AppSizes.unit * 8))
             readonly property var original: ApplicationInfo.assistantBuilt ? Session.assistant : null
+            // Voice input is built with the assistant; the web build has no VoiceInput.
+            readonly property bool voiceAvailable: ApplicationInfo.assistantBuilt ? VoiceInput.available : false
+            readonly property var speechLanguages: ApplicationInfo.assistantBuilt ? VoiceInput.languages : []
             property string copyError: ""
             onOriginalChanged: if (ApplicationInfo.assistantBuilt)
                 ApplicationInfo.preferenceAssistantChanged()
@@ -1006,6 +1009,29 @@ AppDialog {
                     textFormat: Text.PlainText
                     wrapMode: Text.WrapAnywhere
                     color: EaStyle.Colors.red
+                }
+                GroupTitle {
+                    first: false
+                    icon: "microphone"
+                    text: qsTr("Voice input")
+                    visible: aiPage.voiceAvailable
+                }
+                TabRow {
+                    visible: aiPage.voiceAvailable
+                    Field {
+                        label: qsTr("Speech language")
+                        // A hundred languages: the searchable box every long list uses (edi ADR-0017 §7).
+                        SearchableComboBox {
+                            objectName: "preferences.speechLanguage"
+                            width: dialog.columnWidth
+                            elide: Text.ElideRight
+                            model: aiPage.speechLanguages
+                            textRole: "name"
+                            currentIndex: Math.max(0, aiPage.speechLanguages.findIndex(language => language.code === Preferences.assistantSpeechLanguage))
+                            onActivated: index => Preferences.assistantSpeechLanguage = aiPage.speechLanguages[index].code
+                            ToolTip.text: qsTr("The language you speak. Detect works it out from the recording; a fixed language is faster")
+                        }
+                    }
                 }
                 GroupTitle {
                     first: false

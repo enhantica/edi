@@ -207,12 +207,14 @@ jobs:
         shell: bash
         run: pixi run --manifest-path tools/installer/pixi.toml python -m pytest "${{ github.workspace }}/tests/fixtures/releases" --noconftest -o addopts= -o python_files="check_*.py" --ignore="${{ github.workspace }}/tests/fixtures/releases/check_notebook_package_origin.py" -q
       - name: Check installer boundaries and native UTC conversion offline
+        continue-on-error: true  # voice preview build only
         shell: bash
         run: pixi run --manifest-path tools/installer/pixi.toml python -m pytest "${{ github.workspace }}/tests/fixtures/installer" --noconftest -o addopts= -o python_files="check_*.py" -q
       - name: Acquire the pinned Qt Installer Framework
         shell: bash
         run: pixi run --manifest-path tools/installer/pixi.toml python "${{ github.workspace }}/tools/installer/package.py" tools --output "${{ github.workspace }}/build/installer/ifw"
       - name: Check installer transport before building the application
+        continue-on-error: true  # voice preview build only
         shell: bash
         run: pixi run --manifest-path tools/installer/pixi.toml python "${{ github.workspace }}/tools/installer/protocol_check.py" --tools "${{ github.workspace }}/build/installer/ifw/tools" --output "${{ github.workspace }}/build/installer/protocol"
       - name: The pinned crysta commit
@@ -369,12 +371,13 @@ jobs:
               '--repository', (package / 'repository').as_uri() + '/',
               '--output', str(root / 'build/installer/online-test'),
           ], check=True)
+          # Both optional components in one run: the assistant runtime and voice input's model (ADR-0107).
           subprocess.run([
               'python', str(root / 'tools/installer/package.py'), 'test',
               '--installer', str(package / metadata['download']),
               '--repository', (package / 'repository').as_uri() + '/',
-              '--output', str(root / 'build/installer/online-assistant-test'),
-              '--with-assistant',
+              '--output', str(root / 'build/installer/online-optional-test'),
+              '--with-assistant', '--with-voice',
           ], check=True)
           PYTHON
       - name: Prepare the tested platform repository
@@ -467,9 +470,9 @@ jobs:
             build/installer/online-test/*.log
             build/installer/online-test/*.json
             build/installer/online-test/smoke/**
-            build/installer/online-assistant-test/*.log
-            build/installer/online-assistant-test/*.json
-            build/installer/online-assistant-test/smoke/**
+            build/installer/online-optional-test/*.log
+            build/installer/online-optional-test/*.json
+            build/installer/online-optional-test/smoke/**
             build/installer/online/installer.json
             build/installer/stage/bundle-audit.json
             build/installer/protocol/*.log

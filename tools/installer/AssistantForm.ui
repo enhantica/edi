@@ -2,9 +2,9 @@
 <!-- SPDX-License-Identifier: BSD-3-Clause -->
 <!-- The folder field and the choices on the installer's one page (assistantscript.qs, Installer.qs): the folder
      with the space the installation needs under it, then one group of EasyDiffraction, the Maintenance Tool (both
-     ticked and fixed) and the AI assistant with their sizes, then the licence and a desktop shortcut on Windows and
-     Linux. Also the maintenance tool's choice page when adding, removing or updating: the logo and heading, the space
-     line and the same three rows; it has no window title, so that page has no header. The Maintenance Tool's row
+     ticked and fixed), the AI assistant and voice input with their sizes, then the licence and a desktop shortcut on
+     Windows and Linux. Also the maintenance tool's choice page when adding, removing or updating: the logo and heading,
+     the space line and the same rows; it has no window title, so that page has no header. The Maintenance Tool's row
      and the sizes are there from the start, so the rows are spaced once, with every row in place. -->
 <ui version="4.0">
  <class>AssistantForm</class>
@@ -93,6 +93,14 @@
      <property name="visible">
       <bool>false</bool>
      </property>
+     <!-- Never shorter than the field and Browse (37 px inside a 1 px border, Installer.qss), so the space line
+          under it cannot overlap them. -->
+     <property name="minimumSize">
+      <size>
+       <width>0</width>
+       <height>39</height>
+      </size>
+     </property>
      <layout class="QHBoxLayout" name="FolderRow">
       <property name="spacing">
        <number>8</number>
@@ -111,6 +119,12 @@
       </property>
       <item>
        <widget class="QLineEdit" name="FolderLineEdit">
+        <property name="minimumSize">
+         <size>
+          <width>0</width>
+          <height>39</height>
+         </size>
+        </property>
         <property name="accessibleName">
          <string>Install to</string>
         </property>
@@ -118,6 +132,12 @@
       </item>
       <item>
        <widget class="QPushButton" name="FolderBrowseButton">
+        <property name="minimumSize">
+         <size>
+          <width>0</width>
+          <height>39</height>
+         </size>
+        </property>
         <property name="text">
          <string>Browse…</string>
         </property>
@@ -343,6 +363,64 @@
       </item>
       <item>
        <widget class="QLabel" name="AssistantSizeLabel"/>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <!-- Voice input, under the AI assistant: shown where the installer has the component (Installer.qs). -->
+   <item>
+    <widget class="QWidget" name="VoiceRowGap">
+     <property name="minimumSize">
+      <size>
+       <width>0</width>
+       <height>8</height>
+      </size>
+     </property>
+     <property name="maximumSize">
+      <size>
+       <width>16777215</width>
+       <height>8</height>
+      </size>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QWidget" name="VoiceBox">
+     <property name="visible">
+      <bool>false</bool>
+     </property>
+     <layout class="QHBoxLayout" name="VoiceRow">
+      <property name="spacing">
+       <number>8</number>
+      </property>
+      <property name="leftMargin">
+       <number>0</number>
+      </property>
+      <property name="topMargin">
+       <number>0</number>
+      </property>
+      <property name="rightMargin">
+       <number>0</number>
+      </property>
+      <property name="bottomMargin">
+       <number>0</number>
+      </property>
+      <item>
+       <widget class="QCheckBox" name="VoiceCheckBox">
+        <property name="text">
+         <string>Voice input for AI assistant</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <spacer name="VoiceSizeSpacer">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+       </spacer>
+      </item>
+      <item>
+       <widget class="QLabel" name="VoiceSizeLabel"/>
       </item>
      </layout>
     </widget>

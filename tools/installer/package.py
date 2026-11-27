@@ -21,6 +21,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'tools/release'))
+sys.path.insert(0, str(ROOT / 'tools/deps/voice'))
+import fetch as voice_models  # noqa: E402
 import versions  # noqa: E402
 
 sys.path.insert(0, str(ROOT / 'tools/installer'))
@@ -30,7 +32,12 @@ SYSTEM = {'Linux': 'linux', 'Darwin': 'macos', 'Windows': 'windows'}[platform.sy
 APP_COMPONENT = 'org.easydiffraction.app'
 ASSISTANT_COMPONENT = 'org.easydiffraction.app.assistant'
 ASSISTANT_RUNTIME = Path('libexec/edi/codex')
-# macOS and Windows ship their maintenance tool as a signed, app-versioned component (ADR-0091).
+# The speech model for voice input and its manifest, an optional component (ADR-0107). On macOS
+# it sits beside the signed application bundle, as the assistant runtime does.
+VOICE_COMPONENT = 'org.easydiffraction.app.voice'
+VOICE_MODEL = Path('share/edi/voice')
+# macOS and Windows ship their maintenance tool as a signed, app-versioned component (ADR-0091);
+# Linux ships only the tool's runtime in it (ADR-0108).
 MAINTENANCE_COMPONENT = 'org.easydiffraction.app.maintenancetool'
 # The id each component replaced, so an install made before edi ADR-0091 updates in place.
 REPLACED_COMPONENTS = {
@@ -306,8 +313,9 @@ def write_resources(config: Path, configuration: ET.ElementTree) -> Path:
 def write_controller(config: Path, tool_bytes: int = 0) -> None:
     """Write the window's stylesheet and the controller, holding both wordmarks and page themes.
 
-    `tool_bytes` is the maintenance tool's size, which its component (it has no payload on Linux)
-    cannot say: the pages show it on the tool's row.
+    `tool_bytes` is the size of the Framework's binary, which the installation writes as the tool
+    on Linux and on a fresh install elsewhere. No component holds it: on Linux the tool's component
+    carries only its runtime. The pages show it on the tool's row.
 
     The Framework loads one stylesheet for the whole app, before scripts run, so the window around
     the pages follows the system palette (InstallerChrome.qss); the controller gives each page
@@ -359,13 +367,15 @@ def write_metadata(
             # (InstallerChrome.qss), the logo heading each page's content (Installer.qs).
             'WizardStyle': 'Modern',
             'WizardDefaultWidth': '640',
-            # The tallest page, the install page, at 14 px text (a 19 px line in Segoe UI, 17 in
-            # DejaVu Sans and Helvetica Neue): the logo 44 and its 32 px step, "Install to", 8, the
-            # folder 39, 8, the space line, 24, two check box rows with 8 between, 24, the licence
-            # and shortcut rows: 309 px on Windows. An installation already in the folder adds its
-            # two-line warning and 24 (62 on Windows). Qt's margins around the page and its buttons
-            # (11 and 9 px, the buttons 39) add 101: 472 on Windows with the warning.
-            'WizardDefaultHeight': '480',
+            # The tallest page is the install page with an installation already in the folder: the
+            # two-line warning and all four component rows. At 14 px text: the logo 44 and its 32
+            # px step, the warning's two lines and 24, "Install to", 8, the folder 39, 8, the space
+            # line, 24, four check box rows with 8 between, 24, the licence and shortcut rows. Qt's
+            # margins and its buttons add about 100. Windows (Segoe UI, 19 px lines and rows):
+            # 425 + 101 = 526. Linux (DejaVu Sans, 17 px): 405 + 100 = 505, measured. macOS draws
+            # check box rows 24 high, has no shortcut row and larger margins: 419 + 118 = 537,
+            # measured. A few pixels spare on each.
+            'WizardDefaultHeight': {'macos': '540', 'windows': '530'}.get(SYSTEM, '510'),
             # One centred column, no step list (the owner's three-page design, edi ADR-0071).
             'WizardShowPageList': 'false',
             'ControlScript': 'Installer.qs',
@@ -422,9 +432,13 @@ def write_metadata(
             # Listed first wherever components are (the Framework orders by this, higher first).
             'SortingPriority': '200',
             'Script': 'installscript.qs',
+            # Linux installations from before ADR-0108 have no tool component, and an update only
+            # offers components already installed; as a dependency of the app it comes with the
+            # update that takes the runtime out of the app component.
+            **({'Dependencies': MAINTENANCE_COMPONENT} if SYSTEM == 'linux' else {}),
         },
     )
-    shutil.copy2(ROOT / 'tools/installer/installscript.qs', meta / 'installscript.qs')
+    (meta / 'installscript.qs').write_text(app_script(), encoding='utf-8')
     # No <Licenses>: the GPL needs no acceptance page, so the install page has a ticked box and a
     # link to read it (Installer.qs); the licence text ships with the app.
     ET.indent(root)
@@ -459,6 +473,80 @@ def write_assistant_metadata(meta: Path, version: str) -> None:
         shutil.copy2(ROOT / 'tools/installer' / name, meta / name)
 
 
+def write_voice_metadata(meta: Path, version: str) -> None:
+    """Voice input's component; its row is on the assistant's form (Installer.qs)."""
+    xml_file(
+        meta / 'package.xml',
+        'Package',
+        {
+            'DisplayName': 'Voice input for AI assistant',
+            # Package metadata only: the row shows the name and size, no description.
+            'Description': 'Speech recognition on this computer for the AI assistant.',
+            'Version': version,
+            'ReleaseDate': datetime.datetime.now(datetime.UTC).date().isoformat(),
+            'Dependencies': APP_COMPONENT,
+            'Default': 'false',
+            'RequiresAdminRights': 'false',
+            'SortingPriority': '90',  # after the AI assistant
+        },
+    )
+
+
+def release_voice_pin() -> dict:
+    """The committed pin of the model the voice component ships (models.json).
+
+    Tests replace this function to package placeholder bytes; packaging always checks against it.
+    """
+    return voice_models.pins()['models']['small']
+
+
+def write_voice_manifest(folder: Path, pin: dict) -> None:
+    """Write the voice-model.json the app reads beside the model, from the pin."""
+    manifest = {
+        'schema': voice_models.MANIFEST_SCHEMA,
+        'file': pin['file'],
+        'bytes': pin['bytes'],
+        'sha256': pin['sha256'],
+    }
+    path = folder / voice_models.MANIFEST
+    # A staged manifest is replaced, never written through (it could be a link).
+    path.unlink(missing_ok=True)
+    path.write_text(json.dumps(manifest, indent=2) + '\n', encoding='utf-8')
+
+
+def stage_voice_model(stage: Path) -> Path:
+    """Put the pinned speech model and its manifest under share/edi/voice in the stage.
+
+    The model is downloaded once into the shared cache and checked against its pin there; the app
+    never downloads it.
+    """
+    pin = release_voice_pin()
+    model = voice_models.fetch('small')
+    folder = stage / VOICE_MODEL
+    folder.mkdir(parents=True)
+    shutil.copy2(model, folder / model.name)
+    check_voice_model(folder, pin)
+    write_voice_manifest(folder, pin)
+    return folder
+
+
+def check_voice_model(folder: Path, pin: dict) -> None:
+    """Require the pinned model at its pinned size and SHA-256, and nothing else but a manifest.
+
+    A staged manifest is not trusted: packaging writes it again from the pin.
+    """
+    name = pin.get('file', '')
+    if not name or Path(name).name != name or name == voice_models.MANIFEST:
+        raise RuntimeError('The voice model pin names no plain model file')
+    model = folder / name
+    if model.is_symlink() or not model.is_file():
+        raise RuntimeError(f'The stage has no voice model {name}')
+    if not {path.name for path in folder.iterdir()} <= {name, voice_models.MANIFEST}:
+        raise RuntimeError('The voice model folder holds other files')
+    if model.stat().st_size != pin.get('bytes') or sha256(model) != pin.get('sha256'):
+        raise RuntimeError(f'The staged {name} differs from its pinned size or SHA-256')
+
+
 def write_maintenance_tool_metadata(meta: Path, version: str) -> None:
     xml_file(
         meta / 'package.xml',
@@ -480,23 +568,56 @@ def write_maintenance_tool_metadata(meta: Path, version: str) -> None:
     (meta / 'maintenancescript.qs').write_text(maintenance_script(), encoding='utf-8')
 
 
-def maintenance_script() -> str:
-    """The tool component's script, the macOS swap and its undo written in as string literals."""
+SHELL_SCRIPTS = {
+    'EDI_SWAP_SCRIPT': 'maintenance_swap.sh',
+    'EDI_RESTORE_SCRIPT': 'maintenance_restore.sh',
+    'EDI_CLEANUP_SCRIPT': 'maintenance_cleanup.sh',
+}
+
+
+def with_shell_scripts(name: str, markers: tuple[str, ...]) -> str:
+    """A component script with the named shell scripts written in as string literals (ADR-0108)."""
     folder = ROOT / 'tools/installer'
-    script = (folder / 'maintenancescript.qs').read_text(encoding='utf-8')
-    for marker, name in (
-        ('EDI_SWAP_SCRIPT', 'maintenance_swap.sh'),
-        ('EDI_RESTORE_SCRIPT', 'maintenance_restore.sh'),
-    ):
+    script = (folder / name).read_text(encoding='utf-8')
+    for marker in markers:
         quoted = f'"@{marker}@"'
         if script.count(quoted) != 1:
-            raise RuntimeError(f'maintenancescript.qs must name {quoted} once')
-        script = script.replace(quoted, json.dumps((folder / name).read_text(encoding='utf-8')))
+            raise RuntimeError(f'{name} must name {quoted} once')
+        text = (folder / SHELL_SCRIPTS[marker]).read_text(encoding='utf-8')
+        script = script.replace(quoted, json.dumps(text))
     return script
+
+
+def maintenance_script() -> str:
+    """The tool component's script with the swap, its undo and the cleanup after an update."""
+    return with_shell_scripts('maintenancescript.qs', tuple(SHELL_SCRIPTS))
+
+
+def app_script() -> str:
+    """The app component's script with the swap and its undo.
+
+    They keep the Linux tool's runtime through the first update off a release whose app component
+    carried it.
+    """
+    return with_shell_scripts('installscript.qs', ('EDI_SWAP_SCRIPT', 'EDI_RESTORE_SCRIPT'))
 
 
 def maintenance_tool_name() -> str:
     return 'MaintenanceTool.app' if SYSTEM == 'macos' else 'MaintenanceTool.exe'
+
+
+def maintenance_item() -> str:
+    """The folder an update swaps in place of the installed one (maintenance_swap.sh, ADR-0108).
+
+    Windows swaps no folder; the Framework replaces the tool there.
+    """
+    return {'macos': 'MaintenanceTool.app', 'linux': 'installer-runtime'}.get(SYSTEM, '')
+
+
+def maintenance_probe() -> str:
+    """The file inside the swapped folder that makes it usable."""
+    probes = {'macos': 'Contents/MacOS/MaintenanceTool', 'linux': 'dependencies.json'}
+    return probes.get(SYSTEM, '')
 
 
 def maintenance_tool_executable(bundle: Path) -> Path:
@@ -639,6 +760,36 @@ def add_maintenance_tool(
     return sha256(maintenance_tool_executable(target))
 
 
+def add_maintenance_runtime(packages: Path, runtime: Path, version: str) -> None:
+    """Linux: put the tool's runtime into the tool component, staged for the swap (ADR-0108).
+
+    The app component no longer carries it, so undoing the app's operations never takes the
+    libraries the tool loads through its rpath ($ORIGIN/installer-runtime/lib).
+    """
+    meta = packages / MAINTENANCE_COMPONENT / 'meta'
+    meta.mkdir(parents=True)
+    write_maintenance_tool_metadata(meta, version)
+    target = meta.parent / 'data/maintenancetool' / maintenance_item()
+    target.parent.mkdir(parents=True)
+    shutil.copytree(runtime, target, symlinks=True)
+    if not (target / maintenance_probe()).is_file():
+        raise RuntimeError(f'The tool runtime has no {maintenance_probe()}')
+
+
+def check_maintenance_runtime(target: Path) -> None:
+    """Linux: require the tool and every library its runtime lists, with the listed bytes."""
+    if not (target / 'MaintenanceTool').is_file():
+        raise RuntimeError(f'Maintenance tool is missing: {target / "MaintenanceTool"}')
+    runtime = target / maintenance_item()
+    listing = runtime / maintenance_probe()
+    if not listing.is_file():
+        raise RuntimeError(f'The maintenance tool has no runtime: {listing} is missing')
+    for name, expected in json.loads(listing.read_text(encoding='utf-8')).items():
+        library = runtime / 'lib' / name
+        if not library.is_file() or sha256(library) != expected:
+            raise RuntimeError(f'The maintenance tool runtime lacks or changed lib/{name}')
+
+
 def add_maintenance_resource(source: Path, tools: Path, environment: dict | None) -> None:
     """Ship the maintenance tool's pages with the app component, for updates to put in place."""
     meta = source / 'packages' / APP_COMPONENT / 'meta'
@@ -659,20 +810,39 @@ def add_maintenance_resource(source: Path, tools: Path, environment: dict | None
     script.write_text(text.replace(unnamed, named), encoding='utf-8')
 
 
-def verify_installed_maintenance_tool(target: Path, metadata: dict) -> None:
-    """Before running it, require the installed tool to be the shipped one (edi ADR-0091)."""
-    if SYSTEM not in {'macos', 'windows'}:
-        return
-    bundle = target / maintenance_tool_name()
-    check_maintenance_tool(bundle)
-    expected = metadata.get('maintenance_tool_sha256')
-    if expected and sha256(maintenance_tool_executable(bundle)) != expected:
-        raise RuntimeError(
-            'The installer wrote its own maintenance tool instead of the signed one'
-        )
-    if SYSTEM == 'macos' and (target / 'maintenancetool').exists():
+def verify_installed_maintenance_tool(
+    target: Path, metadata: dict, *, updated: bool = False
+) -> None:
+    """Before running it, require the installed tool to be the shipped one (edi ADR-0091).
+
+    Linux has no signed tool: its runtime must be complete instead. No staging folder and no
+    backup may be left (ADR-0108). Windows keeps the staged tool after a fresh install, and after
+    an update until the app's next start removes it: the Framework writes the installed tool only
+    after the update's last signal. So once `updated`, the staged tool must be the installed one.
+    """
+    if SYSTEM == 'linux':
+        check_maintenance_runtime(target)
+    else:
+        bundle = target / maintenance_tool_name()
+        check_maintenance_tool(bundle)
+        expected = metadata.get('maintenance_tool_sha256')
+        if expected and sha256(maintenance_tool_executable(bundle)) != expected:
+            raise RuntimeError(
+                'The installer wrote its own maintenance tool instead of the signed one'
+            )
+    staging = target / 'maintenancetool'
+    if SYSTEM == 'windows' and updated and staging.exists():
+        staged = [path.name for path in staging.iterdir()]
+        installed = target / maintenance_tool_name()
+        if staged != [installed.name] or sha256(staging / installed.name) != sha256(installed):
+            raise RuntimeError(
+                f'The update left a staged maintenance tool the app keeps: {staged}'
+            )
+    # is_dir: on a case-insensitive disk the Linux tool itself answers to this name.
+    elif staging.is_dir() and SYSTEM != 'windows':
         raise RuntimeError('The installer left the shipped maintenance tool in place')
-    if SYSTEM == 'macos' and (target / 'MaintenanceTool.app.old').exists():
+    item = maintenance_item()
+    if item and any((target / (item + suffix)).exists() for suffix in ('.old', '.old-token')):
         raise RuntimeError('The update left the replaced maintenance tool behind')
 
 
@@ -997,10 +1167,12 @@ def macos_installer_template(tools: Path, output: Path) -> Path:
     return thin
 
 
-# The disk image window in points: its content 400 wide and 250 high under a 28-point title bar,
-# centred on a 1440 by 900 screen, and the installer's icon in the window's middle, under the
-# background's "Double-click to install" (disk_image_background.qml), its label below.
-DISK_IMAGE_WINDOW = ((520, 311), (400, 278))
+# The disk image window in points: its content 400 wide and 272 high under a 28-point title bar,
+# centred on a 1440 by 900 screen, the installer's icon under the background's "Double-click to
+# install" (disk_image_background.qml), its label below. A Finder showing its tab bar hides the
+# content's bottom 40 points, leaving 232: the text's top 36 points down and the label's bottom
+# at 196 then leave about 36 above and below.
+DISK_IMAGE_WINDOW = ((520, 300), (400, 300))
 DISK_IMAGE_ICON = (200, 125)
 
 
@@ -1208,6 +1380,25 @@ def installerbase_bytes(tools: Path) -> int:
     return base.stat().st_size if base.exists() else 0
 
 
+def prepare_voice_component(data: Path, package: Path, version: str) -> None:
+    """Move the staged model from the app's payload into the voice component, with a manifest."""
+    pin = release_voice_pin()
+    check_voice_model(data / VOICE_MODEL, pin)
+    write_voice_manifest(data / VOICE_MODEL, pin)
+    voice_data = package / 'data'
+    (package / 'meta').mkdir(parents=True)
+    (voice_data / VOICE_MODEL).parent.mkdir(parents=True)
+    shutil.move(data / VOICE_MODEL, voice_data / VOICE_MODEL)
+    # Where share/edi held only the model, no empty folder stays in the app's payload.
+    for folder in [data / VOICE_MODEL.parent, data / VOICE_MODEL.parent.parent]:
+        if folder.is_dir() and not any(folder.iterdir()):
+            folder.rmdir()
+    (voice_data / 'voice-payload-manifest.json').write_text(
+        json.dumps(payload_manifest(voice_data), indent=2) + '\n'
+    )
+    write_voice_metadata(package / 'meta', version)
+
+
 def prepare_installer_source(
     stage: Path,
     tools: Path,
@@ -1238,12 +1429,15 @@ def prepare_installer_source(
         json.dumps(payload_manifest(assistant_data), indent=2) + '\n'
     )
     write_assistant_metadata(assistant_meta, version)
+    # Voice input comes from build.py's stage; a marker stage without it makes an installer
+    # without the component, which the qualification run with --with-voice refuses.
+    if (data / VOICE_MODEL).exists():
+        prepare_voice_component(data, packages / VOICE_COMPONENT, version)
     template_args, tool_environment = [], None
     runtime = None
     if SYSTEM == 'linux':
         template, runtime, tool_environment = linux_installer_runtime(tools, output)
         template_args = ['-t', template]
-        shutil.copytree(runtime, data / runtime.name)
     elif SYSTEM == 'macos':
         template_args = ['-t', macos_installer_template(tools, output)]
     (data / 'update-channel.txt').write_text(channel + '\n', encoding='utf-8')
@@ -1298,11 +1492,13 @@ def package_app(
     source, template_args, tool_environment, runtime = prepare_installer_source(
         stage, tools, output, version, repository_url, mirrors, channel
     )
-    maintenance_sha256 = (
-        add_maintenance_tool(source / 'packages', maintenance_tool, tools, output, version)
-        if SYSTEM in {'macos', 'windows'}
-        else None
-    )
+    maintenance_sha256 = None
+    if SYSTEM in {'macos', 'windows'}:
+        maintenance_sha256 = add_maintenance_tool(
+            source / 'packages', maintenance_tool, tools, output, version
+        )
+    else:
+        add_maintenance_runtime(source / 'packages', runtime, version)
     if repository_url:
         # Every online release, Linux included: only an update can refresh the tool's pages.
         add_maintenance_resource(source, tools, tool_environment)
@@ -1605,13 +1801,20 @@ def installer_from_download(download: Path, output: Path) -> Path:
     return download
 
 
-def verify_installed_payload(target: Path, *, with_assistant: bool) -> None:
+def verify_installed_payload(
+    target: Path, *, with_assistant: bool, with_voice: bool = False
+) -> None:
     manifest = json.loads((target / 'payload-manifest.json').read_text(encoding='utf-8'))
     optional_manifest = target / 'assistant-payload-manifest.json'
     if with_assistant:
         manifest.update(json.loads(optional_manifest.read_text(encoding='utf-8')))
     elif optional_manifest.exists() or (target / ASSISTANT_RUNTIME).exists():
         raise RuntimeError('The default installation includes the optional assistant')
+    voice_manifest = target / 'voice-payload-manifest.json'
+    if with_voice:
+        manifest.update(json.loads(voice_manifest.read_text(encoding='utf-8')))
+    elif voice_manifest.exists() or (target / VOICE_MODEL).exists():
+        raise RuntimeError('The installation includes voice input without asking for it')
     for name, expected in manifest.items():
         path = target / name
         if 'sha256' in expected and (not path.is_file() or sha256(path) != expected['sha256']):
@@ -1632,7 +1835,12 @@ def verify_installed_identity(metadata: dict, receipt: dict) -> None:
 
 
 def exercise_installer(
-    installer: Path, output: Path, repository: str | None = None, *, with_assistant: bool = False
+    installer: Path,
+    output: Path,
+    repository: str | None = None,
+    *,
+    with_assistant: bool = False,
+    with_voice: bool = False,
 ) -> None:
     output = output.resolve()
     output.mkdir(parents=True, exist_ok=True)
@@ -1662,6 +1870,7 @@ def exercise_installer(
                 '--confirm-command',
                 'install',
                 *([ASSISTANT_COMPONENT] if with_assistant else []),
+                *([VOICE_COMPONENT] if with_voice else []),
             ],
             env=env,
             stdout=log,
@@ -1674,7 +1883,7 @@ def exercise_installer(
         else 'bin/EasyDiffraction' + SUFFIX
     )
     try:
-        verify_installed_payload(target, with_assistant=with_assistant)
+        verify_installed_payload(target, with_assistant=with_assistant, with_voice=with_voice)
         app = target / (
             'EasyDiffraction.app/Contents/MacOS/EasyDiffraction'
             if SYSTEM == 'macos'
@@ -1686,10 +1895,22 @@ def exercise_installer(
         if (
             not receipt.get('passed')
             or receipt.get('assistant_available') is not with_assistant
+            or receipt.get('voice_available') is not with_voice
             or not receipt.get('svg_images')
             or not (output / 'smoke/window.png').is_file()
         ):
             raise RuntimeError('Installed application smoke check failed')
+        # With voice input the installed model must load and recognise a second of silence, and
+        # macOS needs its microphone permission plugin linked (true elsewhere).
+        if with_voice and not (
+            receipt.get('voice_recognition') is True
+            and receipt.get('microphone_permission_backend') is True
+        ):
+            raise RuntimeError(
+                'Installed voice input failed: no recognition or no microphone permission plugin'
+            )
+        if not with_voice and receipt.get('voice_recognition') is not False:
+            raise RuntimeError('Installed application recognises speech without voice input')
         if windows_signing():
             verify_windows_signature(app)
         if SYSTEM == 'linux':
@@ -1798,8 +2019,8 @@ def main() -> None:
     test.add_argument('--output', type=Path, required=True)
     test.add_argument('--repository')
     test.add_argument('--with-assistant', action='store_true')
-    seal = commands.add_parser('seal')
-    seal.add_argument('--output', type=Path, required=True)
+    test.add_argument('--with-voice', action='store_true')
+    commands.add_parser('seal').add_argument('--output', type=Path, required=True)
     args = parser.parse_args()
     if args.command == 'relocate-linux':
         relocate_linux(args.stage, args.patchelf, args.qt_prefix)
@@ -1833,7 +2054,11 @@ def main() -> None:
         seal_installer(args.output)
     else:
         exercise_installer(
-            args.installer, args.output, args.repository, with_assistant=args.with_assistant
+            args.installer,
+            args.output,
+            args.repository,
+            with_assistant=args.with_assistant,
+            with_voice=args.with_voice,
         )
 
 

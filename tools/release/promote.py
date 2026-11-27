@@ -334,9 +334,10 @@ def stage_optional_assets(output: Path, assets: Path, release: dict) -> None:
 
 APP_COMPONENT = 'org.easydiffraction.app'
 APP_COMPONENTS = frozenset({APP_COMPONENT, 'org.easydiffraction.app.assistant'})
-# macOS and Windows install their separately signed maintenance tool from it (edi ADR-0091).
+# macOS and Windows install their separately signed maintenance tool from it, Linux the tool's
+# own runtime (edi ADR-0091, ADR-0108).
 MAINTENANCE_COMPONENT = 'org.easydiffraction.app.maintenancetool'
-MAINTENANCE_PLATFORMS = frozenset({'macos-arm64', 'windows-x86_64'})
+MAINTENANCE_PLATFORMS = frozenset({'linux-x86_64', 'macos-arm64', 'windows-x86_64'})
 
 
 def component_names(platform: str) -> frozenset[str]:

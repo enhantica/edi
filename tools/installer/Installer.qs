@@ -10,17 +10,31 @@ function clearQuarantine() {
         installer.execute("/usr/bin/xattr", ["-r", "-d", "com.apple.quarantine", target]);
 }
 
-// macOS: the maintenance tool an update replaced is kept (maintenance_swap.sh) until the update has succeeded with the
-// new tool in place; then it goes. The Framework signals the end of an update, a successful one or one rolled back,
-// as installationFinished, so the status and the tool are checked first: after a rollback the kept tool was put
-// back by the swap's undo and nothing is removed.
-function dropOldTool() {
-    if (systemInfo.kernelType !== "darwin" || !installer.isUpdater() || installer.status !== QInstaller.Success)
+// After a successful update the kept tool and the staging folder are removed by the tool component's script
+// (maintenancescript.qs), which comes with the release being installed and so runs inside an older tool too; this
+// script is the running tool's own and may be older than the fix (edi ADR-0108).
+
+// Purge: the Framework removes what its operations wrote, but the tool's own files reached their place through the
+// swap, not an operation, so they are removed here: the Linux Qt runtime, any kept copy of the tool, the staging
+// folder and the lock file. The running tool has already loaded its libraries. After a failed removal the tool may
+// still be needed, so nothing goes then (edi ADR-0108).
+function removeToolFiles() {
+    if (!installer.isUninstaller() || installer.status !== QInstaller.Success)
         return;
     var target = installer.value("TargetDir");
-    if (target === "" || !installer.fileExists(target + "/MaintenanceTool.app/Contents/MacOS/MaintenanceTool"))
+    if (target === "")
         return;
-    installer.execute("/bin/rm", ["-rf", target + "/MaintenanceTool.app.old", target + "/MaintenanceTool.app.old-token"]);
+    var lock = ".MaintenanceTool.lock";
+    if (systemInfo.kernelType === "winnt") {
+        if (installer.fileExists(target + "/" + lock))
+            installer.performOperation("Delete", [target + "/" + lock]);
+        return;
+    }
+    var item = systemInfo.kernelType === "darwin" ? "MaintenanceTool.app" : "installer-runtime";
+    var paths = [item + ".old", item + ".old-token", "maintenancetool", lock];
+    if (systemInfo.kernelType !== "darwin")
+        paths.unshift(item);
+    installer.execute("/bin/rm", ["-rf"].concat(paths.map(function (name) { return target + "/" + name; })));
 }
 
 // Windows: a new installation goes to %LOCALAPPDATA%\Programs\EasyDiffraction, or to
@@ -334,7 +348,7 @@ function Controller() {
     });
     installer.installationFinished.connect(clearQuarantine);
     installer.updateFinished.connect(clearQuarantine);
-    installer.installationFinished.connect(dropOldTool);
+    installer.uninstallationFinished.connect(removeToolFiles);
     // When the work is done the Framework moves on to the last page by itself; should it stay on the progress page,
     // Next is pressed for it, so the tool always ends by saying what it did.
     if (captureFolder === "") {
@@ -721,6 +735,7 @@ Controller.prototype.DynamicAssistantFormCallback = function () {
         box.toggled.connect(function () { choiceSpace(page); });
         choiceHooked = true;
     }
+    setupVoiceChoice(page);
     choiceSpace(page);
     settleSoon(page);
     capture("AssistantForm");
@@ -734,8 +749,8 @@ Controller.prototype.DynamicAssistantFormCallback = function () {
 
 var choiceHooked = false;
 
-// The choice page's space line, as the install page's: what adding the assistant needs (and what the disk has), or
-// what removing it frees.
+// The choice page's space line, as the install page's: what adding the assistant or voice input needs (and what the
+// disk has), or what removing them frees.
 function choiceSpace(page) {
     var label = gui.findChild(page, "SpaceLabel");
     var row = gui.findChild(page, "SpaceBox");
@@ -743,19 +758,16 @@ function choiceSpace(page) {
     if (!label || !row || !box)
         return;
     var sizes = choiceSizes(page);
-    var all = installer.components();
-    var installed = false;
-    for (var i = 0; i < all.length; ++i) {
-        if (all[i].name === assistantComponent)
-            installed = all[i].installed;
-    }
+    var assistant = choiceChange(box, assistantComponent, sizes.assistant);
+    var voice = choiceChange(gui.findChild(page, "VoiceCheckBox"), voiceComponent, sizes.voice);
+    var needed = assistant.needed + voice.needed, freed = assistant.freed + voice.freed;
     var free = freeSpace(String(installer.value("TargetDir")));
     var available = isNaN(free) ? "" : " · " + sizeText(free) + " available";
     var text = "";
-    if (box.checked && !installed)
-        text = sizeText(sizes.assistant) + " needed" + available;
-    else if (!box.checked && installed)
-        text = sizeText(sizes.assistant) + " freed";
+    if (needed > 0)
+        text = sizeText(needed) + " needed" + available;
+    else if (freed > 0)
+        text = sizeText(freed) + " freed";
     label.text = text;
     row.visible = text !== "";
     settleSoon(page);
@@ -764,16 +776,23 @@ function choiceSpace(page) {
 // The assistant checkbox on the folder page decides the component, applied when that page is left and again before
 // the summary counts what is installed: a selection made while the component scripts load does not last.
 var assistantComponent = "org.easydiffraction.app.assistant";
+// Voice input's speech model, optional and unticked (ADR-0107): a row of its own under the AI assistant, decided as
+// the assistant is.
+var voiceComponent = "org.easydiffraction.app.voice";
 var appComponent = "org.easydiffraction.app";
 // The maintenance tool is a hidden (virtual) component, installed and updated with the rest. The pages show it as a
 // row of its own, ticked and fixed as EasyDiffraction, between it and the AI assistant (owner, 2026-11-26).
 var maintenanceComponent = "org.easydiffraction.app.maintenancetool";
-// The tool's size: on Linux its component has no payload (the Framework writes the tool from its own binary), so
-// package.py gives the size of that binary.
+// The size of the Framework's binary (package.py), which an installation writes as its tool where no package holds
+// the tool: on Linux, whose tool component carries only the tool's Qt runtime (edi ADR-0108), and when a script does
+// not see the component at all.
 var toolBytes = Number("@TOOL_BYTES@") || 0;
 
 function componentBytes(c) {
-    return Number(c.value("UncompressedSize") || 0) || (c.name === maintenanceComponent ? toolBytes : 0);
+    var bytes = Number(c.value("UncompressedSize") || 0);
+    if (c.name !== maintenanceComponent)
+        return bytes;
+    return systemInfo.kernelType === "linux" ? bytes + toolBytes : bytes || toolBytes;
 }
 
 // Whether a summary counts the component: what is installed, updated or removed. The maintenance tool's component
@@ -790,6 +809,7 @@ function requested(c, removing) {
 }
 
 var assistantHooked = false;
+var voiceHooked = false;
 
 function assistantChosen() {
     var page = gui.pageWidgetByObjectName("TargetDirectoryPage");
@@ -804,6 +824,57 @@ function applyAssistantChoice() {
         installer.selectComponent(assistantComponent);
     else
         installer.deselectComponent(assistantComponent);
+}
+
+// The voice row is there only where the installer has the component (a marker installer may not).
+function showVoiceRow(page) {
+    var row = page ? gui.findChild(page, "VoiceBox") : null;
+    if (row)
+        row.visible = !!installer.componentByName(voiceComponent);
+}
+
+function voiceChosen() {
+    var page = gui.pageWidgetByObjectName("TargetDirectoryPage");
+    var box = page ? gui.findChild(page, "VoiceCheckBox") : null;
+    return box ? box.checked : false;
+}
+
+function applyVoiceChoice() {
+    if (!installer.isInstaller() || !installer.componentByName(voiceComponent))
+        return;
+    if (voiceChosen())
+        installer.selectComponent(voiceComponent);
+    else
+        installer.deselectComponent(voiceComponent);
+}
+
+// The maintenance tool's choice page: voice input ticked when installed, and a change of the box adds or removes it.
+var voiceChoiceHooked = false;
+
+function setupVoiceChoice(page) {
+    showVoiceRow(page);
+    var box = gui.findChild(page, "VoiceCheckBox");
+    var held = installer.componentByName(voiceComponent);
+    if (!box || !held || voiceChoiceHooked)
+        return;
+    box.checked = held.installed;
+    box.toggled.connect(function (checked) {
+        if (checked)
+            installer.selectComponent(voiceComponent);
+        else
+            installer.deselectComponent(voiceComponent);
+        choiceSpace(page);
+    });
+    voiceChoiceHooked = true;
+}
+
+// What a box on the choice page changes: the component's size needed when it is ticked and not installed, freed when
+// it is cleared and installed.
+function choiceChange(box, name, bytes) {
+    var held = installer.componentByName(name);
+    if (!box || !held)
+        return {needed: 0, freed: 0};
+    return {needed: box.checked && !held.installed ? bytes : 0, freed: !box.checked && held.installed ? bytes : 0};
 }
 
 // Removing everything calls its summary step "Ready to remove" (the Framework's "Installation Summary"); the step list
@@ -869,9 +940,9 @@ function summaryRows(removing, total, boxed, first, unticked) {
     return rows;
 }
 
-// What a summary lists, in the pages' order: EasyDiffraction, the maintenance tool, the AI assistant. The Framework
-// leaves its virtual components out of the list a script reads, so the tool is added here whenever EasyDiffraction is
-// installed or updated (it is installed with it and taken by every update, ADR-0091).
+// What a summary lists, in the pages' order: EasyDiffraction, the maintenance tool, the AI assistant, voice input. The
+// Framework leaves its virtual components out of the list a script reads, so the tool is added here whenever
+// EasyDiffraction is installed or updated (it is installed with it and taken by every update, ADR-0091).
 function summaryEntries(removing) {
     var entries = [];
     var tool = false;
@@ -882,7 +953,8 @@ function summaryEntries(removing) {
             continue;
         tool = tool || c.name === maintenanceComponent;
         entries.push({name: displayName(c), bytes: componentBytes(c), app: c.name === appComponent,
-                      order: c.name === appComponent ? 0 : c.name === maintenanceComponent ? 1 : 2});
+                      order: c.name === appComponent ? 0 : c.name === maintenanceComponent ? 1
+                          : c.name === voiceComponent ? 3 : 2});
     }
     var app = entries.some(function (entry) { return entry.app; });
     if (!removing && !tool && installer.isUpdater()) {
@@ -1072,6 +1144,8 @@ function neededSpace() {
         var name = all[i].name;
         if (name === assistantComponent && !assistantChosen())
             continue;
+        if (name === voiceComponent && !voiceChosen())
+            continue;
         tool = tool || name === maintenanceComponent;
         bytes += componentBytes(all[i]);
     }
@@ -1090,22 +1164,24 @@ function updateSpace() {
 }
 
 // Each choice's size on its right, as the update summary shows them: EasyDiffraction's carries everything that is
-// neither the assistant nor the maintenance tool, so the rows add up to the space line when all are ticked.
+// not the assistant, voice input or the maintenance tool, so the rows add up to the space line when all are ticked.
 function choiceSizes(page) {
     if (!page)
         return;
-    var sizes = {app: 0, assistant: 0, maintenance: 0};
+    var sizes = {app: 0, assistant: 0, voice: 0, maintenance: 0};
     var all = installer.components();
     for (var i = 0; i < all.length; ++i) {
         var bytes = componentBytes(all[i]);
         var part = all[i].name === assistantComponent ? "assistant"
+            : all[i].name === voiceComponent ? "voice"
             : all[i].name === maintenanceComponent ? "maintenance" : "app";
         sizes[part] += bytes;
     }
     // The maintenance tool, which a script does not see among the components (summaryEntries).
     if (sizes.maintenance === 0)
         sizes.maintenance = toolBytes;
-    [["App", sizes.app], ["Assistant", sizes.assistant], ["Maintenance", sizes.maintenance]].forEach(function (row) {
+    [["App", sizes.app], ["Assistant", sizes.assistant], ["Voice", sizes.voice],
+     ["Maintenance", sizes.maintenance]].forEach(function (row) {
         var size = gui.findChild(page, row[0] + "SizeLabel");
         if (size)
             size.text = sizeText(row[1]);
@@ -1115,6 +1191,7 @@ function choiceSizes(page) {
 
 function setupInstallPage(page) {
     showIntro();
+    showVoiceRow(page);
     var link = gui.findChild(page, "LicenseLink");
     if (link) {
         link.textFormat = 1;
@@ -1150,13 +1227,21 @@ function setupInstallPage(page) {
         }
         if (assistantBox)
             assistantBox.toggled.connect(updateSpace);
-        // The folder is probed (its disk, an installation in it) when its editing is done, never per keystroke,
-        // and when Browse sets it (a change while the field has no focus, which ends no editing).
+        var voiceBox = gui.findChild(page, "VoiceCheckBox");
+        if (voiceBox)
+            voiceBox.toggled.connect(updateSpace);
+        // The folder's disk is probed when its editing is done, never per keystroke, and when Browse sets it (a
+        // change while the field has no focus, which ends no editing). An installation in it is looked for on
+        // every change, so the warning above never names a folder no longer chosen.
         if (folder) {
             folder.editingFinished.connect(refreshInstallPage);
             folder.textChanged.connect(function () {
-                if (!folder.focus && !showingShort)
+                if (showingShort)
+                    return;
+                if (!folder.focus)
                     refreshInstallPage();
+                else
+                    followInstallation(String(folder.text));
             });
         }
         if (ownField) {
@@ -1246,7 +1331,7 @@ var licenseRefused = false;
 var formRows = [["Logo", ["FormLogo"], 0], ["Folder", ["FolderLineEdit", "FolderBrowseButton"], 1],
                 ["Space", ["SpaceLabel"], 1],
                 ["App", ["AppCheckBox"], 2], ["Maintenance", ["MaintenanceCheckBox"], 2],
-                ["Assistant", ["AssistantCheckBox"], 2],
+                ["Assistant", ["AssistantCheckBox"], 2], ["Voice", ["VoiceCheckBox"], 2],
                 ["License", ["LicenseCheckBox", "LicenseLink"], 3], ["Shortcut", ["ShortcutCheckBox"], 3],
                 ["Notice", ["NoticeLabel"], 4]];
 
@@ -1457,14 +1542,27 @@ function folderField() {
     return installPageField("FolderLineEdit") || installPageField("TargetDirectoryLineEdit");
 }
 
-function refreshInstallPage() {
-    var folder = folderField();
-    var target = folder ? folderValue() : installer.value("TargetDir");
+// Whether the folder holds an installation: its maintenance tool is there.
+function installationIn(target) {
     var tool = target + (systemInfo.kernelType === "darwin" ? "/MaintenanceTool.app"
                          : systemInfo.kernelType === "winnt" ? "/MaintenanceTool.exe" : "/MaintenanceTool");
-    installedHere = target !== "" && installer.fileExists(tool);
+    return target !== "" && installer.fileExists(tool);
+}
+
+function refreshInstallPage() {
+    var folder = folderField();
+    installedHere = installationIn(folder ? folderValue() : installer.value("TargetDir"));
     showNotice();
     updateSpace();
+}
+
+// While the folder is typed: the warning follows each change (a file check), the disk is asked when editing ends.
+function followInstallation(target) {
+    var here = installationIn(target);
+    if (here === installedHere)
+        return;
+    installedHere = here;
+    showNotice();
 }
 
 
@@ -1608,6 +1706,7 @@ function headerWordmark() {
         // was cleared, which brings the first page back saying why.
         if (name === "ReadyForInstallation" && installer.isInstaller()) {
             applyAssistantChoice();
+            applyVoiceChoice();
             // Clicked a moment later, outside the Framework's own page change, which a nested click leaves half done.
             licenseRefused = !licenseAccepted();
             // A captured walk stays a moment, so the accessibility client reads this page too.
@@ -1672,9 +1771,15 @@ function headerWordmark() {
                 page.left.connect(applyAssistantChoice);
                 assistantHooked = true;
             }
+            if (!voiceHooked) {
+                page.left.connect(applyVoiceChoice);
+                voiceHooked = true;
+            }
         }
-        if (name === "LicenseAgreement" || name === "ReadyForInstallation")
+        if (name === "LicenseAgreement" || name === "ReadyForInstallation") {
             applyAssistantChoice();
+            applyVoiceChoice();
+        }
 
         // Installing: the bar and one status line, no details.
         if (name === "PerformInstallation") {

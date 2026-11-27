@@ -6,6 +6,7 @@ import io
 import json
 import os
 import plistlib
+import re
 import shutil
 import subprocess
 import sys
@@ -156,6 +157,20 @@ def test_mirror_is_enabled_only_for_production(tmp_path, channel, prefix):
     )
 
 
+@pytest.mark.parametrize('system', ['linux', 'macos', 'windows'])
+def test_the_linux_app_brings_the_tool_component_with_an_update(tmp_path, monkeypatch, system):
+    # An update offers only installed components, but adds a missing dependency of one it updates;
+    # Linux installations from before ADR-0108 have no tool component, which now holds the runtime.
+    monkeypatch.setattr(PACKAGE, 'SYSTEM', system)
+    config, meta = tmp_path / 'config', tmp_path / 'meta'
+    config.mkdir()
+    meta.mkdir()
+    PACKAGE.write_metadata(config, meta, '26.18', None, [], enable_mirrors=False)
+    dependencies = ElementTree.parse(meta / 'package.xml').findtext('Dependencies')
+    expected = PACKAGE.MAINTENANCE_COMPONENT if system == 'linux' else None
+    assert dependencies == expected, 'Only the Linux app component depends on the tool component'
+
+
 def copy_bundles(command, **_):
     # Stands in for the subprocess so the macOS tool component gets its copied bundle.
     if command[0] == 'ditto':
@@ -188,8 +203,7 @@ def test_offline_installer_retains_default_update_repositories(tmp_path, channel
         (stage / 'build-inputs.json').write_text(json.dumps({'release_history_sha256': 'fixture'}))
     archive = tmp_path / 'installer.zip'
     archive.write_bytes(b'archive fixture')
-    runtime = tmp_path / 'runtime'
-    runtime.mkdir()
+    runtime = installer_runtime(tmp_path)
     output = tmp_path / 'output'
     with (
         mock.patch.object(
@@ -234,10 +248,37 @@ def test_offline_installer_retains_default_update_repositories(tmp_path, channel
             tool / PACKAGE.maintenance_tool_name()
         ).is_file(), 'The installer carries the separately built maintenance tool.'
     else:
-        assert not (packages / PACKAGE.MAINTENANCE_COMPONENT).exists(), (
-            'Only macOS and Windows ship the maintenance tool component.'
+        # Linux: the tool component carries only the tool's runtime, staged for the swap, and the
+        # app component no longer does (ADR-0108).
+        data = packages / PACKAGE.MAINTENANCE_COMPONENT / 'data'
+        assert sorted(path.relative_to(data).as_posix() for path in data.rglob('*')) == [
+            'maintenancetool',
+            'maintenancetool/installer-runtime',
+            'maintenancetool/installer-runtime/dependencies.json',
+            'maintenancetool/installer-runtime/lib',
+            'maintenancetool/installer-runtime/lib/library.so',
+        ], 'The Linux tool component carries only the staged runtime.'
+        app_data = packages / PACKAGE.APP_COMPONENT / 'data'
+        assert not (app_data / 'installer-runtime').exists(), (
+            'The app component does not carry the tool runtime.'
+        )
+        manifest = json.loads((app_data / 'payload-manifest.json').read_text())
+        assert not any(name.startswith('installer-runtime/') for name in manifest), (
+            'The app payload manifest lists no tool runtime file.'
         )
     assert not (output / 'repository').exists(), 'Offline packaging publishes no repository.'
+
+
+def installer_runtime(folder):
+    """A Linux tool runtime as linux_installer_runtime leaves it: one library and its listing."""
+    runtime = folder / 'installer-runtime'
+    (runtime / 'lib').mkdir(parents=True)
+    library = runtime / 'lib/library.so'
+    library.write_bytes(b'portable dependency')
+    (runtime / 'dependencies.json').write_text(
+        json.dumps({library.name: PACKAGE.sha256(library)}) + '\n'
+    )
+    return runtime
 
 
 def test_download_archive_keeps_bootstrap_libraries_and_permissions(tmp_path):
@@ -385,12 +426,33 @@ def test_packaging_uses_acquired_licenses_when_the_original_cache_is_absent(tmp_
             )
 
 
+# Voice input links Qt Multimedia itself (ADR-0107); its QML part is still refused.
 @pytest.mark.parametrize(
-    'name', ['libQt6WebEngineCore.so.6', 'Qt6Multimedia.dll', 'QtWebEngineCore']
+    'name', ['libQt6WebEngineCore.so.6', 'Qt6MultimediaQuick.dll', 'QtWebEngineCore']
 )
 def test_bundle_audit_rejects_unrelated_native_qt_components(tmp_path, name):
     (tmp_path / name).write_bytes(b'\x7fELFunneeded module')
     with pytest.raises(RuntimeError, match='Unused Qt component'):
+        AUDIT.audit_bundle(tmp_path)
+
+
+# Qt Multimedia's FFmpeg plugin and FFmpeg's libraries are left out of every bundle (ADR-0107).
+@pytest.mark.parametrize(
+    ('name', 'magic'),
+    [
+        (
+            'EasyDiffraction.app/Contents/PlugIns/multimedia/libffmpegmediaplugin.dylib',
+            b'\xcf\xfa\xed\xfe',
+        ),
+        ('plugins/multimedia/ffmpegmediaplugin.dll', b'MZ'),
+        ('lib/libavcodec.so.61', b'\x7fELF'),
+        ('bin/avformat-61.dll', b'MZ'),
+    ],
+)
+def test_bundle_audit_rejects_deployed_ffmpeg(tmp_path, name, magic):
+    (tmp_path / name).parent.mkdir(parents=True)
+    (tmp_path / name).write_bytes(magic + b'media library')
+    with pytest.raises(RuntimeError, match=f'^FFmpeg was deployed: {re.escape(name)}$'):
         AUDIT.audit_bundle(tmp_path)
 
 
@@ -700,6 +762,60 @@ def test_installed_maintenance_tool_check_passes_for_the_shipped_tool(tmp_path, 
     with mock.patch.object(PACKAGE, 'run') as verify:
         PACKAGE.verify_installed_maintenance_tool(tmp_path, {'maintenance_tool_sha256': expected})
     assert verify.call_args.args[0][:3] == ['codesign', '--verify', '--strict']
+
+
+@pytest.mark.parametrize('damage', [None, 'library', 'listing', 'staged', 'backup'])
+def test_installed_linux_tool_needs_its_whole_runtime(tmp_path, monkeypatch, damage):
+    # Linux has no signed tool: the check is the runtime the tool loads, swapped in (ADR-0108).
+    monkeypatch.setattr(PACKAGE, 'SYSTEM', 'linux')
+    (tmp_path / 'MaintenanceTool').write_bytes(b'tool')
+    runtime = installer_runtime(tmp_path)
+    if damage == 'library':
+        (runtime / 'lib/library.so').write_bytes(b'changed')
+    elif damage == 'listing':
+        (runtime / 'dependencies.json').unlink()
+    elif damage == 'staged':
+        if (tmp_path / 'maintenancetool').exists():
+            pytest.skip('a case-insensitive disk cannot hold the tool and its staging folder')
+        (tmp_path / 'maintenancetool').mkdir()
+    elif damage == 'backup':
+        (tmp_path / 'installer-runtime.old').mkdir()
+    if damage is None:
+        PACKAGE.verify_installed_maintenance_tool(tmp_path, {})
+    else:
+        with pytest.raises(RuntimeError, match='maintenance tool'):
+            PACKAGE.verify_installed_maintenance_tool(tmp_path, {})
+
+
+# After an update Windows keeps only the staged copy of the installed tool, which the app's next
+# start removes (edi ADR-0108); anything else in the staging folder is refused.
+@pytest.mark.parametrize(
+    ('updated', 'staged', 'refused'),
+    [
+        (False, 'other', False),
+        (True, 'installed', False),
+        (True, 'other', True),
+        (True, 'extra', True),
+    ],
+)
+def test_windows_staged_tool_after_an_update_is_the_installed_one(
+    tmp_path, monkeypatch, updated, staged, refused
+):
+    monkeypatch.setattr(PACKAGE, 'SYSTEM', 'windows')
+    monkeypatch.delenv('EDI_CODESIGN', raising=False)
+    bundle = signed_bundle(tmp_path)
+    staging = tmp_path / 'maintenancetool'
+    staging.mkdir()
+    copy = staging / bundle.name
+    copy.write_bytes(bundle.read_bytes() if staged != 'other' else b'older tool')
+    if staged == 'extra':
+        (staging / 'leftover.txt').write_text('debris\n')
+    metadata = {'maintenance_tool_sha256': PACKAGE.sha256(bundle)}
+    if refused:
+        with pytest.raises(RuntimeError, match='maintenance tool'):
+            PACKAGE.verify_installed_maintenance_tool(tmp_path, metadata, updated=updated)
+    else:
+        PACKAGE.verify_installed_maintenance_tool(tmp_path, metadata, updated=updated)
 
 
 # The installed app's smoke run: two minutes, one more try after a timeout, never after a failure.
