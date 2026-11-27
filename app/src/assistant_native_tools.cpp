@@ -656,8 +656,9 @@ std::optional<edi::Edit> assistant_native_edit(edi::Project& project, const QStr
     return edi::assistant::detail::prepare_parameter_edit(project, flags, nullptr, &beforeFlags);
 }
 namespace {
-// MCP needs a root object schema, so a root oneOf/anyOf becomes one object: every branch's properties, and
-// only the fields every branch requires. assistant_native_arguments still checks the exact branch.
+// MCP needs a root object schema and Claude refuses a root oneOf, anyOf or allOf, so each becomes one object:
+// every branch's properties, and the fields every branch requires (allOf: any branch requires).
+// assistant_native_arguments still checks the exact branch.
 std::optional<Array> mcp_choices(const Object& schema) {
     if (schema.contains("const")) return Array{schema.value("const")};
     if (schema.value("enum").isArray()) return schema.value("enum").toArray();
@@ -693,6 +694,7 @@ Object mcp_flattened(Object schema, const char* combinator) {
     if (!schema.value(combinator).isArray()) return schema;
     QStringList order;
     QHash<QString, QList<Object>> variants;
+    const bool all = QLatin1StringView(combinator) == QLatin1StringView("allOf");
     std::optional<QSet<QString>> common;
     bool closed = true;
     for (const auto& value : schema.value(combinator).toArray()) {
@@ -704,7 +706,7 @@ Object mcp_flattened(Object schema, const char* combinator) {
         }
         QSet<QString> required;
         for (const auto& field : branch.value("required").toArray()) required.insert(field.toString());
-        common = common ? (*common & required) : required;
+        common = common ? (all ? (*common | required) : (*common & required)) : required;
         closed = closed && branch.value("additionalProperties") == QJsonValue(false);
     }
     // The root's own properties and required fields stay as they are.
@@ -750,7 +752,11 @@ QJsonArray assistant_native_mcp_tools(const QJsonArray& dynamicTools) {
         const auto description = spec.value("description").toString();
         if (description.size() > 4096)
             throw std::length_error(QStringLiteral("Tool %1 has a description longer than 4096 characters").arg(name).toStdString());
-        auto schema = mcp_flattened(mcp_flattened(spec.value("inputSchema").toObject(), "oneOf"), "anyOf");
+        auto schema = spec.value("inputSchema").toObject();
+        for (const char* combinator : {"oneOf", "anyOf", "allOf"}) {
+            schema = mcp_flattened(schema, combinator);
+            if (schema.contains(combinator)) throw std::invalid_argument(QStringLiteral("Tool %1 has a malformed %2").arg(name, QLatin1StringView(combinator)).toStdString());
+        }
         schema["type"] = "object";
         tools.append(Object{{"name", name}, {"description", description}, {"inputSchema", schema}, {"_meta", meta}});
     }
