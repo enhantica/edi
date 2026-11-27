@@ -4096,7 +4096,8 @@ QVariantList ProjectViewModel::magneticPresets(int index) const {
     try {
         for (const edi::MagneticPreset& p : edi::magnetic_presets(*project_->structures[static_cast<std::size_t>(index)])) {
             out.push_back(QVariantMap{{QStringLiteral("k"), QString::fromStdString(p.k)},
-                                      {QStringLiteral("label"), QString::fromStdString(p.label)}});
+                                      {QStringLiteral("label"), QString::fromStdString(p.label)},
+                                      {QStringLiteral("cell"), QString::fromStdString(p.cell)}});
         }
     } catch (const std::exception&) {
         out.push_back(QVariantMap{{QStringLiteral("k"), QStringLiteral("0,0,0")}, {QStringLiteral("label"), QStringLiteral("Γ")}});
@@ -4591,9 +4592,10 @@ void ProjectViewModel::retireKMarks() {
     // Any edit ends marking, keeping the marks (review 21 and 22, F4; owner, 2026-11-27): the parent it admitted may
     // no longer be the one enabled crystal, so the next start, tap, snapshot or search admits it again
     // (kMarkingCurrent). Every snapshot and role of the earlier state retires.
-    if (k_marks_.experiment < 0) return;
+    // Add's own edit keeps its marks, roles and snapshot: Add reads that snapshot after the edit, and the parent it
+    // disabled fails kMarkingCurrent at the next action anyway.
+    if (k_marks_.experiment < 0 || adding_k_) return;
     changeKMarks();
-    if (adding_k_) return;  // Add's own edit: its marks and roles stay shown
     k_marks_.active = false;
     k_marks_.roles.clear();
     k_marks_.note.clear();
