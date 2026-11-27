@@ -271,7 +271,18 @@ AppDialog {
                     return sites.length > 0 ? 0.47 / sites.length : 0;
                 }
                 function columns(n) {
-                    const moments = String(n.moments).split(" · ").map(m => m.slice(m.indexOf(" ") + 1));
+                    // A site split in a subgroup (`Co1_1`, `Co1_2`) goes under its parent site's column, its
+                    // distinct forms joined.
+                    const moments = sites.map(site => {
+                        const forms = [];
+                        for (const m of String(n.moments).split(" · ")) {
+                            const id = m.slice(0, m.indexOf(" "));
+                            const form = m.slice(m.indexOf(" ") + 1);
+                            if ((id === site || id.startsWith(site + "_")) && forms.indexOf(form) < 0)
+                                forms.push(form);
+                        }
+                        return forms.join(" / ");
+                    });
                     return [n.bns === "" ? "" : `${n.bns}${n.embedding > 1 ? " #" + n.embedding : ""}`, ["", "I", "II", "III", "IV"][n.type] ?? "", Math.max(1, n.row) === 1 ? qsTr("maximal") : qsTr("level %1").arg(n.row), n.netMoment ? "FM" : ""].concat(moments);
                 }
                 Row {
@@ -327,7 +338,10 @@ AppDialog {
                                 delegate: EaElements.Label {
                                     required property var modelData
                                     required property int index
-                                    anchors.verticalCenter: parent.verticalCenter
+                                    // A Repeater's label has no parent while it is created, so it centres by its
+                                    // own height, not an anchor.
+                                    height: listRow.height
+                                    verticalAlignment: Text.AlignVCenter
                                     width: listView.width * (index + 1 < listPane.widths.length ? listPane.widths[index + 1] : listPane.siteWidth())
                                     leftPadding: EaStyle.Sizes.fontPixelSize * 0.5
                                     elide: Text.ElideRight
