@@ -1126,4 +1126,190 @@ void AssistantRuntimeTranslator::finishTurn(QString status, QJsonObject error) {
     message_order_.clear();
     calls_completed_.clear();
 }
+
+// ---- Tool calls and questions ----
+
+void AssistantRuntimeTranslator::onToolCall(const QJsonValue& toolId, const QString& tool, const QJsonObject& arguments) {
+    if (!tools_) return;
+    // A call is admitted only for the running turn, once the session's readbacks passed and before Stop.
+    if (!live_ || failed_ || account_ != Account::Ready || thread_.isEmpty() || interrupting_) {
+        (void)tools_->refuse(toolId, tr("No assistant turn is running."));
+        return;
+    }
+    if (turn_.isEmpty()) {
+        (void)tools_->refuse(toolId, tr("No assistant turn is running."));
+        return;
+    }
+    if (held_) {
+        // Between the runtime turns of one protocol turn: the call belongs to the next runtime turn, so it waits.
+        early_calls_.append({toolId, tool, arguments});
+        return;
+    }
+    admitCall({toolId, tool, arguments});
+}
+
+void AssistantRuntimeTranslator::admitCall(const ToolCall& call) {
+    if (server_sequence_ == std::numeric_limits<quint64>::max()) {
+        if (tools_) (void)tools_->refuse(call.toolId, tr("No more requests can be accepted."));
+        return;
+    }
+    const auto order = ++server_sequence_;
+    const auto id = QStringLiteral("edi-tool-%1-%2").arg(generation_).arg(order);
+    ServerRequest request;
+    request.id = id;
+    request.order = order;
+    request.toolId = call.toolId;
+    if (call.tool == QLatin1StringView("request_user_input")) {
+        // edi's question tool has the schema of Codex's tool of the same name, so its arguments are the request.
+        request.question = true;
+        request.method = QStringLiteral("item/tool/requestUserInput");
+        request.params = {{"threadId", thread_},
+                          {"turnId", turn_},
+                          {"itemId", QStringLiteral("edi-question-%1-%2").arg(generation_).arg(order)},
+                          {"questions", call.arguments.value(QLatin1StringView("questions"))}};
+    } else {
+        const auto callId = QStringLiteral("edi-call-%1-%2").arg(generation_).arg(order);
+        request.method = QStringLiteral("item/tool/call");
+        request.params = {{"threadId", thread_}, {"turnId", turn_}, {"callId", callId}, {"tool", call.tool}, {"arguments", call.arguments}};
+        calls_completed_.insert(callId, false);
+        // The item the view model's dispatch checks the call against.
+        notify(QStringLiteral("item/started"),
+               {{"threadId", thread_},
+                {"turnId", turn_},
+                {"item", QJsonObject{{"type", "dynamicToolCall"}, {"id", callId}, {"tool", call.tool}, {"arguments", call.arguments},
+                                     {"status", "inProgress"}}}});
+    }
+    const auto key = idKey(request.id);
+    const auto method = request.method;
+    const auto params = request.params;
+    requests_.insert(key, request);
+    post([this, key, id, method, params] {
+        const auto found = requests_.constFind(key);
+        if (found == requests_.cend() || found->closed) return;  // cancelled before the view model saw it
+        emit serverRequest(QJsonValue(id), method, params);
+    });
+}
+
+void AssistantRuntimeTranslator::completeCall(const ServerRequest& request, bool success, const QJsonArray& contentItems) {
+    if (request.question) return;
+    const auto callId = string_field(request.params, "callId");
+    const auto found = calls_completed_.find(callId);
+    if (found == calls_completed_.end() || found.value()) return;
+    found.value() = true;
+    notify(QStringLiteral("item/completed"),
+           {{"threadId", request.params.value(QLatin1StringView("threadId"))},
+            {"turnId", request.params.value(QLatin1StringView("turnId"))},
+            {"item", QJsonObject{{"type", "dynamicToolCall"},
+                                 {"id", callId},
+                                 {"tool", request.params.value(QLatin1StringView("tool"))},
+                                 {"arguments", request.params.value(QLatin1StringView("arguments"))},
+                                 {"status", success ? "completed" : "failed"},
+                                 {"success", success},
+                                 {"contentItems", contentItems}}}});
+}
+
+void AssistantRuntimeTranslator::onToolCancelled(const QJsonValue& toolId) {
+    if (!live_ || failed_) return;
+    early_calls_.erase(std::remove_if(early_calls_.begin(), early_calls_.end(), [&](const ToolCall& call) { return call.toolId == toolId; }),
+                       early_calls_.end());
+    for (auto it = requests_.begin(); it != requests_.end(); ++it) {
+        auto& request = it.value();
+        if (request.closed || request.toolId != toolId) continue;
+        // The runtime gave up on the call: resolve it as the app-server's serverRequest/resolved does.
+        request.closed = true;
+        notify(QStringLiteral("serverRequest/resolved"),
+               {{"threadId", request.params.value(QLatin1StringView("threadId"))}, {"requestId", request.id}});
+        completeCall(request, false, {});
+        return;
+    }
+}
+
+bool AssistantRuntimeTranslator::answer(const QJsonValue& originalId, const QJsonObject& result, void* preparation,
+                                        bool (*handoff)(void*) noexcept, const std::function<bool()>& admit) {
+    const auto key = idKey(originalId);
+    if (key.isEmpty() || !requests_.contains(key) || failed_ || !live_) return false;
+    const QPointer<AssistantRuntimeTranslator> self(this);
+    const auto scope = generation_;
+    const auto current = [&] { return self && generation_ == scope && !failed_ && live_ && requests_.contains(key); };
+    // As CodexAgent::answer: admission, then the waits end and the request retires, then the borrowed handoff runs,
+    // and only then is the answer delivered. A failed handoff leaves the request retired, never repeated.
+    if (admit && !admit()) return false;
+    if (!current()) return false;
+    if (human_wait_start_ >= 0 && human_wait_id_ == key && !endHumanWait(originalId, scope)) return false;
+    if (native_work_id_ == key && !endNativeWork(originalId, scope)) return false;
+    if (!current()) return false;
+    const auto request = requests_.take(key);
+    if (handoff && !handoff(preparation)) return false;
+    if (!self || generation_ != scope || failed_ || !live_) return false;
+    if (request.question) {
+        // The answers go back as the tool's result, in the shape the view model built: {answers: {<id>: {answers}}}.
+        if (request.closed) return true;  // resolved already, as an answer Codex writes after a cancellation
+        return tools_ && tools_->reply(request.toolId, true, QJsonDocument(result).toJson(QJsonDocument::Compact));
+    }
+    // The projected outgoing JSON the view model put in contentItems is what the model reads.
+    const bool success = result.value(QLatin1StringView("success")).toBool();
+    const auto contentItems = result.value(QLatin1StringView("contentItems")).toArray();
+    QByteArray text;
+    for (const auto& value : contentItems) {
+        const auto item = value.toObject();
+        if (item.value(QLatin1StringView("type")) != QLatin1StringView("inputText") || !item.value(QLatin1StringView("text")).isString())
+            continue;
+        if (!text.isEmpty()) text.append('\n');
+        text.append(item.value(QLatin1StringView("text")).toString().toUtf8());
+    }
+    if (request.closed) return true;  // resolved already, as an answer Codex writes after a cancellation
+    const bool delivered = tools_ && tools_->reply(request.toolId, success, text);
+    if (delivered) completeCall(request, success, contentItems);
+    return delivered;
+}
+
+bool AssistantRuntimeTranslator::reject(const QJsonValue& originalId) {
+    const auto key = idKey(originalId);
+    if (key.isEmpty() || !requests_.contains(key) ||
+        (human_wait_start_ >= 0 && human_wait_id_ == key && !endHumanWait(originalId, generation_)))
+        return false;
+    if (native_work_id_ == key && !endNativeWork(originalId, generation_)) return false;
+    const auto request = requests_.take(key);
+    if (failed_ || !live_) return false;
+    if (tools_) (void)tools_->refuse(request.toolId, tr("edi does not support this request."));
+    if (!request.closed) completeCall(request, false, {});
+    return true;
+}
+
+void AssistantRuntimeTranslator::resolved(const QJsonValue& originalId) {
+    const auto key = idKey(originalId);
+    if (human_wait_start_ >= 0 && human_wait_id_ == key && !endHumanWait(originalId, generation_)) return;
+    if (native_work_id_ == key && !endNativeWork(originalId, generation_)) return;
+    requests_.remove(key);
+}
+
+bool AssistantRuntimeTranslator::deferServerRequest(const QJsonValue& originalId, quint64 originalGeneration) {
+    if (generation_ != originalGeneration || failed_ || !live_) return false;
+    const auto key = idKey(originalId);
+    auto found = requests_.find(key);
+    if (key.isEmpty() || found == requests_.end() || found->id != originalId) return false;
+    found->deferred = true;
+    return true;
+}
+
+void AssistantRuntimeTranslator::resumeDeferredRequests(quint64 originalGeneration) {
+    const QPointer<AssistantRuntimeTranslator> self(this);
+    const auto current = [&] { return self && generation_ == originalGeneration && live_ && !failed_; };
+    if (!current()) return;
+    QList<QPair<quint64, QString>> ordered;
+    for (auto it = requests_.cbegin(); it != requests_.cend(); ++it)
+        if (it->deferred && !it->closed) ordered.append({it->order, it.key()});
+    std::sort(ordered.begin(), ordered.end());
+    for (const auto& entry : ordered) {
+        if (!current()) return;
+        auto found = requests_.find(entry.second);
+        if (found == requests_.end() || found->order != entry.first || !found->deferred) continue;
+        const auto request = *found;
+        found->deferred = false;  // consumed before the view model's handler can reenter
+        emit serverRequest(request.id, request.method, request.params);
+        if (!current()) return;
+        found = requests_.find(entry.second);
+        if (found != requests_.end() && found->order == entry.first && found->deferred) return;
+    }
+}
 }  // namespace edi_app
