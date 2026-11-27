@@ -3,7 +3,8 @@
 - **Status:** Accepted
 - **Date:** 2026-11-26
 - **Implementation:** 🟡 Partially implemented — the release tools, the app, the feed and the Maintenance Tool follow
-  it; one real update from an installed 2026.11.x on macOS or Windows is still to be done before a release uses it
+  it; edi-download's site build is still to write both feeds, and one real update from an installed 2026.11.x on
+  macOS or Windows is still to be done before a release uses it
 - **Priority:** High
 - **Supersedes:** the version scheme of [ADR-0072](0072-calendar-releases-and-application-updates.md) (its
   `YYYY.MM.SEQUENCE`); the rest of ADR-0072 stands.
@@ -85,14 +86,25 @@ Once the tool was replaced, it still showed the old release's pages, which the f
    zero), led by an Added entry "This update is EasyDiffraction 26.17: releases are now numbered by year (26.17,
    27.1, ...)" that carries the release's first pull request number. Earlier `YY.N` releases leave this feed, so it
    never holds a version the old parser refuses. `tools/release/legacy_feed.py` applies that parser's rules, and the
-   tools publish no legacy feed it rejects. A testing feed gets the same pair. The alias is only a name in the feed:
-   the Maintenance Tool still updates by content checksum (point 4).
+   tools publish no legacy feed it rejects. Both feed bases in `data/distribution.json` serve the site that
+   enhantica/edi-download builds from the release's `release-history.json` asset, so that build writes the two feeds
+   with `legacy_feed.write_feeds` at the release tag: a feed the check rejects fails the build, and the previous site
+   stays up. The publish workflow writes the feeds from the same asset first and stops the release on a rejection.
+   The `pages/` and `offsite/` copies of `distribution.py` carry both feeds too, but no app reads them. A `YY.N`
+   release must come from a commit whose app reads the `-v2` feed, since an app reading the legacy feed would rank
+   26.18's alias 2026.11.33 below its own 26.17; the publish workflow refuses one that does not. The testing channel
+   has no feed at the feed bases, which serve the stable repositories only, so testing-channel apps of either form
+   find no update there. The alias is only a name in the feed: the Maintenance Tool still updates by content checksum
+   (point 4).
 
 ## Consequences
 
-- Copies of 2026.11.x see the update in their own app: it finds 2026.11.32 in the legacy feed, whose first note says
-  it is 26.17, and its Update button opens the Maintenance Tool, which installs 26.17 by checksum. The updated app
-  reads the `-v2` feed and shows 26.17.
+- Once edi-download writes both feeds, copies of 2026.11.x see the update in their own app: it finds 2026.11.32 in the
+  legacy feed, whose first note says it is 26.17, and its Update button opens the Maintenance Tool, which installs
+  26.17 by checksum. The updated app reads the `-v2` feed and shows 26.17. Until then the feed bases serve the full
+  history as `stable.json` and no `stable-v2.json`, so once 26.17 is in it neither old nor new apps find an update.
+- Before 26.17 is published: edi-download's `main`, which the publish workflow starts, builds its site with
+  `legacy_feed.write_feeds`, and 26.17 is planned and built from a commit whose app reads the `-v2` feed.
 - Before a release uses this: one real update from an installed 2026.11.x on macOS or Windows, against a local feed
   built with `--sha-update`, checking the version and date shown, What's new, the tool's checksum and icon, and that
   a second Update offers nothing.
