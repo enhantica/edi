@@ -85,6 +85,9 @@ struct TutorialStep {
     Q_PROPERTY(QStringList expectSites MEMBER expectSites CONSTANT)
     Q_PROPERTY(double expectChi2 MEMBER expectChi2 CONSTANT)
     Q_PROPERTY(double expectChi2Tolerance MEMBER expectChi2Tolerance CONSTANT)
+    // "introduction" for the step every tutorial opens with (app/tutorials/introduction.json), empty for the others.
+    // The panel and the replay tell it by this, never by its text.
+    Q_PROPERTY(QString kind MEMBER kind CONSTANT)
 
    public:
     QString text;
@@ -104,6 +107,7 @@ struct TutorialStep {
     QStringList expectSites{};
     double expectChi2 = -1;
     double expectChi2Tolerance = 0.01;
+    QString kind{};
 };
 
 // A built-in tutorial, as app/tutorials/manifest.json gives it (ADR-0064).
@@ -967,7 +971,8 @@ class ApplicationInfo : public QObject {
     QString assistantUnavailableReason() const;
     // How to cite the app, from the bundled CITATION.cff, the one place its citation is kept.
     Q_INVOKABLE Citation citation() const;
-    // The built-in tutorials (app/tutorials/manifest.json), in its order.
+    // The built-in tutorials (app/tutorials/manifest.json), in its order, each opened by the introduction
+    // (app/tutorials/introduction.json).
     Q_INVOKABLE QList<Tutorial> tutorials() const;
     // The same tutorials as a list the Examples filters filter: by text and by the values of their tags.
     edi_app::ExampleListModel* tutorialCatalogue();

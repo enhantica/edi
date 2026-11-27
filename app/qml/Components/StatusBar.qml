@@ -34,7 +34,8 @@ EaElements.StatusBar {
     readonly property bool opening: Session.openingExample || pagesWanted > 0 && pagesBuilt < pagesWanted
     // The running tutorial (edi ADR-0064), whose strip sits at the bar's right end.
     property TutorialPanel tutorial: null
-    readonly property bool tutorialShown: tutorial !== null && tutorial.tutorial !== null
+    // Not over the introduction, which has its own Start and Close.
+    readonly property bool tutorialShown: tutorial !== null && tutorial.underway
     readonly property real stripRoom: tutorialStrip.visible ? tutorialStrip.width + EaStyle.Sizes.fontPixelSize * 1.2 : 0
 
     signal updateRequested
@@ -554,7 +555,7 @@ EaElements.StatusBar {
                 requested: progressHover.hovered
             }
             color: EaStyle.Colors.themeForegroundHovered
-            text: bar.tutorial ? qsTr("Step %1 of %2").arg(bar.tutorial.shownStep + 1).arg(bar.tutorial.steps.length) : ""
+            text: bar.tutorial ? bar.tutorial.progressText : ""
         }
         TutorialControls {
             anchors.verticalCenter: parent.verticalCenter

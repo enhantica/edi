@@ -30,6 +30,20 @@ Popup {
     readonly property bool offersKeep: temporary && tutorial !== null && tutorial.completion.includes("keep")
     readonly property var steps: tutorial ? tutorial.steps : []
     readonly property var current: step < steps.length ? steps[step] : null
+    // Every tutorial opens with the same introduction (app/tutorials/introduction.json), told by its kind: it is not
+    // counted as a step, so the steps keep the numbers the documentation gives them.
+    readonly property int firstStep: steps.length > 0 && steps[0].kind === "introduction" ? 1 : 0
+    readonly property int stepCount: steps.length - firstStep
+    // The introduction waits for Start or Close; nothing of the project has changed yet.
+    property bool introducing: false
+    // Start was pressed: the tutorial's project is being put in place, the callout hidden until its first step.
+    property bool starting: false
+    // The tutorial's steps are under way, past its introduction.
+    readonly property bool underway: tutorial !== null && !introducing && !starting
+    // The callout shows the introduction: Start and Close in place of the step buttons.
+    readonly property bool introShown: shown !== null && shown.kind === "introduction"
+    // What the callout and the status bar's strip count: Introduction, then Step n of N.
+    readonly property string progressText: introShown ? qsTr("Introduction") : qsTr("Step %1 of %2").arg(shownStep + 1 - firstStep).arg(stepCount)
     // The running tutorial's title, as a dialog has one.
     readonly property string title: tutorial ? tutorial.title : ""
     // Next was pressed before the step's state held; cleared when the step changes.
@@ -120,9 +134,34 @@ Popup {
         // One tutorial at a time: a second start would set aside the first tutorial's project in place of the user's.
         if (panel.tutorial !== null || Session.hasProjectSetAside)
             return;
+        // The introduction first, at every start: the user's project stays as it is until its Start.
+        if (chosen.steps.length > 0 && chosen.steps[0].kind === "introduction") {
+            RunLog.note(`tutorial introduced: ${chosen.id}`);
+            ++panel.run;
+            panel.tutorial = chosen;
+            panel.step = 0;
+            panel.shownStep = 0;
+            panel.introducing = true;
+            panel.open();
+            panel.show();
+            return;
+        }
+        panel.setUp(chosen);
+    }
+    // The introduction's Start: it fades out, the tutorial's project is put in place, then the first step shows.
+    function startSteps() {
+        if (!panel.introducing)
+            return;
+        panel.introducing = false;
+        panel.starting = true;
+        settled.stop();
+        panel.setUp(panel.tutorial);
+    }
+    // The tutorial's project put in place, then its first step.
+    function setUp(chosen) {
         // An unapplied Text-tab edit joins the project before that project is set aside.
         if (AppState.textEdit !== null) {
-            AppState.textEdit.settleEdit(() => panel.start(chosen));
+            AppState.textEdit.settleEdit(() => panel.setUp(chosen));
             return;
         }
         const temporary = chosen.project === "temporary";
@@ -134,11 +173,15 @@ Popup {
                 // The example's project downloads first; the tutorial begins once it has opened aside.
                 if (Session.openExampleAside(String(chosen.start).replace(/^example:/, "")))
                     panel.pendingStart = chosen;
+                else
+                    panel.close();
                 return;
             }
             const started = chosen.start === "aside" ? Session.setProjectAside() : Session.createProjectAside("tutorial", chosen.title);
-            if (!started)
+            if (!started) {
+                panel.close();
                 return;
+            }
         }
         panel.begin(chosen, temporary);
     }
@@ -152,8 +195,10 @@ Popup {
         panel.savingRequest = 0;
         panel.temporary = temporary;
         panel.tutorial = chosen;
-        panel.step = 0;
-        panel.shownStep = 0;
+        panel.introducing = false;
+        panel.starting = false;
+        panel.step = panel.firstStep;
+        panel.shownStep = panel.firstStep;
         panel.fitsDone = 0;
         panel.fitsStopped = 0;
         panel.filesSaved = false;
@@ -180,7 +225,7 @@ Popup {
             Session.restoreProjectSetAside();
     }
     function stop() {
-        RunLog.note(panel.atEnd ? "tutorial finished" : `tutorial stopped at step ${panel.step + 1}`);
+        RunLog.note(panel.introducing ? "tutorial closed at its introduction" : panel.atEnd ? "tutorial finished" : `tutorial stopped at step ${panel.step + 1 - panel.firstStep}`);
         panel.restoreUserProject();
         panel.close();
     }
@@ -195,6 +240,11 @@ Popup {
     // Goes on. On a step asking for an action not done yet, Next does it first (the owner, 2026-11-02): one done at
     // once goes on at once; one that takes time (a fit, a folder to choose) goes on by itself once it is done.
     function next() {
+        // The introduction has no check: Next is its Start.
+        if (panel.current && panel.current.kind === "introduction") {
+            panel.startSteps();
+            return;
+        }
         if (panel.current && !panel.holds(panel.current.check)) {
             // An action Next does waits until the project takes edits: one asked while the last edit or fit is still
             // being published is refused with a message (a scan's Free · all after its fit).
@@ -206,7 +256,7 @@ Popup {
             readyAgain.tries = 0;
             panel.perform(panel.current.check);
             if (!panel.holds(panel.current.check)) {
-                RunLog.note(`tutorial ${panel.tutorial.id}: step ${panel.step + 1} waits for ${panel.current.check} (fits ${panel.fitsDone - panel.fitsAtStep}, results shown ${AppState.fitResultsShown - panel.resultsAtStep}, results open ${AppState.fitResultsOpen}${panel.groupState()})`);
+                RunLog.note(`tutorial ${panel.tutorial.id}: step ${panel.step + 1 - panel.firstStep} waits for ${panel.current.check} (fits ${panel.fitsDone - panel.fitsAtStep}, results shown ${AppState.fitResultsShown - panel.resultsAtStep}, results open ${AppState.fitResultsOpen}${panel.groupState()})`);
                 return;
             }
         } else if (panel.current && (panel.current.check ?? "").startsWith("free-choice")) {
@@ -1291,7 +1341,8 @@ Popup {
     // experiment its fit frees beyond the fit before it (a 300 K, then a 55 K, then a 2.5 K lesson).
     function showFittedExperiment() {
         const project = Session.project;
-        if (!project || !panel.steps || project.experiments.count < 2)
+        // The introduction shows over the user's own project, which it leaves as it is.
+        if (!project || !panel.steps || project.experiments.count < 2 || (panel.current && panel.current.kind === "introduction"))
             return;
         // A fit's results stay with the experiment just fitted; the next stage switches when it begins.
         if (panel.current && ["results-closed", "fitted"].includes(panel.current.check))
@@ -1325,8 +1376,9 @@ Popup {
             }
         }
     }
+    // Never back onto the introduction: its Start has already put the tutorial's project in place.
     function back() {
-        if (panel.step > 0) {
+        if (panel.step > panel.firstStep) {
             --panel.step;
             panel.show();
         }
@@ -1348,13 +1400,13 @@ Popup {
         // chance.
         const holdsNow = panel.current ? panel.holds(panel.current.check) : false;
         // A step already done when the tutorial reaches it asks for nothing; the replay reports these.
-        if (panel.step === 0)
+        if (panel.step <= panel.firstStep)
             panel.doneOnArrival = [];
         // Fixing the whole table first is a precaution: a project loaded without free marks already holds it, so it
         // is neither reported nor taken as done ahead; it waits for Next like an explanation.
         const precaution = panel.current && panel.current.check === "free-choice:fixed:All categories";
         if (holdsNow && panel.arrivedForward && panel.current.check && !precaution)
-            panel.doneOnArrival = panel.doneOnArrival.concat([`${panel.step + 1}\t${panel.current.check}`]);
+            panel.doneOnArrival = panel.doneOnArrival.concat([`${panel.step + 1 - panel.firstStep}\t${panel.current.check}`]);
         panel.doneAhead = holdsNow && panel.arrivedForward && !panel.followingHeld && !precaution;
         panel.heldAtStart = holdsNow && !panel.doneAhead;
         const following = panel.steps[panel.step + 1];
@@ -1409,6 +1461,17 @@ Popup {
         const window = Overlay.overlay ? Overlay.overlay.Window.window : null;
         if (!panel.opened || !panel.current || !window)
             return;
+        // A step without a control (the introduction) has no page or control to set up: it shows once settled.
+        if (!panel.current.target) {
+            panel.revealed = null;
+            panel.revealedInPopup = false;
+            panel.revealing = false;
+            settled.since = Date.now();
+            settled.last = "";
+            settled.start();
+            panel.place();
+            return;
+        }
         // A page is built in the background the first time it opens and shows only once it is ready; until then
         // nothing of it can be revealed, and the page still shown must not be touched.
         if (!ItemLocator.find(window, `workflow.${panel.current.page}.mainContent`)) {
@@ -1816,12 +1879,21 @@ Popup {
         if (!panel.opened || !Overlay.overlay || !panel.current)
             return;
         const window = Overlay.overlay.Window.window;
-        const item = window ? panel.anchorItem(window) : null;
         const margin = EaStyle.Sizes.fontPixelSize;
         const width = Overlay.overlay.width;
         const height = Overlay.overlay.height;
         const clampX = value => Math.max(margin, Math.min(width - panel.width - margin, value));
         const clampY = value => Math.max(margin, Math.min(height - panel.height - margin, value));
+        // A step without a control (the introduction) sits in the middle of the window, as a dialog does.
+        if (!panel.current.target) {
+            outlineBox.visible = false;
+            panel.side = "";
+            panel.anchored = true;
+            panel.x = clampX((width - panel.width) / 2);
+            panel.y = clampY((height - panel.height) / 2);
+            return;
+        }
+        const item = window ? panel.anchorItem(window) : null;
         // Never a callout without its control: hidden until the control is found and shown, which the reveal and the
         // timer below keep trying.
         if (!item && panel.revealing)
@@ -1924,7 +1996,7 @@ Popup {
     objectName: "tutorial"
     // Above every dialog and popup a step may point into (the owner, 2026-11-02).
     z: 1000
-    opacity: anchored && !settling ? 1 : 0
+    opacity: anchored && !settling && !starting ? 1 : 0
     Behavior on opacity {
         NumberAnimation {
             duration: 150
@@ -1932,14 +2004,28 @@ Popup {
     }
     // In the window's coordinates, as the control's rectangle is.
     parent: Overlay.overlay
-    modal: false
+    // The introduction dims the page as a dialog does and keeps it from input until Start or Close; the steps leave
+    // the page usable.
+    modal: introducing
+    dim: introducing
     closePolicy: Popup.NoAutoClose
     width: EaStyle.Sizes.fontPixelSize * 26
     padding: EaStyle.Sizes.fontPixelSize
     // The same space on every side, measured from what shows (the owner, 2026-11-02): from the top of the heading's
     // letters and from the bottom of the icons' glyphs, not from the line boxes and buttons around them.
     topPadding: Math.max(0, padding - headingInk.inkTop)
-    bottomPadding: Math.max(0, padding - calloutControls.inkBottomInset)
+    bottomPadding: Math.max(0, padding - (introShown ? controls.introInkBottomInset : calloutControls.inkBottomInset))
+
+    // The dialogs' dimmed background (EaElements.Dialog).
+    T.Overlay.modal: Rectangle {
+        color: EaStyle.Colors.dialogOutsideBackground
+
+        Behavior on opacity {
+            NumberAnimation {
+                duration: 150
+            }
+        }
+    }
 
     onOpened: Qt.callLater(panel.reveal)
     onHeightChanged: Qt.callLater(panel.place)
@@ -1957,6 +2043,8 @@ Popup {
         outlineBox.visible = false;
         panel.tutorial = null;
         panel.temporary = false;
+        panel.introducing = false;
+        panel.starting = false;
         AppState.tutorialRunning = false;
     }
     // A replacement or a quit ended the tutorial and brought the user's project back.
@@ -1977,10 +2065,12 @@ Popup {
             if (chosen === null)
                 return;
             panel.pendingStart = null;
-            if (opened && Session.hasProjectSetAside)
+            if (opened && Session.hasProjectSetAside) {
                 panel.begin(chosen, true);
-            else
+            } else {
                 RunLog.note(`tutorial not started: ${chosen.id}, its example did not open`);
+                panel.close();
+            }
         }
         // Each reply is matched to the request that asked for it (its number): a late reply to an earlier staging, or to
         // a save of the files, neither publishes a folder nor consumes or clears the action waiting now.
@@ -2202,7 +2292,7 @@ Popup {
             }
             stop();
             if (panel.shownStep !== panel.step && panel.tutorial !== null)
-                RunLog.note(`tutorial ${panel.tutorial.id}: step ${panel.step + 1} of ${panel.steps.length}`);
+                RunLog.note(`tutorial ${panel.tutorial.id}: step ${panel.step + 1 - panel.firstStep} of ${panel.stepCount}`);
             panel.shownStep = panel.step;
             panel.settling = false;
             panel.place();
@@ -2299,7 +2389,9 @@ Popup {
 
                 objectName: "tutorial.title"
                 width: parent.width - progress.implicitWidth - EaStyle.Sizes.fontPixelSize
-                elide: Text.ElideRight
+                // The introduction is headed by the tutorial's name, which may be long: it wraps rather than being cut.
+                elide: panel.introShown ? Text.ElideNone : Text.ElideRight
+                wrapMode: panel.introShown ? Text.WordWrap : Text.NoWrap
                 font.bold: true
                 // The step's own title (the owner, 2026-11-02); the tutorial's name is in its first step and the strip.
                 // Plain, as an elided line must be: a title's emphasis markers are dropped, never shown.
@@ -2329,7 +2421,7 @@ Popup {
                 objectName: "tutorial.progress"
                 anchors.right: parent.right
                 color: panel.progressColor
-                text: qsTr("Step %1 of %2").arg(panel.shownStep + 1).arg(panel.steps.length)
+                text: panel.progressText
             }
         }
         EaElements.Label {
@@ -2364,30 +2456,54 @@ Popup {
         // The actions at the bottom right: Stop, Back and Next as the status bar's strip has them (TutorialControls), Next
         // off on the last step, where the end choices stand in for Stop. The arrow keys
         // step back and on and Escape stops, while no text field, list or other control that takes those keys has the
-        // focus.
+        // focus. On the introduction, Close and Start; Escape closes it whatever has the focus, as the page beneath
+        // takes no keys then.
         Item {
             id: controls
 
             readonly property Item focused: Window.activeFocusItem
             readonly property bool keysFree: focused === null || (focused.cursorPosition === undefined && focused.currentIndex === undefined && focused.value === undefined)
+            // How far below the introduction's lowest ink (Start's icon and label) the row ends, as the step icons'
+            // inkBottomInset, so its bottom padding is measured from what shows too.
+            readonly property real introInkBottomInset: {
+                const row = startLink.contentItem;
+                if (!row || row.children.length < 2)
+                    return 0;
+                const top = actions.y + startLink.y + row.y;
+                const icon = row.children[0];
+                const label = row.children[1];
+                const lowest = Math.max(top + icon.y + icon.baselineOffset + startIconInk.tightBoundingRect.y + startIconInk.tightBoundingRect.height, top + label.y + label.baselineOffset + startTextInk.tightBoundingRect.y + startTextInk.tightBoundingRect.height);
+                return Math.max(0, controls.height - lowest);
+            }
 
             width: parent.width
             height: actions.height
 
             Shortcut {
                 sequence: "Left"
-                enabled: panel.opened && controls.keysFree && panel.step > 0
+                enabled: panel.opened && !panel.starting && controls.keysFree && panel.step > panel.firstStep
                 onActivated: panel.back()
             }
             Shortcut {
                 sequence: "Right"
-                enabled: panel.opened && controls.keysFree && !panel.atEnd
+                enabled: panel.opened && !panel.starting && controls.keysFree && !panel.atEnd
                 onActivated: panel.forward()
             }
             Shortcut {
                 sequence: "Escape"
-                enabled: panel.opened && controls.keysFree
+                enabled: panel.opened && !panel.starting && (controls.keysFree || panel.introducing)
                 onActivated: panel.stop()
+            }
+            TextMetrics {
+                id: startIconInk
+                font.family: EaStyle.Fonts.iconsFamily
+                font.pixelSize: startLink.font.pixelSize
+                text: startLink.fontIcon
+            }
+            TextMetrics {
+                id: startTextInk
+                font: startLink.font
+                text: startLink.text
             }
 
             Row {
@@ -2396,6 +2512,29 @@ Popup {
                 anchors.right: parent.right
                 spacing: EaStyle.Sizes.fontPixelSize * 0.5
 
+                // The introduction's two ways on, as the last step's: Close leaves everything as it was, Start puts
+                // the tutorial's project in place and goes to its first step.
+                IconLink {
+                    objectName: "tutorial.close"
+                    anchors.verticalCenter: parent.verticalCenter
+                    visible: panel.introShown
+                    // Both off while the introduction fades out after Start: a hidden button still takes clicks.
+                    enabled: !panel.starting
+                    fontIcon: "times-circle"
+                    text: qsTr("Close")
+                    onClicked: panel.stop()
+                }
+                IconLink {
+                    id: startLink
+
+                    objectName: "tutorial.start"
+                    anchors.verticalCenter: parent.verticalCenter
+                    visible: panel.introShown
+                    enabled: !panel.starting
+                    fontIcon: "play-circle"
+                    text: qsTr("Start")
+                    onClicked: panel.startSteps()
+                }
                 // The last step's two ways on, left of the arrows on their row, each an icon with a short label (owner
                 // record 2026-11-11, item 8).
                 IconLink {
@@ -2424,6 +2563,7 @@ Popup {
                     id: calloutControls
 
                     anchors.verticalCenter: parent.verticalCenter
+                    visible: !panel.introShown
                     tutorial: panel
                     stopShown: panel.canGoOn
                 }

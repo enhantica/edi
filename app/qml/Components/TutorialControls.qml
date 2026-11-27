@@ -27,7 +27,8 @@ Row {
     // font size.
     readonly property real roundExtent: Math.round(EaStyle.Sizes.toolButtonHeight * 0.75)
     readonly property real roundIconSize: AppSizes.unit * 0.9375
-    readonly property bool canGoBack: tutorial !== null && tutorial.step > 0
+    // Never back onto the introduction, which comes before the tutorial's project is in place.
+    readonly property bool canGoBack: tutorial !== null && tutorial.step > tutorial.firstStep
     // On the last step Next stays where it is, off, so nothing moves under the pointer; Stop ends the tutorial there.
     readonly property bool canGoOn: tutorial !== null && !tutorial.atEnd
     readonly property string stopTip: tutorial && tutorial.atEnd ? qsTr("Finish the tutorial (Esc)") : qsTr("Stop the tutorial (Esc)")

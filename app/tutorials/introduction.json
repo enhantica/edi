@@ -1,0 +1,6 @@
+{
+  "note": "The first step of every tutorial, put in front of each by the loader (edi ADR-0064). The assistant sentence is shown only in a build with the AI assistant.",
+  "kind": "introduction",
+  "text": "This is a guided tutorial. It shows how EasyDiffraction works on one of its own example projects, so your project is not changed. When it ends, or when you stop it, do the same steps in your own project.",
+  "assistant": "If your data may be shared with an AI service, the built-in AI assistant can also help you create and analyse your own project."
+}

@@ -8,6 +8,10 @@
   (`tools/docs/app_tutorial_plan.py`), never written by hand; a new kind of action in a plan gets its step kind here
   before any tutorial uses it.
 
+**Amended 2026-11-27:** a generated tutorial gets the introduction every tutorial opens with (ADR-0064) from the app's
+loader, not from the generator, which is unchanged. The replay passes the introduction with its Start, telling it by its
+kind, and numbers the steps after it from 1, as the docs pages do.
+
 ## Context
 
 Every catalogue case has an app tutorial on the docs site, captured from a plan the case's Python tutorial gives:
