@@ -132,7 +132,7 @@ Flickable {
                 anchors.verticalCenter: parent.verticalCenter
                 enabled: header.choosable.length > 0
                 checked: header.choosable.length > 0 && header.choosable.every(i => graph.selected.indexOf(i) >= 0)
-                text: (header.index === 0 ? qsTr("Maximal") : qsTr("Level %1").arg(header.index + 1)) + " · " + qsTr("%n group(s)", "", header.members.length)
+                text: (header.index === 0 ? qsTr("Maximal") : qsTr("Level %1").arg(header.index + 1)) + " · " + (header.members.length === 1 ? qsTr("1 group") : qsTr("%1 groups").arg(header.members.length))
                 onToggled: graph.levelToggled(header.index, checked)
             }
         }

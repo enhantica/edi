@@ -193,8 +193,8 @@ AppDialog {
             }
         }
 
-        // What is shown and how.
-        Flow {
+        // What is shown and how, on one line, centred vertically.
+        RowLayout {
             Layout.fillWidth: true
             spacing: EaStyle.Sizes.fontPixelSize
             EaElements.CheckBox {
@@ -315,7 +315,7 @@ AppDialog {
                 const n = popup.nodes[popup.hovered];
                 if (n === undefined)
                     return qsTr("Point at a group for its moments and transforms.");
-                return `${n.name} ${n.bns} · ${qsTr("from the parent")} ${popup.found.cell} · ${qsTr("to the BNS standard")} ${n.transform} · ${qsTr("%n domain(s)", "", n.domains)}\n${n.moments}`;
+                return `${n.name} ${n.bns} · ${qsTr("from the parent")} ${popup.found.cell} · ${qsTr("to the BNS standard")} ${n.transform} · ${(n.domains === 1 ? qsTr("1 domain") : qsTr("%1 domains").arg(n.domains))}\n${n.moments}`;
             }
         }
     }
