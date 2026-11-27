@@ -43,9 +43,9 @@ QStringList claude_runtime_arguments(const QString& workspace, const QString& mo
 ///
 /// `start` stages the plugin, the MCP config and the instructions and starts a first process with a fresh session
 /// id and no model. Every process start first runs `claude auth status` with that process's environment. The first
-/// process's `initialize` reply gives the identity, the skills and the model list, and its `system/init` the tool
-/// set; `ready` follows. `openThread` keeps that process for a new thread when it has no effort to apply, else (and
-/// for every resume) starts a new process with the full arguments and repeats the readbacks before `threadOpened`.
+/// process's `initialize` reply and `system/init` give the identity, the skills, the model list and the tool set;
+/// `ready` follows. `openThread` starts a new process for each thread (and an effort change restarts it); each
+/// process passes the same readbacks before any input, and no input is written before its `system/init`.
 /// `usageChanged` may carry `status: {status: allowed_warning|rejected, window?, resetsAt?}` beside the buckets.
 class ClaudeSession final : public AssistantRuntimeSession {
     Q_OBJECT
@@ -61,10 +61,6 @@ public:
         account_email_ = email;
         account_method_ = authMethod;
     }
-
-    /// False while the runtime has not yet shown its tool set. A runtime that sends `system/init` only with the
-    /// first turn is ready without it; until it arrives, tool calls from that process must be refused.
-    bool toolsVerified() const noexcept { return init_verified_; }
 
     bool start(const AssistantRuntimeLaunch& launch) override;
     void retire() override;
@@ -92,11 +88,11 @@ private:
 
     QPointer<AssistantProcess> process_;
     Purpose purpose_ = Purpose::Probe;
-    bool initialize_passed_ = false, init_verified_ = false, init_deferred_ = false, readbacks_done_ = false;
+    bool initialize_passed_ = false, init_verified_ = false, readbacks_done_ = false;
     QJsonObject identity_;
     QJsonArray models_;
     QStringList tools_, capabilities_;
-    QTimer readback_timer_, init_timer_;
+    QTimer readback_timer_;
 
     QString session_id_, model_, effort_;
     QString process_model_, process_effort_;

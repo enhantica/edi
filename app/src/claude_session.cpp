@@ -17,8 +17,6 @@ namespace {
 
 // The CLI waits up to MCP_TIMEOUT (30 s by default) for edi's server before the first turn.
 constexpr int readback_ms = 120000;
-// How long to wait for `system/init` before input; a release that sends it only with the first turn is checked then.
-constexpr int init_wait_ms = 15000;
 constexpr int status_ms = 30000;
 constexpr int login_ms = 15 * 60 * 1000;
 constexpr int logout_ms = 60000;
@@ -180,16 +178,13 @@ QStringList claude_runtime_arguments(const QString& workspace, const QString& mo
 
 ClaudeSession::ClaudeSession(QObject* parent) : AssistantRuntimeSession(parent) {
     readback_timer_.setSingleShot(true);
-    init_timer_.setSingleShot(true);
     connect(&readback_timer_, &QTimer::timeout, this, [this] {
-        if (process_ && !readbacks_done_)
-            startFailed(QStringLiteral("Claude did not finish starting within %1 seconds.").arg(readback_ms / 1000),
-                        AssistantProvider::FailureKind::OperationDeadline);
-    });
-    connect(&init_timer_, &QTimer::timeout, this, [this] {
-        if (!process_ || !initialize_passed_ || init_verified_) return;
-        init_deferred_ = true;
-        maybeReadbacksDone();
+        if (!process_ || readbacks_done_) return;
+        // No input is ever written before `system/init`, so a runtime that never sends it cannot be used.
+        startFailed(initialize_passed_ && !init_verified_
+                        ? QStringLiteral("Claude did not report its tools within %1 seconds.").arg(readback_ms / 1000)
+                        : QStringLiteral("Claude did not finish starting within %1 seconds.").arg(readback_ms / 1000),
+                    AssistantProvider::FailureKind::OperationDeadline);
     });
 }
 
@@ -410,7 +405,6 @@ void ClaudeSession::spawn(bool resume, quint64 generation) {
 void ClaudeSession::retireProcess() {
     ++generation_;
     readback_timer_.stop();
-    init_timer_.stop();
     if (process_) {
         process_->disconnect(this);
         process_->retire();
@@ -423,7 +417,7 @@ void ClaudeSession::retireProcess() {
         status_->deleteLater();
     }
     launching_ = false;
-    initialize_passed_ = init_verified_ = init_deferred_ = readbacks_done_ = false;
+    initialize_passed_ = init_verified_ = readbacks_done_ = false;
     requests_.clear();
     tools_.clear();
     capabilities_.clear();
@@ -481,12 +475,6 @@ void ClaudeSession::receive(const QJsonObject& record) {
                         type == QStringLiteral("result");
     if (output && !readbacks_done_) {
         startFailed(QStringLiteral("Claude answered before edi sent a message."));
-        return;
-    }
-    if (output && !init_verified_) {
-        retireProcess();
-        emit failed(QStringLiteral("Claude answered before it reported its tools."),
-                    AssistantProvider::FailureKind::Other);
         return;
     }
     if (output && dropRecord(record)) return;
@@ -562,7 +550,6 @@ void ClaudeSession::initializeReply(const QJsonObject& reply) {
                  {QStringLiteral("host"), launch_.account.host},
                  {QStringLiteral("authMethod"), auth_method_}};
     initialize_passed_ = true;
-    if (!init_verified_) init_timer_.start(init_wait_ms);
     maybeReadbacksDone();
 }
 
@@ -601,12 +588,11 @@ void ClaudeSession::systemInit(const QJsonObject& init) {
     for (const auto& value : init.value(QStringLiteral("capabilities")).toArray())
         capabilities_.append(value.toString());
     init_verified_ = true;
-    init_timer_.stop();
     maybeReadbacksDone();
 }
 
 void ClaudeSession::maybeReadbacksDone() {
-    if (readbacks_done_ || !initialize_passed_ || (!init_verified_ && !init_deferred_)) return;
+    if (readbacks_done_ || !initialize_passed_ || !init_verified_) return;
     readbacks_done_ = true;
     readback_timer_.stop();
     // A model chosen while this process was starting.
@@ -638,21 +624,11 @@ void ClaudeSession::openThread(const QString& resumeId, const QString& model, co
     effort_ = effort;
     restart_pending_ = false;
     queued_.clear();
-    // The first process becomes the thread when nothing in its launch must change but the model.
-    if (resumeId.isEmpty() && process_ && purpose_ == Purpose::Probe && readbacks_done_ && !process_used_ &&
-        effort.isEmpty()) {
-        purpose_ = Purpose::Thread;
-        if (!model.isEmpty() && model != process_model_) {
-            control(QStringLiteral("set_model"), {{QStringLiteral("model"), model}});
-            process_model_ = model;
-        }
-        emit threadOpened(session_id_);
-        return;
-    }
     if (!resumeId.isEmpty() && QUuid::fromString(resumeId).isNull()) {
         emit failed(QStringLiteral("This Claude conversation has no valid id."), AssistantProvider::FailureKind::Other);
         return;
     }
+    // Every thread gets its own process, so its readbacks are the ones for the process that takes its input.
     session_id_ = resumeId.isEmpty() ? new_uuid() : resumeId;
     launch(Purpose::Thread, !resumeId.isEmpty());
 }
