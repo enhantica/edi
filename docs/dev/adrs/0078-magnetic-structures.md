@@ -97,6 +97,14 @@ without computing any of them itself.
   fittable, no Wyckoff letter (the site table shows none, and the multiplicity is the operators' orbit), and an
   anisotropic site refused, with the reason, at load, at the type change and at the group selector, which then keeps
   the prior model.
+  A type IV structure (amended 2026-11-27, crysta ADR-0137 Part B) instead takes crysta's admitted site for each atom:
+  its position, displacement and moment ties, its BNS Wyckoff letter (`.` when none applies) and the cell ties the
+  group's metric allows. Its BNS number and name stay while crysta verifies the operators against that entry, a
+  setting change carries the entry through the new transform, and FullProf export and new atoms take their orbits
+  from the operators.
+- **One completion of an edit** (2026-11-27). Every magnetic edit (k, the group, a setting, and a coordinate, cell
+  or displacement edit of a type IV structure) builds the structure as it would become and hands it to crysta's
+  `complete_magnetic`. Only the completed result replaces the model; a refusal keeps the prior one.
 - **The magnetic popup** (2026-11-26). Crystal → Magnetic on an atom-based Crystal structure opens a popup instead of
   setting the grey group; Cancel changes nothing. It takes a propagation vector (crysta's presets, k = 0 first, or
   three exact fractions), the magnetic sites (ticked by default where the element has a magnetic form factor), and
@@ -116,7 +124,7 @@ without computing any of them itself.
   that needs more than 24 parent cells, is underdetermined or incommensurate at this resolution says so.
 - **Picking a BNS group in place.** The Number BNS and Name BNS fields of a Magnetic structure take another group
   only within the structure's cell, its propagation vectors and its atoms (crysta's `admit_magnetic_space_group`);
-  otherwise the refusal points to Crystal → Magnetic.
+  otherwise the refusal says to run the magnetic symmetry analysis again from the crystal structure it came from.
 - **Identity.** The magnetic description and the moments are inputs of the structure's geometry and of every
   calculation it takes part in; a structure without them keeps its identity and its saved bytes.
 
