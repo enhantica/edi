@@ -2,7 +2,7 @@
 """Put crysta's source at one commit on a CI runner and list it for the output checks.
 
     TOKEN=... python3 tools/ci/crysta_fetch.py SHA [--history] [--receipts FOLDER] [--site FOLDER]
-                                               [--base BRANCH]
+                                               [--base BRANCH] [--full-history]
 
 Fetches the commit into $RUNNER_TEMP/crysta, refuses any other, writes the lists source_lists.py
 reads, proves the output filter with them and names the checkout and the lists to the later steps.
@@ -11,7 +11,9 @@ A job that publishes what another commit of edi made lists every commit edi's hi
 the list of the commits its content was checked against and is published with it (`--site`), so
 what it keeps is compared with the source that content was made from. A comparison against
 another crysta commit (`--base`, the performance A/B against crysta main) gets that branch's head
-listed too and checked out beside, in $RUNNER_TEMP/crysta-base. Nothing a child process prints is
+listed too and checked out beside, in $RUNNER_TEMP/crysta-base. A job that reads crysta's history,
+such as the wheel build whose version comes from crysta's tags, fetches every commit and tag
+(`--full-history`); only the listed commits are checked out. Nothing a child process prints is
 passed on: it could be the source.
 """
 
@@ -92,15 +94,16 @@ def branch_head(where: Path, branch: str, token: str) -> str:
     return heads[0]
 
 
-def fetch(home: Path, sha: str, also: set[str], token: str) -> None:
+def fetch(home: Path, sha: str, also: set[str], token: str, *, full: bool = False) -> None:
     """Fetch ``sha`` and check it out, the others beside it; the token stays in this process."""
     remove(home)
     home.mkdir(parents=True)
     git(home, 'init', '-q')
     wanted = [sha, *sorted(also - {sha})]
+    scope = ('--tags',) if full else ('--depth', '1')
     git(
         home,
-        *('fetch', '-q', '--depth', '1', f'{SERVER}/{REPOSITORY}', *wanted),
+        *('fetch', '-q', *scope, f'{SERVER}/{REPOSITORY}', *wanted),
         **credentials(token),
     )
     git(home, 'checkout', '-q', '--detach', sha)
@@ -313,7 +316,7 @@ def prepare(temp: Path, args: argparse.Namespace) -> int:
     if base:
         pins.add(base)
     home = temp / 'crysta'
-    fetch(home, args.sha, pins, os.environ['TOKEN'])
+    fetch(home, args.sha, pins, os.environ['TOKEN'], full=args.full_history)
     made = lists(home, pins, [*checkout(ROOT), *collection(temp / 'edi-data-published')])
     environment = {
         'CRYSTA_SRC': str(home),
@@ -345,6 +348,7 @@ def main() -> int:
     parser.add_argument('--receipts', type=Path)
     parser.add_argument('--site', type=Path)
     parser.add_argument('--base')
+    parser.add_argument('--full-history', action='store_true')
     args = parser.parse_args()
     temp = Path(os.environ['RUNNER_TEMP'])
     try:

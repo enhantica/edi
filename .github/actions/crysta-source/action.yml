@@ -24,6 +24,9 @@ inputs:
   base:
     description: A crysta branch whose head is listed too and checked out beside, for a comparison
     default: ''
+  full-history:
+    description: Fetch every crysta commit and tag, for a job that reads the history
+    default: 'false'
 runs:
   using: composite
   steps:
@@ -45,6 +48,7 @@ runs:
         RECEIPTS: ${{ inputs.receipts }}
         SITE: ${{ inputs.site }}
         BASE: ${{ inputs.base }}
+        FULL: ${{ inputs.full-history == 'true' && '--full-history' || '' }}
       run: >-
         python3 tools/ci/crysta_fetch.py "$SHA" $HISTORY ${RECEIPTS:+--receipts "$RECEIPTS"} ${SITE:+--site "$SITE"}
-        ${BASE:+--base "$BASE"}
+        ${BASE:+--base "$BASE"} $FULL

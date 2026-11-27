@@ -852,7 +852,15 @@ jobs:
     steps:
       - *marker
       - *checkout
-      - *source
+      # The wheel's version comes from crysta's tags.
+      - if: needs.plan.outputs.skip != 'true'
+        name: crysta's source, whose lines no later step prints or stores
+        uses: ./.github/actions/crysta-source
+        with:
+          sha: ${{ inputs.crysta-sha }}
+          app-id: ${{ vars.ENHANTICA_APP_ID }}
+          private-key: ${{ secrets.CRYSTA_READ_KEY }}
+          full-history: 'true'
       - *subject
       # Built to prove the wheels build; they are not stored.
       - name: Build the wheels
