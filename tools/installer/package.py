@@ -1058,10 +1058,12 @@ def macos_installer_template(tools: Path, output: Path) -> Path:
     return thin
 
 
-# The disk image window in points: its content 400 wide and 250 high under a 28-point title bar,
-# centred on a 1440 by 900 screen, and the installer's icon in the window's middle, under the
-# background's "Double-click to install" (disk_image_background.qml), its label below.
-DISK_IMAGE_WINDOW = ((520, 311), (400, 278))
+# The disk image window in points: its content 400 wide and 272 high under a 28-point title bar,
+# centred on a 1440 by 900 screen, the installer's icon under the background's "Double-click to
+# install" (disk_image_background.qml), its label below. A Finder showing its tab bar hides the
+# content's bottom 40 points, leaving 232: the text's top 36 points down and the label's bottom
+# at 196 then leave about 36 above and below.
+DISK_IMAGE_WINDOW = ((520, 300), (400, 300))
 DISK_IMAGE_ICON = (200, 125)
 
 

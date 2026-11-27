@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: BSD-3-Clause
 // The disk image window's background (edi ADR-0071): white as the website, its network in two corners in a light grey
 // with three blue charges running along its lines, "Double-click to install" in the dark text colour above the
-// installer's icon in the window's middle. Finder shows the picture as it is in light and dark mode (it shows even a
-// transparent picture white, and the icon's label black), so it is drawn for that. package.py places the icon in the
-// middle (DISK_IMAGE_ICON); keep the two in step. Writes DiskImageBackground.png and its @2x copy:
+// installer's icon. Finder shows the picture as it is in light and dark mode (it shows even a transparent
+// picture white, and the icon's label black), so it is drawn for that. package.py places the icon and sizes the window
+// (DISK_IMAGE_ICON, DISK_IMAGE_WINDOW); keep the two in step. Writes DiskImageBackground.png and its @2x copy:
 //   QML_XHR_ALLOW_FILE_READ=1 qml -platform offscreen disk_image_background.qml -- <PTSans-Regular.ttf> <folder>
 // PT Sans comes with the pinned gui-components (Gui/Resources/Fonts/PT_Sans); the network is the website's
 // (website/surfaces/overrides/partials/network.svg).
@@ -12,7 +12,7 @@ import QtQuick
 Window {
     id: window
 
-    // Points: the window shows the top 400 by 250; the rest keeps a slightly taller window filled.
+    // Points: the window shows the top 400 by 272, 232 under Finder's tab bar; the rest keeps a taller window filled.
     readonly property int pointWidth: 400
     readonly property int pointHeight: 300
     readonly property var arguments: Qt.application.arguments.slice(Qt.application.arguments.indexOf("--") + 1)
@@ -83,7 +83,8 @@ Window {
 
         Text {
             anchors.horizontalCenter: parent.horizontalCenter
-            // The text's middle 43 points down, the icon's 125, the middle of the window's 250 (DISK_IMAGE_ICON).
+            // The text's middle 43 points down (its letters 36 to 50), the icon's 125 (DISK_IMAGE_ICON) with its label
+            // ending at 196: package.py sizes the window so the space above and below is the same under a tab bar.
             y: 43 * window.scale - height / 2
             text: "Double-click to install"
             // On Finder's window the website's blue darkened to #0887b6, which stands 4.1 to 1 against both Finder's

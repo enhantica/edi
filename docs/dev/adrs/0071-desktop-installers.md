@@ -344,7 +344,7 @@ holding the `.run` beside its runtime libraries. The website still finds the old
 before each change. The disk image's volume is `EasyDiffraction Installer` and holds only `EasyDiffraction
 Installer.app`; the branding licence the installer's icon asks for (BSD, its notice with the binaries) is
 `Contents/Resources/BRANDING-LICENSE.txt` inside the app. `dmgbuild` writes its Finder window into the image: 400 by
-250 points of content on a white background, as the website's, reading "Double-click to install" in the app's dark
+272 points of content on a white background, as the website's, reading "Double-click to install" in the app's dark
 text colour (PT Sans, `#333333`), the website's network (its two banks, at 0.42 of their size, in its light grey a
 little stronger) in the top-right and bottom-left corners with three blue charges along its lines, two crossing in
 the top-right and one in the bottom-left (`DiskImageBackground.png` and its `@2x` copy, written by
@@ -355,7 +355,9 @@ picture white (a macOS capture, 2026-11-26), and draws the icon's label black, w
 recolour nor hide; a light background is what reads in both,
 every bar off (toolbar, status, path, sidebar and tab bar), and the installer's icon as the volume icon.
 A Finder whose tab bar the user turned on shows it in this window too: the window setting cannot override
-it, so the icon sits high enough to keep its label in view under a tab bar. The volume icon is
+it, so the window is tall enough that, under a tab bar (40 points), the space below the icon's label equals the
+space above the text, about 36 points each (owner, 2026-11-27); without one the space below is 40 points larger.
+The volume icon is
 `.VolumeIcon.icns` with the volume's custom icon flag, both inside the image, so a downloaded image shows
 it once mounted (on the desktop, in the Finder sidebar and in the window's title); packaging mounts the
 image and refuses one without either. The image file gets the same icon on the build machine, but a file's
