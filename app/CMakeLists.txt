@@ -733,6 +733,7 @@ if(TARGET edi_assistant_native AND EDI_APP_ASSISTANT)
 endif()
 if(NOT EMSCRIPTEN)
     target_sources(edi_app_module PRIVATE src/assistant_provider.hpp src/codex_agent.hpp src/codex_agent.cpp
+        src/assistant_guard_launch.hpp src/assistant_guard_launch.cpp
         src/assistant_providers.hpp src/assistant_providers.cpp
         src/assistant_accounts.hpp src/assistant_accounts.cpp
         src/native_chatgpt_provider.hpp src/native_chatgpt_provider.cpp
