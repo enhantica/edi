@@ -45,6 +45,13 @@ AppDialog {
     property int hovered: -1
     property string refusal: ""
     property bool busy: false
+    // The toolbar's choices (owner, 2026-11-28, header design B): the magnetic sites by id, the levels, the net moment
+    // (0 any, 1 ferromagnetic, 2 zero), the starting moments and the view.
+    property var chosenSites: []
+    property bool maximalOnly: true
+    property int netMoment: 0
+    property bool startMoments: true
+    property bool listMode: false
 
     readonly property var nodes: found ? found.nodes : []
 
@@ -61,7 +68,11 @@ AppDialog {
 
     function selectable(i) {
         const n = nodes[i];
-        return n !== undefined && n.bns !== "" && n.momentAllowed && (!maximalOnly.checked || Math.max(1, n.row) === 1);
+        return n !== undefined && n.bns !== "" && n.momentAllowed && (!maximalOnly || Math.max(1, n.row) === 1) && netShown(n);
+    }
+    // The net-moment filter: ferromagnetic groups (FM on the cards), or the others.
+    function netShown(n) {
+        return netMoment === 0 || (netMoment === 1) === (n.netMoment === true);
     }
     function toggle(i) {
         if (!selectable(i))
@@ -123,13 +134,17 @@ AppDialog {
         }
     }
     function tickedSites() {
-        const out = [];
-        for (let i = 0; i < siteRepeater.count; ++i) {
-            const box = siteRepeater.itemAt(i) as EaElements.CheckBox;
-            if (box && box.checked)
-                out.push(sites[i].id);
-        }
-        return out;
+        return chosenSites.slice();
+    }
+    // A site's check in the sites list: at least one stays chosen.
+    function setSite(id, on) {
+        const next = chosenSites.filter(s => s !== id);
+        if (on)
+            next.push(id);
+        if (next.length === 0)
+            return;
+        chosenSites = sites.map(s => s.id).filter(s => next.indexOf(s) >= 0);
+        find();
     }
     function find() {
         retireRequest();
@@ -144,12 +159,14 @@ AppDialog {
             kSnapshotId = 0;
             kRow = -1;
         }
-        graphRequest = project.findMagneticGroups(structureIndex, k, ticked, zeroMoment.checked, kSnapshotId, kRow);
+        // A group in which every chosen site must carry no moment is never shown (owner, 2026-11-28).
+        graphRequest = project.findMagneticGroups(structureIndex, k, ticked, false, kSnapshotId, kRow);
     }
 
     Component.onCompleted: {
         presets = project.magneticPresets(structureIndex);
         sites = project.magneticSites(structureIndex);
+        chosenSites = sites.filter(s => s.magnetic).map(s => s.id);
         Qt.callLater(() => {
             if (popup.initialK !== "")
                 popup.setK(popup.initialK);
@@ -181,18 +198,29 @@ AppDialog {
         anchors.fill: parent
         spacing: AppSizes.groupContentSpacing
 
-        // The propagation vector.
-        RowLayout {
-            spacing: EaStyle.Sizes.fontPixelSize * 0.6
-            EaElements.Label {
-                text: qsTr("Propagation vector k")
-            }
-            EaElements.ComboBox {
+        // One toolbar row, built from the chart toolbar's own boxes and buttons and spaced as Experiment → Pattern's
+        // (owner, 2026-11-28, header design B): k with its magnetic cell, the magnetic sites, the levels, the net
+        // moment, the starting moments, then the Graph and List buttons.
+        Row {
+            id: toolbar
+            objectName: "magnetic.toolbar"
+            spacing: AppSizes.toolbarSpacing
+
+            readonly property var kEntries: popup.presets.map(p => {
+                const k = p.k.split(",").join(", ");
+                const named = p.label === "" ? `(${k})` : `${p.label} (${k})`;
+                return p.cell === undefined || p.cell === "" ? named : `${named} · ${p.cell.split(",").join(", ")}`;
+            }).concat([qsTr("Other…")])
+
+            ToolbarComboBox {
                 id: kChoice
                 objectName: "magnetic.k"
                 enabled: !popup.busy
-                Layout.preferredWidth: EaStyle.Sizes.fontPixelSize * 16
-                model: popup.presets.map(p => p.label === "" ? `(${p.k})` : `${p.label}  (${p.k})`).concat([qsTr("Other…")])
+                toolTip: qsTr("Propagation vector k and its magnetic cell")
+                model: toolbar.kEntries
+                closedTexts: toolbar.kEntries.map(e => qsTr("k: %1").arg(e))
+                fitShown: true
+                currentIndex: 0
                 onActivated: {
                     if (currentIndex < popup.presets.length)
                         popup.find();
@@ -207,80 +235,76 @@ AppDialog {
                     required property int index
                     enabled: !popup.busy
                     visible: kChoice.currentIndex === popup.presets.length
-                    Layout.preferredWidth: EaStyle.Sizes.fontPixelSize * 5
+                    width: EaStyle.Sizes.fontPixelSize * 4
+                    height: AppSizes.toolbarControlSize
                     placeholderText: ["k₁", "k₂", "k₃"][index]
                     text: "0"
                     onTextEdited: popup.invalidateGraph()
                     onEditingFinished: popup.find()
                 }
             }
-            EaElements.Label {
-                Layout.fillWidth: true
-                elide: Text.ElideRight
-                text: popup.found ? qsTr("Magnetic cell: %1").arg(popup.found.cell.replace(";0,0,0", "").split(",").join(", ")) : ""
+            MagneticSitesBox {
+                objectName: "magnetic.sites"
+                enabled: !popup.busy
+                structure: popup.structure
+                sites: popup.sites
+                chosen: popup.chosenSites
+                onToggled: (id, on) => popup.setSite(id, on)
             }
-        }
-
-        // The magnetic sites.
-        Flow {
-            Layout.fillWidth: true
-            spacing: EaStyle.Sizes.fontPixelSize * 0.6
-            EaElements.Label {
-                text: qsTr("Magnetic sites")
-            }
-            Repeater {
-                id: siteRepeater
-                model: popup.sites
-                delegate: EaElements.CheckBox {
-                    required property var modelData
-                    required property int index
-                    objectName: `magnetic.site.${index}`
-                    enabled: !popup.busy
-                    text: `${modelData.id} (${modelData.type})`
-                    checked: modelData.magnetic
-                    onToggled: popup.find()
+            ToolbarComboBox {
+                objectName: "magnetic.levels"
+                enabled: !popup.busy
+                toolTip: qsTr("Which levels of groups are shown")
+                model: [qsTr("All"), qsTr("Maximal only")]
+                closedTexts: [qsTr("levels: All"), qsTr("levels: Maximal only")]
+                fitShown: true
+                shownIndex: popup.maximalOnly ? 1 : 0
+                onActivated: index => {
+                    popup.maximalOnly = index === 1;
+                    popup.selected = popup.selected.filter(i => popup.selectable(i));
                 }
             }
-        }
-
-        // What is shown and how, on one line, centred vertically.
-        RowLayout {
-            Layout.fillWidth: true
-            spacing: EaStyle.Sizes.fontPixelSize
-            EaElements.CheckBox {
-                id: maximalOnly
-                objectName: "magnetic.maximalOnly"
+            ToolbarComboBox {
+                objectName: "magnetic.netMoment"
                 enabled: !popup.busy
-                leftPadding: 0  // on the labels' edge, as the rows above
-                text: qsTr("Maximal only")
-                checked: true
-                onToggled: popup.selected = popup.selected.filter(i => popup.selectable(i))
+                toolTip: qsTr("Groups by their net moment: ferromagnetic (FM on the cards) or zero")
+                model: [qsTr("Any"), qsTr("Ferromagnetic"), qsTr("Zero")]
+                closedTexts: [qsTr("net moment: Any"), qsTr("net moment: Ferromagnetic"), qsTr("net moment: Zero")]
+                fitShown: true
+                shownIndex: popup.netMoment
+                onActivated: index => {
+                    popup.netMoment = index;
+                    popup.selected = popup.selected.filter(i => popup.selectable(i));
+                }
             }
-            EaElements.CheckBox {
-                id: zeroMoment
-                objectName: "magnetic.zeroMoment"
-                enabled: !popup.busy
-                text: qsTr("Show groups without moments")
-                checked: false
-                onToggled: popup.find()
-            }
-            EaElements.CheckBox {
-                id: startMoments
+            ToolbarComboBox {
                 objectName: "magnetic.startMoments"
                 enabled: !popup.busy
-                text: qsTr("Add non-zero starting moments")
-                checked: true
+                toolTip: qsTr("The moments each new structure starts with: 2 to 3 μB along the allowed components, or zero")
+                model: [qsTr("Non-zero"), qsTr("Zero")]
+                closedTexts: [qsTr("start: Non-zero"), qsTr("start: Zero")]
+                fitShown: true
+                shownIndex: popup.startMoments ? 0 : 1
+                onActivated: index => popup.startMoments = index === 0
             }
-            EaElements.RadioButton {
-                id: graphMode
+            // A group's spacing, then the view buttons.
+            Item {
+                width: EaStyle.Sizes.fontPixelSize * 0.5 + AppSizes.toolbarSpacing
+                height: 1
+            }
+            ChartToolButton {
                 objectName: "magnetic.graphView"
-                text: qsTr("Graph")
-                checked: true
+                fontIcon: "project-diagram"
+                toolTip: qsTr("Graph")
+                checked: !popup.listMode
+                onClicked: popup.listMode = false
             }
-            EaElements.RadioButton {
-                id: listMode
+            ChartToolButton {
                 objectName: "magnetic.listView"
-                text: qsTr("List")
+                fontIcon: "list"
+                toolTip: qsTr("List")
+                checked: popup.listMode
+                onClicked: popup.listMode = true
             }
         }
 
@@ -302,8 +326,8 @@ AppDialog {
             Layout.fillHeight: true
             Layout.minimumHeight: EaStyle.Sizes.fontPixelSize * 8
             // Its content's own height, so the dialog fits what it shows.
-            Layout.preferredHeight: listMode.checked ? listView.contentHeight + EaStyle.Sizes.tableRowHeight : graphView.contentHeight
-            currentIndex: listMode.checked ? 1 : 0
+            Layout.preferredHeight: popup.listMode ? listView.contentHeight + EaStyle.Sizes.tableRowHeight : graphView.contentHeight
+            currentIndex: popup.listMode ? 1 : 0
 
             // The graph's cards and level titles start one gap in, where the edges into the first column run: the
             // graph sits that gap further left, so they line up with the controls above and those edges run in the
@@ -317,7 +341,8 @@ AppDialog {
                     height: parent.height
                     nodes: popup.nodes
                     selected: popup.selected
-                    maximalOnly: maximalOnly.checked
+                    maximalOnly: popup.maximalOnly
+                    netMoment: popup.netMoment
                     parentCell: popup.found ? popup.found.cell : ""
                     onShownNodeChanged: popup.hovered = shownNode
                     onToggled: index => popup.toggle(index)
@@ -350,7 +375,7 @@ AppDialog {
                 sourceModel: {
                     const rows = [];
                     for (let i = 0; i < popup.nodes.length; ++i)
-                        if (!maximalOnly.checked || Math.max(1, popup.nodes[i].row) === 1)
+                        if ((!popup.maximalOnly || Math.max(1, popup.nodes[i].row) === 1) && popup.netShown(popup.nodes[i]))
                             rows.push(i);
                     rows.sort((a, b) => Math.max(1, popup.nodes[a].row) - Math.max(1, popup.nodes[b].row) || a - b);
                     return rows;
@@ -501,7 +526,7 @@ AppDialog {
                 enabled: popup.selected.length > 0 && !popup.busy
                 onClicked: {
                     const count = popup.selected.length;
-                    if (popup.found !== null && popup.project.addMagneticCandidates(popup.found.graphId, popup.selected, startMoments.checked, popup.selectAfterAdd)) {
+                    if (popup.found !== null && popup.project.addMagneticCandidates(popup.found.graphId, popup.selected, popup.startMoments, popup.selectAfterAdd)) {
                         popup.added(count);
                         popup.close();
                     } else {

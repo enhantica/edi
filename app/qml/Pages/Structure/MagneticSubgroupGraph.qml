@@ -23,6 +23,8 @@ Flickable {
     property var nodes: []
     property var selected: []
     property bool maximalOnly: true
+    // The net-moment filter (owner, 2026-11-28): 0 any, 1 ferromagnetic (FM on the cards), 2 zero.
+    property int netMoment: 0
     property int hovered: -1
     // Hovering a card shows its relatives; its pin (shown on the hovered card) keeps them shown while other cards are
     // hovered, until the pin is clicked again or Esc is pressed (owner, 2026-11-27). Pinning does not select.
@@ -91,7 +93,8 @@ Flickable {
         font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.85
     }
     function shown(i) {
-        return !maximalOnly || Math.max(1, nodes[i].row) === 1;
+        return (!maximalOnly || Math.max(1, nodes[i].row) === 1) &&
+               (netMoment === 0 || (netMoment === 1) === (nodes[i].netMoment === true));
     }
     function selectable(i) {
         const n = nodes[i];
