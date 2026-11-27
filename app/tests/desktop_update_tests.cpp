@@ -45,7 +45,9 @@ public:
         });
         if (!server.listen(QHostAddress::LocalHost)) qFatal("Unable to bind local recorded feed");
     }
-    QUrl url() const { return QUrl(QStringLiteral("http://127.0.0.1:%1/releases.json").arg(server.serverPort())); }
+    QUrl url(const QString& path = QStringLiteral("/releases.json")) const {
+        return QUrl(QStringLiteral("http://127.0.0.1:%1%2").arg(QString::number(server.serverPort()), path));
+    }
 };
 }
 
@@ -147,6 +149,23 @@ private slots:
         QVERIFY(!development.managed());
         development.checkNow();
         QVERIFY(!development.checking());
+    }
+    void previewNotesOnlyFromTestingV2() {
+        // testing.json is the legacy feed for old apps now, so only testing-v2.json may carry preview notes.
+        auto entry = release("26.17");
+        entry["notes"] = QJsonObject{{"Added", QJsonArray{QJsonObject{{"title", "Preview build"}, {"pull_request", 0}}}},
+                                     {"Changed", QJsonArray{}}, {"Fixed", QJsonArray{}}};
+        FeedServer feed(QJsonDocument(QJsonObject{{"schema", "edi.preview-releases/1"}, {"releases", QJsonArray{entry}}}).toJson());
+        edi_app::DesktopUpdates testing("2026.11.31", QCoreApplication::applicationFilePath(), {feed.url("/edi/releases/testing-v2.json")}, false);
+        testing.checkNow();
+        QTRY_VERIFY_WITH_TIMEOUT(!testing.checking(), 3000);
+        QVERIFY(testing.available());
+        QCOMPARE(testing.availableVersion(), "26.17");
+        edi_app::DesktopUpdates legacy("2026.11.31", QCoreApplication::applicationFilePath(), {feed.url("/edi/releases/testing.json")}, false);
+        legacy.checkNow();
+        QTRY_VERIFY_WITH_TIMEOUT(!legacy.checking(), 3000);
+        QVERIFY(!legacy.available());
+        QVERIFY(legacy.status().contains("Unable"));
     }
     void updaterLaunchFailureKeepsTheApplicationOpen() {
         QTemporaryDir temp;

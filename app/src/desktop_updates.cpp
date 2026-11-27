@@ -43,6 +43,67 @@ std::optional<ReleaseKey> release_version_key(const QString& value) {
     if (!y || !m || !n || *y < 2000) return {};
     return ReleaseKey{*y, 0, *m, *n};
 }
+// The mark beside a kept bundle names the update that kept it: its token, the process running it and that process's
+// start time as `LC_ALL=C ps -o lstart=` gives it (maintenance_swap.sh). While that process lives, the swap or its undo
+// may be between its two renames, so the kept bundle is not the app's to take. A process with that number but another
+// start time is a later one. When it cannot tell, it says live: the tool is put back once the update has ended.
+static bool kept_by_live_update(const QString& mark_file) {
+#if defined(__EMSCRIPTEN__) || defined(Q_OS_WIN)
+    Q_UNUSED(mark_file);
+    return false;
+#else
+    QFile file(mark_file);
+    if (!file.open(QIODevice::ReadOnly)) return false;
+    const QStringList fields = QString::fromUtf8(file.readAll()).simplified().split(QLatin1Char(' '));
+    bool number = false;
+    const qint64 pid = fields.value(1).toLongLong(&number);
+    if (!number || pid <= 0) return false;
+    const QString started = fields.mid(2).join(QLatin1Char(' '));
+    QProcess ps;
+    QProcessEnvironment environment = QProcessEnvironment::systemEnvironment();
+    environment.insert(QStringLiteral("LC_ALL"), QStringLiteral("C"));
+    ps.setProcessEnvironment(environment);
+    ps.start(QStringLiteral("/bin/ps"), {QStringLiteral("-o"), QStringLiteral("lstart="), QStringLiteral("-p"),
+                                         QString::number(pid)});
+    if (!ps.waitForFinished(3000)) {
+        ps.kill();
+        ps.waitForFinished(1000);
+        return true;
+    }
+    if (ps.exitStatus() != QProcess::NormalExit) return true;
+    if (ps.exitCode() != 0) return false;  // no such process: the update has ended
+    return started.isEmpty() || QString::fromUtf8(ps.readAllStandardOutput()).simplified() == started;
+#endif
+}
+#ifndef __EMSCRIPTEN__
+// A kept tool beside the bundle holding `executable`: a swap is running or stopped, and the installation is managed.
+static bool kept_maintenance_tool(const QString& executable) {
+    const QString bundle = QDir::cleanPath(executable + QStringLiteral("/../../.."));
+    return bundle.endsWith(QStringLiteral(".app")) &&
+           QFileInfo(bundle + QStringLiteral(".old/Contents/MacOS/") + QFileInfo(executable).fileName()).isFile();
+}
+#endif
+bool restore_kept_maintenance_tool(const QString& executable) {
+    const QString bundle = QDir::cleanPath(executable + QStringLiteral("/../../.."));
+    const QString tail = QStringLiteral("/Contents/MacOS/") + QFileInfo(executable).fileName();
+    const QString kept = bundle + QStringLiteral(".old");
+    const QString drop = bundle + QStringLiteral(".drop");
+    // Only a macOS bundle has a kept copy. A tool counts as there when its file is, as in maintenance_swap.sh.
+    if (!bundle.endsWith(QStringLiteral(".app")) || QFileInfo(bundle + tail).isFile() ||
+        !QFileInfo(kept + tail).isFile())
+        return false;
+    if (kept_by_live_update(bundle + QStringLiteral(".old-token"))) return false;
+    // Part of a bundle in the tool's place leaves it in one rename first, as in the swap. MaintenanceTool.app.new
+    // stays: the retried update finishes the swap with it.
+    if (QFileInfo(bundle).exists() || QFileInfo(bundle).isSymLink()) {
+        QDir(drop).removeRecursively();
+        if (!QDir().rename(bundle, drop)) return false;
+    }
+    if (!QDir().rename(kept, bundle)) return false;
+    QFile::remove(bundle + QStringLiteral(".old-token"));
+    QDir(drop).removeRecursively();
+    return true;
+}
 namespace {
 QString maintenance_path() {
 #ifdef __EMSCRIPTEN__
@@ -73,8 +134,10 @@ QList<QUrl> feed_urls() {
     QList<QUrl> result;
     QStringList bases{object.value(QStringLiteral("primary_base")).toString()};
     for (const auto& mirror : object.value(QStringLiteral("mirror_bases")).toArray()) bases.append(mirror.toString());
+    // Apps up to 2026.11.31 read stable.json and drop the whole file over a YY.N version,
+    // so it stays a legacy feed for them and this app reads the -v2 files (ADR-0106).
     for (const auto& base : bases) {
-        const QUrl url = QUrl(base).resolved(QUrl(testing ? QStringLiteral("releases/testing.json") : QStringLiteral("releases/stable.json")));
+        const QUrl url = QUrl(base).resolved(QUrl(testing ? QStringLiteral("releases/testing-v2.json") : QStringLiteral("releases/stable-v2.json")));
         if (url.scheme() == QLatin1String("https") && !url.host().isEmpty()) result.append(url);
     }
     return result;
@@ -145,7 +208,10 @@ DesktopUpdates::DesktopUpdates(QObject* parent)
 DesktopUpdates::DesktopUpdates(QString version, QString maintenance, QList<QUrl> feeds, bool automatic, QObject* parent)
     : QObject(parent), version_(std::move(version)), maintenance_(std::move(maintenance)), feeds_(std::move(feeds)) {
 #ifndef __EMSCRIPTEN__
-    managed_ = release_version_key(version_).has_value() && QFileInfo(maintenance_).isExecutable();
+    const bool release = release_version_key(version_).has_value();
+    if (release) restore_kept_maintenance_tool(maintenance_);
+    // While an update still runs, the tool may be aside: the launch actions put it back once that update has ended.
+    managed_ = release && (QFileInfo(maintenance_).isExecutable() || kept_maintenance_tool(maintenance_));
 #endif
     status_ = managed_ ? tr("Updates have not been checked yet.") : tr("Updates are available for installed desktop releases.");
     if (managed_ && automatic && !QCoreApplication::arguments().contains(QStringLiteral("--testmode")) &&
@@ -212,7 +278,7 @@ void DesktopUpdates::fetchNext() {
     connect(reply, &QNetworkReply::finished, this, [this, reply, bytes, read] {
         read();
         bool valid = false;
-        const bool preview = reply->request().url().path().endsWith(QStringLiteral("/releases/testing.json"));
+        const bool preview = reply->request().url().path().endsWith(QStringLiteral("/releases/testing-v2.json"));
         const auto history = release_changes(*bytes, QString{}, &valid, preview);
         const bool success = reply->error() == QNetworkReply::NoError && valid;
         reply->deleteLater();
@@ -247,6 +313,8 @@ void DesktopUpdates::fetchNext() {
 }
 bool DesktopUpdates::startMaintenance() {
 #ifndef __EMSCRIPTEN__
+    // The tool may have been left aside since the app started (see restore_kept_maintenance_tool).
+    if (managed_) restore_kept_maintenance_tool(maintenance_);
     if (managed_ && QProcess::startDetached(maintenance_, {}, QFileInfo(maintenance_).absolutePath())) return true;
 #endif
     status_ = tr("The Maintenance Tool could not be opened.");
@@ -257,6 +325,8 @@ bool DesktopUpdates::startMaintenance() {
 
 bool DesktopUpdates::startUpdate() {
 #ifndef __EMSCRIPTEN__
+    // The tool may have been left aside since the app started (see restore_kept_maintenance_tool).
+    if (managed_) restore_kept_maintenance_tool(maintenance_);
     if (managed_ && available() && QProcess::startDetached(maintenance_, {QStringLiteral("--start-updater")}, QFileInfo(maintenance_).absolutePath())) return true;
 #endif
     status_ = tr("The updater could not be opened. Your project is still open.");
