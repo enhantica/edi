@@ -632,15 +632,16 @@ TestCase {
         verify(Math.abs(offset - x) > .04 && Math.abs(offset - x) < .1, "The tap falls beside the maximum within the fixture's known half width");
         tryCompare(table, "count", peaks.length, 2000, "An offset tap restores the observed peak to the sidebar");
         verify(markedPeaks(chart).some(peak => Math.abs(peak.x - x) < 1e-8), "The offset tap lands at the measured maximum");
-        clickPeak(chart, x);
-        tryCompare(table, "count", peaks.length - 1, 2000, "Clicking a mark directly drops its sidebar row");
 
         const blank = 16.2;
         const clicked = clickPeak(chart, blank);
-        tryCompare(table, "count", peaks.length, 2000, "A click on a flat interval still creates a mark");
+        tryCompare(table, "count", peaks.length + 1, 2000, "A click on a flat interval still creates a mark");
         const free = markedPeaks(chart).findIndex(peak => Math.abs(peak.x - clicked) < .02);
         verify(free >= 0, "With no maximum nearby the chart keeps the clicked angle");
         sidebarPeak(table, free, blank, "added by hand");
+        clickPeak(chart, x);
+        tryCompare(table, "count", peaks.length, 2000, "Clicking the snapped mark directly drops its sidebar row");
+        verify(!markedPeaks(chart).some(peak => Math.abs(peak.x - x) < 1e-8), "The click drops only the snapped maximum");
         clickPeak(chart, clicked);
         tryCompare(table, "count", peaks.length - 1, 2000, "Clicking the new free mark removes it");
         const clear = sidebarControl("clear");
