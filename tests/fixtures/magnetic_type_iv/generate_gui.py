@@ -30,6 +30,16 @@ Co1 Co . .13 .25 .31 1 .17 Biso
 '''
 
 
+def refusal_reuse():
+    root = ROOT / 'gui/refusal-reuse'
+    (root / 'structures').mkdir(parents=True, exist_ok=True)
+    (root / 'project.edi').write_text('_edi.schema_version 3\n_metadata.name refusal_reuse\n')
+    (root / 'structures/parent.edi').write_text(parent())
+    (root / 'structures/unrelated.edi').write_text(parent('P 1', 'unrelated'))
+    child = (ROOT / 'pnma-d.edi').read_text().replace('data_type_iv', 'data_parent_62_452')
+    (root / 'structures/parent_62_452.edi').write_text(child)
+
+
 def main():
     source = ROOT.parent / 'adp_site_symmetry/gui/cubic'
     (ROOT / 'source_text.js').write_text(
@@ -106,3 +116,4 @@ parent 0.7() 0.13() {axis}
 
 if __name__ == '__main__':
     main()
+    refusal_reuse()

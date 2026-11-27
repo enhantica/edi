@@ -139,7 +139,7 @@ TestCase {
         return popup();
     }
     function pcontrol(name) {
-        const found = Render.descendants(popup().contentItem).find(item => item.objectName === name);
+        const found = Render.descendants(popup().contentItem).concat(Render.descendants(popup().footer)).find(item => item.objectName === name);
         verify(found !== undefined, "The popup exposes its actual " + name + " control");
         return found;
     }
@@ -163,10 +163,11 @@ TestCase {
                 keyClick(Qt.Key_Return);
             });
         }
-        tryVerify(() => !popup().busy && popup().found !== null, 3000, "The selected k produces its bounded magnetic graph");
+        tryVerify(() => !popup().busy, 5000, "The bounded magnetic graph computation finishes");
+        verify(popup().found !== null, "The selected k produces its magnetic graph: " + popup().refusal);
     }
     function shownNodes() {
-        return Render.descendants(popup().contentItem).filter(item => /^magnetic\.node\./.test(item.objectName));
+        return Render.descendants(popup().contentItem).filter(item => item.visible && /^magnetic\.node\./.test(item.objectName));
     }
     function snapshot() {
         return JSON.stringify({
@@ -199,30 +200,61 @@ TestCase {
             press(zero);
         wave(vector);
         const expected = Oracle.expected[kind].nodes;
+        const maximal = pcontrol("magnetic.maximalOnly");
+        verify(maximal.checked, "The graph opens with Maximal only selected");
+        compare(shownNodes().length, expected.filter(node => node.row === 1).length, "Only the independent maximal classes are initially visible");
+        const renderedEdges = () => Render.descendants(popup().contentItem).filter(item => item.visible && item.to !== undefined && item.to.x !== undefined);
+        compare(renderedEdges().length, 0, "Maximal-only cards render without subgroup edges");
+        const footer = pcontrol("magnetic.add");
+        const footerY = footer.mapToItem(popup().contentItem, 0, 0).y;
+        verify(popup().height <= app.height * .91 && popup().width <= app.width * .91, "The dialog fits within the window with an outer margin");
+        press(maximal);
         const nodes = shownNodes();
-        compare(nodes.length, expected.length, "The rendered graph includes every independently enumerated class");
-        const actual = nodes.map(item => {
-            const text = Ui.text(item);
-            const identity = text.match(/(\d+\.\d+)#(\d+)/);
-            verify(identity !== null, "Every rendered node carries its BNS and embedding identity");
-            return {
-                bns: identity[1],
-                embedding: Number(identity[2]),
-                fm: /\bFM\b/.test(text),
-                y: item.y
-            };
-        });
-        const heights = Array.from(new Set(actual.map(node => node.y))).sort((a, b) => a - b);
-        const actualRows = actual.map(node => [node.bns, heights.indexOf(node.y) + 1, node.fm].join("|")).sort();
+        compare(nodes.length, expected.length, "Expanding levels retains every independently enumerated class");
+        const headers = Render.descendants(popup().contentItem).filter(item => item.visible && /^magnetic\.level\./.test(item.objectName));
+        compare(headers.length, Math.max(...expected.map(node => node.row)), "Every independent subgroup level has a selection header");
+        for (let i = 0; i < headers.length; ++i) {
+            const count = expected.filter(node => node.row === i + 1).length;
+            verify(headers[i].text.includes(count + (count === 1 ? " group" : " groups")), "Each level header displays its independent group count");
+        }
+        const actualRows = nodes.map(item => {
+            const text = Render.texts(item).map(label => label.text).join(" ");
+            const identity = text.match(/(\d+\.\d+)(?:\s*#(\d+))?/);
+            verify(identity !== null && /type (I|II|III|IV)\b/.test(text), "Each compact card displays BNS identity and magnetic type");
+            const level = headers.filter(header => header.mapToItem(popup().contentItem, 0, 0).y < item.mapToItem(popup().contentItem, 0, 0).y).length;
+            return [identity[1], level, /\bFM\b/.test(text)].join("|");
+        }).sort();
         const expectedRows = expected.map(node => [node.bns, node.row, node.fm].join("|")).sort();
-        compare(actualRows.join(";"), expectedRows.join(";"), "Rendered rows and FM marks equal the independent signed census");
-        verify(/1[′']/.test(Ui.text(popup().contentItem)), "The rendered graph has its unselectable parent grey-group header");
-        const edges = Render.descendants(popup().contentItem).filter(item => /^magnetic\.edge\./.test(item.objectName));
-        const count = expected.reduce((sum, node) => sum + node.parents.length, 0);
-        compare(edges.length, count, "Rendered covering edges expose endpoint object-name pairs for the independent graph");
-        for (const edge of edges)
-            verify(actual.some(node => edge.objectName.includes(node.bns + "#" + node.embedding)), "Every edge endpoint names a rendered candidate identity");
-        verify(nodes.some(node => /Co1/.test(Ui.text(node)) && /M[x-z]|m[x-z]/.test(Ui.text(node))), "The actual graph renders the per-split-site moment components");
+        compare(actualRows.join(";"), expectedRows.join(";"), "Rendered levels and FM marks equal the independent signed census");
+        const withChildren = expected.findIndex((node, i) => expected.some(child => child.parents.includes(i)) && expected.filter(peer => peer.bns === node.bns).length === 1);
+        verify(withChildren >= 0, "The independent graph has an unambiguous parent with covering edges");
+        const firstCard = nodes.find(node => node.data_.bns === expected[withChildren].bns);
+        verify(firstCard, "The graph renders that independent parent");
+        Ui.scrollIntoView(firstCard);
+        const point = Ui.clickPoint(firstCard);
+        verify(point !== null, "A maximal card is reachable by pointer");
+        mouseMove(firstCard, point.x, point.y);
+        tryVerify(() => /Co1.*[Mm][xyz]/.test(pcontrol("magnetic.details").text), 2000, "Pointing at a card moves the split-site moment components to the details strip");
+        const outgoing = expected.filter(child => child.parents.includes(withChildren));
+        const targets = renderedEdges().map(edge => {
+            const target = nodes.find(node => node.x === edge.to.x && node.y === edge.to.y);
+            verify(target, "A rendered edge terminates at a card");
+            return target.data_.bns;
+        }).sort();
+        compare(targets.join("|"), outgoing.map(node => node.bns).sort().join("|"), "Only the pointed card's independently known covering endpoints are visible");
+        const header = headers[0];
+        press(header);
+        verify(header.checked && popup().selected.length > 0, "The maximal-level checkbox selects its selectable cards");
+        const selected = popup().selected.length;
+        verify(selected <= expected.filter(node => node.row === 1).length, "Selecting a level never selects lower-level cards");
+        verify(footer.text.includes(String(selected)), "The fixed Add button shows the selected count");
+        compare(footer.mapToItem(popup().contentItem, 0, 0).y, footerY, "Expanding and selecting levels keeps the footer fixed");
+        press(pcontrol("magnetic.clear"));
+        compare(popup().selected.length, 0, "The footer Clear resets level selection");
+        press(pcontrol("magnetic.listView"));
+        const list = pcontrol("magnetic.list");
+        compare(list.count, expected.length, "The list retains every class shown by the expanded graph");
+        verify(/Co1/.test(Ui.text(popup().contentItem)), "The list has per-site moment columns");
     }
     function test_half_graph() {
         graph("half", "1/2,0,0");
@@ -300,14 +332,18 @@ TestCase {
         verify(/1002/.test(Ui.text(popup().contentItem)) && /1000/.test(Ui.text(popup().contentItem)), "The refusal names the mapped texture axis and its bound");
         compare(snapshot(), before, "A failed candidate batch changes neither the project nor Undo history");
     }
-    function test_calculate_does_not_enable_find_k() {
-        openPopup();
-        const button = Render.descendants(popup().contentItem).find(item => /Find k from data/i.test(String(item.text)));
-        verify(button !== undefined, "The popup exposes Find k from data beside its Data list");
-        if (button.enabled)
-            press(button);
-        verify(!pcontrol("magnetic.searchK").enabled, "A fresh Calculate without an adopted fit does not make a bank eligible");
-        verify(/fit.*keep|keep.*fit/i.test(Ui.text(popup().contentItem)), "The ineligible Data list explains that an adopted fit is required");
+    function test_structure_analysis_entry_keeps_k_in_popup() {
+        openInput("find-k");
+        const page = Ui.page(app);
+        verify(!Probe.objectsWithProperty(page, "categoryId").some(item => item.shown && item.categoryId === "propagation_vectors"), "A Crystal structure has no Propagation vectors group");
+        group("space_group");
+        const action = findChild(page, "spaceGroup.magneticAnalysis");
+        verify(action && action.visible, "The Crystal Space group exposes Magnetic symmetry analysis");
+        press(action);
+        tryVerify(() => !!popup(), 2000, "The Space group button independently opens magnetic symmetry analysis");
+        compare(Ui.page(app), page, "The Structure analysis opens over the current page");
+        verify(pcontrol("magnetic.k").visible, "The popup keeps its preset and typed k control");
+        verify(!/Find k from data/i.test(Ui.text(popup().contentItem)), "Peak search is available from the experiment pattern");
     }
     function test_type_iv_letters_and_coordinate_edit() {
         openInput("type-iv");
@@ -342,12 +378,15 @@ TestCase {
         verify(letter !== undefined, "The unknown letter remains visibly represented");
         verify(letter.readOnly === true || letter.editable === false || !letter.enabled, "An unverified operator-defined letter cannot be edited as an ordinary table letter");
     }
+    function checkA10Refusal(message) {
+        verify(/Crystal structure it came from/i.test(message) && /Structure page.*Space group.*Magnetic symmetry analysis/i.test(message) && /Experiment.*Pattern.*Mark peaks for k/i.test(message), "The refusal identifies both analysis routes and describes the original Crystal structure by role");
+    }
     function test_k_field_refusal_is_atomic() {
         openInput("type-iv", false);
         const structure = Session.project.currentStructure;
         const before = snapshot();
         verify(!structure.propagationVectors.setVector(0, "0,0,1/3"), "A k requiring another magnetic cell is refused in the existing structure");
-        verify(/popup|candidate|Magnetic/i.test(structure.propagationVectors.refusal), "The k refusal directs the user to magnetic candidates");
+        checkA10Refusal(structure.propagationVectors.refusal);
         compare(snapshot(), before, "A refused k edit preserves fields, operators, cell, links and Undo history");
         verify(structure.propagationVectors.setVector(0, "0,0,1/2"), "The admitted same-cell propagation vector remains editable");
     }
@@ -358,7 +397,7 @@ TestCase {
         const index = structure.magneticGroupNumbersBns.indexOf("62.442");
         verify(index >= 0, "The independent grey-group BNS number is offered");
         verify(!structure.setMagneticGroup(index), "The BNS control cannot silently change the existing nonzero-k cell contract");
-        verify(/popup|candidate|Magnetic/i.test(structure.magneticGroupRefusal), "The BNS refusal directs the user to magnetic candidates");
+        checkA10Refusal(structure.magneticGroupRefusal);
         compare(snapshot(), before, "A refused BNS edit preserves the complete project and Undo history");
     }
     function compareProfile(actual, expected) {
@@ -403,129 +442,236 @@ TestCase {
         compareProfile(Probe.rows(Session.project.experiments).find(row => row.name === "first").experiment.measCalcPoints().calc, profile);
     }
 
-    function keptSearchFit() {
-        openPopup("find-k");
-        popup().close();
-        const project = Session.project;
-        project.currentExperimentIndex = project.experimentIndex("first");
-        project.analysis.fittingMode = "single";
-        verify(Probe.rows(project.currentStructure.atomSites).every(row => !row.fractX.free && !row.fractY.free && !row.fractZ.free), "The eligibility witness keeps the whole nuclear parent fixed");
-        verify(project.fit.available, "The synthetic observed bank permits its real constant-background fit");
-        project.fit.start();
-        tryVerify(() => !project.fit.running && project.fit.canUndo, 3000, "The real fitted background is adopted before search eligibility is tested");
-        tryCompare(project, "calculating", false, 1000, "The kept fit publishes its current calculated pattern");
-        choose(typeChoice(), "Magnetic");
-        tryVerify(() => !!popup(), 1000, "The kept-fit parent opens the same candidate popup");
+    function chartControl(name) {
+        let item;
+        tryVerify(() => {
+            item = Ui.control(Probe, app, name);
+            return item !== null && item !== undefined;
+        }, 2000, "Experiment Pattern exposes " + name);
+        return item;
     }
-    function dataChoice(name) {
-        const choices = Session.project.magneticDataChoices(Session.project.structureIndex("parent"));
-        const found = choices.find(row => row.name === name);
-        verify(found !== undefined, "The Data list contains the linked bank " + name);
-        return found;
+    function pressChart(item) {
+        const at = Ui.clickPoint(item);
+        verify(at && item.enabled, "The chart action reaches an exposed enabled control");
+        mouseClick(item, at.x, at.y);
+    }
+    function openedVectors() {
+        return Probe.objectsWithProperty(app, "opened").find(item => item.opened && item.objectName === "chart.kVectorPopup");
+    }
+    function openPattern(name = "find-k") {
+        openInput(name, false);
+        const first = Probe.rows(Session.project.experiments).findIndex(row => row.name === "first");
+        verify(first >= 0, "The measured fixture contains the first powder experiment");
+        Session.project.currentExperimentIndex = first;
+        AppState.open(AppState.Page.Experiment);
+        let owner;
+        tryVerify(() => {
+            owner = Render.descendants(Ui.page(app)).find(item => item.pageName === "experiment" && item.current);
+            return !!owner;
+        }, 3000, "The active loader exposes the Experiment page");
+        let tab;
+        tryVerify(() => {
+            tab = owner.pageViewItem ? Array.from(owner.pageViewItem.tabs).find(item => item.objectName === "mainArea.tab.pattern") : null;
+            return tab && tab.enabled && Ui.rendered(tab);
+        }, 3000, "The Experiment page renders its Pattern tab");
+        if (!tab.checked)
+            pressChart(tab);
+        tryCompare(tab, "checked", true, 2000, "The experiment's Pattern tab is active");
+        const view = owner.pageViewItem;
+        let chart;
+        tryVerify(() => {
+            chart = Render.descendants(view).find(item => item.objectName === "chart" && item.shown && Ui.rendered(item) && item.axisProject === Session.project && !item.report);
+            return !!chart;
+        }, 2000, "The current experiment owns the visible live powder chart");
+        return chart;
+    }
+    function startMarking() {
+        pressChart(chartControl("chart.toolbar.findK"));
+        chartControl("chart.findK.strip");
+    }
+    function markedPeaks(chart) {
+        return Array.from(chart.peakMarks, index => chart.peakCandidates[index]);
+    }
+    function clickPeak(x) {
+        const layer = chartControl("chart.peaks");
+        const point = layer.px(x);
+        verify(point > 0 && point < layer.width, "The reference peak falls on the visible native chart axis");
+        mouseClick(layer, point, layer.height / 2);
     }
     function runSearch() {
-        const button = pcontrol("magnetic.findK");
-        if (!button.checked)
-            press(button);
-        const data = pcontrol("magnetic.data");
-        const text = Array.from({
-            length: data.count
-        }, (_, i) => data.textAt(i)).find(value => value === "first");
-        verify(text !== undefined, "The kept first bank is visibly eligible in the Data list");
-        choose(data, text);
-        const ticks = Render.descendants(popup().contentItem).filter(item => /^magnetic\.peak\./.test(item.objectName));
-        verify(ticks.length >= 12 && ticks.every(item => item.checked), "The independently separated observed maxima appear as ticked search peaks");
-        press(pcontrol("magnetic.searchK"));
-        tryVerify(() => !popup().searching, 3000, "The bounded search finishes before a result can be chosen");
-        const list = pcontrol("magnetic.kRows");
-        verify(list.count > 0, "The independent half-period satellites yield a real ranked list");
-        list.forceLayout();
-        return list;
+        pressChart(chartControl("chart.findK"));
+        tryVerify(() => !!openedVectors() && !openedVectors().searching, 8000, "Find k opens and completes a bounded ranked table");
+        const results = openedVectors();
+        verify(results.rows.length > 0 && results.rows.length <= 10, "The table offers a short list of matching vectors");
+        verify(results.rows.every(row => row.parentCells >= 1 && row.parentCells <= 24), "Every offered vector has a buildable magnetic cell");
+        const firstOther = results.rows.findIndex(row => row.stage !== 1);
+        verify(firstOther < 0 || results.rows.slice(firstOther).every(row => row.stage !== 1), "Special points precede general k rows");
+        return results;
     }
-    function test_find_k_fixed_parent_is_eligible() {
-        keptSearchFit();
-        verify(dataChoice("first").eligible, "An adopted fit is eligible even when the nuclear parent itself was fixed");
-        verify(!dataChoice("second").eligible, "A different bank has no adoption merely because the first bank was fitted");
+    function test_find_k_marks_without_kept_fit() {
+        const chart = openPattern();
+        verify(!Session.project.fit.canUndo, "No fit has been kept for this measured bank");
+        startMarking();
+        const peaks = markedPeaks(chart);
+        verify(peaks.length > 0 && peaks.some(peak => Math.abs(peak.x - 13.285477100052015) < .051), "A closed-form isolated half-period satellite is pre-marked from measured data");
+        const before = snapshot();
+        const x = peaks[0].x;
+        clickPeak(x);
+        compare(markedPeaks(chart).length, peaks.length - 1, "Clicking the plotted peak drops its mark");
+        clickPeak(x);
+        compare(markedPeaks(chart).length, peaks.length, "Clicking it again manually restores its mark");
+        pressChart(chartControl("chart.findK.clear"));
+        compare(markedPeaks(chart).length, 0, "Clear removes all chart marks");
+        compare(snapshot(), before, "Transient marking changes neither the saved model nor Undo history");
+        verify(!chartControl("chart.findK").enabled, "Empty marks cannot start indexing");
     }
-    function staleSearchEdit(kind) {
-        keptSearchFit();
-        verify(dataChoice("first").eligible, "The stale-stamp witness starts from a genuinely adopted fit");
-        const project = Session.project, bank = project.currentExperiment;
-        if (kind === "coordinate")
-            Probe.rows(project.currentStructure.atomSites)[0].fractX.value = .173;
-        else if (kind === "zero") {
-            const zero = Probe.rows(bank.instrument).find(row => row.parameter && row.parameter.name === "calib_twotheta_offset");
-            verify(zero !== undefined, "The calibration-only witness reaches the real CW zero parameter");
-            zero.parameter.value = .1;
-        } else if (kind === "mask") {
-            bank.excludedRegions.append();
-            const n = Probe.rows(bank.excludedRegions).length - 1;
-            verify(bank.excludedRegions.setStart(n, 20) && bank.excludedRegions.setEnd(n, 21), "The mask witness changes a real observed-data inclusion interval");
-        } else if (kind === "disabled")
-            verify(bank.linkedStructures.setEnabled(0, false), "The parent link can be disabled through the normal recorded action");
-        else
-            Probe.rows(bank.peak)[2].parameter.value = .09;
-        tryCompare(project, "calculating", false, 1000, "The edit's subsequent Calculate completes");
-        verify(project.fit.canUndo, "The earlier fit record remains available while its adoption is stale");
-        verify(!dataChoice("first").eligible, "Editing and calculating cannot refresh the kept-fit adoption stamp");
-        compare(project.magneticPeaks(project.structureIndex("parent"), project.experimentIndex("first")).length, 0, "A stale or disabled parent refuses peak extraction");
-    }
-    function test_find_k_coordinate_edit_stales_fit() {
-        staleSearchEdit("coordinate");
-    }
-    function test_find_k_calibration_edit_stales_fit() {
-        staleSearchEdit("zero");
-    }
-    function test_find_k_mask_edit_stales_fit() {
-        staleSearchEdit("mask");
+    function test_find_k_mask_excludes_observed_peak() {
+        const chart = openPattern();
+        const mask = Session.project.currentExperiment.excludedRegions;
+        mask.append();
+        const row = Probe.rows(mask).length - 1;
+        verify(mask.setStart(row, 13) && mask.setEnd(row, 13.6), "The mask covers the independent first satellite");
+        startMarking();
+        const peaks = markedPeaks(chart);
+        verify(peaks.length > 0, "Other unmasked peaks still reach the chart");
+        verify(peaks.every(peak => peak.x < 13 || peak.x > 13.6), "An excluded strong peak is not pre-marked");
     }
     function test_find_k_disabled_parent_refuses() {
-        staleSearchEdit("disabled");
+        const chart = openPattern();
+        verify(Session.project.currentExperiment.linkedStructures.setEnabled(0, false), "The real edit disables the sole Crystal link");
+        startMarking();
+        compare(markedPeaks(chart).length, 0, "A disabled parent produces no chart marks");
+        verify(/link.*enable.*crystal/i.test(Ui.text(chartControl("chart.findK.strip"))), "The strip explains that an enabled Crystal link is required");
     }
-    function test_find_k_profile_edit_stales_fit() {
-        staleSearchEdit("profile");
+    function test_find_k_multiple_crystal_links_refuse() {
+        const chart = openPattern("popup");
+        const links = Probe.rows(Session.project.currentExperiment.linkedStructures);
+        verify(links.some(link => link.structureId === "parent" && link.enabled) && links.some(link => link.structureId === "unrelated" && link.enabled), "The measured experiment has two enabled Crystal phases");
+        const before = snapshot();
+        startMarking();
+        compare(markedPeaks(chart).length, 0, "Link order cannot choose a Crystal target when both links are enabled");
+        verify(/several.*crystal/i.test(Ui.text(chartControl("chart.findK.strip"))), "The strip identifies the ambiguous Crystal target");
+        verify(!chartControl("chart.findK").enabled, "The ambiguous target cannot start indexing");
+        compare(snapshot(), before, "Refusing an ambiguous target leaves both links unchanged");
     }
-    function test_find_k_data_ticks_and_choice_reach_graph() {
-        keptSearchFit();
-        const list = runSearch();
-        const top = list.itemAtIndex(0);
-        verify(top && top.enabled, "The synthetic half-period best row is buildable");
-        verify(/1\/2,0,0/.test(Ui.text(top)), "The real result row shows the independently known half-period vector");
-        press(top);
-        tryVerify(() => !popup().busy && popup().found !== null, 3000, "Choosing the ranked k computes its subgroup graph");
-        compare(popup().k, "1/2,0,0", "Choosing a search result sets the graph's exact k");
-        verify(shownNodes().length > 0, "The selected search result reaches the rendered magnetic candidate graph");
+    function test_find_k_gamma_labels_forbidden_and_allowed_marks() {
+        const chart = openPattern("find-k-gamma");
+        startMarking();
+        const bragg = d => 360 / Math.PI * Math.asin(1.54 / (2 * d));
+        const peaks = markedPeaks(chart);
+        compare(peaks.length, 1, "Only the Pnma glide absence is pre-marked");
+        verify(Math.abs(peaks[0].x - bragg(8)) <= .051, "The pre-mark is the independently positioned forbidden 001");
+        const allowedPosition = bragg(1 / Math.hypot(1 / 6, 1 / 8));
+        clickPeak(allowedPosition);
+        const allowed = markedPeaks(chart).find(peak => Math.abs(peak.x - allowedPosition) <= .051);
+        verify(allowed, "Clicking the observed allowed 101 adds it manually");
+        const results = runSearch();
+        const index = results.rows.findIndex(row => row.k === "0,0,0");
+        verify(index >= 0, "Gamma indexes both Pnma lattice peaks");
+        const list = findChild(results.contentItem, "chart.kVectors");
+        list.positionViewAtIndex(index, ListView.Contain);
+        let row;
+        tryVerify(() => {
+            list.forceLayout();
+            row = list.itemAtIndex(index);
+            return !!row && Ui.exposed(row);
+        }, 2000, "The selected k row is instantiated in the visible table");
+        verify(row, "The Gamma result is visibly available");
+        const text = Ui.text(row);
+        verify(text.includes(peaks[0].x.toFixed(2) + "°: forbidden reflection"), "The table pairs 001 with the forbidden role: " + text.trim());
+        verify(text.includes(allowed.x.toFixed(2) + "°: allowed reflection"), "The table pairs 101 with the allowed role: " + text.trim());
     }
-    function test_find_k_unticking_changes_search_snapshot() {
-        keptSearchFit();
-        runSearch();
-        const tick = pcontrol("magnetic.peak.0");
-        press(tick);
-        verify(!tick.checked, "The actual unexplained peak tick changes by pointer input");
-        verify(!Session.project.propagationSearchCurrent(Session.project.experimentIndex("first")), "Changing a peak tick invalidates the previous search snapshot");
-        compare(pcontrol("magnetic.kRows").count, 0, "Stale result rows disappear after peak selection changes");
+    function test_find_k_table_analyse_add_stays_on_pattern() {
+        const chart = openPattern();
+        const project = Session.project;
+        const bank = project.currentExperiment;
+        const page = Ui.page(app);
+        startMarking();
+        const results = runSearch();
+        const index = results.rows.findIndex(row => row.k === "1/2,0,0");
+        verify(index >= 0, "The independently known half-period vector is offered");
+        const list = findChild(results.contentItem, "chart.kVectors");
+        list.positionViewAtIndex(index, ListView.Contain);
+        let row;
+        tryVerify(() => {
+            list.forceLayout();
+            row = list.itemAtIndex(index);
+            return !!row && Ui.exposed(row);
+        }, 2000, "The selected k row is instantiated in the visible table");
+        verify(row && /1\/2,0,0/.test(Ui.text(row)), "The ranked table renders the non-default half-period vector");
+        const cells = Render.texts(row).map(label => label.text);
+        verify(cells.includes("2 parent cells") && cells.some(text => /^\d+\.\d{2}$/.test(text)), "The same row renders cell size and numeric misfit");
+        verify(/13\.3[0-4]°: satellite|13\.2[4-9]°: satellite/.test(Ui.text(row)), "The row identifies the independent isolated peak and its satellite role");
+        pressChart(row);
+        pressChart(findChild(results.footer, "chart.kVectorPopup.analyse"));
+        tryVerify(() => !!popup() && !popup().busy && popup().found !== null, 5000, "Analyse closes the k table and builds the graph over the chart");
+        verify(!openedVectors(), "The k table closes on Analyse");
+        compare(popup().k, "1/2,0,0", "The chart hands off the exact selected k");
+        compare(Ui.page(app), page, "The analysis overlays Experiment Pattern");
+        const starts = pcontrol("magnetic.startMoments");
+        if (starts.checked)
+            press(starts);
+        const node = shownNodes().find(item => item.data_.type === 4 && item.data_.momentAllowed && item.data_.bns);
+        verify(node, "The half-period graph offers a selectable type IV candidate");
+        press(node);
+        press(pcontrol("magnetic.add"));
+        tryVerify(() => !popup(), 2000, "Add closes magnetic analysis");
+        tryCompare(project, "calculating", false, 5000, "The first added candidate gets a current powder calculation");
+        compare(project.currentExperiment, bank, "Add retains the chart experiment selection");
+        compare(Ui.page(app), page, "Add retains Experiment Pattern");
+        const links = Probe.rows(bank.linkedStructures);
+        verify(links.some(link => link.structureId === "parent" && !link.enabled), "The original Crystal link remains and is disabled");
+        const active = links.filter(link => link.enabled);
+        compare(active.length, 1, "Only the first magnetic candidate is enabled");
+        const child = project.structureAt(project.structureIndex(active[0].structureId));
+        verify(child.magnetic, "The active replacement is magnetic");
+        verify(bank.measCalcPoints().calc.some(value => Number.isFinite(value) && value > 0), "A populated calculated powder profile remains on the experiment");
+        const vector = Probe.rows(child.propagationVectors)[0];
+        verify(vector && /^(?:1\/2|0\.5),\s*0,\s*0$/.test(String(vector.vector)), "The active child publishes the chosen non-default propagation vector");
+        tryVerify(() => /1 magnetic structure added.*no magnetic intensity at.*13\.[23]\d°/i.test(Ui.text(chartControl("chart.findK.strip"))), 5000, "A zero-moment candidate reports the marked satellite with no magnetic intensity");
+        verify(Ui.text(chartControl("chart.findK.openStructure")).includes("Open in Structure page"), "The chart offers an explicit way to open Structure");
+        verify(markedPeaks(chart).length > 0, "After Add the original marks remain available on the recalculated chart");
+        pressChart(chartControl("chart.findK.openStructure"));
+        tryVerify(() => Ui.page(app) !== page, 2000, "The explicit Open in Structure action changes pages");
+    }
+    function staleRowChoice(kind) {
+        openPattern();
+        startMarking();
+        const results = runSearch();
+        const project = Session.project;
+        const bank = project.currentExperiment;
+        if (kind === "zero") {
+            const zero = Probe.rows(bank.instrument).find(row => row.parameter && row.parameter.name === "calib_twotheta_offset");
+            verify(zero, "The stale-row witness reaches the CW zero parameter");
+            zero.parameter.value = .1;
+        } else if (kind === "link") {
+            verify(bank.linkedStructures.setEnabled(0, false), "The stale-row witness edits the enabled link");
+        } else {
+            bank.excludedRegions.append();
+            const row = Probe.rows(bank.excludedRegions).length - 1;
+            verify(bank.excludedRegions.setStart(row, 13) && bank.excludedRegions.setEnd(row, 13.6), "The stale-row witness edits the mask");
+        }
+        pressChart(findChild(results.footer, "chart.kVectorPopup.analyse"));
+        verify(!popup(), "An outdated chart snapshot cannot open analysis");
+        verify(/changed.*mark the peaks again/i.test(Ui.text(results.contentItem)), "A stale row tells the user to mark the peaks again");
     }
     function test_find_k_late_choice_after_calibration_edit_refuses() {
-        keptSearchFit();
-        const list = runSearch();
-        const top = list.itemAtIndex(0), before = popup().k;
-        const zero = Probe.rows(Session.project.currentExperiment.instrument).find(row => row.parameter && row.parameter.name === "calib_twotheta_offset");
-        verify(zero !== undefined, "The late-choice witness addresses the real calibration parameter");
-        zero.parameter.value = .1;
-        tryCompare(Session.project, "calculating", false, 1000, "Calculate after the late calibration edit completes");
-        press(top);
-        compare(popup().k, before, "A late row choice cannot change k after its data stamp expires");
-        verify(/changed.*search again/i.test(Ui.text(popup().contentItem)), "The stale result refusal visibly asks the user to search again");
+        staleRowChoice("zero");
+    }
+    function test_find_k_late_choice_after_link_edit_refuses() {
+        staleRowChoice("link");
+    }
+    function test_find_k_late_choice_after_mask_edit_refuses() {
+        staleRowChoice("mask");
     }
     function noteNodes(name, forms) {
         openPopup(name);
         wave("0,0,0");
+        press(pcontrol("magnetic.maximalOnly"));
         const nodes = shownNodes();
-        const selected = [];
         for (const form of forms) {
-            const node = nodes.find(item => form.test(Ui.text(item).replace(/\s/g, "")));
+            const node = nodes.find(item => form.test(String(item.data_.moments).replace(/\s/g, "")));
             verify(node !== undefined, "The independent point-group moment form is selectable");
-            selected.push(node);
             press(node);
         }
         verify(pcontrol("magnetic.startMoments").checked, "Nonzero starting moments are on by default");
@@ -553,7 +699,8 @@ TestCase {
     function test_start_mn3o4_has_no_note() {
         openPopup("note-mn3o4");
         wave("1/2,0,0");
-        const node = shownNodes().find(item => /62\.452/.test(Ui.text(item)));
+        press(pcontrol("magnetic.maximalOnly"));
+        const node = shownNodes().find(item => item.data_.bns === "62.452");
         verify(node !== undefined, "The MAGNDATA Mn3O4 signed group is offered at the published propagation vector");
         press(node);
         verify(pcontrol("magnetic.startMoments").checked, "The published positive-intensity witness uses nonzero starting moments");
@@ -664,7 +811,7 @@ TestCase {
         const before = snapshot();
         choose(control, control.textAt(index));
         compare(snapshot(), before, "Either rendered BNS field refuses a different translation character without changing the project");
-        verify(/popup|Crystal.*Magnetic|candidate/i.test(structure.magneticGroupRefusal), "Either BNS field directs a cell-changing edit to the popup");
+        checkA10Refusal(structure.magneticGroupRefusal);
         verify(/62\.452/.test(value(number)), "A refused BNS name edit leaves the linked BNS number unchanged");
     }
     function test_rendered_bns_number_refusal() {
@@ -672,6 +819,21 @@ TestCase {
     }
     function test_rendered_bns_name_refusal() {
         renderedBnsRefusal(true);
+    }
+    function test_a10_refusal_ignores_renamed_and_reused_parent_name() {
+        openInput("refusal-reuse", false);
+        const project = Session.project;
+        const child = project.structureAt(project.structureIndex("parent_62_452"));
+        verify(child && child.magnetic, "The fixture retains the magnetic child's original parent-based name");
+        project.structureAt(project.structureIndex("parent")).name = "renamed_origin";
+        project.structureAt(project.structureIndex("unrelated")).name = "parent";
+        verify(project.structureIndex("renamed_origin") >= 0 && project.structureIndex("parent") >= 0, "The original name is reused by another Crystal structure");
+        const before = snapshot();
+        const index = child.magneticGroupNumbersBns.indexOf("62.442");
+        verify(index >= 0 && !child.setMagneticGroup(index), "A different translation character is still refused");
+        checkA10Refusal(child.magneticGroupRefusal);
+        verify(!/\b(?:parent|unrelated|renamed_origin)\b/.test(child.magneticGroupRefusal), "Neither the renamed origin nor the structure reusing its old name is named in the refusal");
+        compare(snapshot(), before, "The refusal preserves the entire project after the renames");
     }
     function test_equivalent_signed_rows_retain_derived_identity() {
         openInput("type-iv");
@@ -701,7 +863,7 @@ TestCase {
         compare(snapshot(), afterAppend, "The grey k refusal preserves the model and its existing Undo history");
         const idx = structure.magneticGroupNumbersBns.indexOf("62.452");
         verify(!structure.setMagneticGroup(idx), "The legacy grey structure cannot gain a doubled magnetic atom set from its BNS field");
-        verify(/popup|candidate|Crystal.*Magnetic/i.test(structure.magneticGroupRefusal), "The grey BNS refusal also points to the parent popup");
+        checkA10Refusal(structure.magneticGroupRefusal);
         verify(before.length > 0, "The legacy grey control observes a serialized model before attempted edits");
     }
 }
