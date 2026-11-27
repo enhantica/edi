@@ -63,6 +63,13 @@ QString guard_executable() {
 #endif
     return QDir(QCoreApplication::applicationDirPath()).filePath(name);
 }
+
+// The names edi's tool server lists, for the session's tool readback.
+QStringList mcp_tool_names(const QJsonArray& tools) {
+    QStringList names;
+    for (const auto& tool : tools) names.append(tool.toObject().value(QLatin1StringView("name")).toString());
+    return names;
+}
 }  // namespace
 
 AssistantRuntimeTranslator::AssistantRuntimeTranslator(AssistantProviderId provider,
@@ -154,7 +161,9 @@ bool AssistantRuntimeTranslator::start(const QString& executable, const QString&
         const auto keyFolder = QDir(workspace).filePath(QStringLiteral(".edi"));
         if (!QDir().mkpath(keyFolder) || !server->listen(keyFolder)) throw std::runtime_error("The tool server could not listen");
         // The same catalogue the view model sends with thread/start, so the start's tool readback can pass.
-        server->setTools(assistant_native_mcp_tools(assistant_native_tool_specs()));
+        const auto catalogue = assistant_native_mcp_tools(assistant_native_tool_specs());
+        server->setTools(catalogue);
+        launch_.expectedTools = mcp_tool_names(catalogue);
         launch_.toolServer = server->mcpServerEntry(launch_.guard);
     } catch (...) {
         if (tools_) tools_->deleteLater();
@@ -575,7 +584,12 @@ void AssistantRuntimeTranslator::openThread(const QString& id, const QString& me
     const auto offered = params.value(QLatin1StringView("dynamicTools"));
     try {
         if (!tools_) throw std::runtime_error("The tool server is gone");
-        tools_->setTools(assistant_native_mcp_tools(offered.isArray() ? offered.toArray() : assistant_native_tool_specs()));
+        const auto catalogue =
+            assistant_native_mcp_tools(offered.isArray() ? offered.toArray() : assistant_native_tool_specs());
+        tools_->setTools(catalogue);
+        // The thread's process must show exactly this catalogue before its first input (ADR-0108 §1).
+        launch_.expectedTools = mcp_tool_names(catalogue);
+        session_->setExpectedTools(launch_.expectedTools);
     } catch (...) {
         refuse(id, method, kRefused, tr("edi's tools could not be offered to the assistant."));
         return;
@@ -593,8 +607,9 @@ void AssistantRuntimeTranslator::openThread(const QString& id, const QString& me
     thread_method_ = method;
     thread_target_ = target;
     ack_deadlines_.insert(id, clock_.elapsed() + static_cast<qint64>(Limits::sign_in_ms));
-    // Claude starts one process per thread, which lists edi's tools again; Copilot's one process listed them at start.
-    if (provider_ == AssistantProviderId::Claude) tools_listed_ = false;
+    // Claude starts one process per thread, which must list edi's tools itself; Copilot's one process listed them at
+    // start. A fresh binding keeps an earlier process's listing from counting for the new one.
+    if (provider_ == AssistantProviderId::Claude) bindTools();
     session_->openThread(target, model_, effort_);
 }
 
