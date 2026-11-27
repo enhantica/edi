@@ -1342,7 +1342,9 @@ Structure structure_from_block(const Block& block, const std::string& where) {
     if (!structure.magnetic->operations.empty() || !structure.magnetic->radial_coefficients.empty()) {
         try {
             check_magnetic_acceptance(structure);
-            complete_atom_site_moments(structure);  // tied components as crysta's load sets them
+            // Tied components as crysta's load sets them; a type IV site with a saved letter is restored
+            // from it (owner decision 2026-11-27, addendum 2).
+            complete_atom_site_moments(structure, true);
         } catch (const std::invalid_argument& error) {
             fail_schema(where, "magnetic-refused", error.what());
         }

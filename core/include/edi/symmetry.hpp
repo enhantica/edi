@@ -95,7 +95,11 @@ void check_magnetic_acceptance(const Structure& structure);
 // The moments as crysta's load completes them (its acceptance rule): each component the site
 // symmetry ties or fixes set from the free ones, and the symmetry form crysta derives; crysta
 // reports each value it replaces.
-void complete_atom_site_moments(Structure& structure);
+// `restore`: a load, which restores each type IV site whose file carries its Wyckoff letter from
+// that letter and detects only the others, once (owner decision 2026-11-27, addendum 2).
+// `imported`: rounded literature coordinates (a GSAS or FullProf import), detected at crysta's
+// wider import seed.
+void complete_atom_site_moments(Structure& structure, bool restore = false, bool imported = false);
 
 // The covariance of moment `site`'s crystal-axis components and its structure's cell that every
 // displayed form's s.u. comes from: crysta's mapping of the fit's seeds through the project's

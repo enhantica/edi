@@ -219,7 +219,7 @@ void apply_magnetic_model(Structure& structure, const crysta::SpaceGroup& group,
             });
         if (!known) structure.magnetic_form_factors.push_back(factor);
     }
-    complete_atom_site_moments(structure);
+    complete_atom_site_moments(structure, true, true);  // an import: restored where lettered, else detected once
 }
 
 Structure structure_model(const Value& phase, bool nuclear_neutron_only) {

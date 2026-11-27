@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include <algorithm>
+#include <charconv>
 #include <iostream>
 #include <atomic>
 #include <numbers>
@@ -289,6 +290,10 @@ crysta::Structure to_crysta_structure(const Structure& s) {
                                  built.geom.bond_distance_inc = s.geom.bond_distance_inc.get();
                                  built.atom_site_aniso = detail::to_crysta_atom_site_aniso(s);
                                  detail::to_crysta_magnetic(s, built);
+                                 // The symmetry the host states (its letters, else its coordinates
+                                 // as they stand) kept on the copy, for every expansion, fit and
+                                 // save of it (owner decision 2026-11-27).
+                                 crysta::keep_type_iv_symmetry(built);
                              });
 }
 
@@ -636,13 +641,9 @@ void check_magnetic_acceptance(const Structure& structure) {
 }
 
 // The fields crysta's completion owns (coordinates, letters, moments and their forms, tensors), copied from a completed
-// crysta structure: the one route by which a completion reaches the host, from an edit and from a fit alike. The check
-// refuses before anything is written when a row of the host has no counterpart.
-void check_completed_structure(const Structure& structure, const crysta::Structure& engine);
+// crysta structure: the one route by which a completion reaches the host after an edit.
 void adopt_completed_structure(Structure& structure, const crysta::Structure& engine);
-// A fit's publication of its type IV structures, rebuilt whole from crysta's finalized result.
-void publish_completed_type_iv(Project& host, crysta::Project& work, std::vector<detail::RefinedValue>& refined);
-// One fit's publication as a transaction (review 18, F2): `publish` (the values, the completed type IV structures, the
+// One fit's publication as a transaction (review 18, F2): `publish` (the values, the
 // dependents, the refreshed pattern) and `measure` (the fit's quality and correlations, which can refuse) run first on a
 // copy of the host, with `restage` resolving the fit's values in that copy; only when all of it succeeds does `publish`
 // run on the host itself. A refusal leaves the host and its fit record as they were.
@@ -661,38 +662,15 @@ auto publish_fit_transaction(Project& host, std::vector<detail::RefinedValue>& r
     return measured;
 }
 
-void complete_atom_site_moments(Structure& structure) {
+void complete_atom_site_moments(Structure& structure, bool restore, bool imported) {
     if (structure.magnetic->operations.empty()) {
         return;
     }
     // crysta's one completion of a magnetic edit (ADR-0137 B8): it refuses, naming why, a structure its acceptance
     // rule refuses, before anything here changes.
-    const crysta::CompletedMagnetic completed = crysta::complete_magnetic(to_crysta_structure(structure));
+    const crysta::CompletedMagnetic completed = crysta::complete_magnetic(
+        to_crysta_structure(structure), imported ? crysta::kAdmitImported : crysta::kAdmitAsStated, restore);
     adopt_completed_structure(structure, completed.structure);
-}
-
-void check_completed_structure(const Structure& structure, const crysta::Structure& engine) {
-    const auto has = [](const auto& rows, const std::string& id) {
-        return std::any_of(rows.begin(), rows.end(), [&](const auto& row) { return row.site_id.value() == id; });
-    };
-    for (const auto& site : structure.atom_sites) {
-        if (!has(engine.atom_sites, site->id.value())) {
-            throw std::invalid_argument("the completed structure " + structure.name.value() + " has no site " +
-                                        site->id.value());
-        }
-    }
-    for (const auto& row : structure.atom_site_moment) {
-        if (!has(engine.atom_site_moment, row->id.value())) {
-            throw std::invalid_argument("the completed structure " + structure.name.value() + " has no moment for " +
-                                        row->id.value());
-        }
-    }
-    for (const auto& tensor : structure.atom_site_aniso) {
-        if (!has(engine.atom_site_aniso, tensor->id.value())) {
-            throw std::invalid_argument("the completed structure " + structure.name.value() + " has no tensor for " +
-                                        tensor->id.value());
-        }
-    }
 }
 
 void adopt_completed_structure(Structure& structure, const crysta::Structure& engine) {
@@ -753,22 +731,6 @@ void adopt_completed_structure(Structure& structure, const crysta::Structure& en
 }
 
 
-void publish_completed_type_iv(Project& host, crysta::Project& work, std::vector<detail::RefinedValue>& refined) {
-    // Each type IV structure takes crysta's finalized state: every row checked to resolve before anything is written,
-    // then the fit's values and every field completion owns (coordinates, letters, moments and their forms, tensors)
-    // copied into the host's own rows, which keep their identity for anything holding them (review 18, F2). The fit
-    // routes run this inside one transaction: first on a copy of the project, then on the live one.
-    std::vector<std::pair<Structure*, const crysta::Structure*>> completed;
-    for (const auto& held : host.structures) {
-        for (const crysta::Structure& engine : work.structures) {
-            if (engine.name.value() != held->name.value() || !crysta::type_iv_route(engine)) continue;
-            check_completed_structure(*held, engine);
-            completed.emplace_back(held.get(), &engine);
-        }
-    }
-    detail::write_back(refined);
-    for (const auto& [held, engine] : completed) adopt_completed_structure(*held, *engine);
-}
 
 LetterSource letter_source(const Structure& structure) {
     if (structure.magnetic->operations.empty()) {
@@ -1650,8 +1612,11 @@ bool bns_transform_consistent(const MagneticDescription& magnetic) {
     if (dot == std::string::npos || !digits(bns.substr(0, dot)) || !digits(bns.substr(dot + 1))) {
         return false;
     }
-    const int number = std::stoi(bns.substr(0, dot));
-    if (number < 1 || number > 230) {
+    int number = 0;
+    const char* first = bns.data();
+    const char* last = bns.data() + dot;
+    if (const auto [end, error] = std::from_chars(first, last, number);
+        error != std::errc() || end != last || number < 1 || number > 230) {
         return false;
     }
     for (const SpaceGroupSettingName& setting : space_group_settings()) {
@@ -6654,9 +6619,10 @@ void complete_relations(Project& project) {
         copy_dependents(*converted.project, project, Completion::Values);
         mark_dependents(project, crysta::compile_relations(*converted.project, false), {});
         // A type IV structure's coordinate, cell and ADP edits end in crysta's one completion too (ADR-0137 B8): its
-        // letters, admitted coordinates and moment ties follow the edited values. Types I-III keep today's path.
+        // moment ties follow the edited values, and each site keeps the symmetry its letter states (owner decision
+        // 2026-11-27, addendum 2: a value is never read as a new symmetry). Types I-III keep today's path.
         for (auto& structure : project.structures) {
-            if (letter_source(*structure) == LetterSource::Magnetic) complete_atom_site_moments(*structure);
+            if (letter_source(*structure) == LetterSource::Magnetic) complete_atom_site_moments(*structure, true);
         }
     } catch (const std::exception& error) {
         raise_coded(error);
@@ -8385,10 +8351,9 @@ FitResultBase Project::fit(const std::vector<double>& grid, const std::vector<do
                 request.should_cancel = should_cancel;
                 return crysta::fit_problem(provider, request);
             }();
-            // crysta's type IV finalisation before any outcome or live write (ADR-0137 F17; review 15,
-            // F2): the completed structure, and the completed model's own evaluation when an orbit
-            // changed. A refusal throws here and leaves the model as it was.
-            if (!result.cancelled) crysta::finalize_fit(project, result);
+            // The fit keeps every site's symmetry from its start (owner decision 2026-11-27): crysta writes the
+            // values and names any type IV site that reached a special position; nothing is re-classified.
+            crysta::finalize_fit(project, result);
             const double elapsed_ms = std::chrono::duration<double, std::milli>(
                                           std::chrono::steady_clock::now() - fit_start)
                                           .count();
@@ -8463,7 +8428,7 @@ FitResultBase Project::fit(const std::vector<double>& grid, const std::vector<do
             // Write the refined value/esd back onto the edi model Parameters (all labels resolved above).
             // One transaction (review 18, F2): proven on a copy, then published, then recorded.
             const auto publish = [&](Project& host, std::vector<detail::RefinedValue>& items, bool trial) {
-                publish_completed_type_iv(host, project, items);
+                detail::write_back(items);
                 crysta::write_fit_result_into(project, result);  // crysta completes the dependents
                 publish_fit_state(host, project, items, trial);
             };
@@ -9345,9 +9310,9 @@ FitResultBase Project::fit_joint(const std::vector<PdDataBase>& patterns,
                 request.should_cancel = should_cancel;
                 return crysta::fit_problem(provider, request);
             }();
-            // crysta's type IV finalisation before any outcome or live write (ADR-0137 F17; review 15,
-            // F2); a refusal throws here and leaves the model as it was.
-            const bool orbit_changed = !result.cancelled && crysta::finalize_fit(project, result);
+            // The fit keeps every site's symmetry from its start (owner decision 2026-11-27): crysta writes the
+            // values and names any type IV site that reached a special position; nothing is re-classified.
+            crysta::finalize_fit(project, result);
             const double elapsed_ms = std::chrono::duration<double, std::milli>(
                                           std::chrono::steady_clock::now() - fit_start)
                                           .count();
@@ -9355,13 +9320,10 @@ FitResultBase Project::fit_joint(const std::vector<PdDataBase>& patterns,
             // Per-bank metrics, read from the provider while it is STILL ALIVE — it owns the per-bank
             // sub-residuals and is destroyed when this scope ends, so this must happen here and cannot
             // be recovered afterwards from the FitResultBase. Every number is the engine's; edi only
-            // renames the fields into its own value type. After an orbit change they come from the
-            // completed model instead (below).
+            // renames the fields into its own value type.
             std::vector<BankMetric> bank_metrics;
-            if (!orbit_changed) {
-                for (const crysta::BankMetric& metric : provider.bank_metrics(provider.values())) {
-                    bank_metrics.push_back({metric.name, metric.n_points, metric.rwp, metric.chi_square});
-                }
+            for (const crysta::BankMetric& metric : provider.bank_metrics(provider.values())) {
+                bank_metrics.push_back({metric.name, metric.n_points, metric.rwp, metric.chi_square});
             }
 
             // Translate EVERY joint label to an edi-owned parameter FIRST — total and fail-closed. Only
@@ -9426,7 +9388,7 @@ FitResultBase Project::fit_joint(const std::vector<PdDataBase>& patterns,
                 fitted_patterns.emplace_back(pattern.axis(), pattern.intensity_meas.get(), pattern.intensity_meas_su.get());
             }
             const auto publish = [&](Project& host, std::vector<detail::RefinedValue>& items, bool trial) {
-                publish_completed_type_iv(host, project, items);
+                detail::write_back(items);
                 crysta::write_fit_result_into(project, result);  // crysta completes the dependents
                 publish_fit_state(host, project, items, trial);
             };
@@ -9447,14 +9409,6 @@ FitResultBase Project::fit_joint(const std::vector<PdDataBase>& patterns,
                                       fitted_quality(engine_copy, fitted_patterns, outcome.values.size()));
             };
             auto [correlations, quality] = publish_fit_transaction(*this, refined, publish, restage, measure);
-            // After an orbit change the provider's banks describe the start's orbits: each bank's
-            // figures come from the completed, published model instead.
-            if (orbit_changed) {
-                outcome.banks.clear();
-                for (const crysta::ProfileFactors& bank : quality.experiments) {
-                    outcome.banks.push_back({bank.experiment, bank.n_points, bank.rwp, bank.chi_square});
-                }
-            }
             record_fit_result(*this, outcome, considered, correlations, quality);
             // Before shared items this copied bank 0 into the single-bank mirror (the loader set it
             // up that way), so `experiment` never reports stale values after a joint refinement.
