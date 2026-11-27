@@ -826,16 +826,11 @@ function applyAssistantChoice() {
         installer.deselectComponent(assistantComponent);
 }
 
-// The voice row is there only where the installer has the component (a marker installer may not). Its description is
-// the component's own, as package.py writes it, under the check box.
+// The voice row is there only where the installer has the component (a marker installer may not).
 function showVoiceRow(page) {
     var row = page ? gui.findChild(page, "VoiceBox") : null;
-    var held = installer.componentByName(voiceComponent);
     if (row)
-        row.visible = !!held;
-    var description = page ? gui.findChild(page, "VoiceDescription") : null;
-    if (description && held)
-        description.text = String(held.value("Description") || "");
+        row.visible = !!installer.componentByName(voiceComponent);
 }
 
 function voiceChosen() {
@@ -1235,13 +1230,18 @@ function setupInstallPage(page) {
         var voiceBox = gui.findChild(page, "VoiceCheckBox");
         if (voiceBox)
             voiceBox.toggled.connect(updateSpace);
-        // The folder is probed (its disk, an installation in it) when its editing is done, never per keystroke,
-        // and when Browse sets it (a change while the field has no focus, which ends no editing).
+        // The folder's disk is probed when its editing is done, never per keystroke, and when Browse sets it (a
+        // change while the field has no focus, which ends no editing). An installation in it is looked for on
+        // every change, so the warning above never names a folder no longer chosen.
         if (folder) {
             folder.editingFinished.connect(refreshInstallPage);
             folder.textChanged.connect(function () {
-                if (!folder.focus && !showingShort)
+                if (showingShort)
+                    return;
+                if (!folder.focus)
                     refreshInstallPage();
+                else
+                    followInstallation(String(folder.text));
             });
         }
         if (ownField) {
@@ -1327,12 +1327,11 @@ var licenseRefused = false;
 // The third field is the row's group: the first row shown of a group stands one group gap under the group before.
 // On the install page: the folder with the space it needs right under it, then what is installed, then the licence
 // and the shortcut, then any notice. A component row is measured by its box alone: the size beside it is no taller,
-// and its text arrives as the page opens, which moved it while the rows were being measured. Voice input's row also
-// holds its description under the box, so the row ends below it.
+// and its text arrives as the page opens, which moved it while the rows were being measured.
 var formRows = [["Logo", ["FormLogo"], 0], ["Folder", ["FolderLineEdit", "FolderBrowseButton"], 1],
                 ["Space", ["SpaceLabel"], 1],
                 ["App", ["AppCheckBox"], 2], ["Maintenance", ["MaintenanceCheckBox"], 2],
-                ["Assistant", ["AssistantCheckBox"], 2], ["Voice", ["VoiceCheckBox", "VoiceDescription"], 2],
+                ["Assistant", ["AssistantCheckBox"], 2], ["Voice", ["VoiceCheckBox"], 2],
                 ["License", ["LicenseCheckBox", "LicenseLink"], 3], ["Shortcut", ["ShortcutCheckBox"], 3],
                 ["Notice", ["NoticeLabel"], 4]];
 
@@ -1543,14 +1542,27 @@ function folderField() {
     return installPageField("FolderLineEdit") || installPageField("TargetDirectoryLineEdit");
 }
 
-function refreshInstallPage() {
-    var folder = folderField();
-    var target = folder ? folderValue() : installer.value("TargetDir");
+// Whether the folder holds an installation: its maintenance tool is there.
+function installationIn(target) {
     var tool = target + (systemInfo.kernelType === "darwin" ? "/MaintenanceTool.app"
                          : systemInfo.kernelType === "winnt" ? "/MaintenanceTool.exe" : "/MaintenanceTool");
-    installedHere = target !== "" && installer.fileExists(tool);
+    return target !== "" && installer.fileExists(tool);
+}
+
+function refreshInstallPage() {
+    var folder = folderField();
+    installedHere = installationIn(folder ? folderValue() : installer.value("TargetDir"));
     showNotice();
     updateSpace();
+}
+
+// While the folder is typed: the warning follows each change (a file check), the disk is asked when editing ends.
+function followInstallation(target) {
+    var here = installationIn(target);
+    if (here === installedHere)
+        return;
+    installedHere = here;
+    showNotice();
 }
 
 

@@ -367,15 +367,15 @@ def write_metadata(
             # (InstallerChrome.qss), the logo heading each page's content (Installer.qs).
             'WizardStyle': 'Modern',
             'WizardDefaultWidth': '640',
-            # The tallest page, the install page, at 14 px text (a 19 px line in Segoe UI, 17 in
-            # DejaVu Sans and Helvetica Neue): the logo 44 and its 32 px step, "Install to", 8, the
-            # folder 39, 8, the space line, 24, two check box rows with 8 between, 24, the licence
-            # and shortcut rows: 309 px on Windows. An installation already in the folder adds its
-            # two-line warning and 24 (62 on Windows). Qt's margins around the page and its buttons
-            # (11 and 9 px, the buttons 39) add 101: 472 on Windows with the warning. The voice
-            # input row adds a line and 8 (27), and its description under the box a 16 px line of
-            # 12 px text and 2 (18).
-            'WizardDefaultHeight': '525',
+            # The tallest page is the install page with an installation already in the folder: the
+            # two-line warning and all four component rows. At 14 px text: the logo 44 and its 32
+            # px step, the warning's two lines and 24, "Install to", 8, the folder 39, 8, the space
+            # line, 24, four check box rows with 8 between, 24, the licence and shortcut rows. Qt's
+            # margins and its buttons add about 100. Windows (Segoe UI, 19 px lines and rows):
+            # 425 + 101 = 526. Linux (DejaVu Sans, 17 px): 405 + 100 = 505, measured. macOS draws
+            # check box rows 24 high, has no shortcut row and larger margins: 419 + 118 = 537,
+            # measured. A few pixels spare on each.
+            'WizardDefaultHeight': {'macos': '540', 'windows': '530'}.get(SYSTEM, '510'),
             # One centred column, no step list (the owner's three-page design, edi ADR-0071).
             'WizardShowPageList': 'false',
             'ControlScript': 'Installer.qs',
@@ -479,11 +479,9 @@ def write_voice_metadata(meta: Path, version: str) -> None:
         meta / 'package.xml',
         'Package',
         {
-            'DisplayName': 'Voice input',
-            'Description': (
-                'Speak to the AI assistant instead of typing; '
-                'speech is recognised on this computer.'
-            ),
+            'DisplayName': 'Voice input for AI assistant',
+            # Package metadata only: the row shows the name and size, no description.
+            'Description': 'Speech recognition on this computer for the AI assistant.',
             'Version': version,
             'ReleaseDate': datetime.datetime.now(datetime.UTC).date().isoformat(),
             'Dependencies': APP_COMPONENT,

@@ -39,7 +39,7 @@ from package import (
     installer_from_download,
     package_app,
 )
-from protocol_check import installer_command
+from protocol_check import installer_command, write_voice_marker
 
 PERSONALIZE = r'HKCU\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize'
 
@@ -382,16 +382,18 @@ def marker_installer(tools: Path, work: Path) -> Path:
     """The offline marker installer's download, whose repository holds a newer version.
 
     The maintenance tool then has components to add and an update to apply, as protocol_check.py
-    sets it up, so every one of its modes shows its pages.
+    sets it up, so every one of its modes shows its pages. A small stand-in for the speech model
+    gives it the voice component, so the install page shows all four rows.
     """
     stage = marker_stage(work)
     repository = (work / 'online/repository').as_uri() + '/'
-    with patch('package.repository_urls', return_value=(repository,)):
-        package_app(stage, tools, work / 'offline', '26.17')
-    app = stage / APP_MARKER
-    app.write_text('updated marker\n')
-    (stage / ASSISTANT_RUNTIME / 'assistant.txt').write_text('updated assistant marker\n')
-    package_app(stage, tools, work / 'online', '26.18', repository)
+    with patch('package.release_voice_pin', return_value=write_voice_marker(stage)):
+        with patch('package.repository_urls', return_value=(repository,)):
+            package_app(stage, tools, work / 'offline', '26.17')
+        app = stage / APP_MARKER
+        app.write_text('updated marker\n')
+        (stage / ASSISTANT_RUNTIME / 'assistant.txt').write_text('updated assistant marker\n')
+        package_app(stage, tools, work / 'online', '26.18', repository)
     metadata = (work / 'offline/installer.json').read_text()
     return work / 'offline' / json.loads(metadata)['download']
 
