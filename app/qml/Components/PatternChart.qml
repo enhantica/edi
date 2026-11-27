@@ -1199,7 +1199,30 @@ Item {
 
         onPressed: mouse => ApplicationInfo.patternPointer(mouse, 0)
         onPositionChanged: mouse => ApplicationInfo.patternPointer(mouse, 1)
-        onReleased: mouse => ApplicationInfo.patternPointer(mouse, 2)
+        // While marking peaks for k, a click that does not move marks or drops a peak; a drag still zooms or pans and
+        // the wheel still zooms, through this one pointer, so no layer above it takes the gesture (owner, 2026-11-27).
+        // The mark waits for the double-click interval, so a double click resets the view instead.
+        onReleased: mouse => {
+            const still = Math.abs(mouse.x - pressX) < chart.em * 0.3 && Math.abs(mouse.y - pressY) < chart.em * 0.3;
+            if (chart.peakMode && peakLayer.native_ && mouse.button === Qt.LeftButton && still) {
+                markClick.at = controller.xMin + mouse.x / Math.max(1, width) * (controller.xMax - controller.xMin);
+                markClick.restart();
+                return;
+            }
+            ApplicationInfo.patternPointer(mouse, 2);
+        }
+        onDoubleClicked: mouse => {
+            if (mouse.button !== Qt.LeftButton)
+                return;
+            markClick.stop();
+            controller.reset();
+        }
+        Timer {
+            id: markClick
+            property real at: 0
+            interval: Qt.styleHints.mouseDoubleClickInterval
+            onTriggered: chart.togglePeakAt(at)
+        }
         // On the report's preview the wheel scrolls the page, not the chart.
         onWheel: wheel => {
             if (chart.report) {
@@ -1310,13 +1333,6 @@ Item {
                     color: mark.marked ? EaStyle.Colors.themeAccent : EaStyle.Colors.themeForegroundDisabled
                 }
             }
-        }
-        // A single click marks or drops a peak; a drag, the wheel and a double click reach the chart beneath, so zoom
-        // and pan work while marking (owner decision 2026-11-27). The handler takes only a passive grab.
-        TapHandler {
-            enabled: chart.peakMode && peakLayer.native_
-            acceptedButtons: Qt.LeftButton
-            onSingleTapped: eventPoint => chart.togglePeakAt(controller.xMin + eventPoint.position.x / Math.max(1, peakLayer.width) * (controller.xMax - controller.xMin))
         }
     }
 
