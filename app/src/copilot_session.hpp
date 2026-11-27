@@ -27,12 +27,14 @@ public:
     explicit CopilotSession(QString accountsRoot = {}, QObject* parent = nullptr);
     ~CopilotSession() override;
 
-    /// The CLI's documented built-in tools, all excluded except the skill loader the bundled skills need.
-    static const QStringList& excludedTools();
+    /// The closed tool list: the skill loader and `edi-<name>` for each of edi's tools. Without `expectedTools`
+    /// the static catalogue and `request_user_input` stand in, since the process may start before the thread's
+    /// catalogue is known.
+    static QStringList availableTools(const QStringList& expectedTools);
     /// The app's variables the child may inherit: platform basics, proxies and certificates. `LC_*` is taken too.
     static const QStringList& allowedEnvironment();
     /// The runtime's arguments for a prepared workspace.
-    static QStringList arguments(const QString& workspace);
+    static QStringList arguments(const QString& workspace, const QStringList& availableTools);
     /// The child's environment for an account, built from the allow-list and edi's settings; also used for
     /// `copilot login`. Empty with `explanation` set when the account home or the empty GitHub CLI folder cannot
     /// be used.
@@ -110,6 +112,7 @@ private:
     QString accounts_root_;
     AssistantProcess process_;
     AssistantRuntimeLaunch launch_;
+    QStringList available_tools_;
     quint64 failed_generation_ = 0;
     bool has_failed_ = false;
     qint64 next_id_ = 0;

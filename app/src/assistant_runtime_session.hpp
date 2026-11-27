@@ -19,6 +19,7 @@ struct AssistantRuntimeLaunch {
     QString instructions; ///< edi's instruction text for the thread
     QString skillsDir;    ///< the staged, verified skills (`<workspace>/.agents/skills`)
     QStringList skills;   ///< the ids that discovery must report
+    QStringList expectedTools;  ///< edi's MCP tool names for the thread, as its tool server lists them
     QJsonObject toolServer;  ///< the MCP stdio server entry: {command, args, env}
     /// The tool names edi's server lists (`request_user_input` included); a process's tool readback must show
     /// exactly these, in the runtime's own spelling, plus the skill loader.

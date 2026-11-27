@@ -9,6 +9,7 @@
 #include <QStandardPaths>
 #include <QUrl>
 #include <utility>
+#include "assistant_native_tools.hpp"
 #include "edi/assistant_limits.hpp"
 
 namespace edi_app {
@@ -149,17 +150,17 @@ CopilotSession::~CopilotSession() {
     }
 }
 
-const QStringList& CopilotSession::excludedTools() {
-    // https://docs.github.com/en/copilot/reference/copilot-cli-reference/cli-command-reference#tool-availability-values
-    static const QStringList tools{
-        QStringLiteral("bash"),       QStringLiteral("powershell"),      QStringLiteral("list_bash"),
-        QStringLiteral("list_powershell"), QStringLiteral("read_bash"), QStringLiteral("read_powershell"),
-        QStringLiteral("stop_bash"),  QStringLiteral("stop_powershell"), QStringLiteral("write_bash"),
-        QStringLiteral("write_powershell"), QStringLiteral("apply_patch"), QStringLiteral("create"),
-        QStringLiteral("edit"),       QStringLiteral("view"),            QStringLiteral("list_agents"),
-        QStringLiteral("read_agent"), QStringLiteral("task"),            QStringLiteral("write_agent"),
-        QStringLiteral("ask_user"),   QStringLiteral("glob"),            QStringLiteral("grep"),
-        QStringLiteral("rg"),         QStringLiteral("web_fetch")};
+QStringList CopilotSession::availableTools(const QStringList& expectedTools) {
+    QStringList names = expectedTools;
+    if (names.isEmpty()) {
+        for (const auto& name : assistant_native_tool_names()) names.append(name.toString());
+        names.append(QStringLiteral("request_user_input"));
+    }
+    // The CLI names an MCP tool `<server>-<tool>`; edi's tool names need no sanitizing.
+    QStringList tools{skill_tool};
+    for (const auto& name : names) {
+        if (!name.isEmpty() && !tools.contains(edi_prefix + name)) tools.append(edi_prefix + name);
+    }
     return tools;
 }
 
@@ -189,15 +190,18 @@ const QStringList& CopilotSession::allowedEnvironment() {
     return names;
 }
 
-QStringList CopilotSession::arguments(const QString& workspace) {
+QStringList CopilotSession::arguments(const QString& workspace, const QStringList& availableTools) {
     return {QStringLiteral("--acp"),
             QStringLiteral("--stdio"),
             QStringLiteral("--no-auto-update"),
             QStringLiteral("--disable-builtin-mcps"),
             QStringLiteral("--disable-mcp-server"),
             QStringLiteral("computer-use"),
-            QStringLiteral("--excluded-tools"),
-            excludedTools().join(QLatin1Char(',')),
+            // A closed list: shell, file, web, agent and question tools are not available at all.
+            QStringLiteral("--available-tools"),
+            availableTools.join(QLatin1Char(',')),
+            QStringLiteral("--allow-tool"),
+            skill_tool,
             QStringLiteral("--allow-tool"),
             QStringLiteral("edi"),
             QStringLiteral("--additional-mcp-config"),
@@ -280,7 +284,9 @@ bool CopilotSession::start(const AssistantRuntimeLaunch& launch) {
         return deny(QStringLiteral("The assistant instructions could not be written."));
 
     readback_timer_.start(readback_ms);
-    if (!process_.start(launch.guard, launch.executable, arguments(launch.workspace), launch.workspace, *env)) {
+    available_tools_ = availableTools(launch.expectedTools);
+    if (!process_.start(launch.guard, launch.executable, arguments(launch.workspace, available_tools_),
+                        launch.workspace, *env)) {
         readback_timer_.stop();
         return deny(QStringLiteral("GitHub Copilot could not be started."));
     }
@@ -848,7 +854,7 @@ void CopilotSession::toolUpdate(Thread& thread, const QJsonObject& update) {
         call.reported = true;
         return;
     }
-    if (call.name.startsWith(edi_prefix) && call.name.size() > edi_prefix.size()) {
+    if (call.name.startsWith(edi_prefix) && available_tools_.contains(call.name)) {
         if (!running && !update.value(QStringLiteral("rawInput")).isObject()) return;  // input still streaming
         call.reported = true;
         emit toolUse(session, turn, call.name.mid(edi_prefix.size()), call.arguments, id);
