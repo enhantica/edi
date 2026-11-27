@@ -65,11 +65,14 @@ jobs:
             # Qualify app, browser transport and publication infrastructure changes.
             wasm_build: ['app/**', 'tools/ci/wasm*', '.github/workflows/ci.yml', '.github/workflows/pages.yml', '.github/actions/wasm-cache/**', 'tests/system/manual/*.mjs', 'tests/fixtures/e04_t11_wasm/**', 'tests/fixtures/survey/**', 'tests/system/py/test_survey_events.py', 'tests/integration/py/test_preferences_and_survey.py', 'website/surfaces/docs/assets/survey/**', 'website/surfaces/docs/about/survey.md', 'website/surfaces/mkdocs.yml', 'website/build.py', 'pixi.toml', 'pixi.lock', 'tools/ci/crysta*', 'tools/ci/compiler_cache.py']
 
-  # The crysta SDK this run builds against, once per crysta commit (edi ADR-0083).
+  # The crysta SDK this run builds against, once per crysta commit (edi ADR-0083), of the pin `changes` read.
   crysta-sdk:
     if: github.event.pull_request.head.repo.fork == false
+    needs: changes
     uses: ./.github/workflows/crysta-sdk.yml
     secrets: inherit
+    with:
+      crysta-sha: ${{ needs.changes.outputs.crysta_sha }}
 
   lint:
     name: lint

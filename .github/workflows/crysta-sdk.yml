@@ -1,13 +1,18 @@
 name: Build crysta
 
-# The crysta SDK edi builds against (edi ADR-0083): pixi.toml's CRYSTA_COMMIT, built here once per commit and
-# platform and kept in the cache under that commit. Every edi job and product takes it from there
-# (.github/actions/crysta-sdk). A job that needs crysta's source fetches it itself with the app's read-only token
-# (.github/actions/crysta-source); none stores or prints it.
+# The crysta SDK edi builds against (edi ADR-0083), built here once per commit and platform and kept in the cache
+# under that commit. Every edi job and product takes it from there (.github/actions/crysta-sdk). A job that needs
+# crysta's source fetches it itself with the app's read-only token (.github/actions/crysta-source); none stores or
+# prints it. The caller names the commit, pixi.toml's CRYSTA_COMMIT as its first job read it, so one commit reaches
+# the source, the SDK, its cache key and every consumer of a run; this workflow reads no pin of its own.
 
 on:
-  workflow_dispatch:
   workflow_call:
+    inputs:
+      crysta-sha:
+        description: The full crysta commit to build
+        required: true
+        type: string
     outputs:
       sha:
         description: The crysta commit built
@@ -25,14 +30,22 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - id: pin
-        run: bash tools/ci/crysta-source.sh
+        name: The crysta commit asked for
+        env:
+          SHA: ${{ inputs.crysta-sha }}
+        run: |
+          if [[ ! "$SHA" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "crysta-sha is not a full commit id" >&2
+            exit 1
+          fi
+          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
       - id: recipe
         run: |
           python3 - <<'PYTHON'
           import hashlib, os
           from pathlib import Path
           digest = hashlib.sha256()
-          for name in ['.github/workflows/crysta-sdk.yml', 'tools/ci/crysta_sdk.py', '.github/actions/setup-pixi/action.yml']:
+          for name in ['.github/workflows/crysta-sdk.yml', 'tools/ci/crysta_sdk.py', 'tools/ci/crysta_subject.py', '.github/actions/setup-pixi/action.yml']:
               digest.update(name.encode() + b'\0' + Path(name).read_bytes() + b'\0')
           with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
               output.write(f'sha={digest.hexdigest()}\n')
@@ -79,15 +92,6 @@ jobs:
         uses: ilammy/msvc-dev-cmd@v1
         with:
           toolset: '14.44'
-      - id: pin
-        shell: bash
-        run: bash tools/ci/crysta-source.sh
-      - name: Confirm the resolved engine identity
-        shell: bash
-        env:
-          RESOLVED_SHA: ${{ needs.resolve.outputs.sha }}
-          CHECKED_OUT_SHA: ${{ steps.pin.outputs.sha }}
-        run: test "$RESOLVED_SHA" = "$CHECKED_OUT_SHA"
       - id: cache
         uses: actions/cache/restore@v4
         with:
@@ -105,6 +109,10 @@ jobs:
           sha: ${{ needs.resolve.outputs.sha }}
           app-id: ${{ vars.ENHANTICA_APP_ID }}
           private-key: ${{ secrets.ENHANTICA_APP_KEY }}
+      - name: The crysta commit under test
+        env:
+          SHA: ${{ needs.resolve.outputs.sha }}
+        run: python3 tools/ci/crysta_subject.py --sha "$SHA"
       - name: Check SDK and consumer ABI package locks before compilation
         if: steps.cache.outputs.cache-hit != 'true'
         run: |
@@ -165,7 +173,7 @@ jobs:
       - name: Build, test and pack the SDK
         if: steps.cache.outputs.cache-hit != 'true'
         env:
-          SHA: ${{ steps.pin.outputs.sha }}
+          SHA: ${{ needs.resolve.outputs.sha }}
           # A failed test's message and traceback can quote crysta's tests or corpus.
           PYTEST_ADDOPTS: --tb=no -rN
         run: |
