@@ -1785,7 +1785,7 @@ struct AssistantViewModel::State {
     // The signed-in identity of the active (or just added) account, read from the runtime. A home reporting
     // another identity than its record stops the connection; the default ChatGPT login is the user's own
     // Codex login, which may change outside edi, so its record follows it (ADR-0108 §8).
-    void record_signed_in_account(const QString& email, const QString& plan) {
+    void record_signed_in_account(const QString& email, const QString& plan_type) {
         auto store = account_store();
         if (pending_account) {
             auto record = *pending_account;
@@ -1796,7 +1796,7 @@ struct AssistantViewModel::State {
                     throw std::runtime_error("This account is already added; switch to it instead");
                 }
             record.email = email;
-            record.plan = plan;
+            record.plan = plan_type;
             store.save(record);
             store.setActive(record.provider, record.id);
             active_provider_account = record.ref();
@@ -1815,9 +1815,9 @@ struct AssistantViewModel::State {
                 for (const auto& other : store.accounts(AssistantProviderId::ChatGpt))
                     if (other.home.isEmpty() && !email.isEmpty() && other.email == email) chosen = other;
             auto record = chosen.value_or(store.createDefaultChatGpt());
-            if (!chosen || record.email != email || record.plan != plan) {
+            if (!chosen || record.email != email || record.plan != plan_type) {
                 if (!email.isEmpty()) record.email = email;
-                record.plan = plan;
+                record.plan = plan_type;
                 store.save(record);
             }
             const auto active = store.active();
@@ -1826,9 +1826,9 @@ struct AssistantViewModel::State {
         } else if (auto record = store.find(active_provider_account.provider, active_provider_account.id)) {
             if (!record->email.isEmpty() && !email.isEmpty() && record->email != email)
                 throw std::runtime_error("This account's sign-in now belongs to someone else; sign in again with the right account");
-            if (record->email != email || record->plan != plan) {
+            if (record->email != email || record->plan != plan_type) {
                 record->email = email;
-                record->plan = plan;
+                record->plan = plan_type;
                 store.save(*record);
             }
         }
