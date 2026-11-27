@@ -530,7 +530,16 @@ jobs:
           diagnostic: ${{ inputs.diagnostic && 'true' || 'false' }}
       - *source
       - *subject
-      - *pixi-cpp
+      # This job runs edi's pixi and crysta's, and the A/B also crysta main's: the launcher runs the
+      # version each manifest pins.
+      - &launcher
+        if: needs.plan.outputs.skip != 'true'
+        name: Put the pixi launcher on PATH
+        run: |
+          mkdir -p "$RUNNER_TEMP/pixi-launcher"
+          cp tools/ci/pixi-launcher.sh "$RUNNER_TEMP/pixi-launcher/pixi"
+          chmod +x "$RUNNER_TEMP/pixi-launcher/pixi"
+          echo "$RUNNER_TEMP/pixi-launcher" >> "$GITHUB_PATH"
       - *install-cpp
       - *ccache-env
       - *ccache-restore
@@ -771,7 +780,7 @@ jobs:
           private-key: ${{ secrets.CRYSTA_READ_KEY }}
           base: ${{ matrix.part == '' && 'main' || '' }}
       - *subject
-      - *pixi-cpp
+      - *launcher
       - *install-cpp
       - *ccache-env
       - *ccache-restore
