@@ -28,21 +28,28 @@ API-key entry.
 
 - **ChatGPT** signs in through OpenAI's page in your browser with your ChatGPT plan. If you already use the Codex
   command-line tool, the app starts with that login, and signing out in the app also signs it out there.
-- **Claude** signs in through Claude's own login in your browser, with your Claude plan. Anthropic's Consumer Terms
-  apply to Free, Pro, Max and Ultra plans, and its Commercial Terms to Team, Enterprise and API accounts.
-- **GitHub Copilot** signs in with a device code: the app shows a code and opens GitHub, where you enter it. Personal
-  and business seats work, as do GitHub Enterprise Cloud hosts with data residency (`<name>.ghe.com`, entered when you
-  add the account). GitHub Enterprise Server is not supported. Your organisation must allow the Copilot CLI and MCP
-  servers. On Linux the Copilot program needs OpenSSL 3 from the system. Signing out removes the account from the app;
-  the GitHub sign-in stays in the system keychain until you remove it there or revoke it on GitHub.
+- **Claude** signs in through Claude's own login in your browser, with your Claude plan, or uses your own Anthropic
+  key when one is set in your environment; the Account dialog says which. Anthropic's Consumer Terms apply to Free,
+  Pro, Max and Ultra plans, and its Commercial Terms to Team, Enterprise and API accounts. If your organisation manages
+  Claude, its settings can run their own commands when Claude starts and before each message; the app tells you
+  before you sign in and asks you once when it sees them.
+- **GitHub Copilot** signs in with GitHub's own login. Personal and business seats are meant to work, as are GitHub
+  Enterprise Cloud hosts with data residency (`<name>.ghe.com`, entered when you add the account); GitHub Enterprise
+  Server is not supported. In this version you can add a Copilot account, but Copilot does not answer yet: the app
+  cannot yet confirm which tools Copilot would use and which GitHub account it signed in with, and it sends nothing
+  until it can. "Remove from edi" removes a Copilot account from the app; the GitHub sign-in stays in the system
+  keychain until you remove it there or revoke it on GitHub. On Linux the Copilot program needs OpenSSL 3 from the
+  system.
 
 The account button at the top of the assistant opens the **Account** dialog. It lists your accounts by provider and
 marks the active one. **Add account** starts a new sign-in for that provider, **Switch** makes another account the
-active one and starts an empty conversation, and **Sign out** acts on one account. Each account keeps its own
+active one and starts an empty conversation, and **Sign out** acts on the active account (for Copilot, **Remove from
+edi**). Each account keeps its own
 conversations: opening one that belongs to another account asks whether to switch to it.
 
 Claude and GitHub Copilot use only the app's own actions: their own file, command and web tools are off. Claude's
-and Copilot's past conversations list only the ones started in this app.
+and Copilot's past conversations list only the ones started in this app. A Claude conversation started with a key
+that names no person is kept as history but cannot be continued later.
 
 ## Try the generic desktop candidate
 
