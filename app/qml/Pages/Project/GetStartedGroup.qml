@@ -308,16 +308,14 @@ SideBarGroup {
     property var createOperation: null
     property var assistantCreate: null
     Component.onDestruction: createLife.alive = false
-    // Another project: what names or would write the old one closes; what a create had under way and what its form
-    // held go once the call that replaces the project is over (edi ADR-0052). The Load menu stays open.
+    // Another project: what names or would write the old one closes, and the create it had under way goes with its form
+    // (edi ADR-0052). The Load menu stays open.
     Connections {
         target: Session
-        // The replaced project's popups go as the replacement starts, before a new name can show (AppState.retirePopup).
-        // The Create dialog's untitled request is dropped first, as the later close does: the replacement supersedes it
-        // (edi ADR-0100), and the dialog's close would otherwise reject it.
+        // The replaced project's popups and its create go as the replacement starts, before a new name can show
+        // (AppState.retirePopup), so the next project's first Create finds nothing of them.
         function onProjectReplacing() {
-            createDialog.untitledId = 0;
-            group.hideCreateDialog();
+            group.settleCreate();
             AppState.retirePopup(replaceProject);
             AppState.retirePopup(saveMenu);
         }
@@ -326,20 +324,15 @@ SideBarGroup {
             AppState.retirePopup(replaceProject);
             exportFolder.close();
             exportFolder.sourceProject = null;
-            // The replaced project's Create dialog goes before the new project is published, never after its name shows.
-            if (createDialog.visible)
-                createDialog.untitledId = 0;
-            group.hideCreateDialog();
+            group.settleCreate();
         }
-        // At the new project's publication nothing of the replaced one's page stays open, also what was opened while it
-        // was being opened: the Create dialog among them.
+        // At the new project's publication nothing of the replaced one's page stays, also what was opened while it was
+        // being opened: the Create dialog among them.
         function onProjectChanged() {
             AppState.retirePopup(saveMenu);
             AppState.retirePopup(replaceProject);
             exportFolder.close();
-            if (createDialog.visible)
-                group.hideCreateDialog();
-            Qt.callLater(group.dropCreate);
+            group.settleCreate();
         }
     }
     // The Create dialog's `visible` follows the flag, so the flag is cleared before its close(): a flag left set would
@@ -348,6 +341,15 @@ SideBarGroup {
         AppState.retirePopup(createDialog, () => {
             EaGlobals.Vars.showProjectDescriptionDialog = false;
         });
+    }
+    // Ends the replaced project's create at once, never on a later turn. The untitled request goes first: the
+    // replacement supersedes it (edi ADR-0100), and the dialog's close would otherwise reject it. The close queues its
+    // own settlement under the old life, which dropCreate then ends, as Session.projectGeneration does once the next
+    // project is published.
+    function settleCreate() {
+        createDialog.untitledId = 0;
+        group.hideCreateDialog();
+        group.dropCreate();
     }
     function dropCreate() {
         createLife.alive = false;

@@ -2849,6 +2849,8 @@ bool Session::replaceProject(ProjectViewModel* project, const QStringList& warni
     if(target)connect(target,&ProjectViewModel::pathChanged,this,[this,target] {
         if(target && project_==target && path_generation_!=UINT64_MAX)++path_generation_;
     });
+    // Before anything can read the next project: work queued for the replaced one sees a new generation.
+    ++project_generation_;
     project_ = target;
     if(committed)*committed=true;
     if(committedReplacement)*committedReplacement=replacement;

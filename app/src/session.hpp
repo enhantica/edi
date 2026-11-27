@@ -240,6 +240,9 @@ class Session : public QObject {
     quint64 untitledOperationId() const;
     // The open operation's id while its dialog asks, else 0: a Create dialog opening binds to it.
     Q_INVOKABLE quint64 askingUntitledId() const;
+    // Counts the projects published, a close included. A page's queued work notes it when queued and does nothing
+    // once it has moved: the project that work was for is gone.
+    Q_INVOKABLE double projectGeneration() const { return static_cast<double>(project_generation_); }
     QString colourScheme() const { return colour_scheme_; }
     void setColourScheme(const QString& scheme);
 
@@ -482,7 +485,7 @@ class Session : public QObject {
     void retireAssistantIntent() noexcept;
     std::unique_ptr<ProjectViewModel> prepareAssistantNativeModel(edi::Project, quint64, const std::function<bool()>&);
     bool commitAssistantNativeModel(std::unique_ptr<ProjectViewModel>, quint64, const std::function<bool()>&, bool&);
-    quint64 assistant_epoch_=0, replacement_generation_=0;
+    quint64 assistant_epoch_=0, replacement_generation_=0, project_generation_=0;
     int tutorial_files_request_ = 0;  // the newest staging or saving request; replies carry their own
     // A tutorial files request: its number and the folder it alone writes. Only the current one writes or answers.
     struct TutorialFilesOperation {

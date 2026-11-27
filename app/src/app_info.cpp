@@ -11684,6 +11684,12 @@ QJSValue createGroupField(const PanelUsageFrame& f, const char* name) { return a
 void createGroupWrite(const PanelUsageFrame& f, const char* name, const QJSValue& value) { projectWrite(f, "group", name, value); }
 bool createSameProject(const PanelUsageFrame& f, const QJSValue& original) { return assistantContextField(f, "Session", "project").strictlyEquals(panelUsageRead(f, original, "project")); }
 bool createAlive(const PanelUsageFrame& f, const QJSValue& life) { return panelUsageTruth(panelUsageRead(f, life, "alive")); }
+QJSValue createGeneration(const PanelUsageFrame& f) { return projectInvoke(f, "Session", "projectGeneration"); }
+// Queued Create work acts only while its page's create and the project it was queued for are both still current: a
+// replacement drops the first and publishes a new generation.
+bool createCurrent(const PanelUsageFrame& f, const QJSValue& life, const QJSValue& generation) {
+    return createAlive(f, life) && generation.isNumber() && createGeneration(f).strictlyEquals(generation);
+}
 QJSValue lifecycleCallback(const PanelUsageFrame& f, uint op,
     const std::function<QJSValue(uint)>& saved, const std::function<QJSValue(uint)>& a) {
     if (op == 380) { projectInvoke(f, "Preferences", "apply"); projectInvoke(f, "RecentProjects", "refresh"); return projectInvoke(f, "whatsNewDialog", "showIfUpdated"); }
@@ -11704,17 +11710,17 @@ QJSValue lifecycleCallback(const PanelUsageFrame& f, uint op,
         if (!saved(0).isNull()) { const auto assistant = assistantContextField(f, "Session", "assistant"); return panelUsageDeferredMemberCall(f, assistant, "nativeProjectCreateReady", [&] { return QJSValueList{panelUsageRead(f, saved(0), "id"), QJSValue(false)}; }); } return {};
     }
     if (op == 386) {
-        const auto life = saved(0), original = saved(1);
-        if (!createAlive(f, life) || !createGroupField(f, "createIntent").strictlyEquals(original) || panelUsageTruth(assistantContextField(f, "createDialog", "visible"))) return {};
+        const auto life = saved(0), original = saved(1), generation = saved(2);
+        if (!createCurrent(f, life, generation) || !createGroupField(f, "createIntent").strictlyEquals(original) || panelUsageTruth(assistantContextField(f, "createDialog", "visible"))) return {};
         if (!original.isNull() && !panelUsageRead(f, original, "assistant").isNull() && createGroupField(f, "assistantCreate").strictlyEquals(panelUsageRead(f, original, "assistant"))) createGroupWrite(f, "assistantCreate", consentNull());
-        if (!createAlive(f, life) || !createGroupField(f, "createIntent").strictlyEquals(original) || panelUsageTruth(assistantContextField(f, "createDialog", "visible"))) return {};
+        if (!createCurrent(f, life, generation) || !createGroupField(f, "createIntent").strictlyEquals(original) || panelUsageTruth(assistantContextField(f, "createDialog", "visible"))) return {};
         createGroupWrite(f, "createIntent", consentNull());
-        if (!createAlive(f, life) || !createGroupField(f, "createIntent").isNull() || panelUsageTruth(assistantContextField(f, "createDialog", "visible"))) return {};
+        if (!createCurrent(f, life, generation) || !createGroupField(f, "createIntent").isNull() || panelUsageTruth(assistantContextField(f, "createDialog", "visible"))) return {};
         assistantMemberWrite(f, panelUsageRead(f, panelUsageContextRead(f, "EaGlobals"), "Vars"), "showProjectDescriptionDialog", QJSValue(false)); return {};
     }
     if (op == 387) {
         const auto life = saved(0), original = saved(1);
-        if (!createAlive(f, life) || !createGroupField(f, "createOperation").strictlyEquals(original) || !createSameProject(f, original) || (!panelUsageRead(f, original, "assistant").isNull() && panelUsageTruth(panelUsageRead(f, panelUsageRead(f, original, "assistant"), "cancelled")))) return {};
+        if (!createCurrent(f, life, saved(9)) || !createGroupField(f, "createOperation").strictlyEquals(original) || !createSameProject(f, original) || (!panelUsageRead(f, original, "assistant").isNull() && panelUsageTruth(panelUsageRead(f, panelUsageRead(f, original, "assistant"), "cancelled")))) return {};
         const auto session = panelUsageContextRead(f, "Session");
         const auto outcome = panelUsageDeferredMemberCall(f, session, "createProjectWithOutcome", [&] {
             QJSValueList args{saved(2), saved(3), saved(4), assistantContextField(f, "Preferences", "newProjectSuRule"), saved(5), saved(6), QJSValue(assistantContextField(f, "Preferences", "newReportLibraries").strictlyEquals(QJSValue(QStringLiteral("embedded")))), !panelUsageRead(f, original, "assistant").isNull() ? panelUsageRead(f, panelUsageRead(f, original, "assistant"), "id") : QJSValue(QStringLiteral("")), saved(8)};
@@ -11915,7 +11921,7 @@ void ApplicationInfo::createProjectDialogEvent(int kind) const {
         } return;
     }
     if (kind == 2) {
-        const auto qt = panelUsageContextRead(f, "Qt"); panelUsageMemberCall(f, qt, "callLater", {panelUsageClosure(f, 386, {life, original})}); return;
+        const auto qt = panelUsageContextRead(f, "Qt"); panelUsageMemberCall(f, qt, "callLater", {panelUsageClosure(f, 386, {life, original, createGeneration(f)})}); return;
     }
     if (original.isNull() || !createSameProject(f, original) || (!panelUsageRead(f, original, "assistant").isNull() && panelUsageTruth(panelUsageRead(f, panelUsageRead(f, original, "assistant"), "cancelled")))) return;
     if (!panelUsageRead(f, original, "assistant").isNull()) {
@@ -11931,7 +11937,7 @@ void ApplicationInfo::createProjectDialogEvent(int kind) const {
     // The untitled operation this dialog answered and its Replace confirmation, as they were at its OK (ADR-0100).
     const auto untitled = assistantContextField(f, "createDialog", "untitledId");
     const auto replace = QJSValue(panelUsageTruth(assistantContextField(f, "createDialog", "replaceExisting")));
-    const auto qt = panelUsageContextRead(f, "Qt"); panelUsageMemberCall(f, qt, "callLater", {panelUsageClosure(f, 387, {life, original, name, description, location, title, authors, untitled.isNumber() ? untitled : QJSValue(0), replace})});
+    const auto qt = panelUsageContextRead(f, "Qt"); panelUsageMemberCall(f, qt, "callLater", {panelUsageClosure(f, 387, {life, original, name, description, location, title, authors, untitled.isNumber() ? untitled : QJSValue(0), replace, createGeneration(f)})});
 }
 void ApplicationInfo::windowSaveChoiceOpened() const {
     const auto f = panelUsageEngine(this); if (panelUsageTruth(panelUsageContextRead(f, "nativeAcceptButton"))) assistantMemberWrite(f, panelUsageContextRead(f, "nativeAcceptButton"), "objectName", QJSValue(QStringLiteral("saveAs.accept")));
