@@ -131,15 +131,24 @@ def check_offline_subsets(executable, maintenance, target, installed, options) -
         '--confirm-command',
         'install',
     ]
-    for count in range(1, len(ASSISTANT_MARKERS) + 1):
-        for subset in combinations(ASSISTANT_MARKERS, count):
-            run([*install, *subset], **options)
-            try:
-                if installed.read_text() != 'first marker\n':
-                    raise RuntimeError('Selecting assistants must retain the application')
-                check_assistants(target, set(subset))
-            finally:
-                run([maintenance, '--default-answer', '--confirm-command', 'purge'], **options)
+    subsets = [
+        subset
+        for count in range(1, len(ASSISTANT_MARKERS) + 1)
+        for subset in combinations(ASSISTANT_MARKERS, count)
+    ]
+    for index, subset in enumerate(subsets, 1):
+        # A fresh folder each time: on Windows the purged tool removes itself only after it exits,
+        # and an installer refuses a folder that is not empty.
+        folder = target.with_name(f'{target.name} {index}')
+        install[2] = folder
+        run([*install, *subset], **options)
+        try:
+            if (folder / installed.relative_to(target)).read_text() != 'first marker\n':
+                raise RuntimeError('Selecting assistants must retain the application')
+            check_assistants(folder, set(subset))
+        finally:
+            tool = folder / maintenance.relative_to(target)
+            run([tool, '--default-answer', '--confirm-command', 'purge'], **options)
 
 
 def exercise(kind: str, bootstrap: Path, output: Path, marker: Path) -> None:
