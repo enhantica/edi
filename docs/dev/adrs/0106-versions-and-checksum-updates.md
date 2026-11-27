@@ -56,7 +56,10 @@ Once the tool was replaced, it still showed the old release's pages, which the f
    tool is in place or it is put back. Such an update saves no operation, and the app opens the tool only at
    `MaintenanceTool.app`, so the app puts the backup back itself: on start, and before Maintenance or Update opens
    the tool, a missing tool with a kept one beside it is renamed back and its mark removed, leaving any
-   `MaintenanceTool.app.new` for the retried update to finish the swap with. The control script removes the kept
+   `MaintenanceTool.app.new` for the retried update to finish the swap with. It does so only once the process the
+   mark names has ended (its number and start time, read with `ps` in the C locale by the scripts and the app alike),
+   so an app opened while an update runs never takes the backup from a swap or undo between its renames; that
+   installation still counts as managed, and the launch actions put the tool back when the update has ended. The control script removes the kept
    bundle once the update has succeeded with the new tool in place. An update that leaves the component alone keeps the installed tool. Linux has no separate
    tool and is unchanged. The installer protocol check updates a 2026.11.31 install from a 26.17 repository and
    checks the tool's checksum afterwards.

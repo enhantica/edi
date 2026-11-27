@@ -6,7 +6,7 @@
 t="$1"
 token="$2"
 cur="$t/MaintenanceTool.app"
-mark="$token $PPID $(ps -o lstart= -p "$PPID" 2>/dev/null)"
+mark="$token $PPID $(LC_ALL=C ps -o lstart= -p "$PPID" 2>/dev/null)"
 [ -n "$t" ] && [ -n "$token" ] && [ -d "$cur.old" ] || exit 0
 [ "$(cat "$cur.old-token" 2>/dev/null)" = "$mark" ] || exit 0
 # The bundle in place leaves it in one rename and is removed only once the kept one is back; if that fails it returns.
