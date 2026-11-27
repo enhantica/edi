@@ -369,7 +369,7 @@ Popup {
                         fontIcon: accountView ? "user" : pendingConnection ? "times" : "comment-dots"
                         readonly property bool pendingConnection: panel.assistant.state === "connecting"
                         readonly property bool accountView: !pendingConnection && panel.assistant.connected
-                        text: pendingConnection ? qsTr("Cancel connection") : accountView ? qsTr("ChatGPT account") : qsTr("Connect ChatGPT")
+                        text: pendingConnection ? qsTr("Cancel connection") : accountView ? qsTr("%1 account").arg(panel.assistant.activeProvider.name) : qsTr("Connect %1").arg(panel.assistant.activeProvider.name)
                         enabled: !pendingConnection || panel.assistant.canCancel
                         leftPadding: connectionButton.accountView ? 0 : AppSizes.unit * 0.75
                         rightPadding: leftPadding
@@ -685,7 +685,7 @@ Popup {
                     objectName: "assistant.signInPrompt"
                     anchors.centerIn: parent
                     width: Math.max(0, parent.width - AppSizes.unit * 2)
-                    text: panel.assistant.state === "connecting" ? panel.assistant.connectionLabel : qsTr("No ChatGPT connection")
+                    text: panel.assistant.state === "connecting" ? panel.assistant.connectionLabel : qsTr("No %1 connection").arg(panel.assistant.activeProvider.name)
                 }
             }
             // One real file boundary covers transcript and composer, not ordinary text or the header.

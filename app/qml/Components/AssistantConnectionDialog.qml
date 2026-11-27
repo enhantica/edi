@@ -13,6 +13,69 @@ AppDialog {
     property bool connectionAttempt: false
     property var approvalOwner: ({})
     property var acceptedOffer: null
+    // Before signing in the user picks the provider and account here, so a user without the active one can still reach
+    // the others (edi ADR-0108 §9). Each choice goes through the view model, which the texts below then follow.
+    readonly property var installedProviders: assistant.providers.filter(entry => entry.installed)
+    readonly property var providerAccounts: assistant.accounts.filter(entry => entry.provider === assistant.activeProvider.provider)
+    // An added account is active but not recorded until its sign-in succeeds.
+    readonly property bool addingAccount: !providerAccounts.some(entry => entry.active)
+    readonly property bool choiceShown: !assistant.connected && (installedProviders.length > 1 || providerAccounts.length > 0)
+    readonly property bool hostShown: !assistant.connected && assistant.activeProvider.provider === "copilot" && addingAccount
+    // The host the added Copilot account was started with: empty for github.com, else <name>.ghe.com.
+    property string appliedHost: ""
+    readonly property var typedHost: copilotHost(hostField.text)
+    readonly property bool hostBlocked: hostShown && typedHost !== appliedHost
+    function copilotHost(text) {
+        const host = text.trim().toLowerCase();
+        if (host === "" || host === "github.com")
+            return "";
+        return /^[a-z0-9]([a-z0-9-]*[a-z0-9])?\.ghe\.com$/.test(host) ? host : null;
+    }
+    function chooseProvider(index) {
+        const provider = installedProviders[index]?.provider;
+        if (!provider || provider === assistant.activeProvider.provider)
+            return;
+        const saved = assistant.accounts.filter(entry => entry.provider === provider);
+        if (saved.length > 0)
+            assistant.switchAccount(provider, saved[0].id);
+        else
+            addAccount(provider);
+        refreshOffer();
+    }
+    function chooseAccount(index) {
+        if (index < providerAccounts.length)
+            assistant.switchAccount(assistant.activeProvider.provider, providerAccounts[index].id);
+        else if (!addingAccount)
+            addAccount(assistant.activeProvider.provider);
+        refreshOffer();
+    }
+    function addAccount(provider) {
+        const host = provider === "copilot" ? (typedHost ?? "") : "";
+        appliedHost = host;
+        assistant.addAccount(provider, host);
+    }
+    function applyHost() {
+        if (!hostShown || typedHost === null || typedHost === appliedHost)
+            return;
+        addAccount("copilot");
+        refreshOffer();
+    }
+    // A new account starts a new connection, so the offer shown must be made again.
+    function refreshOffer() {
+        refreshDisclosedContext();
+        updateAcceptButton();
+    }
+    // A host typed for one added account must not carry over to the next one.
+    onHostShownChanged: {
+        if (!hostShown) {
+            hostField.clear();
+            appliedHost = "";
+        }
+    }
+    onHostBlockedChanged: {
+        if (visible)
+            updateAcceptButton();
+    }
     function beginOffer() {
         return ApplicationInfo.connectionBeginOffer();
     }
@@ -72,6 +135,9 @@ AppDialog {
     }
     function updateAcceptButton() {
         ApplicationInfo.connectionUpdateAcceptButton();
+        const accept = standardButton(Dialog.Ok);
+        if (accept && hostBlocked)
+            accept.enabled = false;
     }
     // The disclosure is refreshed before the dialog shows, not only once it has opened: an OK pressed while it
     // opens must approve what the project holds now, or it would be refused for a stale offer.
@@ -162,6 +228,70 @@ AppDialog {
             id: content
             width: disclosure.contentWidth
             spacing: AppSizes.unit
+            Grid {
+                id: choice
+                objectName: "assistant.connection.choice"
+                readonly property real labelWidth: Math.max(providerLabel.implicitWidth, accountLabel.implicitWidth, hostLabel.implicitWidth)
+                readonly property real fieldWidth: Math.max(0, width - labelWidth - columnSpacing)
+                width: parent.width
+                visible: dialog.choiceShown || dialog.hostShown
+                enabled: dialog.assistant.state !== "connecting"
+                columns: 2
+                columnSpacing: AppSizes.unit
+                rowSpacing: AppSizes.unit * 0.5
+                verticalItemAlignment: Grid.AlignVCenter
+                EaElements.Label {
+                    id: providerLabel
+                    visible: providerBox.visible
+                    text: qsTr("Assistant")
+                }
+                EaElements.ComboBox {
+                    id: providerBox
+                    objectName: "assistant.connection.provider"
+                    width: choice.fieldWidth
+                    visible: dialog.installedProviders.length > 1
+                    model: dialog.installedProviders.map(entry => entry.name)
+                    currentIndex: dialog.installedProviders.findIndex(entry => entry.provider === dialog.assistant.activeProvider.provider)
+                    onActivated: index => dialog.chooseProvider(index)
+                }
+                EaElements.Label {
+                    id: accountLabel
+                    visible: accountBox.visible
+                    text: qsTr("Account")
+                }
+                EaElements.ComboBox {
+                    id: accountBox
+                    objectName: "assistant.connection.account"
+                    width: choice.fieldWidth
+                    visible: dialog.providerAccounts.length > 0
+                    model: dialog.providerAccounts.map(entry => entry.email || entry.host || qsTr("Account email unavailable")).concat([qsTr("New account")])
+                    currentIndex: dialog.addingAccount ? dialog.providerAccounts.length : dialog.providerAccounts.findIndex(entry => entry.active)
+                    onActivated: index => dialog.chooseAccount(index)
+                }
+                EaElements.Label {
+                    id: hostLabel
+                    visible: hostField.visible
+                    text: qsTr("Host")
+                }
+                EaElements.TextField {
+                    id: hostField
+                    objectName: "assistant.connection.host"
+                    width: choice.fieldWidth
+                    visible: dialog.hostShown
+                    horizontalAlignment: TextInput.AlignLeft
+                    placeholderText: "github.com"
+                    onTextEdited: dialog.applyHost()
+                }
+            }
+            EaElements.Label {
+                objectName: "assistant.connection.hostMessage"
+                width: parent.width
+                wrapMode: Text.WordWrap
+                textFormat: Text.PlainText
+                visible: dialog.hostShown && dialog.typedHost === null
+                color: EaStyle.Colors.themeForegroundMinor
+                text: qsTr("Enter github.com or a GitHub Enterprise host such as name.ghe.com.")
+            }
             EaElements.Label {
                 width: parent.width
                 wrapMode: Text.WordWrap

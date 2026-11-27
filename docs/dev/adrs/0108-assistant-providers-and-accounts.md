@@ -454,6 +454,7 @@ with a tooltip naming the Maintenance Tool, when the runtime is not installed). 
 active account where the provider has them. Every element copies the closest existing one in the panel and its
 dialogs. The consent dialog before the first sign-in (`AssistantConnectionDialog.qml`) names the provider and the
 company that receives the data (OpenAI, Anthropic, GitHub); Copilot's adds a host field, `github.com` by default.
+The consent dialog also lets the user choose the provider and account before connecting.
 Account states: not installed, signed out, signing in, signed in, needs attention, no seat.
 
 ### 10. Packaging
