@@ -722,7 +722,8 @@ const std::vector<std::string>& new_site_elements() {
 }
 
 // The types one source's table holds: a neutron table's keys with a scattering length, or an X-ray form-factor
-// table's elements and ions (spelled "Fe3+", "O1-"), found by asking the table for each, as it lists none.
+// table's elements, ions (spelled "Fe3+", "O1-") and deuterium ("D", "2H"), found by asking the table for each, as it
+// lists none.
 const std::vector<std::string>& source_atom_types(bool xray, const std::string& source) {
     static std::map<std::pair<bool, std::string>, std::vector<std::string>> cache;
     static std::mutex mutex;
@@ -759,6 +760,13 @@ const std::vector<std::string>& source_atom_types(bool xray, const std::string& 
                     out.push_back(ion);
                 }
             }
+        }
+    }
+    // Any isotope takes its element's form factor; only deuterium is offered, as the common one, and the Text tab
+    // accepts the rest.
+    for (const char* isotope : {"D", "2H"}) {
+        if (held(isotope)) {
+            out.push_back(isotope);
         }
     }
     return out;

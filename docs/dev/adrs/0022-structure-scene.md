@@ -53,12 +53,15 @@ finite and the shares sum to 1. The atom's colour and radius are its major part'
 
 `data/elements/element-styles.tsv` (118 elements, H to Og) is the only source of element colours and radii in edi,
 embedded in the core at build time and read through `element_style_table()`. Its values are copied from
-diffraction-lib's `elements.py` at `c0654956`, the commit crysta's covalent radii come from; its covalent column equals
-crysta's `covalent-radii.tsv`. `data/elements/PROVENANCE.md` names the published sources and licences. The element of
-a type symbol is its first capital letter and the lower-case letter after it (`Co2+` is Co, `2H` is H): the rule the
-app already used for element colours, which differs from diffraction-lib's for a symbol that does not start with its
-element. Fallbacks are diffraction-lib's: a missing VESTA colour is the Jmol one, a missing ionic radius the covalent
-one, an unknown element pink and 1.0 Angstrom, and a substituted radius is reported.
+diffraction-lib's `elements.py` at `c0654956`, the commit crysta's covalent radii come from; its covalent column
+equals crysta's `covalent-radii.tsv`. `data/elements/PROVENANCE.md` names the published sources and licences. The
+element of a type symbol is its first capital letter and the lower-case letter after it (`Co2+` is Co, `13C` is C):
+the rule the app already used for element colours, which differs from diffraction-lib's for a symbol that does not
+start with its element. Deuterium is one atom however a file writes it: `D` and `2H` are both element `D`, so the site
+table, the view and the legend show them alike, under one legend entry `D`. The element table has no deuterium row, as
+diffraction-lib has none, so `D` takes hydrogen's colours and radii, and a polyhedron never centres on it, as on H.
+Fallbacks are diffraction-lib's: a missing VESTA colour is the Jmol one, a missing ionic radius the covalent one, an
+unknown element pink and 1.0 Angstrom, and a substituted radius is reported.
 
 ### 5. Options
 
@@ -95,10 +98,11 @@ generic `_geom_bond` group is not shown, so the bonds appear once.
 
 A site's type is picked from the types crysta's scattering table holds for each experiment linking the structure:
 the neutron table of its scattering-length source (elements and isotopes with a length), or the X-ray form-factor
-table of its source (elements and ions). With both probes linked the list is their union, sorted; with no experiment
-linked it is the elements a new atom may take. crysta lists no X-ray table, so each element and each charge from 1 to
-9 is asked for once per source. Every entry carries its element's colour (§4). A type outside the list, as a file may
-state it, is kept and shown as it is.
+table of its source (elements, ions, and `D` and `2H`, which take hydrogen's form factor; another isotope is typed in
+the Text tab). With both probes linked the list is their union, sorted; with no experiment linked it is the elements a
+new atom may take. crysta lists no X-ray table, so each element and each charge from 1 to 9 is asked for once per
+source. Every entry carries its element's colour (§4). A type outside the list, as a file may state it, is kept and
+shown as it is.
 
 ### 9. Coordination polyhedra
 

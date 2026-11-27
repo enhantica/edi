@@ -111,8 +111,8 @@ void restore_dependent_uncertainties(Project& project);
 AtomSite new_atom_site(const Structure& structure, const std::function<double()>& random);
 
 // The atom types a site of `structure` may take: the types crysta's scattering table holds for the probe and source of
-// each experiment linking it (isotopes with neutrons, ions with X-rays), sorted and without repeats. With no
-// experiment linking it, the elements a new atom may take.
+// each experiment linking it (isotopes with neutrons, ions and deuterium with X-rays), sorted and without repeats.
+// With no experiment linking it, the elements a new atom may take.
 std::vector<std::string> atom_types(const Project& project, const Structure& structure);
 // Fills the tables' type lists atom_types reads, for the default sources: called once off the GUI thread at start.
 void warm_atom_types();

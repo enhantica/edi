@@ -57,7 +57,8 @@ struct ElementStyle {
 };
 const std::vector<ElementStyle>& element_style_table();
 // The type symbol's first capital letter and the lower-case letter directly after it, if any: `Co2+` is
-// `Co`, `162Dy` is `Dy`, `2H` is `H`. A symbol with no capital letter gives the empty string.
+// `Co`, `162Dy` is `Dy`, `13C` is `C`. Deuterium is `D` however it is written (`D` or `2H`) and takes
+// hydrogen's style. A symbol with no capital letter gives the empty string.
 std::string element_of(std::string_view type_symbol);
 struct ElementColor {
     Rgb color;

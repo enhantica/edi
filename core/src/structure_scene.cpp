@@ -194,6 +194,10 @@ const ElementStyle* find_element(std::string_view element) {
     if (element.empty()) {
         return nullptr;
     }
+    // The table has no deuterium row (diffraction-lib has none), so deuterium takes hydrogen's colours and radii.
+    if (element == "D") {
+        element = "H";
+    }
     const auto found = index.find(std::string(element));
     return found == index.end() ? nullptr : &element_style_table()[found->second];
 }
@@ -509,6 +513,10 @@ std::string element_of(std::string_view type_symbol) {
             std::string element(1, c);
             if (i + 1 < type_symbol.size() && type_symbol[i + 1] >= 'a' && type_symbol[i + 1] <= 'z') {
                 element.push_back(type_symbol[i + 1]);
+            }
+            // 2H and D are both deuterium, so they share one legend entry and one style.
+            if (element == "H" && type_symbol.substr(0, i) == "2") {
+                return "D";
             }
             return element;
         }
@@ -916,7 +924,7 @@ StructureScene present_structure(const SceneSource& source, const SceneOptions& 
         const auto corner_element = [&](const std::string& element) { return corners_by_element.count(element) != 0; };
         const auto centre_element = [&](const std::string& element) {
             if (element.empty()) return false;
-            return options.polyhedra_centres.empty() ? !corner_element(element) && element != "H"
+            return options.polyhedra_centres.empty() ? !corner_element(element) && element != "H" && element != "D"
                                                      : options.polyhedra_centres.count(element) != 0;
         };
         std::vector<std::vector<Vec3>> shells(scene.atoms.size());
