@@ -538,12 +538,12 @@ The vendors' current runtimes cannot supply three observations this design asks 
 holds closed until it is answered, and the course this ADR recommends.
 
 1. **GitHub Copilot's tools.** Neither ACP nor the pinned CLI documents a readback of a session's effective tool
-   set. Until answered (a committed decision accepting a substitute, or dropping the Copilot route from the packet),
-   Copilot sessions receive no input; the code holds this in one constant (`assistant_copilot_input_open`).
-   Recommended: accept for Copilot the documented server-start filter (`--available-tools`, "the session can use only
-   the listed tools"), with permission denial, as its tool control. Accounts are not part of the question: Send and resume always need the positive login-and-host match
-   above, and a pin without `/user` over ACP offers no Copilot input at all. A `tool_call` outside the closed list is
-   detection, not a veto, since ACP notifications cannot stop a call.
+   set. Until a substitute is accepted, or the Copilot route is dropped, Copilot sessions receive no
+   input; the code holds this in one constant (`assistant_copilot_input_open`). Recommended: accept for Copilot the
+   documented server-start filter (`--available-tools`, "the session can use only the listed tools"), with permission
+   denial, as its tool control. Accounts are not part of the question: Send and resume always need the positive
+   login-and-host match above, and a pin without `/user` over ACP offers no Copilot input at all. A `tool_call`
+   outside the closed list is detection, not a veto, since ACP notifications cannot stop a call.
 2. **Claude credentials kept only in settings** (`apiKeyHelper`). Recommended: unsupported in edi; the user's own key
    works through the environment.
 3. **Claude managed hooks.** An organisation's managed hooks cannot be prevented while managed policy is respected.
