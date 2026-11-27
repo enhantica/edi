@@ -675,6 +675,16 @@ void complete_atom_site_moments(Structure& structure) {
                 if (site->wyckoff_letter.value() != letter) site->wyckoff_letter = letter;
             }
         }
+        // And crysta's tied displacement tensors (B3): the same completion ties them.
+        for (const crysta::AtomSiteAniso& done : engine.atom_site_aniso) {
+            for (const auto& tensor : structure.atom_site_aniso) {
+                if (tensor->id.value() != done.site_id.value()) continue;
+                const std::vector<Parameter*> parameters = tensor->parameters();
+                for (std::size_t k = 0; k < 6; ++k) {
+                    if (parameters[k]->value != done.adp[k].value()) parameters[k]->value = done.adp[k].value();
+                }
+            }
+        }
         return;
     }
     if (!crysta::operator_defined_symmetry(engine)) {
@@ -1177,6 +1187,15 @@ void sync_atom_site_aniso(Structure& s) {
 
 void complete_atom_site_aniso(Structure& s) {
     const crysta::CellMetric metric = crysta::CellMetric::from_cell(completed_cell(s));
+    // A type IV structure's tensors are tied by crysta's one completion (ADR-0137 B3, B8), not site by site.
+    std::optional<crysta::CompletedMagnetic> magnetic;
+    if (letter_source(s) == LetterSource::Magnetic) {
+        try {
+            magnetic.emplace(crysta::complete_magnetic(to_crysta_structure(s)));
+        } catch (const std::exception&) {
+            // a structure crysta refuses keeps its components; the edit that made it is refused elsewhere
+        }
+    }
     for (const auto& tensor : s.atom_site_aniso) {
         for (const auto& site : s.atom_sites) {
             if (site->id.value() != tensor->id.value() || !is_anisotropic_adp_type(site->adp_type.value())) {
@@ -1189,11 +1208,20 @@ void complete_atom_site_aniso(Structure& s) {
                 components[k] = parameters[k]->value;
             }
             // The site's symmetry exactly: a fixed component is 0 and a tied one its expression over the free ones.
-            try {
-                const crysta::Structure engine = one_site_engine(s, *site, site->adp_type.value());
-                components = crysta::tied_components(engine, engine.atom_sites[0], components);
-            } catch (const std::exception&) {
-                // a position that names no stabilizer keeps its components
+            if (magnetic) {
+                for (const crysta::AtomSiteAniso& done : magnetic->structure.atom_site_aniso) {
+                    if (done.site_id.value() != tensor->id.value()) continue;
+                    for (std::size_t k = 0; k < 6; ++k) {
+                        components[k] = done.adp[k].value();
+                    }
+                }
+            } else {
+                try {
+                    const crysta::Structure engine = one_site_engine(s, *site, site->adp_type.value());
+                    components = crysta::tied_components(engine, engine.atom_sites[0], components);
+                } catch (const std::exception&) {
+                    // a position that names no stabilizer keeps its components
+                }
             }
             for (std::size_t k = 0; k < 6; ++k) {
                 if (parameters[k]->value != components[k]) {
