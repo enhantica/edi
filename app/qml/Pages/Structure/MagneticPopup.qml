@@ -205,6 +205,7 @@ AppDialog {
             EaElements.CheckBox {
                 id: maximalOnly
                 objectName: "magnetic.maximalOnly"
+                leftPadding: 0  // on the labels' edge, as the rows above
                 text: qsTr("Maximal only")
                 checked: true
                 onToggled: popup.selected = popup.selected.filter(i => popup.selectable(i))
@@ -413,7 +414,7 @@ AppDialog {
         implicitHeight: actions.implicitHeight + 2 * EaStyle.Sizes.fontPixelSize
         Row {
             anchors.left: parent.left
-            anchors.leftMargin: EaStyle.Sizes.fontPixelSize
+            anchors.leftMargin: popup.leftPadding
             anchors.verticalCenter: parent.verticalCenter
             spacing: EaStyle.Sizes.fontPixelSize
             EaElements.Button {
@@ -434,7 +435,7 @@ AppDialog {
         Row {
             id: actions
             anchors.right: parent.right
-            anchors.rightMargin: EaStyle.Sizes.fontPixelSize
+            anchors.rightMargin: popup.rightPadding
             anchors.verticalCenter: parent.verticalCenter
             spacing: EaStyle.Sizes.fontPixelSize
             EaElements.Button {

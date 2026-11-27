@@ -130,6 +130,7 @@ Flickable {
             spacing: graph.gap
             EaElements.CheckBox {
                 objectName: `magnetic.level.${header.index}`
+                leftPadding: 0  // on the cards' edge
                 anchors.verticalCenter: parent.verticalCenter
                 enabled: header.choosable.length > 0
                 checked: header.choosable.length > 0 && header.choosable.every(i => graph.selected.indexOf(i) >= 0)

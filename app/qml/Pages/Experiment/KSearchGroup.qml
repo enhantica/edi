@@ -57,7 +57,9 @@ SideBarGroup {
             visible: group.marking
             defaultInfoText: qsTr("No peaks marked yet")
             sourceModel: group.rows
-            columnKinds: ["index", "number", "number", -1, "control"]
+            columnKinds: ["index", "number", "number", "text", "control"]
+            // The role takes the room left, as the last value column of the app's sidebar tables does.
+            spreadColumns: [3]
 
             header: EaComponents.ListViewHeader {
                 EaComponents.ListViewLabel {

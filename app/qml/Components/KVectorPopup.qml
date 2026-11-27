@@ -91,7 +91,8 @@ AppDialog {
             currentIndex: popup.rows.length > 0 ? 0 : -1
             sourceModel: popup.rows
             defaultInfoText: popup.searching ? qsTr("Searching…") : qsTr("No propagation vector")
-            columnKinds: ["index", "short", "text", "number", "number", -1]
+            columnKinds: ["index", "short", "text", "number", "number", "text"]
+            spreadColumns: [5]
             header: EaComponents.ListViewHeader {
                 EaComponents.ListViewLabel {}
                 EaComponents.ListViewLabel {
@@ -200,7 +201,7 @@ AppDialog {
         Row {
             id: actions
             anchors.right: parent.right
-            anchors.rightMargin: EaStyle.Sizes.fontPixelSize
+            anchors.rightMargin: popup.rightPadding
             anchors.verticalCenter: parent.verticalCenter
             spacing: EaStyle.Sizes.fontPixelSize
             EaElements.Button {
