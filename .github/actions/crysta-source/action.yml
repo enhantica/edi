@@ -21,6 +21,9 @@ inputs:
   site:
     description: A site that keeps earlier content, whose commits are listed as well and recorded in it
     default: ''
+  base:
+    description: A crysta branch whose head is listed too and checked out beside, for a comparison
+    default: ''
 runs:
   using: composite
   steps:
@@ -41,5 +44,7 @@ runs:
         HISTORY: ${{ inputs.history == 'true' && '--history' || '' }}
         RECEIPTS: ${{ inputs.receipts }}
         SITE: ${{ inputs.site }}
+        BASE: ${{ inputs.base }}
       run: >-
         python3 tools/ci/crysta_fetch.py "$SHA" $HISTORY ${RECEIPTS:+--receipts "$RECEIPTS"} ${SITE:+--site "$SITE"}
+        ${BASE:+--base "$BASE"}

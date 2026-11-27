@@ -27,7 +27,7 @@ SOURCE = './.github/actions/crysta-source'
 STORE = './.github/actions/store'
 # The steps of the actions everything here relies on, as reviewed: `--digests` prints them.
 REVIEWED = {
-    SOURCE: '09e714c5b055ef90c0ad3a9b059a82284a568ef7938733931d70b4424d3fe364',
+    SOURCE: '0e37770c1b05e83e8b3c202559a6d3195c2e4a13cf89f704c5a27e5b69e0ceb5',
     STORE: '05b4c58e0eac79e613bc94a9fbab5a7863d29549d196ff9c6b7206d340eaa11f',
 }
 # What jobs without the source publish: how, the artifact or cache key itself, and its path.

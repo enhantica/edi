@@ -2,14 +2,17 @@
 """Put crysta's source at one commit on a CI runner and list it for the output checks.
 
     TOKEN=... python3 tools/ci/crysta_fetch.py SHA [--history] [--receipts FOLDER] [--site FOLDER]
+                                               [--base BRANCH]
 
 Fetches the commit into $RUNNER_TEMP/crysta, refuses any other, writes the lists source_lists.py
 reads, proves the output filter with them and names the checkout and the lists to the later steps.
 A job that publishes what another commit of edi made lists every commit edi's history has pinned
 (`--history`) and those its receipts were written against (`--receipts`) as well. A site carries
 the list of the commits its content was checked against and is published with it (`--site`), so
-what it keeps is compared with the source that content was made from. Nothing a child process
-prints is passed on: it could be the source.
+what it keeps is compared with the source that content was made from. A comparison against
+another crysta commit (`--base`, the performance A/B against crysta main) gets that branch's head
+listed too and checked out beside, in $RUNNER_TEMP/crysta-base. Nothing a child process prints is
+passed on: it could be the source.
 """
 
 from __future__ import annotations
@@ -65,20 +68,40 @@ def git(where: Path, *args: str, stdin: bytes | None = None, **env: str) -> byte
     return run.stdout
 
 
+def credentials(token: str) -> dict[str, str]:
+    """The token as a header of this process's git calls, never in a file or a URL."""
+    credential = base64.b64encode(f'x-access-token:{token}'.encode()).decode()
+    return {
+        'GIT_CONFIG_COUNT': '1',
+        'GIT_CONFIG_KEY_0': f'http.{SERVER}/.extraheader',
+        'GIT_CONFIG_VALUE_0': f'AUTHORIZATION: basic {credential}',
+        'GIT_TERMINAL_PROMPT': '0',
+    }
+
+
+def branch_head(where: Path, branch: str, token: str) -> str:
+    """The commit a crysta branch is at now."""
+    if not re.fullmatch(r'[A-Za-z0-9._/-]+', branch):
+        raise RefusedError('the base is not a branch name')
+    out = git(
+        where, 'ls-remote', f'{SERVER}/{REPOSITORY}', f'refs/heads/{branch}', **credentials(token)
+    )
+    heads = [line.split()[0].decode() for line in out.splitlines() if line.strip()]
+    if len(heads) != 1 or not re.fullmatch(r'[0-9a-f]{40}', heads[0]):
+        raise RefusedError('the base branch has no single head')
+    return heads[0]
+
+
 def fetch(home: Path, sha: str, also: set[str], token: str) -> None:
     """Fetch ``sha`` and check it out, the others beside it; the token stays in this process."""
     remove(home)
     home.mkdir(parents=True)
     git(home, 'init', '-q')
-    credential = base64.b64encode(f'x-access-token:{token}'.encode()).decode()
     wanted = [sha, *sorted(also - {sha})]
     git(
         home,
         *('fetch', '-q', '--depth', '1', f'{SERVER}/{REPOSITORY}', *wanted),
-        GIT_CONFIG_COUNT='1',
-        GIT_CONFIG_KEY_0=f'http.{SERVER}/.extraheader',
-        GIT_CONFIG_VALUE_0=f'AUTHORIZATION: basic {credential}',
-        GIT_TERMINAL_PROMPT='0',
+        **credentials(token),
     )
     git(home, 'checkout', '-q', '--detach', sha)
     if git(home, 'rev-parse', 'HEAD').decode().strip() != sha:
@@ -286,6 +309,9 @@ def prepare(temp: Path, args: argparse.Namespace) -> int:
     if args.site:
         pins |= deployed(args.site)
         (args.site / SITE_PINS).write_text(json.dumps(sorted(pins)) + '\n', encoding='utf-8')
+    base = branch_head(temp, args.base, os.environ['TOKEN']) if args.base else None
+    if base:
+        pins.add(base)
     home = temp / 'crysta'
     fetch(home, args.sha, pins, os.environ['TOKEN'])
     made = lists(home, pins, [*checkout(ROOT), *collection(temp / 'edi-data-published')])
@@ -294,6 +320,9 @@ def prepare(temp: Path, args: argparse.Namespace) -> int:
         'CRYSTA_LISTED_SHA': args.sha,
         **write_lists(made, temp),
     }
+    if base:
+        git(home, 'worktree', 'add', '-q', '--detach', str(temp / 'crysta-base'), base)
+        environment |= {'CRYSTA_BASE_SRC': str(temp / 'crysta-base'), 'CRYSTA_BASE_SHA': base}
     prove(home, environment, made.lines[min(made.lines)])
     with Path(os.environ['GITHUB_ENV']).open('a', encoding='utf-8') as output:
         output.writelines(f'{name}={value}\n' for name, value in environment.items())
@@ -302,6 +331,7 @@ def prepare(temp: Path, args: argparse.Namespace) -> int:
 
 def refused(temp: Path, reason: str) -> int:
     """Remove the source and say why, without a word of it."""
+    remove(temp / 'crysta-base')
     remove(temp / 'crysta')
     print(f'crysta-fetch: REFUSED: {reason}', file=sys.stderr)
     return 1
@@ -314,6 +344,7 @@ def main() -> int:
     parser.add_argument('--history', action='store_true')
     parser.add_argument('--receipts', type=Path)
     parser.add_argument('--site', type=Path)
+    parser.add_argument('--base')
     args = parser.parse_args()
     temp = Path(os.environ['RUNNER_TEMP'])
     try:
