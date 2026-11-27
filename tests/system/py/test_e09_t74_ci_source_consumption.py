@@ -138,7 +138,7 @@ if args and args[0] in {consuming_tasks!r} and (not skip or args[0] in {direct_t
                 'runner.temp': str(root),
                 'matrix.platform': 'Linux',
                 'vars.ENHANTICA_APP_ID': 'fixture-installation-id',
-                'secrets.ENHANTICA_APP_KEY': 'fixture-installation-key',
+                'secrets.CRYSTA_READ_KEY': 'fixture-installation-key',
             }
             if expression in context:
                 return context[expression]
