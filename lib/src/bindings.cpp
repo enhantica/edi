@@ -2298,6 +2298,10 @@ NB_MODULE(_edi, m) {
         "_single_crystal_with_reflections",
         [](const edi::BraggPdExperiment& experiment, const std::string& path) {
             edi::PlainDataLoad load = edi::experiment_with_plain_data(experiment, core_path_text(path), false);
+#if defined(_WIN32)
+            // The name the project records is UTF-8, as every name in its files, not the code-page text core read.
+            load.experiment.data_file = utf8_text(path_from_utf8(path).filename());
+#endif
             return edi::BraggPdExperiment(load.experiment);
         },
         "experiment"_a, "path"_a);
@@ -4854,7 +4858,7 @@ NB_MODULE(_edi, m) {
             edi::register_project_importer(
                 {program, suffixes, [function](const std::string& path, const edi::WarningSink&) {
                      nb::gil_scoped_acquire gil;
-                     return nb::cast<edi::Project>(nb::handle(function)(path));
+                     return nb::cast<edi::Project>(nb::handle(function)(python_path_text(path)));
                  }});
         },
         "program"_a, "suffixes"_a, "convert"_a,
@@ -5113,13 +5117,18 @@ NB_MODULE(_edi, m) {
         // Whether the project declares a scan: independent without one fits each experiment alone (edi ADR-0081).
         .def_prop_ro("_scan_declared", [](const edi::Project& self) { return self.sequential_fit.declared(); })
         .def_prop_rw(
-            "_template_file", [](const edi::Project& self) { return self.sequential_fit.template_file; },
-            [](edi::Project& self, const std::string& file) { edi::set_scan_template_file(self, file); })
+            "_template_file",
+            [](const edi::Project& self) { return python_path_text(self.sequential_fit.template_file); },
+            [](edi::Project& self, const std::string& file) {
+                edi::set_scan_template_file(self, core_path_text(file));
+            })
         // The scan block (`_sequential_fit`), as the loader takes it, for the analysis facade's
         // sequential_fit and sequential_fit_extract.
         .def_prop_rw(
-            "_sequential_data_dir", [](const edi::Project& self) { return self.sequential_fit.data_dir; },
-            [](edi::Project& self, const std::string& data_dir) {
+            "_sequential_data_dir",
+            [](const edi::Project& self) { return python_path_text(self.sequential_fit.data_dir); },
+            [](edi::Project& self, const std::string& text) {
+                const std::string data_dir = core_path_text(text);
                 edi::validate_sequential_data_dir(data_dir, " (sequential_fit.data_dir)");
                 self.sequential_fit.data_dir = data_dir;
             })
@@ -5340,7 +5349,10 @@ NB_MODULE(_edi, m) {
                                      std::move(colour_scheme), std::move(correlation_experiment));
                 const edi::ReportSaveResult result =
                     edi::save_report(self, overrides, report_libraries(self, overrides, data_dir));
-                return std::make_pair(result.written, result.pdf_left);
+                std::vector<std::string> written;
+                written.reserve(result.written.size());
+                for (const std::string& file : result.written) written.push_back(python_path_text(file));
+                return std::make_pair(written, result.pdf_left);
             },
             "data_dir"_a, "offline"_a = nb::none(), "x_axis"_a = nb::none(), "correlation_threshold"_a = nb::none(),
             "excluded"_a = nb::none(), "colour_scheme"_a = nb::none(), "correlation_experiment"_a = nb::none())
@@ -5485,7 +5497,7 @@ NB_MODULE(_edi, m) {
                         "save_as(directory) first");
                 }
                 nb::module_::import_("builtins").attr("print")(
-                    "Saving project to '" + (self.archive.empty() ? self.path : self.archive) + "'");
+                    "Saving project to '" + python_path_text(self.archive.empty() ? self.path : self.archive) + "'");
                 // review-32 F2 +: advance before the write, roll back on failure.
                 save_project_advancing_last_modified(self, self.path);
                 // A project opened from a .zip: the archive is rewritten from the folder it works in (edi ADR-0052).

@@ -35,16 +35,18 @@ building error messages.
    argument that names a folder or a file, `Path` or `str`, becomes a `std::filesystem::path` and reaches core as its
    `.string()`, in the process code page, so names that code page holds work; a name it cannot hold is refused with a
    `ValueError` that names the Windows setting "Use Unicode UTF-8 for worldwide language support", with which every
-   name works. A path core returns (a download's folder) is turned back into UTF-8 for Python.
+   name works. Path text core hands back (the save messages, the importer callback's argument, the scan's template file
+   and data folder, the report files written, a download's folder) is turned back into UTF-8 for Python, and the data
+   file name a single crystal's load records is taken from the UTF-8 argument.
 4. On Windows builds that ignore the setting the app logs one warning at start.
 
 ## Consequences
 
 - The fix covers every narrow call in edi's programs at once, including ones added later, without a rule to remember.
 - Windows 10 before 1903 keeps the old behaviour.
-- In `python.exe` without the system setting, a path outside the code page is refused rather than misnamed, and paths
-  core hands back to Python stay in the code page. Lifting that needs every narrow path call in core and crysta
-  converted one by one.
+- In `python.exe` without the system setting, a path outside the code page is refused rather than misnamed, and names
+  core itself writes into project files (a scan's relinked data folder, a listed scan file's name) stay in the code
+  page. Lifting that needs every narrow path call in core and crysta converted one by one.
 
 ## Alternatives considered
 
