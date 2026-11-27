@@ -4505,9 +4505,10 @@ void ProjectViewModel::toggleKMarkAt(double x, double tolerance) {
         emit kSearchChanged();
         return;
     }
+    // Only a measured maximum is a snap target; a residual excess or an earlier click stays where it was found.
     int best = -1;
     for (std::size_t i = 0; i < k_marks_.candidates.size(); ++i) {
-        if (near(k_marks_.candidates[i]) &&
+        if (k_marks_.candidates[i].observed && near(k_marks_.candidates[i]) &&
             (best < 0 || std::abs(k_marks_.candidates[i].x - x) <
                              std::abs(k_marks_.candidates[static_cast<std::size_t>(best)].x - x)))
             best = static_cast<int>(i);
@@ -4556,12 +4557,12 @@ void ProjectViewModel::clearKMarks() {
 }
 
 void ProjectViewModel::retireKMarks() {
-    if (!k_marks_.active || adding_k_ || (k_marks_.candidates.empty() && k_marks_.marks.empty())) return;
+    // Any edit ends marking: the parent it admitted may no longer be the one enabled crystal, or at that index, so
+    // marking starts again from a fresh admission (review 21, F4). Add's own edit keeps its marks shown.
+    if (!k_marks_.active || adding_k_) return;
     changeKMarks();
-    k_marks_.candidates.clear();
-    k_marks_.marks.clear();
-    k_marks_.roles.clear();
-    setKNote(tr("The data or the structures changed; mark the peaks again."));
+    k_marks_ = KMarks{};
+    emit kSearchChanged();
 }
 
 QVariantMap ProjectViewModel::kSnapshot() {

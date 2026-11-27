@@ -147,6 +147,9 @@ struct MagneticPeak {
     /// Offered to the user: at no allowed reflection, or on one the experiment's current calculation leaves
     /// unexplained. Every observed peak stays a target for marking by hand either way (review 16, F4).
     bool suggested = false;
+    /// A maximum of the measured pattern, the only kind a click snaps to; a residual excess or a clicked position is
+    /// not one (review 21, F4).
+    bool observed = false;
 };
 /// Find k's candidate peaks on the pattern chart (owner, 2026-11-27): the observed peaks at no reflection the parent's
 /// space group allows, from the measured data alone, then, when the experiment holds a calculated curve, its

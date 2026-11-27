@@ -10729,7 +10729,7 @@ std::vector<MagneticPeak> magnetic_mark_candidates(const Project& project, std::
                 return std::abs(r.d - p.d) <= std::max(r.tolerance, p.tolerance);
             });
         out.push_back({p.x, p.d, p.tolerance, p.significance, p.half_width, p.on_allowed_reflection,
-                       !p.on_allowed_reflection || unexplained});
+                       !p.on_allowed_reflection || unexplained, true});
     }
     // An excess the difference curve shows clearly above its own noise, with the instrument's width, that is not an
     // observed maximum above already: a suggestion of its own (owner decision 2026-11-27, "better suggestions").
