@@ -94,12 +94,14 @@ void EvolutionViewModel::finishRow() {
 
 void EvolutionViewModel::showIterate(const edi::ParametricIterate& iterate) {
     live_ = iterate;
+    syncFitted();
     finishRow();
 }
 
 void EvolutionViewModel::clearIterate() {
     if (!live_) return;
     live_.reset();
+    syncFitted();
     rebuild();
 }
 
@@ -192,7 +194,8 @@ std::optional<EvolutionViewModel::Point> EvolutionViewModel::templatePoint() con
 }
 
 void EvolutionViewModel::syncFitted() {
-    const bool fitted = scanRows() || templatePoint().has_value();
+    // A running parametric fit's iterate counts as fitted values (ADR-0107).
+    const bool fitted = scanRows() || templatePoint().has_value() || live_.has_value();
     if (fitted != fitted_) {
         fitted_ = fitted;
         emit fittedChanged();

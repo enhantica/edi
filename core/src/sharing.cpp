@@ -678,17 +678,28 @@ std::vector<std::string> settle_parametric_shared(Project& project) {
         ParametricSharedParameter row;
         row.parameter_unique_name = key;
         project.sequential_fit.shared.push_back(std::move(row));
-        // The group has the leader's free flag (one flag per group), where sharing takes effect.
+        // The group takes the listed parameter's value and free flag (one of each per group; owner record 61961fe49),
+        // where sharing takes effect.
         const std::vector<Parameter*> members = group_members(project, key);
-        if (active(project) && members.size() > 1) {
-            const bool free = members.front()->free.get();
+        // The listed parameter is the member whose name the group is kept under.
+        Parameter* listed = nullptr;
+        for (const NamedParameter& each : named) {
+            if (each.unique_name != key) continue;
             for (Parameter* member : members) {
-                if (member->free.get() != free) {
-                    notes.push_back("shared parameter '" + key + "': every experiment takes its free flag");
+                if (member == each.parameter) listed = member;
+            }
+        }
+        if (active(project) && members.size() > 1 && listed != nullptr) {
+            const bool free = listed->free.get();
+            const double value = listed->value.get();
+            for (Parameter* member : members) {
+                if (member->free.get() != free || member->value.get() != value) {
+                    notes.push_back("shared parameter '" + key + "': every experiment takes its value and free flag");
                     break;
                 }
             }
             for (Parameter* member : members) {
+                if (member != listed) assign_value(*member, value);
                 member->free = free;
             }
         }

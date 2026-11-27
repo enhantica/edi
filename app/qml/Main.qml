@@ -844,6 +844,13 @@ EaComponents.ApplicationWindow {
             Preferences.sideBarStepCompact = steps.compact;
         }
     }
+    // The Parameters table shows the Shared column in the Joint and Parametric modes (as ParametersGroup.sharedShown),
+    // and the sidebar's Auto and Full widths make room for it (owner record 453d6ae49).
+    Binding {
+        target: AppSizes
+        property: "sharedColumnShown"
+        value: Session.project !== null && Session.project.fit.measured && Session.project.analysis !== null && (Session.project.analysis.fittingMode === "parametric" || Session.project.analysis.fittingMode === "joint")
+    }
     // Full's fixed width, edi main's rule: from the window's edge to the Experiment button's centre in the top bar.
     Binding {
         target: AppSizes

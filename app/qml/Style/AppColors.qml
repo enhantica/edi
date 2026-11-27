@@ -32,15 +32,11 @@ QtObject {
     readonly property color textLoopColumn: EaStyle.Colors.isDarkPalette ? "#82C886" : "#2B7A30"
     readonly property color textLoop: EaStyle.Colors.isDarkPalette ? "#A6A6A6" : "#6E6E6E"
 
-    // A value a user constraint computes, on every page that shows it (owner record 2026-11-26; the Analysis page hides
-    // it): the style's orange.
-    readonly property color constrained: EaStyle.Colors.orange
-    // Shared (edi ADR-0107): its check boxes and its values on every page and popup, apart from the experiment colours,
-    // the accent, the free green and the constrained orange. Three candidates for the owner to choose from; the first
-    // is the placeholder. EDI_SHARED_COLOUR_OPTION picks another for the comparison screenshots only.
-    readonly property var sharedOptions: [["#3949AB", "#9FA8DA"], ["#8E24AA", "#CE93D8"], ["#C2185B", "#F48FB1"]]
-    readonly property int sharedOption: Math.max(0, Math.min(2, ApplicationInfo.sharedColourOption()))
-    readonly property color shared: sharedOptions[sharedOption][EaStyle.Colors.isDarkPalette ? 1 : 0]
+    // A value a user constraint computes, on every page that shows it (the Analysis page hides it): magenta, apart from
+    // the orange that marks structures, phases and warnings (owner record 8b4e6f965).
+    readonly property color constrained: EaStyle.Colors.isDarkPalette ? "#F48FB1" : "#C2185B"
+    // Shared (edi ADR-0107): its check boxes and its values on every page and popup, indigo (owner record 8b4e6f965).
+    readonly property color shared: EaStyle.Colors.isDarkPalette ? "#9FA8DA" : "#3949AB"
 
     // A block's colour from the figure palette (edi ADR-0038): the palette's colour at the block's position, which the
     // open project holds (a block keeps its position; a new one takes the next free). `dark` picks the dark theme's

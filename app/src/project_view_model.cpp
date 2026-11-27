@@ -4894,8 +4894,10 @@ void ProjectViewModel::startViewRead() {
                 if (point.name != files[static_cast<std::size_t>(index)]) continue;
                 // Only the values the view already holds: a name it does not know would make the view refuse,
                 // leaving the pattern without its calculated curve.
+                // The iterate names each value by its results column, as results.csv does.
                 for (edi::Edit::ScanValue& each : values) {
-                    if (const auto found = point.values.find(each.unique_name); found != point.values.end()) {
+                    if (const auto found = point.values.find(edi::scan_results_column(each.unique_name));
+                        found != point.values.end()) {
                         each.value = found->second;
                         each.uncertainty.reset();
                     }

@@ -146,6 +146,11 @@ QtObject {
     readonly property real autoBoundColumn: Math.ceil(Math.max(autoPlain.advanceWidth("Max"), autoPlain.advanceWidth("-inf"))) + 2 * tableCellMargin
     readonly property real autoIndexColumn: Math.ceil(autoBold.advanceWidth("99")) + tableCellMargin * 2
     readonly property real autoFreeColumn: Math.ceil(unit * 1.35 + tableCellMargin + autoPlain.advanceWidth("Free"))
+    // The Shared column, as Free's with its own title, and the room it adds while the Parameters table shows it (Joint
+    // and Parametric): Auto and Full grow by it so no other column gives way (owner record 453d6ae49).
+    property bool sharedColumnShown: false
+    readonly property real autoSharedColumn: Math.ceil(unit * 1.35 + tableCellMargin + autoPlain.advanceWidth("Shared"))
+    readonly property real sharedColumnRoom: sharedColumnShown ? autoSharedColumn + EaStyle.Sizes.tableColumnSpacing : 0
     readonly property real autoUnitColumn: Math.ceil(autoPlain.advanceWidth("deg\u00b2") - Math.max(0, tableCellMargin + EaStyle.Sizes.tableColumnSpacing - autoPlain.advanceWidth(" "))) + tableCellMargin
     // The table's padding and border, and the sidebar's own insets around it.
     readonly property real autoChrome: EaStyle.Sizes.groupBoxSpacing + EaStyle.Sizes.sideBarPadding + 2 * EaStyle.Sizes.tableColumnSpacing + 2 * EaStyle.Sizes.borderThickness
@@ -154,7 +159,7 @@ QtObject {
     // the e58-names check, 2026-11-23), with the cell's margins (T1).
     readonly property real nameBudget: Math.ceil(unit * 11.15) + 2 * tableCellMargin
     // Every column; and the base the narrowest window keeps (the row number, Name, Value, its unit, s.u. and Free).
-    readonly property real sideBarFullWidth: Math.ceil(autoIndexColumn + nameBudget + 2 * autoValueColumn + autoUncertaintyColumn + autoUnitColumn + autoChangeColumn + 2 * autoBoundColumn + autoFreeColumn + 9 * EaStyle.Sizes.tableColumnSpacing + autoChrome)
+    readonly property real sideBarFullWidth: Math.ceil(autoIndexColumn + nameBudget + 2 * autoValueColumn + autoUncertaintyColumn + autoUnitColumn + autoChangeColumn + 2 * autoBoundColumn + autoFreeColumn + 9 * EaStyle.Sizes.tableColumnSpacing + autoChrome + sharedColumnRoom)
     readonly property real sideBarBaseWidth: Math.ceil(autoIndexColumn + nameBudget + autoValueColumn + autoUncertaintyColumn + autoUnitColumn + autoFreeColumn + 5 * EaStyle.Sizes.tableColumnSpacing + autoChrome)
     // The narrower widths the sidebar's width button names (SideBarWidthButton), each the full width less the columns
     // it leaves out of the Parameters table (noteSideBarSteps): {bounds, values, compact}.
@@ -181,7 +186,7 @@ QtObject {
     function sideBarWidthChosen(width: real, mode: string, manual: int): int {
         let chosen = -1;
         if (mode === "full")
-            chosen = sideBarMainWidth > 0 ? sideBarMainWidth : sideBarDefaultFull;
+            chosen = (sideBarMainWidth > 0 ? sideBarMainWidth : sideBarDefaultFull) + sharedColumnRoom;
         else if (mode === "manual" && manual > 0)
             chosen = manual;
         else if (sideBarSteps[mode] > 0)

@@ -652,9 +652,6 @@ class ApplicationInfo : public QObject {
     Q_INVOKABLE QJSValue statusWidthWith(const QJSValue& itemWidth, bool buttons) const;
     Q_INVOKABLE QJSValue statusFitValues() const;
     Q_INVOKABLE QJSValue statusProgressText() const;
-    // Which candidate Shared colour the app shows (AppColors.sharedOptions): 0 unless EDI_SHARED_COLOUR_OPTION names
-    // another, for the comparison screenshots the owner chooses from.
-    Q_INVOKABLE int sharedColourOption() const;
     Q_INVOKABLE QJSValue colourMapTitles() const;
     /// Preference actions use the existing view records and assistant selection authority.
     Q_INVOKABLE void preferencesClosed() const;

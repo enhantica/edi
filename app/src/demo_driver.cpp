@@ -1964,6 +1964,62 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
                                                      "parameters.freeHeader"}});
         steps_.push_back({"parametric-7-shared-menu", {"key:Escape", "parameters.sharedHeader"}});
     }
+    // A Parametric fit's views after it ends (owner, seq 39): the selected pattern with its calculated curve, Meas vs
+    // calc, Evolution and the results window with one outcome, on the three-file scan with U, V and W shared. Run only
+    // when asked (`--demo-only parametricfit-`).
+    if (only.startsWith(QLatin1String("parametricfit-"))) {
+        steps_.push_back({"parametricfit-1-ready",
+                          QStringList{"resize:1480x900", "theme:light"} + start
+                              + open_cli_project("pd-neut-cwl_cosio-d20_scan-3f")
+                              + QStringList{analysis, extras, "expand:group.fitting_mode", "reveal:fittingMode.type",
+                                            "fittingMode.type", "choose:Parametric: all as one fit", basic,
+                                            "parameters.nameFilter", "type:broad_gauss", "parameters.shared.0",
+                                            "parameters.shared.1", "parameters.shared.2", "parameters.nameFilter",
+                                            "key:Ctrl+A", "key:Backspace"}});
+        steps_.push_back({"parametricfit-2-pattern", {"statusBar.fit.button", "wait-fit", "choose:OK",
+                                                      "mainArea.tab.pattern"}});
+        steps_.push_back({"parametricfit-3-meas-calc", {"mainArea.tab.measCalc"}});
+        steps_.push_back({"parametricfit-4-evolution", {"mainArea.tab.evolution"}});
+        steps_.push_back({"parametricfit-5-results", {"statusBar.fit.outcome"}});
+    }
+    // A running fit's every Analysis chart tab at two iterations after the first, then its status bar and results window
+    // (owner, seq 43-46): the 213-pattern Parametric example with U, V and W shared (`parametriclive-`) and the taurine
+    // in Joint mode with x11, x22 and x33 shared (`jointlive-`, EDI_DEMO_JOINT_PROJECT). Run only when asked.
+    if (only.startsWith(QLatin1String("parametriclive-")) || only.startsWith(QLatin1String("jointlive-"))) {
+        const QStringList tabs{"structure", "pattern", "measCalc", "correlations", "stacked", "map", "evolution"};
+        const auto every_tab = [this, &tabs](const QString& prefix, int iteration, QStringList first) {
+            first << QStringLiteral("wait-iteration:%1").arg(iteration);
+            for (const QString& tab : tabs) {
+                first << "if-enabled:mainArea.tab." + tab << "capture-now";
+                steps_.push_back({QStringLiteral("%1-it%2-%3").arg(prefix).arg(iteration).arg(tab), first});
+                first.clear();
+            }
+        };
+        const bool parametric = only.startsWith(QLatin1String("parametriclive-"));
+        const QString prefix = parametric ? QStringLiteral("parametriclive") : QStringLiteral("jointlive");
+        const QStringList opened = parametric
+            ? QStringList{"resize:1480x900", "theme:light"} + start + open_cli_project("pd-neut-cwl_cosio-d20_parametric") +
+                  QStringList{"wait-settled", analysis, basic}
+            : QStringList{"resize:1480x900", "theme:light"} + start +
+                  QStringList{"open-project:" + qEnvironmentVariable("EDI_DEMO_JOINT_PROJECT"), "wait-settled", analysis, basic};
+        every_tab(prefix, 2, opened + QStringList{"statusBar.fit.button"});
+        every_tab(prefix, 3, {});
+        steps_.push_back({prefix + "-ended-status", {"wait-fit", "choose:OK", "mainArea.tab.pattern"}});
+        steps_.push_back({prefix + "-ended-results", {"statusBar.fit.outcome"}});
+    }
+    // The sidebar's Auto and Full widths with the Shared column (owner record 453d6ae49): the joint taurine and the
+    // parametric CoSiO example, every column of the Parameters table shown, Change included. Run only when asked
+    // (`--demo-only sidebarshared-`).
+    if (only.startsWith(QLatin1String("sidebarshared-"))) {
+        steps_.push_back({"sidebarshared-1-joint-auto",
+                          QStringList{"resize:1920x1080", "theme:light"} + start
+                              + QStringList{"open-project:" + qEnvironmentVariable("EDI_DEMO_JOINT_PROJECT"), analysis,
+                                            basic, "sideBar.width", "sideBar.width.auto"}});
+        steps_.push_back({"sidebarshared-2-joint-full", {"sideBar.width", "sideBar.width.full"}});
+        steps_.push_back({"sidebarshared-3-parametric-full",
+                          open_cli_project("pd-neut-cwl_cosio-d20_parametric") + QStringList{"wait-settled", analysis, basic}});
+        steps_.push_back({"sidebarshared-4-parametric-auto", {"sideBar.width", "sideBar.width.auto"}});
+    }
     // The Evolution additions on a series of joint fits, EDI_DEMO_WISH_PROJECT (a bank parameter tied the same for all
     // banks): the fit, the Shared section listing the tied parameter, and every bank's curves. Run only when asked
     // (`--demo-only evolutionshared-`).
@@ -2003,8 +2059,8 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
                                                      "parameters.nameFilter", "type:coefficient"}});
     }
     // The Shared column and the parameter colours (owner record 2026-11-26): the joint taurine's shared extinction on the
-    // Analysis page in both themes and both palettes, and a constrained project's Experiment page. Run once per Shared
-    // colour candidate (EDI_SHARED_COLOUR_OPTION) when asked (`--demo-only sharedcolour-`).
+    // Analysis page in both themes and both palettes, and a constrained project's Experiment page. Run only when asked
+    // (`--demo-only sharedcolour-`).
     if (only.startsWith(QLatin1String("sharedcolour-"))) {
         const auto palette = [](const QString& name) {
             return QStringList{"appBar.button.preferences", "preferences.tab.appearance", "preferences.colours",
@@ -2019,7 +2075,8 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
         steps_.push_back({"sharedcolour-4-safe-light", {"theme:light"}});
         steps_.push_back({"sharedcolour-5-constrained-experiment",
                           palette(QStringLiteral("Main")) + QStringList{"open-project:" + qEnvironmentVariable("EDI_DEMO_TIED_PROJECT"),
-                                                                 "appBar.tab.experiment"}});
+                                                                 "appBar.tab.experiment", "experiments.name.1",
+                                                                 "reveal:group.extinction", "expand:group.extinction"}});
     }
     // The Evolution tab of a scan before and after its fit, with the parameter list open. Run only when asked
     // (`--demo-only evolution-`).
@@ -4220,6 +4277,11 @@ void DemoDriver::next_action() {
             wait_scan_then([this] { next_action(); }, action.mid(10));
             return;
         }
+        // A running fit's iteration, for a capture made while it runs (capture-now).
+        if (action.startsWith(QLatin1String("wait-iteration:"))) {
+            wait_iteration_then([this] { next_action(); }, action.mid(15).toInt());
+            return;
+        }
         // The assistant answers at its own pace; the step waits until it has stopped working.
         if (action == QLatin1String("wait-assistant")) {
             wait_assistant_then([this] { settle_then([this] { next_action(); }); });
@@ -4616,11 +4678,40 @@ void DemoDriver::wait_fit_then(const std::function<void()>& next, int waited_ms,
     });
 }
 
+void DemoDriver::wait_iteration_then(const std::function<void()>& next, int iteration, int waited_ms) {
+    QQmlEngine* engine = qmlEngine(window_.contentItem());
+    auto* session = engine ? engine->singletonInstance<Session*>("edi.app", "Session") : nullptr;
+    const FitViewModel* fit = session != nullptr && session->project() != nullptr ? session->project()->fit() : nullptr;
+    if (fit == nullptr || !fit->running() || fit->iterations().toInt() >= iteration) {
+        next();
+        return;
+    }
+    if (waited_ms > kFitWaitMs) {
+        fail(QStringLiteral("step %1: the fit did not reach iteration %2 within %3 ms")
+                 .arg(steps_[current_].image)
+                 .arg(iteration)
+                 .arg(kFitWaitMs));
+        return;
+    }
+    QTimer::singleShot(kSettleIntervalMs, this, [this, next, iteration, waited_ms] {
+        wait_iteration_then(next, iteration, waited_ms + kSettleIntervalMs);
+    });
+}
+
 bool DemoDriver::perform(const QString& action) {
     if (documentation_) {
         if (auto handled = documentationAction(action)) return *handled;
     }
     // `uncover:` reveals a control only when none of it can be seen, so a page where it shows is captured as it is.
+    // A control clicked only when it is there and enabled (a chart tab a running fit has not enabled yet): otherwise
+    // the step goes on without it.
+    if (action.startsWith(QLatin1String("if-enabled:"))) {
+        QQuickItem* item = find(action.mid(11), false);
+        if (item == nullptr || !item->isEnabled() || !item->isVisible()) {
+            return true;
+        }
+        return perform(action.mid(11));
+    }
     if (action.startsWith(QLatin1String("uncover:"))) {
         QQuickItem* item = find(action.mid(8), false);
         if (item != nullptr && on_screen(item)) {
