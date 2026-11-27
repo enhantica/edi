@@ -244,10 +244,13 @@ def serialize(feed: dict) -> bytes:
     return (json.dumps(feed, indent=2) + '\n').encode()
 
 
-def publishable(feed: dict, *, testing: bool = False) -> bytes:
-    """The legacy feed's bytes, refused unless old apps accept it and offer its newest release."""
+def publishable(feed: dict, *, testing: bool = False, original: bytes | None = None) -> bytes:
+    """The legacy feed's bytes, refused unless old apps accept it and offer its newest release.
+
+    ``original`` is the feed's own bytes, kept as they are when there is nothing to change.
+    """
     old = legacy(feed)
-    content = serialize(old)
+    content = original if original is not None and old == feed else serialize(old)
     try:
         shown = check(content, testing=testing)
     except RejectedError as error:
@@ -266,8 +269,9 @@ def write_feeds(history: Path, folder: Path, channel: str = 'stable') -> None:
 
     The legacy feed is checked first, so nothing is written when old apps would drop it.
     """
+    original = history.read_bytes()
     content = publishable(
-        json.loads(history.read_text(encoding='utf-8')), testing=channel == 'testing'
+        json.loads(original.decode('utf-8')), testing=channel == 'testing', original=original
     )
     folder.mkdir(parents=True, exist_ok=True)
     shutil.copy2(history, folder / f'{channel}-v2.json')

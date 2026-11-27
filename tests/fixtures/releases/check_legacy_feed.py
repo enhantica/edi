@@ -123,6 +123,12 @@ def test_the_tools_write_the_full_feed_and_the_checked_legacy_feed(tmp_path):
     assert legacy == content(FEED.legacy(history(release('26.17', 'a', 181))))
 
 
+def test_a_history_of_old_releases_is_both_feeds_unchanged(tmp_path):
+    FEED.write_feeds(PUBLISHED, tmp_path)
+    assert (tmp_path / 'stable.json').read_bytes() == PUBLISHED.read_bytes()
+    assert (tmp_path / 'stable-v2.json').read_bytes() == PUBLISHED.read_bytes()
+
+
 def test_a_legacy_feed_the_old_apps_would_drop_is_not_written(tmp_path):
     # 300 characters, 600 UTF-16 code units: QString counts the latter against its 512.
     long = release('26.17', 'a', 181)
