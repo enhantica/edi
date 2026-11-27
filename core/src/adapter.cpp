@@ -641,7 +641,8 @@ void complete_atom_site_moments(Structure& structure) {
     }
     // crysta's one completion of a magnetic edit (ADR-0137 B8): it refuses, naming why, a structure its acceptance
     // rule refuses, before anything here changes.
-    const crysta::Structure engine = crysta::complete_magnetic(to_crysta_structure(structure)).structure;
+    const crysta::CompletedMagnetic completed = crysta::complete_magnetic(to_crysta_structure(structure));
+    const crysta::Structure& engine = completed.structure;
     for (const crysta::AtomSiteMoment& done : engine.atom_site_moment) {
         for (const auto& row : structure.atom_site_moment) {
             if (row->id.value() != done.site_id.value()) {
