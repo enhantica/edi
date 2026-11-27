@@ -91,14 +91,14 @@ bool same_folder(const QString& reported, const QString& home) {
 #endif
 }
 
-// The `authMethod` values the CLI reference lists, in plain words.
-QString method_words(const QString& method) {
-    if (method == QStringLiteral("claude.ai")) return QStringLiteral("a Claude subscription");
-    if (method == QStringLiteral("api_key")) return QStringLiteral("an API key");
-    if (method == QStringLiteral("api_key_helper")) return QStringLiteral("an API key helper");
-    if (method == QStringLiteral("oauth_token")) return QStringLiteral("an OAuth token");
-    if (method == QStringLiteral("third_party")) return QStringLiteral("a cloud provider");
-    return method;
+// Plain words for a field of the account principal.
+QString field_words(const QString& key) {
+    if (key == QStringLiteral("email")) return QStringLiteral("e-mail");
+    if (key == QStringLiteral("organization")) return QStringLiteral("organisation");
+    if (key == QStringLiteral("authMethod")) return QStringLiteral("sign-in method");
+    if (key == QStringLiteral("apiKeySource")) return QStringLiteral("key source");
+    if (key == QStringLiteral("tokenSource")) return QStringLiteral("token source");
+    return key;
 }
 
 // Only Anthropic's sign-in pages are offered to the user.
@@ -367,15 +367,7 @@ void ClaudeSession::launch(Purpose purpose, bool resume) {
                                 false);
             return;
         }
-        const auto expected = account_method_.isEmpty() ? auth_method_ : account_method_;
-        if (!expected.isEmpty() && method != expected) {
-            retireProcess();
-            queued_.clear();
-            emit accountRefused(QStringLiteral("Claude now signs in for this account with %1, not %2.")
-                                    .arg(method_words(method), method_words(expected)),
-                                false);
-            return;
-        }
+        // Only sign-in and the folder are decided here; the identity comes from the turn process itself.
         auth_method_ = method;
         spawn(resume, generation);
     });
@@ -427,6 +419,8 @@ void ClaudeSession::retireProcess() {
     initialize_passed_ = init_verified_ = readbacks_done_ = false;
     requests_.clear();
     tools_.clear();
+    account_info_ = {};
+    api_key_source_.clear();
     capabilities_.clear();
     dropped_messages_.clear();
     dropping_.clear();
@@ -512,18 +506,7 @@ void ClaudeSession::controlResponse(const QJsonObject& response) {
 }
 
 void ClaudeSession::initializeReply(const QJsonObject& reply) {
-    const auto account = reply.value(QStringLiteral("account")).toObject();
-    const auto email = account.value(QStringLiteral("email")).toString();
-    if (!account_email_.isEmpty() && email.compare(account_email_, Qt::CaseInsensitive) != 0) {
-        retireProcess();
-        queued_.clear();
-        emit accountRefused(email.isEmpty()
-                                ? QStringLiteral("Claude did not say who is signed in for this account.")
-                                : QStringLiteral("This account's Claude home is signed in as %1, not %2.")
-                                      .arg(email, account_email_),
-                            false);
-        return;
-    }
+    account_info_ = reply.value(QStringLiteral("account")).toObject();
     QSet<QString> commands;
     for (const auto& value : reply.value(QStringLiteral("commands")).toArray()) {
         auto name = value.toObject().value(QStringLiteral("name")).toString();
@@ -552,10 +535,6 @@ void ClaudeSession::initializeReply(const QJsonObject& reply) {
                                   {QStringLiteral("defaultEffort"), QString()}});
     }
     models_ = models;
-    identity_ = {{QStringLiteral("email"), email},
-                 {QStringLiteral("plan"), account.value(QStringLiteral("subscriptionType")).toString()},
-                 {QStringLiteral("host"), launch_.account.host},
-                 {QStringLiteral("authMethod"), auth_method_}};
     initialize_passed_ = true;
     maybeReadbacksDone();
 }
@@ -618,6 +597,7 @@ void ClaudeSession::systemInit(const QJsonObject& init) {
         return;
     }
     tools_ = tools;
+    api_key_source_ = init.value(QStringLiteral("apiKeySource")).toString();
     capabilities_.clear();
     for (const auto& value : init.value(QStringLiteral("capabilities")).toArray())
         capabilities_.append(value.toString());
@@ -627,6 +607,33 @@ void ClaudeSession::systemInit(const QJsonObject& init) {
 
 void ClaudeSession::maybeReadbacksDone() {
     if (readbacks_done_ || !initialize_passed_ || !init_verified_) return;
+    const auto text = [this](const char* key) { return account_info_.value(QLatin1String(key)).toString(); };
+    identity_ = {{QStringLiteral("email"), text("email")},
+                 {QStringLiteral("organization"), text("organization")},
+                 {QStringLiteral("plan"), text("subscriptionType")},
+                 {QStringLiteral("authMethod"), auth_method_},
+                 {QStringLiteral("apiKeySource"), api_key_source_},
+                 {QStringLiteral("tokenSource"), text("tokenSource")},
+                 {QStringLiteral("host"), launch_.account.host}};
+    // Every field the record holds must be reported, and the same, by this process.
+    for (auto it = principal_.constBegin(); it != principal_.constEnd(); ++it) {
+        const auto recorded = it.value().toString();
+        if (recorded.isEmpty()) continue;
+        const auto observed = identity_.value(it.key()).toString();
+        const bool same = it.key() == QStringLiteral("email")
+                              ? observed.compare(recorded, Qt::CaseInsensitive) == 0
+                              : observed == recorded;
+        if (same) continue;
+        retireProcess();
+        queued_.clear();
+        emit accountRefused(observed.isEmpty()
+                                ? QStringLiteral("Claude did not report the %1 this account's record holds (%2).")
+                                      .arg(field_words(it.key()), recorded)
+                                : QStringLiteral("Claude reports the %1 %2 for this account, not %3.")
+                                      .arg(field_words(it.key()), observed, recorded),
+                            false);
+        return;
+    }
     readbacks_done_ = true;
     readback_timer_.stop();
     // A model chosen while this process was starting.

@@ -110,7 +110,8 @@ std::unique_ptr<AssistantProvider> make_assistant_provider(const AssistantAccoun
         case AssistantProviderId::Claude: {
             if (!assistant_provider_available(AssistantProviderId::Claude)) return nullptr;
             auto session = std::make_unique<ClaudeSession>();
-            session->setAccountRecord(account.email, {});
+            session->setAccountRecord(account.email.isEmpty() ? QJsonObject{}
+                                                              : QJsonObject{{QStringLiteral("email"), account.email}});
             AssistantRuntimeLaunch launch;
             launch.account = account;
             launch.environment = QProcessEnvironment::systemEnvironment();

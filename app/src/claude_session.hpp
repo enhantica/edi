@@ -53,14 +53,11 @@ public:
     explicit ClaudeSession(QObject* parent = nullptr);
     ~ClaudeSession() override;
 
-    /// What the account's record keeps: the e-mail and the `authMethod` the user saw. A non-empty value must match
-    /// what the runtime reports (the e-mail with case ignored), else the start stops with `accountRefused`. Set
-    /// before `start`; empty for an account not yet recorded, whose identity `ready` then reports, `authMethod`
-    /// included.
-    void setAccountRecord(const QString& email, const QString& authMethod) {
-        account_email_ = email;
-        account_method_ = authMethod;
-    }
+    /// The principal the account's record keeps, with keys of `ready`'s identity ({email, organization, plan,
+    /// authMethod, apiKeySource, tokenSource, host}). Every non-empty field must be reported the same by each
+    /// process before its first input (the e-mail with case ignored), else `accountRefused` (not signed out). Set
+    /// before `start`; empty for an account not yet recorded.
+    void setAccountRecord(const QJsonObject& principal) { principal_ = principal; }
 
     void setExpectedTools(const QStringList& names) override { expected_tools_ = names; }
     bool start(const AssistantRuntimeLaunch& launch) override;
@@ -84,7 +81,8 @@ private:
 
     AssistantRuntimeLaunch launch_;
     QProcessEnvironment environment_;
-    QString account_email_, account_method_, auth_method_;
+    QJsonObject principal_, account_info_;
+    QString auth_method_, api_key_source_;
     quint64 generation_ = 0;
 
     QPointer<AssistantProcess> process_;
