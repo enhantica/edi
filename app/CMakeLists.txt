@@ -805,7 +805,7 @@ endif()
 
 if(NOT EMSCRIPTEN)
     qt_add_executable(edi_assistant_guard tools/assistant_guard.cpp)
-    target_link_libraries(edi_assistant_guard PRIVATE Qt6::Core)
+    target_link_libraries(edi_assistant_guard PRIVATE Qt6::Core Qt6::Network)
     set_target_properties(edi_assistant_guard PROPERTIES WIN32_EXECUTABLE FALSE MACOSX_BUNDLE FALSE)
     add_dependencies(edi_app_module edi_assistant_guard)
     add_dependencies(edi_app edi_assistant_guard)
