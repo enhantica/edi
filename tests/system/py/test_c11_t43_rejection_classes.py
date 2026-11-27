@@ -13,11 +13,13 @@ import shutil
 import subprocess
 import sys
 import uuid
+from operator import itemgetter
 from pathlib import Path
 
 import edi
 import pytest
 
+from tests.fixtures.cli_performance.table_assertions import cells, table_rows
 from tests.fixtures.scan_csv import CONDITION_COLUMNS, COSIO_AGREEMENT_COLUMNS, legacy_scan
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -26,7 +28,7 @@ CORPUS_ROOT = Path(
 )
 CASE = CORPUS_ROOT / 'cosio-d20-scan-3f'
 REFERENCE = CASE / 'diffraction-lib' / 'project' / 'analysis' / 'results.csv'
-DECLARED_MODES = {'single', 'joint', 'sequential', 'independent'}
+DECLARED_MODES = {'single', 'joint', 'sequential', 'independent', 'parametric'}
 LOOKALIKES = ('Sequential', 'sequentially', 'independent ', 'parallel', '', ' ', '\t')
 NATIVE_ENTRY_BY_MODE = {
     mode: 'fit' if mode == 'single' else f'fit_{mode}' for mode in DECLARED_MODES
@@ -123,7 +125,7 @@ def _write_completed_partition(
     ) as stream:
         writer = csv.DictWriter(stream, fieldnames=fieldnames)
         writer.writeheader()
-        writer.writerows(rows)
+        writer.writerows([rows[0], rows[2]])
     successful = [row for row in rows if row['fit_result.success'] == 'True']
     return rows[-1], successful[-1] if successful else None
 
@@ -176,7 +178,9 @@ def _template_restart_controls(tmp_path: Path) -> dict[str, dict[str, str]]:
             if data_file.name != source_name:
                 data_file.unlink()
         control = edi.Project.load(project_dir)
-        control.analysis.fitting_mode = 'sequential'
+        # An isolated file cannot inherit any preceding file's fitted parameters.
+        # Use the same declaration to keep the recorded descent part of the comparison.
+        control.analysis.fitting_mode = 'independent'
         control.analysis.fit()
         controls.update(_scan_payloads(_read_results(project_dir)))
     return controls
@@ -201,7 +205,7 @@ _RESULT_SOURCE_BY_FIELD = {
     'stopping_value': 'fit_result.stopping_value when captured; unavailable otherwise',
     'last_shift_su': 'fit_result.last_shift_su when captured; unavailable otherwise',
     'converged': 'fit_result.success',
-    'fitting_time': 'unavailable: no solve ran',
+    'fitting_time': 'duration of the current invocation that filled the gap',
     'iterations': 'fit_result.iterations',
     'reduced_chi_square': 'fit_result.reduced_chi_square',
     'result_kind': 'sequential operation invariant',
@@ -232,11 +236,12 @@ def test_completed_resume_partitions_terminal_outcome_on_python(
     terminal, carry_forward = _write_completed_partition(project_dir, completed_state)
 
     project = edi.Project.load(project_dir)
+    template = project.structure.cell.length_a.value
     outcome = project.analysis.fit()
     expected_converged = terminal['fit_result.success'] == 'True'
 
     assert outcome.converged is expected_converged, (
-        ' edi Python completed resume must recover convergence from the terminal row, '
+        ' edi Python retained-terminal resume must recover convergence from the terminal row, '
         f'not the carry-forward selector; state={completed_state}'
     )
     assert outcome.success is outcome.converged, (
@@ -244,18 +249,18 @@ def test_completed_resume_partitions_terminal_outcome_on_python(
     )
     expected_status = edi.FitStatus.DONE if expected_converged else edi.FitStatus.UNAVAILABLE
     assert outcome.status == expected_status, (
-        ' edi Python completed resume must map persisted success to DONE and an '
+        ' edi Python retained-terminal resume must map persisted success to DONE and an '
         f'unpersisted failure cause to UNAVAILABLE; state={completed_state}'
     )
     assert outcome.iterations == int(terminal['fit_result.iterations']), (
-        ' edi Python completed resume must recover terminal iterations'
+        ' edi Python retained-terminal resume must recover terminal iterations'
     )
     assert outcome.reduced_chi_square == pytest.approx(
         float(terminal['fit_result.reduced_chi_square']), rel=0.0, abs=0.0
-    ), ' edi Python completed resume must recover terminal reduced chi-square'
-    assert project.structure.cell.length_a.value == pytest.approx(
-        float(terminal['cosio.cell.length_a']), rel=0.0, abs=0.0
-    ), ' edi Python completed resume must write back the terminal model state'
+    ), ' edi Python retained-terminal resume must recover terminal reduced chi-square'
+    assert project.structure.cell.length_a.value == template, (
+        'A gap fill reports the retained terminal outcome while preserving the template'
+    )
 
     if completed_state == 'failed-tail':
         assert carry_forward is not None, (
@@ -278,14 +283,11 @@ def test_completed_resume_partitions_terminal_outcome_on_python(
             ' edi Python outcome-selector substitution exercise must reject the '
             'carry-forward reduced chi-square'
         )
-        assert not math.isclose(
-            project.structure.cell.length_a.value,
-            float(substituted['cosio.cell.length_a']),
-            rel_tol=0.0,
-            abs_tol=1e-12,
-        ), (
-            ' edi Python outcome-selector substitution exercise must reject the '
-            'carry-forward model state'
+        reported_cell = [
+            value for name, value in outcome.values.items() if name.endswith('length_a')
+        ]
+        assert reported_cell == [float(terminal['cosio.cell.length_a'])], (
+            'The retained result exposes the terminal cell value independently of the model'
         )
 
 
@@ -359,6 +361,10 @@ def _prepare_cause_ledger(project_dir, terminal, live_cause, ledger, max_iterati
         csv_path = project_dir / 'analysis/results.csv'
         csv_rows = list(csv.DictReader(io.StringIO(csv_path.read_text())))
         _write_cause_rows(csv_path, [csv_rows[-1], *csv_rows[:-1]])
+    results = project_dir / 'analysis/results.csv'
+    rows = _read_results(project_dir)
+    missing = sorted(rows, key=itemgetter('file_path'))[1]['file_path']
+    _write_cause_rows(results, [row for row in rows if row['file_path'] != missing])
     analysis = project_dir / 'analysis/analysis.edi'
     analysis.write_text(
         analysis.read_text().replace(
@@ -423,6 +429,7 @@ def test_completed_resume_recovers_recorded_cause_or_legacy_unknown_on_python(
         project_dir, terminal, live_cause, ledger, 1 if live_cause == 'max-iter' else 3
     )
     completed_project = edi.Project.load(project_dir)
+    template = completed_project.structure.cell.length_a.value
     outcome = completed_project.analysis.fit()
     assert outcome.converged is False, (
         f' edi Python completed {live_cause} resume must retain non-convergence'
@@ -435,7 +442,7 @@ def test_completed_resume_recovers_recorded_cause_or_legacy_unknown_on_python(
         ' edi needs an explicit public status for an unavailable resumed terminal cause'
     )
     assert outcome.status == (expected_live if ledger == 'recorded' else unavailable), (
-        'Completed resume recovers the terminal file cause from provenance despite row '
+        'Retained-terminal resume recovers the terminal file cause from provenance despite row '
         'reordering and a changed bound; absent legacy provenance stays unknown'
     )
     assert outcome.iterations == int(terminal['fit_result.iterations']), (
@@ -448,9 +455,8 @@ def test_completed_resume_recovers_recorded_cause_or_legacy_unknown_on_python(
         ' edi Python resume must mark unavailable Rwp as NaN, never measured-looking zero'
     )
     _assert_resumed_stop_metrics(outcome, terminal)
-    assert outcome.fitting_time is None, (
-        ' edi Python resume must report no fitting time because no solve ran'
-    )
+    assert outcome.fitting_time is not None, 'The current call timed the real gap fill'
+    assert outcome.fitting_time > 0, 'The timed call reports a positive invocation duration'
     assert outcome.result_kind == 'deterministic', (
         ' edi Python resume must retain the public least-squares result kind'
     )
@@ -461,11 +467,8 @@ def test_completed_resume_recovers_recorded_cause_or_legacy_unknown_on_python(
     assert set(outcome.values) == set(outcome.uncertainty), (
         ' edi Python resume must recover an uncertainty for every returned parameter'
     )
-    assert completed_project.structure.cell.length_a.value == pytest.approx(
-        float(terminal['cosio.cell.length_a']), rel=0.0, abs=0.0
-    ), (
-        ' edi Python resume must write back the actual terminal row, not the earlier '
-        f'carry-forward seed; live={live_cause}'
+    assert completed_project.structure.cell.length_a.value == template, (
+        'Recovering the terminal result and its provenance leaves the template unchanged'
     )
 
 
@@ -587,7 +590,7 @@ def test_mode_contract_is_closed_across_edi_loader_setters_dispatch_native_and_s
         for name in dir(reloaded)
         if name.startswith('fit_') and name.endswith(tuple(DECLARED_MODES))
     }
-    expected_native_entries = {'fit_independent', 'fit_sequential'}
+    expected_native_entries = {'fit_independent', 'fit_sequential', 'fit_parametric'}
     missing_native_entries = expected_native_entries - native_scan_entries
     if missing_native_entries:
         violations.append(f'native scan entry points absent: {sorted(missing_native_entries)!r}')
@@ -637,7 +640,7 @@ def test_mode_contract_is_closed_across_edi_loader_setters_dispatch_native_and_s
     if missing_docs:
         violations.append(f'Analysis.fit docs omit {missing_docs!r}')
     assert not violations, (
-        ' declares exactly single/joint/sequential/independent across the edi loader, '
+        ' declares exactly single/joint/sequential/independent/parametric across the loader, '
         'both setters, facade dispatch, direct native entries, save/reload and docs; violations='
         f'{violations!r}'
     )
@@ -829,13 +832,11 @@ def _iteration_numbers(output: str) -> list[int]:
 
 def _human_reporting_violations(output: str, *, expected_files: int) -> list[str]:
     iterations = _iteration_numbers(output)
-    progress = [
-        (int(match.group(1)), int(match.group(2)))
-        for line in output.splitlines()
-        if (match := re.match(r'^\[[█░]+\] · (\d+)/(\d+) ·', line))
-    ]
+    progress = [cells(line)['count'] for line in table_rows(output)]
     violations = []
-    expected_progress = [(completed, expected_files) for completed in range(1, expected_files + 1)]
+    expected_progress = [
+        f'{completed}/{expected_files}' for completed in range(1, expected_files + 1)
+    ]
     if progress != expected_progress:
         violations.append(
             f'scan preamble/completion counts={progress!r}, expected={expected_progress!r}'

@@ -684,20 +684,33 @@ TestCase {
         dialogs().forEach(dialog => dialog.close());
         EaStyle.Colors.theme = data.tag === "light" ? EaStyle.Colors.Themes.LightTheme : EaStyle.Colors.Themes.DarkTheme;
         const button = shortcut(), follow = scanControl("follow");
-        verify(!Session.project.fit.available && !actionable(button) && !actionable(follow), "A completed scan disables Fit and Follow for the muted-style witness");
+        verify(Session.project.fit.available && actionable(button) && !actionable(follow),
+            "A completed scan offers another Fit while idle Follow stays disabled");
         mouseMove(appWindow.contentItem, 1, 1);
-        const fill = rectangle(button), other = rectangle(follow);
-        tryVerify(() => {
-            const a = paintedColor(fill), b = paintedColor(other);
-            return Math.abs(a.r - b.r) <= 1 / 255 && Math.abs(a.g - b.g) <= 1 / 255 && Math.abs(a.b - b.b) <= 1 / 255;
-        }, 1500, "Disabled Fit has the same rendered background as disabled Follow in each theme");
-        const label = View.textItems(button).find(item => item.text === caption(button));
-        verify(label !== undefined, "Disabled Fit retains its caption while secondary controls may compact to icons");
-        tryCompare(label, "color", follow.valueColor, 1500, "Disabled Fit uses Follow's normal caption colour");
-        tryCompare(button, "iconColor", follow.iconColor, 1500, "Disabled Fit uses Follow's normal icon colour");
-        normalButtonStyle(button, data.tag === "light", false);
+        const fill = bodyFrame(button, 0);
+        tryVerify(() => paintedGrayMatches(fill, data.tag === "light" ? 0 : 1), 1500,
+            "A completed scan still renders Fit as an enabled primary action");
         normalButtonStyle(follow, data.tag === "light", false);
+        const secondary = paintedColor(rectangle(follow));
+        const captionColor = follow.valueColor, iconColor = follow.iconColor;
         normalButtonStyle(scanControl("reset"), data.tag === "light", true);
+        runningSpy.clear();
+        keyAction(button, Qt.Key_Return, true);
+        verify(runningSpy.count > 0, "Keyboard Fit starts a new scan after completion without Reset");
+        finish();
+
+        open("calculation");
+        const disabled = shortcut();
+        verify(!Session.project.fit.available && !actionable(disabled),
+            "The measured-data guard supplies the disabled Fit style witness");
+        mouseMove(appWindow.contentItem, 1, 1);
+        normalButtonStyle(disabled, data.tag === "light", false);
+        const label = View.textItems(disabled).find(item => item.text === caption(disabled));
+        verify(label !== undefined, "Disabled Fit retains its caption");
+        tryVerify(() => colorsMatch(paintedColor(rectangle(disabled)), secondary), 1500,
+            "Disabled Fit uses the same rendered background as idle Follow");
+        tryCompare(label, "color", captionColor, 1500, "Disabled Fit uses Follow's muted caption");
+        tryCompare(disabled, "iconColor", iconColor, 1500, "Disabled Fit uses Follow's muted icon");
     }
     function test_fit_tooltip_data() {
         return [

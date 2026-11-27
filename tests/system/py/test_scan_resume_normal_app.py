@@ -1,5 +1,6 @@
-"""Continue observes actual suffix work; a completed scan observes no inner fits."""
+"""The normal app continues an interrupted scan and refits a completed scan."""
 
+import csv
 import os
 import sys
 import time
@@ -66,27 +67,38 @@ def test_resume_preserves_carry_forward_and_processed_terminal_state_in_normal_a
         e['event'] in {'inner_fit_started', 'file_fitted', 'fit_signal'}
         for e in events[after + 1 :]
     ), 'A resumed scan must deliver no inner-fit work or fit signal after its terminal boundary'
-    assert_migrated_prefix(
-        project / 'analysis/results.csv',
-        vehicle[1],
-        vehicle[2],
-        allow_legacy=case != 'failed-prefix-tail',
-        original_bytes=vehicle[3],
-    )
     if case != 'failed-prefix-tail':
-        assert not starts and not fits, 'A completed resume must perform exactly zero inner fits'
-        result = terminal['result']
-        assert result['success'] is (case == 'completed-success'), (
-            'Completed resume must retain the processed tail success bit'
+        assert [event['file'] for event in starts] == vehicle[0], (
+            'The completed scan starts every inner fit in declared file order'
         )
-        assert result['iterations'] == 19 and result['reduced_chi_square'] == 7.125, (
-            'Completed resume must recover processed tail metrics independently of carry-forward'
+        assert [event['file'] for event in fits] == vehicle[0], (
+            'The completed scan publishes one new completion for every dataset'
         )
         key = vehicle[1][5]
-        assert terminal['parameter_values'][key] == pytest.approx(float(vehicle[2][-1][key])), (
-            'Completed resume must recover the processed tail model value, even when it failed'
+        assert [event['start_values'][key] for event in starts] == pytest.approx([
+            float(row[key]) for row in vehicle[2]
+        ]), 'Each actual inner fit uses its own saved result regardless of success'
+        with (project / 'analysis/results.csv').open(newline='') as stream:
+            fresh = list(csv.DictReader(stream))
+        assert [Path(row['file_path']).name for row in fresh] == vehicle[0], (
+            'The completed scan replaces the result generation without duplicated rows'
         )
+        assert terminal['result']['success'] is (fresh[-1]['fit_result.success'] == 'True'), (
+            'The result window reports the new terminal fit outcome'
+        )
+        assert terminal['result']['iterations'] == int(fresh[-1]['fit_result.iterations']), (
+            'The new terminal fit supplies the displayed iteration count'
+        )
+        assert terminal['result']['reduced_chi_square'] == pytest.approx(
+            float(fresh[-1]['fit_result.reduced_chi_square'])
+        ), 'The new terminal row supplies the displayed reduced chi-square'
     else:
+        assert_migrated_prefix(
+            project / 'analysis/results.csv',
+            vehicle[1],
+            vehicle[2],
+            original_bytes=vehicle[3],
+        )
         assert [e['file'] for e in starts] == [vehicle[0][-1]], (
             'A two-row resume prefix must invoke the actual inner fit exactly once for its suffix'
         )

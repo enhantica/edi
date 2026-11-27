@@ -83,7 +83,7 @@ Item {
             tryCompare(dialog, "opened", true, 2000, "The real Preferences dialog opens before measuring its tabs");
             verify(SettingsProof.beginAnimationClock(), "The public Qt animation clock settles each actual Preferences slide before geometric measurements");
             const tabs = ["Prompts", "Updates", "Appearance", "Projects", "Performance", "Experimental", "Develop"];
-            const labels = [["@preferences.toolTipLevel", "@preferences.toolTipDelay", "Show fit results after fitting:", "Enable user guides:"], ["Notify about updates:"], ["Theme:", "Palette:", "Stacked:", "Map:", "When a curve is hidden:", "Moment colours:", "Workflow sidebar side:", "One sidebar group open at a time:", "Text tab shows:"], ["New projects' uncertainties:", "New reports' libraries:"], ["Threads per calculation:", "Parallel fits in a scan:"], ["Zoom:", "Language:"], ["Logging level:", "Feedback address:", "Graphics:", "Scan views:", "Diagnostics:", "Settings:"]];
+            const labels = [["@preferences.toolTipLevel", "@preferences.toolTipDelay", "Show fit results after fitting:", "Enable user guides:"], ["Notify about updates:"], ["Theme:", "Palette:", "Stacked:", "Map:", "When a curve is hidden:", "Moment colours:", "Workflow sidebar side:", "One sidebar group open at a time:", "Text tab shows:"], ["New projects' uncertainties:", "New reports' libraries:"], ["Cores for fitting:"], ["Zoom:", "Language:"], ["Logging level:", "Feedback address:", "Graphics:", "Scan views:", "Diagnostics:", "Settings:"]];
             function rowLabel(selector) {
                 if (!selector.startsWith("@"))
                     return Render.texts(dialog.contentItem).find(item => item.text === selector && item.visible);
@@ -218,7 +218,7 @@ Item {
                     return at.x >= 0 && at.y >= 0 && at.x + item.width <= dialog.contentItem.width + 0.5 && at.y + item.height <= dialog.contentItem.height + 0.5;
                 }).map(item => item.text.replace(/:$/, ""));
             }
-            tryVerify(() => visibleTexts().includes("New projects' uncertainties") && visibleTexts().includes("New reports' libraries"), 2000, "The opened preferences.tab.projects finishes sliding its two default labels into view; initial visible text " + JSON.stringify(visibleTexts()));
+            tryVerify(() => visibleTexts().includes("Uncertainty digits") && visibleTexts().includes("Report chart libraries"), 2000, "The opened preferences.tab.projects finishes sliding its two default labels into view; initial visible text " + JSON.stringify(visibleTexts()));
             const performance = findChild(dialog, "preferences.tab.performance");
             verify(performance !== null, "Preferences has a Performance tab for machine-local run counts");
             mouseClick(performance, performance.width / 2, performance.height / 2);
@@ -229,34 +229,28 @@ Item {
             verify(SettingsProof.stepAnimationClock(2000), "Queued Performance layout settles");
             SettingsProof.endAnimationClock();
             surface.Window.window.update();
-            const workers = findChild(dialog, "preferences.scanWorkers");
-            const threads = findChild(dialog, "preferences.engineThreads");
-            verify(workers && threads, "Performance offers both scan parallelism and calculation threads");
-            const oldWorkers = Preferences.scanWorkers;
-            const oldThreads = Preferences.engineThreads;
+            const cores = findChild(dialog, "preferences.engineThreads");
+            verify(cores && visibleTexts().includes("Cores for fitting"),
+                   "Performance exposes the single Cores for fitting setting");
+            verify(findChild(dialog, "preferences.scanWorkers") === null,
+                   "Performance has no separate scan-worker selection");
+            const oldCores = Preferences.engineThreads;
             if (ApplicationInfo.engineThreadsSelectable) {
-                choose(threads, Math.min(2, ApplicationInfo.engineThreadsMaximum));
-                tryVerify(() => workers.visible && workers.width > 0, 2000,
-                          "The editable scan count is visible before typing");
-                mouseClick(workers.contentItem, workers.contentItem.width / 2, workers.contentItem.height / 2);
-                tryCompare(workers.contentItem, "activeFocus", true, 2000,
-                           "Pointer input focuses the editable scan count before typing");
-                keyClick(Qt.Key_A, Qt.ControlModifier);
-                keyClick(Qt.Key_2);
-                keyClick(Qt.Key_Return);
-                compare(Preferences.scanWorkersApplied, Math.min(2, workers.maximum),
-                        "Typing and accepting the scan count changes the engine run option");
-                if (workers.maximum > 1)
-                    verify(threads.displayText.includes("1 per scan fit"),
-                           "Parallel scan fits disclose their single-thread calculation policy");
+                const count = Math.min(2, ApplicationInfo.engineThreadsMaximum);
+                choose(cores, count);
+                compare(Preferences.engineThreads, count,
+                        "Choosing a positive count stores the exact core budget");
+                choose(cores, 0);
+                compare(cores.displayText, "Auto", "The automatic setting displays Auto");
+                compare(Preferences.engineThreads, 0,
+                        "Choosing Auto persists automatic core selection");
             } else {
-                verify(!workers.enabled && !threads.enabled,
-                       "An unavailable engine thread backend disables both machine-local counts");
+                verify(!cores.enabled && cores.displayText === "1",
+                       "A single-threaded backend exposes its fixed one-core budget");
             }
-            Preferences.scanWorkers = oldWorkers;
-            Preferences.engineThreads = oldThreads;
+            Preferences.engineThreads = oldCores;
             mouseClick(projects, projects.width / 2, projects.height / 2);
-            tryVerify(() => visibleTexts().includes("New projects' uncertainties"), 2000,
+            tryVerify(() => visibleTexts().includes("Uncertainty digits"), 2000,
                       "Returning to Projects restores its own defaults");
             const texts = visibleTexts();
             verify(!texts.includes("Colour scheme"), "The opened preferences.tab.projects keeps Colour scheme on Appearance; visible text " + JSON.stringify(texts));
@@ -292,6 +286,32 @@ Item {
             const second = SettingsProof.restart(code);
             verify(!second.error, "The second engine start reuses the production store");
             compare(second.toolTips, "All", "A second start never overwrites a new-store key with the old value");
+        }
+        function test_fitting_cores_migrate_once_from_the_larger_setting() {
+            const group = "develop";
+            const snapshot = ["engineThreads", "scanWorkers", "coresMigrated"].map(key =>
+                [key, SettingsProof.value(location, group, key)]);
+            const code = 'import QtQuick; import edi.app; QtObject { property int cores: Preferences.engineThreads; property bool migrated: Preferences.coresMigrated }';
+            try {
+                for (const [threads, workers, expected] of [[2, 5, 5], [6, 3, 6], [0, 5, 0]]) {
+                    SettingsProof.seed(location, group, "engineThreads", threads);
+                    SettingsProof.seed(location, group, "scanWorkers", workers);
+                    SettingsProof.erase(location, group, "coresMigrated");
+                    const first = SettingsProof.restart(code);
+                    verify(!first.error && first.migrated, "A fresh Preferences singleton migrates legacy fitting settings");
+                    compare(first.cores, expected, "The larger saved count wins and Auto remains all cores");
+                    SettingsProof.seed(location, group, "engineThreads", 1);
+                    const reopened = SettingsProof.restart(code);
+                    verify(!reopened.error && reopened.migrated, "The migration marker persists across a restart");
+                    compare(reopened.cores, 1, "A later core choice survives a restart with a higher legacy worker count");
+                }
+            } finally {
+                for (const [key, value] of snapshot)
+                    if (value === undefined || value === null)
+                        SettingsProof.erase(location, group, key);
+                    else
+                        SettingsProof.seed(location, group, key, value);
+            }
         }
         function test_window_geometry_restores_and_relocates_an_offscreen_position() {
             for (const entry of [["x", 60], ["y", 40], ["width", 1100], ["height", 700]])

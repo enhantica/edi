@@ -317,11 +317,13 @@ def test_resume_preserves_old_provenance_and_records_new_conditions(tmp_path):
     )
     assert not paths[1].exists(), 'A successful legacy resume migrates conditions into results.csv'
     assert_provenance(rows, rows, [old, new, new])
-    completed = paths[0].read_bytes()
     run_fit(project)
-    assert paths[0].read_bytes() == completed and not paths[1].exists(), (
-        ' a completed resume must append neither result nor provenance rows'
+    assert not paths[1].exists(), 'The second complete pass keeps conditions in results.csv'
+    _, repeated = read_csv(paths[0])
+    assert [row['file_path'] for row in repeated] == [row['file_path'] for row in rows], (
+        'The second pass replaces the result generation in scan order'
     )
+    assert_provenance(repeated, rows, [new, new, new])
 
 
 @pytest.mark.parametrize(

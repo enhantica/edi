@@ -1,5 +1,6 @@
 """Latest-fit uncertainties and undo, using a small rational polynomial model."""
 
+import csv
 import importlib
 import math
 import shutil
@@ -104,11 +105,37 @@ def assert_no_su(project, *, reloaded=False):
     assert math.isfinite(parameters[2].coef.uncertainty), 'A propagated uncertainty must be finite'
 
 
+def scan_rows(root):
+    with (root / 'analysis/results.csv').open(newline='') as stream:
+        return list(csv.DictReader(stream))
+
+
+def assert_scan_uncertainty(project, root, destination):
+    assert project.structures[0].atom_sites[0].adp_iso.uncertainty == pytest.approx(
+        8.75, rel=0, abs=0
+    ), 'The scan preserves the caller template uncertainty'
+    rows = scan_rows(root)
+    assert len(rows) == 2, 'Both measured points publish individual fit records'
+    free_su = next(name for name in rows[0] if name.endswith('background.1.coef.uncertainty'))
+    assert all(float(row[free_su]) > 0 for row in rows), (
+        'The per-point results publish a positive uncertainty for each free coefficient'
+    )
+    assert all('adp_iso' not in key for key in rows[0]), (
+        'An unrelated fixed parameter never acquires a fitted result column'
+    )
+    project.save_as(destination)
+    structure = next((destination / 'structures').glob('*.edi')).read_text()
+    assert '8.75' not in structure, 'The writer serializes a fixed independent template value bare'
+
+
 @pytest.mark.parametrize('mode', ['single', 'joint', 'multiphase', 'sequential', 'independent'])
 def test_every_fit_path_clears_fixed_su_and_keeps_dependent_su(tmp_path, mode):
     project = vehicle(tmp_path / 'input', mode)
     project.structures[0].atom_sites[0].adp_iso.uncertainty = 8.75
     project.analysis.fit()
+    if mode in {'sequential', 'independent'}:
+        assert_scan_uncertainty(project, tmp_path / 'input', tmp_path / 'saved')
+        return
     assert_no_su(project)
     project.save_as(tmp_path / 'saved')
     assert_file_uncertainties(tmp_path / 'saved')
@@ -124,8 +151,32 @@ def test_every_fit_path_clears_fixed_su_and_keeps_dependent_su(tmp_path, mode):
 @pytest.mark.parametrize('mode', ['single', 'joint', 'multiphase', 'sequential', 'independent'])
 def test_unchecking_free_then_fitting_clears_su_and_undo_restores_it(tmp_path, mode):
     project = vehicle(tmp_path / 'input', mode)
-    project.analysis.fit()
     parameter = bank_experiment(project).background_terms[0].coef
+    if mode in {'sequential', 'independent'}:
+        parameter.uncertainty = 0.125
+        project.analysis.fit()
+        assert parameter.uncertainty == pytest.approx(0.125, rel=0, abs=0), (
+            'The first scan preserves the prior template s.u.'
+        )
+        first = scan_rows(tmp_path / 'input')
+        free_su = next(name for name in first[0] if name.endswith('background.1.coef.uncertainty'))
+        assert len(first) == 2, 'The prior scan fits both measured points'
+        assert all(float(row[free_su]) > 0 for row in first), (
+            'The prior generation reports the free coefficient uncertainty for each point'
+        )
+        parameter.free = False
+        fixed_template_su = parameter.uncertainty
+        for ledger in (tmp_path / 'input/analysis').glob('*.csv'):
+            ledger.unlink()
+        project.analysis.fit()
+        fixed = scan_rows(tmp_path / 'input')
+        assert len(fixed) == len(first), 'The new free set still fits every scan point'
+        assert free_su not in fixed[0], 'The fixed coefficient loses its fitted uncertainty column'
+        assert parameter.uncertainty == fixed_template_su, (
+            'The new scan preserves the fixed template s.u.'
+        )
+        return
+    project.analysis.fit()
     before = parameter.uncertainty
     dependent_before = bank_experiment(project).background_terms[2].coef.uncertainty
     assert dependent_before is not None and dependent_before > 0, (
@@ -133,19 +184,6 @@ def test_unchecking_free_then_fitting_clears_su_and_undo_restores_it(tmp_path, m
     )
     assert before is not None, 'The first fit must supply an uncertainty'
     assert before > 0, 'The first fit must supply a nonzero uncertainty'
-    if mode in {'sequential', 'independent'}:
-        _, before = saved_pair(parameter.value, before)
-        dependent = bank_experiment(project).background_terms[2].coef
-        _, dependent_before = saved_pair(dependent.value, dependent_before)
-        next_scan = tmp_path / 'next-scan'
-        project.save_as(next_scan)
-        for ledger in (next_scan / 'analysis').glob('*.csv'):
-            ledger.unlink()
-        project = ENGINE.Project.load(next_scan)
-        parameter = bank_experiment(project).background_terms[0].coef
-        assert parameter.uncertainty == pytest.approx(before, rel=5e-6), (
-            'A fresh scan input retains the prior uncertainty at independently spelled precision'
-        )
     parameter.free = False
     project.analysis.fit()
     assert parameter.uncertainty is None, (

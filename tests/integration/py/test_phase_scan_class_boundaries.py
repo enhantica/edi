@@ -40,12 +40,21 @@ def test_recorded_columns_equal_every_declared_free_category(tmp_path, mode, bac
         'Every declared active free category, including both texture fields per phase, '
         'has exactly one qualified value and uncertainty column'
     )
-    before = (directory / 'analysis/results.csv').read_bytes()
-    first = fit(project)
-    assert (directory / 'analysis/results.csv').read_bytes() == before, (
-        'A completed resume must preserve the complete per-phase result schema and rows'
+    template = [p.value for p in project.free_parameters]
+    completions = []
+    repeat = fit(project, on_file_complete=completions.append)
+    current = rows(directory / 'analysis/results.csv')
+    assert len(completions) == len(current) == len(result), (
+        'A completed scan runs every phase-bearing dataset again'
     )
-    assert first.values, 'A completed resume must recover the declared free result population'
+    assert list(current[0]) == header, 'The second generation retains the exact per-phase schema'
+    assert [row['file_path'] for row in current] == [row['file_path'] for row in result], (
+        'The second generation retains every point identity in order'
+    )
+    assert repeat.values, 'The new terminal fit provides its declared free result population'
+    assert [p.value for p in project.free_parameters] == template, (
+        'Refitting does not replace the project template free values'
+    )
 
 
 @pytest.mark.parametrize('mode', ['sequential', 'independent'])
@@ -71,6 +80,7 @@ def test_refused_terminal_returns_same_state_as_completed_resume(tmp_path, mode)
             message = 'Authored terminal refusal after solver entry'
             raise ValueError(message)
 
+    template = [p.value for p in project.free_parameters]
     fresh = fit(project, on_iteration=refuse_terminal, on_file_complete=completed.append)
     assert failures == ['terminal solver step'], (
         'The terminal refusal must execute after the successful first file and a solver step'
@@ -91,15 +101,20 @@ def test_refused_terminal_returns_same_state_as_completed_resume(tmp_path, mode)
             for key, value in raw.items()
         }
     )
-    resumed = fit(project)
-    assert resumed.values == expected, (
-        'A no-op resume recovers the exact two-significant-digit s.u. CSV projection '
-        'of the terminal state; the live fit retains its unrounded values'
+    csv_path = directory / 'analysis/results.csv'
+    header, _first, terminal = csv_path.read_bytes().splitlines(keepends=True)
+    retained = header + terminal
+    csv_path.write_bytes(retained)
+    completions = []
+    assert fit(project, on_file_complete=completions.append).values == expected, (
+        'Gap fill recovers the exact reported values from the retained terminal row'
     )
-    assert fresh.values == raw, 'Resume must not mutate the earlier returned raw fit result'
-    assert sorted(parameter.value for parameter in project.free_parameters) == sorted(
-        expected.values()
-    ), 'Edi and engine models must adopt the same recoverable terminal CSV state'
+    assert fresh.values == raw, 'Filling a gap preserves the earlier returned raw fit result'
+    assert [p.value for p in project.free_parameters] == template, (
+        'Both the refusing scan and gap fill preserve the caller template values'
+    )
+    assert csv_path.read_bytes().startswith(retained), 'Gap fill retains the exact terminal row'
+    assert len(completions) == 1, 'Gap fill fits only the missing point'
 
 
 @pytest.mark.parametrize('root_data', [False, True])

@@ -170,13 +170,18 @@ def test_cli_fit_and_python_resume_share_crysta_results_writer(tmp_path: Path) -
         ' requires the edi CLI surface to expose one successful fit result per file'
     )
 
-    before_resume = csv_path.read_bytes()
     project = edi.Project.load(project_dir)
-    outcome = project.analysis.fit()
-    assert outcome is not None, (
-        ' requires edi Python Analysis.fit() to return a result on completed-scan resume'
+    before = [(parameter.value, parameter.uncertainty) for parameter in project.parameters]
+    completions = []
+    outcome = project.analysis.fit(on_file_complete=completions.append)
+    assert outcome is not None, 'Edi Python returns a result when a CLI-completed scan fits again'
+    repeat_header, repeat_rows = _rows(csv_path)
+    assert repeat_header == header and len(completions) == len(EXPECTED_FILES), (
+        'The repeat Python Fit emits a completion for every CLI dataset under the same schema'
     )
-    assert csv_path.read_bytes() == before_resume, (
-        ' requires the edi Python surface to resume the CLI-completed scan with zero '
-        'additional rows and no second writer output'
+    assert [Path(row['file_path']).name for row in repeat_rows] == EXPECTED_FILES, (
+        'The repeat fit replaces the CLI generation in stable file order'
     )
+    assert [
+        (parameter.value, parameter.uncertainty) for parameter in project.parameters
+    ] == before, 'A second Fit retains the template loaded by Python after the CLI scan'

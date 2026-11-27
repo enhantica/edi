@@ -657,11 +657,6 @@ void cycle_command(const QByteArray& line) {
     cycle.started = true;
     cycle.nonce = command.value("nonce").toString();
     cycle_emit({{"event", "started"}});
-    const bool complete = cycle.fit->scanTotal() > 0 && cycle.fit->scanProcessed() == cycle.fit->scanTotal();
-    if (complete) {  // nothing left to fit: Start launches no worker
-        QTimer::singleShot(0, QCoreApplication::instance(), [] { cycle_terminal(); });
-        return;
-    }
     cycle.fit->start();
 }
 

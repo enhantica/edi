@@ -365,33 +365,37 @@ def test_completed_noop_resume_reports_all_committed_facts_without_fake_time(
             project,
             edi.VerbosityEnum.COMPACT,
             'completed-resume',
-            clock=_Clock(0.0),
+            clock=_Clock(0.0, 1.0, 2.0, 3.0),
         )
         == 0
-    ), ' completed no-op resume must complete without a new fit'
+    ), 'A second CLI Fit runs the completed scan again'
 
     lines = output.getvalue().splitlines()
     progress = table_rows('\n'.join(lines))
-    assert len(progress) == 1, (
-        'A completed resume emits one final summary row without inventing a new completion event'
+    fresh = _read_result_rows(project_dir)
+    assert [row['file_path'] for row in fresh] == [row['file_path'] for row in seeded], (
+        'The second pass emits a fresh generation for every dataset identity'
     )
-    _assert_failure_count_without_file_list(lines, seeded)
-    final = cells(progress[0])
+    assert len(progress) >= len(fresh), (
+        'The second pass displays progress for every actual completion'
+    )
+    _assert_failure_count_without_file_list(lines, fresh)
+    final = cells(progress[-1])
     assert final['count'] == '3/3' and final['percent'] == '100.0%' and not final['left'], (
-        'A no-op resume retains its complete count and has no remaining-time estimate'
+        'The new generation reaches its exact count with no remaining-time estimate'
     )
-    assert final['elapsed'] == '0s', (
-        'A no-op resume shows this invocation clock, rather than inventing historical elapsed time'
+    assert final['elapsed'] == '3s', (
+        'The final progress row uses the controlled current-invocation clock'
     )
-    values = [float(row['fit_result.reduced_chi_square']) for row in seeded]
+    values = [float(row['fit_result.reduced_chi_square']) for row in fresh]
     assert final['range'] == f'{min(values):.2f}-{max(values):.2f}', (
-        'A no-op resume retains the full independently saved historical metric range'
+        'The final progress range describes the newly produced rows only'
     )
-    assert final['file'] == Path(seeded[-1]['file_path']).stem, (
-        'A no-op resume names the actual last completed historical file'
+    assert final['file'] == Path(fresh[-1]['file_path']).stem, (
+        'The final progress row names the new pass terminal file'
     )
-    assert final['chi2'] == f'{float(seeded[-1]["fit_result.reduced_chi_square"]):.2f}', (
-        'A no-op resume retains the actual last historical metric rather than a blank cell'
+    assert final['chi2'] == f'{values[-1]:.2f}', (
+        'The final progress row uses the newly produced terminal metric'
     )
 
 
