@@ -273,11 +273,12 @@ One process per active account, one ACP session per thread:
 
 ```
 copilot --acp --stdio --no-auto-update --disable-builtin-mcps --disable-mcp-server computer-use
-  --excluded-tools <every built-in tool> --allow-tool edi
+  --excluded-tools <every built-in tool but the skill loader> --allow-tool edi
   --additional-mcp-config @<workspace>/.edi/copilot-mcp.json
 ```
 
-- **Tools.** Every built-in tool, shell, file, web fetch and its own question tool included, is excluded; the
+- **Tools.** Every built-in tool except `skill`, the loader the bundled skills need, is excluded, shell, file, web
+  fetch, agents and its own question tool included; the
   built-in MCP servers (GitHub's, which serves `web_search`, and `computer-use`) are off, so Copilot has no web search;
   edi's server is the only MCP server and its tools are pre-allowed. edi never sets `--allow-all`, `--yolo`,
   `COPILOT_ALLOW_ALL` or the autopilot mode.
