@@ -21003,6 +21003,16 @@ bool AssistantViewModel::resumeConnection() {
     try {
         if(!s->resume_checkpoint && s->generic_mode && !s->generic_authenticated && !s->generic_connecting) {
             // No retained conversation: reconnect the active account when it has signed in before (ADR-0108 §8).
+            // The saved choice may have changed since this view model started, so read it again first.
+            if(s->active_provider_account.id.isEmpty()) {
+                s->resolve_active_account();
+                if(s->agent && s->agent->providerId()!=s->active_provider_account.provider) {
+                    s->agent->retire();
+                    s->agent.release()->deleteLater();  // queued replies fence on a QPointer to it
+                    s->generic_initialize();
+                    emit accountsChanged();
+                }
+            }
             bool known=false;
             try {
                 const auto& active=s->active_provider_account;
