@@ -856,7 +856,7 @@ Rectangle {
                 onClicked: VoiceInput.release(composer)
             }
             // Listening takes the accent colour; while the microphone starts or the speech is recognised it shows the
-            // assistant's spinner, and a press cancels.
+            // assistant's spinner. A press while it starts cancels; a press while it recognises does nothing.
             EaElements.ToolButton {
                 id: voiceButton
                 Layout.minimumWidth: composer.actionSize
