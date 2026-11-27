@@ -1498,12 +1498,67 @@ Rectangle {
             verify(data.kind !== "scan" || follow !== null, "The scan status bar supplies its Follow control");
             verify(data.kind === "scan" ? follow.visible : follow === null || !follow.visible && !follow.clickable && !follow.checked, "Follow is usable only for scans and cannot be activated for single or joint fits");
         }
-        function test_parametric_fit_reports_one_outcome() {
+        function test_parametric_charts_publish_during_the_fit_data() {
+            return [{tag: "pattern"}, {tag: "meascalc"}, {tag: "evolution"}];
+        }
+        function test_parametric_charts_publish_during_the_fit(data) {
             const root = SettingsProof.copyProject(Probe.repoUrl("tests/fixtures/scan_template/project"));
+            const input = SettingsProof.text(root, "experiments/d20_scan/all594687.dat");
+            verify(input.length > 0, "The live-chart scan uses the measured CoSiO fixture");
+            for (let i = 0; i < 9; ++i)
+                verify(SettingsProof.write(root, "experiments/d20_scan/live-" + i + ".dat", input),
+                    "The private scan has enough measured points to open the tabs during a fit");
+            verify(Session.openProject(root), "The app opens an unfitted multi-point scan");
+            const project = Session.project;
+            project.analysis.fittingMode = "parametric";
+            project.analysis.maxIterations = 8;
+            const fit = project.fit;
+            chart = analysisFactory.createObject(surface);
+            tryVerify(() => chart && chart.pageViewItem, 3000, "The native Analysis page loads its views");
+            const page = chart.pageViewItem;
+            function openTab(key) {
+                const tab = page.bar.itemAt(page.tabOf(key));
+                verify(tab && tab.visible && tab.enabled, "The actual Analysis tab is available: " + key);
+                mouseClick(tab, tab.width / 2, tab.height / 2);
+                tryCompare(page, "currentKey", key, 1000, "One click opens the requested chart: " + key);
+            }
+            openTab("pattern");
+            fit.start();
+            tryVerify(() => fit.running && fit.iterations !== "", 8000,
+                "The real Parametric scan publishes an iteration before completion");
+            if (data.tag !== "pattern")
+                openTab(data.tag);
+            function hasFitData() {
+                if (data.tag === "evolution") {
+                    const points = findChild(page, "evolution.points");
+                    return points !== null && points.count > 1;
+                }
+                if (data.tag === "meascalc") {
+                    const comparison = findChild(page, "measCalc.chart");
+                    return comparison !== null && comparison.shown && comparison.hasData;
+                }
+                const pattern = findChild(page, "chart");
+                const series = pattern ? Render.series(pattern) : [];
+                return ["chart.series.calc", "chart.series.resid", "chart.series.bragg.0"].every(
+                    name => series.some(line => line.objectName === name && line.count > 0));
+            }
+            let drawnWhileFitting = false;
+            tryVerify(() => {
+                if (fit.running && hasFitData())
+                    drawnWhileFitting = true;
+                return !fit.running && fit.scanFitted > 1;
+            }, 20000, "The scan finishes and publishes multiple patterns");
+            tryVerify(hasFitData, 4000, "The chart shows the completed fit without reselection: " + data.tag);
+            verify(drawnWhileFitting, "The first chart opening displays live fitted data: " + data.tag);
+        }
+        function test_parametric_fit_reports_one_outcome() {
+            const root = SettingsProof.copyProject(Probe.repoUrl("tests/fixtures/parametric_series/cubic"));
             verify(Session.openProject(root), "The status test opens an actual multi-file scan");
             const project = Session.project;
             project.analysis.fittingMode = "parametric";
             project.analysis.maxIterations = 1;
+            project.analysis.chiSquareTolerance = 1e-12;
+            project.analysis.shiftTolerance = 1e-12;
             applicationWindow = applicationFactory.createObject(null);
             verify(applicationWindow !== null && waitForRendering(applicationWindow.contentItem), "The actual application renders the fit status");
             const fit = project.fit;
@@ -1513,6 +1568,17 @@ Rectangle {
             const values = findChild(applicationWindow, "statusBar.fit.values");
             verify(values !== null, "The real status bar supplies the displayed fit metrics");
             verify(!values.children.some(item => item.shown && item.keyText === "Failed"), "A joint stop never appears as a tally of failed files");
+
+            const results = findChild(applicationWindow, "fit.results");
+            verify(results !== null, "The real app provides a fit results window");
+            results.open();
+            tryCompare(results, "opened", true, 2000, "The fit results window shows the finished scan");
+            const summary = Probe.rows(findChild(results, "fit.results.list").sourceModel);
+            compare(summary.filter(row => row.outcome !== "").length, 1,
+                "The results window assigns one outcome to the entire Parametric fit");
+            verify(!summary.some(row => ["Files fitted", "Converged", "Failed"].includes(row.metric)),
+                "The Parametric results window does not summarize patterns as separate outcomes");
+            results.close();
 
             const dialog = findChild(applicationWindow, "fit.error");
             verify(dialog !== null && !dialog.opened, "A completed scan with readable results raises no fit error");

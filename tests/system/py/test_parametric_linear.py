@@ -1,5 +1,6 @@
 """Background-only observations have a closed-form block-arrow fit and covariance."""
 
+import shutil
 from pathlib import Path
 
 import edi as engine
@@ -149,14 +150,17 @@ def test_cancel_preserves_the_prior_published_generation(tmp_path):
 
 
 def test_iteration_delivery_has_one_series_record_per_round(tmp_path):
-    root = cases.scan(tmp_path / 'series', shared=False)
+    source = Path(__file__).resolve().parents[2] / 'fixtures/parametric_series/cubic'
+    root = tmp_path / 'series'
+    shutil.copytree(source, root)
+    expected_files = ['p0.xy', 'p1.xy', 'p2.xy', 'p3.xy', 'p4.xy']
     project = engine.Project.load(root)
     iterations = []
 
     def observe(record):
         iterations.append(record.iteration)
         if (root / 'analysis/results.csv').exists():
-            assert len(cases.rows(root)) == 3, (
+            assert len(cases.rows(root)) == len(expected_files), (
                 'An iterate observer can only see a whole published generation'
             )
 
@@ -164,7 +168,7 @@ def test_iteration_delivery_has_one_series_record_per_round(tmp_path):
 
     def read_back(record):
         rows = cases.rows(root)
-        assert [Path(row['file_path']).name for row in rows] == ['p0.xy', 'p1.xy', 'p2.xy'], (
+        assert [Path(row['file_path']).name for row in rows] == expected_files, (
             'The first completion already exposes the complete published generation'
         )
         row = rows[len(published)]
@@ -180,14 +184,14 @@ def test_iteration_delivery_has_one_series_record_per_round(tmp_path):
         published.append(Path(record.file_name).name)
 
     project.analysis.fit(on_iteration=observe, on_file_complete=read_back)
-    assert published == ['p0.xy', 'p1.xy', 'p2.xy'], (
+    assert published == expected_files, (
         'A subscriber receives every published row in scan order'
     )
     assert iterations, 'The real parametric driver delivers iteration progress'
     assert iterations == sorted(set(iterations)), (
-        'Independent blocks deliver one increasing series iteration each round'
+        'A nonlinear shared fit delivers one increasing series record per accepted round'
     )
-    assert len(cases.rows(root)) == 3, 'Final publication retains every admitted scan point'
+    assert len(cases.rows(root)) == len(expected_files), 'Final publication retains every admitted scan point'
 
 
 @pytest.mark.parametrize('fixed', [False, True])

@@ -7,6 +7,11 @@ from tests.fixtures.joint_series import cases as prior
 from tests.fixtures.parametric_series import cases
 
 
+def shared_group_names(analysis, parameter):
+    possible_names = {f'{bank}.{parameter}' for bank in cases.BANKS}
+    return [line.strip() for line in analysis.splitlines() if line.strip() in possible_names]
+
+
 @pytest.mark.parametrize('path', cases.PATHS)
 @pytest.mark.parametrize('free', [False, True])
 def test_shared_and_free_are_orthogonal_in_joint(tmp_path, path, free):
@@ -56,7 +61,9 @@ def test_shared_group_round_trip_and_inactive_mode(tmp_path, path, free):
     project.save_as(tmp_path / 'saved')
     analysis = tmp_path / 'saved/analysis/analysis.edi'
     text = analysis.read_text()
-    assert 'zeta.' + path in text, 'The first eligible project member owns the persisted group'
+    assert shared_group_names(text, path) == ['third.' + path], (
+        'The selected third member is the sole persisted group name'
+    )
     assert '_alias.' not in text, 'Generated groups never add user aliases'
     assert '_constraint.' not in text, 'Generated groups never add user constraints'
     reopened = engine.Project.load(tmp_path / 'saved')
@@ -75,41 +82,55 @@ def test_shared_group_round_trip_and_inactive_mode(tmp_path, path, free):
     )
     inactive.save_as(tmp_path / 'inactive')
     active_text = (tmp_path / 'inactive/analysis/analysis.edi').read_text()
-    assert 'zeta.' + path in active_text, (
-        'Independent save preserves the inactive shared declaration'
+    assert shared_group_names(active_text, path) == ['third.' + path], (
+        'Independent save preserves the selected member name of the inactive shared group'
     )
 
 
-def test_loaded_follower_normalizes_and_leader_free_wins(tmp_path):
+def test_loaded_group_preserves_selected_member(tmp_path):
     root = cases.model(tmp_path / 'source')
     first = root / 'experiments/0_zeta.edi'
     first.write_text(
-        first.read_text().replace('_peak.broad_gauss_w 0.15', '_peak.broad_gauss_w 0.15()')
+        first.read_text().replace('_peak.broad_gauss_w 0.15', '_peak.broad_gauss_w 0.45()')
+    )
+    third = root / 'experiments/2_third.edi'
+    third.write_text(
+        third.read_text().replace('_peak.broad_gauss_w 0.15', '_peak.broad_gauss_w 0.85')
     )
     cases.append_shared(root, ['third.peak.broad_gauss_w'])
     project = engine.Project.load(root)
-    assert [project.experiments[bank].peak.broad_gauss_w.free for bank in cases.BANKS] == [
-        True
-    ] * 3, 'A mixed loaded group takes its eligible leader Free flag'
     project.save_as(tmp_path / 'saved')
     text = (tmp_path / 'saved/analysis/analysis.edi').read_text()
-    assert 'zeta.peak.broad_gauss_w' in text, 'A follower declaration writes the eligible leader'
-    assert 'third.peak.broad_gauss_w' not in text, 'A normalized group omits duplicate followers'
+    assert shared_group_names(text, 'peak.broad_gauss_w') == ['third.peak.broad_gauss_w'], (
+        'Saving a loaded group preserves exactly the persisted member name'
+    )
+    assert [project.experiments[bank].peak.broad_gauss_w.free for bank in cases.BANKS] == [
+        False
+    ] * 3, 'A mixed loaded group takes the persisted member Free flag'
+    assert [project.experiments[bank].peak.broad_gauss_w.value for bank in cases.BANKS] == [
+        0.85
+    ] * 3, 'A mixed loaded group takes the persisted member value'
 
 
-def test_user_dependent_is_excluded_before_leader_selection(tmp_path):
+def test_user_dependent_blocks_sharing_without_changing_constraints(tmp_path):
     root = cases.model(tmp_path / 'source')
     prior.relations(
         root,
         [('dependent', 'zeta.peak.broad_gauss_w'), ('source', 'alpha.peak.broad_gauss_w')],
         ['dependent = source * 2'],
     )
+    analysis_file = root / 'analysis/analysis.edi'
+    analysis_file.write_text(
+        analysis_file.read_text().replace(
+            '_constraint.expression\n', '_constraint.id\n_constraint.expression\nwidth_tie '
+        )
+    )
     project = engine.Project.load(root)
     project.save_as(tmp_path / 'before')
     analysis = 'analysis/analysis.edi'
     baseline = (tmp_path / 'before' / analysis).read_bytes()
     for bank in cases.BANKS:
-        with pytest.raises((ValueError, RuntimeError), match=r'constraint.*dependent'):
+        with pytest.raises((ValueError, RuntimeError), match=r'constraint.*width_tie'):
             project.experiments[bank].peak.broad_gauss_w.shared = True
         assert all(
             not project.experiments[member].peak.broad_gauss_w.shared for member in cases.BANKS

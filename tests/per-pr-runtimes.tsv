@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-26T22:02:23Z
+# measured_utc = 2026-11-27T00:49:02Z
 #
-# Recorded from: measured test run (2 node(s) measured once, 187630 banked, 0 stale row(s) dropped)
-# Collected tests: 268839; with a reported duration: 86323
+# Recorded from: measured test run (17 node(s) measured once, 187627 banked, 5 stale row(s) dropped)
+# Collected tests: 268843; with a reported duration: 86331
 # Module-scoped fixture costs recorded: 220
 #
 # Breaches are decided PER TIER against the table
@@ -29,12 +29,12 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 268839
+# inventory_python = 268843
 # inventory_cpp = 0
-# inventory_measured = 187631
-# inventory_unmeasured = 81208
+# inventory_measured = 187641
+# inventory_unmeasured = 81202
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
-# inventory_pr_python = 92968
+# inventory_pr_python = 92972
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -548,9 +548,6 @@ UNMEASURED:failed-in-this-run	tests/integration/app/test_online_load.py::test_on
 0.025	tests/integration/app/test_online_load.py::test_online_load_controls[new_experiment_wavelength-]
 0.400	tests/integration/app/test_online_structure_loading.py::test_cod_falls_back_to_easydiffraction
 UNMEASURED:failed-in-this-run	tests/integration/app/test_online_structure_loading.py::test_structure_matches_disk
-UNMEASURED:failed-in-this-run	tests/integration/app/test_parametric_sharing_controls.py::test_sharing_controls[bulk_shared_is_one_undo]
-0.400	tests/integration/app/test_parametric_sharing_controls.py::test_sharing_controls[column_follows_fitting_mode]
-UNMEASURED:failed-in-this-run	tests/integration/app/test_parametric_sharing_controls.py::test_sharing_controls[group_edits_and_undo]
 0.600	tests/integration/app/test_phase_scan_progress.py::test_app_converted_skip_live_population_matches_reopen[independent]
 0.600	tests/integration/app/test_phase_scan_progress.py::test_app_converted_skip_live_population_matches_reopen[sequential]
 0.570	tests/integration/app/test_phase_scan_progress.py::test_app_incremental_notes_failure_invalidates_before_progress[index-foreign-independent]
@@ -184551,7 +184548,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_parameter_correlations.p
 0.010	tests/integration/py/test_parameter_table_notation.py::test_value_and_su_keep_iucr_rounding_and_share_the_value_power[999.9-iucr_99-model]
 0.050	tests/integration/py/test_parameter_table_notation.py::test_value_and_su_keep_iucr_rounding_and_share_the_value_power[999.9-iucr_99-notebook]
 0.090	tests/integration/py/test_parameter_table_notation.py::test_value_and_su_keep_iucr_rounding_and_share_the_value_power[999.9-iucr_99-report]
-0.040	tests/integration/py/test_parametric_sharing.py::test_loaded_follower_normalizes_and_leader_free_wins
+UNMEASURED:failed-in-this-run	tests/integration/py/test_parametric_sharing.py::test_loaded_group_preserves_selected_member
 0.010	tests/integration/py/test_parametric_sharing.py::test_parametric_fixed_and_free_shared_background_reload[False]
 0.010	tests/integration/py/test_parametric_sharing.py::test_parametric_fixed_and_free_shared_background_reload[True]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_parametric_sharing.py::test_parametric_mode_requires_a_scan
@@ -184561,16 +184558,16 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_parametric_sharing.py::t
 UNMEASURED:failed-in-this-run	tests/integration/py/test_parametric_sharing.py::test_shared_and_free_are_orthogonal_in_joint[True-background.1.intensity]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_parametric_sharing.py::test_shared_and_free_are_orthogonal_in_joint[True-linked_structure.phase.scale]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_parametric_sharing.py::test_shared_and_free_are_orthogonal_in_joint[True-peak.broad_gauss_w]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_parametric_sharing.py::test_shared_group_round_trip_and_inactive_mode[False-background.1.intensity]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_parametric_sharing.py::test_shared_group_round_trip_and_inactive_mode[False-linked_structure.phase.scale]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_parametric_sharing.py::test_shared_group_round_trip_and_inactive_mode[False-peak.broad_gauss_w]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_parametric_sharing.py::test_shared_group_round_trip_and_inactive_mode[True-background.1.intensity]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_parametric_sharing.py::test_shared_group_round_trip_and_inactive_mode[True-linked_structure.phase.scale]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_parametric_sharing.py::test_shared_group_round_trip_and_inactive_mode[True-peak.broad_gauss_w]
+0.150	tests/integration/py/test_parametric_sharing.py::test_shared_group_round_trip_and_inactive_mode[False-background.1.intensity]
+0.170	tests/integration/py/test_parametric_sharing.py::test_shared_group_round_trip_and_inactive_mode[False-linked_structure.phase.scale]
+0.130	tests/integration/py/test_parametric_sharing.py::test_shared_group_round_trip_and_inactive_mode[False-peak.broad_gauss_w]
+0.120	tests/integration/py/test_parametric_sharing.py::test_shared_group_round_trip_and_inactive_mode[True-background.1.intensity]
+0.160	tests/integration/py/test_parametric_sharing.py::test_shared_group_round_trip_and_inactive_mode[True-linked_structure.phase.scale]
+0.120	tests/integration/py/test_parametric_sharing.py::test_shared_group_round_trip_and_inactive_mode[True-peak.broad_gauss_w]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_parametric_sharing.py::test_sparse_start_duplicate_is_rejected
 UNMEASURED:failed-in-this-run	tests/integration/py/test_parametric_sharing.py::test_sparse_start_identity_survives_directory_copy
 UNMEASURED:failed-in-this-run	tests/integration/py/test_parametric_sharing.py::test_unknown_and_shared_point_starts_are_dropped
-0.150	tests/integration/py/test_parametric_sharing.py::test_user_dependent_is_excluded_before_leader_selection
+0.150	tests/integration/py/test_parametric_sharing.py::test_user_dependent_blocks_sharing_without_changing_constraints
 0.140	tests/integration/py/test_pattern_background_report.py::test_report_background_dash_and_solid_structure_outline[background]
 0.130	tests/integration/py/test_pattern_background_report.py::test_report_background_dash_and_solid_structure_outline[structure]
 0.000	tests/integration/py/test_pdf_figure_observer.py::test_saved_pdf_image_bounds_follow_the_independent_affine_reference[clipped]
@@ -256358,6 +256355,10 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_parametric_linear.py::test_sh
 UNMEASURED:failed-in-this-run	tests/system/py/test_parametric_linear.py::test_shared_linear_fit_recovers_truth_and_undamped_covariance[True]
 UNMEASURED:failed-in-this-run	tests/system/py/test_parametric_linear.py::test_shared_scale_and_local_background_follow_the_analytic_fit[False]
 UNMEASURED:failed-in-this-run	tests/system/py/test_parametric_linear.py::test_shared_scale_and_local_background_follow_the_analytic_fit[True]
+0.770	tests/system/py/test_parametric_sharing_controls.py::test_sharing_controls[bulk_shared_is_one_undo]
+1.030	tests/system/py/test_parametric_sharing_controls.py::test_sharing_controls[column_follows_fitting_mode]
+1.990	tests/system/py/test_parametric_sharing_controls.py::test_sharing_controls[group_edits_and_undo]
+1.160	tests/system/py/test_parametric_sharing_controls.py::test_sharing_controls[unshareable_rows_explain_why]
 UNMEASURED:failed-in-this-run	tests/system/py/test_pattern_owner_styles.py::test_pattern_owner_style[test_background_and_legend_dashed:analysis-dark]
 UNMEASURED:failed-in-this-run	tests/system/py/test_pattern_owner_styles.py::test_pattern_owner_style[test_background_and_legend_dashed:analysis-light]
 UNMEASURED:failed-in-this-run	tests/system/py/test_pattern_owner_styles.py::test_pattern_owner_style[test_background_and_legend_dashed:experiment-dark]
@@ -260022,7 +260023,10 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_scan_owner_additions.py::test
 UNMEASURED:failed-in-this-run	tests/system/py/test_scan_owner_additions.py::test_scan_owner_addition[test_owner_toolbar_centred:stacked]
 UNMEASURED:failed-in-this-run	tests/system/py/test_scan_owner_additions.py::test_scan_owner_addition[test_owner_zoom_samples:map]
 UNMEASURED:failed-in-this-run	tests/system/py/test_scan_owner_additions.py::test_scan_owner_addition[test_owner_zoom_samples:stacked]
-0.002	tests/system/py/test_scan_owner_additions.py::test_scan_owner_addition[test_parametric_fit_reports_one_outcome]
+0.000	tests/system/py/test_scan_owner_additions.py::test_scan_owner_addition[test_parametric_charts_publish_during_the_fit:evolution]
+UNMEASURED:failed-in-this-run	tests/system/py/test_scan_owner_additions.py::test_scan_owner_addition[test_parametric_charts_publish_during_the_fit:meascalc]
+0.001	tests/system/py/test_scan_owner_additions.py::test_scan_owner_addition[test_parametric_charts_publish_during_the_fit:pattern]
+0.000	tests/system/py/test_scan_owner_additions.py::test_scan_owner_addition[test_parametric_fit_reports_one_outcome]
 UNMEASURED:failed-in-this-run	tests/system/py/test_scan_owner_additions.py::test_scan_owner_addition[test_preferences_four_choices_remembered]
 UNMEASURED:failed-in-this-run	tests/system/py/test_scan_owner_additions.py::test_scan_owner_addition[test_preferences_four_colour_choices:dark]
 UNMEASURED:failed-in-this-run	tests/system/py/test_scan_owner_additions.py::test_scan_owner_addition[test_preferences_four_colour_choices:light]
@@ -268904,7 +268908,6 @@ UNMEASURED:not-completed-in-this-run	tests/unit/py/test_web_science_identity.py:
 # module-cost: 19.123	tests/integration/app/test_magnetic_preview.py
 # module-cost: 5.691	tests/integration/app/test_online_load.py
 # module-cost: 1.077	tests/integration/app/test_online_structure_loading.py
-# module-cost: 0.406	tests/integration/app/test_parametric_sharing_controls.py
 # module-cost: 0.258	tests/integration/app/test_phase_scan_state.py
 # module-cost: 34.721	tests/integration/app/test_report_deferred_save.py
 # module-cost: 4.282	tests/integration/app/test_scan_axis_sync.py
@@ -269020,6 +269023,7 @@ UNMEASURED:not-completed-in-this-run	tests/unit/py/test_web_science_identity.py:
 # module-cost: 0.899	tests/system/py/test_online_popup_contract.py
 # module-cost: 1.061	tests/system/py/test_online_search_continuation.py
 # module-cost: 2.601	tests/system/py/test_operation_contracts.py
+# module-cost: 0.510	tests/system/py/test_parametric_sharing_controls.py
 # module-cost: 3.896	tests/system/py/test_pattern_owner_styles.py
 # module-cost: 27.704	tests/system/py/test_pattern_range.py
 # module-cost: 179.025	tests/system/py/test_plain_data_app.py
@@ -269053,7 +269057,7 @@ UNMEASURED:not-completed-in-this-run	tests/unit/py/test_web_science_identity.py:
 # module-cost: 1.016	tests/system/py/test_scan_lazy_input.py
 # module-cost: 1.968	tests/system/py/test_scan_native_boundary.py
 # module-cost: 0.318	tests/system/py/test_scan_output_aliases.py
-# module-cost: 18.033	tests/system/py/test_scan_owner_additions.py
+# module-cost: 13.219	tests/system/py/test_scan_owner_additions.py
 # module-cost: 0.058	tests/system/py/test_scan_screen.py
 # module-cost: 241.876	tests/system/py/test_scan_update_modes.py
 # module-cost: 2.935	tests/system/py/test_sealed_publication_contract.py
