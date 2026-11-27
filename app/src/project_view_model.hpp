@@ -597,11 +597,13 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // experiment1, experiment2, … takes the file's name. A second load replaces the data. One undoable step, and
     // one message saying what the reader skipped or changed.
     //
-    // Every Load data route reads its files off the GUI thread (edi ADR-0089 point 7): it returns true once the read
-    // started, false when it refused first, and dataLoadSettled says how it ended. The assistant's pre-armed input is
-    // loaded in the call that consumes it.
+    // Every Load data route reads its files off the GUI thread (edi ADR-0110): it returns false when it refused in the
+    // call, and true when the data is in or a load started. startedDataLoad, read right after the call, names the load
+    // it started (0 when it started none), and dataLoadSettled carries that number when the load ends. The assistant's
+    // pre-armed input is loaded in the call that consumes it.
     Q_INVOKABLE bool loadData(int index, const QUrl& file);
-    // Stops the running load: its result is dropped and nothing changes.
+    Q_INVOKABLE int startedDataLoad() const { return started_load_; }
+    // Stops the running load: its result is dropped, nothing changes, and it settles as not loaded.
     Q_INVOKABLE void cancelDataLoad();
     bool loadingData() const { return pending_load_.has_value(); }
     QString readingData() const;
@@ -915,8 +917,10 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     void missingDataFileChanged();
     void loadingDataChanged();
     void readingDataChanged();
-    // Once for every load a route started: applied (true), or refused, cancelled or replaced by a newer one (false).
-    void dataLoadSettled(bool loaded);
+    // Exactly once for every load a route started, with its number: applied (true), or refused, cancelled, replaced
+    // by a newer load or its experiment removed (false). A view-model destroyed first settles nothing: a waiter watches
+    // its `destroyed` too.
+    void dataLoadSettled(int load, bool loaded);
     void pendingCollectionDataChanged();
     void colourSchemeChanged();
     void experimentColourPositionsChanged();
@@ -1434,7 +1438,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
         std::function<bool()> second;
     };
     struct PendingLoad {
-        quint64 id = 0;
+        int id = 0;
         QString text;
         qint64 started_ms = 0;
         std::optional<PreparedScan> scan;
@@ -1447,8 +1451,9 @@ class ProjectViewModel : public QObject, public ProjectEditor {
         QString error;
     };
     bool startDataLoad(DataLoadOrder order);
-    void finishDataLoad(quint64 id, std::map<std::string, ReadOutcome> outcomes, const QString& copy_error);
-    void discardDataLoad();
+    void finishDataLoad(int id, std::map<std::string, ReadOutcome> outcomes, const QString& copy_error);
+    // Drops the running load and settles it as not loaded.
+    void dropDataLoad();
     // The file's rows as the route's second phase takes them from the job, or read now for a synchronous caller.
     edi::PlainDataLoad readDataFile(const edi::BraggPdExperiment& experiment, const std::string& reader,
                                     const std::string& source, bool take_file_name);
@@ -1458,7 +1463,8 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     bool loadDatasetsNow(ExperimentViewModel* experiment, const QList<QUrl>& files, bool asScan, bool copy,
                          const QList<CollectionOrigin>& origins);
     std::optional<PendingLoad> pending_load_;
-    quint64 load_serial_ = 0;
+    int load_serial_ = 0;
+    int started_load_ = 0;  // the load the latest route call started, 0 when it started none
     QTimer load_clock_;  // the reading text's seconds
     std::map<std::string, ReadOutcome> preread_;
     bool second_phase_ = false;

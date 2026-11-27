@@ -3755,6 +3755,7 @@ bool ProjectViewModel::loadDataNow(int index, const QUrl& file) {
 }
 
 bool ProjectViewModel::loadDataInto(ExperimentViewModel* experiment, const QUrl& file) {
+    started_load_ = 0;
     const int index = experiment != nullptr ? static_cast<int>(experiment_models_.indexOf(experiment)) : -1;
     if (index < 0) {
         const QString refusal = tr("The experiment the file was chosen for is no longer in the project");
@@ -3783,6 +3784,7 @@ QString reading_text(const QStringList& files) {
 }  // namespace
 
 bool ProjectViewModel::loadData(int index, const QUrl& file) {
+    started_load_ = 0;
     // Refusals the route makes before reading, and the assistant's pre-armed input, stay in this call.
     if (retired_ || widget_file_input_ || scan_ || index < 0 || index >= experiment_models_.size() ||
         !file.isLocalFile())
@@ -3807,6 +3809,7 @@ bool ProjectViewModel::loadData(int index, const QUrl& file) {
 
 bool ProjectViewModel::loadDataIntoNewExperiment(const QUrl& file, const QString& sampleForm, const QString& beamMode,
                                                  const QString& radiationProbe) {
+    started_load_ = 0;
     if (retired_ || scan_ || !canCreateExperiment() || !file.isLocalFile())
         return loadDataIntoNewExperimentNow(file, sampleForm, beamMode, radiationProbe);
     // The new experiment's kind decides how the file is read; an impossible type refuses here, before any read.
@@ -3832,6 +3835,7 @@ bool ProjectViewModel::loadDataIntoNewExperiment(const QUrl& file, const QString
 
 bool ProjectViewModel::loadDatasets(ExperimentViewModel* experiment, const QList<QUrl>& files, bool asScan, bool copy,
                                     const QList<CollectionOrigin>& origins) {
+    started_load_ = 0;
     const int index = static_cast<int>(experiment_models_.indexOf(experiment));
     const auto now = [&] { return loadDatasetsNow(experiment, files, asScan, copy, origins); };
     // Refusals the route makes before reading stay in this call, and so does the assistant's pre-armed input.
@@ -3904,26 +3908,27 @@ bool ProjectViewModel::loadDatasets(ExperimentViewModel* experiment, const QList
 }
 
 bool ProjectViewModel::startDataLoad(DataLoadOrder order) {
-    discardDataLoad();  // a newer load replaces the one still reading
+    dropDataLoad();  // a newer load replaces the one still reading, which settles as not loaded
+    const QPointer<ProjectViewModel> alive(this);
+    if (!alive || retired_) return false;
     PendingLoad pending;
-    pending.id = ++load_serial_;
+    load_serial_ = load_serial_ == std::numeric_limits<int>::max() ? 1 : load_serial_ + 1;
+    pending.id = load_serial_;
     pending.text = reading_text(order.files);
     pending.started_ms = QDateTime::currentMSecsSinceEpoch();
     pending.scan = order.scan;
     pending.second = std::move(order.second);
     pending.cancelled = std::make_shared<std::atomic<bool>>(false);
-    const quint64 id = pending.id;
+    const int id = pending.id;
     const auto cancelled = pending.cancelled;
     if (order.target) {
         // Removing the experiment the files are read for drops the load.
         pending.watch = connect(order.target.data(), &QObject::destroyed, this, [this, id] {
-            if (pending_load_ && pending_load_->id == id) {
-                discardDataLoad();
-                emit dataLoadSettled(false);
-            }
+            if (pending_load_ && pending_load_->id == id) dropDataLoad();
         });
     }
     pending_load_ = std::move(pending);
+    started_load_ = id;
     load_clock_.start();
     emit loadingDataChanged();
     emit readingDataChanged();
@@ -3979,7 +3984,7 @@ bool ProjectViewModel::startDataLoad(DataLoadOrder order) {
     return true;
 }
 
-void ProjectViewModel::finishDataLoad(quint64 id, std::map<std::string, ReadOutcome> outcomes,
+void ProjectViewModel::finishDataLoad(int id, std::map<std::string, ReadOutcome> outcomes,
                                       const QString& copy_error) {
     if (!pending_load_ || pending_load_->id != id) return;
     PendingLoad pending = std::move(*pending_load_);
@@ -4027,24 +4032,23 @@ void ProjectViewModel::finishDataLoad(quint64 id, std::map<std::string, ReadOutc
     }
     if (!self) return;
     if (!loaded) removeScan();
-    emit dataLoadSettled(loaded);
+    emit dataLoadSettled(id, loaded);
 }
 
-void ProjectViewModel::discardDataLoad() {
+void ProjectViewModel::dropDataLoad() {
     if (!pending_load_) return;
+    const int id = pending_load_->id;
     pending_load_->cancelled->store(true);  // the job stops between files and only cleans up
     disconnect(pending_load_->watch);
     pending_load_.reset();
     load_clock_.stop();
+    const QPointer<ProjectViewModel> self(this);
     emit loadingDataChanged();
     emit readingDataChanged();
+    if (self) emit dataLoadSettled(id, false);
 }
 
-void ProjectViewModel::cancelDataLoad() {
-    if (!pending_load_) return;
-    discardDataLoad();
-    emit dataLoadSettled(false);
-}
+void ProjectViewModel::cancelDataLoad() { dropDataLoad(); }
 
 QString ProjectViewModel::readingData() const {
     if (!pending_load_) return {};

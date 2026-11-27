@@ -2,8 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-11-27
-- **Implementation:** 🟡 Partially implemented: the two phases, the reading row and `dataLoadSettled` are in; the web
-  app's bound follows its measurement
+- **Implementation:** ✅ Implemented
 - **Priority:** High
 - **Forward constraint (binding on new features):** a new way to load measured data reads and copies its files in the
   background job of this ADR and settles once with `dataLoadSettled`; nothing parses a data file on the GUI thread, and
@@ -29,15 +28,19 @@ view's data.
 2. **Not the calculation worker.** Its destructor waits for the running job, and crysta's readers cannot be stopped,
    so closing a project during a long read would freeze. A job of this ADR that is no longer wanted finishes in the
    background; its result is dropped and the folder it copied into removed.
-3. **One load at a time, and its end.** While a load runs the Experiments group shows "Reading <file>, <size> MB, <n> s"
-   in the fit's striped bar, with Cancel. A new load replaces the running one; Cancel, removing the target experiment
-   and closing the project drop it. `ProjectViewModel::loadingData` says one runs, and `dataLoadSettled(bool loaded)`
-   comes exactly once per started load. A route returns true when its job started. Callers that need the data wait for
-   the signal: the online dialog marks an entry loaded then, and the documentation capture waits for it. The
-   assistant's own input is loaded in the call that consumes it, as before.
-4. **The web app's bound.** The browser holds a file twice while reading it (in the page and in the app's memory) and
-   the app's memory is limited, so the web app refuses a data file over the largest size it loaded reliably in Chrome,
-   before reading any byte of it: in the file chooser's accept step, from the size the browser reports, and in the
+3. **One load at a time, and its end, by number.** While a load runs the Experiments group shows "Reading <file>, <size>
+   MB, <n> s" in the fit's striped bar, with Cancel. Each load a route starts gets a number, which
+   `ProjectViewModel::startedDataLoad()` gives right after the route's call (0 when the call started none), and
+   `dataLoadSettled(number, loaded)` comes exactly once for it: when it is applied or refused, or as not loaded when
+   Cancel, a newer load, or removing its experiment drops it. A caller that needs the data waits for its own number, so
+   another load's end never answers it: the online dialog marks its entry loaded then, and the documentation capture and
+   the demo wait through `wait_for_load` (`app/src/load_wait.hpp`), which also stops waiting when the project closes. A
+   route returns true when its job started. The assistant's own input is loaded in the call that consumes it, as before.
+4. **The web app's bound, 50 MB.** The browser holds a file twice while reading it (in the page and in the app's
+   memory) and the app's memory is limited to 4 GiB, so the web app refuses a data file over the largest size it loaded
+   reliably in Chrome: 50 MB loaded three times out of three with 43 % of that memory to spare, and 100 MB neither
+   finished in 50 minutes nor kept a quarter spare (files from `tools/probes/large_plain_data.py`). It refuses before
+   reading any byte of the file: in the file chooser's accept step, from the size the browser reports, and in the
    folder chooser, over every file's size. It also drops its own copy of a file once the file is in the page's file
    system. The desktop has no such bound.
 
