@@ -58,7 +58,7 @@ each.
 | source | `🔧 maintainer` | `5BB5AB` | E | owner | Filed from feedback whose origin is `🔧 maintainer`, or filed by the owner. |
 | source | `🤖 agent` | `BFE5E0` | E | owner | Found by an agent while working on a development task. |
 | source | `🌙 nightly` | `DDD6FE` | E | owner | The one open issue "Nightly CI is red on main", kept by hand (rule 5). |
-| status | `🚧 in progress` | `7C3AED` | E | owner, triage agent | A development task is working on the issue now (rule 4). |
+| status | `🚧 in progress` | `7C3AED` | E | nobody | No longer set: the board's In progress column says a task is working on the issue (rule 4). Kept while the owner decides whether to delete it. |
 | source | `🔧 maintainer`, `🙋 user` | `5BB5AB`, `0F766E` | F | triage agent | The origin: the message's contact is the maintainer (or an agent's test), or anyone else. |
 | status | `✉️ can reply` | `5B21B6` | F | owner | The sender left an e-mail address: reply when the report is answered. |
 | none | `survey`, `event:<event>` | `C5DEF5`, `C5DEF5` | F | survey tools | Set by the service on survey answers; `tools/survey-summary.mjs` lists issues by `survey`. |
@@ -74,9 +74,11 @@ each.
    (cli), `✉️` (can reply) and `⚠️` (the placeholders) end with the variation selector U+FE0F, the others have none.
    `🪟 app` and `🌍 all` are short for several interfaces: the release plan replaces them with those, and overlapping
    labels are accepted and name each one once.
-4. **In progress.** When a development task starts, `🚧 in progress` is set on every edi issue the task owns. When the
-   task's pull request merges, each of those issues is checked against the merged code and the label is removed, whether
-   the issue is done or not; it is also removed when the task stops or drops the issue.
+4. **In progress (amended 2026-11-27).** When a development task starts, every edi issue the task owns moves to the In
+   progress column of the edi board (https://github.com/orgs/enhantica/projects/1). When the task's pull request merges,
+   each issue is checked against the merged code: a done issue moves to Merged, a partly done one, or one another task now
+   owns, goes back to Planned or to that task's column, never to Merged. An issue a task stops or drops goes back to
+   Planned. No label marks the work; `🚧 in progress` is no longer set.
 5. **The nightly run.** There is at most one open issue for a red nightly run on `main`, "Nightly CI is red on main", with
    `🌙 nightly`, a scope and a priority. A maintainer keeps it by hand: it names the failures that are real, is updated
    instead of filing another, and is closed when a nightly run on `main` passes. Nothing files, updates or closes it
@@ -88,7 +90,7 @@ each.
    (edi has no develop branch; the release plan no longer reads it), `[bot] release` and `[bot] backmerge` in
    edi-feedback (no pull requests there), and the `[area]` group, which nothing reads (the release plan uses
    the interface; work is selected by issue). The `[task]` group, which needed a new label for every task, is dropped too:
-   the in-progress label replaces it. On 2026-11-25 the owner deleted `🔥 highest`, never used, and `⚪ lowest`, whose two
+   the board's columns replace it (rule 4). On 2026-11-25 the owner deleted `🔥 highest`, never used, and `⚪ lowest`, whose two
    issues became `🟡 low`: three priorities are enough, and a crash or data loss is `🔴 high`. The same day edi-feedback's
    form types `question`, `idea`, `problem` and `feedback` went once every issue had a scope, and its `🔧 owner` became
    `🔧 maintainer`, as in edi.
@@ -96,8 +98,8 @@ each.
 ## Consequences
 
 - An agent can triage without judgement calls outside the rules, and the owner's queue is one label.
-- An issue shows whether it is being worked on, and a public issue shows whether a user, the maintainer, an agent or the
-  nightly run raised it.
+- The board shows whether an issue is being worked on, and a public issue shows whether a user, the maintainer, an agent
+  or the nightly run raised it.
 
 ## Alternatives considered
 
