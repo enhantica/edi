@@ -200,7 +200,7 @@ Item {
     readonly property real titleGutter: Math.round(em * 1.6)
     // The toolbar ends at the plot areas' right border, one em above the main one. A report figure has no toolbar; its
     // plot starts no closer to the frame's top than to its sides (the owner, 2026-10-13).
-    readonly property real topHeight: chart.report && !chart.reportToolbar ? Math.max(sideMargin, rightMargin) + (chart.reliability !== "" ? Math.round(em * 1.5) : 0) : topMargin + toolbarLines.height + belowToolbar + (chart.reliability !== "" ? Math.round(em * 1.5) : 0)
+    readonly property real topHeight: chart.report && !chart.reportToolbar ? Math.max(sideMargin, rightMargin) + (chart.reliability !== "" ? Math.round(em * 1.5) : 0) : topMargin + toolbarLines.height + addedLine.room + belowToolbar + (chart.reliability !== "" ? Math.round(em * 1.5) : 0)
     // A report figure's reliability text (edi::reliability_text), above its main plot at the left; the app's own
     // charts show it in the page's selector line.
     readonly property string reliability: chart.report && chart.report.modelRevision >= 0 ? chart.report.reliability(chart.reportExperiment) : ""
@@ -636,7 +636,7 @@ Item {
         // toolbar's own controls (owner, 2026-11-27).
         Row {
             objectName: "chart.findK.strip"
-            visible: chart.peakMode
+            visible: chart.peakMode && chart.addedNote === ""
             spacing: AppSizes.inputSpacing
             EaElements.Label {
                 id: stripNote
@@ -651,30 +651,52 @@ Item {
                     id: noteHover
                 }
                 color: chart.peakNote !== "" ? EaStyle.Colors.red : EaStyle.Colors.themeForeground
-                text: chart.addedNote !== "" ? chart.addedNote : chart.peakNote !== "" ? chart.peakNote : chart.peakMarks.length === 1 ? qsTr("1 peak marked") : qsTr("%1 peaks marked").arg(chart.peakMarks.length)
+                text: chart.peakNote !== "" ? chart.peakNote : chart.peakMarks.length === 1 ? qsTr("1 peak marked") : qsTr("%1 peaks marked").arg(chart.peakMarks.length)
             }
             StripButton {
                 objectName: "chart.findK"
-                visible: chart.addedNote === ""
                 enabled: chart.peakMarks.length > 0
                 text: qsTr("Find k")
                 onClicked: chart.openKVectors()
             }
             StripButton {
                 objectName: "chart.findK.clear"
-                visible: chart.addedNote === ""
                 enabled: chart.peakMarks.length > 0
                 text: qsTr("Clear")
                 onClicked: chart.peakMarks = []
             }
-            StripButton {
-                objectName: "chart.findK.openStructure"
-                visible: chart.addedNote !== ""
-                text: qsTr("Open in Structure page")
-                onClicked: {
-                    chart.addedNote = "";
-                    EaGlobals.Vars.appBarCurrentIndex = 2;
-                }
+        }
+    }
+
+    // After Add, the message on a line of its own under the toolbar, wrapping, so the no-intensity note reads whole
+    // and the toolbar keeps its controls (owner, 2026-11-27).
+    Item {
+        id: addedLine
+        readonly property real room: visible ? height + chart.em * 0.5 : 0
+        objectName: "chart.findK.added"
+        visible: chart.interactive && chart.addedNote !== ""
+        x: chart.toolbarLeft
+        y: chart.topMargin + toolbarLines.height + chart.em * 0.25
+        width: chart.width - chart.toolbarRightInset - chart.toolbarLeft
+        height: Math.max(addedText.implicitHeight, openStructure.height)
+        EaElements.Label {
+            id: addedText
+            anchors.left: parent.left
+            anchors.right: openStructure.left
+            anchors.rightMargin: AppSizes.inputSpacing
+            anchors.verticalCenter: parent.verticalCenter
+            wrapMode: Text.Wrap
+            text: chart.addedNote
+        }
+        StripButton {
+            id: openStructure
+            objectName: "chart.findK.openStructure"
+            anchors.right: parent.right
+            anchors.verticalCenter: parent.verticalCenter
+            text: qsTr("Open in Structure page")
+            onClicked: {
+                chart.addedNote = "";
+                EaGlobals.Vars.appBarCurrentIndex = 2;
             }
         }
     }
