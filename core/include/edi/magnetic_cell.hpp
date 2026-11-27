@@ -152,6 +152,9 @@ struct MagneticPeak {
 /// space group allows, from the measured data alone, then, when the experiment holds a calculated curve, its
 /// unexplained peaks on allowed reflections as suggestions (crysta's forbidden_peaks).
 std::vector<MagneticPeak> magnetic_mark_candidates(const Project& project, std::size_t experiment, std::size_t parent);
+/// A mark the user sets at `x` where no observed maximum is near (owner decision 2026-11-27, "free marking"): its d,
+/// tolerance and half width from the experiment's calibration and instrument (crysta's peak_at).
+MagneticPeak magnetic_peak_at(const Project& project, std::size_t experiment, std::size_t parent, double x);
 /// The peaks the experiment's current calculated curve leaves unexplained, over its included points (crysta's
 /// unexplained_peaks), highest first. Throws std::invalid_argument naming the reason.
 std::vector<MagneticPeak> magnetic_unexplained_peaks(const Project& project, std::size_t experiment,

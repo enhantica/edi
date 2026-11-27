@@ -10713,7 +10713,26 @@ std::vector<MagneticPeak> magnetic_mark_candidates(const Project& project, std::
         out.push_back({p.x, p.d, p.tolerance, p.significance, p.half_width, p.on_allowed_reflection,
                        !p.on_allowed_reflection || unexplained});
     }
+    // An excess the difference curve shows clearly above its own noise, with the instrument's width, that is not an
+    // observed maximum above already: a suggestion of its own (owner decision 2026-11-27, "better suggestions").
+    for (const crysta::UnexplainedPeak& r : residual) {
+        const bool listed = std::any_of(out.begin(), out.end(), [&r](const MagneticPeak& p) {
+            return std::abs(r.d - p.d) <= std::max(r.tolerance, p.tolerance);
+        });
+        if (!listed) {
+            out.push_back({r.x, r.d, r.tolerance, r.significance, r.half_width, r.on_allowed_reflection, true});
+        }
+    }
+    std::sort(out.begin(), out.end(), [](const MagneticPeak& a, const MagneticPeak& b) { return a.x < b.x; });
     return out;
+}
+
+MagneticPeak magnetic_peak_at(const Project& project, std::size_t experiment, std::size_t parent, double x) {
+    require_experiment(project, experiment, parent);
+    const KEngine k(project);
+    const crysta::Structure& structure = engine_structure(k.engine, project.structures[parent]->name.value());
+    const crysta::UnexplainedPeak p = crysta::peak_at(structure, k.engine.experiments.at(experiment), x);
+    return {p.x, p.d, p.tolerance, 0.0, p.half_width, false, false};
 }
 
 std::vector<MagneticKRow> magnetic_k_search(const Project& project, std::size_t experiment, std::size_t parent,
