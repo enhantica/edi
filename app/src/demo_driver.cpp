@@ -4150,6 +4150,11 @@ void DemoDriver::next_action() {
             wait_assistant_then([this] { settle_then([this] { next_action(); }); });
             return;
         }
+        // A control that background work makes (a search's results): the step waits until it is shown.
+        if (action.startsWith(QLatin1String("wait-control:"))) {
+            wait_control_then(action.mid(13), [this] { settle_then([this] { next_action(); }); });
+            return;
+        }
         // A From web search or load runs on the network; the dialog says when it is done.
         if (action == QLatin1String("wait-online")) {
             wait_online_then([this] { settle_then([this] { next_action(); }); });
@@ -7040,6 +7045,20 @@ void DemoDriver::wait_assistant_then(const std::function<void()>& next, int wait
         wait_assistant_then(next, waited_ms + 500, idle_polls);
     });
 #endif
+}
+
+void DemoDriver::wait_control_then(const QString& name, const std::function<void()>& next, int waited_ms) {
+    QQuickItem* item = find(name, false);
+    if (item != nullptr && item->isVisible()) {
+        next();
+        return;
+    }
+    if (waited_ms > kFitWaitMs) {
+        fail(QStringLiteral("step %1: control '%2' did not appear").arg(steps_[current_].image, name));
+        return;
+    }
+    QTimer::singleShot(kSettleIntervalMs, this,
+                       [this, name, next, waited_ms] { wait_control_then(name, next, waited_ms + kSettleIntervalMs); });
 }
 
 void DemoDriver::wait_online_then(const std::function<void()>& next, int waited_ms) {
