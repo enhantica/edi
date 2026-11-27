@@ -176,7 +176,6 @@ AppDialog {
                         objectName: `chart.kVector.${row.index}.indexed`
                         parent: indexedCell
                         visible: indexedHover.hovered
-                        delay: Qt.styleHints.mousePressAndHoldInterval
                         contentItem: Column {
                             spacing: EaStyle.Sizes.fontPixelSize * 0.25
                             Repeater {
