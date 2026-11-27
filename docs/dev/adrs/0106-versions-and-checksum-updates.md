@@ -73,12 +73,26 @@ Once the tool was replaced, it still showed the old release's pages, which the f
    writes the data file: the file becomes its first resource and is deleted. A first installation does the same, so
    no copy is left behind. The protocol check starts from a release whose pages differ, and checks after the update
    that the data file's first resource holds the new release's control script, style sheet, text and images.
+7. **2026.11.x apps get a legacy feed** (the owner, 2026-11-27). Their update check reads `releases/stable.json`
+   (`releases/testing.json` on the testing channel) and drops the whole document when one version is not
+   `YYYY.MM.N` (`release_changes` in `app/src/desktop_updates.cpp` at `v2026.11.31`), so a feed holding 26.17 would
+   show them nothing. Apps from 26.17 on read `releases/stable-v2.json` and `releases/testing-v2.json`, which hold the
+   full history as the old files did, in both forms. The release tools still write `releases/stable.json` for the old
+   apps: every published `YYYY.MM.N` release unchanged, and one alias for the newest `YY.N` release, numbered
+   `2026.11.<31 + k>` where `k` counts the published `YY.N` releases up to and including it, so 26.17 is 2026.11.32
+   and 26.18 is 2026.11.33. The alias has the release's date, commit and notes in the old schema (`edi.releases/1`,
+   groups Added, Fixed and Changed, each title one line of at most 512 characters with a pull request number above
+   zero), led by an Added entry "This update is EasyDiffraction 26.17: releases are now numbered by year (26.17,
+   27.1, ...)" that carries the release's first pull request number. Earlier `YY.N` releases leave this feed, so it
+   never holds a version the old parser refuses. `tools/release/legacy_feed.py` applies that parser's rules, and the
+   tools publish no legacy feed it rejects. A testing feed gets the same pair. The alias is only a name in the feed:
+   the Maintenance Tool still updates by content checksum (point 4).
 
 ## Consequences
 
-- Copies of 2026.11.x take 26.17 through the Maintenance Tool by checksum, but their own update check cannot read a
-  `YY.N` feed, so the app does not show them the Update button; the Maintenance Tool's Update and a new download
-  both work.
+- Copies of 2026.11.x see the update in their own app: it finds 2026.11.32 in the legacy feed, whose first note says
+  it is 26.17, and its Update button opens the Maintenance Tool, which installs 26.17 by checksum. The updated app
+  reads the `-v2` feed and shows 26.17.
 - Before a release uses this: one real update from an installed 2026.11.x on macOS or Windows, against a local feed
   built with `--sha-update`, checking the version and date shown, What's new, the tool's checksum and icon, and that
   a second Update offers nothing.
