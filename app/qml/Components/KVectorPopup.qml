@@ -179,10 +179,16 @@ AppDialog {
                     HoverHandler {
                         id: indexedHover
                     }
-                    ToolTip {
+                    // The app's own tooltip (EaElements.ToolTip, as the table cells and toolbar buttons use): its
+                    // style, and placed below the cell, or above where there is no room, never over it. It shows
+                    // data, so at once whatever the tooltip level (owner, 2026-11-27).
+                    EaElements.ToolTip {
+                        id: indexedTip
                         objectName: `chart.kVector.${row.index}.indexed`
                         parent: indexedCell
-                        visible: indexedHover.hovered
+                        requested: indexedHover.hovered
+                        data: true
+                        text: popup.markRoles(row.modelData).map(r => r.text).join("\n")
                         contentItem: Column {
                             spacing: EaStyle.Sizes.fontPixelSize * 0.25
                             Repeater {
@@ -199,6 +205,8 @@ AppDialog {
                                     }
                                     EaElements.Label {
                                         id: roleText
+                                        color: indexedTip.textColor
+                                        font: indexedTip.font
                                         text: roleRow.modelData.text
                                     }
                                 }

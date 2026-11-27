@@ -289,9 +289,14 @@ Flickable {
                         onClicked: graph.pinned = pin.on ? -1 : node.index
                     }
                 }
-                ToolTip {
+                // The app's own tooltip (EaElements.ToolTip): its style, below the card or above it, never over it;
+                // data, so at once (owner, 2026-11-27).
+                EaElements.ToolTip {
+                    id: details
                     objectName: `magnetic.node.${node.index}.tooltip`
-                    visible: graph.hovered === node.index && node.data_.bns !== ""
+                    requested: graph.hovered === node.index && node.data_.bns !== ""
+                    data: true
+                    text: node.data_.bns !== "" ? graph.detailsOf(node.data_).join(" ") : ""
                     contentItem: GridLayout {
                         columns: 2
                         columnSpacing: EaStyle.Sizes.fontPixelSize
@@ -301,7 +306,8 @@ Flickable {
                             delegate: EaElements.Label {
                                 required property string modelData
                                 required property int index
-                                color: index % 2 === 0 ? EaStyle.Colors.themeForegroundMinor : EaStyle.Colors.themeForeground
+                                color: details.textColor
+                                font: details.font
                                 text: modelData
                             }
                         }
