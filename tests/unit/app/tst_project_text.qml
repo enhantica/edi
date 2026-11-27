@@ -407,6 +407,13 @@ Item {
             compare(appearance(), inherited, "Reopening reads the migrated values and keeps the edit");
             Session.project.currentStructureIndex = 1;
             compare(appearance(), inherited, "The migrated appearance stays global after another selection");
+            Session.closeProject();
+            const firstWithoutView = isolatedAppearanceProject();
+            verify(SettingsProof.write(firstWithoutView, second, SettingsProof.text(firstWithoutView, second) + "\n_structure_view.moment_scale 1.875\n"), "Only the second structure supplies an old scale");
+            verify(Session.openProject(firstWithoutView), "The older project also opens when its first structure has no settings");
+            compare(Session.project.structureViewOptions.momentScale, 1, "An empty first structure uses the new default");
+            Session.project.currentStructureIndex = 1;
+            compare(Session.project.structureViewOptions.momentScale, 1, "The reader never falls through to the second structure's stored scale");
         }
         function test_scattering_lengths_save_only_user_overrides() {
             Session.project.currentStructureIndex = 0;

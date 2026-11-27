@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-27T17:35:55Z
+# measured_utc = 2026-11-27T19:16:44Z
 #
-# Recorded from: Banked rows and fixed-symmetry native pre-fix replay
-# Collected tests: 267589; with a reported duration: 86301
+# Recorded from: Banked rows plus scoped expected-red project appearance actors on edi 8717fe13
+# Collected tests: 267590; with a reported duration: 86300
 # Module-scoped fixture costs recorded: 223
 #
 # Breaches are decided PER TIER against the table
@@ -29,12 +29,12 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 267576
+# inventory_python = 267577
 # inventory_cpp = 13
-# inventory_measured = 187613
-# inventory_unmeasured = 79976
+# inventory_measured = 187612
+# inventory_unmeasured = 79978
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
-# inventory_pr_python = 92665
+# inventory_pr_python = 92666
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -256070,7 +256070,8 @@ UNMEASURED:not-completed-in-this-run	tests/system/py/test_project_creation_overw
 0.670	tests/system/py/test_project_file_text_contract.py::test_real_text_tab_actor[ProjectText::test_invalid_edits_are_atomic:short-loop-row]
 0.760	tests/system/py/test_project_file_text_contract.py::test_real_text_tab_actor[ProjectText::test_invalid_edits_are_atomic:unknown-category]
 0.750	tests/system/py/test_project_file_text_contract.py::test_real_text_tab_actor[ProjectText::test_invalid_edits_are_atomic:unknown-item]
-1.070	tests/system/py/test_project_file_text_contract.py::test_real_text_tab_actor[ProjectText::test_per_structure_appearance]
+UNMEASURED:failed-in-this-run	tests/system/py/test_project_file_text_contract.py::test_real_text_tab_actor[ProjectText::test_legacy_appearance_migrates_first_structure_once]
+UNMEASURED:failed-in-this-run	tests/system/py/test_project_file_text_contract.py::test_real_text_tab_actor[ProjectText::test_project_appearance_survives_structure_switch_and_reopen]
 0.800	tests/system/py/test_project_file_text_contract.py::test_real_text_tab_actor[ProjectText::test_report_asks_for_location]
 0.910	tests/system/py/test_project_file_text_contract.py::test_real_text_tab_actor[ProjectText::test_report_is_written_inside_opened_zip]
 0.740	tests/system/py/test_project_file_text_contract.py::test_real_text_tab_actor[ProjectText::test_syntax_colours]
