@@ -141,6 +141,13 @@ independently of optional update notifications. The red Update button follows th
 guard and starts the maintenance tool. On the updated app's next launch, What's new includes every
 release since the user's previous version. Ordinary developer builds retain their git version.
 
+Apps from 26.17 on read the history feed as `releases/stable-v2.json`, or `releases/testing-v2.json` on the testing
+channel. The tools also publish `releases/stable.json` for 2026.11.x apps, whose update check drops a feed holding any
+version that is not `YYYY.MM.N`: it keeps the old releases and adds only the newest `YY.N` release, under the alias
+`2026.11.<31 + k>`, `k` being its place among the published `YY.N` releases (26.17 is 2026.11.32), with a first note
+naming the real release. `tools/release/legacy_feed.py` checks it by the 2026.11 app's rules, and a feed it rejects
+is not published. A testing feed gets the same legacy `testing.json` (ADR-0106).
+
 ## Python preview distribution
 
 Each versioned native build also produces a CPython 3.12+ stable-ABI wheel.
