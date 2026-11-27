@@ -127,7 +127,7 @@ struct SceneOptions {
     // also takes the corner atoms near it in whichever cell they sit, so its polyhedron is whole.
     bool polyhedra_complete = false;
     bool moments = true;        // `_structure_view.show_moments`
-    double moment_scale = 0.75;  // Angstrom of arrow per Bohr magneton (`_structure_view.moment_scale`)
+    double moment_scale = 1.0;  // Angstrom of arrow per Bohr magneton (`_structure_view.moment_scale`)
     MomentColours moment_colours = MomentColours::GreyedAtom;  // the app's preference
     MomentView moment_view = MomentView::ThroughAtom;          // `_structure_view.moment_view`
 };
