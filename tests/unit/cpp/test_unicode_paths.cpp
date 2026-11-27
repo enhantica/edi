@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include <doctest/doctest.h>
 
+#include <algorithm>
 #include <chrono>
 #include <filesystem>
 #include <fstream>
@@ -91,7 +92,10 @@ TEST_CASE("crysta saves and reopens a project in a Unicode folder") {
             crysta::save_project(project, target);
             fixture.check_directory(folder);
             const auto reopened = crysta::load_project(target);
-            CHECK_MESSAGE(reopened.metadata.name.get() == "Independent crystals", "crysta reopens the saved project metadata");
+            auto names = reopened.experiments.keys();
+            std::ranges::sort(names);
+            const std::vector<std::string> expected{"amber", "copper", "violet"};
+            CHECK_MESSAGE(names == expected, "crysta reopens all three datablocks named in the source files");
             crysta::save_project(reopened, target);
             fixture.check_directory(folder);
             CHECK_MESSAGE(crysta::load_project(target).experiments.size() == 3, "crysta reopens all three source experiments after saving again");
