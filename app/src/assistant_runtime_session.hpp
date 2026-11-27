@@ -44,6 +44,9 @@ public:
     /// `signInFinished`.
     virtual void signIn(const AssistantRuntimeLaunch& launch) = 0;
     virtual void cancelSignIn() = 0;
+    /// What the user typed or chose for the sign-in process's prompt (a code, or yes/no). Written only to that
+    /// process's input; never stored, logged or recorded.
+    virtual void answerSignIn(const QString& input) = 0;
     /// The runtime's own sign-out for the account's home. Emits `signedOut`.
     virtual void signOut(const AssistantRuntimeLaunch& launch) = 0;
 
