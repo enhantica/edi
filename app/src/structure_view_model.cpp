@@ -1206,7 +1206,7 @@ void StructureViewModel::syncAtomTypes() {
 }
 
 QString StructureViewModel::typedAtomType(const QString& text, const QStringList& offered) const {
-    const QString type = text.trimmed();
+    QString type = text.trimmed();
     const edi::Project* project = editor_.currentProject();
     if (type.isEmpty() || offered.contains(type) || project == nullptr ||
         !edi::atom_type_computes(*project, structure_, type.toStdString())) {
