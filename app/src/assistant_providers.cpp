@@ -1,7 +1,14 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "assistant_providers.hpp"
 #include <stdexcept>
+#include <QCoreApplication>
+#include <QDir>
+#include <QFile>
 #include <QFileInfo>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include "claude_runtime_config.hpp"
+#include "copilot_runtime_config.hpp"
 #include "codex_agent.hpp"
 
 namespace edi_app {
@@ -42,13 +49,44 @@ QString development_override(const char* variable) {
         throw std::runtime_error("The explicit development agent executable is unavailable");
     return file.absoluteFilePath();
 }
+// The bundled runtime when its package was staged and its identity file names this build's pin, else empty.
+QString bundled_runtime(const char* runtime, bool available, const char* buildAppDir, const char* buildDir,
+                        const char* installRelative, const char* version, const char* entrypoint) {
+    if (!available) return {};
+    const auto app = QDir::cleanPath(QCoreApplication::applicationDirPath());
+    const auto root = app == QDir::cleanPath(QString::fromUtf8(buildAppDir))
+                          ? QString::fromUtf8(buildDir)
+                          : QDir(app).absoluteFilePath(QString::fromUtf8(installRelative));
+    QFile identity(root + QStringLiteral("/edi-runtime.json"));
+    if (!identity.open(QIODevice::ReadOnly) || identity.size() > 64 * 1024) return {};
+    QJsonParseError error;
+    const auto parsed = QJsonDocument::fromJson(identity.readAll(), &error);
+    if (error.error != QJsonParseError::NoError || !parsed.isObject()) return {};
+    const auto metadata = parsed.object();
+    if (metadata.value("runtime") != QLatin1StringView(runtime) || metadata.value("version") != QLatin1StringView(version) ||
+        metadata.value("entrypoint") != QString::fromUtf8(entrypoint))
+        return {};
+    const auto executable = root + QLatin1Char('/') + QString::fromUtf8(entrypoint);
+    const QFileInfo file(executable);
+    return file.isFile() && file.isExecutable() ? executable : QString();
+}
 }  // namespace
 
 QString assistant_provider_executable(AssistantProviderId id) {
     switch (id) {
         case AssistantProviderId::ChatGpt: return CodexAgent::executable();
-        case AssistantProviderId::Claude: return development_override("EDI_CLAUDE_DEVELOPMENT_EXECUTABLE");
-        case AssistantProviderId::Copilot: return development_override("EDI_COPILOT_DEVELOPMENT_EXECUTABLE");
+        case AssistantProviderId::Claude:
+            if (qEnvironmentVariableIsSet("EDI_CLAUDE_DEVELOPMENT_EXECUTABLE"))
+                return development_override("EDI_CLAUDE_DEVELOPMENT_EXECUTABLE");
+            return bundled_runtime("claude", EDI_CLAUDE_RUNTIME_AVAILABLE, EDI_CLAUDE_BUILD_APP_DIR,
+                                   EDI_CLAUDE_RUNTIME_BUILD_DIR, EDI_CLAUDE_INSTALL_RELATIVE,
+                                   EDI_CLAUDE_RUNTIME_VERSION, EDI_CLAUDE_RUNTIME_ENTRYPOINT);
+        case AssistantProviderId::Copilot:
+            if (qEnvironmentVariableIsSet("EDI_COPILOT_DEVELOPMENT_EXECUTABLE"))
+                return development_override("EDI_COPILOT_DEVELOPMENT_EXECUTABLE");
+            return bundled_runtime("copilot", EDI_COPILOT_RUNTIME_AVAILABLE, EDI_COPILOT_BUILD_APP_DIR,
+                                   EDI_COPILOT_RUNTIME_BUILD_DIR, EDI_COPILOT_INSTALL_RELATIVE,
+                                   EDI_COPILOT_RUNTIME_VERSION, EDI_COPILOT_RUNTIME_ENTRYPOINT);
     }
     return {};
 }
