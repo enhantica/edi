@@ -573,6 +573,10 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // ({x, d, tolerance, significance, halfWidth, suggestion}), the ones at forbidden reflections first; the search
     // that follows (findPropagationVectors) takes indices into this list. Empty and `refused` on a refusal.
     Q_INVOKABLE QVariantList magneticMarkCandidates(int index, int experiment);
+    // After Add from the chart: the first new structure's name, and its magnetic curve's largest value within
+    // `halfWidths` of each of `xs` in experiment `experiment`, with the curve's largest value anywhere
+    // ({structure, values, max}); empty while the experiment's calculation does not hold that structure yet.
+    Q_INVOKABLE QVariantMap magneticIntensityAt(int experiment, const QList<double>& xs, const QList<double>& halfWidths) const;
     // The structure model at `index`, or null.
     Q_INVOKABLE edi_app::StructureViewModel* structureAt(int index) const { return structure_models_.value(index); }
     // The peaks experiment `experiment`'s kept fit leaves unexplained, {x, d, tolerance, significance}; empty and
@@ -958,6 +962,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     unsigned magnetic_search_ = 0;
     // Find k: the inputs hash of each experiment at its last kept fit, by name, and the last search's snapshot.
     std::map<std::string, std::uint64_t> fit_stamps_;
+    std::string last_magnetic_added_;  // the first structure the last magnetic Add made
     std::vector<edi::MagneticPeak> magnetic_peaks_;
     std::uint64_t k_search_stamp_ = 0;
     int k_search_experiment_ = -1;

@@ -4182,6 +4182,7 @@ bool ProjectViewModel::addMagneticCandidates(int index, const QList<int>& nodes,
     }
     undo_history_.emplace_back(std::move(before));
     syncUndo();
+    last_magnetic_added_ = prepared->structures.empty() ? std::string() : prepared->structures.front()->name.value();
     if (select) setCurrentStructureIndex(static_cast<int>(structure_models_.size()) - static_cast<int>(prepared->structures.size()));
     return true;
 }
@@ -4196,6 +4197,38 @@ void ProjectViewModel::recordFitAdoption() {
         } catch (const std::exception&) {
         }
     }
+}
+
+QVariantMap ProjectViewModel::magneticIntensityAt(int experiment, const QList<double>& xs,
+                                                 const QList<double>& halfWidths) const {
+    if (experiment < 0 || experiment >= static_cast<int>(project_->experiments.size()) || last_magnetic_added_.empty())
+        return {};
+    const auto& source = project_->experiments[static_cast<std::size_t>(experiment)];
+    if (!source->data.has_value()) return {};
+    const edi::PdDataBase& data = *source->data;
+    const std::vector<std::string>& order = data.component_order.values();
+    const auto at = std::find(order.begin(), order.end(), last_magnetic_added_);
+    const std::vector<double>& magnetic = data.component_intensities_magnetic.values();
+    const std::vector<double>& x = data.axis();
+    if (at == order.end() || magnetic.size() != x.size() * order.size()) return {};
+    const std::size_t column = static_cast<std::size_t>(at - order.begin());
+    double peak_max = 0.0;
+    for (std::size_t i = 0; i < x.size(); ++i) {
+        const double v = magnetic[i * order.size() + column];
+        if (std::isfinite(v)) peak_max = std::max(peak_max, v);
+    }
+    QVariantList values;
+    for (int p = 0; p < xs.size(); ++p) {
+        double best = 0.0;
+        for (std::size_t i = 0; i < x.size(); ++i) {
+            const double v = magnetic[i * order.size() + column];
+            if (std::abs(x[i] - xs[p]) <= halfWidths.value(p) && std::isfinite(v)) best = std::max(best, v);
+        }
+        values.push_back(best);
+    }
+    return {{QStringLiteral("structure"), QString::fromStdString(last_magnetic_added_)},
+            {QStringLiteral("values"), values},
+            {QStringLiteral("max"), peak_max}};
 }
 
 int ProjectViewModel::magneticParentOf(int experiment) const {

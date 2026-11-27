@@ -31,6 +31,7 @@ Item {
     property int peakParent: -1
     property string peakNote: ""
     property string addedNote: ""
+    property string addedBase: ""
     readonly property Component kVector: kVectorComponent
     readonly property Component analysis: analysisComponent
 
@@ -89,7 +90,12 @@ Item {
             initialK: k,
             selectAfterAdd: false
         }) as MagneticPopup;
-        analysis.added.connect(count => chart.addedNote = count === 1 ? qsTr("1 magnetic structure added") : qsTr("%1 magnetic structures added").arg(count));
+        analysis.added.connect(count => {
+            chart.addedNote = count === 1 ? qsTr("1 magnetic structure added") : qsTr("%1 magnetic structures added").arg(count);
+            chart.addedBase = chart.addedNote;
+            intensityCheck.tries = 0;
+            intensityCheck.start();
+        });
         analysis.open();
     }
     function togglePeakAt(x) {
@@ -1330,6 +1336,32 @@ Item {
             anchors.fill: parent
             enabled: chart.peakMode && peakLayer.native_
             onClicked: mouse => chart.togglePeakAt(controller.xMin + mouse.x / Math.max(1, width) * (controller.xMax - controller.xMin))
+        }
+    }
+
+    // After Add: once the recalculated pattern holds the first new structure, the marked peaks where it puts no
+    // magnetic intensity are named (owner, 2026-11-27).
+    Timer {
+        id: intensityCheck
+        property int tries: 0
+        interval: 500
+        repeat: true
+        onTriggered: {
+            if (++tries > 40 || !chart.axisProject) {
+                stop();
+                return;
+            }
+            const marks = chart.peakMarks.map(i => chart.peakCandidates[i]).filter(p => p !== undefined);
+            const found = chart.axisProject.magneticIntensityAt(chart.axisProject.currentExperimentIndex, marks.map(p => p.x), marks.map(p => p.halfWidth));
+            if (found.values === undefined)
+                return;
+            stop();
+            const none = [];
+            for (let i = 0; i < marks.length; ++i)
+                if (found.values[i] < Math.max(1.0, 0.01 * found.max))
+                    none.push(marks[i].x.toFixed(2) + "°");
+            if (none.length > 0)
+                chart.addedNote = qsTr("%1 · %2 gives no magnetic intensity at %3").arg(chart.addedBase).arg(found.structure).arg(none.join(", "));
         }
     }
 
