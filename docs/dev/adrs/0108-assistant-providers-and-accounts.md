@@ -487,7 +487,11 @@ shows no Claude checkbox. The release steps that name the component set (publica
 size budget, the Windows runtime scan, the accessibility check) learn the new components. The download site refuses a
 file over 100 MB and publication caps an archive at 95 MB, so each new component's archive size is measured per
 platform at the pinned version before the installer work; an archive over the cap needs the owner's choice of host or
-packaging, recorded here.
+packaging, recorded here. Measured on linux-64 with the compression the repository tool uses (`7z -mx=5`): Claude
+2.1.326 is 123.5 MB (371.4 MB installed) and the Copilot CLI 1.0.116 is 150.1 MB (233.6 MB installed), both over the
+cap, so neither can be published until that choice is made. The eligibility setting is `claude_distribution` in
+`data/distribution.json`, read through `tools/release/assistants.py` by packaging, publication, the download site
+update and the installer workflows.
 
 ### 12. Signing
 
