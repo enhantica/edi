@@ -448,7 +448,7 @@ void ClaudeSession::retireProcess() {
         status_->deleteLater();
     }
     launching_ = false;
-    initialize_passed_ = init_verified_ = readbacks_done_ = false;
+    initialize_passed_ = init_verified_ = readbacks_done_ = hooks_ran_ = false;
     requests_.clear();
     tools_.clear();
     account_info_ = {};
@@ -501,7 +501,12 @@ void ClaudeSession::receive(const QJsonObject& record) {
         return;
     }
     if (type == QStringLiteral("system")) {
-        if (record.value(QStringLiteral("subtype")).toString() == QStringLiteral("init")) systemInit(record);
+        const auto subtype = record.value(QStringLiteral("subtype")).toString();
+        if (subtype == QStringLiteral("init")) systemInit(record);
+        // Hooks that run before `system/init` come from settings edi cannot see beforehand (an organisation's
+        // server-managed settings); they are shown, not refused.
+        else if (!init_verified_ && subtype.startsWith(QStringLiteral("hook_")))
+            hooks_ran_ = true;
         return;
     }
     const bool output = type == QStringLiteral("stream_event") || type == QStringLiteral("assistant") ||
@@ -648,6 +653,7 @@ void ClaudeSession::maybeReadbacksDone() {
                  {QStringLiteral("tokenSource"), text("tokenSource")},
                  {QStringLiteral("host"), launch_.account.host}};
     if (!managed_settings_.isEmpty()) identity_.insert(QStringLiteral("managedSettings"), managed_settings_);
+    if (hooks_ran_) identity_.insert(QStringLiteral("hooksRan"), true);
     // Every field the record holds must be reported, and the same, by this process.
     for (auto it = principal_.constBegin(); it != principal_.constEnd(); ++it) {
         const auto recorded = it.value().toString();

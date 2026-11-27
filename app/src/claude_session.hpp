@@ -51,7 +51,9 @@ QString claude_managed_settings();
 /// process's `initialize` reply and `system/init` give the identity, the skills, the model list and the tool set;
 /// `ready` follows. `openThread` starts a new process for each thread (and an effort change restarts it); each
 /// process passes the same readbacks before any input, and no input is written before its `system/init`.
-/// `ready`'s identity adds `managedSettings` ("policy" or "file") when an organisation's settings were found.
+/// `ready`'s identity adds `managedSettings` ("policy" or "file") when an organisation's settings were found, and
+/// `hooksRan: true` when the process ran hooks (`hook_started`, `hook_progress`, `hook_response`) before
+/// `system/init`.
 /// `usageChanged` may carry `status: {status: allowed_warning|rejected, window?, resetsAt?}` beside the buckets.
 class ClaudeSession final : public AssistantRuntimeSession {
     Q_OBJECT
@@ -93,7 +95,7 @@ private:
 
     QPointer<AssistantProcess> process_;
     Purpose purpose_ = Purpose::Probe;
-    bool initialize_passed_ = false, init_verified_ = false, readbacks_done_ = false;
+    bool initialize_passed_ = false, init_verified_ = false, readbacks_done_ = false, hooks_ran_ = false;
     QStringList expected_tools_;
     QJsonObject identity_;
     QJsonArray models_;
