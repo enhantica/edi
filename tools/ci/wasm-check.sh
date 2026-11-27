@@ -6,6 +6,7 @@
 # service-worker shim). Screenshots and logs go to OUT.
 #
 #   pixi run wasm-check <out dir> <browser driver> <pytest file>...
+#   pixi run wasm-check <out dir> <browser driver> --project-open-click-only
 #
 # Needs wasm-build's output (build/wasm), wasm-toolchain's Chrome and the environment's Node.
 set -euo pipefail
@@ -36,23 +37,30 @@ SITE="$OUT-site"  # beside OUT, so an upload of OUT carries the evidence without
 rm -rf "$SITE"
 python -c 'import sys, zipfile; zipfile.ZipFile(sys.argv[1]).extractall(sys.argv[2])' "$ZIP" "$SITE"
 
-export EDI_WASM_ZIP="$ZIP"
-export EDI_WASM_CLI_MULTITHREAD="$ROOT/build/wasm/multithread/crysta-prefix/bin/crysta.js"
-
-# A reference that cannot be written fails the run, but the checks that do not read it still run; those that
-# do find the folder empty and refuse.
 status=0
-REFERENCE="$(mktemp -d "$OUT/native-written.XXXXXX")"
-if ! bash "$ROOT/tools/ci/wasm-written-reference.sh" "$REFERENCE"; then
-  echo "wasm-check: the native-written reference could not be made; checks that need it will refuse" >&2
-  find "$REFERENCE" -mindepth 1 -delete
-  status=1
-fi
-export EDI_WASM_WRITTEN_REFERENCE="$REFERENCE"
+if [ "$#" -ne 1 ] || [ "$1" != --project-open-click-only ]; then
+  export EDI_WASM_ZIP="$ZIP"
+  export EDI_WASM_CLI_MULTITHREAD="$ROOT/build/wasm/multithread/crysta-prefix/bin/crysta.js"
 
-python -m pytest -q "$@" || status=1
-for mode in multithread shim; do
-  echo "wasm-check: browser, $mode"
-  node --experimental-websocket "$DRIVER" "$SITE" "$mode" "$OUT/$mode" "$CHROME" --written-reference="$REFERENCE" || status=1
-done
+  # A reference that cannot be written fails the run, but the checks that do not read it still run; those that
+  # do find the folder empty and refuse.
+  REFERENCE="$(mktemp -d "$OUT/native-written.XXXXXX")"
+  if ! bash "$ROOT/tools/ci/wasm-written-reference.sh" "$REFERENCE"; then
+    echo "wasm-check: the native-written reference could not be made; checks that need it will refuse" >&2
+    find "$REFERENCE" -mindepth 1 -delete
+    status=1
+  fi
+  export EDI_WASM_WRITTEN_REFERENCE="$REFERENCE"
+
+  python -m pytest -q "$@" || status=1
+  for mode in multithread shim; do
+    echo "wasm-check: browser, $mode"
+    node --experimental-websocket "$DRIVER" "$SITE" "$mode" "$OUT/$mode" "$CHROME" --written-reference="$REFERENCE" || status=1
+  done
+else
+  for mode in multithread shim; do
+    echo "wasm-check: first project click, $mode"
+    node --experimental-websocket "$DRIVER" "$SITE" "$mode" "$OUT/$mode" "$CHROME" "$1" || status=1
+  done
+fi
 exit "$status"

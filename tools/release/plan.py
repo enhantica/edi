@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: BSD-3-Clause
-"""Create a calendar release identity and user notes from recorded merged PRs."""
+"""Create a release identity and user notes from recorded merged PRs."""
 
 import argparse
 import datetime
@@ -8,6 +8,18 @@ import re
 import sys
 from operator import itemgetter
 from pathlib import Path
+
+# The version rules live in versions.py, which the installer and site tools import too; the
+# release tools take them from here.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from versions import (
+    PATTERN,  # noqa: F401
+    installer_stem,  # noqa: F401
+    is_version,  # noqa: F401
+    next_version,
+    release_title,  # noqa: F401
+    version_key,
+)
 
 INTERFACES = json.loads(
     (Path(__file__).resolve().parents[2] / 'data/release-interfaces.json').read_text(
@@ -138,14 +150,6 @@ def label_problem(labels: set[str]) -> str | None:
     return None
 
 
-def version_key(version: str) -> tuple[int, int, int]:
-    """Validate and compare calendar versions numerically, including two-digit sequences."""
-    match = re.fullmatch(r'([0-9]{4})\.(0[1-9]|1[0-2])\.(0|[1-9][0-9]*)', version)
-    if not match or int(match[1]) < 2000:
-        raise ValueError(f'Invalid calendar release version: {version}')
-    return tuple(map(int, match.groups()))
-
-
 def check_title(title: str) -> str:
     """Require a public, user-oriented PR title before it becomes a release note."""
     if (
@@ -222,18 +226,14 @@ def note_interfaces(entry: dict) -> list[str]:
 
 
 def next_calendar_version(versions: list[str], today: datetime.date) -> str:
-    known = [version_key(version) for version in versions]
-    current = today.year, today.month
-    if known and max(known)[:2] > current:
-        raise ValueError('The release calendar cannot move backwards')
-    sequence = max((key[2] for key in known if key[:2] == current), default=-1) + 1
-    return f'{today.year:04d}.{today.month:02d}.{sequence}'
+    """The next YY.N for today (versions.py); the name stays for the tools that call it."""
+    return next_version(versions, today)
 
 
 def _new_identity(
     known: dict, reserved: tuple[str, ...], today: datetime.date, identity
 ) -> tuple[str, datetime.date]:
-    """The given reserved identity, else the next free calendar version for today."""
+    """The given reserved identity, else the next free version for today."""
     if identity is None:
         published = [release['version'] for release in known.values()]
         return next_calendar_version([*published, *reserved], today), today
@@ -256,19 +256,6 @@ def release_body(notes: str, date: str) -> str:
         if notes
         else f'<!-- edi release date {date} -->\n'
     )
-
-
-MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-
-
-def release_title(version: str, date: str, *, preview: bool = False) -> str:
-    """A GitHub release's title, its tag and release day: ``v2026.11.14 (13 Nov)``.
-
-    The tag already names the year, so the date leaves it out.
-    """
-    day = datetime.date.fromisoformat(date)
-    title = f'v{version} ({day.day} {MONTHS[day.month - 1]})'
-    return title + ' preview' if preview else title
 
 
 def release_date(body: str | None) -> str | None:

@@ -21,6 +21,7 @@ TestCase {
     property var order: []
     property var tooltip: []
     property var tabs: []
+    property var projectPageBeforeOpening: null
     property double firstDisplay: -1
     property double firstUsable: -1
     readonly property var pages: ["project", "structure", "experiment", "analysis", "report"]
@@ -124,8 +125,14 @@ TestCase {
         tooltip = [];
         firstDisplay = -1;
         firstUsable = -1;
+        projectPageBeforeOpening = app.contentArea[1].item;
         started = Date.now();
         recording = true;
+    }
+    function usesRetainedProjectPage() {
+        const loader = app.contentArea[1];
+        return projectPageBeforeOpening !== null && loader.status === Loader.Ready
+            && loader.item === projectPageBeforeOpening;
     }
     function runOpening(route, phase) {
         const source = Probe.repoUrl("docs/user/cli/sc-neut-tof_taurine-senju/project");
@@ -143,11 +150,22 @@ TestCase {
             const tip = findChild(app, "appBar.preparingToolTip");
             if (tip && tip.visible && !tooltip.includes(tip.text))
                 tooltip.push(tip.text);
-            return built.every(ms => ms >= 0) && enabledAt.every(ms => ms >= 0) && !Session.project.calculating;
-        }, 15000, "All five actual pages finish building and their tabs become enabled without being visited");
+            const current = snapshots[snapshots.length - 1];
+            return (built[0] >= 0 || usesRetainedProjectPage())
+                && built.slice(1).every(ms => ms >= 0) && current.ready.every(Boolean)
+                && current.enabled.every(Boolean) && !Session.project.calculating;
+        }, 15000, "All five pages become ready and enabled without visits, including an already built Project page");
         app.update();
         verify(waitForRendering(app.contentItem), "The readiness receipt includes the frame after the final page is built");
         capture();
+        const projectPageRetained = usesRetainedProjectPage();
+        if (projectPageRetained) {
+            const displayedName = Ui.find(app.contentArea[1].item, "project.name");
+            verify(displayedName !== null, "The retained Project page must display the opened project's identity");
+            compare(displayedName.text, Session.project.name,
+                    "The already built Project page must show the current project on the completed frame");
+            built[0] = 0;
+        }
         recording = false;
         console.log("PAGE_READINESS_EVIDENCE " + JSON.stringify({
             route,
@@ -159,7 +177,8 @@ TestCase {
             order,
             tooltip,
             firstDisplay,
-            firstUsable
+            firstUsable,
+            projectPageRetained
         }));
     }
     function test_routes_data() {
@@ -201,6 +220,7 @@ TestCase {
             app.destroy();
         }
         app = null;
+        projectPageBeforeOpening = null;
         Session.closeProject();
     }
 }

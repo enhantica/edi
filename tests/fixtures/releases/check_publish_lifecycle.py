@@ -41,7 +41,7 @@ with mock.patch.dict(sys.modules, {'plan': PLAN}):
         PREVIEW = module('preview_draft')
 
 RELEASE = {
-    'version': '2026.11.0',
+    'version': '26.17',
     'commit': 'a' * 40,
     'date': '2026-11-05',
     'notes': {
@@ -186,17 +186,17 @@ def folder(tmp_path):
 def test_first_stable_publication_creates_uploads_and_finalizes_its_own_draft(github, folder):
     PUBLISH.publish(REPO, folder)
     (release,) = github.releases.values()
-    assert release['name'] == 'v2026.11.0 (5 Nov)', (
-        'A stable draft title uses its exact tag and release day without a year or channel'
+    assert release['name'] == 'EasyDiffraction 26.17 (5 Nov 2026)', (
+        'A stable draft title names the version and release date, without a channel'
     )
     assert release['draft'] and [a['name'] for a in release['assets']] == [
         'installer.zip',
         'release-history.json',
     ], 'First stable publication creates uploads and finalizes its own draft.'
     PUBLISH.publish(REPO, folder, finalize=True)
-    assert (
-        not release['draft'] and release['make_latest'] == 'true' and 'v2026.11.0' in github.tags
-    ), 'First stable publication creates uploads and finalizes its own draft.'
+    assert not release['draft'] and release['make_latest'] == 'true' and 'v26.17' in github.tags, (
+        'First stable publication creates uploads and finalizes its own draft.'
+    )
     assert len(github.releases) == 1, (
         'First stable publication creates uploads and finalizes its own draft.'
     )
@@ -222,14 +222,14 @@ def test_finalizing_without_a_draft_refuses(github, folder):
 
 
 def test_a_tag_without_its_release_and_duplicate_drafts_refuse(github, folder):
-    github.tags.add('v2026.11.0')
+    github.tags.add('v26.17')
     with pytest.raises(ValueError, match='tag already exists'):
         PUBLISH.publish(REPO, folder)
     github.tags.clear()
     for _ in range(2):
         github.run(
             ['gh', 'api', '--method', 'POST', f'repos/{REPO}/releases'],
-            input=json.dumps({'tag_name': 'v2026.11.0', 'draft': True}).encode(),
+            input=json.dumps({'tag_name': 'v26.17', 'draft': True}).encode(),
         )
     with pytest.raises(ValueError, match='Multiple releases'):
         PUBLISH.publish(REPO, folder)
@@ -242,8 +242,8 @@ def test_preview_drafts_are_found_through_the_same_lookup(github, tmp_path):
     PREVIEW.publish(REPO, RELEASE, 'Notes\n', archives)
     PREVIEW.publish(REPO, RELEASE, 'Notes\n', archives)
     (release,) = github.releases.values()
-    assert release['name'] == 'v2026.11.0 (5 Nov) preview', (
-        'A preview draft retains the same tag/day format with only its short preview marker'
+    assert release['name'] == 'EasyDiffraction 26.17 (5 Nov 2026) preview', (
+        'A preview draft has the same title with only its short preview marker'
     )
     assert release['draft'] and release['prerelease'] and len(release['assets']) == 1, (
         'Preview drafts are found through the same lookup.'
@@ -259,34 +259,34 @@ def reserve(commit, *, prerelease=True, today=TODAY):
 
 def test_a_retry_of_the_same_source_keeps_its_reserved_version_and_date(github):
     github.tags.add('v2026.11.0')
-    assert reserve('a' * 40) == ('2026.11.1', TODAY), (
+    assert reserve('a' * 40) == ('26.17', TODAY), (
         'A retry of the same source keeps its reserved version and date.'
     )
     later = datetime.date(2026, 11, 9)
-    assert reserve('a' * 40, today=later) == ('2026.11.1', TODAY), (
+    assert reserve('a' * 40, today=later) == ('26.17', TODAY), (
         'A retry of the same source keeps its reserved version and date.'
     )
-    assert reserve('c' * 40)[0] == '2026.11.2', (
+    assert reserve('c' * 40)[0] == '26.18', (
         'A retry of the same source keeps its reserved version and date.'
     )
-    assert reserve('a' * 40, prerelease=False)[0] == '2026.11.3', (
+    assert reserve('a' * 40, prerelease=False)[0] == '26.19', (
         'A retry of the same source keeps its reserved version and date.'
     )
     assert len(github.releases) == 3, (
         'A retry of the same source keeps its reserved version and date.'
     )
-    assert github.by_tag_with_drafts('v2026.11.1')['name'] == 'v2026.11.1 (7 Nov) preview', (
-        'A later retry preserves the title date reserved for that exact source'
-    )
+    assert (
+        github.by_tag_with_drafts('v26.17')['name'] == 'EasyDiffraction 26.17 (7 Nov 2026) preview'
+    ), 'A later retry preserves the title date reserved for that exact source'
 
 
 def test_a_simultaneous_allocator_keeps_the_number_and_the_later_one_moves_on(github):
     github.rival_before_create = 'd' * 40
-    assert reserve('a' * 40)[0] == '2026.11.1', (
+    assert reserve('a' * 40)[0] == '26.18', (
         'A simultaneous allocator keeps the number and the later one moves on.'
     )
     owners = {r['target_commitish']: r['tag_name'] for r in github.releases.values()}
-    assert owners == {'d' * 40: 'v2026.11.0', 'a' * 40: 'v2026.11.1'}, (
+    assert owners == {'d' * 40: 'v26.17', 'a' * 40: 'v26.18'}, (
         'A simultaneous allocator keeps the number and the later one moves on.'
     )
 
@@ -297,11 +297,11 @@ def test_a_lost_creation_response_is_settled_on_the_retry(github):
     with pytest.raises(subprocess.CalledProcessError):
         reserve('a' * 40)
     github.fail_after_create = False
-    assert reserve('a' * 40) == ('2026.11.1', TODAY), (
+    assert reserve('a' * 40) == ('26.18', TODAY), (
         'A lost creation response is settled on the retry.'
     )
     owners = {r['target_commitish']: r['tag_name'] for r in github.releases.values()}
-    assert owners == {'d' * 40: 'v2026.11.0', 'a' * 40: 'v2026.11.1'}, (
+    assert owners == {'d' * 40: 'v26.17', 'a' * 40: 'v26.18'}, (
         'A lost creation response is settled on the retry.'
     )
 
@@ -363,7 +363,7 @@ def test_a_lost_response_with_a_same_source_rival_keeps_the_first_reservation(gi
     with pytest.raises(subprocess.CalledProcessError):
         reserve('a' * 40)
     github.fail_after_create = False
-    assert reserve('a' * 40) == ('2026.11.0', TODAY), (
+    assert reserve('a' * 40) == ('26.17', TODAY), (
         'A lost response must retain the first reservation for the same source.'
     )
     ((release_id, release),) = github.releases.items()
@@ -373,7 +373,7 @@ def test_a_lost_response_with_a_same_source_rival_keeps_the_first_reservation(gi
 
 
 def test_two_claimed_drafts_for_one_source_stay_refused(github):
-    for tag in ('v2026.11.0', 'v2026.11.1'):
+    for tag in ('v26.17', 'v26.18'):
         github.add({
             'tag_name': tag,
             'target_commitish': 'a' * 40,
@@ -388,30 +388,30 @@ def test_two_claimed_drafts_for_one_source_stay_refused(github):
 
 
 def test_an_only_own_draft_is_reserved_although_the_list_lags_behind_it(github):
-    github.tags.add('v2026.11.6')
+    github.tags.add('v26.20')
     github.listing_lag = 2
     waits = []
     version = PREPARE.reserve_identity(REPO, 'a' * 40, TODAY, prerelease=True, wait=waits.append)
-    assert version == ('2026.11.7', TODAY), (
+    assert version == ('26.21', TODAY), (
         'A new draft with no rival keeps its version once the release list shows it.'
     )
     assert waits == [2.0, 2.0], 'The list is read again, with a pause, until the draft is in it.'
     (release,) = github.releases.values()
-    assert release['draft'] and release['tag_name'] == 'v2026.11.7', 'The one draft is kept.'
+    assert release['draft'] and release['tag_name'] == 'v26.21', 'The one draft is kept.'
 
 
 def test_a_draft_the_list_never_shows_is_left_for_the_next_run_to_reuse(github):
-    github.tags.add('v2026.11.6')
+    github.tags.add('v26.20')
     github.listing_lag = 10
     with pytest.raises(RuntimeError, match='not in the release list yet'):
         PREPARE.reserve_identity(REPO, 'a' * 40, TODAY, prerelease=True, wait=lambda _: None)
     (release,) = github.releases.values()
-    assert release['draft'] and release['tag_name'] == 'v2026.11.7', (
+    assert release['draft'] and release['tag_name'] == 'v26.21', (
         'The unconfirmed draft stays as the reservation.'
     )
     github.listing_lag = 0
     later = datetime.date(2026, 11, 8)
-    assert reserve('a' * 40, today=later) == ('2026.11.7', TODAY), (
+    assert reserve('a' * 40, today=later) == ('26.21', TODAY), (
         'The next run reuses that draft with its version and recorded date.'
     )
     assert len(github.releases) == 1, 'The next run creates no second draft.'

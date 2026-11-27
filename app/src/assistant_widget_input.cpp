@@ -492,6 +492,7 @@ bool AssistantWidgetInput::mouse(QEvent::Type type, Qt::MouseButton button, QQui
     event.setTimestamp(mouse_owner_->eventStamp(type));
     const QPointer<QQuickItem> expected(receiver);
     const PressWatch watch(type);
+    if (type == QEvent::MouseMove) pointer_inside_ = true;
     QCoreApplication::sendEvent(window, &event);
     if (self && mouse_owner_ && type == QEvent::MouseButtonRelease) mouse_owner_->releaseFinished(*this, original_stamp);
     if (receiver && (!expected || !pressTakenBy(event, *expected, watch.last()))) return false;
@@ -1045,6 +1046,14 @@ void AssistantWidgetInput::stop(const std::shared_ptr<Request>& expected, std::u
     // its original native record; its adapter must independently fence that ID.
     try { original->completed(delivered, settled_diagnostic, cause); } catch (...) {}
 }
+void AssistantWidgetInput::leave() noexcept {
+    if (!pointer_inside_ || request_ || !window_) return;
+    pointer_inside_ = false;
+    try {
+        QEvent left(QEvent::Leave);
+        QCoreApplication::sendEvent(window_, &left);
+    } catch (...) {}
+}
 void AssistantWidgetInput::cancel() {
     const QPointer<AssistantWidgetInput> self(this);
     const auto original=request_;
@@ -1055,6 +1064,8 @@ bool AssistantWidgetInput::eventFilter(QObject* watched, QEvent* event) {
     // The retained application filter separately consumes stale own events, even
     // when this helper is inactive/replaced. Genuine devices remain manual.
     if (ownMouseEvent(event)) return rejectOwnEvent(watched, event);
+    // The user's own pointer moved: what is hovered is its.
+    if (watched == window_ && event->type() == QEvent::MouseMove) pointer_inside_ = false;
     // The owning VM classifies genuine project input at its actual receiver.
     // This helper must not convert ordinary hover/chat/navigation or Cmd-Tab
     // into a second blanket cancellation path.

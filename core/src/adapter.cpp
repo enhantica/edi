@@ -3052,6 +3052,67 @@ std::vector<std::string> scan_extract_values(const Project& project, const std::
 
 namespace {
 
+// A rule's cells are written to the loop as they are: text that needs quotes would not read back.
+void require_bare_cell(const std::string& text, const std::string& what) {
+    if (text.empty()) {
+        throw std::invalid_argument("an extraction rule needs a " + what);
+    }
+    if (text.find_first_of(" \t") != std::string::npos) {
+        throw std::invalid_argument("the " + what + " '" + text + "' holds a space, which the project file cannot: " +
+                                    (what == "pattern" ? "write \\s for a space" : "use an underscore"));
+    }
+    if (crysta::encode_text(text, "extraction rule's " + what) != text) {
+        throw std::invalid_argument("the " + what + " '" + text +
+                                    "' cannot be written to the project file: it starts with a character or a word "
+                                    "the file format reserves");
+    }
+}
+
+}  // namespace
+
+void check_extract_pattern(const std::string& pattern) {
+    require_bare_cell(pattern, "pattern");
+    std::size_t groups = 0;
+    try {
+        groups = std::regex(pattern).mark_count();
+    } catch (const std::regex_error& error) {
+        throw std::invalid_argument("the pattern '" + pattern + "' is not a regular expression: " + error.what());
+    }
+    if (groups == 0) {
+        throw std::invalid_argument("the pattern '" + pattern +
+                                    "' has no group: put the part that is the value in parentheses");
+    }
+}
+
+void check_extract_target(const Project& project, const SequentialExtractRule* rule, const std::string& target) {
+    require_bare_cell(target, "target");
+    if (target.find_first_of(",\"") != std::string::npos) {
+        throw std::invalid_argument("the target '" + target + "' holds a comma or a quote, which a results column cannot");
+    }
+    const auto taken = [&target](const std::string& by) {
+        throw std::invalid_argument("the target '" + target + "' is already the results column of " + by);
+    };
+    if (target == "file_path" || target == "point" || target.starts_with("fit_result.")) {
+        taken("the fit itself");
+    }
+    for (const auto& other : project.sequential_fit.extract) {
+        if (other.get() != rule && other->target.value() == target) {
+            taken("the rule '" + other->id.value() + "'");
+        }
+    }
+    // Every column the fit writes itself (a parameter's, its uncertainty, a derived value such as a moment's spherical
+    // form or a phase's weight fraction) is a datablock, a category and an item: three dotted parts or more. A rule
+    // keeps to two, so no later edit (a site made magnetic, a phase linked, a datablock added or renamed) can give the
+    // fit a column of the same name.
+    if (std::count(target.begin(), target.end(), '.') >= 2) {
+        throw std::invalid_argument("the target '" + target +
+                                    "' has the form of a column the fit writes itself (a datablock, a category and an "
+                                    "item); a rule's target has at most two parts, as diffrn.ambient_temperature");
+    }
+}
+
+namespace {
+
 // crysta writes plain comma-joined cells, with no quoting (its results.csv contract).
 std::vector<std::string> split_scan_row(std::string_view line) {
     std::vector<std::string> cells(1);
@@ -3232,9 +3293,7 @@ ScanPlaces scan_places(const ScanDatasets& datasets) {
     return places;
 }
 
-// The columns crysta derives from the fitted values rather than fits (series_layout's derived_columns): a moment's
-// spherical form and a linked structure's weight fraction. Their value may be undefined in a converged row.
-static bool scan_derived_column(const std::string& name) {
+bool scan_derived_column(const std::string& name) {
     for (const char* suffix : {".spherical_modulus", ".spherical_polar", ".spherical_azimuthal", ".weight_fraction"}) {
         if (name.ends_with(suffix)) return true;
     }
@@ -7296,6 +7355,44 @@ CalculationResult calculate(WorkSnapshot& snapshot, const work::CancelToken& tok
         return result;
     }
     return stage_computed(snapshot.project, std::move(result.stamps), std::move(refusal));
+}
+
+std::string wavelength_refusal(const Project& live, const Parameter& parameter, double value) {
+    std::size_t holder = live.experiments.size();
+    bool second = false;
+    for (std::size_t index = 0; index < live.experiments.size(); ++index) {
+        const InstrumentBase& instrument = live.experiments[index]->instrument;
+        if (instrument.setup_wavelength && &*instrument.setup_wavelength == &parameter) {
+            holder = index;
+        } else if (instrument.setup_wavelength_2 && &*instrument.setup_wavelength_2 == &parameter) {
+            holder = index;
+            second = true;
+        }
+    }
+    if (holder == live.experiments.size()) {
+        return {};
+    }
+    try {
+        WorkSnapshot candidate = snapshot_for_work(live);
+        Project& project = candidate.project;
+        InstrumentBase& instrument = project.experiments[holder]->instrument;
+        assign_value(second ? *instrument.setup_wavelength_2 : *instrument.setup_wavelength, value);
+        // The engine project as Project::calculate prepares and builds it, every dependent at its value.
+        refresh_relations(project);
+        apply_relations(project);
+        const BuiltExperiments banks = calculation_banks(project.experiments);
+        crysta::Project engine(to_crysta_structures(project), experiment_list(banks));
+        fill_crysta_relations(project, engine);
+        // Every bank: a relation can move another bank's cell or range with this wavelength.
+        for (std::size_t index = 0; index < project.experiments.size(); ++index) {
+            if (const std::optional<std::string> refusal =
+                    crysta::reflection_list_refusal(engine, engine.experiments[index])) {
+                return *refusal;
+            }
+        }
+    } catch (const std::exception&) {  // NOLINT(bugprone-empty-catch) — the calculation reports it
+    }
+    return {};
 }
 
 CalculationResult stage_computed(const Project& calculated, WorkStamps stamps, std::string refusal) {

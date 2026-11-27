@@ -31,7 +31,7 @@ Column {
         // Widths from column types, not rows (ADR-0103 rule 4): the label and type are short texts, the
         // coordinates, occupancy and B numbers.
         // Its columns by kind (the shared column model, DataTable.columnKinds; ADR-0103 decision 4).
-        columnKinds: ["index", "short", "short", "value", "value", "value", "short", "value", "control"]
+        columnKinds: ["index", "name", "short", "value", "value", "value", "short", "value", "control"]
 
         header: EaComponents.ListViewHeader {
             EaComponents.ListViewLabel {
@@ -111,6 +111,7 @@ Column {
                     inTable: true
                     anchors.verticalCenter: parent.verticalCenter
                     searchThreshold: 0
+                    noMatchText: qsTr("No type matches")
                     readonly property var types: group.structure ? group.structure.atomTypes : ApplicationInfo.elementSymbols
                     model: types
                     typedEntry: group.structure ? group.structure.typedAtomType(searchText, types) : ""

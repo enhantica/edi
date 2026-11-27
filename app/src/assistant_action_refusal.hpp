@@ -58,9 +58,11 @@ private:
 inline constexpr std::string_view control_failure_guidance = EDI_ASSISTANT_CONTROL_GUIDANCE;
 class ActionRefusal final : public std::invalid_argument {
 public:
-    ActionRefusal(const char* error,const char* field):std::invalid_argument("The original app action was refused"),error(error),field(field){}
+    ActionRefusal(const char* error,const char* field,const char* reason=nullptr)
+        :std::invalid_argument("The original app action was refused"),error(error),field(field),reason(reason){}
     const char* const error;
     const char* const field;
+    const char* const reason;  // in plain words, marked for QObject's translation, or none
 };
 inline bool structure_app_action(const QString& name) {
     return name=="create_structure" || name=="edit_structure" || name=="edit_atom";

@@ -42,4 +42,6 @@ after an update, and the app had nothing of its own to show. edi has no numbered
 [ADR-0072](0072-calendar-releases-and-application-updates.md) replaces the handwritten date-based
 release source and date cursor with calendar release identities and notes from merged user-facing PR
 titles. Its implementation reuses this popup, manual access and accessible presentation. The existing
-dated implementation remains the prior art during that transition.
+dated implementation remains the prior art during that transition. A release's heading is its version and date,
+`26.17 · 26 Nov 2026`, and releases are ordered by the key of [ADR-0106](0106-versions-and-checksum-updates.md), so a
+26.N app lists the 2026.11 releases after its own.

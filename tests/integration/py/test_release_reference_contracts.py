@@ -33,16 +33,24 @@ def release_modules(monkeypatch):
 @pytest.mark.parametrize(
     ('known', 'date', 'expected'),
     [
-        ([], '2026-11-07', '2026.11.0'),
-        (['2026.11.9', '2026.11.10', '2026.10.99'], '2026-11-07', '2026.11.11'),
-        (['2026.12.44'], '2027-01-01', '2027.01.0'),
+        (['2026.11.31', '2026.11.0'], '2026-11-26', '26.17'),
+        (['26.17', '2026.11.31'], '2026-12-01', '26.18'),
+        (['26.18', '2026.11.31', '26.17'], '2027-01-01', '27.1'),
     ],
+    ids=['legacy-cutover', 'same-year', 'new-year'],
 )
-def test_calendar_uses_numeric_monthly_sequence(release_modules, known, date, expected):
+def test_calendar_uses_yearly_sequence(release_modules, known, date, expected):
     plan, _ = release_modules
     assert plan.next_calendar_version(known, datetime.date.fromisoformat(date)) == expected, (
-        'Calendar allocation must increment the numeric sequence and reset in a new month'
+        'The yearly counter continues from legacy releases and resets in January'
     )
+    assert sorted(['26.18', '2026.11.31', '27.1', '26.17', '2026.11.0'], key=plan.version_key) == [
+        '2026.11.0',
+        '2026.11.31',
+        '26.17',
+        '26.18',
+        '27.1',
+    ], 'Legacy versions retain their order and precede the new yearly releases'
 
 
 def test_calendar_refuses_clock_rollback(release_modules):

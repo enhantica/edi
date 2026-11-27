@@ -32,7 +32,7 @@ table to draw curves per dataset from. Displayed-resolution reductions are edi's
    structure-level derived values), and every experiment parameter made "same for all experiments" (ADR-0087),
    listed once and read from the leader's rows; then **Per experiment**: every other column of
    `results_experiments.csv`, listed once by its name without the datablock. Derived values are listed in their
-   section with a "derived" mark. A one-experiment scan shows one list, as now.
+   section, in a group of their own (ADR-0017 §19). A one-experiment scan shows one list, as now.
 2. **Curves per experiment.** A per-experiment parameter draws one curve per experiment in that experiment's colour
    (the palette rule of ADR-0084), with a legend entry to show or hide each. "Compare with" picks a second parameter,
    drawn against a right axis in the same chart.

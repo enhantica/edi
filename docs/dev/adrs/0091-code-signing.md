@@ -125,11 +125,14 @@ them, and the installed payload is checked against the signed bytes.
    matches it and macOS kills the tool, so users could not update or uninstall (the first signed release run
    showed it). So `package.py maintenance-tool` builds the tool on its own with `binarycreator --mt`, the
    Framework's way of making a maintenance tool for separate signing, and signs, notarises and staples it like
-   the installer. Both installers carry it in a hidden, always-installed component
+   the installer. Both installers carry it in a virtual, always-installed component
    (`org.easydiffraction.app.maintenancetool`, carrying the app version like the other components, so the
-   release, preview and Pages repository checks hold), whose script calls `installer.setInstallerBaseBinary`
+   release, preview and Pages repository checks hold; the pages show it as the Maintenance Tool row, ticked and
+   fixed, ADR-0071), whose script calls `installer.setInstallerBaseBinary`
    on the bundle; for a bundle the Framework moves it to the installation root unchanged instead of writing
-   its own. An update lists the component but unpacks nothing and keeps the installed tool. Packaging refuses an unsigned tool when signing is on, and each
+   its own. An update unpacks the new tool as well and its script asks for it again, so the Framework replaces
+   the installed tool once the update is done (on Windows after it quits); an update that does not include the
+   component keeps the installed tool (ADR-0106). Packaging refuses an unsigned tool when signing is on, and each
    test installation checks the installed tool with `codesign --verify --strict`, its Developer ID authority
    on release builds, and its checksum against the shipped one, before running it to uninstall. Unsigned
    builds sign the tool ad hoc and take the same path. EasyDiffractionBeta shipped a separately built tool

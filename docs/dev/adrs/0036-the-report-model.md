@@ -56,8 +56,8 @@ are notebook calls, not report sections; the owner asked for all three in edi's 
    the analysis rows are `analysis_categories`; `correlations` and, for a scan, `evolution` (per listed parameter its
    `name`, `units`, `x_title` and points with `x`, `y`, `su` and `text`, all read from the results in one pass) sit at
    the root. Each pattern carries its `title`, the experiment's Rwp and χ² (`reliability_text`), and `legend`, false:
-   its y titles name the series in their colours. The evolution is one chart per listed parameter, in the Evolution
-   tab's order, titled with its name and units: one to a row, the column's width, its height to its width the Evolution
+   its y titles name the series in their colours. The evolution is one chart per listed parameter, in the core
+   list's order (the Evolution tab groups the same list), titled with its name and units: one to a row, the column's width, its height to its width the Evolution
    tab's at the app's default window size (1.05), so its axes keep the app's proportions. A pattern or evolution chart
    has no border round it; a structure view is framed as a table is (the owner, 2026-10-14). The preview draws each with
    the Evolution tab's chart given its series, the HTML report with plotly.js, and the PDF as images of the preview's

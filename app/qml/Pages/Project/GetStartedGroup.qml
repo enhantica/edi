@@ -71,7 +71,12 @@ SideBarGroup {
                 text: "caret-down"
             }
             ToolTip.text: qsTr("Open an EasyDiffraction project or import one from another program")
-            onClicked: loadMenu.open()
+            // Closed first: a menu the page kept across a replacement could still count itself open, and open() would then do
+            // nothing.
+            onClicked: {
+                loadMenu.close();
+                loadMenu.open();
+            }
 
             EaElements.Menu {
                 id: loadMenu
@@ -308,6 +313,48 @@ SideBarGroup {
     property var createOperation: null
     property var assistantCreate: null
     Component.onDestruction: createLife.alive = false
+    // Another project: what names or would write the old one closes; what a create had under way and what its form
+    // held go once the call that replaces the project is over (edi ADR-0052). The Load menu stays open.
+    Connections {
+        target: Session
+        // The replaced project's Create dialog is hidden as the replacement starts, before a new name can show.
+        function onProjectReplacing() {
+            EaGlobals.Vars.showProjectDescriptionDialog = false;
+        }
+        function onProjectAboutToChange() {
+            saveMenu.close();
+            replaceProject.close();
+            exportFolder.close();
+            exportFolder.sourceProject = null;
+            // The replaced project's Create dialog goes before the new project is published, never after its name shows.
+            if (createDialog.visible)
+                createDialog.untitledId = 0;
+            EaGlobals.Vars.showProjectDescriptionDialog = false;
+        }
+        // At the new project's publication nothing of the replaced one's page stays open, also what was opened while it
+        // was being opened: the Create dialog among them.
+        function onProjectChanged() {
+            saveMenu.close();
+            replaceProject.close();
+            exportFolder.close();
+            // Its `visible` follows the flag; closing it directly would end that binding.
+            if (createDialog.visible)
+                EaGlobals.Vars.showProjectDescriptionDialog = false;
+            Qt.callLater(group.dropCreate);
+        }
+    }
+    function dropCreate() {
+        createLife.alive = false;
+        createLife = {
+            alive: true
+        };
+        createIntent = null;
+        createOperation = null;
+        assistantCreate = null;
+        untitledOrigin = "manual-create";
+        untitledRequest = 0;
+        createDialog.startOver();
+    }
     function prepareAssistantCreate(id) {
         return ApplicationInfo.assistantBuilt ? ApplicationInfo.prepareAssistantCreate(id) : null;
     }
@@ -509,7 +556,7 @@ SideBarGroup {
         title: qsTr("Choose where to create the %1 project folder").arg(program)
         currentFolder: DialogFolders.folder("exportProject", "")
         onAccepted: {
-            if (sourceProject === Session.project) {
+            if (sourceProject && sourceProject === Session.project) {
                 DialogFolders.remember("exportProject", selectedFolder);
                 Session.exportProjectCopy(program, selectedFolder);
             }

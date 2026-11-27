@@ -144,6 +144,13 @@ inline void set_minimizer_stop_rules(Project& project, const std::string& rules)
                                                 : "";
 }
 
+// A scan's extraction rule as a user types it: a regular expression whose first group is the value read, and the
+// results column that value is written to, which no other column of the results has. Both are written to the file as
+// they are, so text a file cannot hold without quotes is refused too. `rule` is the edited row, left out of the search
+// for another rule with the same target; null for a new one.
+void check_extract_pattern(const std::string& pattern);
+void check_extract_target(const Project& project, const SequentialExtractRule* rule, const std::string& target);
+
 // The declared Shift/s.u. value (a positive number, as the loader reads `_minimizer.shift_tolerance`).
 inline void set_minimizer_shift_tolerance(Project& project, double tolerance) {
     if (!(tolerance > 0.0)) {
