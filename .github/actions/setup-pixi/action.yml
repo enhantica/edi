@@ -17,6 +17,9 @@ inputs:
   cache:
     description: Cache the complete selected Pixi environment
     default: "true"
+  install:
+    description: Install the environments here; "false" leaves it to a later run step
+    default: "true"
 runs:
   using: 'composite'
   steps:
@@ -36,5 +39,6 @@ runs:
         manifest-path: ${{ inputs.manifest-path }}
         environments: ${{ inputs.environments }}
         cache: ${{ inputs.cache }}
+        run-install: ${{ inputs.install }}
         frozen: true
         post-cleanup: false

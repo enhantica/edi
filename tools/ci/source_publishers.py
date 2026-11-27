@@ -237,6 +237,13 @@ def after(where: str, step: dict, checked: set[str]) -> Iterator[str]:
         yield f'{where}: {named(step)!r} uses {action(step)} beside the source'
     if action(step) == './.github/actions/setup-pixi' and given(step, 'cache').lower() != 'false':
         yield f'{where}: {named(step)!r} caches an environment beside the source'
+    # Installing an environment can build a package from crysta's source; the action's own output
+    # never passes the filter, so the install is a run step of its own.
+    if (
+        action(step) == './.github/actions/setup-pixi'
+        and given(step, 'install').lower() != 'false'
+    ):
+        yield f'{where}: {named(step)!r} installs an environment outside the output filter'
     if action(step) != STORE:
         for name, nested in inner(step):
             if 'run' in nested and nested.get('shell') != FILTER:
