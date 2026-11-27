@@ -154,11 +154,16 @@ def test_rejected_anisotropic_transition_keeps_the_warm_project(tmp_path, setter
         if setter == 'operators'
         else (lambda: model.structure.set_magnetic_space_group('1.3'))
     )
-    with pytest.raises((ValueError, RuntimeError), match=r'(?i)aniso|tensor|displacement'):
+    refusal = (
+        r'(?i)aniso|tensor|displacement'
+        if setter == 'operators'
+        else r'propagation vector.*anti-translation.*does not reverse.*Magnetic symmetry analysis'
+    )
+    with pytest.raises((ValueError, RuntimeError), match=refusal):
         action()
     model.analysis.calculate()
     assert np.array_equal(before, model.experiment.data.intensity_calc, equal_nan=True), (
-        'ADR-0108 refused tensor transitions preserve every included and excluded cached point'
+        'A refused operator or selector change preserves every included and excluded cached point'
     )
     model.save_as(tmp_path / 'after')
     assert (tmp_path / 'after/structures/cosio.edi').read_bytes() == (
