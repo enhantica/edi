@@ -47,6 +47,8 @@ runs:
         manifest-path: ${{ inputs.manifest-path }}
         environments: ${{ inputs.environments }}
         cache: ${{ inputs.cache }}
+        # Pull requests restore environment caches and never write them; edi's 10 GB is shared by every job.
+        cache-write: ${{ github.event_name == 'schedule' || github.event_name == 'push' && github.ref == 'refs/heads/main' }}
         run-install: ${{ inputs.install }}
         frozen: true
         post-cleanup: false

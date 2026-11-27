@@ -180,7 +180,7 @@ jobs:
         env:
           SHA: ${{ needs.resolve.outputs.sha }}
           # A failed test's message and traceback can quote crysta's tests or corpus.
-          PYTEST_ADDOPTS: --tb=no -rN
+          PYTEST_ADDOPTS: --tb=no -rN --disable-warnings
         run: |
           out="$GITHUB_WORKSPACE/crysta-sdk-archives"
           mkdir -p "$out"

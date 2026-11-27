@@ -37,6 +37,7 @@ jobs:
     outputs:
       rows: ${{ steps.plan.outputs.rows }}
       skip: ${{ steps.plan.outputs.skip }}
+      probe: ${{ steps.plan.outputs.probe }}
       performance: ${{ steps.plan.outputs.performance }}
       edi: ${{ steps.plan.outputs.edi }}
       pr: ${{ steps.plan.outputs.pr }}
@@ -69,6 +70,7 @@ jobs:
           PR: ${{ github.event.pull_request.number }}
           FINAL: ${{ steps.final.outputs.final }}
           INPUTS_CHANGED: ${{ steps.inputs.outputs.run }}
+          SCHEDULE: ${{ github.event.schedule }}
           # The first round of this workflow measures every row on hosted runners before the
           # cadence is fixed.
           PROBE: 'true'
@@ -83,6 +85,8 @@ jobs:
             case "$EVENT" in
               pull_request) if [ "$FINAL" = true ]; then set_=final; else set_=round; fi ;;
               push) set_=main ;;
+              # The Sunday run beside the daily one is edi's weekly round; crysta's night is the daily one.
+              schedule) if [ "$SCHEDULE" = '15 2 * * 0' ]; then set_=none; else set_=night; fi ;;
               *) set_=night ;;
             esac
             # Unchanged inputs (tools/ci/crysta-inputs.txt) skip a round and a main push.
@@ -112,6 +116,7 @@ jobs:
           {
             echo "rows=$json"
             echo "skip=$skip"
+            echo "probe=$([ "$set_" = probe ] && echo true || echo false)"
             echo "performance=$performance"
             echo "edi=$EDI"
             echo "pr=$PR"
@@ -286,6 +291,9 @@ jobs:
         run: cd "$RUNNER_TEMP/crysta" && pixi run -e cpp-ci --skip-deps py-surface-cov-unit
       - name: ruff lint + format (gating)
         if: ${{ needs.plan.outputs.skip != 'true' && (!cancelled() && matrix.platform == 'Linux') }}
+        env:
+          # ruff's full format shows the source around each finding.
+          RUFF_OUTPUT_FORMAT: concise
         run: cd "$RUNNER_TEMP/crysta" && pixi run -e lint-docs-ci check
       - name: docs build --strict (gating)
         if: ${{ needs.plan.outputs.skip != 'true' && (!cancelled() && matrix.platform == 'Linux') }}
@@ -296,8 +304,9 @@ jobs:
       - name: Compiler cache statistics
         if: ${{ needs.plan.outputs.skip != 'true' && (!cancelled()) }}
         run: cd "$RUNNER_TEMP/crysta" && pixi run -e cpp-ci --skip-deps ccache --show-stats
+      # Saved by main pushes and the night, and once by the measuring round: pull requests only restore it.
       - name: Keep the crysta compiler cache
-        if: ${{ needs.plan.outputs.skip != 'true' && (!cancelled() && !inputs.diagnostic && steps.ccache.outcome == 'success') }}
+        if: ${{ needs.plan.outputs.skip != 'true' && (!cancelled() && !inputs.diagnostic && steps.ccache.outcome == 'success' && (github.event_name != 'pull_request' || needs.plan.outputs.probe == 'true' && github.run_attempt == '1')) }}
         uses: ./.github/actions/store
         with:
           ccache: pixi run --manifest-path "$RUNNER_TEMP/crysta/pixi.toml" -e cpp-ci --skip-deps python
@@ -408,7 +417,7 @@ jobs:
           CRYSTA_PYTEST_PART: ${{ matrix.part }}
           CRYSTA_PYTEST_RECORD: ${{ runner.temp }}/findings/pytest.jsonl
           # A failed test's message and traceback can quote crysta's tests or corpus.
-          PYTEST_ADDOPTS: -p crysta_pytest --tb=no -rN
+          PYTEST_ADDOPTS: -p crysta_pytest --tb=no -rN --disable-warnings
         run: |
           cd "$RUNNER_TEMP/crysta"
           export PYTHONPATH="$GITHUB_WORKSPACE/tools/ci${PYTHONPATH:+:$PYTHONPATH}"
@@ -451,7 +460,7 @@ jobs:
           CRYSTA_PYTEST_PART: ${{ matrix.part }}
           CRYSTA_PYTEST_RECORD: ${{ runner.temp }}/findings/pytest.jsonl
           # A failed test's message and traceback can quote crysta's tests or corpus.
-          PYTEST_ADDOPTS: -p crysta_pytest --tb=no -rN
+          PYTEST_ADDOPTS: -p crysta_pytest --tb=no -rN --disable-warnings
         run: |
           cd "$RUNNER_TEMP/crysta"
           export PYTHONPATH="$GITHUB_WORKSPACE/tools/ci${PYTHONPATH:+:$PYTHONPATH}"
@@ -529,7 +538,7 @@ jobs:
           DIAGNOSTIC: ${{ inputs.diagnostic }}
           EDI_READ_AUDIT_LOG: ${{ runner.temp }}/edi-reads.txt
           EDI_READ_AUDIT_ROOT: ${{ github.workspace }}
-          PYTEST_ADDOPTS: --tb=no -rN
+          PYTEST_ADDOPTS: --tb=no -rN --disable-warnings
         run: |
           export PYTHONPATH="$GITHUB_WORKSPACE/tools/ci/read-audit${PYTHONPATH:+:$PYTHONPATH}"
           if [ "$DIAGNOSTIC" = true ] || ! grep -q "^CRYSTA_COMMIT = \"$CRYSTA_SHA\"" pixi.toml; then
@@ -615,7 +624,7 @@ jobs:
           COVERAGE_CORE: sysmon
           CRYSTA_PYTEST_RECORD: ${{ runner.temp }}/findings/pytest.jsonl
           # A failed test's message and traceback can quote crysta's tests or corpus.
-          PYTEST_ADDOPTS: -p crysta_pytest --tb=no -rN
+          PYTEST_ADDOPTS: -p crysta_pytest --tb=no -rN --disable-warnings
         run: |
           cd "$RUNNER_TEMP/crysta"
           export PYTHONPATH="$GITHUB_WORKSPACE/tools/ci${PYTHONPATH:+:$PYTHONPATH}"

@@ -30,7 +30,7 @@ SETUP_PIXI = './.github/actions/setup-pixi'
 REVIEWED = {
     SOURCE: '0e37770c1b05e83e8b3c202559a6d3195c2e4a13cf89f704c5a27e5b69e0ceb5',
     STORE: '05b4c58e0eac79e613bc94a9fbab5a7863d29549d196ff9c6b7206d340eaa11f',
-    SETUP_PIXI: '48d2655648488ec7fb4085d1396013c2447c8b5da60f435b8002f496ddc8d9f1',
+    SETUP_PIXI: '10ca411ea3845cfd9d40631dbec41979652b8a9b3f845557c0182e349fee5fcc',
 }
 # Scripts that may run beside the source without the output filter: setup-pixi reads the pin of
 # the manifest it is given, crysta's in the SDK job, and prints nothing it read. REVIEWED holds it.
