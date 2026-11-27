@@ -1,0 +1,728 @@
+name: crysta
+
+# crysta's own checks and tests, run in edi's CI on one crysta commit (edi ADR-0083): the commit edi
+# pins, or a candidate a paired pull request pins. Each job fetches crysta itself through
+# .github/actions/crysta-source; from then on every script runs under tools/ci/public_log.py, and
+# the checkers' findings print as file, line and check name only (tools/ci/crysta_findings.py).
+# Nothing a job stores holds the source (.github/actions/store).
+#
+# `set` names the rows to run: round (every crysta round of a pull request), final (the round
+# before crysta merges), main (a push to main that moved the pin), night, coverage, wheels, and
+# probe, which runs every row once to measure hosted runners.
+
+on:
+  workflow_call:
+    inputs:
+      crysta-sha:
+        description: The crysta commit under test, 40 hex
+        required: true
+        type: string
+      set:
+        description: The rows to run; empty takes them from the event
+        required: false
+        type: string
+        default: ''
+      diagnostic:
+        description: A manual run of any crysta commit (crysta-diagnostic.yml); it saves no cache
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  plan:
+    runs-on: ubuntu-24.04
+    outputs:
+      rows: ${{ steps.plan.outputs.rows }}
+      performance: ${{ steps.plan.outputs.performance }}
+      edi: ${{ steps.plan.outputs.edi }}
+      pr: ${{ steps.plan.outputs.pr }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+      - name: Whether an input of crysta's jobs changed
+        id: inputs
+        shell: bash
+        env:
+          EDI: ${{ github.event.pull_request.head.sha || github.sha }}
+          BASE: ${{ github.event.pull_request.base.sha }}
+        run: python3 tools/ci/crysta_inputs.py --event "$GITHUB_EVENT_NAME" --head "$EDI" ${BASE:+--base "$BASE"} >> "$GITHUB_OUTPUT"
+      - name: Whether this is the final round
+        id: final
+        shell: bash
+        env:
+          FINAL_ROUND: ${{ github.event.pull_request.number && vars[format('FINAL_ROUND_{0}', github.event.pull_request.number)] || '' }}
+        run: python3 tools/ci/crysta_final_round.py >> "$GITHUB_OUTPUT"
+      - name: Choose the rows of this run
+        id: plan
+        shell: bash
+        env:
+          SHA: ${{ inputs.crysta-sha }}
+          SET: ${{ inputs.set }}
+          EVENT: ${{ github.event_name }}
+          EDI: ${{ github.event.pull_request.head.sha || github.sha }}
+          PR: ${{ github.event.pull_request.number }}
+          FINAL: ${{ steps.final.outputs.final }}
+          INPUTS_CHANGED: ${{ steps.inputs.outputs.run }}
+          # The first round of this workflow measures every row on hosted runners before the
+          # cadence is fixed.
+          PROBE: 'true'
+        run: |
+          set -euo pipefail
+          [[ "$SHA" =~ ^[0-9a-f]{40}$ ]] || { echo "crysta-sha must be a full 40-hex commit, not '$SHA'" >&2; exit 1; }
+          if [ -n "$SET" ]; then
+            set_="$SET"
+          elif [ "$PROBE" = true ]; then
+            set_=probe
+          else
+            case "$EVENT" in
+              pull_request) if [ "$FINAL" = true ]; then set_=final; else set_=round; fi ;;
+              push) set_=main ;;
+              *) set_=night ;;
+            esac
+            # Unchanged inputs (tools/ci/crysta-inputs.txt) skip a round and a main push.
+            if [ "$INPUTS_CHANGED" = false ] && { [ "$set_" = round ] || [ "$set_" = main ]; }; then set_=none; fi
+          fi
+          case "$set_" in
+            round) rows='checks tidy python audit edi-verification' ;;
+            final) rows='checks tidy python-full audit edi-verification cpp-full full-macos cppcheck asan release performance' ;;
+            main) rows='checks tidy audit' ;;
+            night) rows='checks tidy python-full audit cpp-full full-macos cppcheck asan release performance coverage' ;;
+            coverage) rows='coverage' ;;
+            wheels) rows='wheels' ;;
+            probe) rows='checks tidy python python-full audit edi-verification cpp-full full-macos cppcheck asan release performance coverage wheels' ;;
+            none) rows='' ;;
+            *) echo "unknown set '$set_'" >&2; exit 1 ;;
+          esac
+          if [ "$set_" = probe ]; then
+            # Ten A/A runs per platform: Linux on ten runners, macOS on five runners twice each.
+            performance='[{"platform":"Linux","runner":"ubuntu-24.04","part":"1"},{"platform":"Linux","runner":"ubuntu-24.04","part":"2"},{"platform":"Linux","runner":"ubuntu-24.04","part":"3"},{"platform":"Linux","runner":"ubuntu-24.04","part":"4"},{"platform":"Linux","runner":"ubuntu-24.04","part":"5"},{"platform":"Linux","runner":"ubuntu-24.04","part":"6"},{"platform":"Linux","runner":"ubuntu-24.04","part":"7"},{"platform":"Linux","runner":"ubuntu-24.04","part":"8"},{"platform":"Linux","runner":"ubuntu-24.04","part":"9"},{"platform":"Linux","runner":"ubuntu-24.04","part":"10"},{"platform":"macOS","runner":"macos-15","part":"1"},{"platform":"macOS","runner":"macos-15","part":"2"},{"platform":"macOS","runner":"macos-15","part":"3"},{"platform":"macOS","runner":"macos-15","part":"4"},{"platform":"macOS","runner":"macos-15","part":"5"}]'
+          else
+            performance='[{"platform":"Linux","runner":"ubuntu-24.04","part":""},{"platform":"macOS","runner":"macos-15","part":""}]'
+          fi
+          json=$(python3 -c 'import json, sys; print(json.dumps(sys.argv[1].split()))' "$rows")
+          echo "crysta rows ($set_): ${rows:-none}"
+          {
+            echo "rows=$json"
+            echo "performance=$performance"
+            echo "edi=$EDI"
+            echo "pr=$PR"
+          } >> "$GITHUB_OUTPUT"
+
+  checks:
+    needs: plan
+    if: github.repository == 'enhantica/edi' && github.event.pull_request.head.repo.fork == false && contains(fromJSON(needs.plan.outputs.rows), 'checks')
+    name: checks · ${{ matrix.platform }}
+    environment: crysta-sdk
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: Linux
+            runner: ubuntu-24.04
+            sdk: linux-64
+            environments: cpp-ci lint lint-docs-ci
+          - platform: macOS
+            runner: macos-15
+            sdk: osx-arm64
+            environments: cpp-ci lint
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 150
+    defaults:
+      run:
+        shell: python3 tools/ci/public_log.py {0}
+    env:
+      CRYSTA_SHA: ${{ inputs.crysta-sha }}
+      CMAKE_GENERATOR: ${{ matrix.platform == 'macOS' && 'Ninja' || 'Unix Makefiles' }}
+    steps:
+      - &checkout
+        uses: actions/checkout@v5
+        with:
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /*
+            !/tests/
+            !/docs/
+            !/website/
+      - name: This run's crysta SDK, for the consumer smoke
+        uses: ./.github/actions/crysta-sdk
+        with:
+          platform: ${{ matrix.sdk }}
+          diagnostic: ${{ inputs.diagnostic && 'true' || 'false' }}
+      - &source
+        name: crysta's source, whose lines no later step prints or stores
+        uses: ./.github/actions/crysta-source
+        with:
+          sha: ${{ inputs.crysta-sha }}
+          app-id: ${{ vars.ENHANTICA_APP_ID }}
+          private-key: ${{ secrets.ENHANTICA_APP_KEY }}
+      - &subject
+        name: The crysta commit under test
+        run: python3 tools/ci/crysta_subject.py --sha "$CRYSTA_SHA"
+      - name: Set up pixi for crysta
+        uses: ./.github/actions/setup-pixi
+        with:
+          manifest-path: ${{ runner.temp }}/crysta/pixi.toml
+          environments: ${{ matrix.environments }}
+          cache: false
+      - &ccache-env
+        name: Point the compiler cache at the runner
+        id: ccache
+        run: |
+          {
+            echo "CCACHE_DIR=$RUNNER_TEMP/crysta-ccache"
+            echo "CCACHE_COMPILERCHECK=content"
+            echo "CCACHE_MAXSIZE=2G"
+          } >> "$GITHUB_ENV"
+          python3 -c 'import hashlib, os, pathlib; print("lock=" + hashlib.sha256((pathlib.Path(os.environ["RUNNER_TEMP"]) / "crysta/pixi.lock").read_bytes()).hexdigest())' >> "$GITHUB_OUTPUT"
+      - &ccache-restore
+        name: Restore the crysta compiler cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ runner.temp }}/crysta-ccache
+          key: ccache2-crysta-checks-${{ runner.os }}-${{ steps.ccache.outputs.lock }}-${{ inputs.crysta-sha }}
+          restore-keys: |
+            ccache2-crysta-checks-${{ runner.os }}-${{ steps.ccache.outputs.lock }}-
+            ccache2-crysta-checks-${{ runner.os }}-
+      - name: Guards, dictionary and conventions
+        if: matrix.platform == 'Linux'
+        run: |
+          cd "$RUNNER_TEMP/crysta"
+          status=0
+          for check in no_src_spike_import no_log_in_parallel entity_path_convention keyed_swap_completeness token_consumers descent_names symop_shift_bound; do
+            echo "guard: $check"
+            python3 "tools/checks/$check.py" || status=1
+          done
+          for check in write_boundary computed_inputs category_census; do
+            echo "guard: $check"
+            pixi run -e cpp-ci python "tools/checks/$check.py" || status=1
+          done
+          echo "guard: dictionary_sync"
+          pixi run -e cpp-ci python tools/checks/dictionary_sync.py --check || status=1
+          exit "$status"
+      - name: Build the extension and the CLI
+        env:
+          SKBUILD_CMAKE_DEFINE: CRYSTA_REQUIRE_SIMD=ON
+        run: cd "$RUNNER_TEMP/crysta" && pixi run -e cpp-ci cpp-build
+      - name: Report the perf configuration
+        if: ${{ !cancelled() }}
+        run: cd "$RUNNER_TEMP/crysta" && build/crysta --perf-info
+      - name: Warnings-as-errors build
+        if: ${{ !cancelled() }}
+        run: cd "$RUNNER_TEMP/crysta" && pixi run -e cpp-ci cpp-werror
+      - name: clang-format
+        if: ${{ !cancelled() }}
+        run: cd "$RUNNER_TEMP/crysta" && pixi run -e lint cpp-format-check
+      - name: Sanitizer-guard negative control
+        if: ${{ !cancelled() }}
+        run: cd "$RUNNER_TEMP/crysta" && pixi run -e cpp-ci sanitize-guard-control
+      - name: Unit coverage, pull-request subset
+        if: ${{ !cancelled() && matrix.platform == 'Linux' }}
+        run: |
+          cd "$RUNNER_TEMP/crysta"
+          python3 "$GITHUB_WORKSPACE/tools/ci/crysta_findings.py" run doctest "$RUNNER_TEMP/crysta/build" -- pixi run -e cpp-ci bash tools/ci/cpp-coverage-unit.sh
+      - name: LTO premise
+        if: ${{ !cancelled() }}
+        run: cd "$RUNNER_TEMP/crysta" && pixi run -e cpp-ci bash tools/ci/_lto_premise.sh
+      - name: Boundary guard
+        if: ${{ !cancelled() }}
+        run: cd "$RUNNER_TEMP/crysta" && pixi run -e cpp-ci python tools/ci/_boundary_guard.py
+      - name: Contract checks
+        if: ${{ !cancelled() && matrix.platform == 'Linux' }}
+        run: |
+          cd "$RUNNER_TEMP/crysta"
+          status=0
+          for task in cli-vocabulary-check corpus-validate python-surface-check nav-check unit-coverage-audit vector-kernels-check; do
+            echo "contract: $task"
+            pixi run -e cpp-ci "$task" || status=1
+          done
+          exit "$status"
+      - name: Python-surface coverage of the unit tier
+        if: ${{ !cancelled() && matrix.platform == 'Linux' }}
+        run: cd "$RUNNER_TEMP/crysta" && pixi run -e cpp-ci --skip-deps py-surface-cov-unit
+      - name: ruff
+        if: ${{ !cancelled() && matrix.platform == 'Linux' }}
+        run: cd "$RUNNER_TEMP/crysta" && pixi run -e lint-docs-ci check
+      - name: Docs build
+        if: ${{ !cancelled() && matrix.platform == 'Linux' }}
+        run: cd "$RUNNER_TEMP/crysta" && pixi run -e lint-docs-ci docs-build
+      - name: SDK consumer smoke, on this run's SDK
+        if: ${{ !cancelled() }}
+        run: cd "$RUNNER_TEMP/crysta" && pixi run -e cpp-ci bash tools/ci/sdk-smoke/run.sh "$CRYSTA_SDK_ARCHIVES" "${{ matrix.sdk }}"
+      - name: Compiler cache statistics
+        if: ${{ !cancelled() }}
+        run: cd "$RUNNER_TEMP/crysta" && pixi run -e cpp-ci --skip-deps ccache --show-stats
+      - name: Keep the crysta compiler cache
+        if: ${{ !cancelled() && !inputs.diagnostic && steps.ccache.outcome == 'success' }}
+        uses: ./.github/actions/store
+        with:
+          ccache: pixi run --manifest-path "$RUNNER_TEMP/crysta/pixi.toml" -e cpp-ci --skip-deps python
+          path: ${{ runner.temp }}/crysta-ccache
+          key: ccache2-crysta-checks-${{ runner.os }}-${{ steps.ccache.outputs.lock }}-${{ inputs.crysta-sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+
+  tidy:
+    needs: plan
+    if: github.repository == 'enhantica/edi' && github.event.pull_request.head.repo.fork == false && contains(fromJSON(needs.plan.outputs.rows), 'tidy')
+    name: tidy · ${{ matrix.platform }} · ${{ matrix.part }}
+    environment: crysta-sdk
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {platform: Linux, runner: ubuntu-24.04, part: 1/4}
+          - {platform: Linux, runner: ubuntu-24.04, part: 2/4}
+          - {platform: Linux, runner: ubuntu-24.04, part: 3/4}
+          - {platform: Linux, runner: ubuntu-24.04, part: 4/4}
+          - {platform: macOS, runner: macos-15, part: 1/2}
+          - {platform: macOS, runner: macos-15, part: 2/2}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 120
+    defaults:
+      run:
+        shell: python3 tools/ci/public_log.py {0}
+    env:
+      CRYSTA_SHA: ${{ inputs.crysta-sha }}
+      CMAKE_GENERATOR: ${{ matrix.platform == 'macOS' && 'Ninja' || 'Unix Makefiles' }}
+    steps:
+      - *checkout
+      - *source
+      - *subject
+      - name: Set up pixi for crysta
+        uses: ./.github/actions/setup-pixi
+        with:
+          manifest-path: ${{ runner.temp }}/crysta/pixi.toml
+          environments: cpp-ci lint
+          cache: false
+      - *ccache-env
+      - *ccache-restore
+      - name: The build tree clang-tidy reads
+        run: cd "$RUNNER_TEMP/crysta" && pixi run -e cpp-ci cpp-werror
+      - name: clang-tidy, this part
+        run: |
+          cd "$RUNNER_TEMP/crysta"
+          pixi run -e cpp-ci python "$GITHUB_WORKSPACE/tools/ci/crysta_tidy_part.py" '${{ matrix.part }}' . --list
+          python3 "$GITHUB_WORKSPACE/tools/ci/crysta_findings.py" --root "$RUNNER_TEMP/crysta" run clang-tidy "$RUNNER_TEMP/findings/tidy.log" -- \
+            pixi run -e lint python "$GITHUB_WORKSPACE/tools/ci/crysta_tidy_part.py" '${{ matrix.part }}' .
+
+  python:
+    needs: plan
+    if: github.repository == 'enhantica/edi' && github.event.pull_request.head.repo.fork == false && contains(fromJSON(needs.plan.outputs.rows), 'python')
+    name: python · Linux · ${{ matrix.part }}
+    environment: crysta-sdk
+    strategy:
+      fail-fast: false
+      matrix:
+        part: [1/2, 2/2]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    defaults:
+      run:
+        shell: python3 tools/ci/public_log.py {0}
+    env:
+      CRYSTA_SHA: ${{ inputs.crysta-sha }}
+    steps:
+      - *checkout
+      - *source
+      - *subject
+      - &pixi-cpp
+        name: Set up pixi for crysta
+        uses: ./.github/actions/setup-pixi
+        with:
+          manifest-path: ${{ runner.temp }}/crysta/pixi.toml
+          environments: cpp-ci
+          cache: false
+      - *ccache-env
+      - *ccache-restore
+      - name: Build the extension and the CLI
+        env:
+          SKBUILD_CMAKE_DEFINE: CRYSTA_REQUIRE_SIMD=ON
+        run: cd "$RUNNER_TEMP/crysta" && pixi run -e cpp-ci cpp-build
+      - name: Python tiers, pull-request selection, this part
+        env:
+          COVERAGE_CORE: sysmon
+          CRYSTA_PYTEST_PART: ${{ matrix.part }}
+          CRYSTA_PYTEST_RECORD: ${{ runner.temp }}/findings/pytest.jsonl
+          PYTEST_ADDOPTS: -p crysta_pytest
+        run: |
+          cd "$RUNNER_TEMP/crysta"
+          export PYTHONPATH="$GITHUB_WORKSPACE/tools/ci${PYTHONPATH:+:$PYTHONPATH}"
+          python3 "$GITHUB_WORKSPACE/tools/ci/crysta_findings.py" run pytest "$CRYSTA_PYTEST_RECORD" -- pixi run -e cpp-ci --skip-deps suite-pr
+
+  python-full:
+    needs: plan
+    if: github.repository == 'enhantica/edi' && github.event.pull_request.head.repo.fork == false && contains(fromJSON(needs.plan.outputs.rows), 'python-full')
+    name: python full · Linux · ${{ matrix.part }}
+    environment: crysta-sdk
+    strategy:
+      fail-fast: false
+      matrix:
+        part: [1/6, 2/6, 3/6, 4/6, 5/6, 6/6]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    defaults:
+      run:
+        shell: python3 tools/ci/public_log.py {0}
+    env:
+      CRYSTA_SHA: ${{ inputs.crysta-sha }}
+    steps:
+      - *checkout
+      - *source
+      - *subject
+      - *pixi-cpp
+      - *ccache-env
+      - *ccache-restore
+      - name: Build the extension and the CLI
+        env:
+          SKBUILD_CMAKE_DEFINE: CRYSTA_REQUIRE_SIMD=ON
+        run: cd "$RUNNER_TEMP/crysta" && pixi run -e cpp-ci cpp-build
+      - name: Python tiers in full, this part
+        env:
+          COVERAGE_CORE: sysmon
+          CRYSTA_PYTEST_PART: ${{ matrix.part }}
+          CRYSTA_PYTEST_RECORD: ${{ runner.temp }}/findings/pytest.jsonl
+          PYTEST_ADDOPTS: -p crysta_pytest
+        run: |
+          cd "$RUNNER_TEMP/crysta"
+          export PYTHONPATH="$GITHUB_WORKSPACE/tools/ci${PYTHONPATH:+:$PYTHONPATH}"
+          python3 "$GITHUB_WORKSPACE/tools/ci/crysta_findings.py" run pytest "$CRYSTA_PYTEST_RECORD" -- pixi run -e cpp-ci --skip-deps suite-coverage
+      - name: Seeded series, slow cadence
+        if: ${{ !cancelled() && matrix.part == '1/6' }}
+        run: cd "$RUNNER_TEMP/crysta" && pixi run -e cpp-ci --skip-deps slow-seeded-series
+
+  audit:
+    needs: plan
+    if: github.repository == 'enhantica/edi' && github.event.pull_request.head.repo.fork == false && contains(fromJSON(needs.plan.outputs.rows), 'audit')
+    name: audit
+    environment: crysta-sdk
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: python3 tools/ci/public_log.py {0}
+    env:
+      CRYSTA_SHA: ${{ inputs.crysta-sha }}
+    steps:
+      - *checkout
+      - *source
+      - *subject
+      - *pixi-cpp
+      - *ccache-env
+      - *ccache-restore
+      - name: Runtime-manifest equality audit
+        run: cd "$RUNNER_TEMP/crysta" && pixi run -e cpp-ci per-pr-audit
+
+  edi-verification:
+    needs: plan
+    if: github.repository == 'enhantica/edi' && github.event.pull_request.head.repo.fork == false && contains(fromJSON(needs.plan.outputs.rows), 'edi-verification')
+    name: edi verification
+    environment: crysta-sdk
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    defaults:
+      run:
+        shell: python3 tools/ci/public_log.py {0}
+    env:
+      CRYSTA_SHA: ${{ inputs.crysta-sha }}
+    steps:
+      # The verification reads edi's tests, so this checkout is the whole pull-request head.
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ needs.plan.outputs.edi }}
+      - name: Set up pixi for edi
+        uses: ./.github/actions/setup-pixi
+      - name: This run's crysta SDK, the package under test
+        uses: ./.github/actions/crysta-sdk
+        with:
+          platform: linux-64
+          diagnostic: ${{ inputs.diagnostic && 'true' || 'false' }}
+      - *source
+      - *subject
+      - *pixi-cpp
+      - *ccache-env
+      - *ccache-restore
+      # edi's pinned route takes only the pinned commit; another one (a diagnostic, or a candidate
+      # not pinned yet) is linked through CRYSTA_SDK_DIR.
+      - name: edi verification against this crysta
+        env:
+          EDI_DIR: ${{ github.workspace }}
+          CRYSTA_SDK_TARBALL_DIR: ${{ github.workspace }}/crysta-sdk-archives
+          DIAGNOSTIC: ${{ inputs.diagnostic }}
+          EDI_READ_AUDIT_LOG: ${{ runner.temp }}/edi-reads.txt
+          EDI_READ_AUDIT_ROOT: ${{ github.workspace }}
+        run: |
+          export PYTHONPATH="$GITHUB_WORKSPACE/tools/ci/read-audit${PYTHONPATH:+:$PYTHONPATH}"
+          if [ "$DIAGNOSTIC" = true ] || ! grep -q "^CRYSTA_COMMIT = \"$CRYSTA_SHA\"" pixi.toml; then
+            export CRYSTA_SDK_DIR="$RUNNER_TEMP/crysta-sdk-unpacked"
+            mkdir -p "$CRYSTA_SDK_DIR"
+            tar -xzf "$CRYSTA_SDK_TARBALL_DIR/crysta-sdk-$CRYSTA_SHA-linux-64.tar.gz" -C "$CRYSTA_SDK_DIR"
+          fi
+          bash "$CRYSTA_SRC/tools/ci/edi-verification.sh"
+      - name: Every edi file the verification read is an input
+        if: ${{ !cancelled() }}
+        run: python3 tools/ci/crysta_read_audit.py --log "$RUNNER_TEMP/edi-reads.txt" --root "$GITHUB_WORKSPACE"
+
+  cpp-full:
+    needs: plan
+    if: github.repository == 'enhantica/edi' && github.event.pull_request.head.repo.fork == false && contains(fromJSON(needs.plan.outputs.rows), 'cpp-full')
+    name: cpp full · Linux
+    environment: crysta-sdk
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    defaults:
+      run:
+        shell: python3 tools/ci/public_log.py {0}
+    env:
+      CRYSTA_SHA: ${{ inputs.crysta-sha }}
+    steps:
+      - *checkout
+      - *source
+      - *subject
+      - *pixi-cpp
+      - *ccache-env
+      - *ccache-restore
+      - name: Build the extension and the CLI
+        env:
+          SKBUILD_CMAKE_DEFINE: CRYSTA_REQUIRE_SIMD=ON
+        run: cd "$RUNNER_TEMP/crysta" && pixi run -e cpp-ci cpp-build
+      - name: C++ tier in full
+        env:
+          COVERAGE_CORE: sysmon
+        run: |
+          cd "$RUNNER_TEMP/crysta"
+          python3 "$GITHUB_WORKSPACE/tools/ci/crysta_findings.py" run doctest "$RUNNER_TEMP/crysta/build" -- pixi run -e cpp-ci cpp-test-merge
+      - name: Scalar fallback build and parity
+        if: ${{ !cancelled() }}
+        run: cd "$RUNNER_TEMP/crysta" && pixi run -e cpp-ci bash tools/ci/_scalar_fallback.sh
+      - name: LTO correctness
+        if: ${{ !cancelled() }}
+        run: cd "$RUNNER_TEMP/crysta" && pixi run -e cpp-ci bash tools/ci/_lto_correctness.sh
+
+  full-macos:
+    needs: plan
+    if: github.repository == 'enhantica/edi' && github.event.pull_request.head.repo.fork == false && contains(fromJSON(needs.plan.outputs.rows), 'full-macos')
+    name: full · macOS
+    environment: crysta-sdk
+    runs-on: macos-15
+    timeout-minutes: 240
+    defaults:
+      run:
+        shell: python3 tools/ci/public_log.py {0}
+    env:
+      CRYSTA_SHA: ${{ inputs.crysta-sha }}
+      CMAKE_GENERATOR: Ninja
+    steps:
+      - *checkout
+      - *source
+      - *subject
+      - *pixi-cpp
+      - *ccache-env
+      - *ccache-restore
+      - name: Build the extension and the CLI
+        env:
+          SKBUILD_CMAKE_DEFINE: CRYSTA_REQUIRE_SIMD=ON
+        run: cd "$RUNNER_TEMP/crysta" && pixi run -e cpp-ci cpp-build
+      - name: The full suite, C++ and Python tiers
+        env:
+          COVERAGE_CORE: sysmon
+          CRYSTA_PYTEST_RECORD: ${{ runner.temp }}/findings/pytest.jsonl
+          PYTEST_ADDOPTS: -p crysta_pytest
+        run: |
+          cd "$RUNNER_TEMP/crysta"
+          export PYTHONPATH="$GITHUB_WORKSPACE/tools/ci${PYTHONPATH:+:$PYTHONPATH}"
+          status=0
+          python3 "$GITHUB_WORKSPACE/tools/ci/crysta_findings.py" run doctest "$RUNNER_TEMP/crysta/build" -- pixi run -e cpp-ci group-full || status=$?
+          python3 "$GITHUB_WORKSPACE/tools/ci/crysta_findings.py" show pytest "$CRYSTA_PYTEST_RECORD"
+          exit "$status"
+      - name: LTO correctness
+        if: ${{ !cancelled() }}
+        run: cd "$RUNNER_TEMP/crysta" && pixi run -e cpp-ci bash tools/ci/_lto_correctness.sh
+      - name: Seeded series, slow cadence
+        if: ${{ !cancelled() }}
+        run: cd "$RUNNER_TEMP/crysta" && pixi run -e cpp-ci --skip-deps slow-seeded-series
+
+  cppcheck:
+    needs: plan
+    if: github.repository == 'enhantica/edi' && github.event.pull_request.head.repo.fork == false && contains(fromJSON(needs.plan.outputs.rows), 'cppcheck')
+    name: cppcheck · ${{ matrix.platform }}
+    environment: crysta-sdk
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {platform: Linux, runner: ubuntu-24.04}
+          - {platform: macOS, runner: macos-15}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 120
+    defaults:
+      run:
+        shell: python3 tools/ci/public_log.py {0}
+    env:
+      CRYSTA_SHA: ${{ inputs.crysta-sha }}
+    steps:
+      - *checkout
+      - *source
+      - *subject
+      - *pixi-cpp
+      - name: cppcheck
+        run: |
+          cd "$RUNNER_TEMP/crysta"
+          python3 "$GITHUB_WORKSPACE/tools/ci/crysta_findings.py" --root "$RUNNER_TEMP/crysta" run cppcheck "$RUNNER_TEMP/findings/cppcheck.log" -- pixi run -e cpp-ci cpp-cppcheck
+
+  asan:
+    needs: plan
+    if: github.repository == 'enhantica/edi' && github.event.pull_request.head.repo.fork == false && contains(fromJSON(needs.plan.outputs.rows), 'asan')
+    name: ${{ matrix.name }}
+    environment: crysta-sdk
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {name: asan · Linux, runner: ubuntu-24.04, task: cpp-asan}
+          - {name: asan pool · Linux, runner: ubuntu-24.04, task: cpp-asan-pool}
+          - {name: asan · macOS, runner: macos-15, task: cpp-asan}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 90
+    defaults:
+      run:
+        shell: python3 tools/ci/public_log.py {0}
+    env:
+      CRYSTA_SHA: ${{ inputs.crysta-sha }}
+      # Linux's libstdc++ has no container annotations, so this only matters on macOS.
+      ASAN_OPTIONS: detect_container_overflow=0
+      CMAKE_GENERATOR: ${{ runner.os == 'macOS' && 'Ninja' || 'Unix Makefiles' }}
+    steps:
+      - *checkout
+      - *source
+      - *subject
+      - *pixi-cpp
+      - *ccache-env
+      - *ccache-restore
+      - name: ASan and UBSan
+        run: |
+          cd "$RUNNER_TEMP/crysta"
+          python3 "$GITHUB_WORKSPACE/tools/ci/crysta_findings.py" run doctest "$RUNNER_TEMP/crysta/build" -- pixi run -e cpp-ci '${{ matrix.task }}'
+
+  release:
+    needs: plan
+    if: github.repository == 'enhantica/edi' && github.event.pull_request.head.repo.fork == false && contains(fromJSON(needs.plan.outputs.rows), 'release')
+    name: release · Linux
+    environment: crysta-sdk
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    defaults:
+      run:
+        shell: python3 tools/ci/public_log.py {0}
+    env:
+      CRYSTA_SHA: ${{ inputs.crysta-sha }}
+    steps:
+      - *checkout
+      - *source
+      - *subject
+      - *pixi-cpp
+      - name: The full Release suite, GCC -O3, every case
+        run: |
+          cd "$RUNNER_TEMP/crysta"
+          python3 "$GITHUB_WORKSPACE/tools/ci/crysta_findings.py" run doctest "$RUNNER_TEMP/crysta/build" -- pixi run -e cpp-ci bash tools/ci/cpp-test.sh --merge
+
+  performance:
+    needs: plan
+    if: github.repository == 'enhantica/edi' && github.event.pull_request.head.repo.fork == false && contains(fromJSON(needs.plan.outputs.rows), 'performance')
+    name: performance · ${{ matrix.platform }}${{ matrix.part && format(' · A/A {0}', matrix.part) || '' }}
+    environment: crysta-sdk
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.plan.outputs.performance) }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 120
+    defaults:
+      run:
+        shell: python3 tools/ci/public_log.py {0}
+    env:
+      CRYSTA_SHA: ${{ inputs.crysta-sha }}
+      CMAKE_GENERATOR: ${{ matrix.platform == 'macOS' && 'Ninja' || 'Unix Makefiles' }}
+    steps:
+      - *checkout
+      - *source
+      - *subject
+      - *pixi-cpp
+      - *ccache-env
+      - *ccache-restore
+      - name: Build the engine under test
+        run: cd "$RUNNER_TEMP/crysta" && pixi run -e cpp-ci cpp-build && build/crysta --perf-info
+      # A/A: both sides are this commit's engine, so every ratio outside the band is runner noise.
+      - name: A/A runs at this commit
+        if: matrix.part != ''
+        env:
+          RUNS: ${{ matrix.platform == 'macOS' && '2' || '1' }}
+        run: |
+          cd "$RUNNER_TEMP/crysta"
+          work="$RUNNER_TEMP/aa"
+          mkdir -p "$work"
+          cp build/crysta "$work/dev-crysta"
+          cp build/crysta "$work/release-crysta"
+          status=0
+          for run in $(seq 1 "$RUNS"); do
+            echo "A/A run $run of $RUNS"
+            pixi run -e cpp-ci python tools/bench/ab_perf.py --dev-bin "$work/dev-crysta" --release-bin "$work/release-crysta" --release-tree "$RUNNER_TEMP/crysta" || status=1
+          done
+          exit "$status"
+      # The A/B against crysta main needs a second crysta commit on the runner, which the source
+      # action does not fetch yet.
+      - name: A/B against crysta main
+        if: matrix.part == ''
+        run: |
+          echo "The A/B against crysta main is not wired yet: the source action fetches one commit." >&2
+          exit 1
+
+  coverage:
+    needs: plan
+    if: github.repository == 'enhantica/edi' && github.event.pull_request.head.repo.fork == false && contains(fromJSON(needs.plan.outputs.rows), 'coverage')
+    name: coverage
+    environment: crysta-sdk
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    defaults:
+      run:
+        shell: python3 tools/ci/public_log.py {0}
+    env:
+      CRYSTA_SHA: ${{ inputs.crysta-sha }}
+    steps:
+      - *checkout
+      - *source
+      - *subject
+      - *pixi-cpp
+      - name: Unit coverage, gated
+        run: |
+          cd "$RUNNER_TEMP/crysta"
+          python3 "$GITHUB_WORKSPACE/tools/ci/crysta_findings.py" run doctest "$RUNNER_TEMP/crysta/build" -- pixi run -e cpp-ci bash tools/ci/cpp-coverage-unit.sh
+      - name: Python-surface coverage of the unit tier, gated
+        if: ${{ !cancelled() }}
+        run: cd "$RUNNER_TEMP/crysta" && pixi run -e cpp-ci --skip-deps py-surface-cov-unit
+
+  wheels:
+    needs: plan
+    if: github.repository == 'enhantica/edi' && github.event.pull_request.head.repo.fork == false && contains(fromJSON(needs.plan.outputs.rows), 'wheels')
+    name: wheels · Linux
+    environment: crysta-sdk
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    defaults:
+      run:
+        shell: python3 tools/ci/public_log.py {0}
+    env:
+      CRYSTA_SHA: ${{ inputs.crysta-sha }}
+    steps:
+      - *checkout
+      - *source
+      - *subject
+      # Built to prove the wheels build; they are not stored.
+      - name: Build the wheels
+        run: |
+          python3 -m pip install --quiet 'cibuildwheel==3.4.1'
+          python3 -m cibuildwheel "$RUNNER_TEMP/crysta" --output-dir "$RUNNER_TEMP/wheels"
+          ls -l "$RUNNER_TEMP/wheels"

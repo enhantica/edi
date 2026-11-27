@@ -86,6 +86,7 @@ APP = {
 SCAN_ARCHIVE = {'${{ runner.temp }}/scan-archive/44k.zip': 'edi-scan-archive-'}
 WASM = {'~/.cache/edi-ccache': 'ccache2-wasm-', '~/.cache/edi-wasm': 'edi-wasm2-'}
 DURATIONS = {'build/test-durations.json': 'test-durations-'}
+CRYSTA = {'${{ runner.temp }}/crysta-ccache': 'ccache2-crysta-checks-'}
 CACHES = {
     **dict.fromkeys(
         [
@@ -110,6 +111,24 @@ CACHES = {
         '${{ runner.temp }}/crysta-ccache': 'ccache2-crysta-sdk-',
     },
     'installers.yml/installers': {'${{ runner.temp }}/edi-ccache': 'ccache2-installer-'},
+    **dict.fromkeys(
+        [
+            f'crysta.yml/{job}'
+            for job in (
+                'checks',
+                'tidy',
+                'python',
+                'python-full',
+                'audit',
+                'edi-verification',
+                'cpp-full',
+                'full-macos',
+                'asan',
+                'performance',
+            )
+        ],
+        CRYSTA,
+    ),
 }
 USES = {
     'actions/upload-artifact': 'artifact',

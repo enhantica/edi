@@ -74,6 +74,15 @@ jobs:
     with:
       crysta-sha: ${{ needs.changes.outputs.crysta_sha }}
 
+  # crysta's own checks and tests, on the crysta commit this run pins (crysta.yml).
+  crysta:
+    if: github.event.pull_request.head.repo.fork == false && inputs.core_only != true
+    needs: [changes, crysta-sdk]
+    uses: ./.github/workflows/crysta.yml
+    secrets: inherit
+    with:
+      crysta-sha: ${{ needs.changes.outputs.crysta_sha }}
+
   lint:
     name: lint
     if: inputs.core_only != true
