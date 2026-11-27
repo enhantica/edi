@@ -131,6 +131,7 @@ in the same change — see `AGENTS.md` §ADRs.
 | [0104](0104-label-registry.md) | The label registry | Proposed | 🟡 | Medium | every fixed label has a long form, a short form and an icon in app/data/labels.tsv; one label shows the widest that fits, never cut, the long text in its tooltip; a check finds missing rows and raw names |
 | [0105](0105-declared-columns.md) | Declared columns | Proposed | 🟡 | Medium | a table's column widths from its declared kinds and the model's texts, known before its group opens, never from made rows; user text measured from the model |
 | [0106](0106-versions-and-checksum-updates.md) | Versions YY.N and checksum updates | Accepted | 🟡 | High | releases are YY.N (26.17, then 27.1), one identity, ordered after the old YYYY.MM.N by one key; shown as `Version 26.17 · 26 Nov 2026`; the feed offers components by content checksum (`repogen --sha-update`); an update replaces the Maintenance Tool; supersedes ADR-0072's version scheme |
+| [0107](0107-voice-input-with-a-local-whisper-model.md) | Voice input with a local Whisper model | Proposed | ⬜ | Medium | whisper.cpp small q5_1 recognises speech on the desktop, never online; the model is an optional installer component, unticked; audio stays in memory; no model, no microphone button |
 
 New cross-cutting decisions that should also bind crysta are authored as **(shared)** and, once the
 Copier agent-OS template exists (ADR-0004), live in its shared-ADR range so `copier update`
