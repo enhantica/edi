@@ -6,10 +6,12 @@
 #include <QList>
 #include <QObject>
 #include <QByteArray>
+#include <QByteArrayView>
 #include <QPointer>
 #include <QString>
 #include <QTimer>
 
+#include <cstdint>
 #include <memory>
 #include <span>
 #include <vector>
@@ -20,21 +22,32 @@ class QIODevice;
 namespace edi_app {
 
 /// Converts mono audio at any rate to the 16 kHz voice input records (ADR-0107). Feed it in chunks; it keeps the state
-/// between them. Lowering the rate averages the input over each output step first, so speech does not alias.
+/// between them, so the output does not depend on how the input was split. A windowed-sinc low-pass filter keeps
+/// everything above 7.5 kHz out of the result, so fricatives do not fold back into the speech band. Equal rates pass the
+/// samples through unchanged.
 class MonoResampler {
 public:
     explicit MonoResampler(int input_rate, int output_rate = 16000);
     std::vector<float> push(std::span<const float> input);
+    /// The samples still waiting for later input, as if silence followed; the resampler then starts afresh.
+    std::vector<float> flush();
 
 private:
-    double step_;            // input samples per output sample
-    int window_;             // the averaging width when lowering the rate
-    std::vector<float> recent_;
-    double sum_ = 0.0;
-    std::size_t next_ = 0;   // the oldest sample in recent_
-    std::vector<float> pending_;
-    double position_ = 0.0;  // the next output sample's place in pending_
+    std::vector<float> convert(bool flushing);
+    void reset();
+
+    int in_;
+    int out_;
+    double reach_ = 0.0;         // the filter's half width in input samples; 0 when the rates match
+    std::vector<float> kernel_;  // the filter from 0 to reach_, sampled finely
+    std::vector<float> pending_; // input samples some later output still needs
+    std::int64_t received_ = 0;  // input samples pushed since the start
+    std::int64_t dropped_ = 0;   // input samples no longer in pending_
+    std::int64_t emitted_ = 0;   // output samples so far
 };
+
+/// Whole frames of `bytes` in `format`, each frame's channels averaged into one float in [-1, 1].
+std::vector<float> mono_samples(const QAudioFormat& format, QByteArrayView bytes);
 
 /// A microphone for voice input: 16 kHz mono floats in [-1, 1], in memory only. Tests inject their own source.
 class AudioCapture : public QObject {

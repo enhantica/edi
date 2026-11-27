@@ -823,6 +823,18 @@ if(EDI_APP_VOICE)
     endif()
 endif()
 
+# The microphone's conversion to 16 kHz mono, on computed sine waves (ADR-0107).
+if(EDI_APP_VOICE)
+    qt_add_executable(edi_audio_capture_tests EXCLUDE_FROM_ALL tests/audio_capture_tests.cpp)
+    target_link_libraries(edi_audio_capture_tests PRIVATE edi_app_module edi_app_moduleplugin ${EDI_GUI_BASE_TARGETS} Qt6::Test)
+    target_sources(edi_audio_capture_tests PRIVATE "${EDI_APP_BUILD_COMMIT_CPP}")
+    add_dependencies(edi_audio_capture_tests edi_app_build_commit)
+    set_target_properties(edi_audio_capture_tests PROPERTIES AUTOMOC ON WIN32_EXECUTABLE FALSE MACOSX_BUNDLE FALSE)
+    if(TARGET edi_assistant_native)
+        target_link_libraries(edi_audio_capture_tests PRIVATE edi_assistant_native)
+    endif()
+endif()
+
 qt_add_executable(edi_assistant_ui_tests tests/assistant_ui_tests.cpp)
 target_link_libraries(edi_assistant_ui_tests PRIVATE edi_app_module edi_app_moduleplugin ${EDI_GUI_BASE_TARGETS} Qt6::QuickTest)
 target_compile_definitions(edi_assistant_ui_tests PRIVATE EDI_SOURCE_DIR="${PROJECT_SOURCE_DIR}")

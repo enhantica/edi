@@ -45,8 +45,10 @@ assistant runtime, and shows its choices as rows on the folder page instead of a
    has the stated size; packaging checks the staged model against the pin in `tools/deps/voice/models.json` and writes
    the manifest from that pin, and the installer's payload manifest checks it again. A change takes effect after a
    restart, as for the assistant.
-4. **Audio and privacy.** Qt Multimedia's `QAudioSource` records from the default input at 16 kHz mono; when the device
-   does not offer that format the app records in the device's format and converts to 16 kHz mono in memory. The
+4. **Audio and privacy.** Qt Multimedia's `QAudioSource` records from the default input in the device's own format,
+   and the app converts it to 16 kHz mono in memory with a windowed-sinc resampler, so nothing above 8 kHz folds back
+   into speech. Qt is never asked to change the rate: Qt 6.11's macOS rate conversion feeds the same device buffer in
+   more than once and repeats pieces of the audio (QTBUG-151918, fixed in Qt 6.12). The
    samples stay in memory: they are never written to a file and never sent anywhere, and they are released when the
    text is ready or the recording is cancelled. A recording stops when the user presses the button again, after two
    seconds of silence following speech, or after two minutes. Only Qt Multimedia's audio input is used; its FFmpeg

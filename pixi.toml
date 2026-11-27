@@ -258,6 +258,7 @@ app-test-trial-lock = { cmd = "cmake --build build/app --target edi_trial_lock_t
 app-test-load-attempts = { cmd = "cmake --build build/app --target edi_load_attempt_tests -j 4 && QT_QPA_PLATFORM=offscreen build/app/app/edi_load_attempt_tests", depends-on = ["app-build"] }
 # Voice input on the tiny model, staged in build/voice-models/ first (tests/fixtures/assistant_voice/README.md).
 app-test-voice = { cmd = "cmake --build build/app --target edi_voice_input_tests -j 4 && QT_QPA_PLATFORM=offscreen build/app/app/edi_voice_input_tests", depends-on = ["app-build"] }
+app-test-audio-capture = { cmd = "cmake --build build/app --target edi_audio_capture_tests -j 4 && QT_QPA_PLATFORM=offscreen build/app/app/edi_audio_capture_tests", depends-on = ["app-build"] }
 # Build, then start the app: `pixi run -e app app` (arguments pass through: `pixi run -e app app --demo out/`).
 app = { cmd = "EDI_APP_TARGETS=edi_app bash tools/ci/app-build.sh && bash tools/ci/app-run.sh"  }
 # Start the already-built app with no build and no network check.

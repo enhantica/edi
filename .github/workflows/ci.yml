@@ -917,7 +917,9 @@ jobs:
       # recorded clip in place of the microphone. Neither touches a real microphone.
       - name: Voice input recogniser, request owner and Unicode install path
         if: ${{ runner.os != 'Windows' && (!cancelled() && steps.apphost.outcome == 'success') }}
-        run: pixi run -e app --skip-deps app-test-voice
+        run: |
+          pixi run -e app --skip-deps app-test-audio-capture
+          pixi run -e app --skip-deps app-test-voice
       - name: Voice input journey in the app (tests/system/app/test_assistant_voice_input.py)
         id: voicejourney
         if: ${{ runner.os != 'Windows' && (!cancelled() && steps.apphost.outcome == 'success') }}
