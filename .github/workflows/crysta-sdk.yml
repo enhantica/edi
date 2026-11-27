@@ -113,7 +113,7 @@ jobs:
         with:
           sha: ${{ needs.resolve.outputs.sha }}
           app-id: ${{ vars.ENHANTICA_APP_ID }}
-          private-key: ${{ secrets.ENHANTICA_APP_KEY }}
+          private-key: ${{ secrets.CRYSTA_READ_KEY }}
       - name: The crysta commit under test
         env:
           SHA: ${{ needs.resolve.outputs.sha }}

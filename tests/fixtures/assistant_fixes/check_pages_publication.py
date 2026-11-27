@@ -10,6 +10,11 @@ ROOT = Path(__file__).resolve().parents[3]
 SPEC = importlib.util.spec_from_file_location('pages_update', ROOT / 'tools/ci/pages_update.py')
 MODULE = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(MODULE)
+FEED_SPEC = importlib.util.spec_from_file_location(
+    'legacy_feed', ROOT / 'tools/release/legacy_feed.py'
+)
+FEED = importlib.util.module_from_spec(FEED_SPEC)
+FEED_SPEC.loader.exec_module(FEED)
 
 
 def artifact(run, name, created, *, expired=False):
@@ -555,3 +560,103 @@ def test_documentation_build_replaces_the_served_index(tmp_path):
 def test_an_index_of_release_links_only_is_a_valid_base(tmp_path):
     site, _ = site_with_index(tmp_path, [older('2026.11.6'), older('2026.11.10')], {})
     MODULE.check_package_index(site)
+
+
+def preview_release(version, commit):
+    """A preview as tools/installer/build.py records it: notes without pull request numbers."""
+    note = {'title': f'Preview {version}', 'interfaces': ['desktop']}
+    return {
+        'version': version,
+        'date': '2026-11-27',
+        'commit': commit * 40,
+        'notes': {'Added': [note], 'Fixed': [], 'Changed': []},
+    }
+
+
+def publish_preview(site, incoming, version, commit):
+    for platform in ['linux-x86_64', 'macos-arm64', 'windows-x86_64']:
+        part = incoming / 'testing' / platform
+        part.mkdir(parents=True, exist_ok=True)
+        (part / 'Updates.xml').write_text(updates(version))
+    feed = {
+        'schema': 'edi.preview-releases/1',
+        'sequence': 'calendar',
+        'releases': [preview_release(version, commit)],
+    }
+    (incoming / 'testing/feed.json').write_text(json.dumps(feed))
+    MODULE.overlay_component(site, incoming, 'installers')
+
+
+def versions(path):
+    return [entry['version'] for entry in json.loads(path.read_text())['releases']]
+
+
+def test_old_testing_apps_see_yy_n_previews_under_an_alias(tmp_path):
+    site, incoming = calendar_site(tmp_path, '2026.11.30'), tmp_path / 'incoming'
+    # A site from before the -v2 feeds: testing.json holds the whole testing feed.
+    (site / 'releases/testing.json').write_text(
+        json.dumps({
+            'schema': 'edi.preview-releases/1',
+            'sequence': 'calendar',
+            'releases': [preview_release('2026.11.30', 'a')],
+        })
+    )
+    publish_preview(site, incoming, '26.18', 'b')
+    releases = site / 'releases'
+    assert versions(releases / 'testing-v2.json') == ['26.18', '2026.11.30']
+    legacy = (releases / 'testing.json').read_bytes()
+    assert FEED.check(legacy, testing=True) == ['2026.11.32', '2026.11.30']
+    assert json.loads(legacy)['releases'][0]['commit'] == 'b' * 40
+    # The next preview reads the -v2 feed and moves the alias on.
+    publish_preview(site, incoming, '26.19', 'c')
+    assert versions(releases / 'testing-v2.json') == ['26.19', '26.18', '2026.11.30']
+    assert FEED.check((releases / 'testing.json').read_bytes(), testing=True) == [
+        '2026.11.33',
+        '2026.11.30',
+    ]
+
+
+def test_a_testing_feed_the_old_apps_would_drop_is_refused(tmp_path):
+    # calendar_site's feed entry has no date, commit or notes, so old apps cannot read it.
+    site, incoming = calendar_site(tmp_path), tmp_path / 'incoming'
+    before = (site / 'releases/testing.json').read_bytes()
+    with pytest.raises(ValueError, match='would drop the legacy feed'):
+        publish_preview(site, incoming, '26.18', 'b')
+    assert (site / 'releases/testing.json').read_bytes() == before
+    assert not (site / 'releases/testing-v2.json').exists()
+
+
+def test_a_release_publishes_both_feeds_and_agrees_with_the_newer(tmp_path):
+    site, incoming = calendar_site(tmp_path), tmp_path / 'incoming'
+    for platform in ['linux-x86_64', 'macos-arm64', 'windows-x86_64']:
+        part = incoming / 'repository' / platform
+        part.mkdir(parents=True)
+        (part / 'Updates.xml').write_text(updates('26.17'))
+    (incoming / 'releases/26.17').mkdir(parents=True)
+    (incoming / 'pypi').mkdir()
+    (incoming / 'SHA256SUMS').write_text('')
+    history = {
+        'schema': 'edi.releases/1',
+        'baseline_commit': 'c' * 40,
+        'releases': [
+            {
+                **preview_release(version, commit),
+                'notes': {
+                    'Added': [{'title': f'Release {version}', 'pull_request': number}],
+                    'Fixed': [],
+                    'Changed': [],
+                },
+            }
+            for version, commit, number in [('2026.11.31', 'a', 1), ('26.17', 'b', 2)]
+        ],
+    }
+    source = tmp_path / 'release-history.json'
+    source.write_text(json.dumps(history))
+    FEED.write_feeds(source, incoming / 'releases')
+    MODULE.overlay_component(site, incoming, 'release')
+    releases = site / 'releases'
+    assert (releases / 'stable-v2.json').read_bytes() == source.read_bytes()
+    assert versions(releases / 'stable.json') == ['2026.11.31', '2026.11.32']
+    (incoming / 'releases/stable-v2.json').unlink()
+    with pytest.raises(RuntimeError, match='bounded regular files'):
+        MODULE.overlay_component(site, incoming, 'release')
