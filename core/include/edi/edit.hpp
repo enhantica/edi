@@ -1311,7 +1311,7 @@ class Edit {
         return Edit([&project, prepared = std::move(prepared)] {
             check_magnetic_candidates(project, *prepared);  // the whole batch, before any of it lands
             std::vector<ItemVec<Structure>::Ptr> structures(project.structures.begin(), project.structures.end());
-            for (const auto& structure : prepared->structures) structures.push_back(std::make_shared<Structure>(*structure));
+            for (const auto& structure : prepared->children()) structures.push_back(std::make_shared<Structure>(*structure));
             std::vector<std::vector<ItemVec<LinkedStructure>::Ptr>> links;
             std::vector<std::vector<ItemVec<PrefOrient>::Ptr>> texture;
             for (std::size_t e = 0; e < project.experiments.size(); ++e) {

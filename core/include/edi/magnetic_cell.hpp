@@ -75,8 +75,20 @@ struct PreparedMagneticCandidates {
         std::optional<std::uint64_t> inputs;  // none: a bank without measured data
     };
     std::vector<Bank> banks;
-    // Immutable once prepared (review 18, F3): the batch is handed out as const, its children as const structures.
-    std::vector<std::shared_ptr<const Structure>> structures;
+    // The children (review 18 and 19, F3): held by the batch alone. A child is copied in while the batch is built and
+    // copied out to be read, so nothing outside the batch holds a row of the payload Apply publishes, and a batch
+    // shared as const cannot change.
+    void add(const Structure& child) { children_.push_back(std::make_shared<const Structure>(child)); }
+    std::size_t size() const { return children_.size(); }
+    bool empty() const { return children_.empty(); }
+    std::string name(std::size_t index) const { return children_.at(index)->name.value(); }
+    /// Detached copies of the children, in order: what a preview reads and what Apply adds.
+    std::vector<std::shared_ptr<const Structure>> children() const {
+        std::vector<std::shared_ptr<const Structure>> out;
+        out.reserve(children_.size());
+        for (const auto& child : children_) out.push_back(std::make_shared<const Structure>(*child));
+        return out;
+    }
     struct Link {
         std::size_t experiment = 0;
         std::string structure;
@@ -94,6 +106,9 @@ struct PreparedMagneticCandidates {
         std::array<int, 3> axis{0, 0, 1};
     };
     std::vector<Texture> textures;
+
+   private:
+    std::vector<std::shared_ptr<const Structure>> children_;
 };
 /// The whole batch checked against `project` before any of it is published (review 15, F3): the
 /// parent present and linked to powder experiments only, candidate names new and distinct, every

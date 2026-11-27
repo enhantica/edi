@@ -649,13 +649,15 @@ void publish_completed_type_iv(Project& host, crysta::Project& work, std::vector
 template <typename Publish, typename Restage, typename Measure>
 auto publish_fit_transaction(Project& host, std::vector<detail::RefinedValue>& refined, const Publish& publish,
                              const Restage& restage, const Measure& measure) {
+    // The trial publication surfaces a refused Calculate; the quality is measured on a copy of the engine project, so
+    // the live publication runs on exactly the engine state the trial proved (review 19, F2).
     {
         Project trial(host);
         std::vector<detail::RefinedValue> staged = restage(trial);
-        publish(trial, staged);
+        publish(trial, staged, true);
     }
     auto measured = measure();
-    publish(host, refined);
+    publish(host, refined, false);
     return measured;
 }
 
@@ -7830,7 +7832,8 @@ std::vector<std::string> identity_paths(const IterationCallback& subscriber,
 // series is written, never what the engine computes. It runs LAST, after the value write-back and every
 // completion pass, because the pattern must describe the model a SAVE would serialise. The three paths share
 // one function rather than three agreeing copies: a fourth entry point cannot forget a step it never spells.
-void publish_fit_state(Project& project, crysta::Project& converted, const std::vector<detail::RefinedValue>& refined) {
+void publish_fit_state(Project& project, crysta::Project& converted, const std::vector<detail::RefinedValue>& refined,
+                       bool surface_refusal = false) {
     for (const auto& structure : project.structures) {  // every structure (phase)
         rebalance_positional_fit_state(*structure);  // review-9 F1: lossless snapshot hand-off
     }
@@ -7875,7 +7878,13 @@ void publish_fit_state(Project& project, crysta::Project& converted, const std::
     for (const auto& experiment : project.experiments) {
         record_fitted_background(*experiment);
     }
-    project.refresh_calculated_pattern();  // The pattern follows the model it describes
+    // The pattern follows the model it describes. A fit's trial publication raises a Calculate the model refuses
+    // instead of clearing it, so the fit refuses before the live model is touched (review 19, F2).
+    if (surface_refusal) {
+        project.calculate();
+    } else {
+        project.refresh_calculated_pattern();
+    }
 }
 
 // The R factors of the fit that ran on `fitted` (its engine project, at the fitted values), over the measured
@@ -8449,10 +8458,10 @@ FitResultBase Project::fit(const std::vector<double>& grid, const std::vector<do
 
             // Write the refined value/esd back onto the edi model Parameters (all labels resolved above).
             // One transaction (review 18, F2): proven on a copy, then published, then recorded.
-            const auto publish = [&](Project& host, std::vector<detail::RefinedValue>& items) {
+            const auto publish = [&](Project& host, std::vector<detail::RefinedValue>& items, bool trial) {
                 publish_completed_type_iv(host, project, items);
                 crysta::write_fit_result_into(project, result);  // crysta completes the dependents
-                publish_fit_state(host, project, items);
+                publish_fit_state(host, project, items, trial);
             };
             const auto restage = [&](Project& trial) {
                 std::vector<detail::RefinedValue> staged;
@@ -8467,8 +8476,9 @@ FitResultBase Project::fit(const std::vector<double>& grid, const std::vector<do
                 return staged;
             };
             const auto measure = [&] {
+                crysta::Project measured(project);  // the engine project itself stays as the trial left it
                 return std::make_pair(crysta_correlations(project, result),
-                                      fitted_quality(project,
+                                      fitted_quality(measured,
                                                      single_crystal ? std::deque<crysta::PdDataBase>{}
                                                                     : std::deque<crysta::PdDataBase>{crysta::PdDataBase(grid, observed, sigma)},
                                                      outcome.values.size()));
@@ -9411,10 +9421,10 @@ FitResultBase Project::fit_joint(const std::vector<PdDataBase>& patterns,
             for (const PdDataBase& pattern : patterns) {
                 fitted_patterns.emplace_back(pattern.axis(), pattern.intensity_meas.get(), pattern.intensity_meas_su.get());
             }
-            const auto publish = [&](Project& host, std::vector<detail::RefinedValue>& items) {
+            const auto publish = [&](Project& host, std::vector<detail::RefinedValue>& items, bool trial) {
                 publish_completed_type_iv(host, project, items);
                 crysta::write_fit_result_into(project, result);  // crysta completes the dependents
-                publish_fit_state(host, project, items);
+                publish_fit_state(host, project, items, trial);
             };
             const auto restage = [&](Project& trial) {
                 std::vector<detail::RefinedValue> staged;
@@ -9428,8 +9438,9 @@ FitResultBase Project::fit_joint(const std::vector<PdDataBase>& patterns,
                 return staged;
             };
             const auto measure = [&] {
+                crysta::Project measured(project);  // the engine project itself stays as the trial left it
                 return std::make_pair(crysta_correlations(project, result),
-                                      fitted_quality(project, fitted_patterns, outcome.values.size()));
+                                      fitted_quality(measured, fitted_patterns, outcome.values.size()));
             };
             auto [correlations, quality] = publish_fit_transaction(*this, refined, publish, restage, measure);
             // After an orbit change the provider's banks describe the start's orbits: each bank's
@@ -10400,7 +10411,7 @@ std::shared_ptr<const PreparedMagneticCandidates> prepare_magnetic_candidates(
         names.insert(name);
         const std::string text =
             crysta::magnetic_child_text(engine, graph, nodes[i], sites, start_moments, name);
-        prepared->structures.push_back(std::make_shared<Structure>(structure_from_edi_text(text, name)));
+        prepared->add(structure_from_edi_text(text, name));
         for (std::size_t e = 0; e < project.experiments.size(); ++e) {
             const auto& experiment = project.experiments[e];
             for (const auto& link : experiment->linked_structures) {
@@ -10442,6 +10453,7 @@ std::shared_ptr<const PreparedMagneticCandidates> prepare_magnetic_candidates(
 }
 
 void check_magnetic_candidates(const Project& project, const PreparedMagneticCandidates& prepared) {
+    const std::vector<std::shared_ptr<const Structure>> children = prepared.children();
     const auto powder = [&project](std::size_t index) {
         return project.experiments[index]->experiment_type.effective_sample_form() == SampleFormEnum::POWDER;
     };
@@ -10459,7 +10471,7 @@ void check_magnetic_candidates(const Project& project, const PreparedMagneticCan
         }
     }
     std::set<std::string> names;
-    for (const auto& structure : prepared.structures) {
+    for (const auto& structure : children) {
         const std::string& name = structure->name.value();
         if (name.empty() || !names.insert(name).second) {
             throw std::invalid_argument("the candidates need distinct names; '" + name + "' is empty or repeated");
@@ -10475,7 +10487,7 @@ void check_magnetic_candidates(const Project& project, const PreparedMagneticCan
     // never from the prepared rows: for each powder experiment linking the parent, one link per candidate at the
     // parent's scale over N², enabled for the first candidate only; for each of the parent's texture rows, one row per
     // candidate with its values and flags and the axis in the candidate's cell. The prepared rows must be exactly these.
-    if (prepared.structures.empty()) {
+    if (children.empty()) {
         throw std::invalid_argument("the batch adds no magnetic structure");
     }
     const Structure& parent = [&]() -> const Structure& {
@@ -10508,7 +10520,7 @@ void check_magnetic_candidates(const Project& project, const PreparedMagneticCan
                                             parent.cell.length_c.value.get(),   parent.cell.angle_alpha.value.get(),
                                             parent.cell.angle_beta.value.get(), parent.cell.angle_gamma.value.get()};
     std::array<long long, 3> m{0, 0, 0};
-    for (const auto& structure : prepared.structures) {
+    for (const auto& structure : children) {
         // A candidate is a magnetic structure in a magnetic cell of the parent's: the parent's angles, each length an
         // integer multiple of the parent's, at most 24 parent cells in all (crysta ADR-0137 A2).
         if (structure->magnetic->operations.empty()) {
@@ -10549,8 +10561,8 @@ void check_magnetic_candidates(const Project& project, const PreparedMagneticCan
         const auto& experiment = project.experiments[e];
         for (const auto& link : experiment->linked_structures) {
             if (link->structure_id.value() != prepared.parent) continue;
-            for (std::size_t i = 0; i < prepared.structures.size(); ++i) {
-                const LinkKey key{e, prepared.structures[i]->name.value(), i == 0};
+            for (std::size_t i = 0; i < children.size(); ++i) {
+                const LinkKey key{e, children[i]->name.value(), i == 0};
                 expected_links.insert(key);
                 expected_scale[key] = link->scale.value.get() / (n * n);
             }
@@ -10561,7 +10573,7 @@ void check_magnetic_candidates(const Project& project, const PreparedMagneticCan
                                        m[2] * row->index_l.get()};
             const long long g = std::gcd(std::gcd(std::llabs(h[0]), std::llabs(h[1])), std::llabs(h[2]));
             for (long long& x : h) x /= g == 0 ? 1 : g;
-            for (const auto& structure : prepared.structures) {
+            for (const auto& structure : children) {
                 expected_textures.insert({e, structure->name.value(), row->march_r.value.get(),
                                           row->march_random_fract.value.get(), row->march_r.free.get(),
                                           row->march_random_fract.free.get(),
@@ -10664,6 +10676,7 @@ std::vector<MagneticPeak> magnetic_unexplained_peaks(const Project& project, std
 
 std::vector<std::string> magnetic_candidates_without_intensity(const Project& project,
                                                                const PreparedMagneticCandidates& prepared) {
+    const std::vector<std::shared_ptr<const Structure>> children = prepared.children();
     std::vector<std::size_t> experiments;
     for (std::size_t e = 0; e < project.experiments.size(); ++e) {
         const auto& experiment = project.experiments[e];
@@ -10679,7 +10692,7 @@ std::vector<std::string> magnetic_candidates_without_intensity(const Project& pr
     std::vector<std::string> out;
     if (experiments.empty()) return out;
     const KEngine k(project);
-    for (const auto& candidate : prepared.structures) {
+    for (const auto& candidate : children) {
         const crysta::Structure engine = to_crysta_structure(*candidate);
         bool none = true;
         for (const std::size_t e : experiments) {
