@@ -109,6 +109,9 @@ class AssistantViewModel : public QObject {
     Q_PROPERTY(QVariantList accounts READ accounts NOTIFY accountsChanged)
     /// The providers edi offers, in order: {provider, name, company, installed}.
     Q_PROPERTY(QVariantList providers READ providers NOTIFY accountsChanged)
+    /// Non-empty while the active Claude account runs under an organisation's managed settings or hooks that the user
+    /// has not acknowledged yet; Send waits for acknowledgeManagedSettings() (ADR-0108 §4).
+    Q_PROPERTY(QString managedSettingsNotice READ managedSettingsNotice NOTIFY accountsChanged)
     Q_PROPERTY(QString contextPreview READ contextPreview NOTIFY contextPreviewChanged)
     Q_PROPERTY(QString contextConsentIdentity READ contextConsentIdentity NOTIFY contextConsentIdentityChanged)
     Q_PROPERTY(bool draftAdmissionReady READ draftAdmissionReady NOTIFY draftAdmissionReadyChanged)
@@ -255,6 +258,9 @@ class AssistantViewModel : public QObject {
     /// Start an account of `provider` in a fresh config home; it is recorded once its sign-in succeeds.
     Q_INVOKABLE void addAccount(const QString& provider, const QString& host = {});
     QVariantList accounts() const;
+    QString managedSettingsNotice() const;
+    /// The user read the managed-settings notice for the active account; remembered per account.
+    Q_INVOKABLE void acknowledgeManagedSettings();
     QVariantList providers() const;
     Q_INVOKABLE void clearHistory();
     Q_INVOKABLE QString beginFileSelection(bool requireSignedIn = false);

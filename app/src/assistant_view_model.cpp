@@ -1745,6 +1745,19 @@ struct AssistantViewModel::State {
     bool account_chosen_explicitly = false;
     // The runtime named no e-mail and no organisation for its credential (a bare key or token, ADR-0108 §4).
     bool identity_unidentified = false;
+    // Set while the active account's managed settings or hooks wait for the user's acknowledgement.
+    QString managed_notice;
+    static constexpr auto acknowledged_key = "Assistant/Providers/claude/acknowledgedManagedSettings";
+    void update_managed_notice(const Object& account) {
+        managed_notice.clear();
+        const bool managed = !account.value("managedSettings").toString().isEmpty() || account.value("hooksRan").toBool();
+        if (!managed || active_provider_account.id.isEmpty()) return;
+        const QSettings settings(settings_file_path(), QSettings::IniFormat);
+        if (settings.value(QLatin1StringView(acknowledged_key)).toStringList().contains(active_provider_account.id)) return;
+        managed_notice = account.value("hooksRan").toBool()
+            ? QObject::tr("Your organisation's Claude settings ran their own commands when Claude started, and can run them again before each message. They are outside edi's tools.")
+            : QObject::tr("Your organisation's Claude settings apply on this computer and can run their own commands at session start and before each message. They are outside edi's tools.");
+    }
     void resolve_active_account() noexcept {
         if (!active_provider_account.id.isEmpty() || !active_provider_account.home.isEmpty()) return;
         try {
@@ -15670,10 +15683,12 @@ struct AssistantViewModel::State {
                 identity_unidentified=!emailProof && account.value("organization").toString().isEmpty() &&
                     active_provider_account.provider==AssistantProviderId::Claude;
                 record_signed_in_account(emailProof?email.toString():QString(),account.value("planType").toString());
+                update_managed_notice(account);
                 accountStage("ACCOUNT_PUBLIC_METADATA");
                 account_bootstrap_verified=true;usage_read_epoch=usage_epoch;
                 Object public_account;
-                for(const auto* field:{"email","planType","authMethod","organization","apiKeySource","tokenSource","login","host"})if(account.value(field).isString())public_account[field]=usage_text(account.value(field));
+                for(const auto* field:{"email","planType","authMethod","organization","apiKeySource","tokenSource","login","host","managedSettings"})if(account.value(field).isString())public_account[field]=usage_text(account.value(field));
+                if(account.value("hooksRan").isBool())public_account["hooksRan"]=account.value("hooksRan");
                 generic_native["account"]=public_account;generic_native["accountEpoch"]=QString::number(usage_epoch);
                 generic_native["label"]=emailProof?email:QJsonValue(provider_label());generic_native["models"]=QJsonArray{};
                 accountStage("REQUEST_ADMISSION");generic_request("model/list",{{"includeHidden",true}});
@@ -20489,6 +20504,10 @@ QString AssistantViewModel::submitDraftImpl(const QString& text,bool* accountWai
     // Local native command precedes every provider/consent/attachment door.
     if(QStringView(text).trimmed()==u"/work-report") { (void)captureWorkReport(); return {}; }
 #ifndef __EMSCRIPTEN__
+    if(!state_->managed_notice.isEmpty()) {
+        state_->error=tr("Read the note about your organisation's Claude settings in the Account dialog first.");
+        state_->notify();return {};
+    }
     if(!state_->generic_mode)state_->work_begin();
 #else
     state_->work_begin();
@@ -21270,6 +21289,25 @@ QVariantList AssistantViewModel::providers() const {
                                   {"installed", assistant_provider_available(id)}});
 #endif
     return result;
+}
+QString AssistantViewModel::managedSettingsNotice() const {
+#ifndef __EMSCRIPTEN__
+    return state_->managed_notice;
+#else
+    return {};
+#endif
+}
+void AssistantViewModel::acknowledgeManagedSettings() {
+#ifndef __EMSCRIPTEN__
+    if (state_->managed_notice.isEmpty() || state_->active_provider_account.id.isEmpty()) return;
+    QSettings settings(settings_file_path(), QSettings::IniFormat);
+    auto ids = settings.value(QLatin1StringView(State::acknowledged_key)).toStringList();
+    ids.append(state_->active_provider_account.id);
+    settings.setValue(QLatin1StringView(State::acknowledged_key), ids);
+    settings.sync();
+    state_->managed_notice.clear();
+    emit accountsChanged();
+#endif
 }
 QVariantList AssistantViewModel::accounts() const {
     QVariantList result;

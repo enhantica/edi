@@ -469,10 +469,11 @@ QJsonObject AssistantRuntimeTranslator::accountResult() const {
     const auto method = string_field(identity_, "authMethod");
     if (!method.isEmpty()) account["authMethod"] = method;
     // Non-secret parts of the principal, so the dialog can name it and an unidentified key can be told apart.
-    for (const auto* field : {"organization", "apiKeySource", "tokenSource", "login", "host"}) {
+    for (const auto* field : {"organization", "apiKeySource", "tokenSource", "login", "host", "managedSettings"}) {
         const auto value = string_field(identity_, field);
         if (!value.isEmpty()) account[QLatin1StringView(field)] = value;
     }
+    if (identity_.value("hooksRan").toBool()) account["hooksRan"] = true;
     return {{"account", account}, {"requiresOpenaiAuth", false}};
 }
 
