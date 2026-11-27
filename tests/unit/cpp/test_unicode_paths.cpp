@@ -91,7 +91,7 @@ TEST_CASE("crysta saves and reopens a project in a Unicode folder") {
             crysta::save_project(project, target);
             fixture.check_directory(folder);
             const auto reopened = crysta::load_project(target);
-            CHECK_MESSAGE(reopened.metadata.name == "Independent crystals", "crysta reopens the saved project metadata");
+            CHECK_MESSAGE(reopened.metadata.name.get() == "Independent crystals", "crysta reopens the saved project metadata");
             crysta::save_project(reopened, target);
             fixture.check_directory(folder);
             CHECK_MESSAGE(crysta::load_project(target).experiments.size() == 3, "crysta reopens all three source experiments after saving again");
