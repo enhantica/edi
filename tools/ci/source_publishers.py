@@ -3,11 +3,11 @@
 
 Reads the workflows and local actions, following a local action into its steps with its inputs. A
 job that fetches the source (the crysta-source action) runs in two phases: before the fetch each
-script names `shell: bash`, after it every script runs under the output filter, everything stored
-goes through the store action, and a script that publishes a folder comes right after a check of
-that folder that always runs. The two actions all of this rests on are held to their committed
-form. What a job without the source publishes, and the keys of each cache, are in the tables
-below; a new one is a change of its table.
+script names `shell: bash`, after it every script runs under the output filter (but setup-pixi's
+silent pin read), everything stored goes through the store action, and a script that publishes a
+folder comes right after a check of that folder that always runs. The actions all of this rests on
+are held to their committed form. What a job without the source publishes, and the keys of each
+cache, are in the tables below; a new one is a change of its table.
 """
 
 from __future__ import annotations
@@ -25,11 +25,16 @@ ROOT = Path(__file__).resolve().parents[2]
 FILTER = 'python3 tools/ci/public_log.py {0}'
 SOURCE = './.github/actions/crysta-source'
 STORE = './.github/actions/store'
+SETUP_PIXI = './.github/actions/setup-pixi'
 # The steps of the actions everything here relies on, as reviewed: `--digests` prints them.
 REVIEWED = {
     SOURCE: '0e37770c1b05e83e8b3c202559a6d3195c2e4a13cf89f704c5a27e5b69e0ceb5',
     STORE: '05b4c58e0eac79e613bc94a9fbab5a7863d29549d196ff9c6b7206d340eaa11f',
+    SETUP_PIXI: '48d2655648488ec7fb4085d1396013c2447c8b5da60f435b8002f496ddc8d9f1',
 }
+# Scripts that may run beside the source without the output filter: setup-pixi reads the pin of
+# the manifest it is given, crysta's in the SDK job, and prints nothing it read. REVIEWED holds it.
+QUIET = {(SETUP_PIXI, 'pin')}
 # What jobs without the source publish: how, the artifact or cache key itself, and its path.
 PUBLISHERS = {
     'ci.yml/system-time': {('artifact', 'system-time', '${{ runner.temp }}/system-time/')},
@@ -268,7 +273,8 @@ def after(where: str, step: dict, checked: set[str]) -> Iterator[str]:
         yield f'{where}: {named(step)!r} installs an environment outside the output filter'
     if action(step) != STORE:
         for name, nested in inner(step):
-            if 'run' in nested and nested.get('shell') != FILTER:
+            quiet = (name, nested.get('id')) in QUIET
+            if 'run' in nested and nested.get('shell') != FILTER and not quiet:
                 yield f'{where}: {named(step)!r} runs {name} without the output filter'
             for kind, _ in published(nested):
                 yield f'{where}: {named(step)!r} publishes ({kind}) outside the store action'
