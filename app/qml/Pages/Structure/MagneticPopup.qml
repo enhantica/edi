@@ -3,6 +3,7 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import QtQuick.Controls
+import QtQuick.Layouts
 
 import EasyApplication.Gui.Style as EaStyle
 import EasyApplication.Gui.Elements as EaElements
@@ -41,6 +42,7 @@ AppDialog {
     property var peakTicks: []
     property var kRows: []
     property bool searching: false
+    property bool findKShown: false
     property string kRefusal: ""
 
     function setK(text) {
@@ -141,9 +143,12 @@ AppDialog {
         }
     }
 
-    Column {
+    // Bounded to the dialog's own area, so the graph takes what the other rows leave and the
+    // footer stays inside the dialog.
+    ColumnLayout {
         id: content
         width: popup.availableWidth
+        height: popup.availableHeight
         spacing: EaStyle.Sizes.fontPixelSize * 0.6
 
         // 1. The propagation vector.
@@ -185,20 +190,22 @@ AppDialog {
             EaElements.Button {
                 id: findK
                 objectName: "magnetic.findK"
-                checkable: true
-                text: qsTr("Find k from data")
-                onToggled: if (checked)
-                    popup.loadPeaks()
+                text: popup.findKShown ? qsTr("Hide Find k") : qsTr("Find k from data")
+                onClicked: {
+                    popup.findKShown = !popup.findKShown;
+                    if (popup.findKShown)
+                        popup.loadPeaks();
+                }
             }
             EaElements.Label {
                 anchors.verticalCenter: parent.verticalCenter
-                visible: findK.checked
+                visible: popup.findKShown
                 text: qsTr("Data")
             }
             EaElements.ComboBox {
                 id: dataChoice
                 objectName: "magnetic.data"
-                visible: findK.checked
+                visible: popup.findKShown
                 width: EaStyle.Sizes.fontPixelSize * 14
                 model: popup.dataChoices.map(c => c.eligible ? c.name : `${c.name} (${c.reason})`)
                 currentIndex: {
@@ -209,15 +216,15 @@ AppDialog {
             }
             EaElements.Button {
                 objectName: "magnetic.searchK"
-                visible: findK.checked
+                visible: popup.findKShown
                 enabled: popup.peaks.length > 0 && !popup.searching
                 text: popup.searching ? qsTr("Searching…") : qsTr("Search")
                 onClicked: popup.searchK()
             }
         }
         Flow {
-            width: parent.width
-            visible: findK.checked && popup.peaks.length > 0
+            Layout.fillWidth: true
+            visible: popup.findKShown && popup.peaks.length > 0
             spacing: EaStyle.Sizes.fontPixelSize * 0.4
             EaElements.Label {
                 text: qsTr("Unexplained peaks")
@@ -240,18 +247,18 @@ AppDialog {
             }
         }
         EaElements.Label {
-            width: parent.width
+            Layout.fillWidth: true
             wrapMode: Text.Wrap
-            visible: findK.checked && text !== ""
+            visible: popup.findKShown && text !== ""
             color: EaStyle.Colors.red
             text: popup.kRefusal
         }
         ListView {
             id: kList
             objectName: "magnetic.kRows"
-            visible: findK.checked && popup.kRows.length > 0
-            width: parent.width
-            height: Math.min(contentHeight, EaStyle.Sizes.fontPixelSize * 9)
+            visible: popup.findKShown && popup.kRows.length > 0
+            Layout.fillWidth: true
+            Layout.preferredHeight: Math.min(contentHeight, EaStyle.Sizes.fontPixelSize * 9)
             clip: true
             model: popup.kRows
             delegate: EaElements.Label {
@@ -277,7 +284,7 @@ AppDialog {
 
         // 2. The magnetic sites; 3. starting moments; the zero-moment switch.
         Flow {
-            width: parent.width
+            Layout.fillWidth: true
             spacing: EaStyle.Sizes.fontPixelSize * 0.6
             EaElements.Label {
                 text: qsTr("Magnetic sites")
@@ -304,6 +311,12 @@ AppDialog {
                 checked: true
             }
             EaElements.CheckBox {
+                id: allSubgroups
+                objectName: "magnetic.allSubgroups"
+                text: qsTr("Show all subgroups")
+                checked: false
+            }
+            EaElements.CheckBox {
                 id: zeroMoment
                 objectName: "magnetic.zeroMoment"
                 text: qsTr("Show groups without moments")
@@ -313,7 +326,7 @@ AppDialog {
         }
 
         EaElements.Label {
-            width: parent.width
+            Layout.fillWidth: true
             wrapMode: Text.Wrap
             visible: text !== ""
             color: EaStyle.Colors.red
@@ -327,8 +340,10 @@ AppDialog {
         // 4. The graph.
         MagneticSubgroupGraph {
             id: graphView
-            width: parent.width
-            height: popup.availableHeight - y - buttons.height - content.spacing
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            Layout.minimumHeight: EaStyle.Sizes.fontPixelSize * 8
+            showAll: allSubgroups.checked
             nodes: popup.found ? popup.found.nodes : []
             cell: popup.found ? popup.found.cell : ""
             parentName: popup.structure ? popup.structure.spaceGroup.nameHM : ""

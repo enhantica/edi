@@ -21,15 +21,25 @@ Flickable {
     property string cell: ""
     property var selected: []
     property int hovered: -1
+    // Off: the maximal groups only (row 1); on: every subgroup row.
+    property bool showAll: false
 
-    readonly property int nodeWidth: 200
-    readonly property int nodeHeight: 64
+    readonly property int nodeWidth: 220
+    readonly property int nodeHeight: 84
     readonly property int gap: 16
     readonly property int rowGap: 44
 
+    function shown(i) {
+        return showAll || Math.max(1, nodes[i].row) === 1;
+    }
     function selectable(i) {
         const n = nodes[i];
-        return n !== undefined && n.bns !== "" && n.momentAllowed;
+        return n !== undefined && n.bns !== "" && n.momentAllowed && shown(i);
+    }
+    // An edge is drawn only to or from the node under the pointer or a selected one, so the rows
+    // stay readable however many covering edges a graph has.
+    function lit(i) {
+        return i === hovered || selected.indexOf(i) >= 0;
     }
     function toggle(i) {
         if (!selectable(i))
@@ -55,6 +65,8 @@ Flickable {
     readonly property var rows: {
         const out = [];
         for (let i = 0; i < nodes.length; ++i) {
+            if (!shown(i))
+                continue;
             const r = Math.max(1, nodes[i].row);
             while (out.length <= r)
                 out.push([]);
@@ -75,6 +87,8 @@ Flickable {
     function positionOf(i) {
         const r = Math.max(1, nodes[i].row);
         const row = rows[r];
+        if (!shown(i) || row === undefined)
+            return Qt.point(0, 0);
         const at = row.indexOf(i);
         const left = (canvasWidth - row.length * (nodeWidth + gap) + gap) / 2;
         return Qt.point(left + at * (nodeWidth + gap), gap + r * (nodeHeight + rowGap));
@@ -83,13 +97,16 @@ Flickable {
     clip: true
     contentWidth: canvasWidth * zoom
     contentHeight: canvasHeight * zoom
-    property real zoom: 1.0
+    // Fitted to the view until the user zooms (Ctrl + wheel).
+    property real userZoom: 0
+    readonly property real fitZoom: Math.min(1.0, width / Math.max(1, canvasWidth), height / Math.max(1, canvasHeight))
+    readonly property real zoom: userZoom > 0 ? userZoom : Math.max(0.3, fitZoom)
     ScrollBar.vertical: EaElements.ScrollBar {}
     ScrollBar.horizontal: EaElements.ScrollBar {}
 
     WheelHandler {
         acceptedModifiers: Qt.ControlModifier
-        onWheel: event => graph.zoom = Math.min(2.5, Math.max(0.4, graph.zoom * (event.angleDelta.y > 0 ? 1.1 : 1 / 1.1)))
+        onWheel: event => graph.userZoom = Math.min(2.5, Math.max(0.3, graph.zoom * (event.angleDelta.y > 0 ? 1.1 : 1 / 1.1)))
     }
 
     Item {
@@ -106,8 +123,9 @@ Flickable {
                 id: edges
                 required property int index
                 readonly property point from: graph.positionOf(index)
+                visible: graph.shown(edges.index)
                 Shape {
-                    visible: Math.max(1, graph.nodes[edges.index].row) === 1
+                    visible: Math.max(1, graph.nodes[edges.index].row) === 1 && graph.lit(edges.index)
                     ShapePath {
                         strokeColor: EaStyle.Colors.themeForegroundDisabled
                         strokeWidth: 1
@@ -125,6 +143,7 @@ Flickable {
                     delegate: Shape {
                         id: edge
                         required property int modelData
+                        visible: graph.showAll && graph.shown(modelData) && (graph.lit(edges.index) || graph.lit(modelData))
                         readonly property point to: graph.positionOf(modelData)
                         ShapePath {
                             strokeColor: EaStyle.Colors.themeForegroundMinor
@@ -170,6 +189,7 @@ Flickable {
                 readonly property bool chosen: graph.selected.indexOf(index) >= 0
                 readonly property point at: graph.positionOf(index)
                 objectName: `magnetic.node.${index}`
+                visible: graph.shown(index)
                 x: at.x
                 y: at.y
                 width: graph.nodeWidth
@@ -184,14 +204,15 @@ Flickable {
                     anchors.margins: 4
                     EaElements.Label {
                         width: parent.width
-                        elide: Text.ElideRight
+                        wrapMode: Text.Wrap
+                        maximumLineCount: 2
                         font.bold: true
                         text: node.data_.bns === "" ? qsTr("not identified") : `${node.data_.name}  ${node.data_.bns}#${node.data_.embedding}  ${qsTr("type")} ${["", "I", "II", "III", "IV"][node.data_.type] ?? ""}${node.data_.netMoment ? "  FM" : ""}${node.chosen ? "  ✓" : ""}`
                     }
                     EaElements.Label {
                         width: parent.width
                         wrapMode: Text.Wrap
-                        maximumLineCount: 2
+                        maximumLineCount: 3
                         elide: Text.ElideRight
                         font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.85
                         text: node.data_.moments
