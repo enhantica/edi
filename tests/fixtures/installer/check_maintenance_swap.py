@@ -9,6 +9,7 @@ puts the kept bundle back.
 import importlib.util
 import re
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -17,6 +18,9 @@ ROOT = Path(__file__).resolve().parents[3]
 FOLDER = ROOT / 'tools/installer'
 SWAP = FOLDER / 'maintenance_swap.sh'
 RESTORE = FOLDER / 'maintenance_restore.sh'
+
+# The swap is macOS's; its shell runs on any POSIX system, never on Windows.
+pytestmark = pytest.mark.skipif(sys.platform == 'win32', reason='a POSIX shell script')
 
 
 def bundle(path: Path, text: str) -> None:
