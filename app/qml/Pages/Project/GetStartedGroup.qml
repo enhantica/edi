@@ -317,34 +317,52 @@ SideBarGroup {
     // held go once the call that replaces the project is over (edi ADR-0052). The Load menu stays open.
     Connections {
         target: Session
-        // The replaced project's Create dialog is hidden as the replacement starts, before a new name can show.
-        // Its untitled request is dropped first, as the later close does: the replacement supersedes it (edi ADR-0100),
-        // and the dialog's close would otherwise reject it.
+        // The replaced project's popups are hidden as the replacement starts, before a new name can show, and with no
+        // closing animation, which would keep them on screen while it shows. The Create dialog's untitled request is
+        // dropped first, as the later close does: the replacement supersedes it (edi ADR-0100), and the dialog's close
+        // would otherwise reject it.
         function onProjectReplacing() {
             createDialog.untitledId = 0;
-            EaGlobals.Vars.showProjectDescriptionDialog = false;
+            group.hideCreateDialog();
+            group.closeAtOnce(replaceProject);
+            group.closeAtOnce(saveMenu);
         }
         function onProjectAboutToChange() {
-            saveMenu.close();
-            replaceProject.close();
+            group.closeAtOnce(saveMenu);
+            group.closeAtOnce(replaceProject);
             exportFolder.close();
             exportFolder.sourceProject = null;
             // The replaced project's Create dialog goes before the new project is published, never after its name shows.
             if (createDialog.visible)
                 createDialog.untitledId = 0;
-            EaGlobals.Vars.showProjectDescriptionDialog = false;
+            group.hideCreateDialog();
         }
         // At the new project's publication nothing of the replaced one's page stays open, also what was opened while it
         // was being opened: the Create dialog among them.
         function onProjectChanged() {
-            saveMenu.close();
-            replaceProject.close();
+            group.closeAtOnce(saveMenu);
+            group.closeAtOnce(replaceProject);
             exportFolder.close();
-            // Its `visible` follows the flag; closing it directly would end that binding.
             if (createDialog.visible)
-                EaGlobals.Vars.showProjectDescriptionDialog = false;
+                group.hideCreateDialog();
             Qt.callLater(group.dropCreate);
         }
+    }
+    // Closes `popup` with no exit transition: Qt then hides it in this call, not at the end of the animation. Later
+    // closes animate as before.
+    function closeAtOnce(popup) {
+        const exit = popup.exit;
+        popup.exit = null;
+        popup.close();
+        popup.exit = exit;
+    }
+    // The same for the Create dialog. Its `visible` follows the flag, so the flag is cleared instead of calling close():
+    // a flag left set would keep the next Create from opening it.
+    function hideCreateDialog() {
+        const exit = createDialog.exit;
+        createDialog.exit = null;
+        EaGlobals.Vars.showProjectDescriptionDialog = false;
+        createDialog.exit = exit;
     }
     function dropCreate() {
         createLife.alive = false;
