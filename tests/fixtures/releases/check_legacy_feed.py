@@ -255,12 +255,17 @@ def test_a_preview_needs_the_testing_feed_and_no_pull_request():
         FEED.check(content(stable), testing=True)
 
 
-def test_every_copy_of_a_release_serves_both_feeds(tmp_path):
+def distribution_module():
     spec = importlib.util.spec_from_file_location(
         'distribution', ROOT / 'tools/release/distribution.py'
     )
     distribution = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(distribution)
+    return distribution
+
+
+def test_every_copy_of_a_release_serves_both_feeds(tmp_path):
+    distribution = distribution_module()
     distribution.fixture(tmp_path / 'publication', '26.17')
     distribution.build(tmp_path / 'publication', tmp_path / 'copies')
     history = (tmp_path / 'publication/assets/release-history.json').read_bytes()
@@ -272,3 +277,15 @@ def test_every_copy_of_a_release_serves_both_feeds(tmp_path):
         assert '  releases/stable-v2.json\n' in sums
         assert '  releases/stable.json\n' in sums
     assert distribution.check(tmp_path / 'copies', '26.17') == []
+
+
+def test_the_feed_bases_get_both_feeds_from_the_release_asset(tmp_path):
+    # enhantica/edi-download writes the served feeds from the attached release-history.json.
+    distribution = distribution_module()
+    distribution.fixture(tmp_path / 'publication', '26.17')
+    distribution.build(tmp_path / 'publication', tmp_path / 'copies')
+    asset = tmp_path / 'copies/release/release-history.json'
+    served = tmp_path / 'site/releases'
+    FEED.write_feeds(asset, served)
+    assert (served / 'stable-v2.json').read_bytes() == asset.read_bytes()
+    assert FEED.check((served / 'stable.json').read_bytes()) == ['2026.11.32', '2026.11.31']
