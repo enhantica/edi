@@ -23,6 +23,7 @@
 
 #include "background.hpp"
 #include "crysta/project_output.hpp"
+#include "crysta/results_publication.hpp"
 #include "edi/io.hpp"
 
 namespace edi_app {
@@ -562,12 +563,22 @@ QString kept_aside(const fs::path& aside, const std::exception& refusal) {
         .arg(QString::fromUtf8(refusal.what()), QString::fromStdString(aside.string()));
 }
 
+// A parametric fit publishes the result files as one set (crysta ADR-0136): one it interrupted is settled first, and
+// copying, taking or putting back the files holds its publication lock, so no fit swaps the set meanwhile.
+void hold_results(const edi::Project& project, std::optional<crysta::PublicationReadLock>& held) {
+    const fs::path directory = analysis_dir(project);
+    crysta::recover_publication(directory);
+    held.emplace(directory);
+}
+
 }  // namespace
 
 QString ScanSession::copyFiles(const edi::Project& project, Files& copied) {
     const fs::path directory = analysis_dir(project);
     copied = {};
     try {
+        std::optional<crysta::PublicationReadLock> held;
+        hold_results(project, held);
         for (int which = 0; which < kResultFileCount; ++which) {
             *slot(copied, which) = read_file(directory / kResultFiles[which]);
         }
@@ -580,7 +591,9 @@ QString ScanSession::copyFiles(const edi::Project& project, Files& copied) {
 QString ScanSession::takeFiles(const edi::Project& project, Files& taken) {
     const fs::path directory = analysis_dir(project);
     taken = {};
+    std::optional<crysta::PublicationReadLock> held;
     try {
+        hold_results(project, held);
         for (int which = 0; which < kResultFileCount; ++which) {
             *slot(taken, which) = read_file(directory / kResultFiles[which]);
         }
@@ -617,8 +630,10 @@ QString ScanSession::putFiles(const edi::Project& project, const Files& files, b
     moved_in.reserve(kResultFileCount);
     const fs::path directory = analysis_dir(project);
     Files current;
+    std::optional<crysta::PublicationReadLock> held;
     try {
         own_analysis_dir(project);
+        hold_results(project, held);
         for (int which = 0; which < kResultFileCount; ++which) {
             *slot(current, which) = read_file(directory / kResultFiles[which]);
         }

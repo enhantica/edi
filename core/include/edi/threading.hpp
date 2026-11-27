@@ -2,6 +2,7 @@
 #ifndef EDI_THREADING_HPP
 #define EDI_THREADING_HPP
 
+#include <memory>
 #include <string>
 
 namespace edi {
@@ -49,6 +50,30 @@ int cores_for_fitting() noexcept;
 // Before a fit of `mode`, once the preference is set: Independent fits that many files at once and Parametric that many
 // points (ADR-0107 decision 11); Sequential, single and Joint fit one at a time, each calculation on that many threads.
 void apply_cores_for_mode(const std::string& mode) noexcept;
+
+// One fit's cores, taken from the preference and the fit's mode when the fit is asked for, so a preference or mode
+// changed while it runs, or another fit's, does not change it. Zero fields: the preference is unset.
+struct CoresBudget {
+    int threads = 0;       // each calculation's threads
+    int scan_workers = 0;  // the files or points of a scan fitted at once; 0 for a fit that is not a scan
+};
+CoresBudget cores_budget_for_mode(const std::string& mode) noexcept;
+
+// Holds a budget for one fit on the calling thread. The thread count is the calling thread's own; the scan workers are
+// one process value, so fits that hold a budget with scan workers run one at a time.
+class ScopedCores {
+   public:
+    explicit ScopedCores(const CoresBudget& budget);
+    ~ScopedCores();
+    ScopedCores(const ScopedCores&) = delete;
+    ScopedCores& operator=(const ScopedCores&) = delete;
+    ScopedCores(ScopedCores&&) = delete;
+    ScopedCores& operator=(ScopedCores&&) = delete;
+
+   private:
+    struct Held;
+    std::unique_ptr<Held> held_;
+};
 
 }  // namespace edi
 

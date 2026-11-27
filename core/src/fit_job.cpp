@@ -78,9 +78,9 @@ struct Outcome {
 FitResultBase fit_by_mode(Project& project, const IterationCallback& on_iteration, const PreambleCallback& on_start,
                           const CancelCallback& should_cancel, const ScanStartCallback& on_scan_start,
                           const FileCompleteCallback& on_file_complete, const FileFittedCallback& on_file_fitted,
-                          const ParametricIterateCallback& on_iterate) {
+                          const ParametricIterateCallback& on_iterate, const CoresBudget& budget) {
     const std::string mode = effective_fitting_mode(project);
-    apply_cores_for_mode(mode);
+    const ScopedCores cores(budget);
     if (mode == "single") {
         return project.fit(on_iteration, on_start, should_cancel);
     }
@@ -218,10 +218,12 @@ bool FitJob::start(const Project* scan_template) {
     auto snapshot =
         std::make_shared<WorkSnapshot>(snapshot_for_work(scan_template != nullptr ? *scan_template : state_->live));
     auto inputs = std::make_shared<FitInputs>(inputs_of(state_->live));
+    // The cores are the preference's and the mode's when the fit is asked for (edi ADR-0107 decision 11).
+    const CoresBudget budget = cores_budget_for_mode(effective_fitting_mode(snapshot->project));
     state_->frame_wanted.store(true, std::memory_order_release);
     const std::shared_ptr<State> self = state_;
     state_->ticket = state_->worker.submit(
-        kChannel, [self, snapshot, inputs](const work::CancelToken& token, const work::Emit& emit) -> work::Delivery {
+        kChannel, [self, snapshot, inputs, budget](const work::CancelToken& token, const work::Emit& emit) -> work::Delivery {
             auto outcome = std::make_shared<Outcome>();
             outcome->stamps = snapshot->stamps;
             outcome->inputs = *inputs;
@@ -361,7 +363,7 @@ bool FitJob::start(const Project* scan_template) {
             }
             try {
                 outcome->result = fit_by_mode(snapshot->project, on_iteration, on_start, should_cancel, on_scan_start,
-                                              on_file_complete, on_file_fitted, on_iterate);
+                                              on_file_complete, on_file_fitted, on_iterate, budget);
                 if (held_iterate && !token.cancelled()) {  // a cancelled fit's views return to the published results
                     send_iterate(std::move(*held_iterate));
                 }

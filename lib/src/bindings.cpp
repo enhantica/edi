@@ -2318,6 +2318,20 @@ NB_MODULE(_edi, m) {
     m.def("_set_scan_workers", &edi::set_scan_workers, "count"_a);
     m.def("_set_cores_for_fitting", &edi::set_cores_for_fitting, "count"_a);
     m.def("_apply_cores_for_mode", &edi::apply_cores_for_mode, "mode"_a);
+    // One fit's cores, held for the fit (`with _cores_for_fit(mode):`), so another thread's fit does not change them.
+    struct CoresForFit {
+        explicit CoresForFit(const std::string& mode) : budget(edi::cores_budget_for_mode(mode)) {}
+        edi::CoresBudget budget;
+        std::optional<edi::ScopedCores> held;
+    };
+    nb::class_<CoresForFit>(m, "_cores_for_fit")
+        .def(nb::init<const std::string&>(), "mode"_a)
+        .def("__enter__",
+             [](CoresForFit& self) {
+                 const nb::gil_scoped_release unlocked;  // another fit may hold the scan workers
+                 self.held.emplace(self.budget);
+             })
+        .def("__exit__", [](CoresForFit& self, const nb::args&) { self.held.reset(); });
     m.def("_collection_defaults", [] {
         return nb::make_tuple(edi::online::default_collection_sources(), edi::online::default_tutorials_source());
     });

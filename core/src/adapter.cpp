@@ -3056,6 +3056,29 @@ std::filesystem::path scan_results_path(const Project& project) {
     return std::filesystem::path(root) / "analysis" / "results.csv";
 }
 
+namespace {
+
+// The publication lock a reader of the scan's results holds while it reads, so a parametric fit's swap of the set is
+// never seen half done (crysta ADR-0136). Only a folder no one can write, so no fit can publish into, is read without
+// it; any other failure to take it refuses the read.
+void lock_results_for_reading(const Project& project, std::optional<crysta::PublicationReadLock>& reading) {
+    const std::filesystem::path folder = scan_results_path(project).parent_path();
+    try {
+        reading.emplace(folder);
+    } catch (const std::exception& failure) {
+        std::error_code error;
+        const std::filesystem::perms perms = std::filesystem::status(folder, error).permissions();
+        constexpr auto writable = std::filesystem::perms::owner_write | std::filesystem::perms::group_write |
+                                  std::filesystem::perms::others_write;
+        if (error || (perms & writable) != std::filesystem::perms::none) {
+            throw std::invalid_argument(std::string("the scan's results cannot be read while they may be published: ") +
+                                        failure.what());
+        }
+    }
+}
+
+}  // namespace
+
 // Why each file's fit stopped, from crysta's ledger (`termination`, its fifth column), read in step with
 // results.csv: crysta writes a file's ledger row just before its results row, so the k-th of each name the same
 // file. Reading both together keeps one row in memory, not the whole scan's. A ledger written before it recorded
@@ -3562,11 +3585,15 @@ void check_series_bank_rows(const Project& project, const ScanDatasets& datasets
 ScanResultIndex index_scan_results(const Project& project, const ScanDatasets& datasets, const ScanPlaces& places,
                                    bool writing) {
     // The rows and notes are read under the publication lock, so a parametric fit's swap of the set is never seen
-    // half done (crysta ADR-0136). A folder that cannot hold the lock file is read as it is.
+    // half done (lock_results_for_reading).
     std::optional<crysta::PublicationReadLock> reading;
     try {
-        reading.emplace(scan_results_path(project).parent_path());
-    } catch (const std::exception&) {  // NOLINT(bugprone-empty-catch)
+        lock_results_for_reading(project, reading);
+    } catch (const std::exception& refusal) {
+        ScanResultIndex refused;
+        refused.error = refusal.what();
+        refused.rows.resize(datasets.files.size());
+        return refused;
     }
     ScanResultIndex index = index_scan_rows(project, datasets, places, writing);
     if (index.error.empty()) {
@@ -3677,6 +3704,8 @@ ScanResultIndex index_scan_rows(const Project& project, const ScanDatasets& data
 }  // namespace
 
 std::vector<std::string> read_scan_row(const Project& project, std::int64_t offset) {
+    std::optional<crysta::PublicationReadLock> reading;
+    lock_results_for_reading(project, reading);
     if (!scan_state_present(scan_results_path(project), "analysis/results.csv")) {
         throw std::invalid_argument("analysis/results.csv is not there; it has no row at byte " +
                                     std::to_string(offset));
@@ -3734,6 +3763,8 @@ std::filesystem::path scan_experiments_path(const Project& project) {
 
 std::vector<bool> scan_points_changed(const Project& project, const ScanDatasets& datasets,
                                       const std::vector<std::string>& points) {
+    std::optional<crysta::PublicationReadLock> reading;
+    lock_results_for_reading(project, reading);
     std::vector<bool> changed(points.size(), false);
     const std::filesystem::path path = scan_experiments_path(project);
     if (!project.sequential_fit.joint() || points.empty() ||
@@ -3800,6 +3831,8 @@ std::string file_identity(const std::filesystem::path& path) {
 // experiment of the project, or none. Refuses a malformed, foreign or repeated row, or rows for some experiments only.
 std::map<std::string, std::vector<std::string>> point_experiment_rows(const Project& project, const std::string& point,
                                                                       std::vector<std::string>& header_out) {
+    std::optional<crysta::PublicationReadLock> reading;
+    lock_results_for_reading(project, reading);
     std::map<std::string, std::vector<std::string>> cells_of;
     const std::filesystem::path path = scan_experiments_path(project);
     if (!project.sequential_fit.joint() || !scan_state_present(path, "analysis/results_experiments.csv")) {
@@ -4115,6 +4148,8 @@ SeriesRowPattern series_row_pattern(const Project& project, const ScanDatasets& 
 }
 
 std::vector<std::string> evolution_experiment_parameters(const Project& project) {
+    std::optional<crysta::PublicationReadLock> reading;
+    lock_results_for_reading(project, reading);
     std::vector<std::string> names;
     const std::filesystem::path path = scan_experiments_path(project);
     if (!project.sequential_fit.joint() || !scan_state_present(path, "analysis/results_experiments.csv")) {
@@ -4211,6 +4246,8 @@ void evolution_series(const Project& project, const ScanPlaces& places, const Sc
 void evolution_series(const Project& project, const ScanPlaces& places, const ScanResultIndex& index,
                       const std::vector<std::string>& parameters, bool by_value,
                       const std::function<void(std::size_t, const EvolutionPoint&)>& visit) {
+    std::optional<crysta::PublicationReadLock> reading;
+    lock_results_for_reading(project, reading);
     // Each parameter's value and s.u. columns, by its unique name or its results column; none for one not recorded.
     std::vector<const ScanParameterColumns*> columns(parameters.size(), nullptr);
     // An agreement factor's value column; it has no s.u.
@@ -9635,6 +9672,37 @@ void apply_cores_for_mode(const std::string& mode) noexcept {
     if (cores == 0) return;
     crysta::threading::set_thread_count(cores);
     crysta::threading::set_scan_workers(mode == "independent" || mode == "parametric" ? cores : 1);
+}
+
+CoresBudget cores_budget_for_mode(const std::string& mode) noexcept {
+    const int cores = cores_for_fitting();
+    if (cores == 0) return {};
+    if (mode == "independent" || mode == "parametric") return {cores, cores};
+    return {cores, mode == "sequential" ? 1 : 0};  // a single or Joint fit reads no scan workers
+}
+
+namespace {
+std::mutex scan_workers_mutex;  // held by a fit that sets the process's scan workers, for the whole fit
+}  // namespace
+
+struct ScopedCores::Held {
+    explicit Held(int threads) : threads(threads) {}
+    crysta::threading::ScopedThreadCount threads;
+    std::unique_lock<std::mutex> lock;
+    int previous_workers = 0;
+};
+
+ScopedCores::ScopedCores(const CoresBudget& budget) {
+    if (budget.threads <= 0) return;
+    held_ = std::make_unique<Held>(budget.threads);
+    if (budget.scan_workers <= 0) return;
+    held_->lock = std::unique_lock<std::mutex>(scan_workers_mutex);
+    held_->previous_workers = crysta::threading::scan_workers_setting();
+    crysta::threading::set_scan_workers(budget.scan_workers);
+}
+
+ScopedCores::~ScopedCores() {
+    if (held_ && held_->lock.owns_lock()) crysta::threading::set_scan_workers(held_->previous_workers);
 }
 
 namespace {
