@@ -1741,8 +1741,18 @@ struct AssistantViewModel::State {
     AssistantAccounts account_store() const { return {settings_file_path(), AssistantAccounts::defaultAccountsRoot()}; }
     // An added account whose sign-in has not finished; recorded once its identity is read.
     std::optional<AssistantAccountRecord> pending_account;
+    // True after the user switched accounts, until that account's identity was read back.
+    bool account_chosen_explicitly = false;
     // The account a saved conversation belongs to: empty for the default ChatGPT login.
-    QString conversation_account() const { return active_provider_account.home.isEmpty() ? QString() : active_provider_account.id; }
+    QString conversation_account() const {
+        if (!active_provider_account.home.isEmpty()) return active_provider_account.id;
+        // Legacy records carry no account: they belong to the first default ChatGPT record.
+        try {
+            const auto first = account_store().defaultChatGpt();
+            if (active_provider_account.id.isEmpty() || !first || first->id == active_provider_account.id) return {};
+        } catch (...) { return {}; }
+        return active_provider_account.id;
+    }
     void resolve_active_account() noexcept {
         if (!active_provider_account.id.isEmpty() || !active_provider_account.home.isEmpty()) return;
         try {
@@ -1770,14 +1780,26 @@ struct AssistantViewModel::State {
             active_provider_account = record.ref();
             pending_account.reset();
         } else if (active_provider_account.provider == AssistantProviderId::ChatGpt && active_provider_account.home.isEmpty()) {
-            auto record = store.defaultChatGpt().value_or(store.createDefaultChatGpt());
-            if (record.email != email || record.plan != plan || store.accounts(record.provider).isEmpty() ||
-                !store.find(record.provider, record.id)) {
-                record.email = email;
+            // The default home: a changed login there is a new identity, so it gets its own record and id; the old
+            // record and its threads keep theirs (ADR-0108 §8).
+            const auto current = active_provider_account.id.isEmpty() ? store.defaultChatGpt()
+                                                                     : store.find(AssistantProviderId::ChatGpt, active_provider_account.id);
+            std::optional<AssistantAccountRecord> chosen;
+            if (current && (current->email.isEmpty() || email.isEmpty() || current->email == email)) chosen = current;
+            else if (current && account_chosen_explicitly)
+                // The user switched to this record: its identity is the one wanted, so a different login is an error.
+                throw std::runtime_error("The default ChatGPT login is now another account; sign it back in as this account");
+            else
+                for (const auto& other : store.accounts(AssistantProviderId::ChatGpt))
+                    if (other.home.isEmpty() && !email.isEmpty() && other.email == email) chosen = other;
+            auto record = chosen.value_or(store.createDefaultChatGpt());
+            if (!chosen || record.email != email || record.plan != plan) {
+                if (!email.isEmpty()) record.email = email;
                 record.plan = plan;
                 store.save(record);
             }
-            if (!store.active()) store.setActive(record.provider, record.id);
+            const auto active = store.active();
+            if (!active || active->id != record.id) store.setActive(record.provider, record.id);
             active_provider_account = record.ref();
         } else if (auto record = store.find(active_provider_account.provider, active_provider_account.id)) {
             if (!record->email.isEmpty() && !email.isEmpty() && record->email != email)
@@ -1788,6 +1810,7 @@ struct AssistantViewModel::State {
                 store.save(*record);
             }
         }
+        account_chosen_explicitly = false;
         emit owner.accountsChanged();
     }
     QString generic_workspace, generic_thread, generic_turn, generic_login, generic_terminal_turn;
@@ -21258,6 +21281,7 @@ void AssistantViewModel::switchAccount(const QString& provider, const QString& i
     catch (const std::exception& failure) { state_->error = QString::fromUtf8(failure.what()); state_->notify(); return; }
     state_->pending_account.reset();
     state_->active_provider_account = record->ref();
+    state_->account_chosen_explicitly = true;
     if (state_->agent) {
         state_->agent->retire();
         state_->agent.release()->deleteLater();  // queued replies fence on a QPointer to it
