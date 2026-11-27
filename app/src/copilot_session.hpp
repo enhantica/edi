@@ -89,15 +89,25 @@ private:
     void initialized(const QJsonObject& result);
     void probeOpened(const QJsonObject& result);
     void checkSkills();
-    void probeIdentity();
-    void identityRead(const QString& text);
+    struct User {
+        QString login;
+        QStringList hosts;
+        bool signedOut = false;
+    };
+    static User parseUser(const QString& text);
+    /// Run `/user show` in a session and hand over its text, or the refusal.
+    void readUser(const QString& session, std::function<void(const QJsonObject&, const QString&)> done);
+    /// Compare the session's `/user show` with the account. `refused` defaults to `accountRefused` and a retire.
+    void checkIdentity(const QString& session, std::function<void(const QString&)> pass,
+                       std::function<void(const QString&, bool)> refused = {});
+    void finishStart(const QString& login);
     void readbackExpired();
 
     QString accountSession() const;
     void logout(const QString& session);
     void removeHome(const AssistantAccountRef& account);
 
-    void configure(const QString& session, const QString& model, const QString& effort, bool open);
+    void configure(const QString& session, const QString& model, const QString& effort, bool open, bool verify);
     void emitModels(const QJsonArray& configOptions);
     void startTurn(const QString& session, const QString& text);
     void finishTurn(const QString& session, const QString& status, const QJsonObject& error);
@@ -124,8 +134,9 @@ private:
     QTimer readback_timer_;
     bool ready_ = false, can_load_ = false;
     QString probe_, spare_;
-    bool probe_listed_ = false, probing_identity_ = false;
-    QStringList commands_, probe_text_;
+    bool probe_listed_ = false, checking_start_ = false;
+    QStringList commands_;
+    QHash<QString, QStringList> identity_text_;
     QJsonArray probe_options_;
     int turns_ = 0;
 

@@ -302,9 +302,9 @@ void CopilotSession::retire() {
     ready_ = can_load_ = false;
     probe_.clear();
     spare_.clear();
-    probe_listed_ = probing_identity_ = false;
+    probe_listed_ = checking_start_ = false;
     commands_.clear();
-    probe_text_.clear();
+    identity_text_.clear();
     probe_options_ = {};
 }
 
@@ -438,72 +438,115 @@ void CopilotSession::probeOpened(const QJsonObject& result) {
 }
 
 void CopilotSession::checkSkills() {
-    if (ready_ || probe_.isEmpty() || probing_identity_ || !probe_listed_) return;
+    if (ready_ || probe_.isEmpty() || checking_start_ || !probe_listed_) return;
     for (const auto& skill : launch_.skills) {
         if (!commands_.contains(skill)) return;  // a later update may still bring it
     }
-    probeIdentity();
+    checking_start_ = true;
+    checkIdentity(probe_, [this](const QString& login) { finishStart(login); });
 }
 
-void CopilotSession::probeIdentity() {
-    // The login lives in the system keychain, and ACP has no identity call. `/user show` is the CLI's own command
-    // for the signed-in account; it runs over ACP only when the server advertises it. Its output is not
-    // documented, so only a host it names is compared.
-    if (!commands_.contains(QStringLiteral("user"))) {
-        identityRead({});
-        return;
+CopilotSession::User CopilotSession::parseUser(const QString& text) {
+    // `/user show` prints the signed-in account in a format the CLI does not document; these patterns read the
+    // login, the hosts it names and a signed-out answer, and anything they cannot read counts as unreadable.
+    static const QRegularExpression hostPattern(
+        QStringLiteral("\\b((?:[a-z0-9-]+\\.)*ghe\\.com|github\\.com)\\b"), QRegularExpression::CaseInsensitiveOption);
+    static const QRegularExpression loginPattern(
+        QStringLiteral("(?:\\b(?:as|user(?:name)?:|login:|account:)\\s+@?|(?<![\\w.])@)"
+                       "([A-Za-z0-9][A-Za-z0-9-]{0,38})\\b"),
+        QRegularExpression::CaseInsensitiveOption);
+    static const QRegularExpression signedOutPattern(
+        QStringLiteral("\\bnot (?:currently )?(?:signed|logged) in\\b|"
+                       "\\bno (?:signed-in |logged-in )?(?:users?|accounts?)\\b|"
+                       "\\b(?:signed|logged) out\\b"),
+        QRegularExpression::CaseInsensitiveOption);
+    User user;
+    for (auto it = hostPattern.globalMatch(text); it.hasNext();) {
+        const auto host = it.next().captured(1).toLower();
+        if (!user.hosts.contains(host)) user.hosts.append(host);
     }
-    probing_identity_ = true;
+    user.signedOut = signedOutPattern.match(text).hasMatch();
+    if (!user.signedOut) {
+        if (const auto match = loginPattern.match(text); match.hasMatch()) user.login = match.captured(1);
+    }
+    return user;
+}
+
+void CopilotSession::readUser(const QString& session, std::function<void(const QJsonObject&, const QString&)> done) {
+    identity_text_.insert(session, {});
     request(QStringLiteral("session/prompt"),
-            {{"sessionId", probe_},
-             {"prompt", QJsonArray{QJsonObject{{"type", "text"}, {"text", "/user show"}}}}},
-            [this](const QJsonObject&, const QJsonObject& error) {
-                if (!error.isEmpty()) {
-                    const auto generation = process_.generation();
-                    refuse(error, QStringLiteral("GitHub Copilot could not report the signed-in account."));
-                    if (process_.generation() == generation) retire();
-                    return;
-                }
-                identityRead(probe_text_.join(QString()));
+            {{"sessionId", session}, {"prompt", QJsonArray{QJsonObject{{"type", "text"}, {"text", "/user show"}}}}},
+            [this, session, done](const QJsonObject&, const QJsonObject& error) {
+                const auto text = identity_text_.take(session).join(QString());
+                done(error, text);
             });
 }
 
-void CopilotSession::identityRead(const QString& text) {
-    const auto expected = normalizedHost(launch_.account.host);
-    QStringList hosts;
-    static const QRegularExpression hostPattern(
-        QStringLiteral("\\b((?:[a-z0-9-]+\\.)*ghe\\.com|github\\.com)\\b"),
-        QRegularExpression::CaseInsensitiveOption);
-    for (auto it = hostPattern.globalMatch(text); it.hasNext();) {
-        const auto host = it.next().captured(1).toLower();
-        if (!hosts.contains(host)) hosts.append(host);
-    }
-    if (!hosts.isEmpty() && !hosts.contains(expected)) {
-        const auto generation = process_.generation();
-        emit accountRefused(QStringLiteral("This account is signed in to %1, not %2.")
-                                .arg(hosts.join(QStringLiteral(", ")), expected),
-                            false);
-        if (process_.generation() == generation) retire();
+void CopilotSession::checkIdentity(const QString& session, std::function<void(const QString&)> pass,
+                                   std::function<void(const QString&, bool)> refused) {
+    // The login lives in the system keychain and the home does not choose it, so the CLI's own account command is
+    // the evidence. Without `/user` over ACP accounts cannot be told apart, and the caller keeps one per host.
+    if (!commands_.contains(QStringLiteral("user"))) {
+        pass({});
         return;
     }
-    QString login;
-    static const QRegularExpression loginPattern(
-        QStringLiteral("\\b(?:as|user(?:name)?:|login:)\\s+@?([A-Za-z0-9][A-Za-z0-9-]{0,38})\\b"),
-        QRegularExpression::CaseInsensitiveOption);
-    if (const auto match = loginPattern.match(text); match.hasMatch()) login = match.captured(1);
+    if (!refused) {
+        refused = [this](const QString& reason, bool signedOut) {
+            const auto generation = process_.generation();
+            emit accountRefused(withNotices(reason), signedOut);
+            if (process_.generation() == generation) retire();
+        };
+    }
+    const auto expected = normalizedHost(launch_.account.host);
+    const auto email = launch_.account.email;
+    readUser(session, [pass, refused, expected, email](const QJsonObject& error, const QString& text) {
+        if (!error.isEmpty()) {
+            const bool signedOut = error.value(QStringLiteral("code")).toInt() == auth_required;
+            const auto message = errorText(error);
+            const auto fallback = QStringLiteral("GitHub Copilot did not report the signed-in account.");
+            refused(signedOut || message.isEmpty() ? fallback : message, signedOut);
+            return;
+        }
+        const auto user = parseUser(text);
+        if (user.signedOut) {
+            refused(QStringLiteral("This GitHub account is signed out."), true);
+            return;
+        }
+        if (user.login.isEmpty()) {
+            refused(QStringLiteral("GitHub Copilot did not report which account is signed in."), false);
+            return;
+        }
+        const auto hosts = user.hosts.isEmpty() ? QStringList{QStringLiteral("github.com")} : user.hosts;
+        if (!hosts.contains(expected)) {
+            refused(QStringLiteral("GitHub Copilot is signed in to %1, not %2.")
+                        .arg(hosts.join(QStringLiteral(", ")), expected),
+                    false);
+            return;
+        }
+        if (!email.isEmpty() && email.compare(user.login, Qt::CaseInsensitive) != 0) {
+            refused(QStringLiteral("GitHub Copilot is signed in as %1, not %2.").arg(user.login, email), false);
+            return;
+        }
+        pass(user.login);
+    });
+}
 
-    // A probe that ran a command holds a turn and stays out of the conversations; it remains the account's
-    // session for its own commands (`/logout`).
-    if (!probing_identity_) spare_ = probe_;
-    probing_identity_ = false;
+void CopilotSession::finishStart(const QString& login) {
+    // The probe session passed the identity check after this process started, so it can take the first thread.
+    spare_ = probe_;
     ready_ = true;
     readback_timer_.stop();
     const auto generation = process_.generation();
     emitModels(probe_options_);
     if (process_.generation() != generation) return;
+    const bool distinguishable = commands_.contains(QStringLiteral("user"));
     // ACP lists no tools; edi's tool server reports what the runtime listed through it.
-    emit ready(QJsonObject{{"email", ""}, {"plan", ""}, {"host", expected}, {"login", login}}, QStringList{},
-               launch_.skills);
+    emit ready(QJsonObject{{"email", login},
+                           {"plan", ""},
+                           {"host", normalizedHost(launch_.account.host)},
+                           {"login", login},
+                           {"accountsDistinguishable", distinguishable}},
+               QStringList{}, launch_.skills);
 }
 
 void CopilotSession::readbackExpired() {
@@ -549,7 +592,7 @@ void CopilotSession::openThread(const QString& resumeId, const QString& model, c
         const auto session = std::exchange(spare_, QString());
         threads_[session].id = session;
         threads_[session].configOptions = probe_options_;
-        configure(session, model, effort, true);
+        configure(session, model, effort, true, false);
         return;
     }
     if (resumeId.isEmpty()) {
@@ -562,7 +605,7 @@ void CopilotSession::openThread(const QString& resumeId, const QString& model, c
                     }
                     threads_[session].id = session;
                     threads_[session].configOptions = result.value(QStringLiteral("configOptions")).toArray();
-                    configure(session, model, effort, true);
+                    configure(session, model, effort, true, true);
                 });
         return;
     }
@@ -586,19 +629,28 @@ void CopilotSession::openThread(const QString& resumeId, const QString& model, c
                 it->loading = false;
                 if (result.contains(QStringLiteral("configOptions")))
                     it->configOptions = result.value(QStringLiteral("configOptions")).toArray();
-                configure(resumeId, model, effort, true);
+                configure(resumeId, model, effort, true, true);
             });
 }
 
-void CopilotSession::configure(const QString& session, const QString& model, const QString& effort, bool open) {
+void CopilotSession::configure(const QString& session, const QString& model, const QString& effort, bool open,
+                               bool verify) {
     const auto it = threads_.constFind(session);
     if (it == threads_.constEnd()) return;
     const auto modelOption = optionOf(it->configOptions, QStringLiteral("model"));
     const auto effortOption = optionOf(it->configOptions, QStringLiteral("thought_level"));
     const auto modelId = modelOption.value(QStringLiteral("id")).toString(QStringLiteral("model"));
     const auto effortId = effortOption.value(QStringLiteral("id")).toString();
-    const auto done = [this, session, open] {
-        if (open && threads_.contains(session)) emit threadOpened(session);
+    // A new or reloaded session shows whose it is before its first prompt.
+    const auto done = [this, session, open, verify] {
+        if (!open || !threads_.contains(session)) return;
+        if (!verify) {
+            emit threadOpened(session);
+            return;
+        }
+        checkIdentity(session, [this, session](const QString&) {
+            if (threads_.contains(session)) emit threadOpened(session);
+        });
     };
     // No effort option means the model has no effort choice; the catalogue offers none either.
     const auto setEffort = [this, session, effort, effortId, done] {
@@ -637,7 +689,7 @@ void CopilotSession::configure(const QString& session, const QString& model, con
 
 void CopilotSession::selectModel(const QString& thread, const QString& model, const QString& effort) {
     if (!threads_.contains(thread)) return;
-    configure(thread, model, effort, false);
+    configure(thread, model, effort, false, false);
 }
 
 void CopilotSession::sendMessage(const QString& thread, const QString& clientMessageId, const QString& text) {
@@ -775,10 +827,9 @@ void CopilotSession::sessionUpdate(const QJsonObject& params) {
         if (const auto it = threads_.find(session); it != threads_.end()) it->configOptions = options;
         return;
     }
-    if (session == probe_ && probing_identity_) {
+    if (const auto text = identity_text_.find(session); text != identity_text_.end()) {
         if (kind == QStringLiteral("agent_message_chunk"))
-            probe_text_.append(
-                update.value(QStringLiteral("content")).toObject().value(QStringLiteral("text")).toString());
+            text->append(update.value(QStringLiteral("content")).toObject().value(QStringLiteral("text")).toString());
         return;
     }
     const auto it = threads_.find(session);
