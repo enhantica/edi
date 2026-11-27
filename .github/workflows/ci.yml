@@ -913,6 +913,16 @@ jobs:
         run: pixi run --skip-deps native-wiring
         env:
           EDI_APP_TEST_RUNNER: ${{ github.workspace }}/build/app/app/edi_app_tests
+      # Voice input on every run (ADR-0107): the recogniser on the tiny model, then the whole journey in the app with a
+      # recorded clip in place of the microphone. Neither touches a real microphone.
+      - name: Voice input recogniser, request owner and Unicode install path
+        if: ${{ runner.os != 'Windows' && (!cancelled() && steps.apphost.outcome == 'success') }}
+        run: pixi run -e app --skip-deps app-test-voice
+      - name: Voice input journey in the app (tests/system/app/test_assistant_voice_input.py)
+        if: ${{ runner.os != 'Windows' && (!cancelled() && steps.apphost.outcome == 'success') }}
+        run: pixi run --skip-deps python -m pytest tests/system/app/test_assistant_voice_input.py -q
+        env:
+          EDI_APP_TEST_RUNNER: ${{ github.workspace }}/build/app/app/edi_app_tests
       - name: qmllint over edi's QML (zero warnings)
         if: ${{ runner.os != 'Windows' && (!cancelled() && steps.inputs.outputs.run == 'true') }}
         run: pixi run -e app --skip-deps app-lint
