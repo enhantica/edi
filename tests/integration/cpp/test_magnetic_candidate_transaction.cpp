@@ -1,5 +1,7 @@
 #include <doctest/doctest.h>
 
+#include <algorithm>
+#include <array>
 #include <filesystem>
 #include <fstream>
 #include <iterator>
@@ -22,7 +24,7 @@ edi::Project candidate_project() {
             site->wyckoff_letter = structure->name.value() == "parent" ? "c" : "a";
     return project;
 }
-std::shared_ptr<edi::PreparedMagneticCandidates> staged_three() {
+std::shared_ptr<edi::PreparedMagneticCandidates> staged_three(const edi::Project& project) {
     const auto path = std::filesystem::path(__FILE__).parent_path() /
                       "../../fixtures/magnetic_type_iv/pnma-d.edi";
     std::ifstream input(path);
@@ -31,13 +33,29 @@ std::shared_ptr<edi::PreparedMagneticCandidates> staged_three() {
         edi::structure_from_edi_text({std::istreambuf_iterator<char>(input), {}});
     auto prepared = std::make_shared<edi::PreparedMagneticCandidates>();
     prepared->parent = "parent";
+    const auto parent = std::find_if(
+        project.structures.begin(), project.structures.end(),
+        [](const auto& structure) { return structure->name.value() == "parent"; });
+    REQUIRE_MESSAGE(parent != project.structures.end(), "The staged batch has its named parent");
+    prepared->parent_key = edi::magnetic_parent_key(**parent);
+    REQUIRE_MESSAGE((project.experiments.size() == 2 && project.experiments[0]->name == "first" &&
+                     project.experiments[1]->name == "second"),
+                    "The independent parent fixture links the two measured banks in order");
     for (int i = 0; i < 3; ++i) {
-        const std::string name = "candidate_" + std::to_string(i);
-        auto child = std::make_shared<edi::Structure>(child_model);
-        child->name = name;
-        prepared->structures.push_back(child);
-        prepared->links.push_back({0, name, .9, i == 0});
-        prepared->textures.push_back({0, name, .7, .13, true, true, {2, 1, 0}});
+        edi::Structure child(child_model);
+        child.name = "candidate_" + std::to_string(i);
+        prepared->add(child);
+    }
+    // The fixtures double c, so the two parent scales are divided by four and (1,1,0) is unchanged.
+    const std::array<double, 2> scales{.9, 2.1};
+    for (std::size_t e = 0; e < scales.size(); ++e) {
+        prepared->banks.push_back(
+            {e, project.experiments[e]->name, edi::magnetic_fit_inputs_hash(project, e)});
+        for (std::size_t i = 0; i < prepared->size(); ++i) {
+            const std::string name = prepared->name(i);
+            prepared->links.push_back({e, name, scales[e], i == 0});
+            prepared->textures.push_back({e, name, .7, .13, true, true, {1, 1, 0}});
+        }
     }
     return prepared;
 }
@@ -56,35 +74,40 @@ std::vector<std::string> candidate_snapshot(const edi::Project& project) {
 TEST_CASE("The candidate transaction accepts three independently valid staged rows") {
     auto project = candidate_project();
     const auto count = project.structures.size();
-    auto prepared = staged_three();
+    auto prepared = staged_three(project);
     REQUIRE_MESSAGE(!prepared->links[1].enabled,
                     "The second staged candidate is disabled before the transaction");
     CHECK_NOTHROW_MESSAGE(edi::Edit::add_magnetic_candidates(project, prepared)(),
                           "A complete valid three-candidate transaction commits");
     CHECK_MESSAGE(project.structures.size() == count + 3,
                   "The positive control publishes all three candidate structures");
-    const auto& links = project.experiments[0]->linked_structures;
-    for (const auto& link : links) {
-        if (link->structure_id.value() == "parent")
-            CHECK_MESSAGE(!link->enabled.get(), "Adding candidates keeps the parent disabled");
-        if (link->structure_id.value().starts_with("candidate_"))
-            CHECK_MESSAGE(link->enabled.get() == (link->structure_id.value() == "candidate_0"),
-                          "Only the first new candidate is enabled after the transaction");
+    for (const auto& experiment : project.experiments) {
+        std::size_t candidates = 0;
+        for (const auto& link : experiment->linked_structures) {
+            if (link->structure_id.value() == "parent")
+                CHECK_MESSAGE(!link->enabled.get(), "Adding candidates keeps the parent disabled");
+            if (link->structure_id.value().starts_with("candidate_")) {
+                ++candidates;
+                CHECK_MESSAGE(link->enabled.get() == (link->structure_id.value() == "candidate_0"),
+                              "Only the first new candidate is enabled after the transaction");
+            }
+        }
+        CHECK_MESSAGE(candidates == 3, "Each linked bank receives one row for every candidate");
     }
 }
 
 TEST_CASE("An invalid disabled second candidate row refuses the whole transaction") {
     auto project = candidate_project();
     const auto before = candidate_snapshot(project);
-    auto prepared = staged_three();
+    auto prepared = staged_three(project);
     prepared->textures[1].axis = {1002, 1, 0};
     REQUIRE_MESSAGE(
-        (prepared->textures[0].axis == std::array<int, 3>{2, 1, 0} &&
-         prepared->textures[2].axis == std::array<int, 3>{2, 1, 0} && !prepared->links[1].enabled),
+        (prepared->textures[0].axis == std::array<int, 3>{1, 1, 0} &&
+         prepared->textures[2].axis == std::array<int, 3>{1, 1, 0} && !prepared->links[1].enabled),
         "Only the disabled second row exceeds the declared texture-axis bound");
-    CHECK_THROWS_AS_MESSAGE(edi::Edit::add_magnetic_candidates(project, prepared)(),
-                            std::exception,
-                            "The transaction validates the disabled second row before publishing");
+    CHECK_THROWS_WITH_AS_MESSAGE(edi::Edit::add_magnetic_candidates(project, prepared)(),
+                                 doctest::Contains("texture rows"), std::exception,
+                                 "The transaction validates the disabled second row before publishing");
     CHECK_MESSAGE(candidate_snapshot(project) == before,
                   "The disabled-row refusal preserves every structure, link and texture byte");
 }
