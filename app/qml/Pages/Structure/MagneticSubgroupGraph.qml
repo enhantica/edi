@@ -24,8 +24,8 @@ Flickable {
     property var selected: []
     property bool maximalOnly: true
     property int hovered: -1
-    // The card clicked last stays shown, with its relatives and its details, until the pointer enters another card or
-    // Esc is pressed, so the view can be scrolled to them (owner, 2026-11-27).
+    // The card clicked last keeps its relatives highlighted until another card is clicked or Esc is pressed; hovering
+    // another card does not change it, so the view can be scrolled to them (owner, 2026-11-27).
     property int pinned: -1
     // The transform from the parent to the groups' magnetic cell, for each card's tooltip.
     property string parentCell: ""
@@ -258,11 +258,7 @@ Flickable {
                 anchors.fill: parent
                 hoverEnabled: true
                 enabled: true
-                onEntered: {
-                    if (graph.pinned !== node.index)
-                        graph.pinned = -1;
-                    graph.hovered = node.index;
-                }
+                onEntered: graph.hovered = node.index
                 onExited: if (graph.hovered === node.index)
                     graph.hovered = -1
                 onClicked: {
