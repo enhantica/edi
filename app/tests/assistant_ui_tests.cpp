@@ -318,7 +318,7 @@ private slots:
                  "An actual open and read must reach the observer");
 #endif
         auto other = account;
-        const auto otherId = QUuid::createUuid().toString(QUuid::WithoutBraces);
+        const auto otherId = test.value("otherId").toString();
         const auto otherHome = accountParent + otherId;
         other.insert("id", otherId);
         other.insert("email", "other@example.invalid");
@@ -346,6 +346,20 @@ private slots:
         auto* session = engine.singletonInstance<edi_app::Session*>("edi.app", "Session");
         QVERIFY2(session, "The probe must reach the application's normal desktop session");
         auto* assistant = session->assistant();
+        const auto providers = assistant->property("providers").toList();
+        QStringList available;
+        QStringList offered;
+        for (const auto& entry : providers) {
+            const auto facts = entry.toMap();
+            const auto key = facts.value("provider").toString();
+            offered.append(key);
+            if (facts.value("installed").toBool()) available.append(key);
+        }
+        offered.sort();
+        QVERIFY2((offered == QStringList{"chatgpt", "claude", "copilot"}),
+                 "The Account dialog must get one availability record for each provider");
+        QVERIFY2((available == QStringList{provider}),
+                 "An installed runtime must be usable without enabling the other providers");
         QVERIFY2(assistant->resumeConnection(), "A selected, signed-in provider must be available");
         if (test.value("mismatch").toBool()) {
             QTRY_VERIFY2_WITH_TIMEOUT(!assistant->lastError().isEmpty(),
@@ -375,6 +389,12 @@ private slots:
             return false;
         };
         QTRY_VERIFY2_WITH_TIMEOUT(appearsInTranscript(), qPrintable(assistant->lastError()), 3000);
+        QTRY_COMPARE_WITH_TIMEOUT(assistant->state(), QString("idle"), 3000);
+        QVERIFY2(QMetaObject::invokeMethod(assistant, "switchAccount", Q_ARG(QString, provider), Q_ARG(QString, otherId)),
+                 "Switch account must reach the view model's normal account action");
+        QTRY_VERIFY2_WITH_TIMEOUT(assistant->connected() && assistant->account().email == "other@example.invalid",
+                                 "Switching must connect using the other account's own identity", 3000);
+        QVERIFY2(!appearsInTranscript(), "Switch account must not carry over the previous account's reply");
 #if defined(Q_OS_LINUX)
         const auto events = ::read(watcher, activity, sizeof(activity));
         const auto readError = errno;

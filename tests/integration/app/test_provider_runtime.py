@@ -3,9 +3,12 @@
 
 import json
 import os
+import re
 import shlex
+import shutil
 import subprocess
 import sys
+import tomllib
 import uuid
 from pathlib import Path
 
@@ -16,6 +19,8 @@ from tests.fixtures.assistant_providers.wire_peer import CREDENTIALS
 ROOT = Path(__file__).resolve().parents[3]
 FIXTURE = ROOT / 'tests/fixtures/assistant_providers/wire_peer.py'
 BINARIES = ROOT / 'build/app/app'
+PROBE = BINARIES / 'edi_assistant_ui_tests'
+GUARD = BINARIES / 'edi_assistant_guard'
 BUILTIN_TOOLS = {
     'agent',
     'bash',
@@ -34,16 +39,49 @@ BUILTIN_TOOLS = {
 }
 
 
+def stage_install(tmp_path, provider, receipt):
+    install = tmp_path / 'install'
+    binaries = install / 'bin'
+    binaries.mkdir(parents=True)
+    for binary in (PROBE, GUARD):
+        try:
+            os.link(binary, binaries / binary.name)
+        except OSError:
+            shutil.copy2(binary, binaries / binary.name)
+    runtime = install / 'libexec/edi' / provider
+    runtime.mkdir(parents=True)
+    pin = ROOT / 'tools/deps' / f'{provider}-runtime/pixi.toml'
+    metadata = tomllib.loads(pin.read_text(encoding='utf-8'))
+    (runtime / 'edi-runtime.json').write_text(
+        json.dumps({
+            'runtime': provider,
+            'version': metadata['package']['version'],
+            'entrypoint': provider,
+        }),
+        encoding='utf-8',
+    )
+    executable = runtime / provider
+    launcher = ' '.join(map(shlex.quote, [sys.executable, str(FIXTURE), provider]))
+    executable.write_text(
+        '#!/bin/sh\n'
+        f'export EDI_PROVIDER_TEST_RECEIPT={shlex.quote(str(receipt))}\n'
+        f'export EDI_PROVIDER_TEST_GUARD={shlex.quote(str(binaries / GUARD.name))}\n'
+        f'exec {launcher} "$@"\n',
+        encoding='utf-8',
+    )
+    executable.chmod(0o700)
+    return binaries / PROBE.name
+
+
 def run_probe(tmp_path, provider, *, mismatch=False):
-    probe = BINARIES / 'edi_assistant_ui_tests'
-    guard = BINARIES / 'edi_assistant_guard'
-    assert probe.is_file() and guard.is_file(), (
+    assert PROBE.is_file() and GUARD.is_file(), (
         'The provider check requires the desktop assistant UI test and guard from this build'
     )
     sample = tmp_path / 'sample.txt'
     sample.write_text('xxvisibleyy', encoding='utf-8')
     identity = 'selected@example.invalid'
     account_id = str(uuid.uuid4())
+    other_id = str(uuid.uuid4())
     case = tmp_path / 'case.json'
     case.write_text(
         json.dumps({
@@ -56,23 +94,14 @@ def run_probe(tmp_path, provider, *, mismatch=False):
                 'host': 'github.com',
             },
             'runtimeEmail': 'different@example.invalid' if mismatch else identity,
+            'otherId': other_id,
             'mismatch': mismatch,
             'file': str(sample),
         }),
         encoding='utf-8',
     )
     receipt = tmp_path / 'wire.jsonl'
-    executable = tmp_path / provider
-    launcher = ' '.join(map(shlex.quote, [sys.executable, str(FIXTURE), provider]))
-    # The fixture markers must survive even if the app builds a fresh child environment.
-    executable.write_text(
-        '#!/bin/sh\n'
-        f'export EDI_PROVIDER_TEST_RECEIPT={shlex.quote(str(receipt))}\n'
-        f'export EDI_PROVIDER_TEST_GUARD={shlex.quote(str(guard))}\n'
-        f'exec {launcher} "$@"\n',
-        encoding='utf-8',
-    )
-    executable.chmod(0o700)
+    probe = stage_install(tmp_path, provider, receipt)
     home = tmp_path / 'home'
     home.mkdir()
     config = home / '.config/gh'
@@ -92,9 +121,6 @@ def run_probe(tmp_path, provider, *, mismatch=False):
         'QT_QPA_PLATFORM': 'offscreen',
         'QT_QUICK_BACKEND': 'software',
         'EDI_PROVIDER_TEST_CASE': str(case),
-        'EDI_CODEX_DEVELOPMENT_EXECUTABLE': str(tmp_path / 'disabled-codex'),
-        'EDI_CLAUDE_DEVELOPMENT_EXECUTABLE': str(executable),
-        'EDI_COPILOT_DEVELOPMENT_EXECUTABLE': str(executable),
     })
     result = subprocess.run(
         [str(probe), 'accountTurn'],
@@ -110,10 +136,18 @@ def run_probe(tmp_path, provider, *, mismatch=False):
     )
     assert receipt.is_file(), 'The desktop probe must reach the selected real runtime launch path'
     rows = [json.loads(line) for line in receipt.read_text(encoding='utf-8').splitlines()]
+    expected_homes = {(provider, account_id)}
+    if not mismatch:
+        expected_homes.add((provider, other_id))
+    return rows, check_launches(rows, home, (provider, account_id), expected_homes)
+
+
+def check_launches(rows, home, selected_home, expected_homes):
     launches = [row for row in rows if row['event'] == 'launch']
     assert launches, 'The offline peer must record the runtime launches'
-    assert all(Path(row['home']).parts[-2:] == (provider, account_id) for row in launches), (
-        'Every login probe and turn must use the selected account home'
+    homes = [Path(row['home']).parts[-2:] for row in launches]
+    assert homes[0] == selected_home and set(homes) == expected_homes, (
+        'Each login must stay in the selected home and a switch must reach the other home'
     )
     assert all(Path(row['home']).is_relative_to(home) for row in launches), (
         'Account homes must live in the isolated application data directory'
@@ -121,7 +155,7 @@ def run_probe(tmp_path, provider, *, mismatch=False):
     assert all(not row['credentials'] for row in launches), (
         'No provider child may receive an inherited token or credential routing variable'
     )
-    return rows, launches
+    return launches
 
 
 @pytest.mark.skipif(os.name == 'nt', reason='The offline CLI fixture is a shell script')
@@ -141,6 +175,10 @@ def test_selected_provider_runs_only_the_edi_tool(tmp_path, provider):
             assert argv[argv.index('--tools') + 1] == 'Skill', (
                 'Claude may retain the bundled skill loader as its single built-in tool'
             )
+            assert (
+                '--setting-sources' in argv
+                and argv[argv.index('--setting-sources') + 1] == 'local'
+            ), 'Claude must leave user and project settings out of the runtime'
             assert '--session-id' in argv and '--resume' not in argv, (
                 'A newly selected account must not resume a thread owned by another account'
             )
@@ -151,6 +189,10 @@ def test_selected_provider_runs_only_the_edi_tool(tmp_path, provider):
             assert not {'--allow-all', '--yolo'}.intersection(argv), (
                 'Copilot must never be started with a blanket permission grant'
             )
+            allowed = [
+                argv[index + 1] for index, arg in enumerate(argv[:-1]) if arg == '--allow-tool'
+            ]
+            assert allowed == ['edi'], 'Copilot must pre-allow only the edi MCP server'
             assert turn['gh_config_empty'], 'Copilot must not see an inherited gh login'
         skills = {
             path.parent.name: path.read_text(encoding='utf-8')
@@ -184,9 +226,9 @@ def test_selected_provider_runs_only_the_edi_tool(tmp_path, provider):
     assert len(replies) == 1 and not replies[0].get('isError'), (
         'The app dispatcher must return a successful MCP reply for this attached-file read'
     )
-    assert any('visible' in item['text'] for item in replies[0]['content']), (
-        'The MCP result must include the seven requested bytes from the selected file'
-    )
+    assert any(
+        re.search(r'"text"\s*:\s*"visible"', item['text']) for item in replies[0]['content']
+    ), 'The MCP result must include the seven requested bytes from the selected file'
 
 
 @pytest.mark.skipif(os.name == 'nt', reason='The offline CLI fixture is a shell script')
