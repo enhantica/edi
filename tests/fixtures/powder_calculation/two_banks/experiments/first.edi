@@ -1,0 +1,73 @@
+data_first
+_edi.schema_version 3
+_experiment_type.sample_form powder
+_experiment_type.radiation_probe neutron
+_experiment_type.scattering_type bragg
+_experiment_type.beam_mode "constant wavelength"
+_instrument.setup_wavelength 1.5
+_peak.type cwl-tch-pseudo-voigt
+_peak.broad_gauss_u 0
+_peak.broad_gauss_v 0
+_peak.broad_gauss_w 0.0355
+_peak.broad_lorentz_x 0
+_peak.broad_lorentz_y 0
+_peak.cutoff_fwhm 5
+loop_
+_linked_structure.structure_id
+_linked_structure.scale
+alpha 0.023
+beta 0.037
+
+_background.type line-segment
+loop_
+_background.id
+_background.position
+_background.intensity
+left 20.5 8.25
+right 22.5 8.25
+
+loop_
+_data.two_theta
+_data.intensity_meas
+_data.intensity_meas_su
+20.50 8.250000 1.25
+20.55 8.250000 1.25
+20.60 8.250002 1.25
+20.65 8.250077 1.25
+20.70 8.251828 1.25
+20.75 8.279402 1.25
+20.80 8.570007 1.25
+20.85 10.606656 1.25
+20.90 19.993198 1.25
+20.95 47.844091 1.25
+21.00 98.579185 1.25
+21.05 147.687478 1.25
+21.10 153.891340 1.25
+21.15 111.180369 1.25
+21.20 57.471643 1.25
+21.25 24.176576 1.25
+21.30 11.736924 1.25
+21.35 8.766556 1.25
+21.40 8.301820 1.25
+21.45 8.254551 1.25
+21.50 8.267437 1.25
+21.55 8.444400 1.25
+21.60 9.730082 1.25
+21.65 15.874984 1.25
+21.70 34.829450 1.25
+21.75 70.941220 1.25
+21.80 108.300941 1.25
+21.85 116.291188 1.25
+21.90 87.192567 1.25
+21.95 47.278949 1.25
+22.00 21.306182 1.25
+22.05 11.205284 1.25
+22.10 8.702622 1.25
+22.15 8.296906 1.25
+22.20 8.253289 1.25
+22.25 8.250156 1.25
+22.30 8.250005 1.25
+22.35 8.250000 1.25
+22.40 8.250000 1.25
+22.45 8.250000 1.25
+22.50 8.250000 1.25
