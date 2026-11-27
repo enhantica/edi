@@ -1201,6 +1201,7 @@ Item {
         property real pressX: 0
         property real pressY: 0
         property real lastX: 0
+        property double lastClickAt: 0
 
         objectName: "chart.pointer"
         enabled: chart.interactive
@@ -1224,18 +1225,24 @@ Item {
         // The mark waits for the double-click interval, so a double click resets the view instead.
         onReleased: mouse => {
             const still = Math.abs(mouse.x - pressX) < chart.em * 0.3 && Math.abs(mouse.y - pressY) < chart.em * 0.3;
+            // A second still left click within the double-click interval resets the view, marking or not; counted here
+            // from the releases themselves, so it never depends on a double-click event reaching this area.
+            if (mouse.button === Qt.LeftButton && still) {
+                const now = Date.now();
+                if (now - lastClickAt <= Qt.styleHints.mouseDoubleClickInterval) {
+                    lastClickAt = 0;
+                    markClick.stop();
+                    controller.reset();
+                    return;
+                }
+                lastClickAt = now;
+            }
             if (chart.peakMode && peakLayer.native_ && mouse.button === Qt.LeftButton && still) {
                 markClick.at = controller.xMin + mouse.x / Math.max(1, width) * (controller.xMax - controller.xMin);
                 markClick.restart();
                 return;
             }
             ApplicationInfo.patternPointer(mouse, 2);
-        }
-        onDoubleClicked: mouse => {
-            if (mouse.button !== Qt.LeftButton)
-                return;
-            markClick.stop();
-            controller.reset();
         }
         Timer {
             id: markClick
