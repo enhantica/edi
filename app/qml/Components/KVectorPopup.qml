@@ -139,9 +139,14 @@ AppDialog {
                 id: row
                 required property var modelData
                 objectName: `chart.kVector.${row.index}`
-                // A double click analyses the row; a single click is the table's own selection, so this handler
-                // only listens (a passive grab).
+                // A click makes the row current, as a row's own click handler does (TableRow.activated), and gives
+                // the table the keys; a double click analyses it.
                 TapHandler {
+                    onTapped: {
+                        list.currentIndex = row.index;
+                        list.forceActiveFocus();
+                        row.activated();
+                    }
                     onDoubleTapped: {
                         list.currentIndex = row.index;
                         popup.analyse();
