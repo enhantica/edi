@@ -32,6 +32,8 @@ Item {
     property string peakNote: ""
     property string addedNote: ""
     property string addedBase: ""
+    // Set while this chart's own analysis is open, so the Add it makes does not retire the marks it reads after.
+    property bool addingCandidates: false
     readonly property Component kVector: kVectorComponent
     readonly property Component analysis: analysisComponent
 
@@ -83,15 +85,25 @@ Item {
         popup.open();
     }
     function openAnalysis(k) {
+        // The parent the chosen row was found for, by its snapshot, never the chart's current one (review 15, F4).
+        const parent = chart.axisProject.propagationParent();
+        if (parent < 0) {
+            chart.peakNote = qsTr("The data or the structures changed; mark the peaks again.");
+            return;
+        }
+        chart.addingCandidates = true;
         const analysis = chart.analysis.createObject(Overlay.overlay, {
             project: chart.axisProject,
-            structureIndex: chart.peakParent,
-            structure: chart.axisProject.structureAt(chart.peakParent),
+            structureIndex: parent,
+            structure: chart.axisProject.structureAt(parent),
             initialK: k,
             selectAfterAdd: false
         }) as MagneticPopup;
+        analysis.closed.connect(() => chart.addingCandidates = false);
         analysis.added.connect(count => {
-            chart.addedNote = count === 1 ? qsTr("1 magnetic structure added") : qsTr("%1 magnetic structures added").arg(count);
+            const base = count === 1 ? qsTr("1 magnetic structure added") : qsTr("%1 magnetic structures added").arg(count);
+            const note = chart.axisProject.lastMagneticNote();
+            chart.addedNote = note === "" ? base : base + " · " + note;
             chart.addedBase = chart.addedNote;
             intensityCheck.tries = 0;
             intensityCheck.start();
@@ -1369,6 +1381,27 @@ Item {
             enabled: chart.peakMode && peakLayer.native_
             onClicked: mouse => chart.togglePeakAt(controller.xMin + mouse.x / Math.max(1, width) * (controller.xMax - controller.xMin))
         }
+    }
+
+    // Marks belong to the bank and model they were taken on: a bank change, or an edit or Undo other than this chart's
+    // own Add, retires them (review 15, F4).
+    Connections {
+        target: chart.axisProject
+        enabled: chart.peakMode
+        function onCurrentExperimentIndexChanged() {
+            chart.retireMarks();
+        }
+        function onEdited() {
+            if (!chart.addingCandidates && chart.addedNote === "")
+                chart.retireMarks();
+        }
+    }
+    function retireMarks() {
+        if (chart.peakMarks.length === 0 && chart.peakCandidates.length === 0)
+            return;
+        chart.peakCandidates = [];
+        chart.peakMarks = [];
+        chart.peakNote = qsTr("The data or the structures changed; mark the peaks again.");
     }
 
     // After Add: once the recalculated pattern holds the first new structure, the marked peaks where it puts no

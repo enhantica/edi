@@ -576,6 +576,9 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // After Add from the chart: the first new structure's name, and its magnetic curve's largest value within
     // `halfWidths` of each of `xs` in experiment `experiment`, with the curve's largest value anywhere
     // ({structure, values, max}); empty while the experiment's calculation does not hold that structure yet.
+    // The last magnetic Add's A7 note (review 15, F5): each candidate without magnetic intensity at the reflections
+    // of the experiments linking its parent, or empty.
+    Q_INVOKABLE QString lastMagneticNote() const { return last_magnetic_note_; }
     Q_INVOKABLE QVariantMap magneticIntensityAt(int experiment, const QList<double>& xs, const QList<double>& halfWidths) const;
     // The structure model at `index`, or null.
     Q_INVOKABLE edi_app::StructureViewModel* structureAt(int index) const { return structure_models_.value(index); }
@@ -587,6 +590,8 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     Q_INVOKABLE void findPropagationVectors(int index, int experiment, const QList<int>& ticked);
     // Whether the data and the peaks are still those the last search ran on.
     Q_INVOKABLE bool propagationSearchCurrent(int experiment) const;
+    // The parent the last result was found for, while its snapshot is current, else -1 (review 15, F4).
+    Q_INVOKABLE int propagationParent() const;
     // Called when a fit is kept: the inputs of every experiment it calculated.
     void recordFitAdoption();
     // The parameter table's "free" header: free or fix every one of `parameters` (the rows the filters show) that can
@@ -968,10 +973,24 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // Find k: the inputs hash of each experiment at its last kept fit, by name, and the last search's snapshot.
     std::map<std::string, std::uint64_t> fit_stamps_;
     std::string last_magnetic_added_;  // the first structure the last magnetic Add made
-    std::vector<edi::MagneticPeak> magnetic_peaks_;
-    std::uint64_t k_search_stamp_ = 0;
-    int k_search_experiment_ = -1;
+    QString last_magnetic_note_;       // A7: the candidates of the last Add without magnetic intensity
+    // Find k's inputs, fixed when the peaks are extracted (review 15, F4): the parent by row, name and content, the
+    // experiment by row, name and inputs hash, and the peaks. A search, its result and the chooser all read this one
+    // snapshot; a new extraction retires every search still running on an older one.
+    struct KSnapshot {
+        int parent = -1;
+        std::string parent_name;
+        std::string parent_key;
+        int experiment = -1;
+        std::string experiment_name;
+        std::uint64_t stamp = 0;
+        std::vector<edi::MagneticPeak> peaks;
+    };
+    std::shared_ptr<const KSnapshot> k_snapshot_;  // the last extraction
+    std::shared_ptr<const KSnapshot> k_result_;    // the snapshot the last result was found for
     unsigned k_search_ = 0;
+    bool snapshotCurrent(const KSnapshot& snapshot) const;
+    void takeKSnapshot(int index, int experiment, std::vector<edi::MagneticPeak> peaks);
     // The information entry for an estimate with the calculated peaks set to auto (none for another setting).
     void postAutoModelReason(const std::string& experiment, const std::string& reason);
     void publish(bool structural);
