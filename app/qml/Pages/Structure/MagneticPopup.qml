@@ -104,12 +104,18 @@ AppDialog {
     // The shown graph and selection belong to the k they were found for: switching to Other, or typing a k not yet
     // committed, takes them away at once and ignores any answer still on its way (review 19, F4). A k other than the
     // Find k row's leaves that search.
-    function invalidateGraph() {
+    // One rule for every input (review 20, F4): the request in flight is retired and the shown graph and selection are
+    // cleared before anything else happens, so no answer can arrive for inputs the controls no longer show; while a
+    // search runs, the inputs themselves are disabled.
+    function retireRequest() {
         found = null;
         selected = [];
         hovered = -1;
         busy = false;
         graphRequest = -1;
+    }
+    function invalidateGraph() {
+        retireRequest();
         refusal = qsTr("Enter k and press Enter to find its magnetic groups.");
         if (kSnapshotId !== 0 && k !== openedK) {
             kSnapshotId = 0;
@@ -126,10 +132,8 @@ AppDialog {
         return out;
     }
     function find() {
-        found = null;
+        retireRequest();
         refusal = "";
-        selected = [];
-        hovered = -1;
         const ticked = tickedSites();
         if (ticked.length === 0) {
             refusal = qsTr("tick at least one magnetic site");
@@ -186,6 +190,7 @@ AppDialog {
             EaElements.ComboBox {
                 id: kChoice
                 objectName: "magnetic.k"
+                enabled: !popup.busy
                 Layout.preferredWidth: EaStyle.Sizes.fontPixelSize * 16
                 model: popup.presets.map(p => p.label === "" ? `(${p.k})` : `${p.label}  (${p.k})`).concat([qsTr("Other…")])
                 onActivated: {
@@ -200,6 +205,7 @@ AppDialog {
                 model: 3
                 delegate: EaElements.TextField {
                     required property int index
+                    enabled: !popup.busy
                     visible: kChoice.currentIndex === popup.presets.length
                     Layout.preferredWidth: EaStyle.Sizes.fontPixelSize * 5
                     placeholderText: ["k₁", "k₂", "k₃"][index]
@@ -229,6 +235,7 @@ AppDialog {
                     required property var modelData
                     required property int index
                     objectName: `magnetic.site.${index}`
+                    enabled: !popup.busy
                     text: `${modelData.id} (${modelData.type})`
                     checked: modelData.magnetic
                     onToggled: popup.find()
@@ -243,6 +250,7 @@ AppDialog {
             EaElements.CheckBox {
                 id: maximalOnly
                 objectName: "magnetic.maximalOnly"
+                enabled: !popup.busy
                 leftPadding: 0  // on the labels' edge, as the rows above
                 text: qsTr("Maximal only")
                 checked: true
@@ -251,6 +259,7 @@ AppDialog {
             EaElements.CheckBox {
                 id: zeroMoment
                 objectName: "magnetic.zeroMoment"
+                enabled: !popup.busy
                 text: qsTr("Show groups without moments")
                 checked: false
                 onToggled: popup.find()
@@ -258,6 +267,7 @@ AppDialog {
             EaElements.CheckBox {
                 id: startMoments
                 objectName: "magnetic.startMoments"
+                enabled: !popup.busy
                 text: qsTr("Add non-zero starting moments")
                 checked: true
             }
@@ -459,7 +469,7 @@ AppDialog {
                 objectName: "magnetic.selectAll"
                 fontIcon: "check-double"
                 text: qsTr("Select all")
-                enabled: popup.found !== null
+                enabled: popup.found !== null && !popup.busy
                 onClicked: popup.selectAll()
             }
             EaElements.Button {
@@ -489,7 +499,7 @@ AppDialog {
                 enabled: popup.selected.length > 0 && !popup.busy
                 onClicked: {
                     const count = popup.selected.length;
-                    if (popup.project.addMagneticCandidates(popup.structureIndex, popup.selected, startMoments.checked, popup.selectAfterAdd, popup.found ? popup.found.graphId : 0, popup.found ? popup.found.snapshot : 0)) {
+                    if (popup.found !== null && popup.project.addMagneticCandidates(popup.found.graphId, popup.selected, startMoments.checked, popup.selectAfterAdd)) {
                         popup.added(count);
                         popup.close();
                     } else {

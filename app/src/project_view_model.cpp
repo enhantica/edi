@@ -4211,19 +4211,20 @@ QString ProjectViewModel::magneticGroupMoments(int node) {
     }
 }
 
-bool ProjectViewModel::addMagneticCandidates(int index, const QList<int>& nodes, bool startMoments, bool select,
-                                             int graph, qint64 snapshot) {
+bool ProjectViewModel::addMagneticCandidates(int graph, const QList<int>& nodes, bool startMoments, bool select) {
+    // Everything below is derived from the graph the caller names, never passed beside it.
+    const int index = magnetic_graph_structure_;
+    const qint64 snapshot = magnetic_graph_snapshot_;
     edi::Project& project = *project_;
     QString error;
     std::shared_ptr<const edi::PreparedMagneticCandidates> prepared;
     try {
         // The nodes belong to the graph the caller chose them in, still the one held (review 17, F4).
-        if (!magnetic_graph_ || magnetic_graph_structure_ != index || graph <= 0 || graph != magnetic_graph_id_)
+        if (!magnetic_graph_ || graph <= 0 || graph != magnetic_graph_id_ || index < 0 ||
+            index >= static_cast<int>(project.structures.size()))
             throw std::invalid_argument("the magnetic groups shown are no longer the ones found; find them again");
         // The graph is the one result object (review 18, F4): Add takes its own Find k snapshot, never another, and
         // that snapshot must still be current and this parent's. A graph of the Structure page carries none.
-        if (snapshot != magnetic_graph_snapshot_)
-            throw std::invalid_argument("these magnetic groups were found for another propagation vector search; find them again");
         if (magnetic_graph_snapshot_ != 0) {
             const auto held = k_snapshots_.find(magnetic_graph_snapshot_);
             if (held == k_snapshots_.end() || held->second->parent != index || !kSnapshotCurrent(magnetic_graph_snapshot_))

@@ -571,10 +571,10 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     Q_INVOKABLE QString magneticGroupMoments(int node);
     // Adds found groups `nodes` as structures, one undoable step; false and `refused` on a refusal, nothing changed.
     // `select`: the first new structure becomes the current one (the popup opened from the Structure page).
-    // `graph`: the identity of the graph the nodes were chosen in, which must still be the one held. `snapshot`: the
-    // Find k snapshot the analysis came from (0 from the Structure page), which must still be current and this parent's.
-    Q_INVOKABLE bool addMagneticCandidates(int index, const QList<int>& nodes, bool startMoments, bool select, int graph,
-                                           qint64 snapshot = 0);
+    // Adds nodes of graph `graph`, the result object the popup shows (review 20, F4): everything published, the parent,
+    // the Find k snapshot if any and the nodes' meaning, comes from that graph, which must still be the one held and,
+    // from Find k, still current; otherwise it refuses and nothing changes.
+    Q_INVOKABLE bool addMagneticCandidates(int graph, const QList<int>& nodes, bool startMoments, bool select = true);
     QVariantMap kSearch() const;
     // Turns marking on for the current experiment (its parent, its candidate peaks, the pre-marks) or off.
     Q_INVOKABLE void setKSearchActive(bool on);

@@ -44,9 +44,6 @@ Item {
     }
     property string addedNote: ""
     property string addedBase: ""
-    // The Add the notice describes; any edit after it, Undo included, retires the notice once that Add's child or bank
-    // is gone or replaced, whether or not its intensity check is still running (review 19, F4).
-    property real addedEvent: 0
     // A dismissed or replaced notice is not brought back by a late check.
     onAddedNoteChanged: if (addedNote === "")
         intensityCheck.stop()
@@ -85,11 +82,11 @@ Item {
             selectAfterAdd: false
         }) as MagneticPopup;
         analysis.added.connect(count => {
+            intensityCheck.stop();  // an earlier Add's check never writes over this one's notice
             const base = count === 1 ? qsTr("1 magnetic structure added") : qsTr("%1 magnetic structures added").arg(count);
             const note = chart.axisProject.lastMagneticNote();
             chart.addedNote = note === "" ? base : base + " · " + note;
             chart.addedBase = chart.addedNote;
-            chart.addedEvent = chart.axisProject.lastMagneticAddEvent();
             // Only an Add made from this Find k search has its marks to check; a k chosen by hand in the analysis has
             // none.
             if (analysis.kSnapshotId === snapshot.id) {
@@ -1325,12 +1322,23 @@ Item {
     }
 
 
+    // The notice describes the project the Add left and the bank it was shown on: any change after it, an edit, Undo,
+    // Redo, a structure added or removed, or another experiment or bank shown, clears it, with no attempt to keep it
+    // valid (review 20, F4).
     Connections {
         target: chart.axisProject
         enabled: chart.addedNote !== ""
         function onEdited() {
-            if (!chart.axisProject.magneticAddCurrent(chart.addedEvent))
-                chart.addedNote = "";
+            chart.addedNote = "";
+        }
+        function onCurrentExperimentIndexChanged() {
+            chart.addedNote = "";
+        }
+        function onCurrentBankChanged() {
+            chart.addedNote = "";
+        }
+        function onCurrentStructureIndexChanged() {
+            chart.addedNote = "";
         }
     }
 
