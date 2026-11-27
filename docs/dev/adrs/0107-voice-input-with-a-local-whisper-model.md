@@ -63,8 +63,11 @@ assistant runtime, and shows its choices as rows on the folder page instead of a
    own with one thread (ADR-0020's worker is for calculations), so recordings are recognised one at a time. A cancel
    before a job starts means its model is never opened, and the audio goes at once; a cancel during recognition stops
    whisper through its abort callback. A failure in the job, such as too little memory for the model, becomes the
-   message. Whisper uses up to eight threads (§Speed). The model path is handed to whisper as UTF-8, which it turns into
-   a wide path on Windows, so an install folder outside the code page works. The text is inserted at the cursor in the
+   message. Whisper uses one thread fewer than the processor has cores, at most eight (§Speed): its threads wait for
+   each other by spinning, so one losing its core to the app's own drawing would hold up every step (with every core,
+   the app on a CI machine was still recognising the test clip after ten seconds, against 1.8 s without a window). The
+   model path is handed to whisper as UTF-8, which it turns into a wide path on Windows, so an install folder outside
+   the code page works. The text is inserted at the cursor in the
    message box and is never sent by itself; the user edits it and sends it as typed text. A recording belongs to the
    message box that started it: hiding the assistant, switching or clearing the conversation, or a disconnect cancels
    it, and a late result for another owner is dropped.

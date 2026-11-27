@@ -182,8 +182,10 @@ bool SpeechRecogniser::cpu_supported() {
 }
 
 int SpeechRecogniser::threads() {
+    // One core stays with the app: whisper's threads wait for each other by spinning, so one of them losing its core to
+    // the window's drawing holds up every step (ADR-0107 §6).
     const unsigned available = std::thread::hardware_concurrency();
-    return static_cast<int>(std::clamp(available, 1U, 8U));
+    return static_cast<int>(std::clamp(available > 1 ? available - 1 : 1U, 1U, 8U));
 }
 
 }  // namespace edi_app

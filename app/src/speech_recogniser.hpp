@@ -55,7 +55,7 @@ public:
     /// The languages the engine knows, in its own order.
     static std::vector<Language> languages();
 
-    /// The threads recognition uses: up to eight, fewer on a smaller machine (ADR-0107 §Speed).
+    /// The threads recognition uses: one fewer than the cores, at least one and at most eight (ADR-0107 §6).
     static int threads();
 
 private:
