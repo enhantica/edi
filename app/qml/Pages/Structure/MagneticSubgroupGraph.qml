@@ -31,7 +31,6 @@ Flickable {
     readonly property int shownNode: pinned >= 0 ? pinned : hovered
 
     signal toggled(int index)
-    signal levelToggled(int level, bool on)
 
     // A card as wide as its longest name or second line needs, with its check box and inner margins, so more fit on
     // a line; as tall as its two lines with the same margin around and between them (owner, 2026-11-27).
@@ -174,26 +173,24 @@ Flickable {
         }
     }
 
-    // A level's header: its name, its count and a check box selecting all of its selectable groups.
+    // A level's header: its name and its count.
     Repeater {
         model: graph.levels.length
         delegate: Row {
             id: header
             required property int index
             readonly property var members: graph.levels[index]
-            readonly property var choosable: members.filter(i => graph.selectable(i))
             x: graph.gap
             y: graph.levelTops[index] ?? 0
             height: graph.headerHeight
             spacing: graph.gap
-            EaElements.CheckBox {
+            // The level's name and count in bold, on the cards' edge (owner, 2026-11-27: no per-level check box; the
+            // footer's Select all and Clear choose).
+            EaElements.Label {
                 objectName: `magnetic.level.${header.index}`
-                leftPadding: 0  // on the cards' edge
                 anchors.verticalCenter: parent.verticalCenter
-                enabled: header.choosable.length > 0
-                checked: header.choosable.length > 0 && header.choosable.every(i => graph.selected.indexOf(i) >= 0)
+                font.bold: true
                 text: (header.index === 0 ? qsTr("Maximal") : qsTr("Level %1").arg(header.index + 1)) + " · " + (header.members.length === 1 ? qsTr("1 group") : qsTr("%1 groups").arg(header.members.length))
-                onToggled: graph.levelToggled(header.index, checked)
             }
         }
     }

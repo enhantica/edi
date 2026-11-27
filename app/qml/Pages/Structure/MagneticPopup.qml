@@ -312,7 +312,6 @@ AppDialog {
                 maximalOnly: maximalOnly.checked
                 onShownNodeChanged: popup.hovered = shownNode
                 onToggled: index => popup.toggle(index)
-                onLevelToggled: (level, on) => popup.setMany(graphView.levels[level], on)
             }
 
             // The list: one row per group in the app's table (DataTable, as Excluded regions and the parameter table),
