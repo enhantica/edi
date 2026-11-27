@@ -17,6 +17,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'tools/release'))
+from legacy_feed import has_new, legacy, publishable, serialize  # noqa: E402
 from versions import PATTERN, version_key  # noqa: E402
 
 # The crysta commits a site's content was checked against (edi ADR-0083). What a publisher keeps
@@ -188,7 +189,7 @@ def check_feed_agreement(site: Path) -> None:
             encoding='utf-8'
         )
     )
-    for channel, feed_name in (('testing', 'testing.json'), ('stable', 'stable.json')):
+    for channel in ('testing', 'stable'):
         repositories = [
             site / policy['repository_paths'][channel].format(platform=platform)
             for platform in ('linux-x86_64', 'macos-arm64', 'windows-x86_64')
@@ -196,7 +197,7 @@ def check_feed_agreement(site: Path) -> None:
         repositories = [path for path in repositories if (path / 'Updates.xml').is_file()]
         if not repositories:
             continue
-        feed = site / 'releases' / feed_name
+        feed = current_feed(site / 'releases', channel)
         if not feed.is_file():
             raise RuntimeError(f'The {channel} repositories have no update feed')
         releases = json.loads(feed.read_text(encoding='utf-8')).get('releases') or []
@@ -214,6 +215,15 @@ def check_feed_agreement(site: Path) -> None:
                 )
 
 
+def current_feed(releases: Path, channel: str) -> Path:
+    """The feed current apps read: <channel>-v2.json, or <channel>.json on a site from before it.
+
+    Since edi ADR-0106 the old name holds the feed apps up to v2026.11.31 read (legacy_feed.py).
+    """
+    newer = releases / f'{channel}-v2.json'
+    return newer if newer.is_file() else releases / f'{channel}.json'
+
+
 def overlay_release(site: Path, incoming: Path) -> None:
     """Publish one release's Pages copy (tools/release/distribution.py) in one site deployment.
 
@@ -224,9 +234,12 @@ def overlay_release(site: Path, incoming: Path) -> None:
     expected = {'repository', 'releases', 'pypi', 'SHA256SUMS'}
     if {item.name for item in incoming.iterdir()} != expected:
         raise RuntimeError('Release publication requires the Pages copy of the distribution')
-    feed = incoming / 'releases/stable.json'
-    if feed.is_symlink() or not feed.is_file() or feed.stat().st_size > 1024 * 1024:
-        raise RuntimeError('Release feed must be a bounded regular file')
+    feeds = [incoming / 'releases' / name for name in ('stable-v2.json', 'stable.json')]
+    if any(
+        feed.is_symlink() or not feed.is_file() or feed.stat().st_size > 1024 * 1024
+        for feed in feeds
+    ):
+        raise RuntimeError('Release feeds must be bounded regular files')
     versions = [item for item in (incoming / 'releases').iterdir() if item.is_dir()]
     if len(versions) != 1:
         raise RuntimeError('The Pages copy must hold exactly one release folder')
@@ -244,7 +257,8 @@ def overlay_release(site: Path, incoming: Path) -> None:
         if old.is_dir() and not old.is_symlink():
             shutil.rmtree(old)
     shutil.copytree(versions[0], site / 'releases' / versions[0].name)
-    shutil.copy2(feed, site / 'releases/stable.json')
+    for feed in feeds:
+        shutil.copy2(feed, site / 'releases' / feed.name)
     shutil.rmtree(site / 'pypi', ignore_errors=True)
     shutil.copytree(incoming / 'pypi', site / 'pypi')
     shutil.copy2(incoming / 'SHA256SUMS', site / 'SHA256SUMS')
@@ -314,7 +328,7 @@ def overlay_testing_feed(site: Path, feed: Path) -> None:
     current = json.loads(feed.read_text(encoding='utf-8'))
     if current.get('schema') != 'edi.preview-releases/1' or len(current['releases']) != 1:
         raise RuntimeError('Expected one testing release in the incoming feed')
-    target = site / 'releases/testing.json'
+    target = current_feed(site / 'releases', 'testing')
     if target.is_file():
         previous = json.loads(target.read_text(encoding='utf-8'))
         if previous.get('sequence') == current.get('sequence'):
@@ -326,13 +340,24 @@ def overlay_testing_feed(site: Path, feed: Path) -> None:
             )
         elif current.get('sequence') != 'calendar':
             raise RuntimeError('Testing update feed must use the calendar sequence')
-    target.parent.mkdir(exist_ok=True)
-    target.write_text(json.dumps(current, indent=2) + '\n', encoding='utf-8')
+    write_testing_feeds(site / 'releases', current)
     if current.get('sequence') == 'calendar' and len(current['releases']) >= 2:
         keep = {entry['version'] for entry in current['releases'][:2]}
         for platform in feed.parent.iterdir():
             if (platform / 'Updates.xml').is_file():
                 trim_testing_archives(site / 'repository/testing' / platform.name, keep)
+
+
+def write_testing_feeds(releases: Path, feed: dict) -> None:
+    """testing-v2.json as merged, and testing.json for apps up to v2026.11.31 (edi ADR-0106).
+
+    With a YY.N preview, testing.json carries its alias and is refused unless those apps' parser
+    takes it (legacy_feed.py); without one it holds the old previews as before.
+    """
+    old = publishable(feed, testing=True) if has_new(feed) else serialize(legacy(feed))
+    releases.mkdir(exist_ok=True)
+    (releases / 'testing-v2.json').write_text(json.dumps(feed, indent=2) + '\n', encoding='utf-8')
+    (releases / 'testing.json').write_bytes(old)
 
 
 def trim_testing_archives(repository: Path, keep: set[str]) -> None:
