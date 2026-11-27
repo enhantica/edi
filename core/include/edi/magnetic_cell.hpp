@@ -19,6 +19,7 @@ namespace edi {
 struct MagneticPreset {
     std::string k;      ///< `1/2,0,0`
     std::string label;  ///< `X`, or empty
+    std::string cell;   ///< its magnetic cell's basis, `a,b,2c` (crysta's magnetic_cell_of), or empty past the limit
 };
 /// The preset k list of a Crystal structure, k = 0 first.
 std::vector<MagneticPreset> magnetic_presets(const Structure& parent);

@@ -10247,9 +10247,16 @@ namespace edi {
 
 std::vector<MagneticPreset> magnetic_presets(const Structure& parent) {
     std::vector<MagneticPreset> out;
-    for (const crysta::PresetPropagationVector& p :
-         crysta::special_propagation_vectors(to_crysta_structure(parent))) {
-        out.push_back({p.k_text, p.label});
+    const crysta::Structure engine = to_crysta_structure(parent);
+    for (const crysta::PresetPropagationVector& p : crysta::special_propagation_vectors(engine)) {
+        std::string cell;
+        try {
+            const std::string transform = crysta::magnetic_cell_of(crysta::symmetry_group(engine), p.k_text).child_transform;
+            cell = transform.substr(0, transform.find(';'));
+        } catch (const std::invalid_argument&) {
+            cell.clear();  // beyond the cell limit: the popup says so when it is chosen
+        }
+        out.push_back({p.k_text, p.label, cell});
     }
     return out;
 }
