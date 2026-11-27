@@ -7896,9 +7896,26 @@ void publish_fit_state(Project& project, crysta::Project& converted, const std::
                                   [](const auto& experiment) { return experiment->data.has_value(); });
     if (surface_refusal && owed) {
         project.calculate();
-    } else {
-        project.refresh_calculated_pattern();
+        return;
     }
+    // Some banks with their pattern and some without (review 22, F2): the trial still proves the banks that carry
+    // one, on a copy holding only them, so a genuine refusal stops the fit before the live write.
+    if (surface_refusal) {
+        std::vector<ItemVec<BraggPdExperiment>::Ptr> carried;
+        for (const auto& experiment : project.experiments) {
+            if (experiment->data.has_value()) carried.push_back(experiment);
+        }
+        if (!carried.empty()) {
+            Project check = project;
+            std::vector<ItemVec<BraggPdExperiment>::Ptr> kept;
+            for (const auto& experiment : check.experiments) {
+                if (experiment->data.has_value()) kept.push_back(experiment);
+            }
+            check.experiments.assign(std::move(kept));
+            check.calculate();
+        }
+    }
+    project.refresh_calculated_pattern();
 }
 
 // The R factors of the fit that ran on `fitted` (its engine project, at the fitted values), over the measured
