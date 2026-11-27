@@ -39,7 +39,10 @@ Rectangle {
     function openChoices() {
         ApplicationInfo.assistantOpenChoices();
     }
-    onAssistantChanged: ApplicationInfo.composerOwnerChanged()
+    onAssistantChanged: {
+        VoiceInput.release(composer);
+        ApplicationInfo.composerOwnerChanged();
+    }
     onChoicesEnabledChanged: ApplicationInfo.composerChoicesEnabledChanged()
     Connections {
         target: composer.assistant
@@ -48,6 +51,10 @@ Rectangle {
         }
         function onConnectionLabelChanged() {
             composer.closeChoices();
+        }
+        function onConnectedChanged() {
+            if (!composer.assistant.connected)
+                VoiceInput.release(composer);
         }
     }
     FontMetrics {
@@ -361,6 +368,7 @@ Rectangle {
     Connections {
         target: composer.assistant
         function onSessionSelectionStarted(threadId) {
+            VoiceInput.release(composer);
             ApplicationInfo.composerSessionSelectionStarted(composer, editor, threadId);
         }
         function onSessionDraftRestored(threadId, text) {
@@ -368,12 +376,15 @@ Rectangle {
             ApplicationInfo.composerTakeReturnedMessages(composer, editor);
         }
         function onConversationClearRequested(intent) {
+            VoiceInput.release(composer);
             ApplicationInfo.composerConversationClearRequested(composer, editor, intent);
         }
         function onConversationClearCommitted(intent) {
+            VoiceInput.release(composer);
             ApplicationInfo.composerConversationClearCommitted(composer, editor, intent);
         }
         function onConversationRetired() {
+            VoiceInput.release(composer);
             ApplicationInfo.composerConversationRetired(composer);
         }
         function onWorkReportFinished(receipt) {
@@ -412,6 +423,18 @@ Rectangle {
     // Voice input (edi ADR-0107): the recognised text goes in at the cursor and is never sent by itself.
     readonly property bool voiceBusy: VoiceInput.state === VoiceInput.Starting || VoiceInput.state === VoiceInput.Recognising
     readonly property bool voiceActive: VoiceInput.state !== VoiceInput.Idle
+    // The panel stays loaded while hidden: a recording must not go on without its controls or its conversation.
+    onVisibleChanged: {
+        if (!composer.visible)
+            VoiceInput.release(composer);
+    }
+    Component.onDestruction: VoiceInput.release(composer)
+    // Escape from anywhere in the composer stops voice input; otherwise it goes on to the usual Escape action.
+    Keys.onEscapePressed: event => {
+        event.accepted = composer.voiceActive && VoiceInput.owner === composer;
+        if (event.accepted)
+            VoiceInput.release(composer);
+    }
     Binding {
         target: VoiceInput
         property: "language"
@@ -434,7 +457,9 @@ Rectangle {
     Connections {
         target: VoiceInput
         function onTextRecognised(text) {
-            composer.insertRecognisedText(text);
+            // Text from a recording this composer did not start, or one finishing after it was hidden, is dropped.
+            if (VoiceInput.owner === composer && composer.visible)
+                composer.insertRecognisedText(text);
         }
     }
     Connections {
@@ -538,12 +563,6 @@ Rectangle {
                 background: null
                 Accessible.name: qsTr("Message to the assistant")
                 Keys.onReturnPressed: event => ApplicationInfo.composerReturnPressed(event)
-                // Escape cancels voice input while it runs, and otherwise goes on as before.
-                Keys.onEscapePressed: event => {
-                    event.accepted = composer.voiceActive;
-                    if (composer.voiceActive)
-                        VoiceInput.cancel();
-                }
             }
         }
         // Why the last recording gave no text.
@@ -834,7 +853,7 @@ Rectangle {
                 KeyNavigation.priority: KeyNavigation.BeforeItem
                 KeyNavigation.backtab: nextUserButton
                 KeyNavigation.tab: voiceButton
-                onClicked: VoiceInput.cancel()
+                onClicked: VoiceInput.release(composer)
             }
             // Listening takes the accent colour; while the microphone starts or the speech is recognised it shows the
             // assistant's spinner, and a press cancels.
@@ -897,7 +916,7 @@ Rectangle {
                 ToolTip.text: text
                 visible: VoiceInput.available
                 Accessible.name: text
-                onClicked: VoiceInput.toggle()
+                onClicked: VoiceInput.toggle(composer)
             }
             EaElements.ToolButton {
                 id: stopButton
