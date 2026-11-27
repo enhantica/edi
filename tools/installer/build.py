@@ -264,19 +264,34 @@ MACHO_MAGIC = frozenset({
 })  # fmt: skip
 
 
+# Claude Code and the Copilot CLI ship unmodified: release signing never touches them (ADR-0108).
+VENDOR_RUNTIMES = ('libexec/edi/claude', 'libexec/edi/copilot')
+
+
+def vendor_runtime(stage: Path, path: Path) -> bool:
+    """True for a file inside a runtime that keeps its vendor's bytes and signature."""
+    relative = path.relative_to(stage).as_posix()
+    return any(relative == root or relative.startswith(root + '/') for root in VENDOR_RUNTIMES)
+
+
 def release_executables(stage: Path) -> list[Path]:
     """The programs a release signs outside the macOS app bundle (edi ADR-0091).
 
-    Windows: every .exe in the stage (the app, the assistant guard and the assistant runtime's
-    helpers). macOS: every Mach-O file of the assistant runtime, which lives beside the app.
+    Windows: every .exe in the stage (the app, the assistant guard and the Codex runtime's
+    helpers). macOS: every Mach-O file of the Codex runtime, which lives beside the app.
+    Claude's and Copilot's binaries are left out.
     """
     if SYSTEM == 'windows':
-        return sorted(path for path in stage.rglob('*.exe') if path.is_file())
+        return sorted(
+            path
+            for path in stage.rglob('*.exe')
+            if path.is_file() and not vendor_runtime(stage, path)
+        )
     if SYSTEM != 'macos':
         return []
     found = []
     for path in sorted((stage / 'libexec').rglob('*')):
-        if path.is_symlink() or not path.is_file():
+        if path.is_symlink() or not path.is_file() or vendor_runtime(stage, path):
             continue
         with path.open('rb') as stream:
             if stream.read(4) in MACHO_MAGIC:
