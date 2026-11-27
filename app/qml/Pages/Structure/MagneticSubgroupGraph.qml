@@ -8,6 +8,8 @@ import QtQuick.Shapes
 import EasyApplication.Gui.Style as EaStyle
 import EasyApplication.Gui.Elements as EaElements
 
+import edi.app
+
 // The magnetic groups a propagation vector allows (crysta ADR-0137 A4), one block per level: a header with the level's
 // count and a check box selecting all of it, then its groups as compact cards wrapped to the width. With Maximal only
 // just the first level shows. The covering edges are drawn only for the group under the pointer or selected, so the
@@ -75,6 +77,22 @@ Flickable {
         }
         return Qt.point(0, 0);
     }
+    // An edge's corners from parent i to child j, through the gaps only (conductor seq 51): down into the band above the
+    // child's level, across to the gap beside the child's column, down that gap to just above the child's row, across
+    // to the child's centre and down onto its top edge, so no edge crosses a card.
+    function route(i, j) {
+        const from = positionOf(i);
+        const to = positionOf(j);
+        let top = to.y;
+        for (let l = 0; l < levels.length; ++l)
+            if (levels[l].indexOf(j) >= 0)
+                top = levelTops[l];
+        const band = top - levelGap / 2;
+        const lane = to.x - gap / 2;
+        const above = to.y - gap / 2;
+        const centre = to.x + nodeWidth / 2;
+        return [Qt.point(from.x + nodeWidth / 2, from.y + nodeHeight), Qt.point(from.x + nodeWidth / 2, band), Qt.point(lane, band), Qt.point(lane, above), Qt.point(centre, above), Qt.point(centre, to.y)];
+    }
     function related(i, j) {
         return nodes[i].subgroups.indexOf(j) >= 0 || nodes[j].subgroups.indexOf(i) >= 0;
     }
@@ -98,17 +116,16 @@ Flickable {
                 delegate: Shape {
                     id: edge
                     required property int modelData
-                    readonly property point to: graph.positionOf(modelData)
+                    readonly property var corners: graph.route(edges.index, modelData)
                     visible: graph.shown(modelData)
                     ShapePath {
                         strokeColor: EaStyle.Colors.themeAccent
                         strokeWidth: 1.5
                         fillColor: "transparent"
-                        startX: edges.from.x + graph.nodeWidth / 2
-                        startY: edges.from.y + graph.nodeHeight
-                        PathLine {
-                            x: edge.to.x + graph.nodeWidth / 2
-                            y: edge.to.y
+                        startX: edge.corners[0].x
+                        startY: edge.corners[0].y
+                        PathPolyline {
+                            path: edge.corners
                         }
                     }
                 }
@@ -164,7 +181,8 @@ Flickable {
 
             Column {
                 anchors.fill: parent
-                anchors.margins: 4
+                // The inner margin of the app's table cells, so the check box is not on the border.
+                anchors.margins: AppSizes.tableCellMargin
                 // A group that cannot be chosen reads faded, while its card stays opaque over the edges.
                 opacity: graph.selectable(node.index) ? 1.0 : 0.45
                 Row {
@@ -172,7 +190,6 @@ Flickable {
                     EaElements.CheckBox {
                         objectName: `magnetic.node.${node.index}.check`
                         height: nameLabel.implicitHeight
-                        padding: 0
                         enabled: graph.selectable(node.index)
                         checked: node.chosen
                     }

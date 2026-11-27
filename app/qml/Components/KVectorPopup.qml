@@ -177,7 +177,9 @@ AppDialog {
                     "": qsTr("not indexed")
                 };
                 const order = popup.markedPeaks.map((p, i) => i).sort((a, b) => popup.markedPeaks[a].x - popup.markedPeaks[b].x);
-                return order.map(i => `${popup.markedPeaks[i].x.toFixed(2)}°: ${names[r.roles[i] ?? ""] ?? r.roles[i]}`).join(" · ") + (r.equallyGood ? qsTr(" · equally good") : "");
+                // Named by its row, so it reads as the chosen k's (conductor seq 51).
+                const point = r.label === "" ? `(${r.k})` : r.label;
+                return `${point}: ` + order.map(i => `${popup.markedPeaks[i].x.toFixed(2)}° ${names[r.roles[i] ?? ""] ?? r.roles[i]}`).join(" · ") + (r.equallyGood ? qsTr(" · equally good") : "");
             }
         }
     }
