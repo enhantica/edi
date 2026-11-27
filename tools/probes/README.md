@@ -28,13 +28,14 @@ The status is one of:
 | Status                                | Meaning                                                      |
 | ------------------------------------- | ------------------------------------------------------------ |
 | `imported`                            | Imported, nothing missing from the source                    |
-| `imported with defaults reported`     | Imported, some fields missing, and edi warned it used defaults |
+| `imported with defaults reported`     | Imported, some fields missing, and edi warned at least once  |
 | `imported with source fields absent`  | Imported, some fields missing, and edi did not warn          |
 | `imported; source audit incomplete`   | Imported, but the Gemmi check could not match the model      |
 | `refused`                             | edi raised an error; the detail column holds its message     |
 | `timed out`, `process failed`         | The import took too long or crashed                          |
 
-A status can end in `; no atom sites`. The census adds `probe failed` (the worker raised),
+One warning is enough for `imported with defaults reported`: the status does not check that
+each missing field has a warning of its own. A status can end in `; no atom sites`. The census adds `probe failed` (the worker raised),
 `pending` (not run yet) and `withheld by COD` (COD holds the coordinates back). `compare` writes
 `not run` for an ID present in only one snapshot.
 
@@ -71,6 +72,9 @@ python3 -c "import csv, collections; rows = list(csv.DictReader(open('tools/prob
 ```
 
 ### What it shows and what it does not
+
+The CSV is historical: it records one past run and is used to choose test fixtures. The tests
+and CI at the current head are what show today's behaviour.
 
 It shows that, for the listed COD revisions and the two builds used, each entry either imports
 or is refused with a stated reason, and which defaults edi applied. It does not show that the
