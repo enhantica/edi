@@ -1126,7 +1126,8 @@ Item {
                     "color": ink
                 },
                 {
-                    "text": modelData.text,
+                    // The magnetic row says so beside the name, so its two rows read apart (owner test, 2026-11-27).
+                    "text": modelData.magnetic ? qsTr("%1 · magnetic").arg(modelData.text) : modelData.text,
                     "elides": true
                 }
             ]

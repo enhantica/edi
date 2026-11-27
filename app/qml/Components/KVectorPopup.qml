@@ -31,7 +31,6 @@ AppDialog {
     property string refusal: ""
 
     title: qsTr("Possible propagation vectors")
-    standardButtons: Dialog.Cancel
     width: parent ? Math.min(Math.round(parent.width * 0.6), 760) : 700
     height: parent ? Math.min(Math.round(parent.height * 0.6), 520) : 480
     onClosed: destroy()
@@ -74,35 +73,65 @@ AppDialog {
             color: EaStyle.Colors.red
             text: popup.refusal
         }
+        // The columns' header, as the app's tables have one.
+        Row {
+            Layout.fillWidth: true
+            spacing: 0
+            Repeater {
+                model: [[qsTr("Point"), 0.12], [qsTr("k"), 0.22], [qsTr("Marked peaks indexed"), 0.24], [qsTr("Worst misfit"), 0.16], [qsTr("Magnetic cell"), 0.26]]
+                delegate: EaElements.Label {
+                    required property var modelData
+                    width: list.width * modelData[1]
+                    leftPadding: EaStyle.Sizes.fontPixelSize * 0.5
+                    color: EaStyle.Colors.themeForegroundMinor
+                    text: modelData[0]
+                }
+            }
+        }
         ListView {
             id: list
             objectName: "chart.kVectors"
             Layout.fillWidth: true
             Layout.fillHeight: true
             clip: true
+            currentIndex: popup.rows.length > 0 ? 0 : -1
             ScrollBar.vertical: EaElements.ScrollBar {}
             model: popup.rows
             delegate: Rectangle {
                 id: row
                 required property var modelData
                 required property int index
+                readonly property bool current: ListView.isCurrentItem
                 objectName: `chart.kVector.${index}`
                 width: list.width
-                height: EaStyle.Sizes.fontPixelSize * 3.8
-                color: hover.hovered ? EaStyle.Colors.themeRowHovered : "transparent"
+                height: EaStyle.Sizes.fontPixelSize * 3.2
+                color: row.current ? EaStyle.Colors.themeAccentMinor : hover.containsMouse ? EaStyle.Colors.themeRowHovered : "transparent"
+                Rectangle {
+                    visible: row.current
+                    width: 3
+                    height: parent.height
+                    color: EaStyle.Colors.themeAccent
+                }
                 Column {
                     anchors.verticalCenter: parent.verticalCenter
-                    x: EaStyle.Sizes.fontPixelSize * 0.5
-                    EaElements.Label {
-                        font.bold: true
-                        text: row.modelData.label === "" ? `k = (${row.modelData.k})` : `${row.modelData.label}  k = (${row.modelData.k})`
-                    }
-                    EaElements.Label {
-                        font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.85
-                        text: qsTr("Indexes %1 of %2 marked peaks · worst misfit %3 · magnetic cell: %4").arg(row.modelData.explained).arg(popup.marked.length).arg(row.modelData.misfit.toFixed(2)).arg(row.modelData.parentCells === 1 ? qsTr("the crystal's") : qsTr("%1 parent cells").arg(row.modelData.parentCells)) + (row.modelData.equallyGood ? qsTr(" · equally good") : "")
+                    width: parent.width
+                    Row {
+                        Repeater {
+                            model: [[row.modelData.label === "" ? "—" : row.modelData.label, 0.12], [`(${row.modelData.k})`, 0.22], [qsTr("%1 of %2").arg(row.modelData.explained).arg(popup.marked.length), 0.24], [row.modelData.misfit.toFixed(2), 0.16], [row.modelData.parentCells === 1 ? qsTr("a, b, c (same as the crystal)") : qsTr("%1 parent cells").arg(row.modelData.parentCells), 0.26]]
+                            delegate: EaElements.Label {
+                                required property var modelData
+                                width: list.width * modelData[1]
+                                leftPadding: EaStyle.Sizes.fontPixelSize * 0.5
+                                elide: Text.ElideRight
+                                text: modelData[0]
+                            }
+                        }
                     }
                     // Each marked peak, where it is and how this k indexes it.
                     EaElements.Label {
+                        width: parent.width
+                        leftPadding: EaStyle.Sizes.fontPixelSize * 0.5
+                        elide: Text.ElideRight
                         font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.85
                         color: EaStyle.Colors.themeForegroundMinor
                         text: {
@@ -112,28 +141,50 @@ AppDialog {
                                 allowed: qsTr("allowed reflection"),
                                 "": qsTr("not indexed")
                             };
-                            return popup.markedPeaks.map((p, i) => `${p.x.toFixed(2)}: ${names[row.modelData.roles[i] ?? ""] ?? row.modelData.roles[i]}`).join(" · ");
+                            return popup.markedPeaks.map((p, i) => `${p.x.toFixed(2)}°: ${names[row.modelData.roles[i] ?? ""] ?? row.modelData.roles[i]}`).join(" · ") + (row.modelData.equallyGood ? qsTr(" · equally good") : "");
                         }
                     }
                 }
                 MouseArea {
                     id: hover
-                    readonly property bool hovered: containsMouse
                     anchors.fill: parent
                     hoverEnabled: true
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: {
-                        // The data, links and marks the search ran on must still hold (review 12, F19).
-                        if (!popup.project.propagationSearchCurrent(popup.experimentIndex)) {
-                            popup.refusal = qsTr("The data or the structures changed; mark the peaks again.");
-                            return;
-                        }
-                        const k = row.modelData.k;
-                        popup.close();
-                        popup.chosen(k);
+                    onClicked: list.currentIndex = row.index
+                    onDoubleClicked: {
+                        list.currentIndex = row.index;
+                        popup.analyse();
                     }
                 }
             }
+        }
+    }
+
+    // Analyse the chosen k: the data, links and marks the search ran on must still hold (review 12, F19).
+    function analyse() {
+        if (list.currentIndex < 0 || list.currentIndex >= rows.length)
+            return;
+        if (!project.propagationSearchCurrent(experimentIndex)) {
+            refusal = qsTr("The data or the structures changed; mark the peaks again.");
+            return;
+        }
+        const k = rows[list.currentIndex].k;
+        close();
+        chosen(k);
+    }
+
+    footer: EaElements.DialogButtonBox {
+        EaElements.Button {
+            objectName: "chart.kVectorPopup.analyse"
+            fontIcon: "magnet"
+            text: qsTr("Analyse")
+            enabled: list.currentIndex >= 0 && !popup.searching
+            DialogButtonBox.buttonRole: DialogButtonBox.ApplyRole
+            onClicked: popup.analyse()
+        }
+        EaElements.Button {
+            objectName: "chart.kVectorPopup.cancel"
+            text: qsTr("Cancel")
+            DialogButtonBox.buttonRole: DialogButtonBox.RejectRole
         }
     }
 }
