@@ -24,6 +24,9 @@
 #include <atomic>
 #include <cmath>
 #include <filesystem>
+#include <string>
+#include <string_view>
+#include <system_error>
 #include <deque>
 #include <limits>
 #include <numeric>
@@ -68,6 +71,61 @@
 
 namespace nb = nanobind;
 using namespace nb::literals;
+
+// Core reads a narrow path in the process code page: UTF-8 on Linux and macOS, on Windows the system's
+// unless its UTF-8 setting is on (ADR-0109). Every path argument passes through core_path, so a str and a
+// Path reach core alike, and a name the code page cannot hold is refused before core sees it.
+#if defined(_WIN32)
+static std::filesystem::path path_from_utf8(const std::string& text) {
+#if defined(__cpp_char8_t)
+    return std::filesystem::path(
+        std::u8string_view(reinterpret_cast<const char8_t*>(text.data()), text.size()));
+#else
+    return std::filesystem::u8path(text);
+#endif
+}
+#endif
+
+static std::string utf8_text(const std::filesystem::path& path) {
+#if defined(__cpp_char8_t)
+    const std::u8string text = path.u8string();
+    return std::string(reinterpret_cast<const char*>(text.data()), text.size());
+#else
+    return path.u8string();
+#endif
+}
+
+static std::string core_path(const std::filesystem::path& path) {
+#if defined(_WIN32)
+    try {
+        return path.string();
+    } catch (const std::system_error&) {
+        throw nb::value_error(("this path has letters that the Windows code page here cannot hold; turn on "
+                               "'Use Unicode UTF-8 for worldwide language support' in the system's language "
+                               "settings: " + utf8_text(path)).c_str());
+    }
+#else
+    return path.string();
+#endif
+}
+
+// A path given as a str (UTF-8).
+static std::string core_path_text(const std::string& text) {
+#if defined(_WIN32)
+    return core_path(path_from_utf8(text));
+#else
+    return text;
+#endif
+}
+
+// A path core hands back, as the UTF-8 a Python str holds.
+static std::string python_path_text(const std::string& core) {
+#if defined(_WIN32)
+    return utf8_text(std::filesystem::path(core));
+#else
+    return core;
+#endif
+}
 
 // Metadata access on a bound Parameter. Fail-closed — a Parameter no model constructor attached
 // a spec to has no metadata to report, and answering with a placeholder would hide exactly the
@@ -2239,7 +2297,7 @@ NB_MODULE(_edi, m) {
     m.def(
         "_single_crystal_with_reflections",
         [](const edi::BraggPdExperiment& experiment, const std::string& path) {
-            edi::PlainDataLoad load = edi::experiment_with_plain_data(experiment, path, false);
+            edi::PlainDataLoad load = edi::experiment_with_plain_data(experiment, core_path_text(path), false);
             return edi::BraggPdExperiment(load.experiment);
         },
         "experiment"_a, "path"_a);
@@ -2248,7 +2306,7 @@ NB_MODULE(_edi, m) {
     m.def(
         "_read_plain_data",
         [](const std::string& path) {
-            edi::PlainDataRows read = edi::read_plain_data(path);
+            edi::PlainDataRows read = edi::read_plain_data(core_path_text(path));
             nb::dict rows;
             rows["x"] = read.x;
             rows["y"] = read.y;
@@ -2326,14 +2384,16 @@ NB_MODULE(_edi, m) {
     m.def("_collection_fetch", [python_transport](const std::vector<std::string>& sources, const std::string& text,
                                                   const std::string& id, const std::string& into,
                                                   const nb::callable& transport) {
-        return edi::online::fetch(sources, text, id, into, python_transport(transport));
+        return python_path_text(
+            edi::online::fetch(sources, text, id, core_path_text(into), python_transport(transport)));
     }, "sources"_a, "text"_a, "id"_a, "into"_a, "transport"_a);
     m.def("_collection_download", [python_transport](const std::vector<std::string>& sources, const std::string& text,
                                                      const std::string& name, const std::string& kind,
                                                      const std::string& format, const std::string& destination,
                                                      bool overwrite, const nb::callable& transport) {
-        return edi::online::download(sources, text, name, kind, format, destination, overwrite,
-                                     python_transport(transport));
+        return python_path_text(edi::online::download(sources, text, name, kind, format,
+                                                      core_path_text(destination), overwrite,
+                                                      python_transport(transport)));
     }, "sources"_a, "text"_a, "name"_a, "kind"_a, "format"_a, "destination"_a, "overwrite"_a, "transport"_a);
     m.def("_sha256_hex", [](const nb::bytes& bytes) { return edi::online::sha256_hex(std::string_view(bytes.c_str(), bytes.size())); },
           "bytes"_a);
@@ -4688,7 +4748,7 @@ NB_MODULE(_edi, m) {
                 return nb::cast(std::filesystem::path(self.path));
             },
             [](edi::ProjectMetadata& self, const std::filesystem::path& value) {
-                self.path = value.string();
+                self.path = core_path(value);
             },
             "The project directory as a Path (None until loaded or saved).")
         .def_prop_ro(
@@ -4803,7 +4863,7 @@ NB_MODULE(_edi, m) {
     m.def(
         "check_import_roundtrip",
         [](edi::Project& project, const std::filesystem::path& directory) {
-            edi::check_import_roundtrip(project, directory.string());
+            edi::check_import_roundtrip(project, core_path(directory));
         },
         "project"_a, "directory"_a,
         "Save an imported project into directory, open it again and compare every parameter; raises edi.IoError at "
@@ -5176,9 +5236,10 @@ NB_MODULE(_edi, m) {
         .def_static(
             "load",
             [](const std::filesystem::path& directory) {
+                const std::string where = core_path(directory);
                 // crysta's coded warnings reach Python as warnings led by the code; the loader's
                 // own notes keep their stderr line.
-                edi::Project project = edi::load_project(directory.string(), [](const std::string& message) {
+                edi::Project project = edi::load_project(where, [](const std::string& message) {
                     if (message.rfind("crysta.", 0) == 0) {
                         if (PyErr_WarnEx(PyExc_UserWarning, message.c_str(), 1) < 0) {
                             throw nb::python_error();
@@ -5189,10 +5250,10 @@ NB_MODULE(_edi, m) {
                 });
                 // A project opened from a .zip works in the folder it was unpacked into, and save() rewrites the
                 // archive from it (edi ADR-0052): the archive is its location.
-                if (edi::is_project_archive(directory.string())) {
+                if (edi::is_project_archive(where)) {
                     project.path = project.scan_data_root;
                     project.scan_data_root.clear();
-                    project.archive = std::filesystem::absolute(directory).string();
+                    project.archive = core_path(std::filesystem::absolute(directory));
                 }
                 return project;
             },
@@ -5301,13 +5362,14 @@ NB_MODULE(_edi, m) {
                 // edi NARRATES its saves (the display facade is edi's, R6); the write itself
                 // is delegated to crysta's silent writer (:save_project validates and hands
                 // over).
+                const std::string where = core_path(directory);
                 nb::module_::import_("builtins").attr("print")(
-                    "Saving project to '" + directory.string() + "'");
+                    "Saving project to '" + utf8_text(directory) + "'");
                 // review-32 F2: upstream advances on save;: BEFORE the write, rolled back
                 // on failure, so the record holds the advanced value.
-                save_project_advancing_last_modified(self, directory.string());
-                self.path = directory.string();
-                self.metadata.path = directory.string();
+                save_project_advancing_last_modified(self, where);
+                self.path = where;
+                self.metadata.path = where;
                 self.archive.clear();
             },
             "directory"_a,
@@ -5350,6 +5412,7 @@ NB_MODULE(_edi, m) {
                 // `directory` (the project's path from here on; a scan's analysis/results*.csv),
                 // while a scan's data are read in place from the directory this project was
                 // loaded from — never copied.
+                const std::string where = core_path(directory);
                 if (self.path.empty() && self.scan_data_root.empty()) {
                     throw std::invalid_argument(
                         "this project has no directory (never loaded or saved): nothing to run "
@@ -5359,7 +5422,7 @@ NB_MODULE(_edi, m) {
                 if (!self.path.empty()) {
                     self.scan_data_root = self.path;
                 }
-                self.path = directory.string();
+                self.path = where;
                 self.metadata.path = self.path;
                 // A dry run writes nothing back: an archive the project came from is not its output.
                 self.archive.clear();
@@ -5372,9 +5435,10 @@ NB_MODULE(_edi, m) {
             [](edi::Project& self, const std::filesystem::path& directory) {
                 // The CLI's --output: save_as without the narration line, so the machine channel's
                 // stdout stays the record.
-                save_project_advancing_last_modified(self, directory.string());
-                self.path = directory.string();
-                self.metadata.path = directory.string();
+                const std::string where = core_path(directory);
+                save_project_advancing_last_modified(self, where);
+                self.path = where;
+                self.metadata.path = where;
                 self.scan_data_root.clear();
                 self.archive.clear();
             },
@@ -5390,7 +5454,7 @@ NB_MODULE(_edi, m) {
                     folder = edi::fresh_archive_directory("export");
                     edi::save_project(self, folder);
                 }
-                edi::write_project_archive(folder, archive.string());
+                edi::write_project_archive(folder, core_path(archive));
             },
             "archive"_a,
             "Write the project's folder, as last saved and with its reports, as one .zip archive at `archive` "

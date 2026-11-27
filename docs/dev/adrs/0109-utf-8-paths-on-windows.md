@@ -2,8 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-11-27
-- **Implementation:** 🟡 Partially implemented: the manifest, its checks and the app's catches are in; the Python
-  module's conversion and refusal follow
+- **Implementation:** ✅ Implemented
 - **Priority:** Highest
 - **Forward constraint (binding on new features):** a narrow string that holds a path is UTF-8 everywhere in edi; a new
   Windows executable gets the manifest from the build without asking for it, and the Python module turns every path
@@ -33,9 +32,10 @@ building error messages.
    path it cannot check as missing, `Session::publishStaged` reports a refusal, and the scope guards that remove a
    save's staging folder never throw.
 3. **The Python module converts at its boundary.** It runs inside `python.exe`, whose code page is the system's. Every
-   path argument, `Path` or `str`, becomes a `std::filesystem::path` and reaches core as its `.string()`, in the process
-   code page, so names that code page holds work; a name it cannot hold is refused with a `ValueError` that names the
-   Windows setting "Use Unicode UTF-8 for worldwide language support", with which every name works.
+   argument that names a folder or a file, `Path` or `str`, becomes a `std::filesystem::path` and reaches core as its
+   `.string()`, in the process code page, so names that code page holds work; a name it cannot hold is refused with a
+   `ValueError` that names the Windows setting "Use Unicode UTF-8 for worldwide language support", with which every
+   name works. A path core returns (a download's folder) is turned back into UTF-8 for Python.
 4. On Windows builds that ignore the setting the app logs one warning at start.
 
 ## Consequences
