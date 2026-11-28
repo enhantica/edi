@@ -1397,6 +1397,8 @@ bool AssistantRuntimeTranslator::reject(const QJsonValue& originalId) {
     if (native_work_id_ == key && !endNativeWork(originalId, generation_)) return false;
     const auto request = requests_.take(key);
     if (failed_ || !live_) return false;
+    // The session log names what was refused; the view model's own log line says why.
+    qWarning().noquote() << "assistant: refused the runtime's request" << request.method;
     if (tools_) (void)tools_->refuse(request.toolId, tr("edi does not support this request."));
     if (!request.closed) completeCall(request, false, {});
     return true;

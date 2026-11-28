@@ -190,7 +190,9 @@ starts the server as its own child, so the server is a small bridge to the app:
   the same name (at most three questions, options to click, a free answer). The provider emits a call as
   `item/tool/requestUserInput`, so it becomes the question card Codex's questions use today, and the answer is the tool
   result. edi's instructions already name the tool, so the
-  same text serves every provider. The runtimes' own question tools stay off (sections 4, 5).
+  same text serves every provider. The runtimes' own question tools stay off (sections 4, 5). Codex holds its model to
+  the schema; Claude's MCP client does not, so an option may arrive as its label alone or without a description, and
+  the card takes it the same.
 - **Names.** The server is called `edi`; the models see `mcp__edi__<tool>` (Claude) and `edi-<tool>` (Copilot).
 - **Timeouts.** A fit or a question can outlast a runtime's default MCP call timeout. Each runtime's config gives edi's
   server one fixed number, one day plus a minute, since edi sets no total limit on a fit or a question (section 4:

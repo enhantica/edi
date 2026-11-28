@@ -15366,6 +15366,9 @@ struct AssistantViewModel::State {
                         // FIRST non-Qt terminal convention: no request, exception or provider text.
                         std::fprintf(stderr, "Edi assistant request failure method=%s first_stage=%s first_class=%s secondary_stage=%s secondary_class=%s\n",
                             diagnostic.method, diagnostic.first_stage, diagnostic.first_class, secondary_stage, secondary_class);
+                        // The session log keeps the stage too, so a report shows which check a request failed.
+                        qWarning("assistant: request failed: method=%s stage=%s class=%s", diagnostic.method, diagnostic.first_stage,
+                                 diagnostic.first_class);
                         // A local request-processing failure is not account revocation.
                         // Keep the original channel/task; actual transport failure still
                         // arrives through AssistantProvider::failed and its existing owner.
@@ -17099,12 +17102,17 @@ struct AssistantViewModel::State {
                     diagnostic.stage = "QUESTION_OPTION_LIMIT";
                     if (options.size() >= static_cast<qsizetype>(Limits::question_options)) throw std::length_error("Agent question exceeds option limit");
                     diagnostic.stage = "QUESTION_OPTION_LABEL";
-                    const auto value = option.toObject(); const auto label = value.value("label").toString();
+                    // Codex holds its model to the tool's schema; Claude's MCP client does not, so an option may come
+                    // as its label alone, or without a description: the card shows it the same.
+                    const auto value = option.isString() ? Object{{"label", option}} : option.toObject();
+                    const auto label = value.value("label").toString();
                     if (label.isEmpty() || label.toUtf8().size() > static_cast<qsizetype>(Limits::question_option_label_bytes)) throw std::runtime_error("Agent option is invalid");
                     diagnostic.stage = "QUESTION_OPTION_DESCRIPTION";
-                    if (!value.value("description").isString() || value.value("description").toString().toUtf8().size() > static_cast<qsizetype>(Limits::question_option_description_bytes)) throw std::length_error("Agent option description exceeds limit");
+                    const auto description = value.value("description");
+                    if (!description.isUndefined() && !description.isNull() && !description.isString()) throw std::runtime_error("Agent option description is invalid");
+                    if (description.toString().toUtf8().size() > static_cast<qsizetype>(Limits::question_option_description_bytes)) throw std::length_error("Agent option description exceeds limit");
                     diagnostic.stage = "QUESTION_OPTION_ROW";
-                    options.append(Object{{"id", label}, {"label", label}, {"description", value.value("description")}});
+                    options.append(Object{{"id", label}, {"label", label}, {"description", description.toString()}});
                 }
                 prepared.append(Object{{"id",qid},{"text",q.value("question")},{"options",options},
                     {"allow_free_text",true},{"draftText",QString()}});
