@@ -1046,7 +1046,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // Each marking session's id, which a pending tap must still match (review 23, F4).
     quint64 k_session_ = 0;
     // The kept marks measured again on the bank and inputs they are now shown with, when those changed.
-    void kRemeasure(bool always = false);
+    void kRemeasure();
     // Whether a mark may stand at `x` on that bank (review 25): inside the measured range and outside every excluded
     // region. A tap, a remap and a snapshot all ask it.
     bool kMeasurable(int experiment, double x) const;

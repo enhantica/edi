@@ -4498,13 +4498,16 @@ void ProjectViewModel::toggleKMarkAt(double x, double tolerance) {
                                            std::abs(k_marks_.candidates[static_cast<std::size_t>(on_mark)].x - x)))
             on_mark = m;
     }
-    changeKMarks();
-    k_marks_.roles.clear();
     if (on_mark >= 0) {
+        changeKMarks();
+        k_marks_.roles.clear();
         k_marks_.marks.erase(std::find(k_marks_.marks.begin(), k_marks_.marks.end(), on_mark));
         emit kSearchChanged();
         return;
     }
+    // A click where the data are not measured or are excluded marks nothing and changes nothing (review 26, F4): no
+    // snap from it, no retired search.
+    if (!kMeasurable(k_marks_.experiment, x)) return;
     // The nearest measured maximum to the click, listed by a detector or not (review 23, F4): the nearest listed one
     // and the nearest one of the measured curve compete by distance; a residual excess or an earlier click is never
     // a snap target. With none near, the clicked position itself.
@@ -4526,16 +4529,12 @@ void ProjectViewModel::toggleKMarkAt(double x, double tolerance) {
             best = static_cast<int>(k_marks_.candidates.size()) - 1;
         }
     } catch (const std::exception&) {
-        if (best < 0) {
-            emit kSearchChanged();  // outside the calibration's range: nothing to mark there
-            return;
-        }
+        if (best < 0) return;  // outside the calibration's range: nothing to mark there
     }
     // A mark stands only where the data are measured and not excluded (review 25, F4).
-    if (!kMeasurable(k_marks_.experiment, k_marks_.candidates[static_cast<std::size_t>(best)].x)) {
-        emit kSearchChanged();
-        return;
-    }
+    if (!kMeasurable(k_marks_.experiment, k_marks_.candidates[static_cast<std::size_t>(best)].x)) return;
+    changeKMarks();
+    k_marks_.roles.clear();
     k_marks_.marks.push_back(best);
     std::sort(k_marks_.marks.begin(), k_marks_.marks.end(), [this](int a, int b) {
         return k_marks_.candidates[static_cast<std::size_t>(a)].x < k_marks_.candidates[static_cast<std::size_t>(b)].x;
@@ -4606,11 +4605,11 @@ bool ProjectViewModel::kMeasurable(int experiment, double at) const {
     return true;
 }
 
-void ProjectViewModel::kRemeasure(bool always) {
+void ProjectViewModel::kRemeasure() {
     const int experiment = k_marks_.experiment;
     if (experiment < 0 || k_marks_.parent < 0 || experiment >= static_cast<int>(project_->experiments.size())) return;
     const std::uint64_t inputs = kInputs(experiment);
-    if (!always && inputs == k_marks_.inputs &&
+    if (inputs == k_marks_.inputs &&
         k_marks_.bank.lock().get() == project_->experiments[static_cast<std::size_t>(experiment)].get())
         return;
     // Each kept mark measured again where it stands, on the data and calibration it is now shown with (review 24,
@@ -4624,23 +4623,29 @@ void ProjectViewModel::kRemeasure(bool always) {
     } catch (const std::exception&) {
         fresh.clear();
     }
-    // Each kept mark takes the nearest detected peak within that peak's window that no other mark took (review 25):
-    // two marks never collapse onto one peak.
+    // Each kept mark takes the nearest measured maximum within that peak's half width on the chart's axis that no
+    // other mark took (reviews 25 and 26): two marks never collapse onto one peak, a residual excess is never a target,
+    // and the window and the distance are in the same units.
     std::vector<edi::MagneticPeak> measured;
     std::vector<bool> used(fresh.size(), false);
+    const auto taken = [&measured](double at) {
+        return std::any_of(measured.begin(), measured.end(),
+                           [at](const edi::MagneticPeak& p) { return std::abs(p.x - at) <= 1e-9; });
+    };
     for (const int m : k_marks_.marks) {
         const double x = k_marks_.candidates[static_cast<std::size_t>(m)].x;
         if (!kMeasurable(experiment, x)) continue;
         std::size_t best = fresh.size();
         for (std::size_t f = 0; f < fresh.size(); ++f) {
-            if (used[f] || std::abs(fresh[f].x - x) > std::max({fresh[f].half_width, fresh[f].tolerance, 1e-9})) continue;
+            if (used[f] || !fresh[f].observed || std::abs(fresh[f].x - x) > std::max(fresh[f].half_width, 1e-9)) continue;
             if (best == fresh.size() || std::abs(fresh[f].x - x) < std::abs(fresh[best].x - x)) best = f;
         }
-        if (best != fresh.size()) {
+        if (best != fresh.size() && !taken(fresh[best].x)) {
             used[best] = true;
             measured.push_back(fresh[best]);
             continue;
         }
+        if (taken(x)) continue;  // a second mark at a position already kept is the same mark
         try {
             measured.push_back(edi::magnetic_peak_at(*project_, static_cast<std::size_t>(experiment),
                                                      static_cast<std::size_t>(k_marks_.parent), x));
@@ -4679,9 +4684,9 @@ QVariantMap ProjectViewModel::kSnapshot() {
         setLastError(tr("the crystal structure to search k for is no longer the experiment's one enabled crystal"));
         return {};
     }
-    // Every mark is measured again before a search (reviews 23 and 25, F4): a mark of other data, calibration or mask,
-    // or a click in an excluded region, never reaches Find k.
-    kRemeasure(true);
+    // Marks of other data, calibration or mask are measured again before a search (reviews 23, 25 and 26, F4); with the
+    // inputs unchanged a free mark keeps its exact position. A tap never places one where the data are excluded.
+    kRemeasure();
     if (k_marks_.marks.empty()) {
         setLastError(tr("mark at least one peak"));
         return {};
