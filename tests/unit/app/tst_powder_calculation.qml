@@ -54,7 +54,7 @@ TestCase {
             verify(structure.includes("data_" + phase), "The authored method is set on the intended structure block");
             verify(SettingsProof.write(copy, file, structure + "\n_edi_structure.calc_method " + methods[phase] + "\n"), "The disposable input declares each requested method through its structure item");
         }
-        verify(Session.openProject(copy), "The real app opens the hand-authored powder project");
+        verify(Session.openProject(copy), "The real app opens the hand-authored powder project: " + Session.lastError);
         tryVerify(() => app.pagesWanted > 0 && app.pagesWanted === app.pagesBuilt, 10000, "The app instantiates the production workflow pages");
         tryCompare(Session.project, "calculating", false, 10000, "The loaded powder fixture finishes calculating before pointer input");
         return copy;
@@ -139,20 +139,34 @@ TestCase {
         }
     }
 
-    function test_experiment_scale_and_weight_fraction() {
-        openProject("tests/fixtures/powder_calculation/two_banks", {
-            "alpha": "le_bail"
-        });
+    function linkedTable() {
         const experimentPage = page("experiment");
         Ui.expandGroup(test, Probe, app, "group.linked_structure");
         const table = findChild(experimentPage, "linkedStructure.list");
         verify(table && table.count === 2, "The experiment displays both independently linked phases");
+        return table;
+    }
+
+    function test_rietveld_powder_project_keeps_editable_scales() {
+        openProject("tests/fixtures/powder_calculation/two_banks");
+        const table = linkedTable();
+        for (let index = 0; index < table.count; ++index) {
+            const scale = findChild(rowAt(table, index), "linkedStructure.scale." + index);
+            verify(scale && scale.visible && scale.enabled && scale.item.fittable, "A phase in the ordinary Rietveld project retains its editable scale");
+        }
+    }
+
+    function test_experiment_scale_and_weight_fraction() {
+        openProject("tests/fixtures/powder_calculation/two_banks", {
+            "alpha": "le_bail"
+        });
+        const table = linkedTable();
         const scale = findChild(rowAt(table, 0), "linkedStructure.scale.0");
         const control = findChild(rowAt(table, 1), "linkedStructure.scale.1");
         verify(scale && scale.visible && !scale.enabled && !scale.item.fittable, "The Le Bail phase's scale is visible and disabled for fitting");
         verify(/Le Bail|profile match|intensit/i.test(String(scale.item.fitReason)), "The disabled scale names the active intensity extraction in its reason");
         verify(control && control.visible && control.enabled && control.item.fittable, "The other phase in the same experiment keeps its normal Rietveld scale");
-        const fraction = findChild(experimentPage, "linkedStructure.weightFraction.0");
+        const fraction = findChild(rowAt(table, 0), "linkedStructure.weightFraction.0");
         compare(fraction.shownValue, "—", "The linked Le Bail phase has no displayed weight fraction");
     }
 

@@ -5,6 +5,7 @@ _experiment_type.radiation_probe neutron
 _experiment_type.scattering_type bragg
 _experiment_type.beam_mode "constant wavelength"
 _instrument.setup_wavelength 1.5
+_instrument.calib_twotheta_offset 0
 _peak.type cwl-tch-pseudo-voigt
 _peak.broad_gauss_u 0
 _peak.broad_gauss_v 0
