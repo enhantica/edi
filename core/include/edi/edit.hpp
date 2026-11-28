@@ -767,13 +767,13 @@ class Edit {
         });
     }
     // A value entered while a scan has results is the shown point's own start for the next Fit (owner record
-    // 2026-11-28): the shown value and the point's `_parametric_fit_start` row for the name, made over the point's
-    // results row `over`; the template keeps its value. A shared parameter's start is the whole series' one start: the
-    // group takes the value, and a start for the name at any other point goes.
+    // 2026-11-28): the shown value and the point's pending `_parametric_fit_start` row for the name; the template keeps
+    // its value. A shared parameter's start is the whole series' one start: the group takes the value, and a start for
+    // the name at any other point goes.
     static Edit point_start(Project& project, Parameter& parameter, std::string point, std::string unique_name,
-                            double value, std::string over, bool shared) {
+                            double value, bool shared) {
         return Edit([&project, &parameter, point = std::move(point), unique_name = std::move(unique_name), value,
-                     over = std::move(over), shared] {
+                     shared] {
             if (shared) {
                 for (Parameter* member : shared_group(project, parameter)) assign_value(*member, value);
             } else {
@@ -790,7 +790,6 @@ class Edit {
             row.point = point;
             row.parameter_unique_name = unique_name;
             row.value = value;
-            row.over = over;
             starts.push_back(std::move(row));
         });
     }
@@ -799,10 +798,10 @@ class Edit {
         return Edit([&project, &parameter, shared] { set_parametric_shared(project, parameter, shared); });
     }
     // ADR-0107: share or unshare several parameters, by unique name, in one edit (the Shared header menu).
-    // `at` (a point and its results row identity), while the scan has results: a newly shared group takes the shown
-    // copy's value as the whole series' one start (owner record 2026-11-28).
+    // `at` (the shown point), while the scan has results: a newly shared group takes the shown copy's value as the
+    // whole series' one start (owner record 2026-11-28).
     static Edit parameters_shared(Project& project, std::vector<std::string> names, bool shared,
-                                  std::optional<std::pair<std::string, std::string>> at = std::nullopt) {
+                                  std::optional<std::string> at = std::nullopt) {
         return Edit([&project, names = std::move(names), shared, at = std::move(at)] {
             for (const std::string& name : names) {
                 for (const NamedSlot& slot : named_slots(project)) {
@@ -815,10 +814,9 @@ class Edit {
                         for (const NamedSlot& listed : named_slots(project)) {
                             if (listed.parameter != leader) continue;
                             ParametricFitStart row;
-                            row.point = at->first;
+                            row.point = *at;
                             row.parameter_unique_name = listed.unique_name;
                             row.value = shown;
-                            row.over = at->second;
                             project.sequential_fit.starts.push_back(std::move(row));
                         }
                     }

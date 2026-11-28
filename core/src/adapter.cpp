@@ -2692,8 +2692,7 @@ void fill_crysta_sequential(const SequentialFitConfig& config,
     for (const auto& row : config.starts) {
         const std::string& point = row->point.value();
         const std::string& name = row->parameter_unique_name.value();
-        converted.starts.push_back(
-            {crysta::parametric_start_id(point, name), point, name, row->value.get(), row->over.value()});
+        converted.starts.push_back({crysta::parametric_start_id(point, name), point, name, row->value.get()});
     }
 }
 
@@ -3711,17 +3710,6 @@ std::vector<std::string> read_scan_row(const Project& project, std::int64_t offs
         throw std::invalid_argument("analysis/results.csv has no complete row at byte " + std::to_string(offset));
     }
     return split_scan_row(line);
-}
-
-std::string scan_row_identity(const Project& project, std::int64_t offset) {
-    std::optional<crysta::PublicationReadLock> reading;
-    lock_results_for_reading(project, reading);
-    std::ifstream input(scan_results_path(project), std::ios::binary);
-    std::string line;
-    if (!input || offset < 0 || !input.seekg(offset) || !std::getline(input, line) || input.eof()) {
-        throw std::invalid_argument("analysis/results.csv has no complete row at byte " + std::to_string(offset));
-    }
-    return crysta::scan_row_identity(line);
 }
 
 // Whether a scan's rows and notes cover all of its `total` files (a series: its points, by rows alone), as the driver
@@ -9019,6 +9007,28 @@ FitResultBase Project::fit_scan(const IterationCallback& on_iteration,
                                [this, &fitted] { return fitted_scan_pattern(*this, fitted); });
             };
         }
+        // The one Fit entry of a scan (app, Python and CLI alike): crysta's drivers use each point's pending starts and
+        // remove them from their copy as the point's row is written (crysta ADR-0136 decision 9). Whatever this run
+        // leaves pending comes back to this project, however the run ends.
+        struct ReturnStarts {
+            Project& model;
+            const crysta::Project& engine;
+            ~ReturnStarts() {
+                try {
+                    std::set<std::pair<std::string, std::string>> pending;
+                    for (const crysta::ParametricStart& start : engine.sequential_fit.starts) {
+                        pending.emplace(start.point.get(), start.parameter_unique_name.get());
+                    }
+                    auto& starts = model.sequential_fit.starts;
+                    for (std::size_t i = starts.size(); i-- > 0;) {
+                        if (!pending.contains({starts[i]->point.value(), starts[i]->parameter_unique_name.value()})) {
+                            starts.erase_at(i);
+                        }
+                    }
+                } catch (...) {  // NOLINT(bugprone-empty-catch): the starts stay pending, used again next time
+                }
+            }
+        } return_starts{*this, cproject};
         const crysta::FitResultBase result = crysta::fit_project(
             cproject, engine_callback, should_cancel, crysta::FileCompleteCallback{}, engine_file_fitted,
             engine_file_result);
@@ -9118,6 +9128,11 @@ FitResultBase Project::fit_scan(const IterationCallback& on_iteration,
                     recorded.rwp = unknown;
                 }
                 record_fit_result(*this, recorded, cproject.collect_parameters().size(), {}, quality);
+                // The result the caller receives is the series' too: its counts and statistics, not the last file's.
+                outcome.n_points_fitted = recorded.n_points_fitted;
+                outcome.n_free = recorded.n_free;
+                outcome.reduced_chi_square = recorded.reduced_chi_square;
+                outcome.rwp = recorded.rwp;
             } else if (result.scan_quality) {
                 // The record describes the template file, not the file the scan ended on.
                 const crysta::ProfileFactors& pooled = result.scan_quality->pooled;

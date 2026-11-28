@@ -83,8 +83,6 @@ class ScanSession : public QObject {
                QString& error);
     // The cells of a dataset's row, read at its offset and checked to name that dataset; empty without a row.
     std::vector<std::string> row(const edi::Project& project, int dataset) const;
-    // The identity of the dataset's results row (edi::scan_row_identity), or "none" when it has none.
-    std::string rowIdentity(const edi::Project& project, int dataset) const;
     // How the run ended on a dataset: success, maxIterations, noStep, notConverged (no reason recorded), or ""
     // without a row.
     QString outcome(int dataset) const;

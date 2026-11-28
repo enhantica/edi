@@ -72,6 +72,7 @@ struct Outcome {
     std::optional<FitResultBase> result;
     std::string refusal;
     bool scan = false;
+    std::optional<ItemVec<ParametricFitStart>> pending_starts;  // a scan's, however it ended
 };
 
 // Worker thread: the project's own fit entry for its mode, as the CLI's fit takes it (edi.Analysis.fit).
@@ -172,6 +173,7 @@ struct FitJob::State {
         FitReport report;
         report.result = std::move(outcome.result);
         report.refusal = std::move(outcome.refusal);
+        report.pending_starts = std::move(outcome.pending_starts);
         if (!report.result.has_value()) {
             report.status = FitStatus::ERROR;
             if (report.refusal.empty()) {
@@ -373,6 +375,7 @@ bool FitJob::start(const Project* scan_template) {
             } catch (...) {
                 outcome->refusal = "the fit failed";
             }
+            if (outcome->scan) outcome->pending_starts = snapshot->project.sequential_fit.starts;
             return [self, outcome] { State::finish(self, *outcome); };
         });
     return true;

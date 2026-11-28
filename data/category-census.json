@@ -847,16 +847,6 @@
           "storage": [
             "crysta::Column<double>"
           ]
-        },
-        {
-          "member": "ParametricFitStart::over",
-          "type": "detail::WrittenText",
-          "items": [
-            "over"
-          ],
-          "storage": [
-            "crysta::Column<std::string>"
-          ]
         }
       ],
       "row": "ParametricFitStart"
@@ -6011,11 +6001,6 @@
     {
       "member": "ParametricFitStart::value",
       "type": "detail::Written<double>",
-      "category": "_parametric_fit_start"
-    },
-    {
-      "member": "ParametricFitStart::over",
-      "type": "detail::WrittenText",
       "category": "_parametric_fit_start"
     },
     {

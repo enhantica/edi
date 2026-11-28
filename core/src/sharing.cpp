@@ -611,6 +611,12 @@ void set_parametric_shared(Project& project, Parameter& parameter, bool shared) 
     if (!shared) {
         if (const std::optional<std::size_t> row = shared_row(project, key)) {
             project.sequential_fit.shared.erase_at(*row);
+            // The group's start was the whole series' one; unshared it would become one point's, so it goes.
+            for (std::size_t i = project.sequential_fit.starts.size(); i-- > 0;) {
+                if (project.sequential_fit.starts[i]->parameter_unique_name.value() == key) {
+                    project.sequential_fit.starts.erase_at(i);
+                }
+            }
         }
         return;
     }

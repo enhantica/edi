@@ -4460,10 +4460,6 @@ static Project load_project_folder(const std::string& directory, const WarningSi
                     loop_cell(*starts, row, "_parametric_fit_start.parameter_unique_name", analysis_file.string());
                 start.value = to_double(loop_cell(*starts, row, "_parametric_fit_start.value", analysis_file.string()),
                                         "_parametric_fit_start.value");
-                // A start written without `over` was made where its point had no row.
-                if (std::find(starts->tags.begin(), starts->tags.end(), "_parametric_fit_start.over") != starts->tags.end()) {
-                    start.over = loop_cell(*starts, row, "_parametric_fit_start.over", analysis_file.string());
-                }
                 if (!seen.emplace(start.point.value(), start.parameter_unique_name.value()).second) {
                     throw std::invalid_argument("_parametric_fit_start: point '" + start.point.value() + "' gives '" +
                                                 start.parameter_unique_name.value() + "' twice: " +

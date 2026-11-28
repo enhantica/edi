@@ -344,13 +344,6 @@ edi::SeriesPointCheck ScanSession::pointCheck(const edi::Project& project, int p
     return edi::series_point_check(bankRule(project), datasets_, index(), static_cast<std::size_t>(place));
 }
 
-std::string ScanSession::rowIdentity(const edi::Project& project, int dataset) const {
-    if (dataset < 0 || dataset >= static_cast<int>(index().rows.size()) || index().rows[static_cast<std::size_t>(dataset)].offset < 0) {
-        return crysta::kNoResultsRow;
-    }
-    return edi::scan_row_identity(project, index().rows[static_cast<std::size_t>(dataset)].offset);
-}
-
 std::vector<std::string> ScanSession::row(const edi::Project& project, int dataset) const {
     if (dataset < 0 || dataset >= static_cast<int>(index().rows.size()) || index().rows[static_cast<std::size_t>(dataset)].offset < 0) {
         return {};
@@ -434,7 +427,10 @@ std::string ScanSession::templateIdentity(const edi::Project& project) {
     // Hashed from a copy, which is never calculated: a save of a calculated project adds its computed columns and
     // categories (and a newer schema version), so the same inputs would hash differently before and after a
     // calculation, e.g. the shown model at a scan's start against the template copy at its end.
-    const edi::Project inputs = project;  // NOLINT(performance-unnecessary-copy-initialization): see above.
+    // Nor are the pending point starts (owner record 2026-11-28): an edit made while results exist is a start for the
+    // next Fit, so it leaves the results current and their rows there to continue from.
+    edi::Project inputs = project;
+    inputs.sequential_fit.starts = {};
     return templateIdentity(edi::project_edi_files(inputs));
 }
 

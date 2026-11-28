@@ -4014,8 +4014,8 @@ bool ProjectViewModel::setParametersShared(const QList<ParameterItem*>& paramete
         if (const auto found = names.find(item->parameter()); found != names.end()) changed.push_back(found->second);
     }
     if (changed.empty()) return true;
-    std::optional<std::pair<std::string, std::string>> at;
-    if (const std::optional<ShownPoint> point = shownPoint()) at.emplace(point->point, point->over);
+    std::optional<std::string> at;
+    if (const std::optional<ShownPoint> point = shownPoint()) at.emplace(point->point);
     const EditOutcome result =
         applyRecordedEdit(edi::Edit::parameters_shared(*project_, std::move(changed), shared, std::move(at)), false);
     if (!retired_ && !result.applied) announceRefused(result.message);
@@ -4726,6 +4726,37 @@ int ProjectViewModel::startDataset(const edi::Project& from, const edi::ScanResu
     return by_order == by_place ? by_order : kStartUnknown;
 }
 
+namespace {
+
+// A shown point's values with its pending starts over them, as the next Fit starts it (owner record 2026-11-28): its
+// own, and a shared name's start, the whole series' one, on every copy of the group. Applied last in every read of a
+// point's values, after the series overlay, so a bank row never covers an edit.
+void overlay_starts(std::vector<edi::Edit::ScanValue>& values, const edi::Project& project,
+                    const std::vector<std::string>& files, int dataset) {
+    const auto& starts = project.sequential_fit.starts;
+    if (starts.empty() || dataset < 0 || dataset >= static_cast<int>(files.size())) return;
+    const std::string& shown = files[static_cast<std::size_t>(dataset)];
+    std::map<std::string, const edi::Parameter*> by_name;
+    for (const edi::NamedParameter& each : edi::named_parameters(project)) by_name.emplace(each.unique_name, each.parameter);
+    const auto path_of = [](const std::string& name) { return name.substr(name.find('.') + 1); };
+    for (const auto& start : starts) {
+        const std::string& name = start->parameter_unique_name.value();
+        const auto found = by_name.find(name);
+        if (found == by_name.end()) continue;
+        const bool shared = edi::parametric_shared(project, *found->second);
+        if (!shared && start->point.value() != shown) continue;
+        for (edi::Edit::ScanValue& each : values) {
+            const bool copy = each.unique_name == name || (shared && project.sequential_fit.joint() &&
+                                                           path_of(each.unique_name) == path_of(name));
+            if (!copy) continue;
+            each.value = start->value.get();
+            each.uncertainty.reset();
+        }
+    }
+}
+
+}  // namespace
+
 std::vector<edi::Edit::ScanValue> ProjectViewModel::pointValues(int index) const {
     const edi::Project& from = scanTemplateOrModel();
     const int start = startDataset(from, scan_session_->index(), index);
@@ -4734,6 +4765,7 @@ std::vector<edi::Edit::ScanValue> ProjectViewModel::pointValues(int index) const
                       scan_session_->row(*project_, start), start != kStartUnknown);
     overlaySeriesPoint(values, *project_, scan_session_->datasets(), index, start,
                        scan_session_->pointCheck(*project_, index), scan_session_->pointCheck(*project_, start));
+    overlay_starts(values, *project_, scan_session_->datasets().files, index);
     return values;
 }
 
@@ -4973,7 +5005,7 @@ void ProjectViewModel::startViewRead() {
         }
         values = datasetValues(scan_session_->row(*project_, index), scanTemplateOrModel(), scan_session_->index(),
                                scan_session_->row(*project_, start), start != kStartUnknown);
-        overlayStarts(values, index);
+        overlay_starts(values, *project_, scan_session_->datasets().files, index);
         // A running parametric fit: the point's latest iterate values over its row's (ADR-0107), without s.u.
         if (live_iterate_ && (fit_ == nullptr || !fit_->running())) {
             live_iterate_.reset();
@@ -5024,6 +5056,7 @@ void ProjectViewModel::startViewRead() {
         view.values = std::move(values);
         try {
             overlaySeriesPoint(view.values, *project_, datasets, index, start, own_check, from_check);
+            overlay_starts(view.values, *project_, datasets.files, index);
             readDataset(view, datasets, index, modes);
         } catch (const std::exception& refusal) {
             view.error = QString::fromUtf8(refusal.what());
@@ -5050,6 +5083,7 @@ void ProjectViewModel::startViewRead() {
         try {
             if (source) {
                 overlaySeriesPoint(view.values, *source, datasets, index, start, own_check, from_check);
+                overlay_starts(view.values, *source, datasets.files, index);
             }
             readDataset(view, datasets, index, modes);
             if (shown) {
@@ -6086,43 +6120,23 @@ std::optional<ProjectViewModel::ShownPoint> ProjectViewModel::shownPoint() const
     }
     const std::vector<std::string>& files = scan_session_->datasets().files;
     if (current_dataset_ >= static_cast<int>(files.size())) return std::nullopt;
-    return ShownPoint{files[static_cast<std::size_t>(current_dataset_)],
-                      scan_session_->rowIdentity(*project_, current_dataset_)};
+    return ShownPoint{files[static_cast<std::size_t>(current_dataset_)]};
 }
 
-void ProjectViewModel::overlayStarts(std::vector<edi::Edit::ScanValue>& values, int dataset) {
-    // The shown point's starts that still count show as the next Fit starts them (owner record 2026-11-28): its own,
-    // and a shared parameter's one start, over the rows they were made over.
-    const auto& starts = project_->sequential_fit.starts;
-    if (starts.empty() || scan_session_ == nullptr) return;
-    const std::vector<std::string>& files = scan_session_->datasets().files;
-    if (dataset < 0 || dataset >= static_cast<int>(files.size())) return;
-    const std::string& shown = files[static_cast<std::size_t>(dataset)];
-    const std::string shown_over = scan_session_->rowIdentity(*project_, dataset);
-    std::map<std::string, edi::Parameter*> by_name;
-    for (const edi::NamedSlot& each : edi::named_slots(*project_)) by_name.emplace(each.unique_name, each.parameter);
-    for (const auto& start : starts) {
-        const auto found = by_name.find(start->parameter_unique_name.value());
-        if (found == by_name.end()) continue;
-        const bool shared = edi::parametric_shared(*project_, *found->second);
-        if (shared) {
-            const int at = scan_session_->place(start->point.value());
-            if (at < 0 || scan_session_->rowIdentity(*project_, at) != start->over.value()) continue;
-        } else if (start->point.value() != shown || start->over.value() != shown_over) {
-            continue;
-        }
-        std::set<const edi::Parameter*> copies;
-        if (shared) {
-            for (const edi::Parameter* copy : edi::shared_group(*project_, *found->second)) copies.insert(copy);
-        }
-        copies.insert(found->second);
-        for (edi::Edit::ScanValue& each : values) {
-            const auto named = by_name.find(each.unique_name);
-            if (named == by_name.end() || !copies.contains(named->second)) continue;
-            each.value = start->value.get();
-            each.uncertainty.reset();
-        }
+void ProjectViewModel::takePendingStarts(const edi::ItemVec<edi::ParametricFitStart>& pending) {
+    const auto rows = [](const edi::ItemVec<edi::ParametricFitStart>& starts) {
+        std::vector<std::tuple<std::string, std::string, double>> out;
+        for (const auto& row : starts) out.emplace_back(row->point.value(), row->parameter_unique_name.value(), row->value.get());
+        return out;
+    };
+    if (rows(project_->sequential_fit.starts) == rows(pending)) return;
+    project_->sequential_fit.starts = pending;
+    if (scan_template_) {
+        scan_template_->sequential_fit.starts = pending;
+        identityMemoFor(&*scan_template_).reset();
+        template_snapshot_.reset();
     }
+    setModified(true);
 }
 
 edi::Edit ProjectViewModel::valueEdit(edi::Parameter& parameter, double value) {
@@ -6134,8 +6148,7 @@ edi::Edit ProjectViewModel::valueEdit(edi::Parameter& parameter, double value) {
         const edi::Parameter* named_by = shared ? edi::shared_leader(*project_, parameter) : &parameter;
         for (const edi::NamedParameter& each : named) {
             if (each.parameter != named_by) continue;
-            return edi::Edit::point_start(*project_, parameter, point->point, each.unique_name, value, point->over,
-                                          shared);
+            return edi::Edit::point_start(*project_, parameter, point->point, each.unique_name, value, shared);
         }
     }
     // No results: the value is the template's (record 10b08c160, part 3).
@@ -7443,6 +7456,7 @@ QString ProjectViewModel::stageScan(const QString& directory, const edi::Project
                                        scan.listing->row(staged, start), start != kStartUnknown);
             overlaySeriesPoint(*scan.shown, staged, scan.listing->datasets(), current_dataset_, start,
                                scan.listing->pointCheck(staged, current_dataset_), scan.listing->pointCheck(staged, start));
+            overlay_starts(*scan.shown, staged, scan.listing->datasets().files, current_dataset_);
         } catch (const std::exception& refusal) {
             return QString::fromUtf8(refusal.what());
         }

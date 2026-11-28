@@ -1454,13 +1454,17 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     bool modified_held_ = false;  // a drag step changed the project: modified and `edited` are announced on release  // a drag step changed a scan's template: its identity is hashed on release
     bool template_promotion_held_ = false;  // a drag step changed a shown dataset: the template takes it on release
     void promoteShownToTemplate();
-    // The shown scan point while the scan has results: its name (file, or series key) and its results row identity.
+    // The shown scan point while the scan has results: its name (file, or series key).
     struct ShownPoint {
         std::string point;
-        std::string over;
     };
     std::optional<ShownPoint> shownPoint() const;
-    void overlayStarts(std::vector<edi::Edit::ScanValue>& values, int dataset);
+   public:
+    // After a scan fit: the point starts it left pending replace the model's and the template's (a used start is gone);
+    // the project is modified when that changed it.
+    void takePendingStarts(const edi::ItemVec<edi::ParametricFitStart>& pending);
+
+   private:
     edi::Edit valueEdit(edi::Parameter& parameter, double value);
     // What a held slider deferred, done once (release, or a save during the hold).
     void settleHeld();

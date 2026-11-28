@@ -5001,15 +5001,14 @@ struct KeyTraits<ParametricSharedParameter> {
 };
 
 // ADR-0107: one point's own start for one parameter of a scan fit, made by a value edit while the scan had results
-// (owner record 2026-11-28), in every scan mode. The point is its data file relative to the scan folder, or the text
-// the `*` matches in a series of joint fits; a shared parameter's start is the whole series' one start. `over` is the
-// identity of the point's results row it was made over (crysta::scan_row_identity), or `none`: the start counts once,
-// while that row is still the point's. Unkeyed: the load refuses a (point, name) given twice.
+// (owner record 2026-11-28), in every scan mode: pending until a fit uses it and writes the point's row, which removes it
+// (crysta's apply_point_starts and consume_point_starts, ADR-0136 decision 9). The point is its data file relative to the
+// scan folder, or the text the `*` matches in a series of joint fits; a shared parameter's start is the whole series' one
+// start. Unkeyed: the load refuses a (point, name) given twice.
 struct ParametricFitStart {
     detail::WrittenText point;
     detail::WrittenText parameter_unique_name;
     detail::Written<double> value{0.0};
-    detail::WrittenText over{"none"};
 };
 
 // ADR-0087: an experiment set, a template experiment and its members, each an ordinary experiment.
@@ -5068,8 +5067,8 @@ struct RowSchema<edi::ParametricFitStart> {
     static constexpr const char* name = "_parametric_fit_start";
     static constexpr auto fields = std::tuple{&edi::ParametricFitStart::point,
                                               &edi::ParametricFitStart::parameter_unique_name,
-                                              &edi::ParametricFitStart::value, &edi::ParametricFitStart::over};
-    static constexpr std::array items{"point", "parameter_unique_name", "value", "over"};
+                                              &edi::ParametricFitStart::value};
+    static constexpr std::array items{"point", "parameter_unique_name", "value"};
 };
 template <>
 struct RowSchema<edi::ExperimentSet> {
