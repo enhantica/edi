@@ -8,8 +8,8 @@ import EasyApplication.Gui.Components as EaComponents
 import edi.app
 
 // The Project page (easydiffractionbeta Pages/Project): the project's description in the main area;
-// Get started, Examples and Recent projects on the sidebar's Tools tab; how standard uncertainties are written in
-// Extra; the project block's `.edi` in Text.
+// Get started, Examples and Recent projects in the sidebar; how standard uncertainties are written in Extra;
+// the project block's `.edi` in Text.
 WorkflowPage {
     id: page
 
@@ -28,18 +28,12 @@ WorkflowPage {
         function onProjectChanged() {
             page.letGo = false;
             page.textDirty = false;
-            page.showStartTab();
+            page.showSidebarTab(false);
             page.startedOver();
         }
     }
     // Another project is shown: what a page made for it would start with.
     signal startedOver
-    // With no project the page opens on Tools, where a project is started or opened; once one exists, on Main.
-    function showStartTab() {
-        selectSidebarTab(created ? "basic" : "tools");
-    }
-    onCreatedChanged: showStartTab()
-    Component.onCompleted: showStartTab()
 
     pageName: "project"
     defaultInfo: created ? "" : qsTr("No project yet")
@@ -57,9 +51,7 @@ WorkflowPage {
     ]
     textEnabled: created
     extrasEnabled: created
-    // Get started, Examples and Recent projects open or create a project and edit no `.edi` category: tools (owner,
-    // 2026-11-28, sidebar tabs by role; edi ADR-0017 §2). The page shows them while no project exists.
-    toolsItem: Component {
+    basicItem: Component {
         EaComponents.SideBarColumn {
             id: basicColumn
 
@@ -79,19 +71,6 @@ WorkflowPage {
                     examples.rest(true);
                     recentProjects.rest(true);
                     basicColumn.contentY = 0;
-                }
-            }
-        }
-    }
-    // Main: the project's common categories, as Extra holds its rare ones (owner, 2026-11-28).
-    basicItem: Component {
-        EaComponents.SideBarColumn {
-            Repeater {
-                model: page.project ? page.project.categories : null
-                delegate: CategoryGroup {
-                    shownTier: "Basic"
-                    textSource: page.project ? page.project.metadataText : null
-                    admitted: categoryId !== "su_format" && categoryId !== "report"
                 }
             }
         }

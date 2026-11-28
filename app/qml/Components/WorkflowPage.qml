@@ -54,18 +54,10 @@ EaComponents.ContentPage {
     // as the k-vector search or the magnetic symmetry analysis. Main and Extra hold only category groups, Settings only
     // the page's own settings.
     property Component toolsItem: null
-    // The sidebar's tabs by their stable ids, in order (edi ADR-0017 §2).
-    readonly property var sidebarTabNames: ["basic", "extras", "text", "tools", "settings"]
-    // Shows the sidebar tab `name` (one of sidebarTabNames), as a click on it would.
-    function selectSidebarTab(name) {
-        const index = sidebarTabNames.indexOf(name);
-        if (index >= 0 && textTabButton.TabBar.tabBar)
-            textTabButton.TabBar.tabBar.currentIndex = index;
-    }
     property Component settingsItem: null
     property bool extrasEnabled: false
     property bool textEnabled: false
-    // Every page shows all five tabs (the owner, 2026-11-10; Tools 2026-11-28). A tab whose content waits for the page's first block
+    // Every page shows all four tabs (the owner, 2026-11-10). A tab whose content waits for the page's first block
     // says so; a tab the page has no groups for yet asks for ideas, with a link to the feedback form (TabNote below).
     property alias continueText: sideBar.continueButton.text
     property bool continueVisible: true
@@ -269,7 +261,7 @@ EaComponents.ContentPage {
         target: textTabButton.TabBar.tabBar
         function onCurrentIndexChanged() {
             if (page.current)
-                RunLog.note(`${page.pageName} sidebar tab: ${page.sidebarTabNames[textTabButton.TabBar.tabBar.currentIndex] ?? textTabButton.TabBar.tabBar.currentIndex}`);
+                RunLog.note(`${page.pageName} sidebar tab: ${["basic", "extras", "text", "settings"][textTabButton.TabBar.tabBar.currentIndex] ?? textTabButton.TabBar.tabBar.currentIndex}`);
         }
     }
     Connections {

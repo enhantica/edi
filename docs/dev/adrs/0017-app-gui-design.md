@@ -4,8 +4,7 @@
 Extra hold only groups that edit `.edi` categories, a new Tools tab holds the groups that act on the project without
 being one, and Settings only the page's own settings (§2). It replaces the earlier placement of the k-vector search
 and Background estimation on Experiment → Extra, the magnetic symmetry analysis button inside Structure → Space
-group, Appearance and Polyhedra on Structure → Extra, Export on Report → Main, and Get started, Examples and
-Recent projects on Project → Main.
+group, Appearance and Polyhedra on Structure → Extra, and Export on Report → Main.
 
 **Amended 2026-11-13:** As of 2026-11-13 (ADR-0023 §3), browser delivery uses only the multithreaded kit. The former single-thread-browser performance-control state is no longer a shipped variant. Existing browser geometry behavior remains unchanged.
 
@@ -136,17 +135,16 @@ The decisions it rests on, unchanged here:
   - **Main** and **Extra** hold only groups that edit the page's `.edi` categories, Main the common ones and Extra the
     rare and advanced ones.
   - **Text** is the text of the same categories.
-  - **Tools** holds groups that act on the project but are not one of its categories: Project's Get started,
-    Examples and Recent projects, Experiment's Background estimation and k-vector search, Structure's Magnetic
-    symmetry analysis (a button that opens the symmetry popup for the current Crystal structure), and Report's
-    Export. The Project page opens on Tools while no project exists, and on Main once one does.
+  - **Tools** holds groups that act on the project but are not one of its categories: Experiment's Background
+    estimation and k-vector search, Structure's Magnetic symmetry analysis (a button that opens the symmetry popup
+    for the current Crystal structure), and Report's Export.
   - **Settings** holds only the page's own settings: on Structure, the view's Appearance and Polyhedra.
   - A button that acts on one category stays beside that category's data, in its group (Estimate in Linked
     structures).
 
   Earlier placements this replaces: the k-vector search and Background estimation on Experiment → Extra, the
   magnetic symmetry analysis button inside Structure → Space group, Appearance and Polyhedra on Structure → Extra,
-  Export on Report → Main, and Get started, Examples and Recent projects on Project → Main.
+  and Export on Report → Main.
 
 ### 3. Sidebar groups: titles, which one opens, borders
 
