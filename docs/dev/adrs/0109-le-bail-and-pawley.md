@@ -52,7 +52,8 @@ Python, command line and importers.
    reason (ADR-0053). Every weight fraction of an experiment holding such a link shows "—", as crysta gives none. In
    the fit results, its R Bragg, R F and magnetic R show "—" with the tooltip "No R factor: the structure's
    intensities are extracted" (ADR-0045). The structure combo box disables a Le Bail or Pawley structure on a single
-   crystal, with crysta's reason. In Reflections, a Le Bail or Pawley structure's rows show F² extracted
+   crystal, with crysta's reason; a structure that still has such a link shows the link's Scale with crysta's
+   fit mark, never a refusal of edi's own. In Reflections, a Le Bail or Pawley structure's rows show F² extracted
    (`_refln.f_squared_meas`) and, for Pawley, its s.u., in place of F calc, F² calc and |F_M⊥|²; the columns are
    declared (ADR-0105).
 5. **Analysis page.** A Pawley structure's intensities show as one row per structure and experiment, "Pawley
@@ -62,8 +63,9 @@ Python, command line and importers.
    The correlation chart has no intensity rows, since crysta writes none.
 6. **Fits.** `fit_policy.cpp` refuses a structure without atom sites only when it is Rietveld; exports that need atoms
    keep refusing it. Single, joint, independent and sequential fits run through crysta as before. A sequential scan's
-   per-point intensities are crysta's `analysis/results_intensities.csv`. Parametric fits take Le Bail once crysta's
-   parametric fit is merged; not now.
+   per-point intensities are crysta's `analysis/results_intensities.csv`. Parametric fits take a Le Bail structure
+   once crysta's parametric fit has merged (crysta ADR-0138 §9): built in this work if that happens while it is open,
+   otherwise with the work that integrates the two. Pawley stays out of parametric fits.
 7. **Python.** `Structure.calc_method` is a string; its setter is `select_calc_method` and raises `ValueError` with
    crysta's reason. `ExperimentBase.extracted_intensities` is a read-only list of rows with `structure_id`, `index_h`,
    `index_k`, `index_l`, `f_squared` and `f_squared_su`. diffraction-lib has neither, so each gets a necessity-register
@@ -84,7 +86,9 @@ Python, command line and importers.
     the scale start), undo of a switch, save and reopen under Le Bail, the fit write-back of rows, the fit marks, a
     structure without atoms under Le Bail, the single-crystal refusal, a FullProf `Jbt=2` import and export. Python and
     the command line on the same project. QML: the column, its disabled reason, the hidden groups and the Pawley row.
-    The numerical references are crysta's (ADR-0138 §12). One example project shows the workflow.
+    The numerical references are crysta's (ADR-0138 §12). Two example projects, runnable with `edi fit`:
+    `pd-neut-cwl_lbco-hrpt_le-bail` (Le Bail on LBCO HRPT, the owner's workflow from a structure with atoms) and
+    `pd-xray-cwl_pbso4-lab_pawley` (Pawley on the PbSO4 lab X-ray pattern).
 
 ## Consequences
 
