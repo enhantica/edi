@@ -27,6 +27,7 @@
 #include <memory>
 #ifndef __EMSCRIPTEN__
 #include "codex_agent.hpp"
+#include "claude_session.hpp"
 #include "assistant_runtime_config.hpp"
 #endif
 #include "edi/io.hpp"
@@ -276,6 +277,51 @@ private:
 class AssistantProviderProbe : public QObject {
     Q_OBJECT
 private slots:
+    void claudeSignIn() {
+        const auto home = qEnvironmentVariable("EDI_PROVIDER_TEST_LOGIN_HOME");
+        QFile identity(home + "/fixture-account.txt");
+        QVERIFY2(identity.open(QIODevice::WriteOnly), "Prepare the offline login's own config home");
+        identity.close();
+
+        edi_app::ClaudeSession runtime;
+        edi_app::AssistantRuntimeLaunch launch;
+        launch.executable = qEnvironmentVariable("EDI_PROVIDER_TEST_LOGIN_EXECUTABLE");
+        launch.account.home = home;
+        launch.environment = QProcessEnvironment::systemEnvironment();
+        QSignalSpy opened(&runtime, &edi_app::AssistantRuntimeSession::signInOpened);
+        QSignalSpy finished(&runtime, &edi_app::AssistantRuntimeSession::signInFinished);
+        runtime.signIn(launch);
+        QTRY_VERIFY2_WITH_TIMEOUT(std::any_of(opened.cbegin(), opened.cend(), [](const auto& event) {
+            return event.at(0) == QString("https://claude.ai/oauth/authorize") &&
+                event.at(2) == QString("Paste the sign-in code") && event.at(3).toBool();
+        }), "The real login process must publish its browser and callback prompt", 3000);
+        QPointer<QProcess> login = runtime.findChild<QProcess*>();
+        QVERIFY2(login && login->state() == QProcess::Running && finished.isEmpty(),
+                 "The original process must remain alive while the fixture withholds the callback");
+        if (qEnvironmentVariableIsSet("EDI_PROVIDER_TEST_CANCEL_LOGIN")) {
+            runtime.cancelSignIn();
+            QTRY_VERIFY2_WITH_TIMEOUT(login.isNull(), "Cancel must stop and dispose of the login child", 3000);
+            QCOMPARE(finished.size(), 1);
+            QVERIFY2(!finished.at(0).at(0).toBool() &&
+                     finished.at(0).at(1).toString().contains("cancelled", Qt::CaseInsensitive),
+                     "Cancel must report one unsuccessful login without waiting for the callback");
+            return;
+        }
+        // Deliver any login deadline as Qt would, without waiting minutes for wall time.
+        for (auto* timer : login->findChildren<QTimer*>()) {
+            if (!timer->isActive()) continue;
+            QTimerEvent elapsed(timer->timerId());
+            QCoreApplication::sendEvent(timer, &elapsed);
+        }
+        QVERIFY2(login && login->state() == QProcess::Running && finished.isEmpty(),
+                 "The original login process must survive its former deadline");
+        runtime.answerSignIn("offline-fixture-code");
+        QTRY_COMPARE_WITH_TIMEOUT(finished.size(), 1, 3000);
+        QVERIFY2(finished.at(0).at(0).toBool() && finished.at(0).at(1).toString().isEmpty(),
+                 "The delayed callback must finish the same login successfully");
+        QTRY_VERIFY2_WITH_TIMEOUT(login.isNull(), "The successful login must dispose of its child", 3000);
+    }
+
     void accountTurn() {
         edi_app::use_fresh_settings();
         QQmlApplicationEngine engine;
@@ -286,6 +332,7 @@ private slots:
         const auto test = QJsonDocument::fromJson(fixture.readAll()).object();
         QSettings settings(edi_app::settings_file_path(), QSettings::IniFormat);
         const auto provider = test.value("provider").toString();
+        const auto scenario = test.value("scenario").toString();
         auto account = test.value("account").toObject();
         const auto id = account.value("id").toString();
         const auto otherLogin = test.value("otherLogin").toString();
@@ -379,12 +426,11 @@ private slots:
             QVERIFY2(dialog && dialog->setProperty("parent", QVariant::fromValue(window->contentItem())) &&
                             QMetaObject::invokeMethod(dialog, "open"),
                      "The desktop Account dialog must open on the test window");
+            // The credential line itself, not any text naming a key: the Claude note always names ANTHROPIC_API_KEY.
             const auto showsCredentialSource = [&] {
                 for (const auto* item : dialog->findChildren<QQuickItem*>()) {
-                    if (!item->isVisible()) continue;
-                    const auto text = item->property("text").toString();
-                    if (text.contains("ANTHROPIC_API_KEY") ||
-                        text.contains("API key", Qt::CaseInsensitive)) return true;
+                    if (item->objectName() != "assistant.accountCredential" || !item->isVisible()) continue;
+                    if (item->property("text").toString().contains("own API key", Qt::CaseInsensitive)) return true;
                 }
                 return false;
             };
@@ -411,17 +457,20 @@ private slots:
         const auto approval = assistant->acceptConnectionOffer(consent);
         QVERIFY2(approval == "submitted", qPrintable(assistant->lastError() + " Approval: " + approval));
         const auto prompt = "Read the attached sample. fixture-file-id=" + fileId;
-        if (provider == "copilot") {
-            QTRY_VERIFY2_WITH_TIMEOUT(assistant->lastError().contains("thread/start"),
+        if (scenario == "wrong-login" || scenario == "wrong-host") {
+            const QString differing = scenario == "wrong-login" ? "different-user" : "other.ghe.com";
+            QTRY_VERIFY2_WITH_TIMEOUT(assistant->lastError().contains(differing),
                                      qPrintable(assistant->lastError()), 3000);
-            QVERIFY2(assistant->submitDraft(prompt).isEmpty(),
-                     "Copilot must refuse a user draft without effective-tool proof");
+            QVERIFY2(!assistant->connected() && assistant->submitDraft(prompt).isEmpty(),
+                     "Copilot must refuse Send when its selected login or host differs");
             return;
         }
         QTRY_VERIFY2_WITH_TIMEOUT(assistant->state() == "idle" && assistant->draftAdmissionReady(),
                                  qPrintable(assistant->lastError()), 3000);
-        assistant->setSelectedModel("sonnet");
-        QVERIFY2(assistant->selectedModel() == "sonnet", "The selected model must come from Claude's readback");
+        if (provider == "claude") {
+            assistant->setSelectedModel("sonnet");
+            QVERIFY2(assistant->selectedModel() == "sonnet", "The selected model must come from Claude's readback");
+        }
         assistant->refreshSessions();
         QTRY_VERIFY2_WITH_TIMEOUT(!assistant->sessionsLoading(), "The account thread list must settle", 1000);
         const auto* sessions = assistant->sessions();
@@ -434,15 +483,26 @@ private slots:
                 if (rows->text(row, "kind") == "assistant" && rows->text(row, "text").contains("visible")) return true;
             return false;
         };
+        if (scenario == "foreign-tool") {
+            QTRY_VERIFY2_WITH_TIMEOUT(
+                assistant->lastError().contains("fixture_unlisted_tool") &&
+                assistant->lastError().contains("turn was stopped"),
+                qPrintable(assistant->lastError()), 3000);
+            QVERIFY2(!appearsInTranscript(), "An unlisted tool must stop the turn without a tool reply");
+            return;
+        }
         QTRY_VERIFY2_WITH_TIMEOUT(appearsInTranscript(), qPrintable(assistant->lastError()), 3000);
         QTRY_COMPARE_WITH_TIMEOUT(assistant->state(), QString("idle"), 3000);
-        QVERIFY2(QMetaObject::invokeMethod(assistant, "switchAccount", Q_ARG(QString, provider), Q_ARG(QString, otherId)),
-                 "Switch account must reach the view model's normal account action");
-        if (!assistant->connected() && assistant->state() != "connecting")
-            QVERIFY2(assistant->resumeConnection(), "The newly selected saved account must be available to reconnect");
-        QTRY_VERIFY2_WITH_TIMEOUT(assistant->connected() && assistant->account().email == otherLogin,
-                                 "Switching must connect using the other account's own identity", 3000);
-        QVERIFY2(!appearsInTranscript(), "Switch account must not carry over the previous account's reply");
+        if (provider == "claude") {
+            QVERIFY2(QMetaObject::invokeMethod(assistant, "switchAccount", Q_ARG(QString, provider), Q_ARG(QString, otherId)),
+                     "Switch account must reach the view model's normal account action");
+            if (!assistant->connected() && assistant->state() != "connecting")
+                QVERIFY2(assistant->resumeConnection(), "The newly selected saved account must be available to reconnect");
+            QTRY_VERIFY2_WITH_TIMEOUT(assistant->connected() && assistant->account().email == otherLogin,
+                                     "Switching must connect using the other account's own identity", 3000);
+            QVERIFY2(!appearsInTranscript(), "Switch account must not carry over the previous account's reply");
+        }
+
 #if defined(Q_OS_LINUX)
         const auto events = ::read(watcher, activity, sizeof(activity));
         const auto readError = errno;
