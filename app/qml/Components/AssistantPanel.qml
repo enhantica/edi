@@ -931,9 +931,19 @@ Popup {
             objectName: "assistant.accountDialog"
             title: qsTr("Account")
             standardButtons: Dialog.Close
+            // The connection dialog's buttons, so Close ends at the content's right edge as Connect does there.
+            footer: EaElements.DialogButtonBox {
+                id: accountButtons
+                visible: count > 0
+                delegate: EaElements.Button {
+                    highlighted: true
+                    padding: EaStyle.Sizes.fontPixelSize * 0.5
+                    fontIcon: accountButtons.roleIcon(DialogButtonBox.buttonRole)
+                }
+            }
             readonly property real viewportHeight: Math.max(0, parent.height - AppSizes.unit * 2)
             // The connection dialog's width, so the two read as one family.
-            width: Math.min(AppSizes.unit * 40 + leftPadding + rightPadding, Math.max(0, parent.width - AppSizes.unit * 2))
+            width: connectionDialog.width
             height: Math.min(implicitHeight, viewportHeight)
             contentWidth: Math.max(0, width - leftPadding - rightPadding)
             contentHeight: Math.min(accountContent.implicitHeight, Math.max(0, viewportHeight - topPadding - bottomPadding - (implicitHeaderHeight > 0 ? implicitHeaderHeight + spacing : 0) - (implicitFooterHeight > 0 ? implicitFooterHeight + spacing : 0)))
@@ -950,7 +960,8 @@ Popup {
                 clip: true
                 Column {
                     id: accountContent
-                    width: Math.max(0, accountDialog.contentWidth - AppSizes.unit)
+                    // Full width, so the panel's sign-out ends at Close's right edge.
+                    width: accountDialog.contentWidth
                     spacing: AppSizes.unit
                     EaElements.Label {
                         objectName: "assistant.managedSettingsNotice"
@@ -975,8 +986,14 @@ Popup {
                         assistant: panel.assistant
                         activeEmail: panel.accountData.email || ""
                         activePlan: panel.accountPlanLabel
+                        activeUsage: panel.usageWindow ? qsTr("%1% used").arg(panel.usageWindow.usedPercent) : ""
                         activeCredential: panel.credentialLine()
-                        onAddRequested: provider => panel.assistant.addAccount(provider, "")
+                        // A new account of the active provider, then the Connect dialog, where the provider can change.
+                        onAddRequested: {
+                            accountDialog.close();
+                            panel.assistant.addAccount(panel.assistant.activeProvider.provider, "");
+                            Qt.callLater(ApplicationInfo.panelConnectionActivated);
+                        }
                         onSignOutRequested: panel.assistant.signOut()
                     }
                 }

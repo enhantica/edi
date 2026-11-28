@@ -463,12 +463,15 @@ edi keeps the account list; a runtime only says who is signed in.
 
 The account button (`connectionButton`) keeps its place, size and states, and keeps opening the Account dialog
 (`accountDialog`, ADR-0057's account card); it stays the one account surface, as wide as the connect dialog. It lists
-one group per provider, each account once: a header with the provider's name, one row per account with the active one
-checked and its e-mail, plan and, only when it applies, one short credential line ("Using your ANTHROPIC_API_KEY"), a
-Switch action on the others, Sign out (for Copilot, Remove from edi) on the active account, and "Add account" per
-installed provider (disabled when the runtime is not installed, with a tooltip naming the Maintenance Tool, or saying
-the provider is not included when this release leaves it out). The ChatGPT sign-in from before accounts were recorded
-is listed as ChatGPT's default login, by the e-mail its saved conversations carry, until its record is written. In the
+each account once (the owner's layout C of 2026-11-28): the active account on a light panel, "<Provider> · <e-mail>"
+over "<plan> · <N>% used" and, only when it applies, one short credential line ("Using your ANTHROPIC_API_KEY"), with
+Sign out (for Copilot, Remove from edi) at its right; under "Switch to" every other account, one row each that switches
+when clicked (disabled with a tooltip when its runtime is not installed); then a separator and one "Add account" row
+naming the installed providers, which adds an account of the active provider and opens the connect dialog, where the
+provider can change. The ChatGPT sign-in from before accounts were recorded
+is listed as ChatGPT's default login, by the e-mail its saved conversations carry, until its first read records it.
+The plan line reads as the provider names it ("ChatGPT Plus", "Claude Max"). The Account and Connect dialogs share
+one width, from the font: the longest sign-in text (GitHub Copilot's) in two nearly full lines. In the
 header the account is a pill naming the provider, like Sessions and Usage. After a failure the panel shows one short
 line with Try again; Sign out (Remove from edi) stays beside it while the account is disconnected, so an account whose
 sign-in turned out to be someone else can be reset. A connection that already had a conversation open stays connected

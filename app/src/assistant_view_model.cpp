@@ -21682,8 +21682,9 @@ void AssistantViewModel::acknowledgeManagedSettings() {
 }
 #ifndef __EMSCRIPTEN__
 namespace {
-// The e-mail of the newest ChatGPT conversation saved before accounts were recorded (no account field), if any.
-QString legacy_chatgpt_email() {
+// The e-mail of the newest ChatGPT conversation of the default login, if any: saved before accounts were recorded (no
+// account field) or under that login's record id.
+QString legacy_chatgpt_email(const QString& defaultId = {}) {
     const auto path = edi_app::settings_file_path();
     if (path.isEmpty()) return {};
     QSettings settings(path, QSettings::IniFormat);
@@ -21692,7 +21693,9 @@ QString legacy_chatgpt_email() {
     double newest = -1;
     for (const auto& value : document.object().value(QStringLiteral("threads")).toObject()) {
         const auto record = value.toObject();
-        if (record.contains(QStringLiteral("account")) || record.value(QStringLiteral("email")).toString().isEmpty()) continue;
+        const bool defaultLogin = !record.contains(QStringLiteral("account")) ||
+            (!defaultId.isEmpty() && record.value(QStringLiteral("account")).toString() == defaultId);
+        if (!defaultLogin || record.value(QStringLiteral("email")).toString().isEmpty()) continue;
         const auto updated = record.value(QStringLiteral("updatedAt")).toDouble(0);
         if (updated < newest) continue;
         newest = updated;
@@ -21710,9 +21713,14 @@ QList<AssistantAccountEntry> AssistantViewModel::accounts() const {
         QList<AssistantAccountRecord> records;
         try { records = state_->account_store().accounts(id); } catch (...) { continue; }
         const bool installed = assistant_provider_available(id);
-        for (const auto& record : records)
-            result.append({assistant_provider_key(id), assistant_provider_name(id), record.id, record.email, record.plan,
+        for (const auto& record : records) {
+            // The default ChatGPT login's record is made before its first read when the user picks it, so until then
+            // it shows the e-mail its saved conversations carry.
+            const auto email = record.email.isEmpty() && id == AssistantProviderId::ChatGpt && record.home.isEmpty()
+                ? legacy_chatgpt_email(record.id) : record.email;
+            result.append({assistant_provider_key(id), assistant_provider_name(id), record.id, email, record.plan,
                            record.host, record.provider == active.provider && record.id == active.id, installed});
+        }
         // The ChatGPT sign-in from before accounts were recorded is the default login; its record is written only
         // when it is first read, so until then it is listed by the e-mail its saved conversations carry.
         if (id == AssistantProviderId::ChatGpt && installed &&

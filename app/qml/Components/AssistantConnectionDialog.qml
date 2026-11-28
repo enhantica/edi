@@ -121,7 +121,20 @@ AppDialog {
     readonly property var disclosedContext: ApplicationInfo.connectionDisclosedContext()
     title: assistant.connected ? qsTr("Approve project information") : qsTr("Connect assistant")
     readonly property real viewportHeight: Math.max(0, parent.height - AppSizes.unit * 2)
-    width: Math.min(AppSizes.unit * 40 + leftPadding + rightPadding, Math.max(0, parent.width - AppSizes.unit * 2))
+    // Before sign-in: how a provider signs in, and where the data goes. Copilot signs in with a one-time code on
+    // GitHub's page.
+    function signInText(provider, name, company) {
+        return provider === "copilot" ? qsTr("Signs in with your GitHub account and a one-time code in the browser. Messages and project data go to %1.").arg(company) : qsTr("Signs in with your %1 account in the browser. Messages and project data go to %2.").arg(name).arg(company);
+    }
+    // One width for every provider, from the font: the longest sign-in text (GitHub Copilot's) in two nearly full
+    // lines. The slack covers the longest word a line break can push down. The choices above it share the width.
+    TextMetrics {
+        id: longestSignIn
+        font: signInLabel.font
+        text: dialog.signInText("copilot", "GitHub Copilot", "GitHub")
+    }
+    readonly property real fittedContentWidth: Math.ceil(longestSignIn.advanceWidth / 2 + EaStyle.Sizes.fontPixelSize * 2.5)
+    width: Math.min(fittedContentWidth + leftPadding + rightPadding, Math.max(0, parent.width - AppSizes.unit * 2))
     height: Math.min(implicitHeight, viewportHeight)
     contentWidth: Math.max(0, width - leftPadding - rightPadding)
     contentHeight: Math.min(content.implicitHeight, Math.max(0, viewportHeight - topPadding - bottomPadding - (implicitHeaderHeight > 0 ? implicitHeaderHeight + spacing : 0) - (implicitFooterHeight > 0 ? implicitFooterHeight + spacing : 0)))
@@ -249,12 +262,12 @@ AppDialog {
                 text: qsTr("Enter github.com or a GitHub Enterprise host such as name.ghe.com.")
             }
             EaElements.Label {
+                id: signInLabel
+                objectName: "assistant.connection.signIn"
                 width: parent.width
                 wrapMode: Text.WordWrap
                 textFormat: Text.PlainText
-                // Before sign-in: how the chosen provider signs in, and where the data goes. Copilot
-                // signs in with a one-time code on GitHub's page.
-                text: dialog.assistant.connected ? qsTr("Allow the assistant to use current project information and attached files for your message.") : dialog.assistant.activeProvider.provider === "copilot" ? qsTr("Signs in with your GitHub account and a one-time code in the browser. Messages and project data go to %1.").arg(dialog.assistant.activeProvider.company) : qsTr("Signs in with your %1 account in the browser. Messages and project data go to %2.").arg(dialog.assistant.activeProvider.name).arg(dialog.assistant.activeProvider.company)
+                text: dialog.assistant.connected ? qsTr("Allow the assistant to use current project information and attached files for your message.") : dialog.signInText(dialog.assistant.activeProvider.provider, dialog.assistant.activeProvider.name, dialog.assistant.activeProvider.company)
             }
             EaElements.Label {
                 width: parent.width
