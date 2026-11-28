@@ -45,9 +45,10 @@ SideBarGroup {
             // After Type, Crystal or Magnetic for an atom-based structure (edi ADR-0078; the owner, 2026-11-18).
             readonly property var kinds: [qsTr("Crystal"), qsTr("Magnetic")]
             // Its columns by kind (the shared column model, DataTable.columnKinds; ADR-0103 decision 4).
-            columnKinds: ["index", "mark", "name", "text", "text", "control"]
-            // Widths from column types, not rows (ADR-0103 rule 4): the name, the type and the
-            // kind, all texts.
+            columnKinds: ["index", "mark", "name", "text", "text", "text", "control"]
+            // Widths from column types, not rows (ADR-0103 rule 4): the name, the type, the kind and the
+            // calculation, all texts. Every column shows at every width: only the Analysis table drops columns
+            // (ADR-0103 decision 2).
 
             header: EaComponents.ListViewHeader {
                 EaComponents.ListViewLabel {
@@ -72,6 +73,10 @@ SideBarGroup {
                     elide: Text.ElideRight
                     horizontalAlignment: Text.AlignLeft
                     text: qsTr("Structure")
+                }
+                HeaderLabel {
+                    horizontalAlignment: Text.AlignLeft
+                    uid: "structure.calc_method"
                 }
                 EaComponents.ListViewLabel {
                     elide: Text.ElideRight
@@ -143,6 +148,37 @@ SideBarGroup {
                                 structure: structure
                             }) as AppDialog;
                             dialog.open();
+                        }
+                    }
+                }
+                // How the reflection intensities are calculated (edi ADR-0109): crysta's options for the structure.
+                // Where only Rietveld applies (a link to a single crystal or to total scattering) the box is disabled,
+                // with crysta's reason as its tooltip. Switching keeps the atoms; Undo switches back.
+                ComboCell {
+                    SearchableComboBox {
+                        id: calcMethodBox
+
+                        readonly property OptionListModel methods: row.structure ? row.structure.calcMethodOptions : null
+                        readonly property string reason: row.structure ? row.structure.calcMethodReason : ""
+                        readonly property string token: row.structure ? row.structure.calcMethod : ""
+
+                        objectName: `structures.calcMethod.${row.index}`
+                        horizontalAlignment: Text.AlignLeft
+                        inTable: true
+                        anchors.verticalCenter: parent.verticalCenter
+                        model: methods
+                        textRole: "label"
+                        enabled: methods !== null && reason === ""
+                        currentIndex: methods && methods.revision >= 0 ? methods.indexOf(token) : -1
+                        ToolTip.text: reason !== "" ? reason : token !== "" ? Session.optionTooltip("structure.calc_method", token) : ""
+                        onActivated: index => {
+                            const structure = row.structure;
+                            const chosen = calcMethodBox.methods ? calcMethodBox.methods.tokenAt(index) : "";
+                            currentIndex = Qt.binding(() => calcMethodBox.methods && calcMethodBox.methods.revision >= 0 ? calcMethodBox.methods.indexOf(calcMethodBox.token) : -1);
+                            if (!structure || chosen === "" || chosen === structure.calcMethod)
+                                return;
+                            if (!structure.setCalcMethod(chosen))
+                                Session.reportRefusal(structure.calcMethodRefusal);
                         }
                     }
                 }
