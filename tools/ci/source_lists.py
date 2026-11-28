@@ -53,6 +53,11 @@ QUOTES = (
     re.compile(rb'^::[a-z-]+[^:]*::'),
     re.compile(rb'^\d{4}-\d\d-\d\dT[\d:.]+Z\s'),
 )
+# A tool that reads a settings file prints a value without its key or quotes (cibuildwheel shows
+# its options so), so a setting's value and the quoted items in it are listed as lines too.
+SETTING = re.compile(rb'^(?:-\s+)?[\w.-]+\s*[=:]\s*(?P<value>.+?)\s*,?$')
+QUOTED = re.compile(rb'"(?P<double>[^"]*)"|\'(?P<single>[^\']*)\'')
+ITEMS = re.compile(rb'^[\[\s]*(?:(?:"[^"]*"|\'[^\']*\')[\s,]*)+\]?[\s,]*$')
 ANSI = re.compile(rb'\x1b\[[0-?]*[ -/]*[@-~]|\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)')
 ESCAPES = re.compile(rb'\\u([0-9a-fA-F]{4})|\\(.)')
 PLAIN = {b'n': b'\n', b't': b'\t', b'r': b'\r', b'b': b' ', b'f': b' '}
@@ -82,6 +87,19 @@ def line_id(text: bytes) -> str | None:
     if WORD.fullmatch(bare):
         return None
     return hashlib.sha256(bare).hexdigest()
+
+
+def values(line: bytes) -> set[bytes]:
+    """A setting's value as another tool prints it: whole, unquoted, and each quoted item."""
+    setting = SETTING.match(line.strip())
+    if setting:
+        value = setting['value']
+    elif ITEMS.match(line.strip()):
+        value = line.strip()
+    else:
+        return set()
+    found = {value, *(m['double'] or m['single'] or b'' for m in QUOTED.finditer(value))}
+    return {text.strip() for text in found if text.strip()}
 
 
 def mark(text: bytes) -> int:

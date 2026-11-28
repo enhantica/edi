@@ -162,10 +162,11 @@ def contents(where: Path, ids: set[str]) -> Iterator[bytes]:
 
 
 def bare(data: bytes) -> set[bytes]:
-    """The bare lines of a text file."""
+    """The bare lines of a text file, and the values of its settings."""
     if not source_lists.is_text(data):
         return set()
-    return {line.strip() for line in data.splitlines()}
+    lines = {line.strip() for line in data.splitlines()}
+    return lines.union(*map(source_lists.values, lines))
 
 
 def opened(files: Iterable[bytes]) -> Iterator[bytes]:
