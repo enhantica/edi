@@ -6422,6 +6422,25 @@ std::string fit_reason(FitBlocker blocker) {
     return {};
 }
 
+bool fits_intensities(Project& project) {
+    const bool extracting = std::any_of(project.structures.begin(), project.structures.end(), [](const auto& structure) {
+        try {
+            return extracts_intensities(*structure);
+        } catch (const std::exception&) {  // an unknown token: the fit refuses it by name
+            return false;
+        }
+    });
+    if (!extracting) {
+        return false;
+    }
+    try {
+        RelationProject converted = relation_project(project);
+        return crysta::fits_intensities(*converted.project);
+    } catch (const std::exception&) {
+        return false;  // a project crysta cannot read: its fit says why
+    }
+}
+
 void refresh_fittability(Project& project) {
     // Every parameter a page or a fit names, fittable until the rule says otherwise; a descriptor by its entry alone.
     std::vector<Parameter*> parameters;
@@ -8440,7 +8459,8 @@ FitResultBase Project::fit(const std::vector<double>& grid, const std::vector<do
         // adapter already propagated each Parameter.free into the crysta model, so this is
         // byte-identical to the CLI's free_from_model on the same project.
         std::vector<crysta::FreeParameter> free = crysta::free_from_model(project);
-        if (free.empty()) {
+        // A Le Bail or Pawley structure has its intensities to fit at a fixed cell and profile.
+        if (free.empty() && !crysta::fits_intensities(project)) {
             throw std::invalid_argument(
                 "edi fit: no free parameters (mark parameters refinable via their free flags)");
         }
@@ -9404,7 +9424,7 @@ FitResultBase Project::fit_joint(const std::vector<PdDataBase>& patterns,
         }
 
         const auto finish = [&](auto& provider) -> FitResultBase {
-            if (provider.n_free() == 0) {
+            if (provider.n_free() == 0 && !crysta::fits_intensities(project)) {
                 throw std::invalid_argument("edi fit_joint: no free parameters (mark parameters "
                                             "refinable via their free flags)");
             }
