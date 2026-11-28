@@ -4245,23 +4245,17 @@ bool ProjectViewModel::addMagneticCandidates(int graph, const QList<int>& nodes,
         prepared = edi::prepare_magnetic_candidates(project, static_cast<std::size_t>(index), *magnetic_graph_, picked,
                                                     startMoments);
         QStringList quiet;
-        QSet<QString> quietNames;
         if (startMoments) {
             for (const std::string& name : edi::magnetic_candidates_without_intensity(project, *prepared)) {
                 quiet.push_back(tr("%1: no magnetic intensity at the experiment's reflections; set the moments by hand")
                                     .arg(QString::fromStdString(name)));
-                quietNames.insert(QString::fromStdString(name));
             }
         }
         last_magnetic_note_ = quiet.join(QStringLiteral(" · "));
         last_magnetic_added_list_.clear();
         for (std::size_t i = 0; i < prepared->size(); ++i) {
             const QString name = QString::fromStdString(prepared->name(i));
-            last_magnetic_added_list_.push_back(QVariantMap{
-                {QStringLiteral("name"), name},
-                {QStringLiteral("note"), quietNames.contains(name)
-                                             ? tr("no magnetic intensity at the experiment's reflections; set the moments by hand")
-                                             : QString()}});
+            last_magnetic_added_list_.push_back(QVariantMap{{QStringLiteral("name"), name}});
         }
     } catch (const std::exception& refusal) {
         error = QString::fromUtf8(refusal.what());
@@ -4286,18 +4280,6 @@ bool ProjectViewModel::addMagneticCandidates(int graph, const QList<int>& nodes,
     undo_history_.emplace_back(std::move(before));
     syncUndo();
     last_magnetic_added_ = prepared->empty() ? std::string() : prepared->name(0);
-    // The after-Add notice belongs to this Add: its snapshot and its first child, never to what is shown later.
-    {
-        std::shared_ptr<const edi::Structure> child;
-        for (const auto& held : project.structures)
-            if (held->name.value() == last_magnetic_added_) child = held;
-        KAdded added{++k_add_events_, nullptr, last_magnetic_added_, child, {}};
-        if (snapshot != 0) {
-            added.snapshot = k_snapshots_.at(snapshot);
-            added.experiment = project.experiments[static_cast<std::size_t>(added.snapshot->experiment)];
-        }
-        k_added_ = std::move(added);
-    }
     if (!last_magnetic_note_.isEmpty()) emit information(last_magnetic_note_);
     if (select) setCurrentStructureIndex(static_cast<int>(structure_models_.size()) - static_cast<int>(prepared->size()));
     return true;
@@ -4313,38 +4295,6 @@ void ProjectViewModel::recordFitAdoption() {
         } catch (const std::exception&) {
         }
     }
-}
-
-QVariantMap ProjectViewModel::magneticIntensityAt(int experiment, const QList<double>& xs,
-                                                 const QList<double>& halfWidths) const {
-    if (experiment < 0 || experiment >= static_cast<int>(project_->experiments.size()) || last_magnetic_added_.empty())
-        return {};
-    const auto& source = project_->experiments[static_cast<std::size_t>(experiment)];
-    if (!source->data.has_value()) return {};
-    const edi::PdDataBase& data = *source->data;
-    const std::vector<std::string>& order = data.component_order.values();
-    const auto at = std::find(order.begin(), order.end(), last_magnetic_added_);
-    const std::vector<double>& magnetic = data.component_intensities_magnetic.values();
-    const std::vector<double>& x = data.axis();
-    if (at == order.end() || magnetic.size() != x.size() * order.size()) return {};
-    const std::size_t column = static_cast<std::size_t>(at - order.begin());
-    double peak_max = 0.0;
-    for (std::size_t i = 0; i < x.size(); ++i) {
-        const double v = magnetic[i * order.size() + column];
-        if (std::isfinite(v)) peak_max = std::max(peak_max, v);
-    }
-    QVariantList values;
-    for (int p = 0; p < xs.size(); ++p) {
-        double best = 0.0;
-        for (std::size_t i = 0; i < x.size(); ++i) {
-            const double v = magnetic[i * order.size() + column];
-            if (std::abs(x[i] - xs[p]) <= halfWidths.value(p) && std::isfinite(v)) best = std::max(best, v);
-        }
-        values.push_back(best);
-    }
-    return {{QStringLiteral("structure"), QString::fromStdString(last_magnetic_added_)},
-            {QStringLiteral("values"), values},
-            {QStringLiteral("max"), peak_max}};
 }
 
 int ProjectViewModel::magneticParentOf(int experiment) const {
@@ -4771,49 +4721,6 @@ bool ProjectViewModel::kSnapshotCurrent(qint64 id) const {
     } catch (const std::exception&) {
         return false;
     }
-}
-
-bool ProjectViewModel::magneticAddCurrent(qint64 event) const {
-    if (!k_added_ || k_added_->event != event || last_magnetic_added_ != k_added_->child) return false;
-    const std::shared_ptr<const edi::Structure> child = k_added_->child_item.lock();
-    if (!child || std::none_of(project_->structures.begin(), project_->structures.end(),
-                               [&child](const auto& s) { return s.get() == child.get(); }))
-        return false;  // undone or replaced
-    if (!k_added_->snapshot) return true;
-    const std::shared_ptr<const edi::BraggPdExperiment> bank = k_added_->experiment.lock();
-    const int experiment = k_added_->snapshot->experiment;
-    return bank && experiment >= 0 && experiment < static_cast<int>(project_->experiments.size()) &&
-           project_->experiments[static_cast<std::size_t>(experiment)].get() == bank.get();
-}
-
-QVariantMap ProjectViewModel::kAddedIntensity(qint64 id) const {
-    const QVariantMap retired{{QStringLiteral("retired"), true}};
-    if (!k_added_ || !k_added_->snapshot || k_added_->snapshot->id != id || !magneticAddCurrent(k_added_->event))
-        return retired;
-    const KSearchSnapshot& snapshot = *k_added_->snapshot;
-    const int experiment = snapshot.experiment;
-    // The Add's own bank and child, by identity, not a same-name replacement; gone or replaced retires the notice.
-    const std::shared_ptr<const edi::BraggPdExperiment> bank = k_added_->experiment.lock();
-    const std::shared_ptr<const edi::Structure> child = k_added_->child_item.lock();
-    if (!bank || !child || experiment < 0 || experiment >= static_cast<int>(project_->experiments.size()) ||
-        project_->experiments[static_cast<std::size_t>(experiment)].get() != bank.get() ||
-        std::none_of(project_->structures.begin(), project_->structures.end(),
-                     [&child](const auto& s) { return s.get() == child.get(); }))
-        return retired;
-    if (!bank->computed_current()) return {};  // the calculation of the edited model is not in yet
-    QList<double> xs;
-    QList<double> halfWidths;
-    for (const edi::MagneticPeak& p : snapshot.marks) {
-        xs.push_back(p.x);
-        halfWidths.push_back(p.half_width);
-    }
-    QVariantMap out = magneticIntensityAt(experiment, xs, halfWidths);
-    if (!out.isEmpty()) {
-        QVariantList marks;
-        for (const edi::MagneticPeak& p : snapshot.marks) marks.push_back(peak_map(p));
-        out.insert(QStringLiteral("marks"), marks);
-    }
-    return out;
 }
 
 QVariantList ProjectViewModel::magneticPeaks(int index, int experiment) {

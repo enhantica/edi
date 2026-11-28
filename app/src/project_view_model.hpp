@@ -594,14 +594,6 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // Whether snapshot `id` exists and still describes the project and the current marks (a Clear and the same marks
     // again is another generation).
     Q_INVOKABLE bool kSnapshotCurrent(qint64 id) const;
-    // After an Add from snapshot `id`: the added child's magnetic curve at the snapshot's marks in the snapshot's
-    // experiment ({structure, values, max}); {retired: true} once that Add's child or experiment is gone or another
-    // Add followed; empty while the calculation does not hold the child yet.
-    Q_INVOKABLE QVariantMap kAddedIntensity(qint64 id) const;
-    // Every magnetic Add, from either popup origin, is an event (review 19, F4): its identity, and whether it still
-    // stands, its first child and (from Find k) its bank still the ones it made and used. Undo or a replacement retires it.
-    Q_INVOKABLE qint64 lastMagneticAddEvent() const { return k_added_ ? k_added_->event : 0; }
-    Q_INVOKABLE bool magneticAddCurrent(qint64 event) const;
     // Find k from data: each experiment linking structure `index`, {index, name, eligible, reason}; eligible while a
     // kept fit's inputs still match (recordFitAdoption).
     Q_INVOKABLE QVariantList magneticDataChoices(int index) const;
@@ -618,10 +610,8 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // The last magnetic Add's A7 note (review 15, F5): each candidate without magnetic intensity at the reflections
     // of the experiments linking its parent, or empty.
     Q_INVOKABLE QString lastMagneticNote() const { return last_magnetic_note_; }
-    // The last Add's structures, in the order of its groups: each {name, note}, the note empty unless the structure
-    // gives no magnetic intensity at the experiment's reflections (the after-Add dialog, owner 2026-11-27).
+    // The last Add's structures, in the order of its groups: each {name} (the after-Add dialog, owner 2026-11-28).
     Q_INVOKABLE QVariantList lastMagneticAdded() const { return last_magnetic_added_list_; }
-    Q_INVOKABLE QVariantMap magneticIntensityAt(int experiment, const QList<double>& xs, const QList<double>& halfWidths) const;
     // The structure model at `index`, or null.
     Q_INVOKABLE edi_app::StructureViewModel* structureAt(int index) const { return structure_models_.value(index); }
     // The peaks experiment `experiment`'s kept fit leaves unexplained, {x, d, tolerance, significance}; empty and
@@ -1076,16 +1066,6 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     std::map<qint64, std::vector<std::string>> k_rows_;
     std::map<qint64, std::vector<QStringList>> k_row_roles_;  // each ranked row's roles for the snapshot's marks
     qint64 k_next_snapshot_ = 0;
-    // The last Add from a Find k snapshot: the snapshot, its first child and its experiment.
-    struct KAdded {
-        qint64 event = 0;
-        std::shared_ptr<const KSearchSnapshot> snapshot;  // none for an Add outside Find k
-        std::string child;
-        std::weak_ptr<const edi::Structure> child_item;          // the child itself, not a same-name replacement
-        std::weak_ptr<const edi::BraggPdExperiment> experiment;  // the bank itself
-    };
-    std::optional<KAdded> k_added_;
-    qint64 k_add_events_ = 0;
     int magnetic_graph_id_ = 0;  // the request the held graph answered
     qint64 magnetic_graph_snapshot_ = 0;  // the Find k snapshot and ranked row it was searched for, if any
     int magnetic_graph_row_ = -1;

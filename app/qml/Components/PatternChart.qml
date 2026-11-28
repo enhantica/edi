@@ -65,8 +65,6 @@ Item {
         when: chart.findKPage
         restoreMode: Binding.RestoreBindingOrValue
     }
-    // The after-Add dialog while it is open, which the intensity check reports into.
-    property MagneticAddedDialog addedDialog: null
     readonly property Component kVector: kVectorComponent
     readonly property Component analysis: analysisComponent
 
@@ -108,15 +106,13 @@ Item {
             kRow: rank
         }) as MagneticPopup;
         analysis.added.connect(count => {
-            intensityCheck.stop();  // an earlier Add's check never writes into this one's dialog
-            // Each added structure, in the order of its groups, with its BNS symbol and its note (owner, 2026-11-27).
+            // Each added structure, in the order of its groups, with its BNS symbol (owner, 2026-11-28: no note).
             const added = chart.axisProject.lastMagneticAdded();
             const entries = added.map((a, i) => {
                 const node = analysis.nodes[analysis.selected[i]];
                 return {
                     "name": a.name,
-                    "symbol": node ? `${node.name} ${node.bns}` : "",
-                    "note": a.note
+                    "symbol": node ? `${node.name} ${node.bns}` : ""
                 };
             });
             const dialog = addedComponent.createObject(Overlay.overlay, {
@@ -124,20 +120,7 @@ Item {
             }) as MagneticAddedDialog;
             // The first added structure is already the Structure page's current one (Add selects it).
             dialog.openStructure.connect(() => EaGlobals.Vars.appBarCurrentIndex = 2);
-            dialog.closed.connect(() => {
-                intensityCheck.stop();
-                if (chart.addedDialog === dialog)
-                    chart.addedDialog = null;
-            });
-            chart.addedDialog = dialog;
             dialog.open();
-            // Only an Add made from this Find k search has its marks to check; a k chosen by hand in the analysis has
-            // none.
-            if (analysis.kSnapshotId === snapshot.id) {
-                intensityCheck.snapshot = snapshot.id;
-                intensityCheck.tries = 0;
-                intensityCheck.start();
-            }
         });
         analysis.open();
     }
@@ -1365,38 +1348,6 @@ Item {
         }
     }
 
-
-    // After Add: once the recalculated pattern holds the first new structure, the marked peaks where it puts no
-    // magnetic intensity are named (owner, 2026-11-27).
-    Timer {
-        id: intensityCheck
-        property int tries: 0
-        // The Find k snapshot of the Add, whose experiment, marks and child the project reads, not whatever is shown by now.
-        property real snapshot: 0
-        interval: 500
-        repeat: true
-        onTriggered: {
-            if (++tries > 40 || !chart.axisProject) {
-                stop();
-                return;
-            }
-            const found = chart.axisProject.kAddedIntensity(snapshot);
-            if (found.retired === true) {
-                stop();  // the Add's child or bank is gone or replaced: nothing to report
-                return;
-            }
-            if (found.values === undefined)
-                return;
-            stop();
-            const marks = found.marks;
-            const none = [];
-            for (let i = 0; i < marks.length; ++i)
-                if (found.values[i] < Math.max(1.0, 0.01 * found.max))
-                    none.push(marks[i].x.toFixed(2) + "°");
-            if (none.length > 0 && chart.addedDialog !== null)
-                chart.addedDialog.addNote(0, qsTr("no magnetic intensity at %1").arg(none.join(", ")));
-        }
-    }
 
     Component {
         id: kVectorComponent
