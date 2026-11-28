@@ -51,19 +51,19 @@ Component.prototype.beginInstallation = function () {
 Component.prototype.settleRuntime = function () {
     if (keepsRuntime() && installer.value("TargetDir") !== "")
         installer.execute("/bin/sh", runtimeCommand(RESTORE_SCRIPT));
-    removeOldStaging();
 };
 
-// Windows: after a successful update, the folder releases before staged the Maintenance Tool into, which nothing uses
-// any more (edi ADR-0109). This component is in every update, the tool's component only when the tool changed.
-// cmd.exe runs in the installation folder and names only that folder, so it never reads the installation's path.
+// Windows: the folder releases before staged the Maintenance Tool into, which nothing uses any more (edi ADR-0109). An
+// operation runs while the update holds the rights it gained for a protected folder such as Program Files, which it
+// drops before it signals the end, and an operation that fails stops the update. This component is in every update,
+// the tool's component only when the tool changed. cmd.exe runs in the installation folder and names only that
+// folder, so it never reads the installation's path; rmdir's own exit code does not show whether the folder went.
 function removeOldStaging() {
-    var target = installer.value("TargetDir");
-    if (systemInfo.kernelType !== "winnt" || !installer.isUpdater() || installer.status !== QInstaller.Success
-            || target === "" || !installer.fileExists(target + "/maintenancetool"))
+    if (systemInfo.kernelType !== "winnt" || !installer.isUpdater())
         return;
-    installer.performOperation("Execute", ["cmd.exe", "/c", "rmdir", "/s", "/q", "maintenancetool",
-                                           "workingdirectory=" + target]);
+    component.addOperation("Execute", "cmd.exe", "/c", "rmdir", "/s", "/q", "maintenancetool", "2>nul", "&", "if",
+                           "exist", "maintenancetool", "(exit", "1)", "else", "(exit", "0)",
+                           "workingdirectory=@TargetDir@");
 }
 
 Component.prototype.createOperations = function () {
@@ -72,6 +72,7 @@ Component.prototype.createOperations = function () {
         var settle = ["/bin/sh"].concat(runtimeCommand(RESTORE_SCRIPT));
         component.addOperation("Execute", settle.concat(["UNDOEXECUTE"], settle));
     }
+    removeOldStaging();
     component.createOperations();
     holdProgress();
     var target = installer.value("TargetDir");

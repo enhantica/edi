@@ -105,7 +105,10 @@ update replaces while the tool runs. So the runtime takes the bundle's design ra
    - The tool component's script runs the cleanup on `installer.installationFinished` when an update has succeeded,
      and the release when it has not.
      Component scripts come from the repository being installed, so the new script runs inside an older tool too.
-     This is the only cleanup during an update: the control script no longer removes the backup itself.
+     This is the only cleanup during an update: the control script no longer removes the backup itself. It runs after
+     the Framework has dropped any rights it gained, and must, since the backup is the rollback's until the update has
+     succeeded; macOS and Linux install into folders the user can write (`/Applications`, the home folder; ADR-0071),
+     so it needs none. In a folder only an administrator can write, the backup and the staging folder stay.
    - The app runs the same cleanup at start on macOS and Linux, under the lock and with two more guards, since an
      update unpacking holds no lock. It leaves `maintenance-update/` alone while the tool its claim names runs,
      whatever the folder holds yet; a folder without a claim, or whose tool has exited, is left over and goes. It
@@ -117,9 +120,11 @@ update replaces while the tool runs. So the runtime takes the bundle's design ra
    backup without the lock once the update has succeeded. That removal and the new cleanup remove the same files and
    either may come first, so they overlap harmlessly.
 
-   On Windows a successful update leaves no staged tool (decision 3), and the app component's script removes the
-   `maintenancetool\` folder releases before staged into on `installer.installationFinished` after a successful update:
-   the app component is in every update, the tool's only when the tool changed. A first installation may keep the
+   On Windows a successful update leaves no staged tool (decision 3), and the app component removes the
+   `maintenancetool\` folder releases before staged into with an `Execute` operation, which then checks that the folder
+   has gone. An operation runs while the update holds the rights it gained for a protected folder such as Program Files,
+   which the Framework drops before `installer.installationFinished`, and a failed operation stops the update. The app
+   component is in every update, the tool's only when the tool changed. A first installation may keep the
    staged tool as the installed tool's bytes. The app touches no Windows staging: it cannot tell when an update starts
    to need its staged tool, whose bytes may equal the installed one's, and without it the Framework would write an
    unsigned tool (ADR-0091). The rollback of a failed update leaves the tool it staged (measured on CI),
