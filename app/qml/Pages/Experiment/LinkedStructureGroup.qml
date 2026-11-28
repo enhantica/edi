@@ -133,7 +133,8 @@ Column {
 
                         required property int index
                         required property var modelData
-                        readonly property string refusal: group.rows ? (group.rows.structureRefusals[entry.index] ?? "") : ""
+                        // By name: a typed search lists the entries in an order of its own.
+                        readonly property string refusal: group.rows ? (group.rows.structureRefusals[group.rows.structureNames.indexOf(String(entry.modelData))] ?? "") : ""
                         // Whether the entry passes the search, read from the name alone (the text may carry colour).
                         readonly property bool matching: structureBox.matches(String(entry.modelData))
 
