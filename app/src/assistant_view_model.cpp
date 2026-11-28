@@ -5107,9 +5107,9 @@ struct AssistantViewModel::State {
         const auto text=[&row](const char* key) {return row.value(QLatin1StringView(key)).toString().toStdString();};
         const auto index=static_cast<std::size_t>(at);
         if(run->relation_constraint)
-            return index<stored.constraints.size() && stored.constraints[index]->id.value()==text("id") &&
-                stored.constraints[index]->expression.value()==text("expression") && stored.constraints[index]->enabled.get()==row.value("enabled").toBool();
-        return index<stored.aliases.size() && stored.aliases[index]->id.value()==text("id") && stored.aliases[index]->parameter_unique_name.value()==text("parameter");
+            return index<edi::ActiveView(stored).constraints().size() && edi::ActiveView(stored).constraints()[index]->id.value()==text("id") &&
+                edi::ActiveView(stored).constraints()[index]->expression.value()==text("expression") && edi::ActiveView(stored).constraints()[index]->enabled.get()==row.value("enabled").toBool();
+        return index<edi::ActiveView(stored).aliases().size() && edi::ActiveView(stored).aliases()[index]->id.value()==text("id") && edi::ActiveView(stored).aliases()[index]->parameter_unique_name.value()==text("parameter");
     }
     QString relation_row_ordinary(const std::shared_ptr<NativeWidget>& run) {
         using Action=ProjectEditor::RelationAction;
@@ -5150,20 +5150,20 @@ struct AssistantViewModel::State {
             action.kind=Action::Kind::AliasAppend;
             if(auto refusal=apply(action,[&] {target->analysis()->aliases()->append();});!refusal.isEmpty())return refusal;
         }
-        if(index>=stored.aliases.size())return widget_outcome_error;
+        if(index>=edi::ActiveView(stored).aliases().size())return widget_outcome_error;
         if(run->relation_field==0) {
-            run->relation_key=run->partial_alias=stored.aliases[index].get();
+            run->relation_key=run->partial_alias=edi::ActiveView(stored).aliases()[index];
             run->relation_field=1;
         }
-        if(stored.aliases[index].get()!=run->relation_key)return widget_outcome_error;
+        if(edi::ActiveView(stored).aliases()[index]!=run->relation_key)return widget_outcome_error;
         action={};action.row=run->relation_key;
-        if(action.text=id;stored.aliases[index]->id.value()!=id.toStdString()) {
+        if(action.text=id;edi::ActiveView(stored).aliases()[index]->id.value()!=id.toStdString()) {
             action.kind=Action::Kind::AliasId;
             if(auto refusal=apply(action,[&] {target->analysis()->aliases()->setText(static_cast<int>(at),QStringLiteral("id"),id);});!refusal.isEmpty())return refusal;
         }
         run->relation_field=2;
         const auto parameter=row.value("parameter").toString();
-        if(action.text=parameter;stored.aliases[index]->parameter_unique_name.value()!=parameter.toStdString()) {
+        if(action.text=parameter;edi::ActiveView(stored).aliases()[index]->parameter_unique_name.value()!=parameter.toStdString()) {
             action.kind=Action::Kind::AliasParameter;
             if(auto refusal=apply(action,[&] {target->analysis()->aliases()->setText(static_cast<int>(at),QStringLiteral("parameter"),parameter);});!refusal.isEmpty())return refusal;
         }
@@ -5303,7 +5303,7 @@ struct AssistantViewModel::State {
                 const auto rows=run->relation_args.value(run->relation_constraint?"constraints":"aliases").toArray();
                 if(run->relation_row>=rows.size() && !run->relation_constraint) {  // no aliases, or none left
                     run->relation_constraint=true;run->relation_row=run->relation_field=0;
-                    run->relation_base=static_cast<qsizetype>(project->assistantProject()->constraints.size());
+                    run->relation_base=static_cast<qsizetype>(edi::ActiveView(*project->assistantProject()).constraints().size());
                 }
                 return relation_step_failed(run,message);
             }
@@ -8132,10 +8132,10 @@ struct AssistantViewModel::State {
         const auto& projectModel = *run->project->assistantProject();
         const auto at = run->relation_base + run->relation_row;
         if(at<0)return false;
-        const bool member=run->relation_constraint ? at < static_cast<qsizetype>(projectModel.constraints.size()) && projectModel.constraints[static_cast<std::size_t>(at)].get() == run->relation_key
-            : at < static_cast<qsizetype>(projectModel.aliases.size()) && projectModel.aliases[static_cast<std::size_t>(at)].get() == run->relation_key;
+        const bool member=run->relation_constraint ? at < static_cast<qsizetype>(edi::ActiveView(projectModel).constraints().size()) && edi::ActiveView(projectModel).constraints()[static_cast<std::size_t>(at)] == run->relation_key
+            : at < static_cast<qsizetype>(edi::ActiveView(projectModel).aliases().size()) && edi::ActiveView(projectModel).aliases()[static_cast<std::size_t>(at)] == run->relation_key;
         if(!member || run->tool!="edit_relation")return member;
-        const auto& id=run->relation_constraint?projectModel.constraints[static_cast<std::size_t>(at)]->id.value():projectModel.aliases[static_cast<std::size_t>(at)]->id.value();
+        const auto& id=run->relation_constraint?edi::ActiveView(projectModel).constraints()[static_cast<std::size_t>(at)]->id.value():edi::ActiveView(projectModel).aliases()[static_cast<std::size_t>(at)]->id.value();
         return id==run->relation_args.value("id").toString().toStdString();
     }
     void widget_relation_scroll(const std::shared_ptr<NativeWidget>& run) {
@@ -8179,25 +8179,25 @@ struct AssistantViewModel::State {
         using Action = ProjectEditor::RelationAction;
         switch (expected.kind) {
         case Action::Kind::AliasAppend:
-            actual = position + 1 == static_cast<qsizetype>(declaration.aliases.size());
-            if (actual) run->partial_alias = declaration.aliases[static_cast<std::size_t>(position)].get();
+            actual = position + 1 == static_cast<qsizetype>(edi::ActiveView(declaration).aliases().size());
+            if (actual) run->partial_alias = edi::ActiveView(declaration).aliases()[static_cast<std::size_t>(position)];
             break;
         case Action::Kind::ConstraintAppend: {
-            actual = position < static_cast<qsizetype>(declaration.constraints.size()) &&
-                declaration.constraints[static_cast<std::size_t>(position)].get() == input->applied_result.constraint &&
-                declaration.constraints[static_cast<std::size_t>(position)]->id.value() == expected.text.toStdString() &&
-                declaration.constraints[static_cast<std::size_t>(position)]->expression.value() == expected.expression.toStdString() &&
-                declaration.constraints[static_cast<std::size_t>(position)]->enabled.get() == expected.enabled;
+            actual = position < static_cast<qsizetype>(edi::ActiveView(declaration).constraints().size()) &&
+                edi::ActiveView(declaration).constraints()[static_cast<std::size_t>(position)] == input->applied_result.constraint &&
+                edi::ActiveView(declaration).constraints()[static_cast<std::size_t>(position)]->id.value() == expected.text.toStdString() &&
+                edi::ActiveView(declaration).constraints()[static_cast<std::size_t>(position)]->expression.value() == expected.expression.toStdString() &&
+                edi::ActiveView(declaration).constraints()[static_cast<std::size_t>(position)]->enabled.get() == expected.enabled;
             break;
         }
-        case Action::Kind::AliasId: actual = position < static_cast<qsizetype>(declaration.aliases.size()) && declaration.aliases[static_cast<std::size_t>(position)].get() == expected.row && declaration.aliases[static_cast<std::size_t>(position)]->id.value() == expected.text.toStdString(); break;
+        case Action::Kind::AliasId: actual = position < static_cast<qsizetype>(edi::ActiveView(declaration).aliases().size()) && edi::ActiveView(declaration).aliases()[static_cast<std::size_t>(position)] == expected.row && edi::ActiveView(declaration).aliases()[static_cast<std::size_t>(position)]->id.value() == expected.text.toStdString(); break;
         case Action::Kind::AliasParameter:
-            actual = position < static_cast<qsizetype>(declaration.aliases.size()) && declaration.aliases[static_cast<std::size_t>(position)].get() == expected.row && declaration.aliases[static_cast<std::size_t>(position)]->parameter_unique_name.value() == expected.text.toStdString();
+            actual = position < static_cast<qsizetype>(edi::ActiveView(declaration).aliases().size()) && edi::ActiveView(declaration).aliases()[static_cast<std::size_t>(position)] == expected.row && edi::ActiveView(declaration).aliases()[static_cast<std::size_t>(position)]->parameter_unique_name.value() == expected.text.toStdString();
             if (actual && delivered && input->outcome.published) run->partial_alias = nullptr;
             break;
-        case Action::Kind::ConstraintId: actual = position < static_cast<qsizetype>(declaration.constraints.size()) && declaration.constraints[static_cast<std::size_t>(position)].get() == expected.row && declaration.constraints[static_cast<std::size_t>(position)]->id.value() == expected.text.toStdString(); break;
-        case Action::Kind::ConstraintExpression: actual = position < static_cast<qsizetype>(declaration.constraints.size()) && declaration.constraints[static_cast<std::size_t>(position)].get() == expected.row && declaration.constraints[static_cast<std::size_t>(position)]->expression.value() == expected.text.toStdString(); break;
-        case Action::Kind::ConstraintEnabled: actual = position < static_cast<qsizetype>(declaration.constraints.size()) && declaration.constraints[static_cast<std::size_t>(position)].get() == expected.row && declaration.constraints[static_cast<std::size_t>(position)]->enabled.get() == expected.enabled; break;
+        case Action::Kind::ConstraintId: actual = position < static_cast<qsizetype>(edi::ActiveView(declaration).constraints().size()) && edi::ActiveView(declaration).constraints()[static_cast<std::size_t>(position)] == expected.row && edi::ActiveView(declaration).constraints()[static_cast<std::size_t>(position)]->id.value() == expected.text.toStdString(); break;
+        case Action::Kind::ConstraintExpression: actual = position < static_cast<qsizetype>(edi::ActiveView(declaration).constraints().size()) && edi::ActiveView(declaration).constraints()[static_cast<std::size_t>(position)] == expected.row && edi::ActiveView(declaration).constraints()[static_cast<std::size_t>(position)]->expression.value() == expected.text.toStdString(); break;
+        case Action::Kind::ConstraintEnabled: actual = position < static_cast<qsizetype>(edi::ActiveView(declaration).constraints().size()) && edi::ActiveView(declaration).constraints()[static_cast<std::size_t>(position)] == expected.row && edi::ActiveView(declaration).constraints()[static_cast<std::size_t>(position)]->enabled.get() == expected.enabled; break;
         default: actual = false;
         }
         if (!delivered || !input->outcome.published || !actual) { if(delivered)control_failure(run,ControlCause::Commit); widget_refuse(run, widget_outcome_error); return; }
@@ -8222,11 +8222,11 @@ struct AssistantViewModel::State {
         }
         if (run->relation_field == 0) {
             if (run->relation_constraint) {
-                if (at + 1 != static_cast<qsizetype>(projectModel.constraints.size())) { widget_refuse(run, widget_outcome_error); return; }
-                run->relation_key = projectModel.constraints[static_cast<std::size_t>(at)].get();
+                if (at + 1 != static_cast<qsizetype>(edi::ActiveView(projectModel).constraints().size())) { widget_refuse(run, widget_outcome_error); return; }
+                run->relation_key = edi::ActiveView(projectModel).constraints()[static_cast<std::size_t>(at)];
             } else {
-                if (at + 1 != static_cast<qsizetype>(projectModel.aliases.size())) { widget_refuse(run, widget_outcome_error); return; }
-                run->relation_key = projectModel.aliases[static_cast<std::size_t>(at)].get();
+                if (at + 1 != static_cast<qsizetype>(edi::ActiveView(projectModel).aliases().size())) { widget_refuse(run, widget_outcome_error); return; }
+                run->relation_key = edi::ActiveView(projectModel).aliases()[static_cast<std::size_t>(at)];
             }
         }
         ++run->relation_field; run->reveal_steps = 0;
@@ -8246,7 +8246,7 @@ struct AssistantViewModel::State {
                 native_finish(true, widget_sequence_progress(run, QObject::tr("Relations edited through the existing rows; each edit has its ordinary Undo"), true)); return;
             }
             run->relation_constraint = true; run->relation_row = 0; run->relation_field = 0;
-            run->relation_base = static_cast<qsizetype>(run->project->assistantProject()->constraints.size());
+            run->relation_base = static_cast<qsizetype>(edi::ActiveView(*run->project->assistantProject()).constraints().size());
             rows = run->relation_args.value("constraints").toArray();
             if(rows.isEmpty()) {
                 native_finish(true,widget_sequence_progress(run,QObject::tr("Aliases edited through their original controls and Undo"),true));return;
@@ -8276,9 +8276,9 @@ struct AssistantViewModel::State {
             action.kind = Action::Kind::ConstraintEnabled; action.row = run->relation_key; action.enabled = row.value("enabled").toBool();
         }
         const auto& projectModel = *run->project->assistantProject();
-        const bool unchanged = run->relation_field == 1 ? (run->relation_constraint ? projectModel.constraints[static_cast<std::size_t>(at)]->id.value() : projectModel.aliases[static_cast<std::size_t>(at)]->id.value()) == value.toStdString()
-            : run->relation_field == 2 ? (run->relation_constraint ? projectModel.constraints[static_cast<std::size_t>(at)]->expression.value() : projectModel.aliases[static_cast<std::size_t>(at)]->parameter_unique_name.value()) == value.toStdString()
-            : run->relation_field == 3 && projectModel.constraints[static_cast<std::size_t>(at)]->enabled.get() == action.enabled;
+        const bool unchanged = run->relation_field == 1 ? (run->relation_constraint ? edi::ActiveView(projectModel).constraints()[static_cast<std::size_t>(at)]->id.value() : edi::ActiveView(projectModel).aliases()[static_cast<std::size_t>(at)]->id.value()) == value.toStdString()
+            : run->relation_field == 2 ? (run->relation_constraint ? edi::ActiveView(projectModel).constraints()[static_cast<std::size_t>(at)]->expression.value() : edi::ActiveView(projectModel).aliases()[static_cast<std::size_t>(at)]->parameter_unique_name.value()) == value.toStdString()
+            : run->relation_field == 3 && edi::ActiveView(projectModel).constraints()[static_cast<std::size_t>(at)]->enabled.get() == action.enabled;
         if (unchanged) {
             // The alias already has its requested parameter: it is complete, no longer disposable.
             if (run->relation_field == 2 && !run->relation_constraint) run->partial_alias = nullptr;
@@ -8353,10 +8353,10 @@ struct AssistantViewModel::State {
         if(!widget_owned(run))return false;
         const auto& projectModel=*run->project->assistantProject();const auto at=run->relation_base;
         if(at<0)return false;
-        const bool member=run->relation_constraint?at<static_cast<qsizetype>(projectModel.constraints.size()) && projectModel.constraints[static_cast<std::size_t>(at)].get()==run->relation_key:
-            at<static_cast<qsizetype>(projectModel.aliases.size()) && projectModel.aliases[static_cast<std::size_t>(at)].get()==run->relation_key;
+        const bool member=run->relation_constraint?at<static_cast<qsizetype>(edi::ActiveView(projectModel).constraints().size()) && edi::ActiveView(projectModel).constraints()[static_cast<std::size_t>(at)]==run->relation_key:
+            at<static_cast<qsizetype>(edi::ActiveView(projectModel).aliases().size()) && edi::ActiveView(projectModel).aliases()[static_cast<std::size_t>(at)]==run->relation_key;
         if(!member || !original_id)return member;
-        return (run->relation_constraint?projectModel.constraints[static_cast<std::size_t>(at)]->id.value():projectModel.aliases[static_cast<std::size_t>(at)]->id.value())==run->relation_args.value("id").toString().toStdString();
+        return (run->relation_constraint?edi::ActiveView(projectModel).constraints()[static_cast<std::size_t>(at)]->id.value():edi::ActiveView(projectModel).aliases()[static_cast<std::size_t>(at)]->id.value())==run->relation_args.value("id").toString().toStdString();
     }
     Object widget_relation_edit_result(const std::shared_ptr<NativeWidget>& run,bool complete) const {
         const auto input=run->relation_input;
@@ -8440,11 +8440,11 @@ struct AssistantViewModel::State {
         } else if(widget_relation_edit_member(run,false)) {
             const auto index=run->relation_base;
             switch(expected.kind) {
-            case K::AliasId:actual=projectModel.aliases[static_cast<std::size_t>(index)]->id.value()==expected.text.toStdString();break;
-            case K::AliasParameter:actual=projectModel.aliases[static_cast<std::size_t>(index)]->parameter_unique_name.value()==expected.text.toStdString();break;
-            case K::ConstraintId:actual=projectModel.constraints[static_cast<std::size_t>(index)]->id.value()==expected.text.toStdString();break;
-            case K::ConstraintExpression:actual=projectModel.constraints[static_cast<std::size_t>(index)]->expression.value()==expected.text.toStdString();break;
-            case K::ConstraintEnabled:actual=projectModel.constraints[static_cast<std::size_t>(index)]->enabled.get()==expected.enabled;break;
+            case K::AliasId:actual=edi::ActiveView(projectModel).aliases()[static_cast<std::size_t>(index)]->id.value()==expected.text.toStdString();break;
+            case K::AliasParameter:actual=edi::ActiveView(projectModel).aliases()[static_cast<std::size_t>(index)]->parameter_unique_name.value()==expected.text.toStdString();break;
+            case K::ConstraintId:actual=edi::ActiveView(projectModel).constraints()[static_cast<std::size_t>(index)]->id.value()==expected.text.toStdString();break;
+            case K::ConstraintExpression:actual=edi::ActiveView(projectModel).constraints()[static_cast<std::size_t>(index)]->expression.value()==expected.text.toStdString();break;
+            case K::ConstraintEnabled:actual=edi::ActiveView(projectModel).constraints()[static_cast<std::size_t>(index)]->enabled.get()==expected.enabled;break;
             default:break;
             }
         }
@@ -8663,8 +8663,11 @@ struct AssistantViewModel::State {
         run->go(widget_route(run));
         const auto& projectModel=*project->assistantProject();
         qsizetype position=0;bool found=false;
-        if(run->relation_constraint){for(const auto& row:projectModel.constraints){if(row->id.value()==id){if(found)throw ActionRefusal("target_unavailable","relation");found=true;run->relation_key=row.get();run->relation_base=position;}++position;}}
-        else {for(const auto& row:projectModel.aliases){if(row->id.value()==id){if(found)throw ActionRefusal("target_unavailable","relation");found=true;run->relation_key=row.get();run->relation_base=position;}++position;}}
+        // Positions in the rows the Analysis tables show (edi::ActiveView, review 32), so a position is a table row; a
+        // disabled phase's relation is not one the assistant can reach.
+        const edi::ActiveView view(projectModel);
+        if(run->relation_constraint){for(const edi::ParameterConstraint* row:view.constraints()){if(row->id.value()==id){if(found)throw ActionRefusal("target_unavailable","relation");found=true;run->relation_key=row;run->relation_base=position;}++position;}}
+        else {for(const edi::ParameterAlias* row:view.aliases()){if(row->id.value()==id){if(found)throw ActionRefusal("target_unavailable","relation");found=true;run->relation_key=row;run->relation_base=position;}++position;}}
         if(!found || run->relation_base>std::numeric_limits<int>::max())throw ActionRefusal("target_unavailable","relation");
         using K=ProjectEditor::RelationAction::Kind;
         auto& action=run->relation_action;action.row=run->relation_key;action.text=args.value("value").toString();
@@ -8682,11 +8685,11 @@ struct AssistantViewModel::State {
         bool equal=false;
         const auto at=run->relation_base;
         switch(action.kind) {
-        case K::AliasId:equal=projectModel.aliases[static_cast<std::size_t>(at)]->id.value()==action.text.toStdString();break;
-        case K::AliasParameter:equal=projectModel.aliases[static_cast<std::size_t>(at)]->parameter_unique_name.value()==action.text.toStdString();break;
-        case K::ConstraintId:equal=projectModel.constraints[static_cast<std::size_t>(at)]->id.value()==action.text.toStdString();break;
-        case K::ConstraintExpression:equal=projectModel.constraints[static_cast<std::size_t>(at)]->expression.value()==action.text.toStdString();break;
-        case K::ConstraintEnabled:equal=projectModel.constraints[static_cast<std::size_t>(at)]->enabled.get()==action.enabled;break;
+        case K::AliasId:equal=edi::ActiveView(projectModel).aliases()[static_cast<std::size_t>(at)]->id.value()==action.text.toStdString();break;
+        case K::AliasParameter:equal=edi::ActiveView(projectModel).aliases()[static_cast<std::size_t>(at)]->parameter_unique_name.value()==action.text.toStdString();break;
+        case K::ConstraintId:equal=edi::ActiveView(projectModel).constraints()[static_cast<std::size_t>(at)]->id.value()==action.text.toStdString();break;
+        case K::ConstraintExpression:equal=edi::ActiveView(projectModel).constraints()[static_cast<std::size_t>(at)]->expression.value()==action.text.toStdString();break;
+        case K::ConstraintEnabled:equal=edi::ActiveView(projectModel).constraints()[static_cast<std::size_t>(at)]->enabled.get()==action.enabled;break;
         default:break;
         }
         if(!projection.input_current() || !native_call || native_call->record!=run->call.record || native_call->receipt!=run->call.receipt)return;
@@ -8814,7 +8817,7 @@ struct AssistantViewModel::State {
             else (void)edi::prepare_background_point(*project->assistantProject(), *background.experiment, background.input,
                 background.experiment->background.size()+1, Limits::id_bytes,
                 background.experiment->data?background.experiment->data->axis().size():0,
-                project->assistantProject()->aliases.size(), true);
+                edi::ActiveView(*project->assistantProject()).aliases().size(), true);
             if(!background.names)widget_background_prepare(run);
         } else if (tool == "add_relations") {
             const auto aliases = args.value("aliases").toArray(), constraints = args.value("constraints").toArray();
@@ -8836,7 +8839,7 @@ struct AssistantViewModel::State {
                 row["parameter"] = QString::fromStdString(slot->unique_name); actualAliases[i] = row;
             }
             run->relation_args["aliases"] = actualAliases;
-            run->relation_base = static_cast<qsizetype>(project->assistantProject()->aliases.size());
+            run->relation_base = static_cast<qsizetype>(edi::ActiveView(*project->assistantProject()).aliases().size());
             for (const auto& category : {actualAliases, constraints}) for (const auto& value : category) {
                 const auto row = value.toObject();
                 for (auto field = row.constBegin(); field != row.constEnd(); ++field) if (field->isString()) {
