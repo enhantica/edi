@@ -963,11 +963,22 @@ jobs:
       - *subject
       - *pixi-cpp
       - *install-cpp
+      - *ccache-env
+      - *ccache-restore
       - name: C++ unit coverage, gated at cpp_lines_min (clang -O0 + LLVM)
         if: needs.plan.outputs.skip != 'true'
         run: |
           cd "$RUNNER_TEMP/crysta"
           python3 "$GITHUB_WORKSPACE/tools/ci/crysta_findings.py" run doctest "$RUNNER_TEMP/crysta/build" -- pixi run -e cpp-ci bash tools/ci/cpp-coverage-unit.sh
+      # The unit tier runs crysta's CLI, which the build makes.
+      - name: Build C++ extension + CLI
+        if: ${{ needs.plan.outputs.skip != 'true' && (!cancelled()) }}
+        env:
+          SKBUILD_CMAKE_DEFINE: CRYSTA_REQUIRE_SIMD=ON
+        run: |
+          cd "$RUNNER_TEMP/crysta"
+          python3 "$GITHUB_WORKSPACE/tools/ci/crysta_findings.py" --root "$RUNNER_TEMP/crysta" run build "$RUNNER_TEMP/findings/cpp-build.log" -- \
+            pixi run -e cpp-ci cpp-build
       - name: Python surface coverage, gated at python_surface_min (unit tier)
         if: ${{ needs.plan.outputs.skip != 'true' && (!cancelled()) }}
         run: |
