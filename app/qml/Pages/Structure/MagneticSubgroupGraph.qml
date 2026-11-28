@@ -9,6 +9,7 @@ import QtQuick.Shapes
 import EasyApplication.Gui.Style as EaStyle
 import EasyApplication.Gui.Elements as EaElements
 import EasyApplication.Gui.Globals as EaGlobals
+import EasyApplication.Gui.Animations as EaAnimations
 
 import edi.app
 
@@ -273,35 +274,42 @@ Flickable {
             width: graph.nodeWidth
             height: graph.nodeHeight
             // A click on the card selects it, filled with the app's accent and white text; unselected it takes the
-            // chart's background inside the chart's axis border, as the toolbar's boxes. A selected card's border
-            // is its fill. The fill and border change in a table row's hover time (Sizes.tableHighlightMoveDuration) and
-            // the text with them in one step, so it never passes through grey. An unselected relative of the shown card
-            // keeps its accent border (owner, 2026-11-27).
+            // chart's background inside the chart's axis border, as the toolbar's boxes. The fill changes in a table
+            // row's hover time (Sizes.tableHighlightMoveDuration) and the text with it in one step, so it never passes
+            // through grey. An unselected relative of the shown card keeps its accent border (owner, 2026-11-27).
             radius: 2
             // A group that cannot be chosen takes the app's disabled colours, as a disabled control does.
             readonly property bool selectable: graph.selectable(index)
-            readonly property color textColor: !selectable ? EaStyle.Colors.themeForegroundDisabled : chosen ? "white" : EaStyle.Colors.themeForeground
+            // An unselected card's text turns the accent with its border on hover, both with the app's hover
+            // animation (ThemeChange, as a hovered button's text); selecting switches between that and white in
+            // one step.
+            property color hoverTextColor: hoveredCard ? EaStyle.Colors.themeAccent : EaStyle.Colors.themeForeground
+            Behavior on hoverTextColor {
+                EaAnimations.ThemeChange {}
+            }
+            readonly property color textColor: !selectable ? EaStyle.Colors.themeForegroundDisabled : chosen ? "white" : hoverTextColor
             color: chosen ? EaStyle.Colors.themeAccent : EaStyle.Colors.chartBackground
             Behavior on color {
                 ColorAnimation {
                     duration: EaStyle.Sizes.tableHighlightMoveDuration
                 }
             }
-            border.width: chosen ? 0 : near ? graph.lineWidth : EaStyle.Sizes.borderThickness
-            border.color: !chosen && near ? EaStyle.Colors.themeAccent : selectable ? EaStyle.Colors.chartAxis : EaStyle.Colors.themeBackgroundDisabled
+            // Hovered, an unselected card's border turns the accent, as the app's buttons change on hover and with
+            // their animation (ThemeChange); a selected card's border is the accent of its fill.
+            readonly property bool hoveredCard: cardArea.containsMouse && selectable
+            border.width: near && !chosen ? graph.lineWidth : EaStyle.Sizes.borderThickness
+            border.color: chosen || near || hoveredCard ? EaStyle.Colors.themeAccent : selectable ? EaStyle.Colors.chartAxis : EaStyle.Colors.themeBackgroundDisabled
             Behavior on border.color {
-                ColorAnimation {
-                    duration: EaStyle.Sizes.tableHighlightMoveDuration
-                }
+                EaAnimations.ThemeChange {}
             }
 
-            // The app's hover tint (AppColors.hoverHighlight, as the status bar's items), over a selected card too,
-            // fading in and out as a table row's hover does.
+            // Hovered, a selected card takes the app's hover tint (AppColors.hoverHighlight, as the status bar's
+            // items), fading in and out as a table row's hover does.
             Rectangle {
                 anchors.fill: parent
                 radius: parent.radius
                 color: AppColors.hoverHighlight
-                opacity: cardArea.containsMouse && node.selectable ? 1 : 0
+                opacity: node.hoveredCard && node.chosen ? 1 : 0
                 Behavior on opacity {
                     NumberAnimation {
                         duration: EaStyle.Sizes.tableHighlightMoveDuration
@@ -369,20 +377,21 @@ Flickable {
                     font.family: EaStyle.Fonts.iconsFamily
                     font.pixelSize: EaStyle.Sizes.fontPixelSize
                     rotation: on ? 0 : 45
-                    color: node.chosen ? "white" : on ? EaStyle.Colors.themeAccent : pinHover.hovered ? EaStyle.Colors.themeForegroundHovered : node.textColor
+                    color: node.chosen ? "white" : on ? EaStyle.Colors.themeAccent : pinArea.containsMouse ? EaStyle.Colors.themeForegroundHovered : node.textColor
                     text: "thumbtack"
-                    HoverHandler {
-                        id: pinHover
+                    // A mouse area inside the card's own: the pointer stays on the card while it presses the pin, so
+                    // the pin stays shown and the click pins (a pointer handler took the press from the card, which
+                    // then read as left and hid the pin before the click landed).
+                    MouseArea {
+                        id: pinArea
+                        anchors.fill: parent
+                        hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
-                    }
-                    TapHandler {
-                        // Takes the press, so a click on the pin never also selects the card.
-                        gesturePolicy: TapHandler.ReleaseWithinBounds
-                        onTapped: graph.pinned = pin.on ? -1 : node.index
+                        onClicked: graph.pinned = pin.on ? -1 : node.index
                     }
                     EaElements.ToolTip {
                         text: pin.on ? qsTr("Unpin: let this group's lineage follow the pointer") : qsTr("Pin: keep this group's lineage shown")
-                        requested: pinHover.hovered
+                        requested: pinArea.containsMouse
                     }
                 }
                 // The app's own tooltip (EaElements.ToolTip): its style, below the card or above it, never over it;
