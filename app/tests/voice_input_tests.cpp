@@ -467,16 +467,24 @@ private slots:
         QCOMPARE(voice.input->message(), kNoModelMessage);
     }
 
-    // Speech that falls 20 dB after two seconds keeps the recording going until the silence after it: the detector's
-    // longest gap in it measured 1.25 s, under the two-second stop.
+    // Speech that falls sharply after two seconds keeps the recording going until the silence after it. Without the
+    // detector's levelling gain a fall of 25 dB left a 3.4 s gap and the silence stop came during the quiet part;
+    // with it the longest gap measured 1.2 s for falls of 25 to 40 dB.
+    void quietContinuationKeepsListening_data() {
+        QTest::addColumn<double>("loud");
+        QTest::addColumn<double>("quiet");
+        QTest::newRow("falls 25 dB") << -20.0 << -45.0;
+        QTest::newRow("falls 30 dB") << -20.0 << -50.0;
+        QTest::newRow("falls 40 dB") << -15.0 << -55.0;
+    }
     void quietContinuationKeepsListening() {
+        QFETCH(double, loud);
+        QFETCH(double, quiet);
         auto voice = voiceOn(kAbsentModel);
         voice.input->toggle();
         QTRY_COMPARE(voice.input->state(), VoiceInput::State::Listening);
-        const auto loud = at(speech_, -20.0);
-        const auto quiet = at(speech_, -40.0);
-        voice.capture->play(loud.first(2 * kRate));
-        voice.capture->play(quiet.sliced(2 * kRate));
+        voice.capture->play(at(speech_, loud).first(2 * kRate));
+        voice.capture->play(at(speech_, quiet).sliced(2 * kRate));
         QCOMPARE(voice.input->state(), VoiceInput::State::Listening);
         voice.capture->play(zeros(2.5));
         QCOMPARE(voice.input->state(), VoiceInput::State::Recognising);

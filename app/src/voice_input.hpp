@@ -150,6 +150,7 @@ private:
     std::ptrdiff_t framesRead_ = 0;  // detector frames so far
     int speechFrames_ = 0;           // frames the detector took for speech
     std::ptrdiff_t lastVoice_ = -1;  // the last frame of speech or its quieter continuation
+    double reference_db_ = -200.0;   // the loudness the detector's gain levels to -20 dBFS
     double level_ = 0.0;
     double loudest_ = 0.0;      // the loudest block since `level` last changed
     QElapsedTimer levelShown_;  // `level` changes at most every level_ms, as the meter needs no more

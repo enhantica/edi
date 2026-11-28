@@ -105,24 +105,27 @@ assistant runtime, and shows its choices as rows on the folder page instead of a
    leaves its state uncleared and gave different results for the same audio without that. With Silero's own defaults
    a frame is speech at a probability of 0.5, a recording holds speech after 250 ms of such frames, and speech goes on
    while frames stay above 0.35, so the two-second silence stop counts from the last of those and a press decides on
-   the same frames. Measured on 2026-11-28 with whisper.cpp `v1.9.6` streaming 100 ms pieces as the microphone does,
-   on the fixture recording `tests/fixtures/assistant_voice/inaugural.wav` and the recorded classroom
-   `classroom-noise.wav` (ventilation and a ceiling light):
+   the same frames. The detector misses speech for a few seconds after the voice falls 25 dB or more at once, so it
+   hears the recording through a gain: the loudest recent frame, followed at once when louder and falling 20 dB a
+   second, is brought to -20 dBFS, by raising only and by 40 dB at most. Whisper gets the recording as captured.
+   Measured on 2026-11-28 with whisper.cpp `v1.9.6` streaming 100 ms pieces as the microphone does, on the fixture
+   recording `tests/fixtures/assistant_voice/inaugural.wav` and the recorded classroom `classroom-noise.wav`
+   (ventilation and a ceiling light):
 
    | Recording | Frames at 0.5 or more | Longest gap in the speech |
    |---|---|---|
-   | Speech at -20, -45 and -55 dBFS | 233, 217, 168 | 1.06 to 1.44 s |
-   | Speech at -60 dBFS | 85 | 1.15 s |
-   | 1.5 s of speech from the first sample behind a gate, 4:1 | 22 to 23 | 0.22 s |
-   | All of it from the first sample behind a gate, 4:1 | 210 | 1.12 s |
-   | Speech in the recorded room 10 dB and 5 dB below it | 199, 230 | 1.15, 1.12 s |
-   | Speech that falls 20 dB after 2 s | 140 after the fall | 1.25 s |
-   | The room at -22, -40 and -55 dBFS; after or between digital silence | none (highest 0.38) | |
-   | Digital silence, white noise, a click, keys typed behind a gate | none (highest 0.064) | |
+   | Speech at -20, -45, -55 and -60 dBFS | 234, 244, 240, 237 | 0.70 to 1.02 s |
+   | 1.5 s of speech from the first sample behind a gate, 4:1 | 26 to 27 | 0.06 s |
+   | All of it from the first sample behind a gate, 4:1 | 178 | 1.12 s |
+   | Speech in the recorded room 10 dB and 5 dB below it | 236, 219 | 0.58 s |
+   | Speech that falls 20, 25, 30 and 40 dB after 2 s | 237, 237, 236, 222 | 1.15 to 1.18 s |
+   | The room at -22, -40 and -55 dBFS; after or between digital silence | none (highest 0.16) | |
+   | Digital silence, white noise, a click, keys typed behind a gate | none (highest 0.07) | |
 
-   Two cases fall outside what it does: speech that falls 25 dB at once left a 3.4 s gap, so the silence stop would come
-   during the quiet part, and speech pushed through a gate 10 dB below its loudest and compressed 8:1 lost its second
-   half. The level meter still shows the loudness of each frame. The button is always shown (the owner,
+   Without the gain the falls of 25 and 30 dB left gaps of 3.4 and 3.7 s, so the silence stop came during the quiet
+   part. One case is still outside what it does: speech pushed through a gate 10 dB below its loudest and compressed
+   8:1 was heard only up to 9.0 s of its 11.3 s, so the silence stop would cut its last words. The level meter still
+   shows the loudness of each frame. The button is always shown (the owner,
    2026-11-27). Without the component, or on a processor without AVX2, a press opens the same note as the assistant's
    button without the assistant (ADR-0071): what is missing and, in an installation Maintenance Tool manages, a link to
    Updates in Preferences to add voice input.

@@ -43,10 +43,18 @@ constexpr int rate = SpeechRecogniser::sample_rate;
 constexpr auto frame = static_cast<std::size_t>(SpeechDetector::frame_samples);  // 32 ms
 // The speech detector decides what is speech (ADR-0107 §8), with Silero's own defaults: a frame is speech at a
 // probability of 0.5, a recording has speech after 250 ms of such frames, and speech goes on while frames stay above
-// 0.35. Measured on the fixture recording and a recorded room: speech gave 736 ms or more, rooms never one frame.
+// 0.35. Measured on the fixture recording and a recorded room (ADR-0107 §8): speech gave 26 frames or more, rooms and
+// noise none.
 constexpr float speech_probability = 0.5F;
 constexpr float voice_probability = 0.35F;
 constexpr int speech_frames = 8;
+// The detector misses speech for a few seconds after the voice falls 25 dB or more at once, so it hears the recording
+// through a gain that brings the loudest recent frame to -20 dBFS: the reference follows a louder frame at once and
+// falls 20 dB a second, and the gain only raises, by 40 dB at most. Measured: falls of 25 to 40 dB left gaps of at
+// most 1.2 s instead of 3.4 s, and rooms and noise still gave no speech frame. Whisper gets the recording as captured.
+constexpr double detector_level_db = -20.0;
+constexpr double detector_gain_db = 40.0;
+constexpr double detector_fall_db = 20.0 * SpeechDetector::frame_samples / rate;
 // The level meter shows -60 to -10 dBFS: a quiet room near the bottom, close speech near the top. It rises at once and
 // falls back over a few updates, so it does not flicker between words.
 constexpr double meter_floor_db = -60.0;
@@ -166,7 +174,8 @@ void VoiceInput::toggle(QObject* owner) {
             return;
         if (!detector_) {
             std::string error;
-            detector_ = SpeechDetector::load(QFile::encodeName(detectorFile_).toStdString(), error);
+            // A native path, as for the model: Windows' 8-bit file names lose characters outside the code page.
+            detector_ = SpeechDetector::load(QFileInfo(detectorFile_).filesystemAbsoluteFilePath(), error);
             if (!detector_) {
                 qCInfo(lcVoice) << "The speech detector failed to load";
                 setMessage(QString::fromStdString(error));
@@ -319,14 +328,21 @@ void VoiceInput::analyse(std::span<const float> chunk) {
     const std::size_t whole = (recording_.size() - analysed_) / frame * frame;
     if (whole == 0 || !detector_)
         return;
-    const std::span<const float> frames(recording_.data() + analysed_, whole);
+    std::vector<float> levelled(recording_.begin() + static_cast<std::ptrdiff_t>(analysed_),
+                                recording_.begin() + static_cast<std::ptrdiff_t>(analysed_ + whole));
     for (std::size_t at = 0; at < whole; at += frame) {
         double energy = 0.0;
         for (std::size_t i = at; i < at + frame; ++i)
-            energy += static_cast<double>(frames[i]) * static_cast<double>(frames[i]);
-        loudest_ = std::max(loudest_, std::sqrt(energy / static_cast<double>(frame)));
+            energy += static_cast<double>(levelled[i]) * static_cast<double>(levelled[i]);
+        const double rms = std::sqrt(energy / static_cast<double>(frame));
+        loudest_ = std::max(loudest_, rms);
+        reference_db_ = std::max(20.0 * std::log10(std::max(rms, 1e-10)), reference_db_ - detector_fall_db);
+        const double gain_db = std::clamp(detector_level_db - reference_db_, 0.0, detector_gain_db);
+        const auto gain = static_cast<float>(std::pow(10.0, gain_db / 20.0));
+        for (std::size_t i = at; i < at + frame; ++i)
+            levelled[i] = std::clamp(levelled[i] * gain, -1.0F, 1.0F);
     }
-    const auto probabilities = detector_->probabilities(frames);
+    const auto probabilities = detector_->probabilities(levelled);
     analysed_ += whole;
     for (const float probability : probabilities) {
         if (probability >= speech_probability)
@@ -422,6 +438,7 @@ void VoiceInput::dropRecording() {
     framesRead_ = 0;
     speechFrames_ = 0;
     lastVoice_ = -1;
+    reference_db_ = -200.0;
     if (detector_)
         detector_->reset();
     loudest_ = 0.0;
