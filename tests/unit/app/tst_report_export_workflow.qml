@@ -63,9 +63,12 @@ Rectangle {
             verify(page !== null && waitForPolish(page), "The real Report page lays out its export controls");
         }
         function group() {
-            Ui.selectSidebarTab(test, page, "tools");
-            const value = webGroup || findChild(page, "group.reportExport");
-            verify(value !== null, "The Report page exposes its actual Export group");
+            let value = webGroup;
+            if (!value) {
+                const pane = Ui.selectSidebarTab(test, page, "tools");
+                value = findChild(pane, "group.reportExport");
+            }
+            verify(value !== null, "The selected Report Tools pane exposes Export");
             if (value.collapsed)
                 mouseClick(value.titleArea, value.titleArea.width / 2, value.titleArea.height / 2);
             tryCompare(value, "collapsed", false, 1000, "The Export group is open before pointer input");
