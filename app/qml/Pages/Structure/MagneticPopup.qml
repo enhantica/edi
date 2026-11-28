@@ -201,6 +201,17 @@ AppDialog {
         anchors.fill: parent
         spacing: AppSizes.groupContentSpacing
 
+        // Esc with a lineage pinned unpins it and leaves the dialog open (owner record 0958fb450 item 4).
+        focus: true
+        Keys.onEscapePressed: event => {
+            if (graphView.pinned >= 0) {
+                graphView.pinned = -1;
+                event.accepted = true;
+            } else {
+                event.accepted = false;
+            }
+        }
+
         // One toolbar row, built from the chart toolbar's own boxes and buttons and spaced as Experiment → Pattern's
         // (owner, 2026-11-28, header design B), in groups a toolbar group's gap apart: what is analysed (k with its
         // magnetic cell, the sites), which groups are shown (levels, net moment), what Add creates (the starting
@@ -495,12 +506,9 @@ AppDialog {
 
     }
 
-    // Esc unpins a pinned card before it would close the dialog.
-    Shortcut {
-        sequences: [StandardKey.Cancel]
-        enabled: graphView.pinned >= 0
-        onActivated: graphView.pinned = -1
-    }
+    // Esc unpins a pinned card before it would close the dialog. The content's key handler below takes it, as an Esc
+    // no focused control uses comes up to it; while a lineage is pinned the dialog itself does not take Esc (review 28).
+    closePolicy: graphView.pinned >= 0 ? Popup.CloseOnPressOutside : Popup.CloseOnEscape | Popup.CloseOnPressOutside
 
     // The fixed footer, as the app's other dialogs place their actions: the selection's own actions at the left, then
     // Cancel and the primary Add at the right.
