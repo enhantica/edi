@@ -2182,6 +2182,16 @@ struct PropagationVectorRef {
     }
 };
 
+// One extracted intensity as Python reads it (edi ADR-0109): a copy, never written back.
+struct ExtractedIntensityRow {
+    std::string structure_id;
+    int index_h = 0;
+    int index_k = 0;
+    int index_l = 0;
+    double f_squared = 0.0;
+    std::optional<double> f_squared_su;
+};
+
 }  // namespace
 
 NB_MODULE(_edi, m) {
@@ -2807,6 +2817,13 @@ NB_MODULE(_edi, m) {
             [](edi::Structure& self, std::map<std::string, double> value) {
                 self.scattering_lengths_fm = std::move(value);
             })
+        // How the structure's intensities are calculated (edi ADR-0109). A switch follows crysta's rule: one crysta
+        // does not offer raises ValueError with its reason, and back on Rietveld the structure's links take
+        // crysta's scale start.
+        .def_prop_rw(
+            "calc_method", [](const edi::Structure& self) { return edi::calc_method_token(self); },
+            [](edi::Structure& self, const std::string& value) { edi::select_calc_method(self, value); },
+            "How the structure's reflection intensities are calculated: 'rietveld', 'le_bail' or 'pawley'.")
         // The bond cutoffs (an input), and crysta's computed structure categories — the
         // stored unit-cell result, each property read calculating through crysta when it is
         // not current and returning an object that holds what it read. edi computes none of
@@ -3550,6 +3567,15 @@ NB_MODULE(_edi, m) {
         .def_ro("modulus", &edi::SphericalMoment::modulus, "The moment's size, in uB.")
         .def_ro("polar", &edi::SphericalMoment::polar, "Its angle from +z (along c*), in degrees.")
         .def_ro("azimuth", &edi::SphericalMoment::azimuthal, "Its angle about z from +x (along a), in degrees.");
+    nb::class_<ExtractedIntensityRow>(m, "ExtractedIntensity",
+                                      "One extracted intensity of a Le Bail or Pawley structure, read-only.")
+        .def_ro("structure_id", &ExtractedIntensityRow::structure_id, "The structure it belongs to.")
+        .def_ro("index_h", &ExtractedIntensityRow::index_h, "The h index of its reflection's Laue orbit.")
+        .def_ro("index_k", &ExtractedIntensityRow::index_k, "The k index of its reflection's Laue orbit.")
+        .def_ro("index_l", &ExtractedIntensityRow::index_l, "The l index of its reflection's Laue orbit.")
+        .def_ro("f_squared", &ExtractedIntensityRow::f_squared, "Its |F|², in the units of F² calc.")
+        .def_ro("f_squared_su", &ExtractedIntensityRow::f_squared_su,
+                "Its standard uncertainty (a fitted Pawley value), or None.");
     nb::class_<edi::WeightFraction>(m, "WeightFraction", "A derived weight fraction, read-only.")
         .def_ro("value", &edi::WeightFraction::value, "The weight fraction, 0 to 1.")
         .def_ro("uncertainty", &edi::WeightFraction::uncertainty,
@@ -3690,7 +3716,20 @@ NB_MODULE(_edi, m) {
                                                         &edi::LinkedStructure::structure_id};
             },
             nb::keep_alive<0, 1>(), "The linked structures (phases), keyed by structure_id.")
-        .def_rw("dataset_weight", &edi::ExperimentBase::dataset_weight);
+        .def_rw("dataset_weight", &edi::ExperimentBase::dataset_weight)
+        // The intensities a Le Bail or Pawley fit holds, a copy of each row (edi ADR-0109).
+        .def_prop_ro(
+            "extracted_intensities",
+            [](const edi::ExperimentBase& self) {
+                std::vector<ExtractedIntensityRow> rows;
+                rows.reserve(self.extracted_intensities.size());
+                for (const auto& row : self.extracted_intensities) {
+                    rows.push_back({row->structure_id.value(), row->index_h.get(), row->index_k.get(),
+                                    row->index_l.get(), row->f_squared.value.get(), row->f_squared.uncertainty.get()});
+                }
+                return rows;
+            },
+            "The intensities a Le Bail or Pawley fit holds, one row per structure and Laue orbit, read-only.");
     // The scattering tables (`_scattering_source`), as the app's Experiment page chooses them: each
     // reads the table the calculation uses, None when the item is of the other probe; setting None
     // goes back to the default.
