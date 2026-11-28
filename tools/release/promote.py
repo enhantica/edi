@@ -346,9 +346,9 @@ def component_names(platform: str) -> frozenset[str]:
     return APP_COMPONENTS
 
 
-# Each component archive is attached to the release as its own asset, which GitHub keeps under
-# 2 GiB (edi ADR-0071). The earlier 95 MB cap was for GitHub's 100 MiB limit on files pushed to
-# edi-sites, which used to hold the archives; the download site's host never refused one.
+# Each stable component archive is attached to the release as its own asset, which GitHub keeps
+# under 2 GiB (edi ADR-0071). The earlier 95 MB cap was for GitHub's 100 MiB limit on files pushed
+# to edi-sites, which used to hold the archives; the download site's host never refused one.
 ARCHIVE_LIMIT = 2_000_000_000
 
 # A component archive's release asset is component-<platform>-<component>-<version><archive>,
@@ -362,13 +362,10 @@ ARCHIVE_NAME = r'[A-Za-z][A-Za-z0-9._-]*\.7z'
 WITHHOLDING_SETTINGS: dict[str, str] = {}
 
 
-def require_archive_size(path: Path) -> None:
-    size = path.stat().st_size
-    if size > ARCHIVE_LIMIT:
-        raise ValueError(
-            f'{path.name} is {size:,} bytes, over the {ARCHIVE_LIMIT:,}-byte limit'
-            ' of a release asset'
-        )
+def require_archive_size(path: Path, limit: int | None = None) -> None:
+    size, limit = path.stat().st_size, ARCHIVE_LIMIT if limit is None else limit
+    if size > limit:
+        raise ValueError(f'{path.name} is {size:,} bytes, over the {limit:,}-byte limit')
 
 
 def component_asset(platform: str, component: str, version: str, archive: str) -> str:
@@ -392,13 +389,17 @@ def withheld(component: str) -> bool:
 
 
 def validate_repository(
-    folder: Path, version: str, *, expected: frozenset[str] = APP_COMPONENTS
+    folder: Path,
+    version: str,
+    *,
+    expected: frozenset[str] = APP_COMPONENTS,
+    limit: int | None = None,
 ) -> None:
     """Require matching component identity and the framework's original archive checksums."""
     # Publication copies the whole tree, so every file in it meets the size limit, listed or not.
     for path in sorted(folder.rglob('*')):
         if path.is_file():
-            require_archive_size(path)
+            require_archive_size(path, limit)
     content = (folder / 'Updates.xml').read_bytes()
     if len(content) > 1024 * 1024 or b'<!' in content:
         raise ValueError('Component metadata must be bounded without declarations')
@@ -418,12 +419,12 @@ def validate_repository(
             raise ValueError('Component archive names are invalid')
         for name in archives:
             path = component / (version + name)
-            require_archive_size(path)
+            require_archive_size(path, limit)
             with path.open('rb') as stream:
                 actual = hashlib.file_digest(stream, 'sha1').hexdigest()
             if actual != path.with_suffix(path.suffix + '.sha1').read_text().strip():
                 raise ValueError('Component archive checksum differs')
-        require_archive_size(component / (version + 'meta.7z'))
+        require_archive_size(component / (version + 'meta.7z'), limit)
         with (component / (version + 'meta.7z')).open('rb') as stream:
             if hashlib.file_digest(stream, 'sha1').hexdigest() != package.findtext('SHA1'):
                 raise ValueError('Component metadata archive checksum differs')
