@@ -222,22 +222,19 @@ claude -p --input-format stream-json --output-format stream-json --verbose --inc
   the start). So no hooks, MCP servers or `CLAUDE.md` from elsewhere apply: a settings file can add hooks and servers
   that run outside the tool policy. The authentication methods that work in edi are therefore the binary's own login
   in the account's home and the credentials of the environment (key, token, cloud provider); a method kept only in a
-  settings file (`apiKeyHelper`, a settings `env` block) is not loaded, and the Account dialog says so when the
-  runtime reports no credential. This keeps the user's own API key, through the environment, and does not open the
-  tool policy. Whether a settings-only method must also work is a scope question for the owner (open question 2
-  below); until it is answered the boundary above holds.
+  settings file (`apiKeyHelper`, a settings `env` block) is not loaded, and the Account dialog says so for every
+  Claude account. This keeps the user's own API key, through the environment, and does not open the tool policy. The
+  owner ruled on 2026-11-28 that a settings-only method is not supported.
 - **Managed settings.** An organisation's managed Claude settings (a managed settings file, a device-management
   policy, or settings Anthropic's servers deliver to an organisation's accounts) always apply and edi does not disable
   them; their hooks are the organisation's own controls, chosen by its administrator for every Claude session on the
   computer, and run outside edi's tool boundary by that choice. They cannot be prevented while managed policy is
-  respected, and settings delivered by Anthropic's servers cannot be seen before a launch, so edi asks before any
-  launch rather than after an observation: the consent the user gives before Claude's first sign-in, which every later
-  start and resume of that account relies on, says that an organisation managing Claude can run its own commands when
-  Claude starts and before each message, outside edi's tools. That consent covers policy edi has not seen and policy
-  that changes later. On top of it, when a managed settings file or policy is visible at the documented locations,
-  or the stream's `hook_started` events before `system/init` show a hook ran, the account says so and Send waits for
-  the user's acknowledgement, once per account. Whether this consent is enough to cover managed effects is open
-  question 3; until the owner answers, it is what edi does.
+  respected. When a managed settings file or policy is visible at the documented locations, the connect dialog says so
+  in one line before Claude's first sign-in, and the user's consent there covers that organisation's commands when
+  Claude starts and before each message, outside edi's tools; when the stream's `hook_started` events show a hook ran,
+  the account says so and Send waits for the user's acknowledgement, once per account. Settings Anthropic's servers
+  deliver cannot be seen before a launch, so for them only the acknowledgement applies. The owner accepted this on
+  2026-11-28.
 - **Environment.** `CLAUDE_CONFIG_DIR=<account home>`, `DISABLE_UPDATES=1`, `MCP_TOOL_TIMEOUT` (§3),
   `MCP_PROTOCOL_NEGOTIATION=legacy`. Removed, because they change how edi's tools and turns run: `CLAUDECODE`,
   `CLAUDE_CODE_SUBPROCESS_ENV_SCRUB` and `CLAUDE_AUTO_BACKGROUND_TASKS`. Anthropic's conditions for shipping Claude Code
@@ -252,13 +249,18 @@ claude -p --input-format stream-json --output-format stream-json --verbose --inc
   has, and edi sets no `forceLoginMethod` or other setting that restricts one. edi opens the URL the binary prints only
   when it is `https`, carries no user info and is on Anthropic's sign-in hosts (`claude.ai`, `claude.com`,
   `anthropic.com` and their subdomains, checked against the pinned binary in the owner's trial), the same shape as
-  ChatGPT's check. When the binary asks for a code, edi shows a field and writes what the user types only to the
-  sign-in process's input; it never stores, logs or records it. edi offers no API-key entry of its own.
+  ChatGPT's check. The binary opens its own sign-in page, which ends at a local callback; when its output says so,
+  edi opens no second tab and shows the printed page as a link instead. When the binary asks for a code, edi shows a
+  field and writes what the user types only to the sign-in process's input; it never stores, logs or records it. The
+  sign-in has no time limit, since an e-mail link can take minutes: the binary and its callback stay until the
+  sign-in ends or the user cancels it, and the start deadline begins after it. edi offers no API-key entry of its
+  own.
 - **Identity readback, before any input.** The identity that gates Send comes from the turn process itself, so the
   probe and the turn cannot disagree: its `initialize` reply's `account` (e-mail, organisation, subscription type,
-  token source) and its `system/init` `apiKeySource`. `claude auth status`, run with the same environment, working
-  folder and config home, only decides whether to offer sign-in (`authMethod: none`) and checks `configDirectory`
-  against the account's home. The account record keeps the non-secret principal the user saw: provider `anthropic`,
+  token source). `claude auth status`, run with the same environment, working folder and config home just before the
+  process, decides whether to offer sign-in (`authMethod: none`), checks `configDirectory` against the account's home
+  and gives the key's source (`apiKeySource`) and a cloud provider (`apiProvider`, `bedrock` or `vertex`), which the
+  pinned release reports nowhere else before input. The account record keeps the non-secret principal the user saw: provider `anthropic`,
   the method and source (`claude.ai` login, `ANTHROPIC_API_KEY`, a token, a cloud provider) and the e-mail and
   organisation when the runtime gives them. Only an e-mail names the person; an organisation, a method or a key's
   source does not, since many credentials share them. A credential for which the runtime names no e-mail (a key or
@@ -268,19 +270,22 @@ claude -p --input-format stream-json --output-format stream-json --verbose --inc
   new process starts a new conversation, and a verified account's thread never runs under it. Every process start repeats the readback before its first input; a missing field the record holds, or a
   different value, stops Send with the reason shown and marks the account as needing attention, for a new thread and
   for a resumed one alike. edi never opens a file inside the home.
-- **Tool and skill readback, before any input.** The documented stream sends `system/init` as its first event, before
-  any input; edi waits for it, within the start deadline, and writes no user message until it has passed. Its `tools`
-  must equal exactly `Skill` plus `mcp__edi__<name>` for each tool of the admitted catalogue (and
-  `request_user_input`), with nothing missing and nothing extra; `mcp_servers` must be exactly `edi`, connected;
-  `plugins` exactly edi's; `skills` (and the `initialize` reply's `commands`) must list each bundled skill as
-  `edi:<id>`. No `system/init` before the deadline fails the start; there is no path that sends input first. A pinned
-  release that does not send it before input cannot be pinned.
+- **Tool and skill readback, before any input.** The pinned release (2.1.326) sends `system/init` only with the first
+  turn, after the first user message, so edi reads the tools back through two control requests first and writes no
+  user message until both pass, within the start deadline. `mcp_status` must list exactly one server, `edi`,
+  connected, whose `tools` are exactly the admitted catalogue (and `request_user_input`); `get_context_usage`, the
+  context Claude would send, must list `mcp__edi__<name>` for exactly those tools in `mcpTools` and no built-in tool
+  category (`system_tools`, which it lists whenever a built-in tool is on); the `initialize` reply's `commands` must
+  list each bundled skill as `edi:<id>`. With the first turn, `system/init` is checked again: `tools` exactly `Skill`
+  plus `mcp__edi__<name>`, `mcp_servers` exactly `edi` connected, `plugins` exactly edi's, `skills` each bundled
+  skill. A difference there stops the turn and retires the process; the readback before input is what gates Send.
+  A pinned release that cannot answer both control requests before input cannot be pinned.
 - **Skills.** The same approved skill bytes as ADR-0058's `.agents/skills` are staged as a plugin,
   `<workspace>/.edi/claude-plugin/.claude-plugin/plugin.json` naming `edi` plus `skills/<id>/SKILL.md`. Plugin skills
   load from `--plugin-dir` independently of setting sources.
-- **Turns.** `initialize` first; a turn is one `user` message whose `uuid` is edi's client message id. Its first text
-  block is a one-line edi header, so a user message starting with `/` reaches the model as text and never runs as one
-  of the binary's commands. A message sent during a turn is a steer. Stop sends the `interrupt` control request, with
+- **Turns.** `initialize` first; a turn is one `user` message whose `uuid` is edi's client message id. Its one text
+  block starts with a one-line edi header, so a user message starting with `/` reaches the model as text and never
+  runs as one of the binary's commands (the binary reads a command from the last text block). A message sent during a turn is a steer. Stop sends the `interrupt` control request, with
   `cancel_queued: true` when `system/init` lists the `interrupt_cancel_queued_v1` capability, and edi checks the receipt
   so a steer queued before Stop does not start a new turn. The turn ends at `result`; edi checks
   `is_error` and the assistant message's `error`, not only `subtype`, because a signed-out turn reports `success`
@@ -346,9 +351,9 @@ copilot --acp --stdio --no-auto-update --disable-builtin-mcps --disable-mcp-serv
   process. Each pin's owner trial asks a session to run a shell command and to read a file and records that both are
   refused; a pin where either acts is not shipped. If the CLI gains a documented readback of the effective tool set,
   edi requires it like Claude's. These are intended settings and enforcement, not an observation of the effective
-  set, so they do not meet §1's evidence rule by themselves: until the owner rules on it (open question 1 below) or
-  a pinned CLI supplies an observation, a Copilot session never receives user input. The Copilot provider is built
-  and tested, and the Account dialog shows it as not yet available.
+  set; the owner accepted them on 2026-11-28 as Copilot's tool control in place of §1's readback, so Copilot sessions
+  take input once the login and host match. A `tool_call` outside the closed list is detection, not a veto, since ACP
+  notifications cannot stop a call: edi logs it, stops the turn and retires the process.
 - **Instructions.** edi writes its instructions to `AGENTS.md` in the workspace, the CLI's custom instructions file.
   Each prompt starts with the same one-line edi header as Claude's, so a message starting with `/` is never run as one
   of the CLI's commands.
@@ -449,12 +454,18 @@ edi keeps the account list; a runtime only says who is signed in.
 The account button (`connectionButton`) keeps its place, size and states, and keeps opening the Account dialog
 (`accountDialog`, ADR-0057's account card); it stays the one account surface. The dialog gains one group per provider:
 a header with the provider's name, one row per account with the active one checked and its e-mail, plan and state, a
-Switch action on the others, Sign out (for Copilot, Remove from edi) on the active account, and "Add account" per installed provider (disabled,
-with a tooltip naming the Maintenance Tool, when the runtime is not installed). E-mail, plan and usage show for the
+Switch action on the others, Sign out (for Copilot, Remove from edi) on the active account, and "Add account" per
+installed provider (disabled when the runtime is not installed, with a tooltip naming the Maintenance Tool, or saying
+the provider is not included when this release leaves it out). Sign out (Remove from edi) stays available in the
+panel while the account is disconnected, so an account whose sign-in turned out to be someone else can be reset.
+While signing in, the panel shows the provider's page as a link, Copilot's device code with Copy and its plain-file
+question with Yes and No (No by default), and for Claude a field for a code the page may show. E-mail, plan and usage show for the
 active account where the provider has them. Every element copies the closest existing one in the panel and its
-dialogs. The consent dialog before the first sign-in (`AssistantConnectionDialog.qml`) names the provider and the
-company that receives the data (OpenAI, Anthropic, GitHub); Copilot's adds a host field, `github.com` by default.
-The consent dialog also lets the user choose the provider and account before connecting.
+dialogs. The connect dialog before the first sign-in (`AssistantConnectionDialog.qml`, "Connect assistant") has the
+provider choice and one sentence naming where the chosen provider signs in and which company receives the data
+(OpenAI, Anthropic, GitHub), plus one line when managed Claude settings are found; Copilot's adds a host field,
+`github.com` by default. Until an account is chosen the panel names no provider ("Connect", "No assistant
+connected"; owner decision of 2026-11-28).
 Account states: not installed, signed out, signing in, signed in, needs attention, no seat.
 
 ### 10. Packaging
@@ -538,22 +549,19 @@ providers.
 The web app (ADR-0023 §6); an API-key entry of edi's own; GitHub Enterprise Server, which the Copilot CLI reaches only
 with a token in the environment; voice input; new tools; Copilot's bring-your-own-key providers.
 
-## Open questions for the owner
+## Owner decisions
 
-The vendors' current runtimes cannot supply three observations this design asks for; each question names the route it
-holds closed until it is answered, and the course this ADR recommends.
+The vendors' runtimes could not supply three observations this design asked for. The owner answered all three on
+2026-11-28, each with the course this ADR recommended:
 
 1. **GitHub Copilot's tools.** Neither ACP nor the pinned CLI documents a readback of a session's effective tool
-   set. Until a substitute is accepted, or the Copilot route is dropped, Copilot sessions receive no
-   input; the code holds this in one constant (`assistant_copilot_input_open`). Recommended: accept for Copilot the
-   documented server-start filter (`--available-tools`, "the session can use only the listed tools"), with permission
-   denial, as its tool control. Accounts are not part of the question: Send and resume always need the positive
-   login-and-host match above, and a pin without `/user` over ACP offers no Copilot input at all. A `tool_call`
-   outside the closed list is detection, not a veto, since ACP notifications cannot stop a call.
-2. **Claude credentials kept only in settings** (`apiKeyHelper`). Recommended: unsupported in edi; the user's own key
-   works through the environment.
-3. **Claude managed hooks.** An organisation's managed hooks cannot be prevented while managed policy is respected.
-   Recommended: the consent before the first sign-in plus the per-account acknowledgement in §4.
+   set. Accepted: the documented server-start filter (`--available-tools`, "the session can use only the listed
+   tools"), with permission denial, is Copilot's tool control. Send and resume still need the positive
+   login-and-host match (§5), and a pin without `/user` over ACP offers no Copilot input at all.
+2. **Claude credentials kept only in settings** (`apiKeyHelper`, a settings `env` block): unsupported in edi; the
+   user's own key works through the environment.
+3. **Claude managed hooks**, which cannot be prevented while managed policy is respected: the consent before the
+   first sign-in plus the per-account acknowledgement in §4.
 
 Copilot's Sign out is not an owner question but a pin qualification (§5): until the owner's trial shows a selected
 account stays signed out after a fresh start while another stays available, only "Remove from edi" is offered.

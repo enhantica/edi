@@ -12,9 +12,9 @@
         return [
             shot("assistant-panel", "project", "Open the assistant from the toolbar",
                 ["platform:light", "theme:light", "home.start", "assistant.toggle"], ["assistant.connection"]),
-            shot("assistant-connect", "project", "Connect ChatGPT", ["assistant.connection"], []),
+            shot("assistant-connect", "project", "Connect the assistant", ["assistant.connection"], []),
             shot("assistant-ready", "project", "The assistant is connected; Show actions is off",
-                ["choose:Connect ChatGPT", "wait-assistant"], ["assistant.showActions"]),
+                ["choose:Connect", "wait-assistant"], ["assistant.showActions"]),
             shot("assistant-ask", "project", "Attach the two files and ask for the fit",
                 ["assistant-attach:" + INPUTS + "tutorial-lbco.cif|" + INPUTS + "tutorial-hrpt.xye",
                  "fill:assistant.composer=Fit the crystal structure to this measured pattern."],
