@@ -55,7 +55,15 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'website'))
 sys.path.insert(0, str(ROOT / 'tools/release'))
 from legacy_feed import write_feeds  # noqa: E402
-from promote import ARCHIVE_NAME, COMPONENT_ID, component_asset, withheld  # noqa: E402
+from promote import (  # noqa: E402
+    ARCHIVE_NAME,
+    COMPONENT_ID,
+    RECORD,
+    archive_assets,
+    component_asset,
+    read_record,
+    withheld,
+)
 from render_package_index import RELEASES, write_package_index  # noqa: E402
 from versions import PATTERN, version_key  # noqa: E402
 
@@ -146,7 +154,7 @@ def build(publication: Path, output: Path, published: list[list[dict]] | None = 
         for platform in sorted((incoming / 'repository/stable').iterdir()):
             where = paths['repository_paths']['stable'].format(platform=platform.name).rstrip('/')
             index = Path(scratch) / platform.name
-            attach_components(tree / where, where, platform.name, attached, index)
+            attach_components(tree / where, where, platform.name, version, attached, index)
             name = f'repoindex-stable-{platform.name}.tar.gz'
             reproducible_archive(index, where, attached / name)
     (attached / 'SHA256SUMS').write_text(manifest(attached), encoding='utf-8')
@@ -164,23 +172,25 @@ def downloadable_archives(repository: Path) -> list[tuple[str, str, str]]:
 
 
 def attach_components(
-    repository: Path, where: str, platform: str, attached: Path, index: Path
+    repository: Path, where: str, platform: str, version: str, attached: Path, index: Path
 ) -> None:
-    """Attach each archive of a stable repository as a release asset; copy the rest to `index`.
+    """Attach each archive of this `version` as a release asset; copy the rest to `index`.
 
     The index is what the download site serves itself at `where`: Updates.xml, every .sha1 and
-    meta.7z, and the redirect rules that send the archives to their assets.
+    meta.7z, and the redirect rules that send the archives to their assets. An archive of an
+    earlier version is already an asset of that release (edi ADR-0111).
     """
     archives = {}
-    for component, version, name in downloadable_archives(repository):
+    for component, own, name in downloadable_archives(repository):
         if withheld(component):
             raise ValueError(f'{component} is withheld from public downloads')
-        archives[f'{component}/{version}{name}'] = component_asset(
-            platform, component, version, name
-        )
+        asset = component_asset(platform, component, own, name)
+        archives[f'{component}/{own}{name}'] = asset if own == version else None
     index.mkdir(parents=True)
     for path in sorted(p for p in repository.rglob('*') if p.is_file()):
         relative = path.relative_to(repository).as_posix()
+        if relative in archives and archives[relative] is None:
+            continue
         target = attached / archives[relative] if relative in archives else index / relative
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(path, target)
@@ -285,7 +295,7 @@ def component_problems(pages: Path, attached: Path, version: str) -> list[str]:
             problems += [
                 f'{archive.name}: {problem}'
                 for problem in repository_index_problems(
-                    index, pages / where, where, attached, version, named
+                    index, pages / where, where, platform, attached, version, named
                 )
             ]
     if named != {p.name for p in attached.glob('component-*')}:
@@ -294,15 +304,23 @@ def component_problems(pages: Path, attached: Path, version: str) -> list[str]:
 
 
 def repository_index_problems(
-    index: Path, repository: Path, where: str, attached: Path, version: str, named: set[str]
+    index: Path,
+    repository: Path,
+    where: str,
+    platform: str,
+    attached: Path,
+    version: str,
+    named: set[str],
 ) -> list[str]:
     """What the download site would serve wrongly from one platform's index at `where`.
 
     The site serves every file it holds, and no rule may match a .sha1. Each archive, which it
-    does not hold, must be redirected to its own release asset. The asset names go into `named`.
+    does not hold, must be redirected to its asset on the release its version names: this one's,
+    attached here, or an earlier one's, not attached again. This release's asset names go into
+    `named`.
     """
     rules = (index / RULE_FILE).read_text(encoding='utf-8')
-    archives = {f'{c}/{v}{n}' for c, v, n in downloadable_archives(repository)}
+    archives = {f'{c}/{v}{n}': (c, v, n) for c, v, n in downloadable_archives(repository)}
     served = {p.relative_to(index).as_posix() for p in index.rglob('*') if p.is_file()}
     problems, expected = [], {RULE_FILE}
     for path in sorted(p for p in repository.rglob('*') if p.is_file()):
@@ -315,17 +333,57 @@ def repository_index_problems(
             elif target and relative.endswith('.sha1'):
                 problems.append(f'{relative}: a rule matches it')
             continue
-        asset = (target or '').removeprefix(f'{RELEASES}/v{version}/')
-        named.add(asset)
-        if (
-            '/' in asset
-            or not (attached / asset).is_file()
-            or sha256(attached / asset) != sha256(path)
-        ):
+        component, own, name = archives[relative]
+        asset = component_asset(platform, component, own, name)
+        if own == version:
+            named.add(asset)
+        if target != f'{RELEASES}/v{own}/{asset}':
             problems.append(f'{relative} is not sent to its release asset')
+        elif own == version and (
+            not (attached / asset).is_file() or sha256(attached / asset) != sha256(path)
+        ):
+            problems.append(f'{relative} is not attached as it is')
+        elif own != version and (
+            version_key(own) >= version_key(version) or (attached / asset).exists()
+        ):
+            problems.append(f'{relative} is attached again or names a later release')
     return problems + [
         f'{extra} does not belong in the index' for extra in sorted(served - expected)
     ]
+
+
+def record_problems(pages: Path, attached: Path, version: str) -> list[str]:
+    """The component record, checked against every stable repository it describes."""
+    if not (attached / RECORD).is_file():
+        return [f'release: no {RECORD}']
+    try:
+        record = read_record(attached / RECORD, version)
+    except (ValueError, json.JSONDecodeError) as error:
+        return [f'release: {error}']
+    paths = json.loads((ROOT / 'data/distribution.json').read_text(encoding='utf-8'))
+    repositories = sorted((pages / 'repository').glob('*/Updates.xml'))
+    problems = []
+    if sorted(record['platforms']) != sorted(p.parent.name for p in repositories):
+        problems.append(f'release: {RECORD} does not list every stable platform')
+    for platform, entries in sorted(record['platforms'].items()):
+        where = paths['repository_paths']['stable'].format(platform=platform)
+        updates = pages / where / 'Updates.xml'
+        if not updates.is_file():
+            continue
+        listed = {
+            package.findtext('Name'): package
+            for package in ET.fromstring(updates.read_bytes()).findall('PackageUpdate')  # noqa: S314
+        }
+        if set(listed) != set(entries):
+            problems.append(f'release: {RECORD} lists other {platform} components')
+            continue
+        problems += [
+            f'release: {RECORD} disagrees with the {platform} repository on {name}'
+            for name, entry in sorted(entries.items())
+            if entry['version'] != listed[name].findtext('Version')
+            or entry['archives'] != archive_assets(platform, listed[name])
+        ]
+    return problems
 
 
 def link_problems(copy: Path) -> list[str]:
@@ -369,6 +427,7 @@ def check(output: Path, version: str, published: list[list[dict]] = ()) -> list[
     ]
     problems += attachment_problems(pages, attached, version)
     problems += component_problems(pages, attached, version)
+    problems += record_problems(pages, attached, version)
     return problems + link_problems(pages) + link_problems(offsite)
 
 
@@ -474,6 +533,25 @@ def fixture(folder: Path, version: str = '2026.11.0') -> None:
             '<DownloadableArchives>bin.7z,EasyDiffraction.app.7z</DownloadableArchives>'
             '</PackageUpdate></Updates>\n'
         )
+    archives = ['bin.7z', 'EasyDiffraction.app.7z']
+    record = {
+        'schema': 'edi.components/1',
+        'version': version,
+        'platforms': {
+            platform: {
+                'org.easydiffraction.app': {
+                    'version': version,
+                    'identity': hashlib.sha256(platform.encode()).hexdigest(),
+                    'archives': [
+                        component_asset(platform, 'org.easydiffraction.app', version, name)
+                        for name in archives
+                    ],
+                }
+            }
+            for platform in ('linux-x86_64', 'macos-arm64', 'windows-x86_64')
+        },
+    }
+    (assets / RECORD).write_text(json.dumps(record, indent=2) + '\n')
     release = {'version': version}
     (folder / 'release.json').write_text(json.dumps(release) + '\n')
     (assets / 'release.json').write_text(json.dumps(release) + '\n')
