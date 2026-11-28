@@ -84,7 +84,7 @@ void CorrelationViewModel::show(const std::string& file,
     std::map<std::string, std::size_t> index;
     for (const auto& row : rows) {
         for (const std::string* name : {&row->parameter_unique_name_i.value(), &row->parameter_unique_name_j.value()}) {
-            if (shown(*name) && !index.contains(*name)) {
+            if (shown(*name) && !excluded_.contains(*name) && !index.contains(*name)) {
                 index.emplace(*name, names_.size());
                 names_.push_back(*name);
             }
@@ -131,6 +131,7 @@ void CorrelationViewModel::setTable(const edi::CorrelationTable& table) {
                 matrix_[j * n + i] = (*table.values)[at];
             }
         }
+        edi::drop_correlation_names(names_, matrix_, excluded_);
     }
     settle(tr("No correlations for this experiment"));
 }

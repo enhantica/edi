@@ -4,6 +4,7 @@
 #include "load_attempt.hpp"
 
 #include "edi/project_archive.hpp"
+#include "edi/correlation_matrix.hpp"
 #include "option_list_model.hpp"
 
 #include "run_log.hpp"
@@ -8311,6 +8312,9 @@ void ProjectViewModel::syncCorrelations() {
     }
     // The level is the project's `_correlation_chart.threshold`, so it is saved, undone and reported as one.
     correlations_->setThreshold(project_->correlation_threshold);
+    // The chart leaves out hidden parameters and the shown bank's disabled phases, live, saved and scan pairs alike.
+    correlations_->setExcluded(edi::correlation_hidden_names(
+        *project_, current_experiment_ >= 0 ? std::optional<std::size_t>(current_experiment_) : std::nullopt));
     if (retired_) return;
     if (scan_) {
         const std::vector<std::string>& files = scan_session_->datasets().files;
