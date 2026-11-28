@@ -10,11 +10,11 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-28T02:52:32Z
+# measured_utc = 2026-11-28T11:52:27Z
 #
-# Recorded from: measured test run (20 node(s) measured once, 187657 banked, 0 stale row(s) dropped)
-# Collected tests: 267611; with a reported duration: 86302
-# Module-scoped fixture costs recorded: 222
+# Recorded from: merged pytest collection and matching banked parent records
+# Collected tests: 267636; with a reported duration: 86319
+# Module-scoped fixture costs recorded: 223
 #
 # Breaches are decided PER TIER against the table
 # below, which the loader validates against the code constants - a manifest must state
@@ -29,12 +29,12 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 267611
+# inventory_python = 267636
 # inventory_cpp = 0
-# inventory_measured = 187677
-# inventory_unmeasured = 79934
+# inventory_measured = 187698
+# inventory_unmeasured = 79938
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
-# inventory_pr_python = 92700
+# inventory_pr_python = 92725
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
