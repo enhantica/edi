@@ -15,15 +15,30 @@ import json
 import os
 import pathlib
 import re
+import sys
 
 import pytest
 
 PART = re.compile(r'^([1-9][0-9]*)/([1-9][0-9]*)$')
+HERE = pathlib.Path(__file__).resolve().parent
+
+
+def _elsewhere(entry: str) -> bool:
+    return bool(entry) and pathlib.Path(entry).resolve() != HERE
+
+
+# pytest has read its options when it loads this plugin. crysta's tests start pytest themselves,
+# and such a run must not inherit this one's options, part or record, nor find edi's scripts first.
+ASKED = {name: os.environ.pop(name, '') for name in ('CRYSTA_PYTEST_PART', 'CRYSTA_PYTEST_RECORD')}
+os.environ.pop('PYTEST_ADDOPTS', None)
+if kept := os.pathsep.join(filter(_elsewhere, os.environ.pop('PYTHONPATH', '').split(os.pathsep))):
+    os.environ['PYTHONPATH'] = kept
+sys.path[:] = [entry for entry in sys.path if not entry or _elsewhere(entry)]
 
 
 def part() -> tuple[int, int] | None:
     """The part asked for, or None for the whole collection."""
-    text = os.environ.get('CRYSTA_PYTEST_PART', '')
+    text = ASKED['CRYSTA_PYTEST_PART']
     if not text:
         return None
     match = PART.match(text)
@@ -49,7 +64,7 @@ def pytest_collection_modifyitems(config, items) -> None:
 
 def pytest_runtest_logreport(report) -> None:
     """One line per phase; a passed setup or teardown is left out."""
-    path = os.environ.get('CRYSTA_PYTEST_RECORD')
+    path = ASKED['CRYSTA_PYTEST_RECORD']
     if not path or (report.when != 'call' and report.passed):
         return
     file, line, _ = report.location
