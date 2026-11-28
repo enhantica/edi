@@ -2,8 +2,10 @@
 <!-- SPDX-License-Identifier: BSD-3-Clause -->
 <!-- The folder field and the choices on the installer's one page (assistantscript.qs, Installer.qs): the folder
      with the space the installation needs under it, then one group of EasyDiffraction, the Maintenance Tool (both
-     ticked and fixed) and the assistants, ChatGPT, Claude and GitHub Copilot, with their sizes, then the licence and
-     a desktop shortcut on Windows and Linux. A provider whose component the installer does not carry has no row.
+     ticked and fixed) and the assistants, ChatGPT, Claude and GitHub Copilot, then the licence and a desktop shortcut
+     on Windows and Linux. Every component row is the same: <Row>RowGap, then <Row>Box holding <Row>CheckBox, a
+     spacer and <Row>SizeLabel; Installer.qs (componentRows) gives each its component's name, description (the
+     tooltip) and size. The tool's tooltip here is for Linux, where it has no component. A provider whose component the installer does not carry has no row.
      Also the maintenance tool's choice page when adding, removing or updating: the logo and heading, the space line
      and the same rows; it has no window title, so that page has no header. The Maintenance Tool's row
      and the sizes are there from the start, so the rows are spaced once, with every row in place. -->
@@ -277,7 +279,7 @@
          <string>Maintenance Tool</string>
         </property>
         <property name="toolTip">
-         <string>Updates and uninstalls EasyDiffraction</string>
+         <string>Updates and removes EasyDiffraction.</string>
         </property>
        </widget>
       </item>

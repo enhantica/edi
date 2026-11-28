@@ -308,6 +308,14 @@ links the real marker in a release build and reads it from the resulting binary.
 
 **Amended 2026-11-27 (ADR-0108):** the one checkbox becomes three optional components, ChatGPT, Claude and GitHub Copilot, each added or removed on its own; Claude's and Copilot's runtimes sit beside Codex's under `libexec/edi/`.
 
+**Amended 2026-11-28:** every component row on the install page and the Change components page is built the same way,
+so a new optional component (the voice model next) is one more row of the same kind. A row is a box named after its
+component, with the component's own name and description (from `package.py`, shown as the box's tooltip) and its size
+on the right. EasyDiffraction and the Maintenance Tool are ticked and fixed; the others are choices. `Installer.qs`
+lists the rows in their order (`componentRows`), and spacing, sizes and descriptions follow that list;
+`assistantscript.qs` lists the choices with whether each starts ticked. A new component adds its row to
+`AssistantForm.ui` and its entry to both lists.
+
 The required EasyDiffraction component contains the application, Qt, crysta and the small process
 lifetime guard. The separate AI assistant component contains the complete verified Codex runtime
 under `libexec/edi/codex`, including on macOS where it sits beside the signed application bundle.
@@ -315,8 +323,8 @@ The installer ticks it by default (the command line installs it only when named)
 installation or add and remove it with Maintenance Tool.
 
 The choice is one checkbox, "AI assistant", on the installation folder page: under the folder and
-the space line, after EasyDiffraction's and the Maintenance Tool's boxes (both ticked and fixed, the
-tool's tooltip "Updates and uninstalls EasyDiffraction"), each with its size on the right, as the
+the space line, after EasyDiffraction's and the Maintenance Tool's boxes (both ticked and fixed, each box's tooltip its component's
+description), each with its size on the right, as the
 update summary lists them; then the licence and, on Windows and Linux, the desktop shortcut boxes.
 Every page and list orders the components EasyDiffraction, Maintenance Tool, AI assistant (their
 sorting priorities 200, 150, 100). The tool's component has no payload on Linux, so its row shows

@@ -772,11 +772,21 @@ function choiceSpace(page) {
 // The assistant checkboxes on the folder page decide their components, applied when that page is left and again
 // before the summary counts what is installed: a selection made while the component scripts load does not last.
 var assistantComponent = "org.easydiffraction.app.assistant";
-// Each assistant component and its row (AssistantForm.ui, assistantscript.qs) in the pages' order: ChatGPT, Claude,
-// GitHub Copilot (edi ADR-0108). A component the installer does not carry has no row.
-var assistantChoices = [{name: assistantComponent, row: "Assistant"},
-                        {name: "org.easydiffraction.app.claude", row: "Claude"},
-                        {name: "org.easydiffraction.app.copilot", row: "Copilot"}];
+var appComponent = "org.easydiffraction.app";
+// The maintenance tool is a hidden (virtual) component, installed and updated with the rest. The pages show it as a
+// row of its own, ticked and fixed as EasyDiffraction, between it and the assistants (owner, 2026-11-26).
+var maintenanceComponent = "org.easydiffraction.app.maintenancetool";
+// Every component row of the pages (AssistantForm.ui), in their order. Each row is the same: a box named by its
+// component, its description as the box's tooltip and its size on the right (choiceSizes). EasyDiffraction and the
+// tool are ticked and fixed; the others are choices, ChatGPT, Claude and GitHub Copilot (edi ADR-0108), each also in
+// assistantscript.qs. A component the installer does not carry has no row. A new optional component (the voice model
+// next) adds its row to the form, here and in assistantscript.qs (edi ADR-0071).
+var componentRows = [{name: appComponent, row: "App", fixed: true},
+                     {name: maintenanceComponent, row: "Maintenance", fixed: true},
+                     {name: assistantComponent, row: "Assistant"},
+                     {name: "org.easydiffraction.app.claude", row: "Claude"},
+                     {name: "org.easydiffraction.app.copilot", row: "Copilot"}];
+var assistantChoices = componentRows.filter(function (row) { return !row.fixed; });
 
 function assistantChoice(name) {
     for (var i = 0; i < assistantChoices.length; ++i) {
@@ -785,10 +795,6 @@ function assistantChoice(name) {
     }
     return null;
 }
-var appComponent = "org.easydiffraction.app";
-// The maintenance tool is a hidden (virtual) component, installed and updated with the rest. The pages show it as a
-// row of its own, ticked and fixed as EasyDiffraction, between it and the assistants (owner, 2026-11-26).
-var maintenanceComponent = "org.easydiffraction.app.maintenancetool";
 // The tool's size: on Linux its component has no payload (the Framework writes the tool from its own binary), so
 // package.py gives the size of that binary.
 var toolBytes = Number("@TOOL_BYTES@") || 0;
@@ -1123,6 +1129,7 @@ function updateSpace() {
 function choiceSizes(page) {
     if (!page)
         return;
+    describeChoices(page);
     var sizes = {App: 0, Maintenance: 0};
     assistantChoices.forEach(function (choice) { sizes[choice.row] = 0; });
     var all = installer.components();
@@ -1140,6 +1147,20 @@ function choiceSizes(page) {
             size.text = sizeText(sizes[row]);
     });
     return sizes;
+}
+
+// Each row's name and description from its component, so the pages say what the component's own metadata says
+// (package.py). The tool has no component on Linux and keeps the form's own text.
+function describeChoices(page) {
+    componentRows.forEach(function (row) {
+        var box = gui.findChild(page, row.row + "CheckBox");
+        var component = installer.componentByName(row.name);
+        if (!box || !component)
+            return;
+        box.text = displayName(component);
+        box.toolTip = component.value("Description");
+        box.accessibleDescription = box.toolTip;
+    });
 }
 
 function setupInstallPage(page) {
@@ -1275,12 +1296,10 @@ var licenseRefused = false;
 // and the shortcut, then any notice. A component row is measured by its box alone: the size beside it is no taller,
 // and its text arrives as the page opens, which moved it while the rows were being measured.
 var formRows = [["Logo", ["FormLogo"], 0], ["Folder", ["FolderLineEdit", "FolderBrowseButton"], 1],
-                ["Space", ["SpaceLabel"], 1],
-                ["App", ["AppCheckBox"], 2], ["Maintenance", ["MaintenanceCheckBox"], 2],
-                ["Assistant", ["AssistantCheckBox"], 2], ["Claude", ["ClaudeCheckBox"], 2],
-                ["Copilot", ["CopilotCheckBox"], 2],
-                ["License", ["LicenseCheckBox", "LicenseLink"], 3], ["Shortcut", ["ShortcutCheckBox"], 3],
-                ["Notice", ["NoticeLabel"], 4]];
+                ["Space", ["SpaceLabel"], 1]].concat(
+    componentRows.map(function (row) { return [row.row, [row.row + "CheckBox"], 2]; }),
+    [["License", ["LicenseCheckBox", "LicenseLink"], 3], ["Shortcut", ["ShortcutCheckBox"], 3],
+     ["Notice", ["NoticeLabel"], 4]]);
 
 // As soon as the page is laid out, so nobody sees it move, once more when the styles have reached every widget, and
 // a last time once a page whose text changed as it opened (the warning over an installation) has laid itself out.

@@ -5,11 +5,12 @@
 // components. The tree page is hidden (Installer.qs) because macOS accessibility clients crashed the Framework's
 // Qt on it (edi #150). This is ChatGPT's component; its form has a row for each assistant component (edi ADR-0108).
 
-// Each assistant component, its row and its label; ChatGPT starts ticked when installing, the others do not. A
+// Each optional component and its row, as Installer.qs lists them (componentRows), which also gives each row its
+// name, description and size from the component; ChatGPT starts ticked when installing, the others do not. A
 // component the installer does not carry (Claude or GitHub Copilot, until its distribution is public) has no row.
-var CHOICES = [{row: "Assistant", name: "org.easydiffraction.app.assistant", label: "ChatGPT", ticked: true},
-               {row: "Claude", name: "org.easydiffraction.app.claude", label: "Claude", ticked: false},
-               {row: "Copilot", name: "org.easydiffraction.app.copilot", label: "GitHub Copilot", ticked: false}];
+var CHOICES = [{row: "Assistant", name: "org.easydiffraction.app.assistant", ticked: true},
+               {row: "Claude", name: "org.easydiffraction.app.claude", ticked: false},
+               {row: "Copilot", name: "org.easydiffraction.app.copilot", ticked: false}];
 
 function Component() {
     // The command line (install and remove by name, the protocol check) has no pages.
@@ -55,7 +56,6 @@ function Component() {
         part(choice.row + "Box").visible = !!carried;
         if (!carried || !box)
             return;
-        box.text = choice.label;
         if (installer.isInstaller()) {
             // The owner's choice of what starts ticked; the command line still installs only what it names.
             box.checked = choice.ticked;
