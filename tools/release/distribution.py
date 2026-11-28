@@ -4,18 +4,23 @@
 
 One distribution scheme for every download (edi ADR-0071 as amended): the wheels and their index,
 the command-line zips, the installers, the installer components and the update feeds share one
-layout, published three times on two providers:
+layout, written as three copies:
 
 - ``release/``: every file attached to the GitHub release, the component repositories as one
   archive per channel and platform, and ``SHA256SUMS`` over all of them;
 - ``pages/``: the layout as GitHub Pages serves it at the current release;
-- ``offsite/``: the same tree for the copy behind ``download.easydiffraction.org``.
+- ``offsite/``: the same tree, kept as the publish run's ``offsite`` artifact.
 
 The layout of ``pages/`` and ``offsite/``: ``pypi/simple/easydiffraction/`` the package index with
 the current wheels beside it and older versions linked to their GitHub releases (the docs build
 writes the same index, website/render_package_index.py), ``releases/<version>/`` every file,
 ``repository/<channel>/<platform>/`` the installers' component repositories,
-``releases/stable.json`` the update feed, and ``SHA256SUMS`` over the whole tree.
+``releases/stable-v2.json`` the update feed, ``releases/stable.json`` the feed apps up to
+v2026.11.31 read (legacy_feed.py), and ``SHA256SUMS`` over the whole tree.
+
+The apps' feed bases (data/distribution.json) do not serve ``pages/`` or ``offsite/``: the site
+behind both is built by enhantica/edi-download from the GitHub release's assets with these tools,
+its two feeds with ``legacy_feed.write_feeds``.
 
     python tools/release/distribution.py --publication publication --output copies --repo <repo>
     python tools/release/distribution.py --dry-run --output copies   # a fixture, then the checks
@@ -43,7 +48,10 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'website'))
+sys.path.insert(0, str(ROOT / 'tools/release'))
+from legacy_feed import write_feeds  # noqa: E402
 from render_package_index import RELEASES, write_package_index  # noqa: E402
+from versions import version_key  # noqa: E402
 
 PROJECT = 'easydiffraction'
 
@@ -107,7 +115,9 @@ def build(publication: Path, output: Path, published: list[list[dict]] | None = 
         for platform in sorted(channel.iterdir()):
             where = paths['repository_paths'][channel.name].format(platform=platform.name)
             shutil.copytree(platform, tree / where.rstrip('/'))
-    shutil.copy2(incoming / 'releases/stable.json', tree / 'releases/stable.json')
+    # The update feeds: stable-v2.json, and the legacy stable.json apps up to v2026.11.31 read.
+    for feed in ('stable-v2.json', 'stable.json'):
+        shutil.copy2(incoming / 'releases' / feed, tree / 'releases' / feed)
     write_package_index(
         tree,
         [*(published or []), [current_release(version, files)]],
@@ -319,8 +329,26 @@ def fixture(folder: Path, version: str = '2026.11.0') -> None:
     release = {'version': version}
     (folder / 'release.json').write_text(json.dumps(release) + '\n')
     (assets / 'release.json').write_text(json.dumps(release) + '\n')
-    (incoming / 'releases').mkdir(parents=True)
-    (incoming / 'releases/stable.json').write_text(json.dumps({'releases': [release]}) + '\n')
+    (assets / 'release-history.json').write_text(json.dumps(fixture_history(version), indent=2))
+    write_feeds(assets / 'release-history.json', incoming / 'releases')
+
+
+def fixture_history(version: str) -> dict:
+    """A release history as plan.py records it: the last old-form release, then `version`."""
+
+    def release(name: str, day: str, commit: str, number: int) -> dict:
+        note = {'title': f'Change {number}', 'pull_request': number, 'interfaces': ['desktop']}
+        return {
+            'version': name,
+            'date': day,
+            'commit': commit * 40,
+            'notes': {'Added': [note], 'Fixed': [], 'Changed': []},
+        }
+
+    releases = [release(version, '2026-11-27', 'b', 2)]
+    if version_key(version) > version_key('2026.11.31'):
+        releases.insert(0, release('2026.11.31', '2026-11-25', 'a', 1))
+    return {'schema': 'edi.releases/1', 'baseline_commit': 'c' * 40, 'releases': releases}
 
 
 def older_release(version: str) -> dict:
@@ -356,7 +384,8 @@ def main() -> int:
         published: list[list[dict]] = []
         if args.dry_run:
             publication = Path(scratch) / 'publication'
-            fixture(publication)
+            # A YY.N release, so the legacy feed for 2026.11.x apps carries its alias.
+            fixture(publication, '26.17')
             published = [[older_release('2026.10.0')]]
         if publication is None:
             parser.error('--publication or --dry-run')
