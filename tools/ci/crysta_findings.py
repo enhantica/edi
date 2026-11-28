@@ -55,6 +55,8 @@ LINKER = re.compile(
     r'|symbol\(s\) not found|\bld(?:\.\w+)?: error|ld returned|linker command failed'
 )
 LOCATED = re.compile(r'^(?P<file>[^\s:]*/[^\s:]+|[^\s:/]+\.[A-Za-z]\w*):(?P<line>\d+)\b')
+# A warning a check prints, such as pytest's summary of them, fails nothing.
+WARNED = re.compile(r'^\S+:\d+: (?:[A-Z]\w*)?Warning\b')
 RUFF = re.compile(r'^(?P<file>[^\s:][^:]*):(?P<line>\d+):\d+: (?P<code>[A-Za-z][\w-]*)')
 REFORMAT = re.compile(r'^Would reformat: (?P<file>\S.*)$')
 # ab_perf's verdicts can carry a declared delta's cause; the numbers are what the runs measured.
@@ -102,7 +104,7 @@ def output(kind: str, log: Path, root: Path | None, name: str) -> list[str]:
                 found.append(f'{place(match, root)} cmake error')
             elif LINKER.search(line):
                 found.append('link error')
-        elif kind == 'check' and (match := LOCATED.match(line)):
+        elif kind == 'check' and (match := LOCATED.match(line)) and not WARNED.match(line):
             found.append(f'{place(match, root)} {name}')
         elif kind == 'ruff':
             if match := RUFF.match(line):
