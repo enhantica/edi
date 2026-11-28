@@ -39,9 +39,12 @@ assistant runtime, and shows its choices as rows on the folder page instead of a
    holds the model and a small manifest (`voice-model.json`: file name, size, SHA-256) under `share/edi/voice/`; on
    macOS this is beside the signed application bundle, like the assistant runtime. It is unticked by default and
    depends on EasyDiffraction. Its row on the folder page is the last, below the AI assistant rows and built as they
-   are (ADR-0071), with its size; its sorting priority is 70, below every assistant's. Its release inputs, which decide
-   whether a release carries a new copy of it, are the model's pinned SHA-256 and the whisper.cpp version
-   (`voice_component_inputs` in `tools/installer/package.py`). Maintenance Tool's Change components page adds or removes it. The engine
+   are (ADR-0071), with its size; its sorting priority is 70, below every assistant's. Its input identity (ADR-0111),
+   which decides whether a release carries a new copy of it, is its metadata, the model's pinned SHA-256, the
+   whisper.cpp version and a build number, and no whole file (its `COMPONENT_INPUTS` entry in
+   `tools/installer/package.py`): the pin file also holds the test model and the engine's CMake file its build options.
+   So the 190 MB archive is uploaded and downloaded only when one of them changes, through the release assets the other
+   components use. Maintenance Tool's Change components page adds or removes it. The engine
    itself is part of the app on every desktop system, a few megabytes; without the component the app has no model, and
    the microphone button then opens the note the assistant's button opens without its component (§8). At start the app checks that the manifest exists and that the model file
    has the stated size; packaging checks the staged model against the pin in `tools/deps/voice/models.json` and writes

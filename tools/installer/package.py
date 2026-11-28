@@ -494,10 +494,11 @@ def write_voice_metadata(meta: Path, version: str) -> None:
 
 
 def voice_component_inputs() -> dict:
-    """What decides whether the voice component changed between releases (edi ADR-0071).
+    """What decides whether the voice component changed between releases (edi ADR-0107).
 
-    The model's pinned checksum and the whisper.cpp release that reads it. A release whose inputs
-    equal the last one's keeps that release's component instead of building a new one.
+    The model's pinned checksum and the whisper.cpp release that reads it, never a file as a
+    whole: the pin file also holds the test model and the download address, and the CMake file the
+    engine's build options, none of which change what this component installs.
     """
     whisper = re.search(
         r'^set\(EDI_WHISPER_VERSION ([0-9.]+)\)$',
@@ -509,17 +510,19 @@ def voice_component_inputs() -> dict:
     return {'model_sha256': release_voice_pin()['sha256'], 'whisper_cpp': whisper.group(1)}
 
 
-# Each component's declared inputs, for the rule that a component keeps the version of the release
-# that last changed it.
-COMPONENT_INPUTS = {VOICE_COMPONENT: voice_component_inputs}
-
-
 def release_voice_pin() -> dict:
     """The committed pin of the model the voice component ships (models.json).
 
     Tests replace this function to package placeholder bytes; packaging always checks against it.
     """
     return voice_models.pins()['models']['small']
+
+
+# What each component is built from besides its metadata folder, as a build number and paths in
+# this repository, for updates that carry only changed components. The voice component's build
+# is its declared inputs and a number to raise when its build changes in a way they do not show;
+# it declares no files.
+COMPONENT_INPUTS = {VOICE_COMPONENT: ({'build': 1, **voice_component_inputs()}, ())}
 
 
 def write_voice_manifest(folder: Path, pin: dict) -> None:
