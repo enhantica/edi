@@ -1323,9 +1323,21 @@ class Edit {
             } catch (const std::exception&) {
                 held = false;
             }
+            Project probe(project);
+            place_magnetic_candidates(probe, *prepared);
+            // Every alias the batch adds names a parameter of the prospective project (review 32), whatever the state
+            // of the relations it already had.
+            {
+                std::set<std::string> before;
+                for (const auto& alias : project.aliases) before.insert(alias->id.value());
+                const ActiveView prospective(probe);
+                for (const auto& alias : probe.aliases)
+                    if (!before.contains(alias->id.value()) &&
+                        prospective.resolve(alias->parameter_unique_name.value()) == nullptr)
+                        throw std::invalid_argument("the added structures' texture alias '" + alias->id.value() +
+                                                    "' would name no parameter");
+            }
             if (held) {
-                Project probe(project);
-                place_magnetic_candidates(probe, *prepared);
                 try {
                     refresh_relations(probe);
                 } catch (const std::exception& broken) {
@@ -1392,7 +1404,15 @@ class Edit {
                 kept_texture.push_back(std::move(row));
             }
         }
-        carry_texture_relations(project, prepared);
+        // The parent's own texture parameters, by identity: an alias is the parent's only when it resolves to one.
+        std::set<const Parameter*> parent_texture;
+        for (const auto& experiment : project.experiments)
+            for (const auto& row : experiment->preferred_orientation)
+                if (parents(row->structure_id.value())) {
+                    parent_texture.insert(&row->march_r);
+                    parent_texture.insert(&row->march_random_fract);
+                }
+        carry_texture_relations(project, prepared, parent_texture);
         for (std::size_t i = 0; i < project.experiments.size(); ++i) {
             project.experiments[i]->linked_structures.assign(std::move(links[i]));
             project.experiments[i]->preferred_orientation.assign(std::move(texture[i]));
@@ -1403,7 +1423,8 @@ class Edit {
     // Only a constraint that sets a parent March–Dollase parameter is copied, as one setting the child's: its target
     // is then a new parameter, so no target gains a second writer. One that the parent's texture drives elsewhere
     // stays single. An alias's parameter keeps its experiment and field; only the phase part names the child.
-    static void carry_texture_relations(Project& project, const PreparedMagneticCandidates& prepared) {
+    static void carry_texture_relations(Project& project, const PreparedMagneticCandidates& prepared,
+                                        const std::set<const Parameter*>& parent_texture) {
         const auto split = [](const std::string& text) {
             std::vector<std::string> parts;
             std::size_t start = 0;
@@ -1417,7 +1438,11 @@ class Edit {
             if (std::find(children.begin(), children.end(), texture.structure) == children.end())
                 children.push_back(texture.structure);
         std::map<std::string, std::vector<std::string>> parent_aliases;  // alias id -> its parameter name's parts
+        const ActiveView view(project);
         for (const auto& alias : project.aliases) {
+            // Only an alias that resolves to the parent's own texture parameter is the parent's (review 32): one naming
+            // a missing bank or anything else is left as it is, never multiplied.
+            if (!parent_texture.contains(view.resolve(alias->parameter_unique_name.value()))) continue;
             const std::vector<std::string> parts = split(alias->parameter_unique_name.value());
             // The phase part is the structure's name (the long form) or its datablock key (the short form).
             if (parts.size() >= 2 && (parts.back() == "march_r" || parts.back() == "march_random_fract") &&
