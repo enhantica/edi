@@ -1170,6 +1170,7 @@ void set_propagation_vectors(Structure& s, std::vector<std::pair<std::string, st
     crysta::check_magnetic_acceptance(to_crysta_structure(trial));
     s.magnetic.modify([&rows](MagneticDescription& magnetic) { magnetic.propagation_vectors = std::move(rows); });
     complete_atom_site_moments(s);  // the accepted state, as crysta completes it
+    rekey_extracted_intensities(s);
 }
 
 namespace {
@@ -1286,6 +1287,7 @@ void set_magnetic_symmetry(Structure& s, std::vector<std::pair<std::string, std:
     }
     s = trial;  // Structure assigns by copy
     complete_atom_site_moments(s);  // the accepted state, as crysta completes it
+    rekey_extracted_intensities(s);
 }
 
 // The transforms loop's BNS row set to `transform`: the replaced row keeps its id, a new one takes the first free
@@ -1363,6 +1365,7 @@ void set_magnetic_space_group(Structure& s, const std::string& number_bns) {
     trial.magnetic.modify([](MagneticDescription& magnetic) { set_bns_transform(magnetic, "a,b,c;0,0,0"); });
     set_magnetic_symmetry(trial, numbered(entry.operations), numbered(entry.centerings), name);
     s = trial;  // Structure assigns by copy
+    rekey_extracted_intensities(s);
 }
 
 namespace {
@@ -1857,6 +1860,7 @@ void set_structure_magnetic(Structure& s, bool magnetic) {
         });
         set_magnetic_symmetry(trial, std::move(operations), std::move(centerings), name);
         s = trial;  // Structure assigns by copy
+        rekey_extracted_intensities(s);
         return;
     }
     // Back to Crystal: the magnetic group's own space group (time reversal ignored), declared, and no magnetic data.
@@ -1881,6 +1885,7 @@ void set_structure_magnetic(Structure& s, bool magnetic) {
     while (!trial.atom_site_moment.empty()) trial.atom_site_moment.erase_at(trial.atom_site_moment.size() - 1);
     while (!trial.magnetic_form_factors.empty()) trial.magnetic_form_factors.erase_at(trial.magnetic_form_factors.size() - 1);
     s = trial;  // Structure assigns by copy
+    rekey_extracted_intensities(s);
 }
 
 std::string held_magnetic_setting(const Structure& s) {
@@ -1962,6 +1967,7 @@ void set_magnetic_setting(Structure& s, const std::string& transform) {
     set_magnetic_symmetry(trial, magnetic_rows_in_setting(entry.operations, *parsed),
                           magnetic_rows_in_setting(entry.centerings, *parsed), trial.magnetic->group);
     s = trial;  // Structure assigns by copy
+    rekey_extracted_intensities(s);
 }
 
 void change_adp_type(Structure& s, AtomSite& site, const std::string& adp_type) {
@@ -7104,6 +7110,34 @@ CalcMethodOutcome select_calc_method(Project& project, Structure& structure, con
         scale->value = value;
     }
     return outcome;
+}
+
+void rekey_extracted_intensities(Structure& structure) {
+    Project* project = project_holding(structure);
+    const std::optional<std::size_t> at = project != nullptr ? structure_place(*project, structure) : std::nullopt;
+    if (!at) {
+        return;
+    }
+    const std::string key = datablock_key(structure.name, "structure");
+    const bool held = std::any_of(project->experiments.begin(), project->experiments.end(), [&key](const auto& bank) {
+        return std::any_of(bank->extracted_intensities.begin(), bank->extracted_intensities.end(),
+                           [&key](const auto& row) { return datablock_key(row->structure_id, "structure") == key; });
+    });
+    if (!held) {
+        return;  // a Rietveld structure, or one no fit has given rows yet: nothing to convert
+    }
+    try {
+        // Only the symmetry and the rows matter here: no measured data crosses.
+        BuiltExperiments banks;
+        banks.reserve(project->experiments.size());
+        for (const auto& bank : project->experiments) {
+            build_on_heap(banks, *bank, true);
+        }
+        crysta::Project engine(to_crysta_structures(*project, false), experiment_list(banks));
+        crysta::rekey_extracted_intensities(engine, engine.structures.at(*at).name.value());
+        adopt_extracted_intensities(*project, engine);
+    } catch (const std::exception&) {  // NOLINT(bugprone-empty-catch) — the calculation names the row it cannot read
+    }
 }
 
 void set_reflns_threshold_sigma(ExperimentBase& experiment, std::optional<double> sigma) {

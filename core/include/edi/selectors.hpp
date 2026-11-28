@@ -273,6 +273,11 @@ CalcMethodOutcome select_calc_method(Project& project, Structure& structure, con
 // The same through the project that holds the structure (the Python `Structure.calc_method` setter). A structure no
 // project holds has no links or rows: it takes any token crysta knows.
 CalcMethodOutcome select_calc_method(Structure& structure, const std::string& token);
+// After a change of the structure's space group, setting, magnetic group or propagation vectors: its extracted rows in
+// every experiment of the project holding it move to their orbit keys under the new symmetry, through crysta's
+// rekey (rows that land on one orbit merge). Nothing without a project or rows. It never refuses, so the symmetry
+// edit that calls it stays whole: when crysta cannot read the project the rows stay, and its calculation says why.
+void rekey_extracted_intensities(Structure& structure);
 // Why the structure cannot be linked to the experiment as it is (a Le Bail or Pawley structure on a single crystal or a
 // total-scattering experiment), crysta's reason; empty when it can.
 std::string calc_method_link_refusal(const Project& project, const ExperimentBase& experiment,

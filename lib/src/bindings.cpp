@@ -319,6 +319,7 @@ static void change_setting(edi::SpaceGroup& group, Change change) {
             structure->magnetic.modify([](edi::MagneticDescription& magnetic) { magnetic.space_group_declared = true; });
         }
         edi::complete_atom_site_moments(*structure);
+        edi::rekey_extracted_intensities(*structure);  // the rows follow the new group's orbits
     }
 }
 

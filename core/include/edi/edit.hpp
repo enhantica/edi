@@ -1297,10 +1297,14 @@ class Edit {
     // No change of its own: the common scale alone (the Estimate beside Add linked structure), wrapped by rescaled.
     static Edit unchanged() { return Edit([] {}); }
     // A space-group setting chosen whole (assign_space_group_setting): name, code and IT number never contradict
-    // one another (the owner, 2026-10-06). Assignments, which cannot fail.
+    // one another (the owner, 2026-10-06). Assignments, which cannot fail; the structure's extracted rows then move
+    // to their keys under the new group in the same step (rekey_extracted_intensities, which never refuses).
     static Edit space_group_setting(SpaceGroup& group, SpaceGroupSettingName setting, bool declare_number) {
         return Edit([&group, setting = std::move(setting), declare_number] {
             assign_space_group_setting(group, setting, declare_number);
+            if (group.holder.structure != nullptr) {
+                rekey_extracted_intensities(*group.holder.structure);
+            }
         });
     }
     // A structure's declared scattering length: set (declaring it when it is new) or removed. The map is
