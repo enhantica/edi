@@ -13,7 +13,7 @@ Shown: magnetic structure.
 
 ## Use this group
 
-On **Structure → Main**, expand **Magnetic moments**. Choose how the moments are shown in **moments as**: crystal axes, Cartesian or spherical. The table has one row per atom site. Choose the magnetic ion for a site, or **none** for a site without a moment. The ion belongs to the atom type, so sites of one type share it. Edit the three components along the cell axes; those the site symmetry leaves free are editable, and the symmetry form is shown read-only.
+On **Structure → Main**, expand **Magnetic moments**. Choose how the moments are shown in **moments as**: crystal axes, Cartesian or spherical. The table has one row per atom site. Choose the magnetic ion for a site, or **none** for a site without a moment. The ion belongs to the atom type, so sites of one type share it. Edit the three components along the cell axes; those the site symmetry leaves free are editable, and the symmetry form is shown read-only. Under Le Bail or Pawley, set in the **Calculation** column of [Structures](structures.md), this group is hidden; its values are kept and come back with Rietveld. The reflections still come from the magnetic group, whatever the moments are.
 
 <!-- gui-guide:use-this-group -->
 <div class="gui-viewer" markdown="1">

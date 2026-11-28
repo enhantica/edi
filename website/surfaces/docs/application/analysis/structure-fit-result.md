@@ -15,6 +15,8 @@ Shown: recorded fit.
 
 On **Analysis → Extra**, expand **Structure fit result**. It reports the structure's reflection agreement for each experiment. This group is read-only. See [Structure fit result](../../physics/parameters.md#fit-result-phase) in the parameter reference.
 
+A Le Bail or Pawley structure has no R Bragg, R F or magnetic R: its intensities are taken from the pattern, so there is no calculated intensity to compare them with. They show "—", with the reason in the tooltip.
+
 <!-- gui-guide:use-this-group -->
 <div class="gui-viewer" markdown="1">
 

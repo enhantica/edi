@@ -15,6 +15,8 @@ On **Analysis → Main**, use the table filters to find a parameter. Edit its va
 
 The displayed minimum and maximum describe admissible model values. See [parameters](../../user-guide/parameters.md) and [fit a pattern](index.md#choose-free-parameters).
 
+A Pawley structure's intensities are one row per structure and experiment, **Pawley intensities (N)**, with one free box for all N. A partly checked box means some are free. Le Bail intensities are not parameters and are not listed. The atoms, displacements and moments of a Le Bail or Pawley structure keep their rows and free marks, but the fit leaves them out; they show under **Not measured in this fit**.
+
 <!-- gui-guide:choose-independent-parameters -->
 <div class="gui-viewer" markdown="1">
 
