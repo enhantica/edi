@@ -32,17 +32,13 @@ AppDialog {
         spacing: Math.round(EaStyle.Sizes.fontPixelSize * 0.75)
         Repeater {
             model: dialog.entries
-            delegate: Column {
-                id: entry
+            delegate: EaElements.Label {
                 required property var modelData
                 required property int index
-                spacing: Math.round(EaStyle.Sizes.fontPixelSize * 0.25)
-                EaElements.Label {
-                    width: column.width
-                    elide: Text.ElideRight
-                    objectName: `chart.findK.added.${entry.index}`
-                    text: `${entry.modelData.name} · ${entry.modelData.symbol}`
-                }
+                width: column.width
+                elide: Text.ElideRight
+                objectName: `chart.findK.added.${index}`
+                text: `${modelData.name} · ${modelData.symbol}`
             }
         }
     }
@@ -54,7 +50,6 @@ AppDialog {
             fontIcon: "times"
             text: qsTr("Close")
             DialogButtonBox.buttonRole: DialogButtonBox.RejectRole
-            onClicked: dialog.close()
         }
         EaElements.Button {
             objectName: "chart.findK.openStructure"

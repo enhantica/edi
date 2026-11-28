@@ -1298,8 +1298,7 @@ Item {
         onExited: hoverLabel.show("", 0, 0)
     }
 
-    // The hover read-out, beside the pointer: diffraction-lib's lines, each value in its series' colour
-    // Find k's marks over the main plot area, on the native axis, and the clicks that mark and drop them.
+    // Find k's marks over the main plot area, on the native axis; the pointer handlers mark and drop them.
     Item {
         id: peakLayer
         objectName: "chart.peaks"
@@ -1323,7 +1322,7 @@ Item {
                 readonly property bool marked: chart.peakMarks.indexOf(index) >= 0
                 readonly property bool hovered: marked && chart.hoveredMark === index
                 objectName: `chart.peak.${index}`
-                x: peakLayer.px(modelData.x)
+                x: Math.round(peakLayer.px(modelData.x))  // whole pixels, as the grid lines, so a line stays one pixel
                 // Every observed peak can be marked by a click; only the marked, the forbidden-line and the suggested
                 // ones are drawn.
                 visible: x >= 0 && x <= peakLayer.width &&
@@ -1331,20 +1330,30 @@ Item {
                 // A marked peak: a short tick at the top of the plot and a faint line through it; a candidate not
                 // marked: the tick alone, grey.
                 Rectangle {
-                    x: -width / 2
-                    width: 1
+                    width: EaStyle.Sizes.borderThickness
                     height: peakLayer.height
                     visible: mark.marked
-                    // Hovered, the line and its pin turn grey (owner, 2026-11-27).
-                    color: mark.hovered ? EaStyle.Colors.themeForegroundMinor : EaStyle.Colors.themeAccent
+                    // Hovered, the line and its pin turn grey (owner, 2026-11-27), in a table row's hover time.
+                    color: mark.hovered ? chart.colors.themeForegroundMinor : EaStyle.Colors.themeAccent
                     opacity: mark.hovered ? 1 : 0.35
+                    Behavior on color {
+                        ColorAnimation {
+                            duration: EaStyle.Sizes.tableHighlightMoveDuration
+                        }
+                    }
                 }
                 Rectangle {
-                    x: -width / 2
-                    width: mark.marked ? 4 : 2
-                    height: chart.em * 0.8
-                    radius: 1
-                    color: mark.hovered ? EaStyle.Colors.themeForegroundMinor : mark.marked ? EaStyle.Colors.themeAccent : EaStyle.Colors.themeForegroundDisabled
+                    // Centred on the line on whole pixels: four or two of the border's widths.
+                    width: (mark.marked ? 4 : 2) * EaStyle.Sizes.borderThickness
+                    x: -Math.round((width - EaStyle.Sizes.borderThickness) / 2)
+                    height: Math.round(chart.em * 0.8)
+                    radius: EaStyle.Sizes.borderThickness
+                    color: mark.hovered ? chart.colors.themeForegroundMinor : mark.marked ? EaStyle.Colors.themeAccent : chart.colors.themeForegroundDisabled
+                    Behavior on color {
+                        ColorAnimation {
+                            duration: EaStyle.Sizes.tableHighlightMoveDuration
+                        }
+                    }
                 }
             }
         }
@@ -1364,6 +1373,7 @@ Item {
         MagneticAddedDialog {}
     }
 
+    // The hover read-out, beside the pointer: diffraction-lib's lines, each value in its series' colour
     // (PatternChartController.hoverReadout).
     Rectangle {
         id: hoverLabel

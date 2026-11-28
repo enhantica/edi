@@ -58,8 +58,8 @@ AppDialog {
     title: qsTr("Magnetic structures from %1").arg(structure ? structure.name : "")
     // As tall as its content, up to the height that keeps the navigation bar and the status bar clear, centred as the
     // app's other dialogs are.
-    readonly property real maximumHeight: parent ? parent.height - 2 * (EaStyle.Sizes.appBarHeight + EaStyle.Sizes.fontPixelSize) : 800
-    width: parent ? Math.round(parent.width * 0.9) : 1000
+    readonly property real maximumHeight: parent ? parent.height - 2 * (EaStyle.Sizes.appBarHeight + EaStyle.Sizes.fontPixelSize) : AppSizes.unit * 57
+    width: Math.round(parent ? parent.width * 0.9 : AppSizes.unit * 71)
     height: Math.round(Math.min(maximumHeight, implicitHeight))
     // Centred on whole pixels by AppDialog, as the app's other dialogs are, so its text is sharp (owner, Retina).
     onClosed: destroy()
@@ -193,8 +193,8 @@ AppDialog {
         }
     }
 
-    // The dialog's own area: the choices on top, the groups in the middle (the one part that scrolls), the details
-    // strip and the footer at the bottom.
+    // The dialog's own area: the choices on top, the groups in the middle (the one part that scrolls), the footer at
+    // the bottom.
     ColumnLayout {
         id: content
         anchors.fill: parent
@@ -504,55 +504,46 @@ AppDialog {
         onActivated: graphView.pinned = -1
     }
 
-    // The fixed footer, as the app's other dialogs place their actions: the selection's own actions at the left, then
-    // Cancel and the primary Add at the right.
-    footer: Item {
-        implicitHeight: actions.implicitHeight + 2 * EaStyle.Sizes.fontPixelSize
-        Row {
-            anchors.left: parent.left
-            anchors.leftMargin: popup.leftPadding
-            anchors.verticalCenter: parent.verticalCenter
-            spacing: EaStyle.Sizes.fontPixelSize
-            EaElements.Button {
-                objectName: "magnetic.selectAll"
-                fontIcon: "check-double"
-                text: qsTr("Select all")
-                enabled: popup.found !== null && !popup.busy
-                onClicked: popup.selectAll()
-            }
-            EaElements.Button {
-                objectName: "magnetic.clear"
-                fontIcon: "eraser"
-                text: qsTr("Clear")
-                enabled: popup.selected.length > 0
-                onClicked: popup.selected = []
-            }
+    // The app's dialog button row (DialogButtonBox), as every other dialog's: the selection's own actions, then Cancel
+    // and the primary Add. Add closes the dialog only once the structures are added.
+    footer: EaElements.DialogButtonBox {
+        // Actions, then Cancel, then the primary button last, as What's New lays out its own.
+        buttonLayout: DialogButtonBox.WinLayout
+        EaElements.Button {
+            objectName: "magnetic.selectAll"
+            fontIcon: "check-double"
+            text: qsTr("Select all")
+            enabled: popup.found !== null && !popup.busy
+            DialogButtonBox.buttonRole: DialogButtonBox.ActionRole
+            onClicked: popup.selectAll()
         }
-        Row {
-            id: actions
-            anchors.right: parent.right
-            anchors.rightMargin: popup.rightPadding
-            anchors.verticalCenter: parent.verticalCenter
-            spacing: EaStyle.Sizes.fontPixelSize
-            EaElements.Button {
-                objectName: "magnetic.cancel"
-                fontIcon: "times"
-                text: qsTr("Cancel")
-                onClicked: popup.close()
-            }
-            EaElements.Button {
-                objectName: "magnetic.add"
-                fontIcon: "plus-circle"
-                text: popup.selected.length > 1 ? qsTr("Add %1 structures").arg(popup.selected.length) : qsTr("Add")
-                enabled: popup.selected.length > 0 && !popup.busy
-                onClicked: {
-                    const count = popup.selected.length;
-                    if (popup.found !== null && popup.project.addMagneticCandidates(popup.found.graphId, popup.selected, popup.startMoments, popup.selectAfterAdd)) {
-                        popup.added(count);
-                        popup.close();
-                    } else {
-                        popup.refusal = popup.project.lastError;
-                    }
+        EaElements.Button {
+            objectName: "magnetic.clear"
+            fontIcon: "eraser"
+            text: qsTr("Clear")
+            enabled: popup.selected.length > 0
+            DialogButtonBox.buttonRole: DialogButtonBox.ActionRole
+            onClicked: popup.selected = []
+        }
+        EaElements.Button {
+            objectName: "magnetic.cancel"
+            fontIcon: "times"
+            text: qsTr("Cancel")
+            DialogButtonBox.buttonRole: DialogButtonBox.RejectRole
+        }
+        EaElements.Button {
+            objectName: "magnetic.add"
+            fontIcon: "plus-circle"
+            text: popup.selected.length > 1 ? qsTr("Add %1 structures").arg(popup.selected.length) : qsTr("Add")
+            enabled: popup.selected.length > 0 && !popup.busy
+            DialogButtonBox.buttonRole: DialogButtonBox.ApplyRole
+            onClicked: {
+                const count = popup.selected.length;
+                if (popup.found !== null && popup.project.addMagneticCandidates(popup.found.graphId, popup.selected, popup.startMoments, popup.selectAfterAdd)) {
+                    popup.added(count);
+                    popup.close();
+                } else {
+                    popup.refusal = popup.project.lastError;
                 }
             }
         }

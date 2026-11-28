@@ -48,8 +48,9 @@ AppDialog {
     title: qsTr("Possible propagation vectors")
     // As tall as its rows, up to the height that keeps the navigation bar and the status bar clear, centred on the
     // window as the app's other dialogs are.
-    readonly property real maximumHeight: parent ? parent.height - 2 * (EaStyle.Sizes.appBarHeight + EaStyle.Sizes.fontPixelSize) : 480
-    width: parent ? Math.min(Math.round(parent.width * 0.6), 760) : 700
+    readonly property real maximumHeight: parent ? parent.height - 2 * (EaStyle.Sizes.appBarHeight + EaStyle.Sizes.fontPixelSize) : AppSizes.unit * 34
+    // At most about 54 characters wide, in the font's units as the app's other dialogs.
+    width: Math.round(parent ? Math.min(parent.width * 0.6, AppSizes.unit * 54) : AppSizes.unit * 50)
     height: Math.round(Math.min(maximumHeight, implicitHeight))
     // Centred on whole pixels by AppDialog, as the app's other dialogs are, so its text is sharp (owner, Retina).
     onClosed: destroy()
@@ -85,12 +86,6 @@ AppDialog {
         anchors.fill: parent
         spacing: AppSizes.groupContentSpacing
 
-        EaElements.Label {
-            Layout.fillWidth: true
-            wrapMode: Text.Wrap
-            visible: popup.searching
-            text: qsTr("Searching…")
-        }
         EaElements.Label {
             Layout.fillWidth: true
             wrapMode: Text.Wrap
@@ -274,28 +269,23 @@ AppDialog {
         chosen(k, rank);
     }
 
-    // Cancel and the primary Analyse at the right, as the app's other dialogs place their actions.
-    footer: Item {
-        implicitHeight: actions.implicitHeight + 2 * EaStyle.Sizes.fontPixelSize
-        Row {
-            id: actions
-            anchors.right: parent.right
-            anchors.rightMargin: popup.rightPadding
-            anchors.verticalCenter: parent.verticalCenter
-            spacing: EaStyle.Sizes.fontPixelSize
-            EaElements.Button {
-                objectName: "chart.kVectorPopup.cancel"
-                fontIcon: "times"
-                text: qsTr("Cancel")
-                onClicked: popup.close()
-            }
-            EaElements.Button {
-                objectName: "chart.kVectorPopup.analyse"
-                fontIcon: "magnet"
-                text: qsTr("Analyse")
-                enabled: popup.current >= 0 && !popup.searching
-                onClicked: popup.analyse()
-            }
+    // The app's dialog button row (DialogButtonBox), as every other dialog's: Cancel and the primary Analyse.
+    footer: EaElements.DialogButtonBox {
+        // Actions, then Cancel, then the primary button last, as What's New lays out its own.
+        buttonLayout: DialogButtonBox.WinLayout
+        EaElements.Button {
+            objectName: "chart.kVectorPopup.cancel"
+            fontIcon: "times"
+            text: qsTr("Cancel")
+            DialogButtonBox.buttonRole: DialogButtonBox.RejectRole
+        }
+        EaElements.Button {
+            objectName: "chart.kVectorPopup.analyse"
+            fontIcon: "magnet"
+            text: qsTr("Analyse")
+            enabled: popup.current >= 0 && !popup.searching
+            DialogButtonBox.buttonRole: DialogButtonBox.ApplyRole
+            onClicked: popup.analyse()
         }
     }
 }

@@ -48,16 +48,16 @@ EaComponents.ContentPage {
     readonly property bool basicShown: current && basicLoader.SwipeView.isCurrentItem
     property Component extrasItem: null
     property Component textItem: null
-    // The page's Settings tab (edi ADR-0031 §2): its view options, kept in the app's settings under the page's name,
-    // never in the project.
     // Tools (owner, 2026-11-28, sidebar tabs by role): groups that act on the project but edit no `.edi` category, such
     // as the k-vector search or the magnetic symmetry analysis. Main and Extra hold only category groups, Settings only
     // the page's own settings.
     property Component toolsItem: null
+    // The page's Settings tab (edi ADR-0031 §2): its view options, kept in the app's settings under the page's name,
+    // never in the project.
     property Component settingsItem: null
     property bool extrasEnabled: false
     property bool textEnabled: false
-    // Every page shows all four tabs (the owner, 2026-11-10). A tab whose content waits for the page's first block
+    // Every page shows all five tabs (the owner, 2026-11-10; Tools 2026-11-28). A tab whose content waits for the page's first block
     // says so; a tab the page has no groups for yet asks for ideas, with a link to the feedback form (TabNote below).
     property alias continueText: sideBar.continueButton.text
     property bool continueVisible: true

@@ -59,19 +59,7 @@ AppDialog {
     // The agreement factors (edi ADR-0045), below the summary: one column per factor, one row per dataset.
     readonly property FitAgreementModel agreement: dialog.results ? dialog.results.agreement : null
     readonly property var factorColumns: dialog.agreement ? dialog.agreement.columns : []
-    // Wide enough for the longest structure name under a phase factor, with its icon, and for the widest value: neither
-    // is ever cut ("undefined" is wider than a number).
-    readonly property real factorWidth: Math.max(EaStyle.Sizes.fontPixelSize * 4.5, structureMetrics.advanceWidth + EaStyle.Sizes.fontPixelSize * 2.5, dialog.widestValue + AppSizes.tableCellMargin * 2)
     property int valuesRevision: 0
-    readonly property real widestValue: {
-        let widest = 0;
-        for (let row = 0; dialog.valuesRevision >= 0 && row < factorValues.count; ++row) {
-            const texts = factorValues.objectAt(row) as FactorTexts;
-            widest = Math.max(widest, texts?.widest ?? 0);
-        }
-        return Math.ceil(widest);
-    }
-
     // Each factor column as wide as its own header (the factor, and under a phase factor its structure with the icon)
     // and its widest value, with the cell margins (owner, 2026-11-27): no column takes another's width.
     readonly property var columnWidths: {
@@ -79,7 +67,7 @@ AppDialog {
         return dialog.factorColumns.map((column, index) => {
             let widest = plain(column.factor);
             if (column.structure !== "")
-                widest = Math.max(widest, EaStyle.Sizes.fontPixelSize * 1.45 + plain(column.structure));
+                widest = Math.max(widest, dialog.structureIconWidth + dialog.structureIconSpacing + plain(column.structure));
             for (let row = 0; dialog.valuesRevision >= 0 && row < factorValues.count; ++row) {
                 const texts = factorValues.objectAt(row) as FactorTexts;
                 if (texts && index < texts.values.length)
@@ -88,13 +76,15 @@ AppDialog {
             return Math.ceil(Math.max(EaStyle.Sizes.fontPixelSize * 3, widest) + 2 * AppSizes.tableCellMargin);
         });
     }
+    // A phase factor's structure header: its icon and the gap before the name.
+    readonly property real structureIconWidth: EaStyle.Sizes.fontPixelSize * 1.2
+    readonly property real structureIconSpacing: EaStyle.Sizes.fontPixelSize * 0.25
     function columnWidth(index) {
         return index >= 0 && index < columnWidths.length ? columnWidths[index] : 0;
     }
 
     component FactorTexts: QtObject {
         required property var values
-        readonly property real widest: Math.max(0, ...values.map(text => valueMetrics.advanceWidth(text)))
     }
     Instantiator {
         id: factorValues
@@ -109,12 +99,6 @@ AppDialog {
         font.pixelSize: EaStyle.Sizes.fontPixelSize
     }
 
-    TextMetrics {
-        id: structureMetrics
-        font.family: EaStyle.Fonts.fontFamily
-        font.pixelSize: EaStyle.Sizes.fontPixelSize
-        text: ApplicationInfo.fitResultProjection(0)
-    }
     readonly property bool structureHeaders: ApplicationInfo.fitResultProjection(1)
 
     // The summary table is as wide as its content (the owner, 2026-10-21): each text column its widest entry.
@@ -378,18 +362,17 @@ AppDialog {
                                 anchors.right: parent.right
                                 anchors.rightMargin: AppSizes.tableCellMargin
                                 height: EaStyle.Sizes.tableRowHeight
-                                spacing: EaStyle.Sizes.fontPixelSize * 0.25
+                                spacing: dialog.structureIconSpacing
 
                                 IconCell {
-                                    width: EaStyle.Sizes.fontPixelSize * 1.2
+                                    width: dialog.structureIconWidth
                                     icon: "layer-group"
                                     iconColor: factorHeader.modelData.place >= 0 ? AppColors.structure(factorHeader.modelData.place) : ""
                                 }
                                 EaComponents.ListViewLabel {
                                     objectName: `fit.results.agreement.structure.${factorHeader.index}`
                                     height: parent.height
-                                    width: implicitWidth
-                                    elide: Text.ElideRight
+                                    width: implicitWidth  // its column is as wide as the name, so it is never cut
                                     // The structure's chart colour, as its icon (the owner, 2026-10-21).
                                     color: factorHeader.modelData.place >= 0 ? AppColors.structure(factorHeader.modelData.place) : EaStyle.Colors.themeForeground
                                     text: factorHeader.modelData.structure

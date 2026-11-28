@@ -45,7 +45,7 @@ SideBarGroup {
         }
         EaElements.SideBarButton {
             objectName: "spaceGroup.magneticAnalysis"
-            width: parent.width
+            wide: true  // the row to itself, as the sidebar's other single actions
             enabled: group.crystal && group.project !== null && group.popupComponent !== null
             fontIcon: "magnet"
             text: qsTr("Magnetic symmetry analysis…")
