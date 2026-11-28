@@ -10813,8 +10813,28 @@ namespace {
 // The engine project a calculation would build, and the parent's structure in it.
 // The project as Find k reads it (review 33): only what participates. A disabled link, its texture row and the
 // relations edi::ActiveView hides are left out, so crysta's one-phase k search sees the experiment's enabled phases.
-Project participating(const Project& project) {
+//
+// Bound to `phase` (review 34), each experiment keeps only that phase's link, enabled or not, and its texture row, and
+// no relation (their values are already applied): crysta's bank context reads one link, so a valid bank that also
+// enables other phases is searched as the phase's own. The other phases stay in the edi-side veto, which reads the
+// edi project.
+Project participating(const Project& project, const std::string& phase = {}) {
     Project out(project);
+    if (!phase.empty()) {
+        out.aliases.assign(std::vector<ItemVec<ParameterAlias>::Ptr>{});
+        out.constraints.assign(std::vector<ItemVec<ParameterConstraint>::Ptr>{});
+        for (const auto& experiment : out.experiments) {
+            std::vector<ItemVec<LinkedStructure>::Ptr> links;
+            for (const auto& link : experiment->linked_structures)
+                if (names_structure(project, link->structure_id.value(), phase)) links.push_back(link);
+            std::vector<ItemVec<PrefOrient>::Ptr> texture;
+            for (const auto& row : experiment->preferred_orientation)
+                if (names_structure(project, row->structure_id.value(), phase)) texture.push_back(row);
+            experiment->linked_structures.assign(std::move(links));
+            experiment->preferred_orientation.assign(std::move(texture));
+        }
+        return out;
+    }
     const ActiveView view(project);
     std::vector<ItemVec<ParameterAlias>::Ptr> aliases;
     for (const auto& alias : out.aliases)
@@ -10842,8 +10862,8 @@ Project participating(const Project& project) {
 }
 
 struct KEngine {
-    explicit KEngine(const Project& project)
-        : active(participating(project)),
+    explicit KEngine(const Project& project, const std::string& phase = {})
+        : active(participating(project, phase)),
           banks(calculation_banks(active.experiments)),
           engine(to_crysta_structures(active), experiment_list(banks)) {
         fill_crysta_relations(active, engine);
@@ -10887,7 +10907,7 @@ std::vector<MagneticPeak> magnetic_unexplained_peaks(const Project& project, std
     std::vector<bool> included(x.size(), true);
     const std::vector<std::string>& status = data.calc_status.values();
     for (std::size_t i = 0; i < included.size() && i < status.size(); ++i) included[i] = status[i] == "incl";
-    const KEngine k(project);
+    const KEngine k(project, project.structures[parent]->name.value());  // bound to the phase (review 34)
     const crysta::Structure& structure = engine_structure(k.engine, project.structures[parent]->name.value());
     std::vector<MagneticPeak> out;
     for (const crysta::UnexplainedPeak& p : crysta::unexplained_peaks(structure, k.engine.experiments.at(experiment), x,
@@ -10914,7 +10934,7 @@ std::vector<std::string> magnetic_candidates_without_intensity(const Project& pr
     }
     std::vector<std::string> out;
     if (experiments.empty()) return out;
-    const KEngine k(project);
+    const KEngine k(project, prepared.parent);  // bound to the phase (review 34)
     for (const auto& candidate : children) {
         const crysta::Structure engine = to_crysta_structure(*candidate);
         bool none = true;
@@ -10998,7 +11018,7 @@ std::vector<MagneticPeak> magnetic_mark_candidates(const Project& project, std::
             if (x[i] >= lo && x[i] <= hi) included[i] = false;
         }
     }
-    const KEngine k(project);
+    const KEngine k(project, project.structures[parent]->name.value());  // bound to the phase (review 34)
     const std::string parent_name = project.structures[parent]->name.value();
     const crysta::Structure& structure = engine_structure(k.engine, parent_name);
     // Every other phase the experiment links and enables: a peak at its allowed lines is not pre-marked.
@@ -11089,7 +11109,7 @@ std::vector<MagneticPeak> magnetic_mark_candidates(const Project& project, std::
 
 MagneticPeak magnetic_peak_at(const Project& project, std::size_t experiment, std::size_t parent, double x) {
     require_experiment(project, experiment, parent);
-    const KEngine k(project);
+    const KEngine k(project, project.structures[parent]->name.value());  // bound to the phase (review 34)
     const crysta::Structure& structure = engine_structure(k.engine, project.structures[parent]->name.value());
     const crysta::UnexplainedPeak p = crysta::peak_at(structure, k.engine.experiments.at(experiment), x);
     return {p.x, p.d, p.tolerance, 0.0, p.half_width, false, false};
@@ -11114,7 +11134,7 @@ MagneticPeak magnetic_peak_near(const Project& project, std::size_t experiment, 
     // The nearest measured maximum whose own half width holds the click (packet 9m; reviews 30 and 31): maxima are
     // taken outward from the click, nearest first, with no cap, since the width varies along the pattern (a TOF
     // width can grow as d²). The first that holds the click is the nearest such one.
-    const KEngine k(project);
+    const KEngine k(project, project.structures[parent]->name.value());  // bound to the phase (review 34)
     const crysta::Structure& structure = engine_structure(k.engine, project.structures[parent]->name.value());
     const auto& engine_experiment = k.engine.experiments.at(experiment);
     const auto maximum = [&](std::size_t i) {
@@ -11145,7 +11165,7 @@ MagneticPeak magnetic_peak_near(const Project& project, std::size_t experiment, 
 std::vector<MagneticKRow> magnetic_k_search(const Project& project, std::size_t experiment, std::size_t parent,
                                             const std::vector<MagneticPeak>& peaks) {
     require_experiment(project, experiment, parent);
-    const KEngine k(project);
+    const KEngine k(project, project.structures[parent]->name.value());  // bound to the phase (review 34)
     const crysta::Structure& structure = engine_structure(k.engine, project.structures[parent]->name.value());
     std::vector<crysta::UnexplainedPeak> in;
     for (const MagneticPeak& p : peaks) in.push_back({p.x, p.d, p.tolerance, p.significance, p.half_width, p.on_allowed_reflection});
