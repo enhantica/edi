@@ -2692,7 +2692,8 @@ void fill_crysta_sequential(const SequentialFitConfig& config,
     for (const auto& row : config.starts) {
         const std::string& point = row->point.value();
         const std::string& name = row->parameter_unique_name.value();
-        converted.starts.push_back({crysta::parametric_start_id(point, name), point, name, row->value.get()});
+        converted.starts.push_back(
+            {crysta::parametric_start_id(point, name), point, name, row->value.get(), row->over.value()});
     }
 }
 
@@ -3059,21 +3060,15 @@ std::filesystem::path scan_results_path(const Project& project) {
 namespace {
 
 // The publication lock a reader of the scan's results holds while it reads, so a parametric fit's swap of the set is
-// never seen half done (crysta ADR-0136). Only a folder no one can write, so no fit can publish into, is read without
-// it; any other failure to take it refuses the read.
+// never seen half done (crysta ADR-0136). It is kept outside the project, so a read-only folder takes it too; one that
+// cannot be taken refuses the read.
 void lock_results_for_reading(const Project& project, std::optional<crysta::PublicationReadLock>& reading) {
     const std::filesystem::path folder = scan_results_path(project).parent_path();
     try {
         reading.emplace(folder);
     } catch (const std::exception& failure) {
-        std::error_code error;
-        const std::filesystem::perms perms = std::filesystem::status(folder, error).permissions();
-        constexpr auto writable = std::filesystem::perms::owner_write | std::filesystem::perms::group_write |
-                                  std::filesystem::perms::others_write;
-        if (error || (perms & writable) != std::filesystem::perms::none) {
-            throw std::invalid_argument(std::string("the scan's results cannot be read while they may be published: ") +
-                                        failure.what());
-        }
+        throw std::invalid_argument(std::string("the scan's results cannot be read while they may be published: ") +
+                                    failure.what());
     }
 }
 
@@ -3716,6 +3711,36 @@ std::vector<std::string> read_scan_row(const Project& project, std::int64_t offs
         throw std::invalid_argument("analysis/results.csv has no complete row at byte " + std::to_string(offset));
     }
     return split_scan_row(line);
+}
+
+std::string scan_row_identity(const Project& project, std::int64_t offset) {
+    std::optional<crysta::PublicationReadLock> reading;
+    lock_results_for_reading(project, reading);
+    std::ifstream input(scan_results_path(project), std::ios::binary);
+    std::string line;
+    if (!input || offset < 0 || !input.seekg(offset) || !std::getline(input, line) || input.eof()) {
+        throw std::invalid_argument("analysis/results.csv has no complete row at byte " + std::to_string(offset));
+    }
+    return crysta::scan_row_identity(line);
+}
+
+// Whether a scan's rows and notes cover all of its `total` files (a series: its points, by rows alone), as the driver
+// decides it refits. A notes file that cannot be read leaves the decision to the driver: not complete here.
+static bool scan_preamble_complete(const std::vector<ScanFileRecord>& rows, const std::filesystem::path& notes, int total,
+                            bool series) {
+    std::set<std::string> covered;
+    const auto base = [](const std::string& cell) { return std::filesystem::path(cell).filename().string(); };
+    for (const ScanFileRecord& row : rows) covered.insert(base(row.file_name));
+    if (!series) {
+        std::ifstream input(notes);
+        std::string line;
+        if (input && std::getline(input, line)) {
+            while (std::getline(input, line)) {
+                if (!line.empty()) covered.insert(base(line.substr(0, line.find(','))));
+            }
+        }
+    }
+    return total > 0 && static_cast<int>(covered.size()) >= total;
 }
 
 std::vector<std::string> evolution_parameters(const Project& project, const ScanResultIndex& index) {
@@ -7925,7 +7950,8 @@ void record_fit_result(Project& project, FitResultBase& outcome, std::size_t con
     record.last_shift_su = finite_factor(outcome.last_shift_su);
     record.fitting_time = outcome.elapsed_ms / 1000.0;
     record.reduced_chi_square = finite_factor(outcome.reduced_chi_square);
-    const std::size_t n_free = outcome.values.size();
+    // A parametric series gives its own count of free parameters (all points' and the shared ones).
+    const std::size_t n_free = outcome.n_free > 0 ? outcome.n_free : outcome.values.size();
     record.objective_name = "chi_square";
     record.objective_value =
         finite_factor(outcome.reduced_chi_square * detail::reduced_chi_square_dof(outcome.n_points_fitted, n_free));
@@ -8444,7 +8470,8 @@ FitResultBase Project::fit_parametric(const IterationCallback& on_iteration,
             out.reduced_chi_square = iterate.reduced_chi_square;
             out.points.reserve(iterate.points.size());
             for (const crysta::ParametricIterate::Point& point : iterate.points) {
-                ParametricIterate::IteratePoint copy{point.name, {}, point.grid, point.calculated};
+                ParametricIterate::IteratePoint copy{point.name,        {},          point.grid, point.calculated,
+                                                     point.experiments, point.offsets};
                 for (std::size_t i = 0; i < point.parameters.size() && i < point.values.size(); ++i) {
                     if (!point.parameters[i].empty()) copy.values[point.parameters[i]] = point.values[i];
                 }
@@ -8892,6 +8919,12 @@ FitResultBase Project::fit_scan(const IterationCallback& on_iteration,
                         ? csv_path
                         : data_root / "analysis" / "results.csv";
                 scan_preamble.completed_rows = read_scan_rows(resume_csv, csv_path);
+                // A complete scan (every file with a row or a note) is fitted again as a new pass that replaces
+                // its rows (owner decision 2026-11-27): none of them is this run's, so none is carried in.
+                if (scan_preamble_complete(scan_preamble.completed_rows, resume_csv.parent_path() / "scan-notes.csv",
+                                           *total_files, joint)) {
+                    scan_preamble.completed_rows.clear();
+                }
                 on_scan_start(scan_preamble);
                 preamble_delivered = true;
             }
@@ -9067,7 +9100,25 @@ FitResultBase Project::fit_scan(const IterationCallback& on_iteration,
         if (!result.cancelled) {
             // crysta gives the R factors of the scan's template file when this call fitted it; otherwise there is
             // nothing to record, and an earlier fit's result would be stale. Each file's results are the scan's.
-            if (result.scan_quality) {
+            if (result.series) {
+                // A parametric series is one fit: its points, free parameters and reduced chi-square are the
+                // series' (crysta ADR-0136); the agreement factors are its template file's when that was fitted.
+                FitResultBase recorded = outcome;
+                recorded.n_points_fitted = result.series->n_observed;
+                recorded.n_free = result.series->n_free;
+                recorded.reduced_chi_square = result.reduced_chi_square;
+                crysta::FitQuality quality;
+                if (result.scan_quality) {
+                    quality = *result.scan_quality;
+                    recorded.rwp = quality.pooled.rwp;
+                } else {
+                    constexpr double unknown = std::numeric_limits<double>::quiet_NaN();
+                    quality.pooled.rp = quality.pooled.rwp = quality.pooled.rexp = unknown;
+                    quality.pooled.chi_square = quality.pooled.crp = quality.pooled.cwrp = unknown;
+                    recorded.rwp = unknown;
+                }
+                record_fit_result(*this, recorded, cproject.collect_parameters().size(), {}, quality);
+            } else if (result.scan_quality) {
                 // The record describes the template file, not the file the scan ended on.
                 const crysta::ProfileFactors& pooled = result.scan_quality->pooled;
                 FitResultBase recorded = outcome;
@@ -9681,29 +9732,19 @@ CoresBudget cores_budget_for_mode(const std::string& mode) noexcept {
     return {cores, mode == "sequential" ? 1 : 0};  // a single or Joint fit reads no scan workers
 }
 
-namespace {
-std::mutex scan_workers_mutex;  // held by a fit that sets the process's scan workers, for the whole fit
-}  // namespace
-
+// Both counts are the calling thread's own, so fits on other threads, or a fit its own callback starts, keep theirs.
 struct ScopedCores::Held {
-    explicit Held(int threads) : threads(threads) {}
+    Held(int threads, int scan_workers) : threads(threads), scan_workers(scan_workers) {}
     crysta::threading::ScopedThreadCount threads;
-    std::unique_lock<std::mutex> lock;
-    int previous_workers = 0;
+    crysta::threading::ScopedScanWorkers scan_workers;
 };
 
 ScopedCores::ScopedCores(const CoresBudget& budget) {
     if (budget.threads <= 0) return;
-    held_ = std::make_unique<Held>(budget.threads);
-    if (budget.scan_workers <= 0) return;
-    held_->lock = std::unique_lock<std::mutex>(scan_workers_mutex);
-    held_->previous_workers = crysta::threading::scan_workers_setting();
-    crysta::threading::set_scan_workers(budget.scan_workers);
+    held_ = std::make_unique<Held>(budget.threads, budget.scan_workers > 0 ? budget.scan_workers : 0);
 }
 
-ScopedCores::~ScopedCores() {
-    if (held_ && held_->lock.owns_lock()) crysta::threading::set_scan_workers(held_->previous_workers);
-}
+ScopedCores::~ScopedCores() = default;
 
 namespace {
 

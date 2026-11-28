@@ -344,10 +344,19 @@ edi::SeriesPointCheck ScanSession::pointCheck(const edi::Project& project, int p
     return edi::series_point_check(bankRule(project), datasets_, index(), static_cast<std::size_t>(place));
 }
 
+std::string ScanSession::rowIdentity(const edi::Project& project, int dataset) const {
+    if (dataset < 0 || dataset >= static_cast<int>(index().rows.size()) || index().rows[static_cast<std::size_t>(dataset)].offset < 0) {
+        return crysta::kNoResultsRow;
+    }
+    return edi::scan_row_identity(project, index().rows[static_cast<std::size_t>(dataset)].offset);
+}
+
 std::vector<std::string> ScanSession::row(const edi::Project& project, int dataset) const {
     if (dataset < 0 || dataset >= static_cast<int>(index().rows.size()) || index().rows[static_cast<std::size_t>(dataset)].offset < 0) {
         return {};
     }
+    // The header and the row are read under one hold of the publication lock, so both are the same set's.
+    const crysta::PublicationReadLock reading(analysis_dir(project));
     if (!edi::scan_state_present(analysis_dir(project) / "results.csv", "analysis/results.csv")) {
         throw std::invalid_argument("analysis/results.csv changed under the app: it is no longer there");
     }
@@ -564,8 +573,10 @@ QString kept_aside(const fs::path& aside, const std::exception& refusal) {
 }
 
 // A parametric fit publishes the result files as one set (crysta ADR-0136): one it interrupted is settled first, and
-// copying, taking or putting back the files holds its publication lock, so no fit swaps the set meanwhile.
-void hold_results(const edi::Project& project, std::optional<crysta::PublicationReadLock>& held) {
+// copying the files holds its publication lock shared, so no fit swaps the set meanwhile. Taking them away or putting
+// them back (Reset fits, its Undo) changes the set, so it holds the lock alone: no reader or second Reset meets it.
+template <typename Lock>
+void hold_results(const edi::Project& project, std::optional<Lock>& held) {
     const fs::path directory = analysis_dir(project);
     crysta::recover_publication(directory);
     held.emplace(directory);
@@ -591,7 +602,7 @@ QString ScanSession::copyFiles(const edi::Project& project, Files& copied) {
 QString ScanSession::takeFiles(const edi::Project& project, Files& taken) {
     const fs::path directory = analysis_dir(project);
     taken = {};
-    std::optional<crysta::PublicationReadLock> held;
+    std::optional<crysta::PublicationWriteLock> held;
     try {
         hold_results(project, held);
         for (int which = 0; which < kResultFileCount; ++which) {
@@ -630,7 +641,7 @@ QString ScanSession::putFiles(const edi::Project& project, const Files& files, b
     moved_in.reserve(kResultFileCount);
     const fs::path directory = analysis_dir(project);
     Files current;
-    std::optional<crysta::PublicationReadLock> held;
+    std::optional<crysta::PublicationWriteLock> held;
     try {
         own_analysis_dir(project);
         hold_results(project, held);
