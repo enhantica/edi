@@ -1242,6 +1242,9 @@ struct Parameter {
     // names). Its free flag is kept for when a link reads it again, so a fit leaves it out and neither a fit nor a load
     // refuses or clears it.
     bool fit_idle = false;
+    // Set with them: idle because a Le Bail or Pawley structure's method does not use it (its atoms, its link's scale
+    // and texture). Pages draw such a value fixed whatever its flag, which waits for a switch back to Rietveld.
+    bool fit_method_idle = false;
 
     Parameter() = default;
     Parameter(double value_, std::optional<double> esd_ = 0.0, bool free_ = false)
@@ -3957,7 +3960,7 @@ struct PreparedAbsorptionRestore {
                 // their written identities; Undo restores only differing state.
                 const bool equal=held.value.get()==wanted.value.get() && held.uncertainty.get()==wanted.uncertainty.get() &&
                     held.free.get()==wanted.free.get() && held.start_value.get()==wanted.start_value.get() &&
-                    held.start_uncertainty.get()==wanted.start_uncertainty.get() && held.spec==wanted.spec && held.dependence==wanted.dependence && held.fit_blocker==wanted.fit_blocker && held.fit_reason==wanted.fit_reason && held.fit_idle==wanted.fit_idle;
+                    held.start_uncertainty.get()==wanted.start_uncertainty.get() && held.spec==wanted.spec && held.dependence==wanted.dependence && held.fit_blocker==wanted.fit_blocker && held.fit_reason==wanted.fit_reason && held.fit_idle==wanted.fit_idle && held.fit_method_idle==wanted.fit_method_idle;
                 if(!equal)held=std::move(incoming.live_->parameter);
             }
             else if(!current.live_ && incoming.live_) {
@@ -4033,7 +4036,7 @@ struct PreparedExtinctionRestore {
                 // their written identities; Undo restores only differing state.
                 const bool equal=held.value.get()==wanted.value.get() && held.uncertainty.get()==wanted.uncertainty.get() &&
                     held.free.get()==wanted.free.get() && held.start_value.get()==wanted.start_value.get() &&
-                    held.start_uncertainty.get()==wanted.start_uncertainty.get() && held.spec==wanted.spec && held.dependence==wanted.dependence && held.fit_blocker==wanted.fit_blocker && held.fit_reason==wanted.fit_reason && held.fit_idle==wanted.fit_idle;
+                    held.start_uncertainty.get()==wanted.start_uncertainty.get() && held.spec==wanted.spec && held.dependence==wanted.dependence && held.fit_blocker==wanted.fit_blocker && held.fit_reason==wanted.fit_reason && held.fit_idle==wanted.fit_idle && held.fit_method_idle==wanted.fit_method_idle;
                 if(!equal)held=std::move(incoming.live_->parameter);
             }
             else if(!current.live_ && incoming.live_) {

@@ -80,13 +80,14 @@ ParameterItem::ParameterItem(const edi::DescriptorEntry& entry, ProjectEditor& e
     full_name_ = block_name_ + QLatin1Char('.') + category_ + (row_label_.isEmpty() ? QString() : QLatin1Char('.') + row_label_) + QLatin1Char('.') + name_;
 }
 
-void ParameterItem::setFittability(bool fittable, const QString& reason, int group) {
+void ParameterItem::setFittability(bool fittable, const QString& reason, int group, bool method_idle) {
     if (fit_group_ != group) {
         fit_group_ = group;
         emit fitGroupChanged();
     }
-    if (fittable_ != fittable) {
+    if (fittable_ != fittable || method_idle_ != method_idle) {
         fittable_ = fittable;
+        method_idle_ = method_idle;
         emit fittableChanged();
     }
     if (fit_reason_ != reason) {

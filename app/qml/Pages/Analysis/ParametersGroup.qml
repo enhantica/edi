@@ -966,8 +966,9 @@ SideBarGroup {
                 }
                 // Enabled where a fit can vary the value, or while it is free so a flag set before a change can be
                 // cleared; otherwise disabled, its tooltip naming why (edi ADR-0053). Without measured data every box
-                // is disabled. A Pawley row's box is partly checked while only some of its intensities are free; a
-                // click frees or fixes them all.
+                // is disabled. A value a Le Bail or Pawley structure leaves idle is drawn fixed and disabled whatever
+                // its flag, as on its own page (edi ADR-0109). A Pawley row's box is partly checked while only some of
+                // its intensities are free; a click frees or fixes them all.
                 Item {
                     // At the table's right edge, under the title's arrow (the owner, 2026-11-17).
                     property int horizontalAlignment: Text.AlignRight
@@ -979,9 +980,10 @@ SideBarGroup {
                         anchors.right: parent.right
                         horizontalAlignment: Text.AlignRight
                         objectName: `parameters.free.${row.index}`
-                        enabled: group.measured && row.parameter !== null && (row.parameter.fittable || row.parameter.free || row.parameter.partiallyFree)
+                        readonly property bool idle: row.parameter !== null && !row.grouped && row.parameter.methodIdle
+                        enabled: group.measured && row.parameter !== null && !idle && (row.parameter.fittable || row.parameter.free || row.parameter.partiallyFree)
                         tristate: row.grouped
-                        checkState: !row.parameter ? Qt.Unchecked : row.parameter.partiallyFree ? Qt.PartiallyChecked : row.parameter.free ? Qt.Checked : Qt.Unchecked
+                        checkState: !row.parameter || idle ? Qt.Unchecked : row.parameter.partiallyFree ? Qt.PartiallyChecked : row.parameter.free ? Qt.Checked : Qt.Unchecked
                         // Never partly checked by a click: that state only reports a mix.
                         nextCheckState: () => freeBox.checkState === Qt.Checked ? Qt.Unchecked : Qt.Checked
                         onToggled: row.parameter.free = checked

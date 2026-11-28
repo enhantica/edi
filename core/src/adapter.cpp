@@ -6400,11 +6400,14 @@ FitBlocker fit_blocker_of(crysta::FitBlocker blocker) {
     return FitBlocker::None;
 }
 
-// crysta's reason with its detail, or for a blocker given alone its reason; empty when fittable.
-void mark(Parameter& parameter, crysta::FitBlocker blocker, std::string reason = {}, bool idle = false) {
+// crysta's reason with its detail, or for a blocker given alone its reason; empty when fittable. An idle mark with a
+// detail is the method's (crysta's method_idle_parameters reads it so).
+void mark(Parameter& parameter, crysta::FitBlocker blocker, std::string reason = {}, bool idle = false,
+          bool method_idle = false) {
     parameter.fit_blocker = fit_blocker_of(blocker);
     parameter.fit_reason = reason.empty() ? std::string(crysta::fit_reason(blocker)) : std::move(reason);
     parameter.fit_idle = idle;
+    parameter.fit_method_idle = method_idle;
 }
 }  // namespace
 
@@ -6505,7 +6508,7 @@ void refresh_fittability(Project& project) {
     for (const auto& [parameter, row] : rows) {
         try {
             const crysta::FitEligibility& status = rule->status(row->f_squared);
-            mark(*parameter, status.blocker, status.reason(), status.idle);
+            mark(*parameter, status.blocker, status.reason(), status.idle, status.idle && !status.detail.empty());
         } catch (const std::invalid_argument&) {  // NOLINT(bugprone-empty-catch) — stays not determined
         }
     }
@@ -6515,7 +6518,7 @@ void refresh_fittability(Project& project) {
         if (parameter->fit_blocker == FitBlocker::Descriptor || status == nullptr) {
             continue;
         }
-        mark(*parameter, status->blocker, status->reason(), status->idle);
+        mark(*parameter, status->blocker, status->reason(), status->idle, status->idle && !status->detail.empty());
         answered.insert(parameter);
     }
     // A parameter crysta's model does not hold (an inert slot of the other beam mode), or one of an experiment no fit

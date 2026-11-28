@@ -314,7 +314,7 @@ void ParameterRegistry::refreshFittability(edi::Project& project) {
             return ParameterItem::NoGroup;
         }();
         item->setFittability(parameter.fit_blocker == edi::FitBlocker::None,
-                             QString::fromStdString(parameter.fit_reason), group);
+                             QString::fromStdString(parameter.fit_reason), group, parameter.fit_method_idle);
     }
 }
 
