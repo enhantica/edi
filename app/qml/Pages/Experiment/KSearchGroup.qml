@@ -87,6 +87,10 @@ SideBarGroup {
                     enabled: group.rows.length > 0
                     ToolTip.text: qsTr("Remove all marked peaks")
                     onClicked: group.chart.axisProject.clearKMarks()
+                    // The header's own MouseArea, over its row of cells, takes every header click for the list's
+                    // focus; this row goes above it so the button gets its click, while the labels, which take no
+                    // clicks, still let theirs through (review 28).
+                    Component.onCompleted: if (parent) parent.z = 1
                 }
             }
 
