@@ -9,6 +9,11 @@
           "proof": null,
           "overloads": 1
         },
+        "projectGeneration": {
+          "domain": "read-only query",
+          "proof": null,
+          "overloads": 1
+        },
         "locationExists": {
           "domain": "read-only query",
           "proof": null,
