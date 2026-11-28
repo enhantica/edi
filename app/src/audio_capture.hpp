@@ -49,6 +49,20 @@ private:
 /// Whole frames of `bytes` in `format`, each frame's channels averaged into one float in [-1, 1].
 std::vector<float> mono_samples(const QAudioFormat& format, QByteArrayView bytes);
 
+/// The microphone's bytes in `format` as 16 kHz mono. A partial frame waits for the rest of it; `finish` returns what
+/// the resampler still holds at the end of a recording, which only a flush releases.
+class CaptureConverter {
+public:
+    explicit CaptureConverter(const QAudioFormat& format);
+    std::vector<float> push(QByteArrayView bytes);
+    std::vector<float> finish();
+
+private:
+    QAudioFormat format_;
+    MonoResampler resampler_;
+    QByteArray carry_;  // a partial frame left from the last push
+};
+
 /// A microphone for voice input: 16 kHz mono floats in [-1, 1], in memory only. Tests inject their own source.
 class AudioCapture : public QObject {
     Q_OBJECT
@@ -61,8 +75,14 @@ public:
     /// Asks for the microphone permission when the system has not been asked yet, then records. Answers with
     /// `started` or `failed`, possibly before returning.
     virtual void start() = 0;
-    /// Stops recording; no `samples` follow.
+    /// Stops recording and drops what the microphone still holds; no `samples` follow.
     virtual void stop() = 0;
+    /// Stops recording and returns what the microphone still holds: audio buffered since the last `samples` and the
+    /// resampler's end. No `samples` follow.
+    virtual std::vector<float> finish() {
+        stop();
+        return {};
+    }
 
 signals:
     void started();
@@ -79,6 +99,7 @@ public:
 
     void start() override;
     void stop() override;
+    std::vector<float> finish() override;
 
 private:
     void open();
@@ -87,9 +108,7 @@ private:
 
     QPointer<QAudioSource> source_;
     QPointer<QIODevice> device_;
-    QAudioFormat format_;
-    std::unique_ptr<MonoResampler> resampler_;
-    QByteArray carry_;  // a partial frame left from the last read
+    std::unique_ptr<CaptureConverter> converter_;
     int request_ = 0;  // a stop or a later start makes an earlier permission answer stale
 };
 

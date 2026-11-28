@@ -169,6 +169,26 @@ std::vector<float> mono_samples(const QAudioFormat& format, QByteArrayView bytes
     return mono;
 }
 
+CaptureConverter::CaptureConverter(const QAudioFormat& format) : format_(format), resampler_(format.sampleRate()) {}
+
+std::vector<float> CaptureConverter::push(QByteArrayView bytes) {
+    carry_.append(bytes);
+    const qsizetype frame = format_.bytesPerFrame();
+    if (frame <= 0)
+        return {};
+    const qsizetype whole = carry_.size() / frame * frame;
+    if (whole == 0)
+        return {};
+    const auto mono = mono_samples(format_, QByteArrayView(carry_).first(whole));
+    carry_.remove(0, whole);
+    return resampler_.push(mono);
+}
+
+std::vector<float> CaptureConverter::finish() {
+    carry_.clear();
+    return resampler_.flush();
+}
+
 QtAudioCapture::~QtAudioCapture() { close(); }
 
 void QtAudioCapture::start() {
@@ -203,6 +223,20 @@ void QtAudioCapture::stop() {
     close();
 }
 
+std::vector<float> QtAudioCapture::finish() {
+    ++request_;
+    std::vector<float> tail;
+    if (converter_) {
+        // Read before the source stops, which closes its device.
+        if (device_)
+            tail = converter_->push(device_->readAll());
+        const auto end = converter_->finish();
+        tail.insert(tail.end(), end.begin(), end.end());
+    }
+    close();
+    return tail;
+}
+
 void QtAudioCapture::open() {
     const QAudioDevice input = QMediaDevices::defaultAudioInput();
     if (input.isNull()) {
@@ -211,24 +245,24 @@ void QtAudioCapture::open() {
     }
     // Record in the device's own format and convert here. When Qt 6.11 converts the rate itself on macOS it repeats up to a
     // fifth of the audio in short pieces (QTBUG-151918), which garbles speech.
-    format_ = input.preferredFormat();
-    if (!format_.isValid()) {
+    QAudioFormat format = input.preferredFormat();
+    if (!format.isValid()) {
         QAudioFormat wanted;
         wanted.setSampleRate(16000);
         wanted.setChannelCount(1);
         wanted.setSampleFormat(QAudioFormat::Float);
         if (input.isFormatSupported(wanted))
-            format_ = wanted;
+            format = wanted;
     }
     // The rate bounds the resampler's filter length.
-    if (!format_.isValid() || format_.bytesPerFrame() <= 0 || format_.sampleRate() < 8000 || format_.sampleRate() > 384000) {
+    if (!format.isValid() || format.bytesPerFrame() <= 0 || format.sampleRate() < 8000 || format.sampleRate() > 384000) {
         emit failed(Failure::DeviceFailed);
         return;
     }
-    qCInfo(lcVoiceCapture) << "Microphone" << input.description() << format_.sampleRate() << "Hz" << format_.channelCount()
-                           << "channels" << format_.sampleFormat();
-    resampler_ = std::make_unique<MonoResampler>(format_.sampleRate());
-    source_ = new QAudioSource(input, format_, this);
+    qCInfo(lcVoiceCapture) << "Microphone" << input.description() << format.sampleRate() << "Hz" << format.channelCount()
+                           << "channels" << format.sampleFormat();
+    converter_ = std::make_unique<CaptureConverter>(format);
+    source_ = new QAudioSource(input, format, this);
     connect(source_, &QAudioSource::stateChanged, this, [this](QtAudio::State) {
         if (source_ && source_->error() != QtAudio::NoError) {
             close();
@@ -246,18 +280,9 @@ void QtAudioCapture::open() {
 }
 
 void QtAudioCapture::read() {
-    if (!device_ || !resampler_)
+    if (!device_ || !converter_)
         return;
-    carry_.append(device_->readAll());
-    const qsizetype frame = format_.bytesPerFrame();
-    if (frame <= 0)
-        return;
-    const qsizetype whole = carry_.size() / frame * frame;
-    if (whole == 0)
-        return;
-    const auto mono = mono_samples(format_, QByteArrayView(carry_).first(whole));
-    carry_.remove(0, whole);
-    const auto converted = resampler_->push(mono);
+    const auto converted = converter_->push(device_->readAll());
     if (!converted.empty())
         emit samples(QList<float>(converted.begin(), converted.end()));
 }
@@ -270,8 +295,7 @@ void QtAudioCapture::close() {
     }
     source_ = nullptr;
     device_ = nullptr;
-    resampler_.reset();
-    carry_.clear();
+    converter_.reset();
 }
 
 ScriptedAudioCapture::ScriptedAudioCapture(QString mode, QString wav, QObject* parent)

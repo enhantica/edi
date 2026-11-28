@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 // Voice input (ADR-0107) on the tiny model and a recorded speech, never a real microphone: a model folder named outside
-// ASCII, an owner that goes away or releases its recording, a result that lands after a cancel, and a microphone that
-// is missing, refused or broken.
+// ASCII, an owner that goes away or releases its recording, a result that lands after a cancel, a microphone that is
+// missing, refused or broken, and when a recording counts as speech, quiet or not.
 #include <QCoreApplication>
 #include <QDir>
 #include <QFile>
@@ -15,7 +15,10 @@
 #include <QtTest/QtTest>
 
 #include <algorithm>
+#include <cmath>
+#include <initializer_list>
 #include <memory>
+#include <numbers>
 #include <utility>
 #include <vector>
 
@@ -27,7 +30,12 @@ namespace edi_app {
 namespace {
 
 constexpr int kRecognitionMs = 120000;
+constexpr int kRate = SpeechRecogniser::sample_rate;
 const QString kFixtures = QStringLiteral(EDI_SOURCE_DIR "/tests/fixtures/assistant_voice");
+// A model path with no file: the recogniser refuses it at once, which shows a recording reached it without running
+// Whisper.
+const QString kAbsentModel = kFixtures + QStringLiteral("/absent-model.bin");
+const QString kNoModelMessage = QStringLiteral("The speech model is not installed.");
 
 // CI stages the model before the run (tests/fixtures/assistant_voice/README.md).
 QString tinyModel() {
@@ -41,6 +49,56 @@ QStringList words(const QString& text) {
     return text.toLower().split(separators, Qt::SkipEmptyParts);
 }
 
+// Test signals at a known level in dBFS: white noise from a fixed seed for a room, a 220 Hz tone for a voice.
+QList<float> noise(double seconds, double db) {
+    QList<float> samples(static_cast<qsizetype>(std::lround(seconds * kRate)));
+    const double peak = std::pow(10.0, db / 20.0) * std::sqrt(3.0);  // uniform in [-peak, peak]
+    quint32 state = 12345U;
+    for (auto& sample : samples) {
+        state = state * 1664525U + 1013904223U;
+        sample = static_cast<float>(peak * (static_cast<double>(state >> 8) / (1 << 23) - 1.0));
+    }
+    return samples;
+}
+
+QList<float> tone(double seconds, double db) {
+    QList<float> samples(static_cast<qsizetype>(std::lround(seconds * kRate)));
+    const double peak = std::pow(10.0, db / 20.0) * std::sqrt(2.0);
+    const double step = 2.0 * std::numbers::pi * 220.0 / kRate;
+    for (qsizetype i = 0; i < samples.size(); ++i)
+        samples[i] = static_cast<float>(peak * std::sin(step * static_cast<double>(i)));
+    return samples;
+}
+
+// `a` with `b` added from `at` on.
+QList<float> mixed(QList<float> a, const QList<float>& b, qsizetype at = 0) {
+    for (qsizetype i = 0; i < b.size() && at + i < a.size(); ++i)
+        a[at + i] += b[i];
+    return a;
+}
+
+QList<float> joined(std::initializer_list<QList<float>> parts) {
+    QList<float> all;
+    for (const auto& part : parts)
+        all.append(part);
+    return all;
+}
+
+QList<float> scaled(const std::vector<float>& audio, double gain) {
+    QList<float> samples;
+    samples.reserve(static_cast<qsizetype>(audio.size()));
+    for (const float sample : audio)
+        samples.append(static_cast<float>(sample * gain));
+    return samples;
+}
+
+double rms(const std::vector<float>& audio) {
+    double energy = 0.0;
+    for (const float sample : audio)
+        energy += static_cast<double>(sample) * static_cast<double>(sample);
+    return std::sqrt(energy / static_cast<double>(audio.size()));
+}
+
 // A microphone the test speaks into: it starts on the next turn of the event loop, as a real one answers later.
 class FakeCapture final : public AudioCapture {
 public:
@@ -52,7 +110,18 @@ public:
         }, Qt::QueuedConnection);
     }
     void stop() override { ++request_; }
+    std::vector<float> finish() override {
+        ++finished;
+        stop();
+        const std::vector<float> end(held.begin(), held.end());
+        held.clear();
+        return end;
+    }
     void play(const std::vector<float>& audio) { emit samples(QList<float>(audio.begin(), audio.end())); }
+    void play(const QList<float>& audio) { emit samples(audio); }
+
+    QList<float> held;  // what only `finish` returns, as a real microphone's buffer and resampler hold the end
+    int finished = 0;
 
 private:
     int request_ = 0;
@@ -256,10 +325,11 @@ private slots:
         auto voice = voiceOn(tinyModel());
         QCOMPARE(voice.input->workers().maxThreadCount(), 1);
         QSignalSpy text(voice.input.get(), &VoiceInput::textRecognised);
-        // Hold the one worker thread, so the jobs below wait as they would behind a slow load.
-        QSemaphore gate;
-        voice.input->workers().start([&gate] { gate.acquire(); });
-        auto open = qScopeGuard([&gate] { gate.release(); });
+        // Hold the one worker thread, so the jobs below wait as they would behind a slow load. The job shares the gate,
+        // so it outlives this test however it ends.
+        auto gate = std::make_shared<QSemaphore>();
+        voice.input->workers().start([gate] { gate->acquire(); });
+        auto open = qScopeGuard([gate] { gate->release(); });
         const int loads = SpeechRecogniser::loads();
         for (int round = 0; round < 2; ++round) {
             voice.input->toggle();
@@ -270,10 +340,106 @@ private slots:
             QCOMPARE(voice.input->state(), VoiceInput::State::Idle);
         }
         open.dismiss();
-        gate.release();
+        gate->release();
         QVERIFY(settle(*voice.input));
         QCOMPARE(SpeechRecogniser::loads(), loads);
         QCOMPARE(text.count(), 0);
+        QCOMPARE(voice.input->message(), QString());
+    }
+
+    // A recording without speech is never recognised, since Whisper makes up text from silence (ADR-0107 §8): digital
+    // silence, a quiet or a noisy room, a microphone that starts with digital silence, a click. The silence stop waits
+    // for speech, and a press says nothing was heard.
+    void nothingHeardWithoutSpeech_data() {
+        QTest::addColumn<QList<float>>("recording");
+        QTest::newRow("digital silence") << QList<float>(3 * kRate, 0.0F);
+        QTest::newRow("quiet room") << noise(3.0, -70.0);
+        QTest::newRow("noisy room") << noise(3.0, -45.0);
+        QTest::newRow("digital silence, then a room") << joined({QList<float>(kRate / 2, 0.0F), noise(3.0, -50.0)});
+        QTest::newRow("a click") << mixed(noise(3.0, -60.0), tone(0.01, -10.0), kRate);
+    }
+    void nothingHeardWithoutSpeech() {
+        QFETCH(QList<float>, recording);
+        auto voice = voiceOn(kAbsentModel);
+        QVERIFY(voice.input->available());
+        voice.input->toggle();
+        QTRY_COMPARE(voice.input->state(), VoiceInput::State::Listening);
+        voice.capture->play(recording);
+        QCOMPARE(voice.input->state(), VoiceInput::State::Listening);
+        voice.input->toggle();
+        QCOMPARE(voice.input->state(), VoiceInput::State::Idle);
+        QCOMPARE(voice.input->message(), QStringLiteral("Nothing was heard."));
+        QVERIFY(settle(*voice.input));
+        QCOMPARE(voice.input->message(), QStringLiteral("Nothing was heard."));
+    }
+
+    // Speech from a microphone set low, the fixture at -45 dBFS (28 dB down, no 30 ms block above -36 dBFS), is heard:
+    // the silence after it stops the recording, and so does a press. The recogniser's refusal of the absent model
+    // shows the recording reached it.
+    void quietSpeechIsHeard_data() {
+        QTest::addColumn<bool>("pressed");
+        QTest::newRow("stopped by the silence") << false;
+        QTest::newRow("stopped by a press") << true;
+    }
+    void quietSpeechIsHeard() {
+        QFETCH(bool, pressed);
+        const double gain = std::pow(10.0, -45.0 / 20.0) / rms(speech_);
+        const auto three_seconds = std::ptrdiff_t{3} * kRate;
+        const auto recording =
+            pressed ? scaled(std::vector<float>(speech_.begin(), speech_.begin() + three_seconds), gain)
+                    : scaled(spoken_, gain);
+        auto voice = voiceOn(kAbsentModel);
+        voice.input->toggle();
+        QTRY_COMPARE(voice.input->state(), VoiceInput::State::Listening);
+        voice.capture->play(recording);
+        if (pressed) {
+            QCOMPARE(voice.input->state(), VoiceInput::State::Listening);
+            voice.input->toggle();
+        }
+        QCOMPARE(voice.input->state(), VoiceInput::State::Recognising);
+        QVERIFY(settle(*voice.input));
+        QCOMPARE(voice.input->state(), VoiceInput::State::Idle);
+        QCOMPARE(voice.input->message(), kNoModelMessage);
+    }
+
+    // A quiet continuation after a loud syllable is still speech, so the silence stop waits for real silence: a room at
+    // -60 dBFS, a syllable at -20 dBFS, then three seconds at -40 dBFS.
+    void quietContinuationKeepsListening() {
+        auto voice = voiceOn(kAbsentModel);
+        voice.input->toggle();
+        QTRY_COMPARE(voice.input->state(), VoiceInput::State::Listening);
+        voice.capture->play(noise(0.5, -60.0));
+        voice.capture->play(mixed(noise(0.3, -60.0), tone(0.3, -20.0)));
+        voice.capture->play(mixed(noise(3.0, -60.0), tone(3.0, -40.0)));
+        QCOMPARE(voice.input->state(), VoiceInput::State::Listening);
+        voice.capture->play(noise(2.5, -60.0));
+        QCOMPARE(voice.input->state(), VoiceInput::State::Recognising);
+        QVERIFY(settle(*voice.input));
+        QCOMPARE(voice.input->message(), kNoModelMessage);
+    }
+
+    // A press takes the end of the recording the microphone still holds, here its only speech; a cancel drops it.
+    void stopTakesTheHeldEndAndCancelDropsIt() {
+        auto voice = voiceOn(kAbsentModel);
+        voice.input->toggle();
+        QTRY_COMPARE(voice.input->state(), VoiceInput::State::Listening);
+        voice.capture->play(noise(2.0, -60.0));
+        voice.capture->held = mixed(noise(1.0, -60.0), tone(1.0, -30.0));
+        voice.input->toggle();
+        QCOMPARE(voice.capture->finished, 1);
+        QVERIFY(voice.capture->held.isEmpty());
+        QCOMPARE(voice.input->state(), VoiceInput::State::Recognising);
+        QVERIFY(settle(*voice.input));
+        QCOMPARE(voice.input->message(), kNoModelMessage);
+
+        voice.input->toggle();
+        QTRY_COMPARE(voice.input->state(), VoiceInput::State::Listening);
+        voice.capture->play(noise(2.0, -60.0));
+        voice.capture->held = mixed(noise(1.0, -60.0), tone(1.0, -30.0));
+        voice.input->cancel();
+        QCOMPARE(voice.capture->finished, 1);
+        QCOMPARE(voice.input->state(), VoiceInput::State::Idle);
+        QVERIFY(settle(*voice.input));
         QCOMPARE(voice.input->message(), QString());
     }
 

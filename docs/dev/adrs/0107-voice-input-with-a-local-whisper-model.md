@@ -56,9 +56,11 @@ assistant runtime, and shows its choices as rows on the folder page instead of a
    more than once and repeats pieces of the audio (QTBUG-151918, fixed in Qt 6.12). The
    samples stay in memory: they are never written to a file and never sent anywhere, and they are released when the
    text is ready or the recording is cancelled. A recording stops when the user presses the button again, after two
-   seconds of silence following speech, or after two minutes. Only Qt Multimedia's audio input is used; its FFmpeg
-   media plugin is not shipped. The run log (category `edi.voice`) records each step, why a recording stopped or was
-   cancelled and how long recognition took, never audio or text.
+   seconds of silence following speech, or after two minutes. A press keeps the end of the recording: the audio the
+   device buffered since its last read and the samples the resampler holds back are taken before recognition starts; a
+   cancel drops them. Only Qt Multimedia's audio input is used; its FFmpeg media plugin is not shipped. The run log
+   (category `edi.voice`) records each step, why a recording stopped or was cancelled and how long recognition took,
+   never audio or text.
 5. **Permission.** On first use the app asks for Qt's `QMicrophonePermission`. The macOS bundle's Info.plist
    (`app/resources/macos/Info.plist.in`, given to CMake so Qt links its microphone permission plugin) declares
    `NSMicrophoneUsageDescription` ("EasyDiffraction uses the microphone only when you press the microphone button in
@@ -86,14 +88,18 @@ assistant runtime, and shows its choices as rows on the folder page instead of a
    their left. One press starts listening, the next stops and recognises. There is no cancel button; Escape anywhere
    in the message box cancels. While listening the button takes the accent colour and a row of 16 accent-coloured
    dots beside it ripples gently from right to left, so it never looks frozen in silence; the voice raises the dots
-   into bars that move the same way. While recognising the button shows it is busy and the dots keep a slower, smaller
-   ripple until the text is in; Escape stops it and another press does not, so a press just after the silence stop
-   keeps the recording. No words say the state (the owner, 2026-11-28); the button's accessible description does.
-   With animations off the dots stay still and light from the left with the level. A recording in which no speech was heard is not recognised, since Whisper makes up text from
-   silence; the box says "Nothing was heard." The button is always shown (the owner, 2026-11-27). Without the
-   component, or on a processor without AVX2, a press opens the same note as the assistant's button without the
-   assistant (ADR-0071): what is missing and, in an installation Maintenance Tool manages, a link to Updates in
-   Preferences to add voice input.
+   into bars that move the same way. While recognising the button's microphone is dimmed, with no spinner, and the dots
+   keep a slower, smaller ripple until the text is in; Escape stops it and another press does not, so a press just after
+   the silence stop keeps the recording. No words say the state (the owner, 2026-11-28); the button's accessible
+   description does. With animations off the dots stay still and light from the left with the level. A recording in
+   which no speech was heard is not recognised, since Whisper makes up text from silence; the box says "Nothing was
+   heard." Speech is judged against the recording's own noise floor, the level a tenth of its 30 ms blocks are quieter
+   than, digital silence below -80 dBFS left out: a block 15 dB above the floor is speech, and a recording needs four
+   such blocks, so a microphone set low still counts and a click does not. The two-second silence stop uses the same
+   test, so a quiet continuation after a loud syllable keeps the recording going. The button is always shown (the owner,
+   2026-11-27). Without the component, or on a processor without AVX2, a press opens the same note as the assistant's
+   button without the assistant (ADR-0071): what is missing and, in an installation Maintenance Tool manages, a link to
+   Updates in Preferences to add voice input.
 
 ## Speed
 

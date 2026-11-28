@@ -12,8 +12,10 @@
 #include <QList>
 #include <QtQml/qqmlregistration.h>
 
+#include <array>
 #include <atomic>
 #include <memory>
+#include <span>
 #include <vector>
 
 namespace edi_app {
@@ -119,6 +121,8 @@ private:
     void captureStarted();
     void captureSamples(const QList<float>& chunk);
     void captureFailed(AudioCapture::Failure failure);
+    void analyse(std::span<const float> chunk);
+    bool speech(double rms);
     void finish(int generation, const QString& text, const QString& error, bool cancelled);
     void setState(State state);
     void setMessage(const QString& message);
@@ -135,9 +139,12 @@ private:
     QString message_;
     QString language_ = QStringLiteral("en");
     std::vector<float> recording_;
-    std::size_t analysed_ = 0;  // samples of recording_ the silence check has read
+    std::size_t analysed_ = 0;  // samples of recording_ the speech check has read
     std::size_t silent_ = 0;    // samples of silence since the last speech
     bool heard_ = false;        // speech has been heard in this recording
+    std::array<int, 81> levels_{};  // 30 ms blocks per 1 dB from -80 to 0 dBFS, for the noise floor
+    int counted_ = 0;               // blocks in levels_
+    int spoken_ = 0;                // blocks of speech so far
     double level_ = 0.0;
     double loudest_ = 0.0;      // the loudest block since `level` last changed
     QElapsedTimer levelShown_;  // `level` changes at most every level_ms, as the meter needs no more

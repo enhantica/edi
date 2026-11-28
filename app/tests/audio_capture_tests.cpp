@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 // The microphone's conversion to the 16 kHz mono floats the speech model reads (ADR-0107): sample formats, channel
-// mixing and the resampler, checked against sine waves computed here rather than against the code's own output.
+// mixing, the resampler and the end of a recording, checked against sine waves computed here rather than against the
+// code's own output.
 #include <QAudioFormat>
 #include <QByteArray>
 #include <QtTest/QtTest>
@@ -165,6 +166,38 @@ private slots:
         append<float>(stereo, 0.0F);
         append<float>(stereo, 0.75F);  // half a frame, kept back by the caller until the rest arrives
         QCOMPARE(mono_samples(format(QAudioFormat::Float, 2), stereo), (std::vector<float>{0.375F, -0.5F}));
+    }
+
+    // A stop must finish the microphone's converter: the resampler holds the last samples back until it knows what
+    // follows. Bytes in uneven pieces, partial frames included, then the finish give the whole recording at 16 kHz.
+    void converterFinishReleasesTheEnd() {
+        const auto stereo = format(QAudioFormat::Int16, 2);
+        const auto wave = sine(440.0, 48000, 0.5);
+        QByteArray bytes;
+        for (const float sample : wave) {
+            const auto value = static_cast<qint16>(std::lround(static_cast<double>(sample) * 32767.0));
+            append<qint16>(bytes, value);
+            append<qint16>(bytes, value);
+        }
+        CaptureConverter converter(stereo);
+        std::vector<float> output;
+        qsizetype size = 1;
+        for (qsizetype at = 0; at < bytes.size(); at += size, size = size * 3 % 1999 + 1) {
+            const auto part = converter.push(QByteArrayView(bytes).sliced(at, std::min(size, bytes.size() - at)));
+            output.insert(output.end(), part.begin(), part.end());
+        }
+        const auto expected =
+            static_cast<std::size_t>(std::ceil(static_cast<double>(wave.size()) * kOutputRate / 48000));
+        QVERIFY2(output.size() < expected, "nothing was held back for the finish");
+        const auto end = converter.finish();
+        output.insert(output.end(), end.begin(), end.end());
+        QCOMPARE(output.size(), expected);
+        // The ideal 440 Hz wave at 16 kHz, away from both ends.
+        const auto ideal = sine(440.0, kOutputRate, 0.5);
+        double worst = 0.0;
+        for (std::size_t i = output.size() / 20; i < output.size() - output.size() / 20; ++i)
+            worst = std::max(worst, static_cast<double>(std::abs(output[i] - ideal[i])));
+        QVERIFY2(worst < 1e-3, qPrintable(QStringLiteral("worst error %1").arg(worst)));
     }
 };
 
