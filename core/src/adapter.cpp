@@ -6060,13 +6060,19 @@ namespace {
 // The engine experiments a calculation runs on: one per bank, each with its data node. Shared by
 // calculate() and the parity dump, so the dump is of the very model a
 // calculation reads.
-BuiltExperiments calculation_banks(const ItemVec<BraggPdExperiment>& experiments) {
+// `data_required` false lets a powder bank without a data node cross as calculation only, for work that reads
+// data only where an experiment has some (the scale start after a method switch).
+BuiltExperiments calculation_banks(const ItemVec<BraggPdExperiment>& experiments, bool data_required = true) {
     BuiltExperiments banks;
     banks.reserve(experiments.size());
     for (const auto& bank_item : experiments) {
         const BraggPdExperiment& bank = *bank_item;
         if (bank.reflections.has_value()) {  // a single crystal: its reflections cross with it
             build_on_heap(banks, bank);
+            continue;
+        }
+        if (!bank.data.has_value() && !data_required) {
+            build_on_heap(banks, bank).calculation_only = true;
             continue;
         }
         if (!bank.data.has_value()) {
@@ -7052,8 +7058,9 @@ CalcMethodOutcome select_calc_method(Project& project, Structure& structure, con
     if (!at) {
         throw std::invalid_argument("the structure is not in the project");
     }
-    // Everything is worked out on crysta's copy first, so a refusal writes nothing here.
-    const BuiltExperiments banks = calculation_banks(project.experiments);
+    // Everything is worked out on crysta's copy first, so a refusal writes nothing here. Only the scale start reads
+    // measured data, and only of the experiments that have some.
+    const BuiltExperiments banks = calculation_banks(project.experiments, false);
     crysta::Project engine(to_crysta_structures(project, false), experiment_list(banks));
     fill_crysta_relations(project, engine);
     engine.refine_ls_threshold_sigma = project.refine_ls_threshold_sigma;
