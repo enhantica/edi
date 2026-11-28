@@ -88,8 +88,8 @@ Component.prototype.createOperations = function () {
 
 // After a successful update nothing of the swap is left: no backup and no staging folder, whichever tool drove the
 // update (edi ADR-0109). After a rollback the undo has put the kept item back, and only this run's claim on the
-// staging folder goes. Windows has nothing to remove: the Framework writes the installed tool from the staged file as
-// it quits and then deletes that file (IFW 4.11).
+// staging folder goes. Windows has nothing to remove here: the Framework writes the installed tool from the staged
+// file as it quits and then deletes that file (IFW 4.11).
 Component.prototype.removeLeftovers = function () {
     var swap = swapped();
     var target = installer.value("TargetDir");

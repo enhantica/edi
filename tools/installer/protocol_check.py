@@ -421,6 +421,9 @@ def first_update(
         for name in (STAGING, LEGACY_STAGING):
             (target / name).mkdir(exist_ok=True)
             (target / name / '.DS_Store').write_bytes(b'')
+    elif SYSTEM == 'windows':
+        # The empty folder an earlier update left (edi ADR-0109); this update must remove it.
+        (target / LEGACY_STAGING).mkdir(exist_ok=True)
     # --verbose: the log says whether the tool component was updated.
     run([maintenance, *UPDATE], **options)
     if installed.read_text(encoding='utf-8') != 'second marker\n':
@@ -689,8 +692,8 @@ def tool_files_settled(target: Path) -> None:
     """Require no staging folder and no backup of the tool's swapped files (edi ADR-0109).
 
     Windows has no staging folder; verify_installed_maintenance_tool checks its staged file. The
-    folder releases before this one staged into goes too: on a case-insensitive disk that name is
-    the Linux tool itself, so only a folder counts.
+    folder releases before this one staged into goes too, on every system: on a case-insensitive
+    disk that name is the Linux tool itself, so only a folder counts.
     """
     staging = target / STAGING
     if SYSTEM != 'windows' and staging.is_dir():
@@ -698,7 +701,7 @@ def tool_files_settled(target: Path) -> None:
     if SYSTEM != 'windows' and staging.exists():
         raise RuntimeError(f'{STAGING} is left in the installation')
     legacy = target / LEGACY_STAGING
-    if SYSTEM != 'windows' and legacy.is_dir() and not legacy.is_symlink():
+    if legacy.is_dir() and not legacy.is_symlink():
         raise RuntimeError(
             f'{LEGACY_STAGING}/ is left in the installation, holding {held(legacy)}'
         )

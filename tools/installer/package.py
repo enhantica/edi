@@ -850,8 +850,8 @@ def verify_installed_maintenance_tool(
 
     Linux has no signed tool: its runtime must be complete instead. No staging folder and no
     backup may be left (ADR-0109). Windows may keep the staged tool after a fresh install, as the
-    installed tool's bytes, for the app's next start to remove; an update leaves none, as the
-    Framework deletes it once it has written the installed tool from it.
+    installed tool's bytes; an update leaves none, as the Framework deletes it once it has written
+    the installed tool from it, nor the maintenancetool folder releases before staged into.
     """
     if SYSTEM == 'linux':
         check_maintenance_runtime(target)
@@ -868,6 +868,11 @@ def verify_installed_maintenance_tool(
         installed = target / maintenance_tool_name()
         if staged.exists() and (updated or sha256(staged) != sha256(installed)):
             raise RuntimeError('The installer left a staged maintenance tool behind')
+        # The folder releases before staged into; the update removes it as it ends.
+        if updated and (target / 'maintenancetool').exists():
+            raise RuntimeError(
+                'The update left the folder an older maintenance tool was staged in'
+            )
     elif (target / MAINTENANCE_STAGING).exists():
         raise RuntimeError('The installer left the shipped maintenance tool in place')
     item = maintenance_item()

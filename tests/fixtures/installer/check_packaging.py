@@ -802,6 +802,9 @@ def test_installed_linux_tool_needs_its_whole_runtime(tmp_path, monkeypatch, dam
         (True, None, False),
         (True, 'installed', True),
         (True, 'other', True),
+        # The folder releases before staged into; the update removes it as it ends.
+        (False, 'legacy', False),
+        (True, 'legacy', True),
     ],
 )
 def test_windows_staged_tool_is_gone_after_an_update(
@@ -810,7 +813,9 @@ def test_windows_staged_tool_is_gone_after_an_update(
     monkeypatch.setattr(PACKAGE, 'SYSTEM', 'windows')
     monkeypatch.delenv('EDI_CODESIGN', raising=False)
     bundle = signed_bundle(tmp_path)
-    if staged:
+    if staged == 'legacy':
+        (tmp_path / 'maintenancetool').mkdir()
+    elif staged:
         copy = tmp_path / PACKAGE.WINDOWS_STAGED_TOOL
         copy.write_bytes(bundle.read_bytes() if staged == 'installed' else b'older tool')
     metadata = {'maintenance_tool_sha256': PACKAGE.sha256(bundle)}

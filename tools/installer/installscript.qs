@@ -2,7 +2,8 @@
 
 // Shortcuts to the installed program: the Start menu and the desktop on Windows, the applications menu and the
 // desktop (when the home folder has one) on Linux. The installer undoes these operations when the app is removed.
-// On Linux an update also keeps the maintenance tool's runtime (keepsRuntime below).
+// On Linux an update also keeps the maintenance tool's runtime (keepsRuntime below); on Windows it removes the tool's
+// old staging folder (removeOldStaging).
 function Component() {
     installer.installationFinished.connect(this, Component.prototype.settleRuntime);
 }
@@ -50,7 +51,20 @@ Component.prototype.beginInstallation = function () {
 Component.prototype.settleRuntime = function () {
     if (keepsRuntime() && installer.value("TargetDir") !== "")
         installer.execute("/bin/sh", runtimeCommand(RESTORE_SCRIPT));
+    removeOldStaging();
 };
+
+// Windows: after a successful update, the folder releases before staged the Maintenance Tool into, which nothing uses
+// any more (edi ADR-0109). This component is in every update, the tool's component only when the tool changed.
+// cmd.exe runs in the installation folder and names only that folder, so it never reads the installation's path.
+function removeOldStaging() {
+    var target = installer.value("TargetDir");
+    if (systemInfo.kernelType !== "winnt" || !installer.isUpdater() || installer.status !== QInstaller.Success
+            || target === "" || !installer.fileExists(target + "/maintenancetool"))
+        return;
+    installer.performOperation("Execute", ["cmd.exe", "/c", "rmdir", "/s", "/q", "maintenancetool",
+                                           "workingdirectory=" + target]);
+}
 
 Component.prototype.createOperations = function () {
     // First, so that any later failure of this component undoes it: the copy goes back when the runtime is gone.
