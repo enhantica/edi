@@ -31,20 +31,24 @@ def load(relative):
 PACKAGE = load('tools/installer/package.py')
 
 
+def replay_install_choices(*flags):
+    return subprocess.run(
+        [
+            'node',
+            str(ROOT / 'tests/fixtures/installer/choices.mjs'),
+            str(ROOT / 'tools/installer'),
+            *flags,
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=10,
+    )
+
+
 def test_three_page_install_choices_gate_components_license_and_sizes():
     for flags in ([], ['--with-claude']):
-        result = subprocess.run(
-            [
-                'node',
-                str(ROOT / 'tests/fixtures/installer/choices.mjs'),
-                str(ROOT / 'tools/installer'),
-                *flags,
-            ],
-            check=False,
-            capture_output=True,
-            text=True,
-            timeout=10,
-        )
+        result = replay_install_choices(*flags)
         assert result.returncode == 0, (
             'Installer callbacks must keep choices and the summary consistent whether or not '
             'Claude is carried: ' + result.stdout + result.stderr
@@ -53,6 +57,31 @@ def test_three_page_install_choices_gate_components_license_and_sizes():
 
 def parse_metadata(path):
     return ET.parse(path)  # noqa: S314 - only locally generated installer XML
+
+
+@pytest.mark.parametrize('tool', ['built-in', 'component'])
+def test_installer_component_rows_expose_descriptions(tmp_path, tool):
+    PACKAGE.write_maintenance_tool_metadata(tmp_path, '26.20')
+    description = parse_metadata(tmp_path / 'package.xml').findtext('Description')
+    form = parse_metadata(ROOT / 'tools/installer/AssistantForm.ui')
+    box = form.find(".//widget[@class='QCheckBox'][@name='MaintenanceCheckBox']")
+    assert box is not None and description, (
+        'The Maintenance Tool must supply a checkbox and a component description'
+    )
+    initial = {
+        field: box.findtext(f"property[@name='{field}']/string")
+        for field in ('toolTip', 'accessibleDescription')
+    }
+    flags = ['--with-maintenance', '--with-claude'] if tool == 'component' else []
+    result = replay_install_choices(
+        '--check-descriptions',
+        json.dumps({'description': description, 'initial': initial}),
+        *flags,
+    )
+    assert result.returncode == 0, (
+        'Every visible component checkbox must expose its own description on hover and to '
+        'assistive technology: ' + result.stdout + result.stderr
+    )
 
 
 @pytest.mark.parametrize(

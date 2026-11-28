@@ -7,6 +7,9 @@ import {createContext, runInContext} from 'node:vm';
 
 const root = process.argv[2];
 const carriesClaude = process.argv.includes('--with-claude');
+const carriesMaintenance = process.argv.includes('--with-maintenance');
+const descriptionsFlag = process.argv.indexOf('--check-descriptions');
+const maintenanceForm = descriptionsFlag === -1 ? null : JSON.parse(process.argv[descriptionsFlag + 1]);
 const source = name => readFileSync(join(root, name), 'utf8');
 const ui = source('AssistantForm.ui');
 for (const name of ['AssistantCheckBox', 'ClaudeCheckBox', 'CopilotCheckBox', 'LicenseCheckBox'])
@@ -28,9 +31,12 @@ const assistantName = 'org.easydiffraction.app.assistant';
 const claudeName = 'org.easydiffraction.app.claude';
 const copilotName = 'org.easydiffraction.app.copilot';
 const appName = 'org.easydiffraction.app';
+const maintenanceName = 'org.easydiffraction.app.maintenancetool';
 const selected = new Set([appName]);
 const fields = {
   AppBox: {},
+  AppCheckBox: {},
+  MaintenanceCheckBox: {...maintenanceForm?.initial},
   AssistantBox: {},
   AssistantCheckBox: {checked: false, toggled: signal()},
   ClaudeBox: {},
@@ -80,15 +86,20 @@ const embedded = [];
 const extraPages = [];
 let mode = 'install';
 const records = [
-  [appName, 'EasyDiffraction', 123500000],
-  [assistantName, 'ChatGPT', 27500000],
-  ...(carriesClaude ? [[claudeName, 'Claude', 40000000]] : []),
-  [copilotName, 'GitHub Copilot', 60000000],
+  [appName, 'AppCheckBox', 'EasyDiffraction', 'Analyze a fixture crystal structure.', 123500000],
+  [assistantName, 'AssistantCheckBox', 'ChatGPT', 'ChatGPT fixture description.', 27500000],
+  ...(carriesClaude ? [[claudeName, 'ClaudeCheckBox', 'Claude', 'Claude fixture description.', 40000000]] : []),
+  [copilotName, 'CopilotCheckBox', 'GitHub Copilot', 'Copilot fixture description.', 60000000],
+  ...(carriesMaintenance ? [[maintenanceName, 'MaintenanceCheckBox',
+    'Maintenance Tool', 'Updates the fixture in place.', 0]] : []),
 ];
-const components = records.map(([name, displayName, bytes]) => ({
+const components = records.map(([name, , displayName, description, bytes]) => ({
   name,
-  value(key) { return {DisplayName: displayName, UncompressedSize: String(bytes)}[key]; },
+  value(key) {
+    return {DisplayName: displayName, Description: description, UncompressedSize: String(bytes)}[key];
+  },
   installationRequested: () => selected.has(name),
+  updateRequested: () => false,
   uninstallationRequested: () => false,
 }));
 
@@ -169,6 +180,16 @@ assert.equal(visibility.get('start-menu'), false, 'The Start menu page is absent
 wizard.IntroductionPageCallback();
 assert.deepEqual(buttonClicks.splice(0), ['Next'], 'Introduction passes without a visible choice');
 wizard.TargetDirectoryPageCallback();
+if (maintenanceForm) {
+  const expected = records.map(([, row, , description]) => [row, description]);
+  if (!carriesMaintenance)
+    expected.push(['MaintenanceCheckBox', maintenanceForm.description]);
+  for (const [row, description] of expected) {
+    assert.equal(fields[row].toolTip, description, row + ' exposes its component description on hover');
+    assert.equal(fields[row].accessibleDescription, description,
+      row + ' exposes its component description to assistive technology');
+  }
+}
 assert.deepEqual(buttonClicks, [], 'Install waits for the user on the first stop');
 assert.equal(fields.AssistantCheckBox.checked, true, 'ChatGPT starts selected');
 assert.equal(fields.AssistantCheckBox.text, 'ChatGPT', 'The first assistant row is ChatGPT');

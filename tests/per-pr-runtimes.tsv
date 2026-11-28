@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-28T02:52:32Z
+# measured_utc = 2026-11-28T13:10:48Z
 #
-# Recorded from: measured test run (20 node(s) measured once, 187657 banked, 0 stale row(s) dropped)
-# Collected tests: 267611; with a reported duration: 86302
+# Recorded from: measured test run (26 node(s) measured once, 187686 banked, 0 stale row(s) dropped)
+# Collected tests: 267650; with a reported duration: 86333
 # Module-scoped fixture costs recorded: 222
 #
 # Breaches are decided PER TIER against the table
@@ -29,12 +29,12 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 267625
+# inventory_python = 267650
 # inventory_cpp = 0
-# inventory_measured = 187687
-# inventory_unmeasured = 79938
+# inventory_measured = 187708
+# inventory_unmeasured = 79942
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
-# inventory_pr_python = 92714
+# inventory_pr_python = 92739
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -177360,6 +177360,28 @@ UNMEASURED:not-completed-in-this-run	tests/integration/py/test_collection_bundle
 0.000	tests/integration/py/test_compiler_launcher_probes.py::test_real_initial_and_nested_compiler_configuration_preserves_launcher_policy[CXX-default]
 0.000	tests/integration/py/test_compiler_launcher_probes.py::test_real_initial_and_nested_compiler_configuration_preserves_launcher_policy[CXX-empty]
 0.000	tests/integration/py/test_compiler_launcher_probes.py::test_real_initial_and_nested_compiler_configuration_preserves_launcher_policy[CXX-list]
+0.110	tests/integration/py/test_component_release_delivery.py::test_a_held_runtimes_recipe_checksum_still_governs_its_identity[org.easydiffraction.app.claude-claude-runtime]
+0.100	tests/integration/py/test_component_release_delivery.py::test_a_held_runtimes_recipe_checksum_still_governs_its_identity[org.easydiffraction.app.copilot-copilot-runtime]
+0.230	tests/integration/py/test_component_release_delivery.py::test_packaged_input_change_changes_only_its_component_version[valid-build-number-org.easydiffraction.app.maintenancetool]
+0.230	tests/integration/py/test_component_release_delivery.py::test_packaged_input_change_changes_only_its_component_version[valid-maintenance-page-org.easydiffraction.app.maintenancetool]
+0.370	tests/integration/py/test_component_release_delivery.py::test_packaged_input_change_changes_only_its_component_version[valid-release-date-and-built-bytes-None]
+0.240	tests/integration/py/test_component_release_delivery.py::test_packaged_input_change_changes_only_its_component_version[valid-runtime-sha256-org.easydiffraction.app.assistant]
+0.020	tests/integration/py/test_component_release_delivery.py::test_promotion_refuses_a_damaged_release[archive]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_component_release_delivery.py::test_promotion_refuses_a_damaged_release[changed-record-archive]
+0.010	tests/integration/py/test_component_release_delivery.py::test_promotion_refuses_a_damaged_release[extra-identity]
+0.010	tests/integration/py/test_component_release_delivery.py::test_promotion_refuses_a_damaged_release[invalid-identity]
+0.020	tests/integration/py/test_component_release_delivery.py::test_promotion_refuses_a_damaged_release[metadata]
+0.010	tests/integration/py/test_component_release_delivery.py::test_promotion_refuses_a_damaged_release[missing-identities]
+0.010	tests/integration/py/test_component_release_delivery.py::test_promotion_refuses_a_damaged_release[missing-identity]
+0.020	tests/integration/py/test_component_release_delivery.py::test_promotion_refuses_a_damaged_release[record-archive]
+0.020	tests/integration/py/test_component_release_delivery.py::test_promotion_refuses_a_damaged_release[record-version]
+0.010	tests/integration/py/test_component_release_delivery.py::test_promotion_refuses_a_damaged_release[too-new]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_component_release_delivery.py::test_promotion_refuses_a_damaged_release[unlisted-claude]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_component_release_delivery.py::test_promotion_refuses_a_damaged_release[unlisted-copilot]
+0.010	tests/integration/py/test_component_release_delivery.py::test_promotion_refuses_a_damaged_release[withheld-claude]
+0.010	tests/integration/py/test_component_release_delivery.py::test_promotion_refuses_a_damaged_release[withheld-copilot]
+0.030	tests/integration/py/test_component_release_delivery.py::test_promotion_reuses_the_original_component_release[valid]
+0.050	tests/integration/py/test_component_release_delivery.py::test_release_attaches_flat_assets_and_serves_framework_index
 0.350	tests/integration/py/test_constraint_alias_lifetime.py::test_alias_first_handle_owns_storage_and_obeys_detachment[destroy-background]
 0.180	tests/integration/py/test_constraint_alias_lifetime.py::test_alias_first_handle_owns_storage_and_obeys_detachment[destroy-cell]
 0.160	tests/integration/py/test_constraint_alias_lifetime.py::test_alias_first_handle_owns_storage_and_obeys_detachment[destroy-instrument]
@@ -181924,6 +181946,8 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_independent_heidi_case.p
 0.100	tests/integration/py/test_installer_identity.py::test_failed_release_workflow_reaches_owned_draft_cleanup[release-plan.yml]
 0.020	tests/integration/py/test_installer_identity.py::test_failed_release_workflow_reaches_owned_draft_cleanup[release-publish.yml]
 0.000	tests/integration/py/test_installer_identity.py::test_installed_windows_maintenance_tool_requires_signature
+UNMEASURED:failed-in-this-run	tests/integration/py/test_installer_identity.py::test_installer_component_rows_expose_descriptions[built-in]
+0.170	tests/integration/py/test_installer_identity.py::test_installer_component_rows_expose_descriptions[component]
 0.000	tests/integration/py/test_installer_identity.py::test_macos_bundle_declares_the_project_owned_identifier
 0.000	tests/integration/py/test_installer_identity.py::test_metadata_preserves_existing_component_updates[linux]
 0.000	tests/integration/py/test_installer_identity.py::test_metadata_preserves_existing_component_updates[macos]
@@ -181934,7 +181958,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_independent_heidi_case.p
 0.000	tests/integration/py/test_installer_identity.py::test_signing_enablement_keeps_pr_builds_unsigned[macos-]
 0.000	tests/integration/py/test_installer_identity.py::test_signing_enablement_keeps_pr_builds_unsigned[windows-1]
 0.000	tests/integration/py/test_installer_identity.py::test_signing_enablement_keeps_pr_builds_unsigned[windows-]
-0.120	tests/integration/py/test_installer_identity.py::test_three_page_install_choices_gate_components_license_and_sizes
+0.340	tests/integration/py/test_installer_identity.py::test_three_page_install_choices_gate_components_license_and_sizes
 0.000	tests/integration/py/test_installer_identity.py::test_windows_installation_defaults[AdminTargetDir-@ApplicationsDirX64@/EasyDiffraction]
 0.000	tests/integration/py/test_installer_identity.py::test_windows_installation_defaults[StartMenuDir-EasyDiffraction]
 0.000	tests/integration/py/test_installer_identity.py::test_windows_installation_defaults[TargetDir-@ApplicationsDirUser@/EasyDiffraction]
@@ -266958,6 +266982,7 @@ UNMEASURED:not-completed-in-this-run	tests/unit/py/test_release_promotion.py::te
 UNMEASURED:not-completed-in-this-run	tests/unit/py/test_release_promotion.py::test_component_identity_and_original_checksums_are_verified[legacy-assistant]
 UNMEASURED:not-completed-in-this-run	tests/unit/py/test_release_promotion.py::test_component_identity_and_original_checksums_are_verified[missing]
 UNMEASURED:not-completed-in-this-run	tests/unit/py/test_release_promotion.py::test_component_identity_and_original_checksums_are_verified[none]
+0.000	tests/unit/py/test_release_promotion.py::test_component_identity_and_original_checksums_are_verified[recorded-earlier]
 UNMEASURED:not-completed-in-this-run	tests/unit/py/test_release_promotion.py::test_component_identity_and_original_checksums_are_verified[version]
 0.000	tests/unit/py/test_release_promotion.py::test_delivery_compares_download_and_executed_app_to_prepared_identity[linux-x86_64-.zip-bytes]
 0.000	tests/unit/py/test_release_promotion.py::test_delivery_compares_download_and_executed_app_to_prepared_identity[linux-x86_64-.zip-channel]
