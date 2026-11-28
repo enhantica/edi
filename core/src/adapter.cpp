@@ -3852,9 +3852,21 @@ std::vector<std::string> read_scan_row(const Project& project, std::int64_t offs
 }
 
 namespace {
-// The structure a series column belongs to, by its grammar (review 23): a bank's `linked_structure.<id>.…`,
-// `preferred_orientation.<id>.…`, `fit_result.r_bragg.<id>` or `fit_result.r_mag.<id>`; a shared column's datablock
-// when that is a structure's; else empty. Ids compare by their datablock spelling.
+// The experiment a series column names first, `<experiment>.…` (a single results.csv's qualified bank columns), or
+// null.
+const BraggPdExperiment* column_bank(const Project& project, const std::string& column) {
+    const std::string first = column.substr(0, column.find('.'));
+    for (const auto& experiment : project.experiments) {
+        if (first == experiment->name.value() || first == datablock_key(experiment->name, "experiment")) {
+            return experiment.get();
+        }
+    }
+    return nullptr;
+}
+// The structure a series column belongs to, by its grammar (reviews 23 and 24): a bank's
+// `[<experiment>.]linked_structure.<id>.…` or `[<experiment>.]preferred_orientation.<id>.…`,
+// `fit_result.r_bragg.<id>` or `fit_result.r_mag.<id>`; a shared column's datablock when that is a structure's and
+// no experiment's; else empty. Ids compare by their datablock spelling.
 std::string column_phase(const Project& project, const std::string& column) {
     std::vector<std::string> parts;
     for (std::size_t start = 0; start <= column.size();) {
@@ -3862,12 +3874,15 @@ std::string column_phase(const Project& project, const std::string& column) {
         parts.push_back(column.substr(start, end - start));
         start = end + 1;
     }
+    if (column_bank(project, column) != nullptr) {
+        parts.erase(parts.begin());  // the bank that owns it; the phase follows
+    }
     std::string id;
     if (parts.size() > 1 && (parts[0] == "linked_structure" || parts[0] == "preferred_orientation")) {
         id = parts[1];
     } else if (parts.size() > 2 && parts[0] == "fit_result" && (parts[1] == "r_bragg" || parts[1] == "r_mag")) {
         id = parts[2];
-    } else if (!parts.empty()) {
+    } else if (!parts.empty() && column_bank(project, column) == nullptr) {
         id = parts[0];
     }
     for (const auto& structure : project.structures) {
@@ -3881,7 +3896,17 @@ std::string column_phase(const Project& project, const std::string& column) {
 // file written before its link was disabled (owner decision 2026-11-27).
 bool names_hidden_structure(const Project& project, const std::string& column) {
     const std::string phase = column_phase(project, column);
-    return !phase.empty() && project.structure_hidden(phase);
+    if (phase.empty()) return false;
+    if (project.structure_hidden(phase)) return true;
+    // A qualified bank column of a phase its own bank leaves disabled.
+    const BraggPdExperiment* bank = column_bank(project, column);
+    return bank != nullptr && std::none_of(bank->linked_structures.begin(), bank->linked_structures.end(),
+                                           [&](const auto& link) {
+                                               return link->enabled.get() &&
+                                                      (link->structure_id.value() == phase ||
+                                                       (link->structure_id.value().empty() &&
+                                                        project.structures.size() == 1));
+                                           });
 }
 // Whether a bank enables the structure a column belongs to; a column of no structure belongs to every bank.
 bool bank_enables(const Project& project, const BraggPdExperiment& bank, const std::string& column) {
@@ -4432,6 +4457,11 @@ void evolution_series(const Project& project, const ScanPlaces& places, const Sc
     std::vector<std::optional<std::size_t>> factor_columns(parameters.size());
     bool any = false;
     for (std::size_t i = 0; i < parameters.size(); ++i) {
+        // A disabled phase's column shows nothing, whoever asks for it (review 24).
+        if (names_hidden_structure(project, parameters[i]) ||
+            names_hidden_structure(project, scan_results_column(parameters[i]))) {
+            continue;
+        }
         for (const std::string& name : {parameters[i], scan_results_column(parameters[i])}) {
             for (const ScanParameterColumns& recorded : index.parameters) {
                 if (columns[i] == nullptr && recorded.name == name) {
