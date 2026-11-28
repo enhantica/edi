@@ -200,7 +200,8 @@ AppDialog {
 
         // One toolbar row, built from the chart toolbar's own boxes and buttons and spaced as Experiment → Pattern's
         // (owner, 2026-11-28, header design B), in groups a toolbar group's gap apart: what is analysed (k with its
-        // magnetic cell, the sites), which groups are shown (levels, net moment), and how (Graph, List).
+        // magnetic cell, the sites), which groups are shown (levels, net moment), what Add creates (the starting
+        // moments), and how the groups are shown (Graph, List).
         Row {
             id: toolbar
             objectName: "magnetic.toolbar"
@@ -282,6 +283,21 @@ AppDialog {
                     popup.netMoment = index;
                     popup.selected = popup.selected.filter(i => popup.selectable(i));
                 }
+            }
+            Item {
+                width: toolbar.groupGap
+                height: 1
+            }
+            // What Add creates, a group of its own (owner, 2026-11-28).
+            ToolbarComboBox {
+                objectName: "magnetic.startMoments"
+                enabled: !popup.busy
+                toolTip: qsTr("The moments each new structure starts with: 2 to 3 μB along the allowed components, or zero")
+                model: [qsTr("Non-zero"), qsTr("Zero")]
+                closedTexts: [qsTr("start: Non-zero"), qsTr("start: Zero")]
+                fitShown: true
+                shownIndex: popup.startMoments ? 0 : 1
+                onActivated: index => popup.startMoments = index === 0
             }
             Item {
                 width: toolbar.groupGap
@@ -513,17 +529,6 @@ AppDialog {
                 fontIcon: "times"
                 text: qsTr("Cancel")
                 onClicked: popup.close()
-            }
-            // What Add creates, so beside it (owner, 2026-11-28): the starting moments.
-            ToolbarComboBox {
-                objectName: "magnetic.startMoments"
-                enabled: !popup.busy
-                toolTip: qsTr("The moments each new structure starts with: 2 to 3 μB along the allowed components, or zero")
-                model: [qsTr("Non-zero"), qsTr("Zero")]
-                closedTexts: [qsTr("start: Non-zero"), qsTr("start: Zero")]
-                fitShown: true
-                shownIndex: popup.startMoments ? 0 : 1
-                onActivated: index => popup.startMoments = index === 0
             }
             EaElements.Button {
                 objectName: "magnetic.add"
