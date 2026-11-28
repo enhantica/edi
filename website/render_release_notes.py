@@ -84,14 +84,9 @@ def _day(release: dict) -> str:
 
 
 def _title(release: dict) -> str:
-    """The release title, as GitHub shows it: ``EasyDiffraction 26.17 (26 Nov 2026)``."""
+    """The release title, as GitHub shows it: ``v26.17 · 26 Nov 2026``."""
     version = release['tag_name'].removeprefix('v')
-    if versions.is_new(version):
-        title = versions.release_title(version, _date(release))
-    else:
-        # Old releases show their tag and day, as their titles on GitHub do.
-        title = f'{release["tag_name"]} ({_day(release)})'
-    return escape(title) + (' preview' if release['prerelease'] else '')
+    return escape(versions.release_title(version, _date(release), preview=release['prerelease']))
 
 
 def latest_release(pages: list[list[dict]]) -> str:
