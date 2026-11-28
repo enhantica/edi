@@ -133,6 +133,35 @@ def observe_reopen(folder, sources, thread):
             actor.close()
 
 
+def observe_legacy_reopen(folder, sources, thread):
+    settings = Path(sources['settings_source'])
+    old_row, index = read_associations(settings)
+    original = index['threads'][thread]
+    assert original['email'] == sources['actual_account']['email'], (
+        'The legacy conversation must carry the e-mail of the real default login'
+    )
+    original.pop('account', None)
+    original.pop('provider', None)
+    escaped = json.dumps(index, separators=(',', ':')).replace('"', r'\"')
+    prefix, suffix = old_row.split('@ByteArray(', 1)[0], old_row.rsplit(')', 1)[1]
+    old_settings = folder / 'pre-account.ini'
+    old_settings.write_text(
+        '\n'.join(
+            f'{prefix}@ByteArray({escaped}){suffix}' if row == old_row else row
+            for row in settings.read_text(encoding='utf-8').splitlines()
+            if not row.startswith(('activeAccount=', r'Providers\chatgpt\accounts='))
+        )
+        + '\n',
+        encoding='utf-8',
+    )
+    _, old_index = read_associations(old_settings)
+    assert 'account' not in old_index['threads'][thread] and not any(
+        row.startswith(('activeAccount=', r'Providers\chatgpt\accounts='))
+        for row in old_settings.read_text(encoding='utf-8').splitlines()
+    ), 'The restored settings must predate saved provider accounts'
+    return observe_reopen(folder, {**sources, 'settings_source': str(old_settings)}, thread)
+
+
 def hold_account_reply(folder, name, account):
     fifo = folder / f'{name}.fifo'
     os.mkfifo(fifo, 0o600)
@@ -347,9 +376,24 @@ def observe_failure(folder, sources, thread, scenario):  # noqa: PLR0912, PLR091
 
 
 @pytest.fixture(scope='module')
-def startup_observations(tmp_path_factory):
+def startup_capture(tmp_path_factory):
     folder = tmp_path_factory.mktemp('owner-startup')
-    project, thread, expected, sources = capture_saved_conversation(folder)
+    return folder, capture_saved_conversation(folder)
+
+
+@pytest.fixture(scope='module')
+def legacy_startup_observation(startup_capture):
+    folder, (_, thread, expected, sources) = startup_capture
+    result = observe_legacy_reopen(folder, sources, thread)
+    (folder / 'original-fixture-restart').rename(folder / 'pre-account-restart')
+    return thread, expected, result
+
+
+@pytest.fixture(scope='module')
+def startup_observations(startup_capture, legacy_startup_observation):
+    # Before the failure scenarios move the original project away from its saved path.
+    folder, (project, _, _, sources) = startup_capture
+    thread, expected, _ = legacy_startup_observation
     receipts = {'success': observe_reopen(folder, sources, thread)}
     (folder / 'original-fixture-restart').rename(folder / 'successful-restart')
     project_file = project / 'project.edi'
@@ -409,6 +453,19 @@ def test_startup_reopens_the_associated_project_after_ordinary_save(startup_obse
     ), 'Required: startup connects and reopens the same project and original conversation.'
 
 
+def test_pre_account_chatgpt_conversation_reopens_with_the_default_login(
+    legacy_startup_observation,
+):
+    thread, expected, result = legacy_startup_observation
+    assert (
+        result['connected']
+        and result['project'] == expected['location']
+        and result['browser']['runtime_thread'] == thread
+        and result['association'] == expected
+        and not result['new_threads']
+    ), 'The same default login must reopen its old conversation without creating a new thread'
+
+
 def assert_connect_requires_new_consent(receipt, *, reads=1):
     assert_no_generic_account_check(receipt)
     assert FALLBACK_SCOPE_ERROR not in json.dumps(receipt), (
@@ -422,14 +479,14 @@ def assert_connect_requires_new_consent(receipt, *, reads=1):
     ), 'Required: only the correlated reopen reads precede explicit new connection consent.'
     offer = receipt.get('offer') or {}
     assert (
-        offer.get('title') == 'Connect ChatGPT'
+        offer.get('title') == 'Connect assistant'
         and offer.get('offer')
         and offer.get('identity')
         and offer['identity'] == offer.get('current')
         and receipt['offer_reads'] == receipt['preconsent_reads']
         and not receipt['offer_threads']
         and not receipt['offer_turns']
-    ), 'Required: the genuine Connect ChatGPT dialog offers exact scope before any new thread.'
+    ), 'Required: the genuine Connect assistant dialog offers exact scope before any new thread.'
 
 
 def test_unavailable_startup_project_reports_reopen_cause_and_connects_a_new_thread(

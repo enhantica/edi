@@ -3,10 +3,16 @@
 
 import json
 import os
+import subprocess
 
 import pytest
 
-from tests.integration.app.test_provider_runtime import probe_tool_catalogue, run_probe
+from tests.integration.app.test_provider_runtime import (
+    probe_tool_catalogue,
+    require_selected_file_reply,
+    run_probe,
+    stage_install,
+)
 
 
 @pytest.mark.skipif(os.name == 'nt', reason='The offline CLI fixture is a shell script')
@@ -31,14 +37,39 @@ def test_claude_shows_edi_tool_reply_and_switches_accounts(tmp_path):
     assert len(prompts) == 1 and prompts[0]['identity'] == 'selected@example.invalid', (
         'The tool-using prompt must run once under the selected account'
     )
-    replies = [row['result'] for row in rows if row['event'] == 'mcp-reply']
-    assert len(replies) == 1 and not replies[0].get('isError'), (
-        'The app dispatcher must return a successful MCP reply for this attached-file read'
+    session_events = [row for row in rows if row.get('session') == prompts[0]['session']]
+    controls = [row['subtype'] for row in session_events if row['event'] == 'claude-control']
+    assert controls[:3] == ['initialize', 'mcp_status', 'get_context_usage'], (
+        'The Claude turn process must independently read back its identity and tools before use'
     )
-    assert any(
-        json.loads(item['text']).get('selected_text', {}).get('text') == 'visible'
-        for item in replies[0]['content']
-    ), 'The MCP result must include exactly the requested seven bytes from the selected file'
+    phase = [
+        row['event']
+        for row in session_events
+        if row['event'] in {'claude-control', 'prompt', 'claude-init'}
+    ]
+    assert phase[:5] == [
+        'claude-control',
+        'claude-control',
+        'claude-control',
+        'prompt',
+        'claude-init',
+    ], 'The pre-input controls must succeed before the first user input causes init'
+    require_selected_file_reply(rows)
+
+
+@pytest.mark.skipif(os.name == 'nt', reason='The offline CLI fixture is a shell script')
+def test_claude_waits_for_the_mcp_catalogue_before_input(tmp_path):
+    rows, _ = run_probe(tmp_path, 'claude', scenario='pending-mcp')
+    (prompt,) = [row for row in rows if row['event'] == 'prompt']
+    observed = [
+        row['status']
+        for row in rows[: rows.index(prompt)]
+        if row['event'] == 'claude-mcp-status' and row['session'] == prompt['session']
+    ]
+    assert observed[0] == 'pending' and observed[-1] == 'connected', (
+        'The same turn runtime must wait for its pending MCP connection before accepting input'
+    )
+    require_selected_file_reply(rows)
 
 
 @pytest.mark.skipif(os.name == 'nt', reason='The offline CLI fixture is a shell script')
@@ -52,4 +83,49 @@ def test_claude_discloses_inherited_credential_before_input(tmp_path):
     )
     assert not any(row['event'] == 'prompt' for row in rows), (
         'Checking the active credential disclosure must never send a user prompt'
+    )
+
+
+@pytest.mark.skipif(os.name == 'nt', reason='The offline CLI fixture is a shell script')
+@pytest.mark.parametrize('action', ['delayed-callback', 'cancel'])
+def test_claude_interactive_login_stays_owned_until_callback_or_cancel(tmp_path, action):
+    receipt = tmp_path / 'login.jsonl'
+    probe, executable = stage_install(tmp_path, 'claude', receipt, '')
+    home = tmp_path / 'account'
+    home.mkdir()
+    env = {
+        key: os.environ[key] for key in ('LD_LIBRARY_PATH', 'QT_PLUGIN_PATH') if key in os.environ
+    }
+    env.update({
+        'HOME': str(tmp_path),
+        'PATH': str(tmp_path),
+        'QT_QPA_PLATFORM': 'offscreen',
+        'EDI_PROVIDER_TEST_CASE': 'login',
+        'EDI_PROVIDER_TEST_LOGIN_HOME': str(home),
+        'EDI_PROVIDER_TEST_LOGIN_EXECUTABLE': str(executable),
+    })
+    if action == 'cancel':
+        env['EDI_PROVIDER_TEST_CANCEL_LOGIN'] = '1'
+    result = subprocess.run(
+        [str(probe), 'claudeSignIn'],
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=8,
+    )
+    assert result.returncode == 0, (
+        'The original Claude process must survive an elapsed deadline or stop on Cancel.\n'
+        + result.stdout
+        + result.stderr
+    )
+    rows = [json.loads(line) for line in receipt.read_text(encoding='utf-8').splitlines()]
+    login = [row for row in rows if row['event'].startswith('claude-login-')]
+    assert [row['event'] for row in login] == (
+        ['claude-login-opened']
+        if action == 'cancel'
+        else ['claude-login-opened', 'claude-login-completed']
+    ), 'Only the delayed callback must finish the original offline login'
+    assert len({row['pid'] for row in login}) == 1, (
+        'A delayed callback must finish on the original process without starting another login'
     )

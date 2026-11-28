@@ -137,49 +137,60 @@ def mcp_config(argv, flag):
 
 
 def claude(argv, identity, skills, tools, request):
-    # Claude Code's print-mode stream-json uses user, assistant, system and result messages.
+    # Offline readback from the pinned Claude CLI: both controls precede the first user message.
     session = option(argv, '--resume' if '--resume' in argv else '--session-id')
+    qualified_tools = [f'mcp__edi__{name}' for name in tools]
+    init_sent = False
+    pending = os.environ.get('EDI_PROVIDER_TEST_SCENARIO') == 'pending-mcp'
     for line in sys.stdin:
         message = json.loads(line)
         if message['type'] == 'control_request':
-            initialization = message['request']['subtype'] == 'initialize'
+            subtype = message['request']['subtype']
+            if subtype == 'initialize':
+                reply = {
+                    'commands': [
+                        {
+                            'name': f'edi:{skill}',
+                            'description': 'Bundled skill',
+                            'argumentHint': '',
+                        }
+                        for skill in skills
+                    ],
+                    'models': [{'value': 'sonnet', 'displayName': 'Sonnet', 'description': ''}],
+                    'account': {'email': identity, 'subscriptionType': 'pro'},
+                }
+                observe('claude-readback', identity=identity, session=session)
+            elif subtype == 'mcp_status':
+                status = 'pending' if pending else 'connected'
+                server = {'name': 'edi', 'status': status, 'transport': 'stdio'}
+                if not pending:
+                    server['tools'] = [{'name': name, 'annotations': {}} for name in tools]
+                observe('claude-mcp-status', status=status, session=session)
+                pending = False
+                reply = {'mcpServers': [server]}
+            elif subtype == 'get_context_usage':
+                reply = {
+                    'categories': [
+                        {'id': 'system_prompt', 'name': 'System prompt', 'kind': 'used'},
+                        {'id': 'mcp_tools', 'name': 'MCP tools', 'kind': 'used'},
+                        {'id': 'skills', 'name': 'Skills', 'kind': 'used'},
+                    ],
+                    'mcpTools': [
+                        {'name': name, 'serverName': 'edi', 'tokens': 35, 'isLoaded': False}
+                        for name in qualified_tools
+                    ],
+                }
+            else:
+                reply = {}
+            observe('claude-control', subtype=subtype, session=session)
             write({
                 'type': 'control_response',
                 'response': {
                     'subtype': 'success',
                     'request_id': message['request_id'],
-                    'response': {
-                        'commands': [
-                            {
-                                'name': f'edi:{skill}',
-                                'description': 'Bundled skill',
-                                'argumentHint': '',
-                            }
-                            for skill in skills
-                        ],
-                        'models': [
-                            {'value': 'sonnet', 'displayName': 'Sonnet', 'description': ''}
-                        ],
-                        'account': {'email': identity, 'subscriptionType': 'pro'},
-                    }
-                    if initialization
-                    else {},
+                    'response': reply,
                 },
             })
-            if initialization:
-                observe('claude-readback', identity=identity, session=session)
-                write({
-                    'type': 'system',
-                    'subtype': 'init',
-                    'session_id': session,
-                    'tools': ['Skill', *(f'mcp__edi__{name}' for name in tools)],
-                    'mcp_servers': [{'name': 'edi', 'status': 'connected'}],
-                    'plugins': [{'name': 'edi', 'path': option(argv, '--plugin-dir')}],
-                    'skills': [f'edi:{skill}' for skill in skills],
-                    'apiKeySource': 'user' if CLAUDE_KEY in os.environ else 'none',
-                    'model': 'sonnet',
-                    'cwd': str(Path.cwd()),
-                })
             continue
         if message['type'] != 'user':
             continue
@@ -190,6 +201,21 @@ def claude(argv, identity, skills, tools, request):
             else ' '.join(part['text'] for part in content if part['type'] == 'text')
         )
         observe('prompt', identity=identity, text=prompt, session=session)
+        if not init_sent:
+            init_sent = True
+            observe('claude-init', session=session)
+            write({
+                'type': 'system',
+                'subtype': 'init',
+                'session_id': session,
+                'tools': ['Skill', *qualified_tools],
+                'mcp_servers': [{'name': 'edi', 'status': 'connected'}],
+                'plugins': [{'name': 'edi', 'path': option(argv, '--plugin-dir')}],
+                'skills': [f'edi:{skill}' for skill in skills],
+                'apiKeySource': 'user' if CLAUDE_KEY in os.environ else 'none',
+                'model': 'sonnet',
+                'cwd': str(Path.cwd()),
+            })
         leaf = call_tool(request, prompt)
         write({
             'type': 'assistant',
@@ -224,19 +250,50 @@ def acp_update(session, **update):
     })
 
 
-def copilot_prompt(session, identity, mcp_request, prompt):
-    if prompt in {f'/user switch {identity}', '/user show'}:
+def copilot_prompt(session, identity, mcp_request, prompt, scenario):
+    if prompt.startswith('/user switch ') or prompt == '/user show':
         observe('account-command', text=prompt, session=session)
         if prompt == '/user show':
+            login = 'different-user' if scenario == 'wrong-login' else identity
+            host = 'other.ghe.com' if scenario == 'wrong-host' else 'github.com'
+            observe('copilot-identity', login=login, host=host, session=session)
             acp_update(
                 session,
                 sessionUpdate='agent_message_chunk',
-                content={'type': 'text', 'text': f'Signed in as @{identity} on github.com'},
+                content={'type': 'text', 'text': f'Signed in as @{login} on {host}'},
             )
         return
     observe('prompt', identity=identity, text=prompt, session=session)
     if mcp_request is None:
         raise ValueError('ACP prompt arrived before MCP discovery')
+    if scenario == 'foreign-tool':
+        call = {
+            'toolCallId': 'fixture-foreign-call',
+            'title': 'Unlisted fixture tool',
+            'name': 'fixture_unlisted_tool',
+            'kind': 'other',
+            'status': 'pending',
+        }
+        write({
+            'jsonrpc': '2.0',
+            'id': 'fixture-permission',
+            'method': 'session/request_permission',
+            'params': {
+                'sessionId': session,
+                'toolCall': call,
+                'options': [
+                    {'optionId': 'yes', 'name': 'Allow once', 'kind': 'allow_once'},
+                    {'optionId': 'no', 'name': 'Reject once', 'kind': 'reject_once'},
+                ],
+            },
+        })
+        answer = json.loads(sys.stdin.readline())
+        if answer.get('id') != 'fixture-permission':
+            raise ValueError('ACP must correlate the tool permission answer')
+        observe('copilot-permission', outcome=answer.get('result', {}).get('outcome'))
+        observe('copilot-foreign-tool', session=session)
+        acp_update(session, sessionUpdate='tool_call', **{**call, 'status': 'in_progress'})
+        return
     acp_update(
         session,
         sessionUpdate='agent_message_chunk',
@@ -247,6 +304,7 @@ def copilot_prompt(session, identity, mcp_request, prompt):
 def copilot(argv, identity, skills, resources):
     # ACP v1 initialize, session/new, session/prompt and agent_message_chunk.
     session = identity + '-session'
+    scenario = os.environ.get('EDI_PROVIDER_TEST_SCENARIO', '')
     mcp_request = None
     for line in sys.stdin:
         request = json.loads(line)
@@ -288,7 +346,7 @@ def copilot(argv, identity, skills, resources):
             if params['sessionId'] != session:
                 raise ValueError('ACP prompt used a different account session')
             prompt = ' '.join(part['text'] for part in params['prompt'] if part['type'] == 'text')
-            copilot_prompt(session, identity, mcp_request, prompt)
+            copilot_prompt(session, identity, mcp_request, prompt, scenario)
             result = {'stopReason': 'end_turn'}
         elif 'id' in request:
             write({
@@ -336,7 +394,14 @@ def main():
             'authMethod': 'api-key' if CLAUDE_KEY in os.environ else 'claude.ai',
             'configDirectory': home,
         })
-    elif argv[:2] == ['auth', 'login'] or argv[:1] == ['login']:
+    elif argv[:2] == ['auth', 'login']:
+        observe('claude-login-opened', pid=os.getpid())
+        print('Opening browser: https://claude.ai/oauth/authorize', flush=True)
+        print('Paste the sign-in code', flush=True)
+        if sys.stdin.readline().strip() != 'offline-fixture-code':
+            raise ValueError('The original Claude login must receive the fixture callback')
+        observe('claude-login-completed', pid=os.getpid())
+    elif argv[:1] == ['login']:
         return
     else:
         with ExitStack() as resources:

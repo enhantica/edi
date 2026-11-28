@@ -38,7 +38,7 @@ BUILTIN_TOOLS = {
 }
 
 
-def stage_install(tmp_path, provider, receipt):
+def stage_install(tmp_path, provider, receipt, scenario):
     install = tmp_path / 'install'
     binaries = install / 'bin'
     binaries.mkdir(parents=True)
@@ -64,15 +64,16 @@ def stage_install(tmp_path, provider, receipt):
     executable.write_text(
         '#!/bin/sh\n'
         f'export EDI_PROVIDER_TEST_RECEIPT={shlex.quote(str(receipt))}\n'
+        f'export EDI_PROVIDER_TEST_SCENARIO={shlex.quote(scenario)}\n'
         f'export EDI_PROVIDER_TEST_GUARD={shlex.quote(str(binaries / GUARD.name))}\n'
         f'exec {launcher} "$@"\n',
         encoding='utf-8',
     )
     executable.chmod(0o700)
-    return binaries / PROBE.name
+    return binaries / PROBE.name, executable
 
 
-def write_case(tmp_path, provider, mismatch, credential):
+def write_case(tmp_path, provider, mismatch, credential, scenario):
     sample = tmp_path / 'sample.txt'
     sample.write_text('xxvisibleyy', encoding='utf-8')
     identity = 'selected@example.invalid' if provider == 'claude' else 'selected-user'
@@ -94,6 +95,7 @@ def write_case(tmp_path, provider, mismatch, credential):
             'otherLogin': other,
             'mismatch': mismatch,
             'credential': credential,
+            'scenario': scenario,
             'file': str(sample),
         }),
         encoding='utf-8',
@@ -101,13 +103,13 @@ def write_case(tmp_path, provider, mismatch, credential):
     return case, account_id, other_id
 
 
-def run_probe(tmp_path, provider, *, mismatch=False, credential=False):
+def run_probe(tmp_path, provider, *, mismatch=False, credential=False, scenario=''):
     assert PROBE.is_file() and GUARD.is_file(), (
         'The provider check requires the desktop assistant UI test and guard from this build'
     )
-    case, account_id, other_id = write_case(tmp_path, provider, mismatch, credential)
+    case, account_id, other_id = write_case(tmp_path, provider, mismatch, credential, scenario)
     receipt = tmp_path / 'wire.jsonl'
-    probe = stage_install(tmp_path, provider, receipt)
+    probe, _ = stage_install(tmp_path, provider, receipt, scenario)
     home = tmp_path / 'home'
     home.mkdir()
     config = home / '.config/gh'
@@ -199,7 +201,7 @@ def probe_tool_catalogue(tmp_path, provider):
 
 
 @pytest.mark.skipif(os.name == 'nt', reason='The offline CLI fixture is a shell script')
-def test_copilot_refuses_user_input_without_tool_proof(tmp_path):
+def test_copilot_shows_edi_tool_reply_after_account_readback(tmp_path):
     rows, turns, catalogues = probe_tool_catalogue(tmp_path, 'copilot')
     for turn in turns:
         argv = turn['argv']
@@ -231,8 +233,56 @@ def test_copilot_refuses_user_input_without_tool_proof(tmp_path):
     assert len({row['session'] for row in commands}) == 1, (
         'Copilot account selection and readback must share a session'
     )
+    (identity,) = [row for row in rows if row['event'] == 'copilot-identity']
+    (prompt,) = [row for row in rows if row['event'] == 'prompt']
+    assert (
+        identity['login'] == prompt['identity'] == 'selected-user'
+        and identity['host'] == 'github.com'
+        and identity['session'] == prompt['session'] == commands[0]['session']
+        and rows.index(identity) < rows.index(prompt)
+    ), 'The selected login and host must be confirmed in the same session before user input'
+    require_selected_file_reply(rows)
+
+
+def require_selected_file_reply(rows):
+    replies = [row['result'] for row in rows if row['event'] == 'mcp-reply']
+    assert len(replies) == 1 and not replies[0].get('isError'), (
+        'The dispatcher must return a successful MCP reply for the attached-file read'
+    )
+    assert any(
+        json.loads(item['text']).get('selected_text', {}).get('text') == 'visible'
+        for item in replies[0]['content']
+    ), 'The MCP reply must carry exactly the selected bytes from the attached sample'
+
+
+@pytest.mark.skipif(os.name == 'nt', reason='The offline CLI fixture is a shell script')
+@pytest.mark.parametrize('scenario', ['wrong-login', 'wrong-host'])
+def test_copilot_refuses_input_for_a_different_account(tmp_path, scenario):
+    rows, _ = run_probe(tmp_path, 'copilot', scenario=scenario)
+    (identity,) = [row for row in rows if row['event'] == 'copilot-identity']
+    assert (identity['login'], identity['host']) == (
+        ('different-user', 'github.com')
+        if scenario == 'wrong-login'
+        else ('selected-user', 'other.ghe.com')
+    ), 'The turn runtime must report the mismatched login or host'
     assert not any(row['event'] in {'prompt', 'mcp-reply'} for row in rows), (
-        'Without effective-tool proof, Copilot must receive no user input or dispatch a tool'
+        'An account that fails the live proof must receive no prompt or tool call'
+    )
+
+
+@pytest.mark.skipif(os.name == 'nt', reason='The offline CLI fixture is a shell script')
+def test_copilot_denies_permission_and_stops_an_unlisted_tool(tmp_path):
+    rows, _ = run_probe(tmp_path, 'copilot', scenario='foreign-tool')
+    (permission,) = [row for row in rows if row['event'] == 'copilot-permission']
+    assert permission['outcome'] == {'outcome': 'selected', 'optionId': 'no'}, (
+        'Copilot must receive the reject-once answer to an unlisted tool permission request'
+    )
+    assert [
+        row['event']
+        for row in rows
+        if row['event'] in {'prompt', 'copilot-permission', 'copilot-foreign-tool', 'mcp-reply'}
+    ] == ['prompt', 'copilot-permission', 'copilot-foreign-tool'], (
+        'The runtime must attempt the unlisted tool without calling the edi MCP dispatcher'
     )
 
 

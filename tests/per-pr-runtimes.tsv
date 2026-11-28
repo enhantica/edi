@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-27T11:20:26Z
+# measured_utc = 2026-11-28T02:18:37Z
 #
-# Recorded from: measured test run (7 node(s) measured once, 187599 banked, 2 stale row(s) dropped)
-# Collected tests: 267544; with a reported duration: 86295
+# Recorded from: measured test run (12 node(s) measured once, 187601 banked, 2 stale row(s) dropped)
+# Collected tests: 267551; with a reported duration: 86301
 # Module-scoped fixture costs recorded: 221
 #
 # Breaches are decided PER TIER against the table
@@ -29,12 +29,12 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 267544
+# inventory_python = 267551
 # inventory_cpp = 0
-# inventory_measured = 187605
+# inventory_measured = 187612
 # inventory_unmeasured = 79939
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
-# inventory_pr_python = 92633
+# inventory_pr_python = 92640
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -121,6 +121,7 @@ UNMEASURED:not-completed-in-this-run	tests/integration/app/test_assistant_startu
 0.000	tests/integration/app/test_assistant_startup_reopen.py::test_different_account_reopen_does_not_authorize_fresh_context
 UNMEASURED:not-completed-in-this-run	tests/integration/app/test_assistant_startup_reopen.py::test_fallback_refusal_settles_the_original_startup_selection
 0.000	tests/integration/app/test_assistant_startup_reopen.py::test_intentional_startup_cancel_does_not_report_failed_open
+0.002	tests/integration/app/test_assistant_startup_reopen.py::test_pre_account_chatgpt_conversation_reopens_with_the_default_login
 0.000	tests/integration/app/test_assistant_startup_reopen.py::test_reopen_retired_during_failure_publication_cannot_authorize_context
 UNMEASURED:not-completed-in-this-run	tests/integration/app/test_assistant_startup_reopen.py::test_startup_failure_publication_rechecks_ownership_after_sessions_changed
 UNMEASURED:not-completed-in-this-run	tests/integration/app/test_assistant_startup_reopen.py::test_startup_local_reconnect_failure_settles_original_recovery[reconnect-start-words1]
@@ -639,8 +640,11 @@ UNMEASURED:failed-in-this-run	tests/integration/app/test_phase_scan_state.py::te
 0.580	tests/integration/app/test_phase_scan_state.py::test_description_tab_keeps_literal_authors_including_cif_nulls[.]
 0.690	tests/integration/app/test_phase_scan_state.py::test_description_tab_keeps_literal_authors_including_cif_nulls[?]
 0.580	tests/integration/app/test_phase_scan_state.py::test_description_tab_keeps_literal_authors_including_cif_nulls[A. Author; B. Author]
-0.540	tests/integration/app/test_provider_runtime.py::test_claude_identity_mismatch_refuses_before_a_prompt
-0.530	tests/integration/app/test_provider_runtime.py::test_copilot_refuses_user_input_without_tool_proof
+0.520	tests/integration/app/test_provider_runtime.py::test_claude_identity_mismatch_refuses_before_a_prompt
+0.690	tests/integration/app/test_provider_runtime.py::test_copilot_denies_permission_and_stops_an_unlisted_tool
+0.430	tests/integration/app/test_provider_runtime.py::test_copilot_refuses_input_for_a_different_account[wrong-host]
+0.390	tests/integration/app/test_provider_runtime.py::test_copilot_refuses_input_for_a_different_account[wrong-login]
+0.660	tests/integration/app/test_provider_runtime.py::test_copilot_shows_edi_tool_reply_after_account_readback
 0.000	tests/integration/app/test_report_deferred_save.py::test_real_save_route_keeps_finished_content_and_completed_rows[deferred-excluded]
 0.000	tests/integration/app/test_report_deferred_save.py::test_real_save_route_keeps_finished_content_and_completed_rows[deferred-html]
 0.000	tests/integration/app/test_report_deferred_save.py::test_real_save_route_keeps_finished_content_and_completed_rows[deferred-pdf]
@@ -187207,8 +187211,11 @@ UNMEASURED:not-completed-in-this-run	tests/system/app/test_assistant_cif_attachm
 UNMEASURED:failed-in-this-run	tests/system/app/test_assistant_project_replacement.py::test_saved_project_awaits_user_confirmation[quiet]
 UNMEASURED:failed-in-this-run	tests/system/app/test_assistant_project_replacement.py::test_saved_project_awaits_user_confirmation[shown]
 UNMEASURED:failed-in-this-run	tests/system/app/test_assistant_step_folding.py::test_different_finished_steps_share_one_expandable_row
-UNMEASURED:failed-in-this-run	tests/system/app/test_claude_account_journey.py::test_claude_discloses_inherited_credential_before_input
-1.610	tests/system/app/test_claude_account_journey.py::test_claude_shows_edi_tool_reply_and_switches_accounts
+2.830	tests/system/app/test_claude_account_journey.py::test_claude_discloses_inherited_credential_before_input
+0.170	tests/system/app/test_claude_account_journey.py::test_claude_interactive_login_stays_owned_until_callback_or_cancel[cancel]
+0.210	tests/system/app/test_claude_account_journey.py::test_claude_interactive_login_stays_owned_until_callback_or_cancel[delayed-callback]
+1.570	tests/system/app/test_claude_account_journey.py::test_claude_shows_edi_tool_reply_and_switches_accounts
+UNMEASURED:failed-in-this-run	tests/system/app/test_claude_account_journey.py::test_claude_waits_for_the_mcp_catalogue_before_input
 UNMEASURED:not-completed-in-this-run	tests/system/app/test_feedback_attachment_typing.py::test_typing_with_a_real_attachment_stays_responsive
 UNMEASURED:not-completed-in-this-run	tests/system/app/test_large_collection_open.py::test_collection_first_open[large_offline]
 UNMEASURED:not-completed-in-this-run	tests/system/app/test_large_collection_open.py::test_collection_first_open[large_online]
@@ -250354,7 +250361,7 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_distribution_licences.py::tes
 UNMEASURED:failed-in-this-run	tests/system/py/test_distribution_licences.py::test_delivered_surface_lists_only_its_bundled_components[desktop-EDI_DESKTOP_BUNDLE]
 UNMEASURED:failed-in-this-run	tests/system/py/test_distribution_licences.py::test_delivered_surface_lists_only_its_bundled_components[python-EDI_PYTHON_BUNDLE]
 UNMEASURED:failed-in-this-run	tests/system/py/test_distribution_licences.py::test_delivered_surface_lists_only_its_bundled_components[web-EDI_WEB_BUNDLE]
-0.010	tests/system/py/test_distribution_licences.py::test_web_licence_staging_replaces_old_serial_delivery
+0.000	tests/system/py/test_distribution_licences.py::test_licence_staging_replaces_old_serial_delivery
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_docs_image_reference.py::test_capture_command_manifest_covers_every_theme_image
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_docs_image_reference.py::test_declared_capture_command_freshly_produces_the_required_app_images
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_docs_image_reference.py::test_every_content_image_resolves_distinct_scheme_variants
@@ -267594,7 +267601,7 @@ UNMEASURED:not-completed-in-this-run	tests/unit/py/test_web_science_identity.py:
 # module-cost: 30.584	tests/integration/app/test_assistant_misfit_workflow.py
 # module-cost: 70.695	tests/integration/app/test_assistant_review_receipts.py
 # module-cost: 16.504	tests/integration/app/test_assistant_shown_fit_details.py
-# module-cost: 65.778	tests/integration/app/test_assistant_startup_reopen.py
+# module-cost: 17.088	tests/integration/app/test_assistant_startup_reopen.py
 # module-cost: 14.161	tests/integration/app/test_assistant_status_order.py
 # module-cost: 119.960	tests/integration/app/test_assistant_trial_lock.py
 # module-cost: 216.944	tests/integration/app/test_assistant_trial_retirement.py

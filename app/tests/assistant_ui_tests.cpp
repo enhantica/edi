@@ -405,8 +405,21 @@ private slots:
                  "The Account dialog must get one availability record for each provider");
         QVERIFY2((available == QStringList{provider}),
                  "An installed runtime must be usable without enabling the other providers");
+        assistant->switchAccount(provider, id);
+        QVERIFY2(assistant->activeProvider().provider == provider,
+                 "The connection offer must use the installed provider the user selected");
+        const auto selection = assistant->beginFileSelection();
+        QVERIFY2(!selection.isEmpty(), "The assistant must accept file selection before the connection offer");
+        QVERIFY2(assistant->addSelectedFiles(selection, {QUrl::fromLocalFile(test.value("file").toString())}),
+                 qPrintable(assistant->lastError()));
+        const auto fileId = assistant->selectedFiles()->text(0, "id");
+        QVERIFY2(!fileId.isEmpty(), "The attached sample must have an edi file identity");
+        const auto consent = assistant->contextConsentIdentity();
+        QVERIFY2(!consent.isEmpty() && assistant->contextConsentRequired(),
+                 "The newly attached sample must be covered by the user's outgoing context approval");
+        const auto approval = assistant->acceptConnectionOffer(consent);
+        QVERIFY2(approval == "submitted", qPrintable(assistant->lastError() + " Approval: " + approval));
         if (test.value("mismatch").toBool()) {
-            QVERIFY2(assistant->resumeConnection(), "The recorded Claude account must be available to reconnect");
             QTRY_VERIFY2_WITH_TIMEOUT(assistant->lastError().contains(test.value("runtimeEmail").toString()),
                                      qPrintable(assistant->lastError()), 3000);
             QVERIFY2(!assistant->connected(), "A mismatched runtime must not connect");
@@ -414,7 +427,6 @@ private slots:
             return;
         }
         if (test.value("credential").toBool()) {
-            QVERIFY2(assistant->resumeConnection(), "The recorded Claude account must be available to reconnect");
             QTRY_VERIFY2_WITH_TIMEOUT(assistant->connected() && assistant->draftAdmissionReady(),
                                      qPrintable(assistant->lastError()), 3000);
             QQmlComponent component(&engine);
@@ -442,20 +454,6 @@ private slots:
             QVERIFY2(showsCredentialSource(), "The Account dialog must identify the active Claude environment key");
             return;
         }
-        assistant->switchAccount(provider, id);
-        QVERIFY2(assistant->activeProvider().provider == provider,
-                 "The connection offer must use the installed provider the user selected");
-        const auto selection = assistant->beginFileSelection();
-        QVERIFY2(!selection.isEmpty(), "The assistant must accept file selection before the connection offer");
-        QVERIFY2(assistant->addSelectedFiles(selection, {QUrl::fromLocalFile(test.value("file").toString())}),
-                 qPrintable(assistant->lastError()));
-        const auto fileId = assistant->selectedFiles()->text(0, "id");
-        QVERIFY2(!fileId.isEmpty(), "The attached sample must have an edi file identity");
-        const auto consent = assistant->contextConsentIdentity();
-        QVERIFY2(!consent.isEmpty() && assistant->contextConsentRequired(),
-                 "The newly attached sample must be covered by the user's outgoing context approval");
-        const auto approval = assistant->acceptConnectionOffer(consent);
-        QVERIFY2(approval == "submitted", qPrintable(assistant->lastError() + " Approval: " + approval));
         const auto prompt = "Read the attached sample. fixture-file-id=" + fileId;
         if (scenario == "wrong-login" || scenario == "wrong-host") {
             const QString differing = scenario == "wrong-login" ? "different-user" : "other.ghe.com";
@@ -476,6 +474,10 @@ private slots:
         const auto* sessions = assistant->sessions();
         for (int row = 0; row < sessions->rowCount(); ++row)
             QVERIFY2(sessions->text(row, "id") != foreignThread, "Another account's thread must stay out of this list");
+        QStringList errors;
+        const auto errorObservation = QObject::connect(assistant, &edi_app::AssistantViewModel::lastErrorChanged,
+            [&] { errors.append(assistant->lastError()); });
+        const auto disconnectErrors = qScopeGuard([&] { QObject::disconnect(errorObservation); });
         assistant->send(prompt);
         const auto appearsInTranscript = [&] {
             auto* rows = assistant->messages();
@@ -485,9 +487,10 @@ private slots:
         };
         if (scenario == "foreign-tool") {
             QTRY_VERIFY2_WITH_TIMEOUT(
-                assistant->lastError().contains("fixture_unlisted_tool") &&
-                assistant->lastError().contains("turn was stopped"),
-                qPrintable(assistant->lastError()), 3000);
+                std::any_of(errors.cbegin(), errors.cend(), [](const QString& failure) {
+                    return failure.contains("fixture_unlisted_tool") && failure.contains("turn was stopped");
+                }),
+                qPrintable(errors.join(u'\n')), 3000);
             QVERIFY2(!appearsInTranscript(), "An unlisted tool must stop the turn without a tool reply");
             return;
         }
