@@ -29,6 +29,11 @@ Item {
     // marks and passes clicks on; the Experiment page's k search group shows and edits the same marks.
     readonly property var kState: chart.axisProject ? chart.axisProject.kSearch : ({})
     readonly property bool peakMode: chart.findKPage && kState.active === true
+    // A marking session ends with its pending tap and its click state (review 23, F4).
+    onPeakModeChanged: {
+        markClick.stop();
+        pointer.lastClickAt = 0;
+    }
     // The marks stay drawn and listed when marking stops, for the experiment they were made on (owner, 2026-11-27):
     // marking is a mode over them, and only Clear empties them.
     readonly property bool marksShown: chart.findKPage && chart.axisProject !== null &&
@@ -1217,6 +1222,7 @@ Item {
                 }
                 markClick.at = controller.xMin + mouse.x / Math.max(1, width) * (controller.xMax - controller.xMin);
                 markClick.experiment = chart.axisProject ? chart.axisProject.currentExperimentIndex : -1;
+                markClick.session = chart.kState.session ?? -1;
                 markClick.restart();
                 return;
             }
@@ -1228,9 +1234,11 @@ Item {
             id: markClick
             property real at: 0
             property int experiment: -1
+            property real session: -1
             interval: Qt.styleHints.mouseDoubleClickInterval
             function fire() {
-                if (!chart.peakMode || chart.axisProject === null || chart.axisProject.currentExperimentIndex !== experiment)
+                if (!chart.peakMode || chart.axisProject === null || chart.axisProject.currentExperimentIndex !== experiment ||
+                    chart.kState.session !== session)
                     return;
                 chart.togglePeakAt(at);
                 chart.hoveredMark = -1;

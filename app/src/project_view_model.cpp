@@ -4439,6 +4439,7 @@ QVariantMap ProjectViewModel::kSearch() const {
     for (std::size_t i = 0; i < k_marks_.marks.size() && i < static_cast<std::size_t>(k_marks_.roles.size()); ++i)
         roles.insert(QString::number(k_marks_.marks[i]), k_marks_.roles[static_cast<qsizetype>(i)]);
     return {{QStringLiteral("active"), k_marks_.active},
+            {QStringLiteral("session"), static_cast<double>(k_session_)},
             {QStringLiteral("experiment"), k_marks_.experiment},
             {QStringLiteral("parent"), k_marks_.parent},
             {QStringLiteral("note"), k_marks_.note},
@@ -4465,6 +4466,7 @@ void ProjectViewModel::setKSearchActive(bool on) {
     // starting again continues with them, and only Clear empties the table. Suggestions are offered only when
     // marking starts with no marks.
     k_marks_.roles.clear();
+    ++k_session_;
     if (!on) {
         k_marks_.active = false;
         k_marks_.note.clear();
@@ -4473,8 +4475,11 @@ void ProjectViewModel::setKSearchActive(bool on) {
     }
     const int experiment = currentExperimentIndex();
     const int parent = magneticParentOf(experiment);
-    // Marks made on another experiment are not these data's: that one's table starts afresh here.
-    if (k_marks_.experiment != experiment) {
+    // Marks made on another bank, or on a bank since replaced at this place, are not these data's: the table starts
+    // afresh here.
+    const bool sameBank = k_marks_.experiment == experiment && experiment >= 0 &&
+                          k_marks_.bank.lock().get() == project_->experiments[static_cast<std::size_t>(experiment)].get();
+    if (!sameBank) {
         changeKMarks();
         k_marks_ = KMarks{};
     }
@@ -4492,11 +4497,14 @@ void ProjectViewModel::setKSearchActive(bool on) {
     }
     if (!k_marks_.marks.empty()) {
         changeKMarks();  // the same marks, now under this parent
+        kRemeasure();
         setKNote(QString());
         return;
     }
     changeKMarks();
     try {
+        k_marks_.bank = project_->experiments[static_cast<std::size_t>(experiment)];
+        k_marks_.inputs = kInputs(experiment);
         k_marks_.candidates = edi::magnetic_mark_candidates(*project_, static_cast<std::size_t>(experiment),
                                                             static_cast<std::size_t>(parent));
     } catch (const std::exception& refusal) {
@@ -4536,7 +4544,9 @@ void ProjectViewModel::toggleKMarkAt(double x, double tolerance) {
         emit kSearchChanged();
         return;
     }
-    // Only a measured maximum is a snap target; a residual excess or an earlier click stays where it was found.
+    // The nearest measured maximum to the click, listed by a detector or not (review 23, F4): the nearest listed one
+    // and the nearest one of the measured curve compete by distance; a residual excess or an earlier click is never
+    // a snap target. With none near, the clicked position itself.
     int best = -1;
     for (std::size_t i = 0; i < k_marks_.candidates.size(); ++i) {
         if (k_marks_.candidates[i].observed && near(k_marks_.candidates[i]) &&
@@ -4544,13 +4554,18 @@ void ProjectViewModel::toggleKMarkAt(double x, double tolerance) {
                              std::abs(k_marks_.candidates[static_cast<std::size_t>(best)].x - x)))
             best = static_cast<int>(i);
     }
-    if (best < 0) {
-        try {
-            // The highest measured maximum near the click, listed by a detector or not, else the clicked position.
-            k_marks_.candidates.push_back(edi::magnetic_peak_near(*project_, static_cast<std::size_t>(k_marks_.experiment),
-                                                                   static_cast<std::size_t>(k_marks_.parent), x));
+    try {
+        const edi::MagneticPeak measured = edi::magnetic_peak_near(
+            *project_, static_cast<std::size_t>(k_marks_.experiment), static_cast<std::size_t>(k_marks_.parent), x);
+        const bool closer = best < 0 || (measured.observed &&
+                                         std::abs(measured.x - x) <
+                                             std::abs(k_marks_.candidates[static_cast<std::size_t>(best)].x - x) - 1e-9);
+        if (closer) {
+            k_marks_.candidates.push_back(measured);
             best = static_cast<int>(k_marks_.candidates.size()) - 1;
-        } catch (const std::exception&) {
+        }
+    } catch (const std::exception&) {
+        if (best < 0) {
             emit kSearchChanged();  // outside the calibration's range: nothing to mark there
             return;
         }
@@ -4602,6 +4617,46 @@ void ProjectViewModel::retireKMarks() {
     emit kSearchChanged();
 }
 
+std::uint64_t ProjectViewModel::kInputs(int experiment) const {
+    try {
+        return edi::magnetic_fit_inputs_hash(*project_, static_cast<std::size_t>(experiment));
+    } catch (const std::exception&) {
+        return 0;
+    }
+}
+
+void ProjectViewModel::kRemeasure() {
+    const int experiment = k_marks_.experiment;
+    if (experiment < 0 || k_marks_.parent < 0 || experiment >= static_cast<int>(project_->experiments.size())) return;
+    const std::uint64_t inputs = kInputs(experiment);
+    if (inputs == k_marks_.inputs && k_marks_.bank.lock().get() == project_->experiments[static_cast<std::size_t>(experiment)].get())
+        return;
+    // Each kept mark measured again where it stands, on the data and calibration it is now shown with: its d, width
+    // and tolerance follow; what it is (a suggestion, a measured maximum) stays.
+    std::vector<edi::MagneticPeak> measured;
+    for (const int m : k_marks_.marks) {
+        const edi::MagneticPeak& kept = k_marks_.candidates[static_cast<std::size_t>(m)];
+        try {
+            edi::MagneticPeak again = edi::magnetic_peak_at(*project_, static_cast<std::size_t>(experiment),
+                                                            static_cast<std::size_t>(k_marks_.parent), kept.x);
+            again.significance = kept.significance;
+            again.on_allowed_reflection = kept.on_allowed_reflection;
+            again.suggested = kept.suggested;
+            again.observed = kept.observed;
+            measured.push_back(again);
+        } catch (const std::exception&) {
+            // outside the new calibration's range: that mark goes
+        }
+    }
+    changeKMarks();
+    k_marks_.candidates = std::move(measured);
+    k_marks_.marks.clear();
+    for (std::size_t i = 0; i < k_marks_.candidates.size(); ++i) k_marks_.marks.push_back(static_cast<int>(i));
+    k_marks_.roles.clear();
+    k_marks_.bank = project_->experiments[static_cast<std::size_t>(experiment)];
+    k_marks_.inputs = inputs;
+}
+
 bool ProjectViewModel::kMarkingCurrent() const {
     return k_marks_.parent >= 0 && k_marks_.experiment == currentExperimentIndex() &&
            magneticParentOf(k_marks_.experiment) == k_marks_.parent &&
@@ -4616,6 +4671,11 @@ QVariantMap ProjectViewModel::kSnapshot() {
     if (!kMarkingCurrent()) {
         if (k_marks_.active) setKSearchActive(false);
         setLastError(tr("the crystal structure to search k for is no longer the experiment's one enabled crystal"));
+        return {};
+    }
+    kRemeasure();  // kept marks of other data or calibration are measured again first (review 23, F4)
+    if (k_marks_.marks.empty()) {
+        setLastError(tr("mark at least one peak"));
         return {};
     }
     auto snapshot = std::make_shared<KSearchSnapshot>();

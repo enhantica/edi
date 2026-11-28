@@ -1042,6 +1042,10 @@ class ProjectViewModel : public QObject, public ProjectEditor {
         int experiment = -1;
         int parent = -1;
         std::string parent_name;
+        // The bank the candidates were measured on, by identity, and its scientific inputs then (review 23, F4): a
+        // mark kept for display is measured again before a search when either changed.
+        std::weak_ptr<const edi::BraggPdExperiment> bank;
+        std::uint64_t inputs = 0;
         std::vector<edi::MagneticPeak> candidates;
         std::vector<int> marks;
         QStringList roles;  // per mark, after a search on exactly these marks
@@ -1049,6 +1053,11 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     };
     KMarks k_marks_;
     bool kMarkingCurrent() const;
+    // Each marking session's id, which a pending tap must still match (review 23, F4).
+    quint64 k_session_ = 0;
+    // The kept marks measured again on the bank and inputs they are now shown with, when those changed.
+    void kRemeasure();
+    std::uint64_t kInputs(int experiment) const;
     quint64 k_generation_ = 1;  // every change of the marks
     struct KSearchSnapshot {
         qint64 id = 0;
