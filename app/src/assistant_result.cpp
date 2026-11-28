@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "assistant_result.hpp"
+#include "engine_setup.hpp"
 #include "assistant_file_primitives.hpp"
 #include <limits>
 #include "edi/assistant.hpp"
@@ -561,10 +562,10 @@ std::shared_ptr<ImmutableAssistantResult> owned_result_snapshot_in(const QString
     return result;
 }
 std::shared_ptr<ImmutableAssistantResult> owned_result_snapshot() {
-    const auto cache=QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation)+"/assistant/results";
+    const auto cache=edi_app::app_local_data_location()+"/assistant/results";
     if(!QDir().mkpath(cache))refuse();
     const auto physical=QFileInfo(cache).canonicalFilePath();
-    const auto agent=QFileInfo(QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation)+"/assistant/agent").canonicalFilePath();
+    const auto agent=QFileInfo(edi_app::app_local_data_location()+"/assistant/agent").canonicalFilePath();
     if(physical.isEmpty() || (!agent.isEmpty() && (physical==agent || physical.startsWith(agent+'/'))))refuse();
     return owned_result_snapshot_in(physical);
 }
@@ -675,7 +676,7 @@ std::shared_ptr<ImmutableAssistantResult> capture_prepared_native_documents(
 
 namespace {
 bool separated_from_host_storage(const QString& physical) {
-    const auto base = QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation);
+    const auto base = edi_app::app_local_data_location();
     if (base.isEmpty()) return false;
     const auto within = [](const QString& child, const QString& parent) {
         return child.compare(parent, Qt::CaseInsensitive) == 0 || child.startsWith(parent + '/', Qt::CaseInsensitive);
@@ -1132,7 +1133,7 @@ void AssistantResultExport::prepare(const ImmutableAssistantResult& source, cons
     // Save As keeps its original canonical/reserved-root door.
     if(!alreadyPhysical) {
         const auto physicalParent=QFileInfo(parent).canonicalFilePath();
-        const auto appData=QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation);
+        const auto appData=edi_app::app_local_data_location();
         for(const auto& reserved:{appData+"/assistant/agent",appData+"/assistant/results"}) {
             const auto physical=QFileInfo(reserved).canonicalFilePath();
             if(!physical.isEmpty() && (physicalParent==physical || physicalParent.startsWith(physical+'/')))refuse();
@@ -1308,12 +1309,12 @@ std::shared_ptr<ImmutableAssistantReport> capture_assistant_report(const QString
     auto sourceRoot = parentName == "." ? Fd(::openat(root.n, ".", O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC)) : below(root.n, parentName, true);
     const Identity sourceRootIdentity(sourceRoot.n);
     auto result = std::make_shared<ImmutableAssistantReport>();
-    const auto cache = QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation) + "/assistant/report-views";
+    const auto cache = edi_app::app_local_data_location() + "/assistant/report-views";
     if (!QDir().mkpath(cache)) refuse();
     result->lease = std::make_shared<QTemporaryDir>(cache + "/report-XXXXXX");
     if (!result->lease->isValid()) refuse();
     const auto physicalCopy = QFileInfo(result->lease->path()).canonicalFilePath();
-    const auto agentRoot = QFileInfo(QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation) + "/assistant/agent").canonicalFilePath();
+    const auto agentRoot = QFileInfo(edi_app::app_local_data_location() + "/assistant/agent").canonicalFilePath();
     if (physicalCopy.isEmpty() || agentRoot.isEmpty() || physicalCopy == agentRoot || physicalCopy.startsWith(agentRoot + '/')) refuse();
     auto destination = directory(physicalCopy);
     struct Source { QString path; Identity identity; bool directory; };

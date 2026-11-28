@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "assistant_accounts.hpp"
+#include "engine_setup.hpp"
 #include <stdexcept>
 #include <QDir>
 #include <QFile>
@@ -58,7 +59,7 @@ AssistantAccounts::AssistantAccounts(QString settingsPath, const QString& accoun
     : settings_path_(std::move(settingsPath)), accounts_root_(QDir::cleanPath(accountsRoot)) {}
 
 QString AssistantAccounts::defaultAccountsRoot() {
-    const auto base = QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation);
+    const auto base = edi_app::app_local_data_location();
     return base.isEmpty() ? QString() : QDir::cleanPath(base + QStringLiteral("/assistant/accounts"));
 }
 

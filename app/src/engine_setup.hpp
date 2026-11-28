@@ -45,6 +45,10 @@ void use_design_font();
 void use_fresh_settings();
 // The folder use_fresh_settings() made, or empty when this run uses the user's own settings.
 QString fresh_settings_dir();
+// Qt's AppLocalDataLocation, every one of edi's own data folders lives under it. On macOS Qt asks the system for the
+// home folder rather than reading HOME; this follows HOME there as on Linux, so a changed HOME (a test's own folder)
+// moves edi's data with it.
+QString app_local_data_location();
 // Text renders with Qt's FreeType font engine (ADR-0015 §10). select_freetype_engine(), given main's
 // arguments, completes QT_QPA_PLATFORM before the QGuiApplication exists: on macOS and Windows the default
 // platform (cocoa, windows) gains fontengine=freetype; Linux platforms render with FreeType already.

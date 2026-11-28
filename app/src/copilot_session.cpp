@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "copilot_session.hpp"
+#include "engine_setup.hpp"
 #include <QCoreApplication>
 #include <QDir>
 #include <QFile>
@@ -106,7 +107,7 @@ QString stripTerminal(QString text) {
 CopilotSession::CopilotSession(QString accountsRoot, QObject* parent)
     : AssistantRuntimeSession(parent), accounts_root_(std::move(accountsRoot)) {
     if (accounts_root_.isEmpty()) {
-        const auto base = QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation);
+        const auto base = edi_app::app_local_data_location();
         if (!base.isEmpty()) accounts_root_ = base + QStringLiteral("/assistant/accounts");
     }
     if (!accounts_root_.isEmpty()) accounts_root_ = QDir::cleanPath(accounts_root_);
