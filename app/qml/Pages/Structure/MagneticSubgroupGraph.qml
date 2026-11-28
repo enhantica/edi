@@ -81,10 +81,10 @@ Flickable {
     }
     readonly property int nodeHeight: Math.ceil(cardMargin + nameMetrics.height + cardSpacing + lineMetrics.height +
                                                 Math.max(0, cardPadding - lineMetrics.descent))
-    // About twice the earlier spacing between cards.
-    readonly property int gap: 20
-    readonly property int headerHeight: 28
-    readonly property int levelGap: 26
+    // About twice the earlier spacing between cards, in the font's units as the app's other spacings.
+    readonly property int gap: Math.round(EaStyle.Sizes.fontPixelSize * 1.4)
+    readonly property int headerHeight: Math.round(EaStyle.Sizes.fontPixelSize * 2)
+    readonly property int levelGap: Math.round(EaStyle.Sizes.fontPixelSize * 1.85)
     readonly property int perLine: Math.max(1, Math.floor((width - gap) / (nodeWidth + gap)))
 
     function nameOf(n) {
@@ -143,7 +143,8 @@ Flickable {
             const at = levels[l].indexOf(i);
             if (at < 0)
                 continue;
-            return Qt.point(gap + (at % perLine) * (nodeWidth + gap), levelTops[l] + headerHeight + Math.floor(at / perLine) * (nodeHeight + gap));
+            return Qt.point(Math.round(gap + (at % perLine) * (nodeWidth + gap)),
+                            Math.round(levelTops[l] + headerHeight + Math.floor(at / perLine) * (nodeHeight + gap)));
         }
         return Qt.point(0, 0);
     }
@@ -157,10 +158,12 @@ Flickable {
         for (let l = 0; l < levels.length; ++l)
             if (levels[l].indexOf(j) >= 0)
                 top = levelTops[l];
-        const band = top - levelGap / 2;
-        const lane = to.x - gap / 2;
-        const middle = to.y + nodeHeight / 2;
-        return [Qt.point(from.x + nodeWidth / 2, from.y + nodeHeight), Qt.point(from.x + nodeWidth / 2, band), Qt.point(lane, band), Qt.point(lane, middle), Qt.point(to.x, middle)];
+        // Whole pixels, so the lines are as sharp as the cards.
+        const band = Math.round(top - levelGap / 2);
+        const lane = Math.round(to.x - gap / 2);
+        const middle = Math.round(to.y + nodeHeight / 2);
+        const down = Math.round(from.x + nodeWidth / 2);
+        return [Qt.point(down, from.y + nodeHeight), Qt.point(down, band), Qt.point(lane, band), Qt.point(lane, middle), Qt.point(to.x, middle)];
     }
     // The shown card's whole lineage (owner, 2026-11-27): every ancestor up to the maximal level and every descendant
     // down to the last, each as a set of node indices, the card itself in both.
@@ -196,6 +199,10 @@ Flickable {
     }
 
     clip: true
+    // Scrolled by whole pixels and never past its ends, so every card and its text stays on the pixel grid (owner,
+    // Retina: a fractional scroll offset drew the whole graph soft), as the report preview and the app's lists scroll.
+    pixelAligned: true
+    boundsBehavior: Flickable.StopAtBounds
     contentWidth: width
     contentHeight: levelTops.length > 0 ? levelTops[levelTops.length - 1] : 0
     ScrollBar.vertical: EaElements.ScrollBar {}
@@ -213,6 +220,8 @@ Flickable {
                 model: graph.nodes[edges.index].subgroups
                 delegate: Shape {
                     id: edge
+                    // Antialiased at the screen's own resolution, as the tutorial's arrow is drawn.
+                    preferredRendererType: Shape.CurveRenderer
                     required property int modelData
                     readonly property var corners: graph.route(edges.index, modelData)
                     visible: graph.shown(modelData) && graph.onLineage(edges.index, modelData)
@@ -234,22 +243,17 @@ Flickable {
     // A level's header: its name and its count.
     Repeater {
         model: graph.levels.length
-        delegate: Row {
+        // The level's name and count in bold, on the cards' edge (owner, 2026-11-27: no per-level check box; the
+        // footer's Select all and Clear choose), centred in its band on a whole pixel.
+        delegate: EaElements.Label {
             id: header
             required property int index
             readonly property var members: graph.levels[index]
+            objectName: `magnetic.level.${index}`
             x: graph.gap
-            y: graph.levelTops[index] ?? 0
-            height: graph.headerHeight
-            spacing: graph.gap
-            // The level's name and count in bold, on the cards' edge (owner, 2026-11-27: no per-level check box; the
-            // footer's Select all and Clear choose).
-            EaElements.Label {
-                objectName: `magnetic.level.${header.index}`
-                anchors.verticalCenter: parent.verticalCenter
-                font.bold: true
-                text: (header.index === 0 ? qsTr("Maximal") : qsTr("Level %1").arg(header.index + 1)) + " · " + (header.members.length === 1 ? qsTr("1 group") : qsTr("%1 groups").arg(header.members.length))
-            }
+            y: (graph.levelTops[index] ?? 0) + Math.round((graph.headerHeight - implicitHeight) / 2)
+            font.bold: true
+            text: (index === 0 ? qsTr("Maximal") : qsTr("Level %1").arg(index + 1)) + " · " + (members.length === 1 ? qsTr("1 group") : qsTr("%1 groups").arg(members.length))
         }
     }
 
@@ -268,13 +272,42 @@ Flickable {
             y: at.y
             width: graph.nodeWidth
             height: graph.nodeHeight
-            // A click on the card selects it, filled with the app's blue and white text; unselected it takes the chart's
-            // background. Its border marks the group shown and its covering relatives (owner, 2026-11-27).
+            // A click on the card selects it, filled with the app's accent and white text; unselected it takes the
+            // chart's background inside the chart's axis border, as the toolbar's boxes. A selected card's border
+            // is its fill. The fill and border change in a table row's hover time (Sizes.tableHighlightMoveDuration) and
+            // the text with them in one step, so it never passes through grey. An unselected relative of the shown card
+            // keeps its accent border (owner, 2026-11-27).
             radius: 2
-            readonly property color textColor: chosen ? "white" : EaStyle.Colors.themeForeground
+            // A group that cannot be chosen takes the app's disabled colours, as a disabled control does.
+            readonly property bool selectable: graph.selectable(index)
+            readonly property color textColor: !selectable ? EaStyle.Colors.themeForegroundDisabled : chosen ? "white" : EaStyle.Colors.themeForeground
             color: chosen ? EaStyle.Colors.themeAccent : EaStyle.Colors.chartBackground
-            border.width: near || graph.shownNode === index ? graph.lineWidth : 1
-            border.color: near || graph.shownNode === index ? EaStyle.Colors.themeAccent : EaStyle.Colors.chartAxis
+            Behavior on color {
+                ColorAnimation {
+                    duration: EaStyle.Sizes.tableHighlightMoveDuration
+                }
+            }
+            border.width: chosen ? 0 : near ? graph.lineWidth : EaStyle.Sizes.borderThickness
+            border.color: !chosen && near ? EaStyle.Colors.themeAccent : selectable ? EaStyle.Colors.chartAxis : EaStyle.Colors.themeBackgroundDisabled
+            Behavior on border.color {
+                ColorAnimation {
+                    duration: EaStyle.Sizes.tableHighlightMoveDuration
+                }
+            }
+
+            // The app's hover tint (AppColors.hoverHighlight, as the status bar's items), over a selected card too,
+            // fading in and out as a table row's hover does.
+            Rectangle {
+                anchors.fill: parent
+                radius: parent.radius
+                color: AppColors.hoverHighlight
+                opacity: cardArea.containsMouse && node.selectable ? 1 : 0
+                Behavior on opacity {
+                    NumberAnimation {
+                        duration: EaStyle.Sizes.tableHighlightMoveDuration
+                    }
+                }
+            }
 
 
             Column {
@@ -284,19 +317,23 @@ Flickable {
                 anchors.leftMargin: graph.cardPadding
                 anchors.rightMargin: graph.cardPadding
                 spacing: graph.cardSpacing
-                // A group that cannot be chosen reads faded, while its card stays opaque over the edges.
-                opacity: graph.selectable(node.index) ? 1.0 : 0.45
-                EaElements.Label {
+                // Plain text in the Label's font: a Label animates its colour, which passed through grey.
+                Text {
                     id: nameLabel
                     width: parent.width
+                    height: Math.ceil(implicitHeight)  // whole pixels, so the second line sits on one too
+                    font.family: EaStyle.Fonts.fontFamily
+                    font.pixelSize: EaStyle.Sizes.fontPixelSize
                     elide: Text.ElideRight
                     horizontalAlignment: Text.AlignLeft
                     color: node.textColor
                     text: graph.nameOf(node.data_)
                 }
-                EaElements.Label {
+                Text {
                     width: parent.width
+                    height: Math.ceil(implicitHeight)
                     elide: Text.ElideRight
+                    font.family: EaStyle.Fonts.fontFamily
                     font.pixelSize: Math.round(EaStyle.Sizes.fontPixelSize * 0.85)
                     horizontalAlignment: Text.AlignLeft
                     color: node.textColor
@@ -315,8 +352,9 @@ Flickable {
                 onClicked: if (graph.selectable(node.index))
                     graph.toggled(node.index)
 
-                // The sidebar groups' pin, in the card's top-right corner while the card is hovered, and always while
-                // it is pinned: grey, upright in the accent colour when on.
+                // The sidebar groups' pin (SideBarGroup), in the card's top-right corner while the card is hovered, and
+                // always while it is pinned: at a title icon's size, upright in the accent colour when on; on a selected
+                // (accent) card white, so it never sinks into the fill.
                 EaElements.Label {
                     id: pin
                     objectName: `magnetic.node.${node.index}.pin`
@@ -324,24 +362,27 @@ Flickable {
                     visible: on || graph.hovered === node.index
                     x: Math.round(parent.width - width - graph.cardMargin * 0.5)
                     y: Math.round(graph.cardMargin * 0.5)
-                    width: Math.round(EaStyle.Sizes.fontPixelSize * 1.25)
+                    width: Math.round(EaStyle.Sizes.fontPixelSize * 1.5)
                     height: width
                     horizontalAlignment: Text.AlignHCenter
                     verticalAlignment: Text.AlignVCenter
                     font.family: EaStyle.Fonts.iconsFamily
-                    font.pixelSize: Math.round(EaStyle.Sizes.fontPixelSize * 0.8)
+                    font.pixelSize: EaStyle.Sizes.fontPixelSize
                     rotation: on ? 0 : 45
-                    // On a selected (blue) card always white: faded until hovered or pinned, so it never sinks into
-                    // the fill (owner, 2026-11-27).
-                    color: node.chosen ? "white" : on ? EaStyle.Colors.themeAccent : pinArea.containsMouse ? EaStyle.Colors.themeForegroundHovered : node.textColor
-                    opacity: node.chosen && !on && !pinArea.containsMouse ? 0.6 : 1.0
+                    color: node.chosen ? "white" : on ? EaStyle.Colors.themeAccent : pinHover.hovered ? EaStyle.Colors.themeForegroundHovered : node.textColor
                     text: "thumbtack"
-                    MouseArea {
-                        id: pinArea
-                        anchors.fill: parent
-                        hoverEnabled: true
+                    HoverHandler {
+                        id: pinHover
                         cursorShape: Qt.PointingHandCursor
-                        onClicked: graph.pinned = pin.on ? -1 : node.index
+                    }
+                    TapHandler {
+                        // Takes the press, so a click on the pin never also selects the card.
+                        gesturePolicy: TapHandler.ReleaseWithinBounds
+                        onTapped: graph.pinned = pin.on ? -1 : node.index
+                    }
+                    EaElements.ToolTip {
+                        text: pin.on ? qsTr("Unpin: let this group's lineage follow the pointer") : qsTr("Pin: keep this group's lineage shown")
+                        requested: pinHover.hovered
                     }
                 }
                 // The app's own tooltip (EaElements.ToolTip): its style, below the card or above it, never over it;
