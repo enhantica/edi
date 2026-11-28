@@ -175,6 +175,28 @@ def hold_account_reply(folder, name, account):
     }
 
 
+def process_parent(pid):
+    status = Path(f'/proc/{pid}/status').read_text(encoding='utf-8')
+    return int(next(row.split()[1] for row in status.splitlines() if row.startswith('PPid:')))
+
+
+def owned_startup_peer(actor, reply, request):
+    proof = json.loads(Path(reply['ready']).read_text(encoding='utf-8'))
+    guard = actor.command('startup_account_transport', request_id=request['id'])['reply']
+    guard_pid, peer_pid = int(guard['guard_pid']), proof['pid']
+    command = Path(f'/proc/{peer_pid}/cmdline').read_bytes().split(b'\0')
+    assert (
+        proof['request_id'] == request['id']
+        and proof['method'] == request['method'] == 'account/read'
+        and proof['parent_pid'] == process_parent(peer_pid) == guard_pid
+        and process_parent(guard_pid) == actor.process.pid
+        and len(command) > 1
+        and Path(os.fsdecode(command[1])).resolve() == (actor.folder / 'codex').resolve()
+        and Path(reply['release_fifo']).parent == actor.folder
+    ), 'Required: the live guard owns the exact peer holding this startup account request.'
+    return peer_pid
+
+
 def connect_offer(actor, *, acknowledge_open_failure):
     if acknowledge_open_failure:
         actor.until(lambda _row: native.qml(actor, 'refusal.opened'))
@@ -210,7 +232,11 @@ def connect_offer(actor, *, acknowledge_open_failure):
         )
 
     actor.until(
-        lambda row: native._original_context_disclosure_present(row) and disclosure() is not None
+        lambda row: (
+            row['ui']['state'] == 'connecting'
+            or row['ui']['connected']
+            or (native._original_context_disclosure_present(row) and disclosure() is not None)
+        )
     )
     return disclosure()
 
@@ -309,16 +335,17 @@ def observe_failure(folder, sources, thread, scenario):  # noqa: PLR0912, PLR091
                 native.qml(actor, 'Session.assistant.cancelSessionSelection()')
                 return startup_receipt(actor, thread)
 
+            peer = owned_startup_peer(actor, preflight, initial)
             if scenario == 'transport':
-                owner = actor.command('usage_transport_snapshot')['reply']
-                assert owner['original_vm_child'], (
-                    'Required: stop only the original process serving the held account preflight.'
-                )
-                os.kill(int(owner['peer_pid']), signal.SIGKILL)
+                os.kill(peer, signal.SIGKILL)
             else:
-                native._release_original_usage_reply(
-                    actor, preflight, initial['id'], method='account/read'
-                )
+                descriptor = os.open(preflight['release_fifo'], os.O_WRONLY | os.O_NONBLOCK)
+                try:
+                    assert os.write(descriptor, b'R') == 1, (
+                        'Required: release the original held startup account response.'
+                    )
+                finally:
+                    os.close(descriptor)
             # A missing settlement is part of the observed product result.
             with suppress(AssertionError):
                 actor.until(
@@ -530,10 +557,10 @@ def test_reopen_retired_during_failure_publication_cannot_authorize_context(star
     ('scenario', 'words'),
     [
         ('malformed', ('project',)),
-        ('transport', ('process', 'transport')),
+        ('transport', ('stopped by the system',)),
         ('archived', ('archiv', 'unavailable', 'no longer')),
         ('prepare', ('prepar', 'workspace', 'directory')),
-        ('continuation', ('bootstrap', 'resume', 'reconnect')),
+        ('continuation', ('could not connect while opening the conversation',)),
     ],
 )
 def test_automatic_reopen_handoff_settles_with_its_own_cause(
@@ -619,7 +646,10 @@ def startup_release_observations(tmp_path_factory):
 @pytest.mark.parametrize(
     ('mode', 'words'),
     [
-        ('stale-proof', ('scope changed', 'disclosure changed')),
+        (
+            'stale-proof',
+            ('what you chose to share changed', 'what this conversation shares changed'),
+        ),
         ('reconnect-start', ('start', 'reconnect')),
     ],
 )
@@ -638,7 +668,7 @@ def test_startup_local_reconnect_failure_settles_original_recovery(
     )
     cause = result['browser']['startup_transition'].get('reopen_failure', '').lower()
     assert any(word in cause for word in words) and result['sessions_error'], (
-        'Required: the startup terminal reports the local reconnect cause.'
+        f'Required: the startup terminal reports the local reconnect cause. Observed: {cause!r}'
     )
     assert_connect_requires_new_consent(result)
 
@@ -654,7 +684,6 @@ def deferred_startup_observation(tmp_path_factory):
             executable.write_text(
                 '#!' + sys.executable + '\n'
                 'import signal\nfrom pathlib import Path\n'
-                'signal.signal(signal.SIGTERM, signal.SIG_IGN)\n'
                 'Path(__file__ + ".ready").touch()\n'
                 'signal.pause()\n',
                 encoding='utf-8',
@@ -677,12 +706,13 @@ def deferred_startup_observation(tmp_path_factory):
                 'Fixture-owned obstacle to the account workspace.', encoding='utf-8'
             )
             try:
-                assert actor.command('release_previous_startup_peer')['reply']['killed'], (
+                assert actor.command('release_previous_startup_peer')['reply']['resumed'], (
                     'Required: release the preceding transport while the obstacle is present.'
                 )
                 actor.until(
                     lambda _row: (
-                        'workspace' in native.qml(actor, 'Session.assistant.sessionsError').lower()
+                        'account check'
+                        in native.qml(actor, 'Session.assistant.sessionsError').lower()
                     )
                 )
                 result = startup_receipt(actor, thread)
@@ -707,9 +737,10 @@ def test_deferred_startup_account_workspace_failure_settles_original_operation(
     assert result['association'] == expected and not result['browser']['startup_target'], (
         'Required: deferred preflight failure retires recovery and preserves the association.'
     )
-    assert (
-        'workspace' in result['browser']['startup_transition'].get('reopen_failure', '').lower()
-    ), 'Required: the original startup terminal carries the actual workspace failure.'
+    cause = result['browser']['startup_transition'].get('reopen_failure', '').lower()
+    assert 'prepare' in cause and 'account check' in cause, (
+        'Required: the original startup terminal reports failure to prepare the account check.'
+    )
     assert_connect_requires_new_consent(result, reads=0)
 
 
