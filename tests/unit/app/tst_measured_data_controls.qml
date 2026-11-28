@@ -79,7 +79,9 @@ TestCase {
     }
     function exposed(item) {
         Ui.scrollIntoView(Ui.target(item));
-        verify(waitForPolish(appWindow.contentItem) && waitForRendering(appWindow.contentItem), "The inspected control completes layout and a real frame");
+        verify(waitForPolish(appWindow.contentItem), "The inspected control completes layout");
+        appWindow.update();
+        verify(waitForRendering(appWindow.contentItem), "The inspected control renders a real frame");
         verify(Ui.exposed(Ui.target(item)), "The inspected control can be reached in the current sidebar");
     }
     function expand(group) {

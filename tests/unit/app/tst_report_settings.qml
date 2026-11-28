@@ -321,21 +321,24 @@ Item {
                 analysis: analysisFactory,
                 report: reportFactory
             };
-            verify(Examples.fixture(Session, "pd-neut-cwl_cosio-d20_scan-3f"), "A measured scan enables the real page settings");
+            const source = Probe.repoUrl("tests/fixtures/e04_t1/xray-project");
+            verify(Session.openProject(SettingsProof.copyProject(source)), "The measured project enables the real page settings: " + Session.lastError);
             const page = createTemporaryObject(factories[data.page], surface, {
                 width: 1200,
                 height: 800,
                 current: true
             });
             verify(page !== null && waitForPolish(page), "The actual workflow page lays out before checking its fifth sidebar tab");
-            Ui.selectSidebarTab(test, page, "settings");
-            const groups = Ui.groupNames(page);
+            const pane = Ui.selectSidebarTab(test, page, "settings");
+            const groups = Ui.groupNames(pane);
             if (data.page === "structure")
                 compare(groups, ["appearance", "polyhedra"], "Structure Settings contains both moved view groups in order");
             else if (["project", "report"].includes(data.page))
-                verify(Ui.find(page, "sideBar.note.invite") !== null, "An empty Settings tab displays its invitation");
+                verify(Ui.find(pane, "sideBar.note.invite") !== null, "An empty Settings tab displays its invitation");
+            else if (data.page === "analysis")
+                verify(groups.includes("shownParameters"), "Analysis offers its parameter view settings");
             else
-                verify(groups.includes("performance"), "The measured workflow offers its own performance setting");
+                verify(groups.includes("performance"), "Experiment offers its performance setting");
         }
         function choose(control, index) {
             verify(control !== undefined && control.enabled, "The real page setting is enabled before actual pointer input");

@@ -56,8 +56,8 @@ TestCase {
                 verify(sidebar, "The current workflow page has a real sidebar for " + name);
                 compare(Array.from(sidebar.tabs).map(tab => tab.objectName), tabs.map(tab => "sideBar.tab." + tab), name + " exposes Main, Extra, Text, Tools and Settings in the approved order");
                 for (const role of ["basic", "extras", "tools", "settings"]) {
-                    Ui.selectSidebarTab(test, page, role);
-                    const groups = Ui.groupNames(page);
+                    const pane = Ui.selectSidebarTab(test, page, role, sidebar);
+                    const groups = Ui.groupNames(pane);
                     if (role === "tools") {
                         for (const group of tools[name])
                             if (!groups.includes(group))
@@ -72,7 +72,7 @@ TestCase {
                         for (const group of groups)
                             if (tools[name].includes(group) || (!Object.prototype.hasOwnProperty.call(ranks, group) && !editors[name].includes(group)))
                                 failures.push(name + " " + role + " contains a group without an .edi category: " + group);
-                        if (name === "structure" && role === "basic" && Render.descendants(page).some(item => item.objectName === "spaceGroup.magneticAnalysis" && Ui.inPane(item)))
+                        if (name === "structure" && role === "basic" && Render.descendants(pane).some(item => item.objectName === "spaceGroup.magneticAnalysis" && Ui.inPane(item)))
                             failures.push("Structure Main still offers a magnetic analysis button");
                     }
                 }

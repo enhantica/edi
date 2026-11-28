@@ -240,9 +240,9 @@ Item {
             verify(/ionic/i.test(extra.currentText), "The Settings control follows the toolbar's atom-view choice");
             choose(extra, /covalent/i);
             tryCompare(Session.project.structureViewOptions, "atomView", "covalent", 1000, "The Settings atom-view choice changes the shared appearance state");
-            verify(/covalent/i.test(toolbar.currentText), "The actual toolbar follows the Extra atom-view choice");
+            verify(/covalent/i.test(toolbar.currentText), "The actual toolbar follows the Settings atom-view choice");
             edit(findChild(page, "structure.appearance.atomScale"), .41);
-            verify(Session.save(), "The actual session saves the atom-view and scale choices");
+            verify(Session.save(), "The actual session saves the atom-view and scale choices: " + Session.lastError);
             const structure = "structures/cosio.edi";
             const saved = SettingsProof.fileObservation(root, structure);
             verify(saved.exists && !/^_structure_view\./m.test(saved.text), "The actual save keeps appearance out of the structure file");
@@ -306,7 +306,7 @@ Item {
             choose(findChild(poly, "structure.polyhedra.extent"), /complete/i);
             const selected = uiSnapshot();
             verify(selected !== defaults, "The explicit polyhedra appearance differs from the other project's observed defaults");
-            verify(Session.save(), "The actual session saves the explicit polyhedra appearance");
+            verify(Session.save(), "The actual session saves the explicit polyhedra appearance: " + Session.lastError);
             const saved = projectSnapshot(projectA);
             retire();
             Session.closeProject();

@@ -143,6 +143,7 @@ TestCase {
     function pointer(control) {
         Ui.scrollIntoView(control);
         verify(waitForPolish(appWindow, 2000), "The selected estimate control must finish layout before input");
+        appWindow.update();
         verify(waitForRendering(appWindow.contentItem), "The selected estimate control must render before pointer input");
         Ui.scrollIntoView(control);
         const point = Ui.clickPoint(control);

@@ -827,16 +827,17 @@ TestCase {
         verify(!preferenceItems.some(item => /moment.*(?:scale|length)|(?:scale|length).*moment/i.test(String(item.text || item.label || item.objectName || ""))), "The moment length preference is removed when project Appearance owns the field");
         dialog.close();
         dialog.destroy();
-        const magnetic = group("space_group_magn");
-        const selectors = Render.descendants(magnetic).filter(item => typeof item.textAt === "function" && item.editable === true);
-        compare(selectors.length, 1, "The magnetic name fields share one searchable selector");
         const appearances = groups("structure", "settings").filter(item => item.objectName === "group.appearance" && Ui.inPane(Ui.target(item)));
         compare(appearances.length, 1, "Magnetic scale is edited in the single Appearance group under Structure Settings");
         appearances[0].collapsed = false;
-        const fields = Render.descendants(appearances[0]).filter(item => typeof item.label === "string");
-        const atom = fields.find(item => item.label === "Atom scale");
-        const moment = fields.find(item => item.label === "Moment scale");
-        verify(atom !== undefined && moment !== undefined, "Appearance places Moment scale alongside Atom scale");
+        const atom = findChild(appearances[0], "structure.appearance.atomScale");
+        const moment = findChild(appearances[0], "structure.appearance.momentScale");
+        verify(atom && atom.visible && moment && moment.visible, "Appearance exposes both scale controls");
+        compare([atom.parameter.shortPrettyName, moment.parameter.shortPrettyName], ["Atom scale", "Moment scale"],
+                "The settings retain the Atom scale and Moment scale labels");
+        const magnetic = group("space_group_magn");
+        const selectors = Render.descendants(magnetic).filter(item => typeof item.textAt === "function" && item.editable === true);
+        compare(selectors.length, 1, "The magnetic name fields share one searchable selector");
         Session.project.structureViewOptions.momentScale = 1.125;
         verify(Session.save(), "The selected appearance scale saves through the real project");
         Session.closeProject();
