@@ -570,7 +570,8 @@ jobs:
         run: |
           cd "$RUNNER_TEMP/crysta"
           export PYTHONPATH="$GITHUB_WORKSPACE/tools/ci${PYTHONPATH:+:$PYTHONPATH}"
-          python3 "$GITHUB_WORKSPACE/tools/ci/crysta_findings.py" run pytest "$CRYSTA_PYTEST_RECORD" -- pixi run -e cpp-ci suite-coverage
+          python3 "$GITHUB_WORKSPACE/tools/ci/crysta_tasks.py" --root "$RUNNER_TEMP/crysta" --findings "$RUNNER_TEMP/findings" \
+            --record "$CRYSTA_PYTEST_RECORD" cpp-ci suite-coverage
       - name: Seeded series (slow cadence)
         if: ${{ needs.plan.outputs.skip != 'true' && (!cancelled() && matrix.part == '1/2' && contains(fromJSON(needs.plan.outputs.rows), 'seeded')) }}
         run: |
@@ -774,7 +775,8 @@ jobs:
         run: |
           cd "$RUNNER_TEMP/crysta"
           export PYTHONPATH="$GITHUB_WORKSPACE/tools/ci${PYTHONPATH:+:$PYTHONPATH}"
-          python3 "$GITHUB_WORKSPACE/tools/ci/crysta_findings.py" run pytest "$CRYSTA_PYTEST_RECORD" -- pixi run -e cpp-ci suite-coverage
+          python3 "$GITHUB_WORKSPACE/tools/ci/crysta_tasks.py" --root "$RUNNER_TEMP/crysta" --findings "$RUNNER_TEMP/findings" \
+            --record "$CRYSTA_PYTEST_RECORD" cpp-ci suite-coverage
       - name: LTO correctness (-DCRYSTA_LTO=ON byte-identical build + parity)
         if: ${{ needs.plan.outputs.skip != 'true' && (!cancelled() && matrix.part == '2/2') }}
         run: |
