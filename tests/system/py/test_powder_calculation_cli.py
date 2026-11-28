@@ -6,6 +6,7 @@ import shutil
 import subprocess
 from pathlib import Path
 
+import edi
 import gemmi
 import pytest
 
@@ -57,7 +58,11 @@ def test_example_fits_and_saves_extracted_rows(tmp_path, example, method):
         'CLI output stores one squared factor per structure and hkl'
     )
     assert all(key[0] == structure for key in keys), 'The CLI fit state names its owning structure'
-    strengths = [gemmi.cif.as_number(row[4]) for row in rows]
+    reopened = edi.Project.load(work).experiment.extracted_intensities
+    assert {(row.structure_id, row.index_h, row.index_k, row.index_l) for row in reopened} == set(
+        keys
+    ), 'The native reader restores every orbit written by the CLI'
+    strengths = [row.f_squared for row in reopened]
     assert all(math.isfinite(value) and value >= 0 for value in strengths), (
         'The fitted CLI example saves finite nonnegative squared factors'
     )
@@ -65,9 +70,12 @@ def test_example_fits_and_saves_extracted_rows(tmp_path, example, method):
         'The measured CLI fit extracts at least one positive squared factor'
     )
     if method == 'pawley':
-        assert any('(' in row[4] and not row[4].endswith('()') for row in rows), (
-            'The Pawley CLI example retains a fitted intensity standard uncertainty'
-        )
+        assert any(
+            row.f_squared_su is not None
+            and math.isfinite(row.f_squared_su)
+            and row.f_squared_su > 0
+            for row in reopened
+        ), 'The Pawley CLI example retains a positive fitted intensity standard uncertainty'
 
 
 def only_block(folder):

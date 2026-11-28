@@ -195,6 +195,7 @@ def _declared_catalogue_origin(node_file: str, origin: str | None) -> bool:
     """ADR-0080 gate 2 fits the declared catalogue through each actual public interface.
 
     This is a second named corpus authority, restricted to an exact registered gate file.
+    A gate may name exact executing CLI examples in place of the user-facing catalogue.
     Copies must match the whole canonical starting tree, including the analysis recipe.
     Unit-tier refusal and resolution of the linked engine corpus remain preconditions.
     """
@@ -216,8 +217,16 @@ def _catalogue_origin_matches(repo: Path, node_file: str, staged: Path) -> bool:
     actual = _catalogue_tree_bytes(staged)
     if not actual or 'project.edi' not in actual:
         return False
+    executing_projects = matches[0].get('executing_projects')
     for row in rows:
-        if row.get('user-facing') is True:
+        admitted = (
+            row.get('user-facing') is True
+            if executing_projects is None
+            else isinstance(executing_projects, list)
+            and row.get('executing') is True
+            and row['id'] in executing_projects
+        )
+        if admitted:
             source = repo / 'docs/user/cli' / row['id'] / 'project'
             if actual == _catalogue_tree_bytes(source):
                 return True
