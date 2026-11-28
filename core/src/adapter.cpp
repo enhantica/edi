@@ -1310,7 +1310,7 @@ void complete_atom_site_aniso(Structure& s) {
     }
 }
 
-void set_propagation_vectors(Structure& s, std::vector<std::pair<std::string, std::string>> rows) {
+static void set_propagation_vectors_checked(Structure& s, std::vector<std::pair<std::string, std::string>> rows) {
     std::set<std::string> ids;
     for (const auto& [id, k] : rows) {
         if (id.empty() || !ids.insert(id).second) {
@@ -1492,7 +1492,7 @@ crysta::MagneticGroupName group_name(const crysta::MagneticSpaceGroupEntry& entr
 }
 }  // namespace
 
-void set_magnetic_space_group(Structure& s, const std::string& number_bns) {
+static void set_magnetic_space_group_checked(Structure& s, const std::string& number_bns) {
     const crysta::MagneticSpaceGroupEntry& entry = crysta::magnetic_space_group(number_bns);
     const auto numbered = [](const std::vector<std::string>& triplets) {
         std::vector<std::pair<std::string, std::string>> rows;
@@ -2117,7 +2117,7 @@ std::vector<std::pair<std::string, std::string>> magnetic_rows_in_setting(const 
 }
 }  // namespace
 
-void set_magnetic_setting(Structure& s, const std::string& transform) {
+static void set_magnetic_setting_checked(Structure& s, const std::string& transform) {
     // Use the BNS group's operations in the selected tabulated setting and write its transform as the BNS row.
     if (!structure_magnetic(s) || s.magnetic->group.number_bns.empty()) {
         throw std::invalid_argument("only a Magnetic structure with a magnetic space group has a magnetic setting");
@@ -2147,6 +2147,33 @@ void set_magnetic_setting(Structure& s, const std::string& transform) {
     // The checked, completed proposal is what is published (review 18, F6).
     adopt_completed_structure(trial, crysta::admit_magnetic_edit(to_crysta_structure(s), to_crysta_structure(trial)));
     s = trial;  // Structure assigns by copy
+}
+
+namespace {
+// A10 (review 29): every refusal of a k or group edit on a structure that is already magnetic names where the analysis
+// is run, whichever check made it, so no refusal leaves it out.
+template <class Edit>
+void with_analysis_routes(const Structure& s, Edit&& edit) {
+    try {
+        edit();
+    } catch (const std::invalid_argument& error) {
+        const std::string message = error.what();
+        if (s.magnetic->operations.empty() || message.find(crysta::kMagneticAnalysisRoutes) != std::string::npos) throw;
+        throw std::invalid_argument(message + "; " + crysta::kMagneticAnalysisRoutes);
+    }
+}
+}  // namespace
+
+void set_propagation_vectors(Structure& s, std::vector<std::pair<std::string, std::string>> rows) {
+    with_analysis_routes(s, [&] { set_propagation_vectors_checked(s, std::move(rows)); });
+}
+
+void set_magnetic_space_group(Structure& s, const std::string& number_bns) {
+    with_analysis_routes(s, [&] { set_magnetic_space_group_checked(s, number_bns); });
+}
+
+void set_magnetic_setting(Structure& s, const std::string& transform) {
+    with_analysis_routes(s, [&] { set_magnetic_setting_checked(s, transform); });
 }
 
 void change_adp_type(Structure& s, AtomSite& site, const std::string& adp_type) {
