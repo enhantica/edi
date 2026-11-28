@@ -86,12 +86,15 @@ def read_release_plan(directory: Path, source_commit: str | None = None) -> dict
 
 
 def repository_urls(channel: str) -> tuple[str, ...]:
-    """Return the primary repository and configured mirrors for this build platform."""
+    """Return the primary repository and its mirrors for this build platform.
+
+    The feed mirrors (mirror_bases) are not listed: a mirror without the archives, or with older
+    metadata, would fail or hold back an update (edi ADR-0071).
+    """
     policy = json.loads((ROOT / 'data/distribution.json').read_text(encoding='utf-8'))
     tail = policy['repository_paths'][channel].format(platform=PLATFORM_ID)
-    return tuple(
-        base.rstrip('/') + '/' + tail for base in [policy['primary_base'], *policy['mirror_bases']]
-    )
+    bases = [policy['primary_base'], *policy['repository_mirror_bases']]
+    return tuple(base.rstrip('/') + '/' + tail for base in bases)
 
 
 def run(args, **kwargs: object) -> None:

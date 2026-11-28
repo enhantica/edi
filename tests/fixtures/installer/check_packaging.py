@@ -132,22 +132,31 @@ def test_invalid_version_cannot_escape_installer_output(tmp_path, version):
 
 
 @pytest.mark.parametrize(('channel', 'prefix'), [('stable', ''), ('testing', 'testing/')])
+def test_installers_list_only_the_download_host(channel, prefix):
+    # The Pages site keeps the feeds but no repository (edi ADR-0071).
+    tail = f'repository/{prefix}{PACKAGE.PLATFORM_ID}/'
+    assert PACKAGE.repository_urls(channel) == (f'https://download.easydiffraction.org/{tail}',), (
+        'Installers list only the download host as their repository.'
+    )
+
+
+@pytest.mark.parametrize(('channel', 'prefix'), [('stable', ''), ('testing', 'testing/')])
 def test_mirror_is_enabled_only_for_production(tmp_path, channel, prefix):
     config, meta = tmp_path / 'config', tmp_path / 'meta'
     config.mkdir()
     meta.mkdir()
-    urls = PACKAGE.repository_urls(channel)
+    tail = f'repository/{prefix}{PACKAGE.PLATFORM_ID}/'
+    urls = (*PACKAGE.repository_urls(channel), f'https://mirror.example.org/{tail}')
     PACKAGE.write_metadata(
         config, meta, '2026.11.0', urls[0], urls[1:], enable_mirrors=channel == 'stable'
     )
     xml = ElementTree.parse(config / 'config.xml')
     repositories = xml.findall('RemoteRepositories/Repository')
     assert repositories[0].findtext('Enabled') == '1', 'Mirror is enabled only for production.'
-    tail = f'repository/{prefix}{PACKAGE.PLATFORM_ID}/'
     assert repositories[0].findtext('Url') == f'https://download.easydiffraction.org/{tail}', (
         'Mirror is enabled only for production.'
     )
-    assert repositories[1].findtext('Url') == f'https://enhantica.github.io/edi-download/{tail}', (
+    assert repositories[1].findtext('Url') == f'https://mirror.example.org/{tail}', (
         'Mirror is enabled only for production.'
     )
     assert repositories[1].find('DisplayName') is None, 'Mirror is enabled only for production.'
@@ -216,10 +225,9 @@ def test_offline_installer_retains_default_update_repositories(tmp_path, channel
     assert tuple(item.findtext('Url') for item in repositories) == PACKAGE.repository_urls(
         channel
     ), 'Offline maintenance retains the selected channel repositories.'
-    assert [item.findtext('Enabled') for item in repositories] == [
-        '1',
-        '1' if channel == 'stable' else '0',
-    ], 'Offline maintenance retains channel mirror policy.'
+    assert [item.findtext('Enabled') for item in repositories] == ['1'], (
+        'Offline maintenance lists the download host alone, enabled.'
+    )
     creators = [
         call.args[0]
         for call in builder.call_args_list
