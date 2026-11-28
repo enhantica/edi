@@ -21,11 +21,11 @@ using ReleaseKey = std::array<quint64, 4>;
 /// The key of a YY.N or old YYYY.MM.N version, or none for anything else.
 std::optional<ReleaseKey> release_version_key(const QString& value);
 /// An update stopped between moving the installed Maintenance Tool's files aside and moving the new ones in leaves the
-/// only usable copy as `<item>.old` (ADR-0108): the bundle holding `executable` on macOS, `installer-runtime` beside
+/// only usable copy as `<item>.old` (ADR-0109): the bundle holding `executable` on macOS, `installer-runtime` beside
 /// it on Linux. When the item is not usable and the kept one is, put the kept one back and drop its mark. Returns
 /// whether it did; anything else, a Windows tool, or an update holding the tool lock, changes nothing.
 bool restore_kept_maintenance_tool(const QString& executable);
-/// Remove what a finished update left behind (ADR-0108). macOS and Linux, only while the item is usable and the tool
+/// Remove what a finished update left behind (ADR-0109). macOS and Linux, only while the item is usable and the tool
 /// lock is free: `<item>.old` and its mark unless the tool named in the mark still runs, and the staging folder
 /// `maintenancetool` unless it holds a usable staged item. Windows: the staging folder once it is empty or the installed
 /// tool has the staged tool's bytes. Returns whether it removed anything.

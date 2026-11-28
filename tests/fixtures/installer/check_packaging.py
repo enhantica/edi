@@ -160,7 +160,7 @@ def test_mirror_is_enabled_only_for_production(tmp_path, channel, prefix):
 @pytest.mark.parametrize('system', ['linux', 'macos', 'windows'])
 def test_the_linux_app_brings_the_tool_component_with_an_update(tmp_path, monkeypatch, system):
     # An update offers only installed components, but adds a missing dependency of one it updates;
-    # Linux installations from before ADR-0108 have no tool component, which now holds the runtime.
+    # Linux installations from before ADR-0109 have no tool component, which now holds the runtime.
     monkeypatch.setattr(PACKAGE, 'SYSTEM', system)
     config, meta = tmp_path / 'config', tmp_path / 'meta'
     config.mkdir()
@@ -249,7 +249,7 @@ def test_offline_installer_retains_default_update_repositories(tmp_path, channel
         ).is_file(), 'The installer carries the separately built maintenance tool.'
     else:
         # Linux: the tool component carries only the tool's runtime, staged for the swap, and the
-        # app component no longer does (ADR-0108).
+        # app component no longer does (ADR-0109).
         data = packages / PACKAGE.MAINTENANCE_COMPONENT / 'data'
         assert sorted(path.relative_to(data).as_posix() for path in data.rglob('*')) == [
             'maintenancetool',
@@ -766,7 +766,7 @@ def test_installed_maintenance_tool_check_passes_for_the_shipped_tool(tmp_path, 
 
 @pytest.mark.parametrize('damage', [None, 'library', 'listing', 'staged', 'backup'])
 def test_installed_linux_tool_needs_its_whole_runtime(tmp_path, monkeypatch, damage):
-    # Linux has no signed tool: the check is the runtime the tool loads, swapped in (ADR-0108).
+    # Linux has no signed tool: the check is the runtime the tool loads, swapped in (ADR-0109).
     monkeypatch.setattr(PACKAGE, 'SYSTEM', 'linux')
     (tmp_path / 'MaintenanceTool').write_bytes(b'tool')
     runtime = installer_runtime(tmp_path)
@@ -788,7 +788,7 @@ def test_installed_linux_tool_needs_its_whole_runtime(tmp_path, monkeypatch, dam
 
 
 # After an update Windows keeps only the staged copy of the installed tool, which the app's next
-# start removes (edi ADR-0108); anything else in the staging folder is refused.
+# start removes (edi ADR-0109); anything else in the staging folder is refused.
 @pytest.mark.parametrize(
     ('updated', 'staged', 'refused'),
     [

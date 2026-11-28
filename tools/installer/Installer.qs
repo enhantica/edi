@@ -12,12 +12,12 @@ function clearQuarantine() {
 
 // After a successful update the kept tool and the staging folder are removed by the tool component's script
 // (maintenancescript.qs), which comes with the release being installed and so runs inside an older tool too; this
-// script is the running tool's own and may be older than the fix (edi ADR-0108).
+// script is the running tool's own and may be older than the fix (edi ADR-0109).
 
 // Purge: the Framework removes what its operations wrote, but the tool's own files reached their place through the
 // swap, not an operation, so they are removed here: the Linux Qt runtime, any kept copy of the tool, the staging
 // folder and the lock file. The running tool has already loaded its libraries. After a failed removal the tool may
-// still be needed, so nothing goes then (edi ADR-0108).
+// still be needed, so nothing goes then (edi ADR-0109).
 function removeToolFiles() {
     if (!installer.isUninstaller() || installer.status !== QInstaller.Success)
         return;
@@ -784,7 +784,7 @@ var appComponent = "org.easydiffraction.app";
 // row of its own, ticked and fixed as EasyDiffraction, between it and the AI assistant (owner, 2026-11-26).
 var maintenanceComponent = "org.easydiffraction.app.maintenancetool";
 // The size of the Framework's binary (package.py), which an installation writes as its tool where no package holds
-// the tool: on Linux, whose tool component carries only the tool's Qt runtime (edi ADR-0108), and when a script does
+// the tool: on Linux, whose tool component carries only the tool's Qt runtime (edi ADR-0109), and when a script does
 // not see the component at all.
 var toolBytes = Number("@TOOL_BYTES@") || 0;
 

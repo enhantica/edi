@@ -37,7 +37,7 @@ ASSISTANT_RUNTIME = Path('libexec/edi/codex')
 VOICE_COMPONENT = 'org.easydiffraction.app.voice'
 VOICE_MODEL = Path('share/edi/voice')
 # macOS and Windows ship their maintenance tool as a signed, app-versioned component (ADR-0091);
-# Linux ships only the tool's runtime in it (ADR-0108).
+# Linux ships only the tool's runtime in it (ADR-0109).
 MAINTENANCE_COMPONENT = 'org.easydiffraction.app.maintenancetool'
 # The id each component replaced, so an install made before edi ADR-0091 updates in place.
 REPLACED_COMPONENTS = {
@@ -432,7 +432,7 @@ def write_metadata(
             # Listed first wherever components are (the Framework orders by this, higher first).
             'SortingPriority': '200',
             'Script': 'installscript.qs',
-            # Linux installations from before ADR-0108 have no tool component, and an update only
+            # Linux installations from before ADR-0109 have no tool component, and an update only
             # offers components already installed; as a dependency of the app it comes with the
             # update that takes the runtime out of the app component.
             **({'Dependencies': MAINTENANCE_COMPONENT} if SYSTEM == 'linux' else {}),
@@ -576,7 +576,7 @@ SHELL_SCRIPTS = {
 
 
 def with_shell_scripts(name: str, markers: tuple[str, ...]) -> str:
-    """A component script with the named shell scripts written in as string literals (ADR-0108)."""
+    """A component script with the named shell scripts written in as string literals (ADR-0109)."""
     folder = ROOT / 'tools/installer'
     script = (folder / name).read_text(encoding='utf-8')
     for marker in markers:
@@ -607,7 +607,7 @@ def maintenance_tool_name() -> str:
 
 
 def maintenance_item() -> str:
-    """The folder an update swaps in place of the installed one (maintenance_swap.sh, ADR-0108).
+    """The folder an update swaps in place of the installed one (maintenance_swap.sh, ADR-0109).
 
     Windows swaps no folder; the Framework replaces the tool there.
     """
@@ -761,7 +761,7 @@ def add_maintenance_tool(
 
 
 def add_maintenance_runtime(packages: Path, runtime: Path, version: str) -> None:
-    """Linux: put the tool's runtime into the tool component, staged for the swap (ADR-0108).
+    """Linux: put the tool's runtime into the tool component, staged for the swap (ADR-0109).
 
     The app component no longer carries it, so undoing the app's operations never takes the
     libraries the tool loads through its rpath ($ORIGIN/installer-runtime/lib).
@@ -816,7 +816,7 @@ def verify_installed_maintenance_tool(
     """Before running it, require the installed tool to be the shipped one (edi ADR-0091).
 
     Linux has no signed tool: its runtime must be complete instead. No staging folder and no
-    backup may be left (ADR-0108). Windows keeps the staged tool after a fresh install. An update
+    backup may be left (ADR-0109). Windows keeps the staged tool after a fresh install. An update
     moves it into place after its last signal and leaves the folder empty, for the app's next start
     to remove. So once `updated`, the folder must be empty or hold the installed tool.
     """

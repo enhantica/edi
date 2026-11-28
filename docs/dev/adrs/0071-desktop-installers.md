@@ -113,7 +113,7 @@ Linux download ZIP and, for the installed maintenance tool, in the tool's own co
 (`org.easydiffraction.app.maintenancetool`, which on Linux carries only this runtime). An update swaps
 the new runtime in and keeps the installed one until it has succeeded, a rollback puts that one back,
 and no undo ever removes the runtime in use; the control script removes it when the installation is
-purged ([ADR-0108](0108-replacing-the-maintenance-tools-own-files.md)). Earlier releases kept it in the
+purged ([ADR-0109](0109-replacing-the-maintenance-tools-own-files.md)). Earlier releases kept it in the
 app component, where a failed update's rollback deleted it and left the tool without its libraries.
 Do not patch an already appended installer or rely on Pixi paths in the user's environment. The
 operating system still supplies glibc.
@@ -325,7 +325,7 @@ update summary lists them; then the licence and, on Windows and Linux, the deskt
 Every page and list orders the components EasyDiffraction, Maintenance Tool, AI assistant (their
 sorting priorities 200, 150, 100). The optional voice input component (ADR-0107) follows as a fourth row,
 "Voice input for AI assistant", on the same page and in the same Change components page, unticked, with sorting
-priority 90. On Linux the tool's component carries only the installer runtime (ADR-0108), and the Framework
+priority 90. On Linux the tool's component carries only the installer runtime (ADR-0109), and the Framework
 writes the tool from its own binary. In Maintenance Tool's Change components flow
 it is a page of its own whose box shows whether the assistant is installed; Update has no such page and goes straight
 to Ready to update, updating everything installed (owner, 2026-11-26). Ready to update lists the tool only when the update

@@ -1,6 +1,6 @@
 #!/bin/sh
 # SPDX-License-Identifier: BSD-3-Clause
-# Undo maintenance_swap.sh (edi ADR-0108), run with the same arguments:
+# Undo maintenance_swap.sh (edi ADR-0109), run with the same arguments:
 #   maintenance_restore.sh <target> <token> <item> <probe>
 # The kept item goes back only when this operation kept it in this same run (the mark beside it, see the swap). A
 # later update undoing the operation once it was committed, or any other mismatch, leaves every item alone.

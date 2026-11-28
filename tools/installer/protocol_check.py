@@ -76,7 +76,7 @@ exit 1
 FAILURE_EVIDENCE_NAME = 'failed update evidence.txt'
 
 # The folder the tool component unpacks into, the Linux tool's runtime and the lock every writer
-# of the tool's files takes (edi ADR-0108).
+# of the tool's files takes (edi ADR-0109).
 STAGING = 'maintenancetool'
 RUNTIME = 'installer-runtime'
 LOCK_NAME = '.MaintenanceTool.lock'
@@ -425,7 +425,7 @@ def first_update(
     # write the tool only once the updating process has ended, so the check waits for it a while,
     # and says what it found if it never comes. The released controller ran this update and has
     # no cleanup of its own: the new tool component's scripts must leave no backup and no staging
-    # folder (edi ADR-0108).
+    # folder (edi ADR-0109).
     tool_replaced(target, new_metadata)
     # Nothing is left to offer after the update.
     nothing_offered(maintenance, options['env'])
@@ -542,7 +542,7 @@ def rolled_back(target: Path, found: dict, output: Path) -> None:
     else:
         if found['marker'] != 'third marker':
             raise RuntimeError(f'The failing operation saw the app marker {found["marker"]!r}')
-        # The runtime ships in the tool component, so undoing the app leaves it (edi ADR-0108);
+        # The runtime ships in the tool component, so undoing the app leaves it (edi ADR-0109);
         # the caller requires it complete.
         if RUNTIME not in found['paths']:
             raise RuntimeError(f'The failing operation saw no {RUNTIME}')
@@ -684,7 +684,7 @@ def nothing_offered(maintenance: Path, env: dict, repository: str | None = None)
 
 
 def tool_files_settled(target: Path) -> None:
-    """Require no staging folder and no backup of the tool's swapped files (edi ADR-0108).
+    """Require no staging folder and no backup of the tool's swapped files (edi ADR-0109).
 
     Windows writes the installed tool from the staged one after the update ends, so its staging
     folder stays until the app's next start; verify_installed_maintenance_tool checks it there.

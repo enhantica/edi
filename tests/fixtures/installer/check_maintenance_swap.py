@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: BSD-3-Clause
-"""The swap of the maintenance tool's own files an update runs (edi ADR-0108), in a scratch folder.
+"""The swap of the maintenance tool's own files an update runs (edi ADR-0109), in a scratch folder.
 
 maintenance_swap.sh puts the item an update unpacked in place of the installed one: the macOS
 bundle, or the Linux tool's Qt runtime. It must leave an item in place whatever fails, keep the

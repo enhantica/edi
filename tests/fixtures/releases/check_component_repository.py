@@ -64,7 +64,7 @@ def test_release_admits_exactly_each_platform_component_set(tmp_path, platform, 
     PROMOTE.validate_repository(folder, '2026.11.3', expected=PROMOTE.component_names(platform))
 
 
-# Linux's tool component carries the tool's runtime (ADR-0108).
+# Linux's tool component carries the tool's runtime (ADR-0109).
 @pytest.mark.parametrize('platform', ['macos-arm64', 'linux-x86_64', 'windows-x86_64'])
 def test_release_refuses_a_platform_without_its_maintenance_component(tmp_path, platform):
     folder = repository(tmp_path / 'r', dict.fromkeys([APP, ASSISTANT], '2026.11.3'))

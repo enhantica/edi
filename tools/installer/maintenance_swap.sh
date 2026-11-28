@@ -1,6 +1,6 @@
 #!/bin/sh
 # SPDX-License-Identifier: BSD-3-Clause
-# Put the item an update unpacked into maintenancetool/ in place of the installed one (edi ADR-0108): the macOS
+# Put the item an update unpacked into maintenancetool/ in place of the installed one (edi ADR-0109): the macOS
 # Maintenance Tool bundle, or the Linux tool's Qt runtime. Run by the tool component's operation as
 #   maintenance_swap.sh <target> <token> <item> <probe>
 # where <item> is the folder's name in the installation folder <target>, <token> the operation's own mark and <probe>

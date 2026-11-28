@@ -12,7 +12,7 @@ function stagedTool() {
     return "";
 }
 
-// The folder the swap puts in place, and the file inside it that shows it is usable (edi ADR-0108).
+// The folder the swap puts in place, and the file inside it that shows it is usable (edi ADR-0109).
 function swapped() {
     if (systemInfo.kernelType === "darwin")
         return { item: "MaintenanceTool.app", probe: "Contents/MacOS/MaintenanceTool" };
@@ -41,7 +41,7 @@ function Component() {
 // staged bundle into place on a first installation only (measured on CI), so the update swaps the bundles itself
 // once the new one is unpacked. On Linux the runtime the tool loads its Qt libraries from is swapped the same way,
 // on a first installation too, so that no undo ever deletes the runtime in place. The swap can be run again after
-// any failure, keeps the installed item until the update has succeeded, and its undo puts it back (edi ADR-0108).
+// any failure, keeps the installed item until the update has succeeded, and its undo puts it back (edi ADR-0109).
 // The running tool keeps its open files.
 Component.prototype.createOperations = function () {
     if (!installer.isInstaller() && !installer.isUpdater())
@@ -71,7 +71,7 @@ Component.prototype.createOperations = function () {
 };
 
 // After a successful update nothing of the swap is left: no backup and no staging folder, whichever tool drove the
-// update (edi ADR-0108). After a rollback the undo has put the kept item back and nothing is removed. Windows keeps
+// update (edi ADR-0109). After a rollback the undo has put the kept item back and nothing is removed. Windows keeps
 // its staged tool here: in an update the framework writes the installed tool from it only after this signal, as it
 // quits (IFW 4.11), so the app removes it once the installed tool has the same bytes.
 Component.prototype.removeLeftovers = function () {

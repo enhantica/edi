@@ -51,7 +51,7 @@ std::optional<ReleaseKey> release_version_key(const QString& value) {
     return ReleaseKey{*y, 0, *m, *n};
 }
 namespace {
-// The lock every writer of the Maintenance Tool's files takes (ADR-0108). The kernel drops it when its holder exits, so
+// The lock every writer of the Maintenance Tool's files takes (ADR-0109). The kernel drops it when its holder exits, so
 // an update stopped by a crash or a power cut never leaves it taken. The app never waits for it: busy means an update
 // is changing the files right now. Windows has no swap and so no lock: there it is never held.
 class ToolLock {
@@ -84,7 +84,7 @@ public:
 private:
     int fd_ = -1;
 };
-// The folder an update swaps in for the installed one (ADR-0108), or an empty string: the bundle holding `executable`
+// The folder an update swaps in for the installed one (ADR-0109), or an empty string: the bundle holding `executable`
 // on macOS, the Qt runtime beside the tool on Linux. Windows has none, the Framework writes the tool itself.
 QString swapped_item(const QString& executable) {
     if (executable.isEmpty() || executable.endsWith(QStringLiteral(".exe"), Qt::CaseInsensitive)) return {};
@@ -119,7 +119,7 @@ bool same_bytes(const QString& a, const QString& b) {
     return true;
 }
 // Whether the tool named in a kept item's mark, "<token> <pid> <start>", still runs: the same process number with the
-// same start time, read as the scripts read it (ADR-0108). Only the cleanup asks, so a wrong yes merely leaves the
+// same start time, read as the scripts read it (ADR-0109). Only the cleanup asks, so a wrong yes merely leaves the
 // backup to the next start; when it cannot tell, it says yes.
 bool marked_tool_running(const QString& mark_file) {
 #ifdef EDI_TOOL_LOCK

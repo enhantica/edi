@@ -1,6 +1,6 @@
 #!/bin/sh
 # SPDX-License-Identifier: BSD-3-Clause
-# After a successful update, remove what maintenance_swap.sh kept and the staging folder (edi ADR-0108), run as
+# After a successful update, remove what maintenance_swap.sh kept and the staging folder (edi ADR-0109), run as
 #   maintenance_cleanup.sh <target> <item> <probe>
 # Only while a usable item is in place: otherwise the backup may be the only copy.
 # IFW expands variable names between at signs in its arguments, so this file has no at sign.

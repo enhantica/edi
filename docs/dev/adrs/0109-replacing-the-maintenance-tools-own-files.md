@@ -1,4 +1,4 @@
-# 0108. Replacing the Maintenance Tool's own files during an update
+# 0109. Replacing the Maintenance Tool's own files during an update
 
 - **Status:** Proposed
 - **Date:** 2026-11-27

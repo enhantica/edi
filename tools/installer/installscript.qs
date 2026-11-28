@@ -17,7 +17,7 @@ var DESCRIPTION = "Calculate diffraction patterns and fit a structural model to 
 var MAINTENANCE_RESOURCE = "";
 
 // The first Linux update off a release whose app component carried the tool's runtime (installer-runtime/, edi
-// ADR-0108). The Framework undoes that release's operations of this component, which deletes the runtime, before
+// ADR-0109). The Framework undoes that release's operations of this component, which deletes the runtime, before
 // any operation of this update runs, and a rollback never brings it back. So the update keeps a copy first and
 // settles it at the end: back in place when no usable runtime is there, dropped otherwise. maintenance_swap.sh and
 // maintenance_restore.sh, written in by package.py, do it with copy as their last argument, under the lock and with

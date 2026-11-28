@@ -9,7 +9,7 @@
 - **Supersedes:** the version scheme of [ADR-0072](0072-calendar-releases-and-application-updates.md) (its
   `YYYY.MM.SEQUENCE`); the rest of ADR-0072 stands.
 
-**Amended 2026-11-27 ([ADR-0108](0108-replacing-the-maintenance-tools-own-files.md)):** how the Maintenance Tool's
+**Amended 2026-11-27 ([ADR-0109](0109-replacing-the-maintenance-tools-own-files.md)):** how the Maintenance Tool's
 files are swapped, recovered and cleaned up (decision 5) moved there, and Linux now updates the tool's runtime the same
 way.
 
@@ -54,7 +54,7 @@ Once the tool was replaced, it still showed the old release's pages, which the f
    Framework writes the tool from its own binary, the same component carries the runtime the tool loads its libraries
    from, swapped in the same way. The swap, its undo, the lock they share with the app, the cleanup after a successful
    update and the app's recovery after an interrupted one are
-   [ADR-0108](0108-replacing-the-maintenance-tools-own-files.md). An update that leaves the component alone keeps the
+   [ADR-0109](0109-replacing-the-maintenance-tools-own-files.md). An update that leaves the component alone keeps the
    installed tool. The installer protocol check updates a 2026.11.31 install from a 26.17 repository and checks the
    tool's checksum afterwards.
 6. **An update also replaces the Maintenance Tool's pages**, on every platform. The framework keeps the tool's

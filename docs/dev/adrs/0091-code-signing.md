@@ -5,7 +5,7 @@
 - **Implementation:** ✅ Implemented
 - **Priority:** High
 
-**Amended 2026-11-27 ([ADR-0108](0108-replacing-the-maintenance-tools-own-files.md)):** Linux has the maintenance
+**Amended 2026-11-27 ([ADR-0109](0109-replacing-the-maintenance-tools-own-files.md)):** Linux has the maintenance
 tool's component too, carrying only the tool's runtime and no separately signed binary.
 
 ## Context
@@ -135,7 +135,7 @@ them, and the installed payload is checked against the signed bytes.
    on the bundle; for a bundle the Framework moves it to the installation root unchanged instead of writing
    its own. An update unpacks the new tool as well; on macOS an operation of the component swaps the bundle in,
    and on Windows the Framework replaces the tool once it quits; an update that does not include the component
-   keeps the installed tool (ADR-0106, [ADR-0108](0108-replacing-the-maintenance-tools-own-files.md)).
+   keeps the installed tool (ADR-0106, [ADR-0109](0109-replacing-the-maintenance-tools-own-files.md)).
    Packaging refuses an unsigned tool when signing is on, and each test installation checks the installed
    tool with `codesign --verify --strict`, its Developer ID authority on release builds, and its checksum
    against the shipped one, before running it to uninstall. Unsigned builds sign the tool ad hoc and take the
@@ -169,7 +169,7 @@ them, and the installed payload is checked against the signed bytes.
 **Linux** has no separately signed tool: Linux installers are not signed, and the Framework writes the tool from
 its own binary. The tool's component exists on Linux too, but carries only `installer-runtime/`, the libraries the
 tool loads, so an update swaps them like the macOS bundle and a failed update puts them back (ADR-0071,
-[ADR-0108](0108-replacing-the-maintenance-tools-own-files.md)).
+[ADR-0109](0109-replacing-the-maintenance-tools-own-files.md)).
 
 **When signing runs.** Only for release builds of the installer workflow on `main` in this repository: a manual
 run with a release plan or a preview-release preparation. `EDI_CODESIGN` is set for those runs and every signing
