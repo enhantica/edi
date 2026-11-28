@@ -4528,6 +4528,11 @@ void ProjectViewModel::toggleKMarkAt(double x, double tolerance) {
             return;
         }
     }
+    // A mark stands only where the data are measured and not excluded (review 25, F4).
+    if (!kMeasurable(k_marks_.experiment, k_marks_.candidates[static_cast<std::size_t>(best)].x)) {
+        emit kSearchChanged();
+        return;
+    }
     k_marks_.marks.push_back(best);
     std::sort(k_marks_.marks.begin(), k_marks_.marks.end(), [this](int a, int b) {
         return k_marks_.candidates[static_cast<std::size_t>(a)].x < k_marks_.candidates[static_cast<std::size_t>(b)].x;
@@ -4583,17 +4588,32 @@ std::uint64_t ProjectViewModel::kInputs(int experiment) const {
     }
 }
 
-void ProjectViewModel::kRemeasure() {
+bool ProjectViewModel::kMeasurable(int experiment, double at) const {
+    if (experiment < 0 || experiment >= static_cast<int>(project_->experiments.size())) return false;
+    const edi::BraggPdExperiment& bank = *project_->experiments[static_cast<std::size_t>(experiment)];
+    if (!bank.data.has_value() || bank.data->axis().empty()) return false;
+    const auto [lo, hi] = std::minmax_element(bank.data->axis().begin(), bank.data->axis().end());
+    if (at < *lo || at > *hi) return false;
+    for (const auto& region : bank.excluded_regions) {
+        if (!region->axis.value().empty()) continue;
+        if (at >= std::min(region->first.get(), region->second.get()) &&
+            at <= std::max(region->first.get(), region->second.get()))
+            return false;
+    }
+    return true;
+}
+
+void ProjectViewModel::kRemeasure(bool always) {
     const int experiment = k_marks_.experiment;
     if (experiment < 0 || k_marks_.parent < 0 || experiment >= static_cast<int>(project_->experiments.size())) return;
     const std::uint64_t inputs = kInputs(experiment);
-    if (inputs == k_marks_.inputs && k_marks_.bank.lock().get() == project_->experiments[static_cast<std::size_t>(experiment)].get())
+    if (!always && inputs == k_marks_.inputs &&
+        k_marks_.bank.lock().get() == project_->experiments[static_cast<std::size_t>(experiment)].get())
         return;
     // Each kept mark measured again where it stands, on the data and calibration it is now shown with (review 24,
     // F4): a mark now outside the measured range or inside an excluded region goes; what a mark is (a suggestion, a
     // measured maximum, on an allowed line) comes from the detection on these data, not from the earlier one, and a
     // mark no detected peak matches is one placed by hand.
-    const edi::BraggPdExperiment& bank = *project_->experiments[static_cast<std::size_t>(experiment)];
     std::vector<edi::MagneticPeak> fresh;
     try {
         fresh = edi::magnetic_mark_candidates(*project_, static_cast<std::size_t>(experiment),
@@ -4601,27 +4621,21 @@ void ProjectViewModel::kRemeasure() {
     } catch (const std::exception&) {
         fresh.clear();
     }
-    const auto measurable = [&bank](double at) {
-        if (!bank.data.has_value() || bank.data->axis().empty()) return false;
-        const auto [lo, hi] = std::minmax_element(bank.data->axis().begin(), bank.data->axis().end());
-        if (at < *lo || at > *hi) return false;
-        for (const auto& region : bank.excluded_regions) {
-            if (!region->axis.value().empty()) continue;
-            if (at >= std::min(region->first.get(), region->second.get()) &&
-                at <= std::max(region->first.get(), region->second.get()))
-                return false;
-        }
-        return true;
-    };
+    // Each kept mark takes the nearest detected peak within that peak's window that no other mark took (review 25):
+    // two marks never collapse onto one peak.
     std::vector<edi::MagneticPeak> measured;
+    std::vector<bool> used(fresh.size(), false);
     for (const int m : k_marks_.marks) {
         const double x = k_marks_.candidates[static_cast<std::size_t>(m)].x;
-        if (!measurable(x)) continue;
-        const auto match = std::find_if(fresh.begin(), fresh.end(), [x](const edi::MagneticPeak& p) {
-            return std::abs(p.x - x) <= std::max({p.half_width, p.tolerance, 1e-9});
-        });
-        if (match != fresh.end()) {
-            measured.push_back(*match);
+        if (!kMeasurable(experiment, x)) continue;
+        std::size_t best = fresh.size();
+        for (std::size_t f = 0; f < fresh.size(); ++f) {
+            if (used[f] || std::abs(fresh[f].x - x) > std::max({fresh[f].half_width, fresh[f].tolerance, 1e-9})) continue;
+            if (best == fresh.size() || std::abs(fresh[f].x - x) < std::abs(fresh[best].x - x)) best = f;
+        }
+        if (best != fresh.size()) {
+            used[best] = true;
+            measured.push_back(fresh[best]);
             continue;
         }
         try {
@@ -4662,7 +4676,9 @@ QVariantMap ProjectViewModel::kSnapshot() {
         setLastError(tr("the crystal structure to search k for is no longer the experiment's one enabled crystal"));
         return {};
     }
-    kRemeasure();  // kept marks of other data or calibration are measured again first (review 23, F4)
+    // Every mark is measured again before a search (reviews 23 and 25, F4): a mark of other data, calibration or mask,
+    // or a click in an excluded region, never reaches Find k.
+    kRemeasure(true);
     if (k_marks_.marks.empty()) {
         setLastError(tr("mark at least one peak"));
         return {};
