@@ -1468,11 +1468,30 @@ class Edit {
             return out;
         };
         // The constraints that set a parent texture parameter: the first identifier, before '=', is its alias.
+        // Only a sound rule is copied (review 33): every alias it names exists and resolves to a parameter. A rule that
+        // names an undeclared or unresolved alias stays the user's to repair and is never multiplied.
+        std::map<std::string, const ParameterAlias*> declared;
+        for (const auto& alias : project.aliases) declared[alias->id.value()] = alias.get();
+        const auto sound = [&](const std::string& expression) {
+            const auto parts = tokens(expression);
+            for (std::size_t i = 0; i < parts.size(); ++i) {
+                const auto& [token, identifier] = parts[i];
+                if (!identifier || std::isdigit(static_cast<unsigned char>(token.front())) || token == "pi") continue;
+                std::size_t next = i + 1;
+                while (next < parts.size() && parts[next].first == " ") ++next;
+                if (next < parts.size() && parts[next].first == "(") continue;  // a function
+                const auto found = declared.find(token);
+                if (found == declared.end() || view.resolve(found->second->parameter_unique_name.value()) == nullptr)
+                    return false;
+            }
+            return true;
+        };
         std::vector<const ParameterConstraint*> setting;
         for (const auto& constraint : project.constraints) {
             for (const auto& [token, identifier] : tokens(constraint->expression.value())) {
                 if (!identifier) continue;
-                if (parent_aliases.contains(token)) setting.push_back(constraint.get());
+                if (parent_aliases.contains(token) && sound(constraint->expression.value()))
+                    setting.push_back(constraint.get());
                 break;
             }
         }
