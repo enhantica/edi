@@ -122,8 +122,8 @@ private:
     void captureSamples(const QList<float>& chunk);
     void captureFailed(AudioCapture::Failure failure);
     void analyse(std::span<const float> chunk);
-    bool speech(double rms);
-    double floorDb() const;
+    void addBlock(double db);
+    void judge();
     void finish(int generation, const QString& text, const QString& error, bool cancelled);
     void setState(State state);
     void setMessage(const QString& message);
@@ -145,10 +145,18 @@ private:
     bool heard_ = false;        // speech has been heard in this recording
     std::array<int, 81> levels_{};  // 30 ms blocks per 1 dB from -80 to 0 dBFS, for the noise floor
     int counted_ = 0;               // blocks in levels_
-    int spoken_ = 0;                // blocks of speech so far
-    std::vector<double> blockDb_;   // every block's level, to judge the whole recording at a press
-    int silentBlocks_ = 0;          // blocks of digital silence
-    bool gated_ = false;            // digital silence has followed sound: a noise gate
+    struct Block {
+        double db;
+        int run;  // its run of sound in runs_, or -1 for digital silence
+    };
+    struct Run {
+        int length;
+        bool afterSilence;  // began after digital silence, not at the start
+    };
+    std::vector<Block> blocks_;  // every 30 ms block, as the floor and the gate seen so far change what counts
+    std::vector<Run> runs_;
+    std::ptrdiff_t lastSpeech_ = -1;  // the last block judged speech
+    bool gated_ = false;              // digital silence has followed sound: a noise gate
     double level_ = 0.0;
     double loudest_ = 0.0;      // the loudest block since `level` last changed
     QElapsedTimer levelShown_;  // `level` changes at most every level_ms, as the meter needs no more

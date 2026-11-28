@@ -357,6 +357,13 @@ private slots:
         QTest::newRow("noisy room") << noise(3.0, -45.0);
         QTest::newRow("digital silence, then a room") << joined({QList<float>(kRate / 2, 0.0F), noise(3.0, -50.0)});
         QTest::newRow("a click") << mixed(noise(3.0, -60.0), tone(0.01, -10.0), kRate);
+        // An open microphone in a room whose capture then falls to digital silence: the room is no gated sound.
+        QTest::newRow("a room, then digital silence") << joined({noise(3.0, -50.0), QList<float>(kRate, 0.0F)});
+        // Keys typed behind a noise gate: each passes for 20 ms, shorter than any syllable.
+        QList<float> typing;
+        for (int key = 0; key < 6; ++key)
+            typing = joined({typing, QList<float>(kRate * 3 / 10, 0.0F), noise(0.02, -30.0)});
+        QTest::newRow("keys typed behind a gate") << joined({typing, QList<float>(kRate, 0.0F)});
     }
     void nothingHeardWithoutSpeech() {
         QFETCH(QList<float>, recording);
@@ -419,24 +426,32 @@ private slots:
     }
 
     // A microphone with a noise gate sends digital silence instead of the room, so its speech can be the only sound and
-    // at an even level: a phrase at -45 to -46 dBFS. It is heard whether the gate closes between words or only after
-    // the phrase, just before the press. Zeros at the start alone are a microphone starting (nothingHeardWithoutSpeech).
+    // at an even level: a phrase at -45 to -46 dBFS. It is heard when the gate closes between words, when it closes only
+    // after the phrase just before a press, and when the silence after the phrase stops the recording by itself. Zeros
+    // only at the start are a microphone starting (nothingHeardWithoutSpeech).
     void gatedEvenSpeechIsHeard_data() {
         QTest::addColumn<QList<float>>("recording");
+        QTest::addColumn<bool>("pressed");
         const QList<float> start(kRate / 2, 0.0F);
         const QList<float> gap(kRate * 3 / 20, 0.0F);
         QTest::newRow("gaps between words")
-            << joined({start, tone(0.5, -45.0), gap, tone(0.5, -46.0), gap, tone(0.5, -45.0), gap});
-        QTest::newRow("gate closes after the phrase") << joined({start, tone(1.5, -45.0), QList<float>(kRate * 3 / 10, 0.0F)});
+            << joined({start, tone(0.5, -45.0), gap, tone(0.5, -46.0), gap, tone(0.5, -45.0), gap}) << true;
+        QTest::newRow("gate closes after the phrase")
+            << joined({start, tone(1.5, -45.0), QList<float>(kRate * 3 / 10, 0.0F)}) << true;
+        QTest::newRow("the silence after the phrase stops it")
+            << joined({start, tone(1.5, -45.0), QList<float>(kRate * 5 / 2, 0.0F)}) << false;
     }
     void gatedEvenSpeechIsHeard() {
         QFETCH(QList<float>, recording);
+        QFETCH(bool, pressed);
         auto voice = voiceOn(kAbsentModel);
         voice.input->toggle();
         QTRY_COMPARE(voice.input->state(), VoiceInput::State::Listening);
         voice.capture->play(recording);
-        QCOMPARE(voice.input->state(), VoiceInput::State::Listening);
-        voice.input->toggle();
+        if (pressed) {
+            QCOMPARE(voice.input->state(), VoiceInput::State::Listening);
+            voice.input->toggle();
+        }
         QCOMPARE(voice.input->state(), VoiceInput::State::Recognising);
         QVERIFY(settle(*voice.input));
         QCOMPARE(voice.input->message(), kNoModelMessage);
