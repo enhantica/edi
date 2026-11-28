@@ -48,14 +48,9 @@ Item {
     property int hoveredMark: -1
     // A few pixels on the chart's axis: how near a line a click drops its mark, and the pointer finds it.
     readonly property real markReach: 4 * (controller.xMax - controller.xMin) / Math.max(1, pointer.width)
+    // The mark under the pointer, decided where a click's removal is (kMarkAt), so hover and click agree.
     function markAt(x) {
-        let best = -1;
-        for (const index of chart.peakMarks) {
-            const p = chart.peakCandidates[index];
-            if (p !== undefined && Math.abs(p.x - x) <= chart.markReach && (best < 0 || Math.abs(p.x - x) < Math.abs(chart.peakCandidates[best].x - x)))
-                best = index;
-        }
-        return best;
+        return chart.marksShown && chart.axisProject ? chart.axisProject.kMarkAt(x, chart.markReach) : -1;
     }
     // The Experiment page's chart is the one the sidebar's k search group edits.
     Binding {
@@ -124,8 +119,8 @@ Item {
         });
         analysis.open();
     }
-    function togglePeakAt(x) {
-        chart.axisProject.toggleKMarkAt(x, chart.markReach);
+    function togglePeakAt(x, reach) {
+        chart.axisProject.toggleKMarkAt(x, reach);
     }
 
     // One accessible part in the browser, where Qt reads a flat page again for each of its items.
@@ -1204,6 +1199,7 @@ Item {
                     markClick.fire();
                 }
                 markClick.at = controller.xMin + mouse.x / Math.max(1, width) * (controller.xMax - controller.xMin);
+                markClick.reach = chart.markReach;  // the target shown at the tap, whatever zoom follows
                 markClick.experiment = chart.axisProject ? chart.axisProject.currentExperimentIndex : -1;
                 markClick.session = chart.kState.session ?? -1;
                 markClick.restart();
@@ -1216,6 +1212,7 @@ Item {
         Timer {
             id: markClick
             property real at: 0
+            property real reach: 0
             property int experiment: -1
             property real session: -1
             interval: Qt.styleHints.mouseDoubleClickInterval
@@ -1223,7 +1220,7 @@ Item {
                 if (!chart.peakMode || chart.axisProject === null || chart.axisProject.currentExperimentIndex !== experiment ||
                     chart.kState.session !== session)
                     return;
-                chart.togglePeakAt(at);
+                chart.togglePeakAt(at, reach);
                 chart.hoveredMark = -1;
             }
             onTriggered: fire()

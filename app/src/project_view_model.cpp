@@ -4493,13 +4493,7 @@ void ProjectViewModel::toggleKMarkAt(double x, double tolerance) {
     };
     // A click removes a mark only inside its visible target, the chart's full-height hit window `tolerance` that turns
     // the line grey under the pointer (review 27); a peak's measured window is for acquiring a mark, not removing one.
-    int on_mark = -1;
-    for (const int m : k_marks_.marks) {
-        const edi::MagneticPeak& p = k_marks_.candidates[static_cast<std::size_t>(m)];
-        if (std::abs(p.x - x) <= std::max(tolerance, 1e-9) && (on_mark < 0 || std::abs(p.x - x) <
-                                           std::abs(k_marks_.candidates[static_cast<std::size_t>(on_mark)].x - x)))
-            on_mark = m;
-    }
+    const int on_mark = kMarkAt(x, tolerance);
     if (on_mark >= 0) {
         changeKMarks();
         k_marks_.roles.clear();
@@ -4535,6 +4529,10 @@ void ProjectViewModel::toggleKMarkAt(double x, double tolerance) {
     }
     // A mark stands only where the data are measured and not excluded (review 25, F4).
     if (!kMeasurable(k_marks_.experiment, k_marks_.candidates[static_cast<std::size_t>(best)].x)) return;
+    // A peak already marked is that mark, not a second one (review 28): the click changes nothing.
+    if (std::find(k_marks_.marks.begin(), k_marks_.marks.end(), best) != k_marks_.marks.end() ||
+        kMarkAt(k_marks_.candidates[static_cast<std::size_t>(best)].x, 0.0) >= 0)
+        return;
     changeKMarks();
     k_marks_.roles.clear();
     k_marks_.marks.push_back(best);
@@ -4542,6 +4540,25 @@ void ProjectViewModel::toggleKMarkAt(double x, double tolerance) {
         return k_marks_.candidates[static_cast<std::size_t>(a)].x < k_marks_.candidates[static_cast<std::size_t>(b)].x;
     });
     emit kSearchChanged();
+}
+
+namespace {
+// Whether a mark at `mark` is the one at `x`: within `reach` on the chart's axis, or at the same position.
+bool same_k_mark(double mark, double x, double reach) {
+    return std::abs(mark - x) <= std::max(reach, 1e-9);
+}
+}  // namespace
+
+int ProjectViewModel::kMarkAt(double x, double reach) const {
+    int found = -1;
+    for (const int m : k_marks_.marks) {
+        if (m < 0 || m >= static_cast<int>(k_marks_.candidates.size())) continue;
+        const double at = k_marks_.candidates[static_cast<std::size_t>(m)].x;
+        if (same_k_mark(at, x, reach) &&
+            (found < 0 || std::abs(at - x) < std::abs(k_marks_.candidates[static_cast<std::size_t>(found)].x - x)))
+            found = m;
+    }
+    return found;
 }
 
 void ProjectViewModel::showKRoles(qint64 id, int rank) {
@@ -4632,7 +4649,7 @@ void ProjectViewModel::kRemeasure() {
     std::vector<bool> used(fresh.size(), false);
     const auto taken = [&measured](double at) {
         return std::any_of(measured.begin(), measured.end(),
-                           [at](const edi::MagneticPeak& p) { return std::abs(p.x - at) <= 1e-9; });
+                           [at](const edi::MagneticPeak& p) { return same_k_mark(p.x, at, 0.0); });
     };
     for (const int m : k_marks_.marks) {
         const double x = k_marks_.candidates[static_cast<std::size_t>(m)].x;

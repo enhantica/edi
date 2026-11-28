@@ -581,6 +581,10 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // Marks or unmarks the candidate peak nearest `x` within its half width; drops candidate `index`; drops them all.
     // `tolerance`: how near a mark, on the axis, a click drops it (a few pixels on the chart).
     Q_INVOKABLE void toggleKMarkAt(double x, double tolerance = 0.0);
+    // The one place a mark's identity is decided (review 28): the marked peak whose line is within `reach` of x on the
+    // chart's axis, the nearest, else -1. A click's removal, the chart's hover, a new mark's check against the kept
+    // ones and a re-measure all ask it, so they cannot disagree.
+    Q_INVOKABLE int kMarkAt(double x, double reach) const;
     // The marks' roles under row `rank` of snapshot `id`'s search, the row the k dialog shows selected (owner,
     // 2026-11-27): until a row is selected the marks show why they were marked.
     Q_INVOKABLE void showKRoles(qint64 id, int rank);
