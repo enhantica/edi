@@ -475,10 +475,10 @@ While signing in, the panel shows the provider's page as a link, Copilot's devic
 question with Yes and No (No by default), and for Claude a field for a code the page may show. E-mail, plan and usage show for the
 active account where the provider has them. Every element copies the closest existing one in the panel and its
 dialogs. The connect dialog before the first sign-in (`AssistantConnectionDialog.qml`, "Connect assistant") has the
-provider choice and one sentence naming where the chosen provider signs in and which company receives the data
-(OpenAI, Anthropic, GitHub), plus one line when managed Claude settings are found; Copilot's adds a host field,
-`github.com` by default. Until an account is chosen the panel names no provider ("Connect", "No assistant
-connected"; owner decision of 2026-11-28).
+provider choice, the account choice and, for Copilot, a host field (`github.com` by default), each full width with no
+label of its own; then where the chosen provider signs in and which company receives the data (OpenAI, Anthropic,
+GitHub), in two short sentences, plus one line when managed Claude settings are found. Until an account is chosen the
+panel names no provider ("Connect", "No assistant connected"; owner decision of 2026-11-28).
 Account states: not installed, signed out, signing in, signed in, needs attention, no seat.
 
 ### 10. Packaging

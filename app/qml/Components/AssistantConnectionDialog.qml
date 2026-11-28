@@ -204,8 +204,8 @@ AppDialog {
             id: content
             width: disclosure.contentWidth
             spacing: AppSizes.unit
-            // The provider choice stands alone, full width, with no label of its own. With one installed provider it
-            // still names it, disabled.
+            // Each choice stands alone, full width, with no label of its own: the provider, then the account and, for
+            // Copilot, the host. With one installed provider it still names it, disabled.
             EaElements.ComboBox {
                 id: providerBox
                 objectName: "assistant.connection.provider"
@@ -215,47 +215,29 @@ AppDialog {
                 model: dialog.installedProviders.map(entry => entry.name)
                 currentIndex: dialog.installedProviders.findIndex(entry => entry.provider === dialog.assistant.activeProvider.provider)
                 onActivated: index => dialog.chooseProvider(index)
+                Accessible.name: qsTr("Provider")
             }
-            Grid {
-                id: choice
-                objectName: "assistant.connection.choice"
-                readonly property real labelWidth: Math.max(accountLabel.implicitWidth, hostLabel.implicitWidth)
-                readonly property real fieldWidth: Math.max(0, width - labelWidth - columnSpacing)
+            EaElements.ComboBox {
+                id: accountBox
+                objectName: "assistant.connection.account"
                 width: parent.width
-                visible: (dialog.choiceShown || dialog.hostShown) && (dialog.providerAccounts.length > 0 || dialog.hostShown)
+                visible: (dialog.choiceShown || dialog.hostShown) && dialog.providerAccounts.length > 0
                 enabled: dialog.assistant.state !== "connecting"
-                columns: 2
-                columnSpacing: AppSizes.unit
-                rowSpacing: AppSizes.unit * 0.5
-                verticalItemAlignment: Grid.AlignVCenter
-                EaElements.Label {
-                    id: accountLabel
-                    visible: accountBox.visible
-                    text: qsTr("Account")
-                }
-                EaElements.ComboBox {
-                    id: accountBox
-                    objectName: "assistant.connection.account"
-                    width: choice.fieldWidth
-                    visible: dialog.providerAccounts.length > 0
-                    model: dialog.providerAccounts.map(entry => entry.email || entry.host || qsTr("Account email unavailable")).concat([qsTr("New account")])
-                    currentIndex: dialog.addingAccount ? dialog.providerAccounts.length : dialog.providerAccounts.findIndex(entry => entry.active)
-                    onActivated: index => dialog.chooseAccount(index)
-                }
-                EaElements.Label {
-                    id: hostLabel
-                    visible: hostField.visible
-                    text: qsTr("Host")
-                }
-                EaElements.TextField {
-                    id: hostField
-                    objectName: "assistant.connection.host"
-                    width: choice.fieldWidth
-                    visible: dialog.hostShown
-                    horizontalAlignment: TextInput.AlignLeft
-                    placeholderText: "github.com"
-                    onTextEdited: dialog.applyHost()
-                }
+                model: dialog.providerAccounts.map(entry => entry.email || entry.host || qsTr("Account email unavailable")).concat([qsTr("New account")])
+                currentIndex: dialog.addingAccount ? dialog.providerAccounts.length : dialog.providerAccounts.findIndex(entry => entry.active)
+                onActivated: index => dialog.chooseAccount(index)
+                Accessible.name: qsTr("Account")
+            }
+            EaElements.TextField {
+                id: hostField
+                objectName: "assistant.connection.host"
+                width: parent.width
+                visible: dialog.hostShown
+                enabled: dialog.assistant.state !== "connecting"
+                horizontalAlignment: TextInput.AlignLeft
+                placeholderText: "github.com"
+                onTextEdited: dialog.applyHost()
+                Accessible.name: qsTr("Host")
             }
             EaElements.Label {
                 objectName: "assistant.connection.hostMessage"
@@ -270,9 +252,9 @@ AppDialog {
                 width: parent.width
                 wrapMode: Text.WordWrap
                 textFormat: Text.PlainText
-                // Before sign-in: one sentence on how the chosen provider signs in and where the data goes. Copilot
+                // Before sign-in: how the chosen provider signs in, and where the data goes. Copilot
                 // signs in with a one-time code on GitHub's page.
-                text: dialog.assistant.connected ? qsTr("Allow the assistant to use current project information and attached files for your message.") : dialog.assistant.activeProvider.provider === "copilot" ? qsTr("Signs in with your GitHub account and a one-time code in the browser; messages and project data go to %1.").arg(dialog.assistant.activeProvider.company) : qsTr("Signs in with your %1 account in the browser; messages and project data go to %2.").arg(dialog.assistant.activeProvider.name).arg(dialog.assistant.activeProvider.company)
+                text: dialog.assistant.connected ? qsTr("Allow the assistant to use current project information and attached files for your message.") : dialog.assistant.activeProvider.provider === "copilot" ? qsTr("Signs in with your GitHub account and a one-time code in the browser. Messages and project data go to %1.").arg(dialog.assistant.activeProvider.company) : qsTr("Signs in with your %1 account in the browser. Messages and project data go to %2.").arg(dialog.assistant.activeProvider.name).arg(dialog.assistant.activeProvider.company)
             }
             EaElements.Label {
                 width: parent.width
