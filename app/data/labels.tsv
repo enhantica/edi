@@ -24,7 +24,6 @@ appBar.tab.report	Report		clipboard-list
 appBar.tab.structure	Structure		layer-group
 assistant.accountDialog	Account		
 assistant.acknowledgeManagedSettings	I understand		check
-assistant.claudeCredentialNote	edi uses Claude's own sign-in or a key set in your environment (ANTHROPIC_API_KEY). A key helper or env block in your Claude settings file is not used.		
 assistant.clear	New session		plus
 assistant.connection.hostMessage	Enter github.com or a GitHub Enterprise host such as name.ghe.com.		
 assistant.desktopOnly	AI assistant		
@@ -50,6 +49,7 @@ assistant.signInSubmitCode	Submit		sign-in-alt
 assistant.signOut	Sign out		sign-out-alt
 assistant.stop	Stop		stop
 assistant.switchAccount	Switch		exchange-alt
+assistant.tryAgain	Try again		redo
 assistant.usageDialog	Usage		
 atomSites.append	Append new atom site	Append	plus-circle
 atomSites.duplicate	Duplicate selected atom site	Duplicate	clone

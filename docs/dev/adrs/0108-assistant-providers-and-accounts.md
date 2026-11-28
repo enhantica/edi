@@ -277,8 +277,10 @@ claude -p --input-format stream-json --output-format stream-json --verbose --inc
   context Claude would send, must list `mcp__edi__<name>` for exactly those tools in `mcpTools` and no built-in tool
   category (`system_tools`, which it lists whenever a built-in tool is on); the `initialize` reply's `commands` must
   list each bundled skill as `edi:<id>`. With the first turn, `system/init` is checked again: `tools` exactly `Skill`
-  plus `mcp__edi__<name>`, `mcp_servers` exactly `edi` connected, `plugins` exactly edi's, `skills` each bundled
-  skill. A difference there stops the turn and retires the process; the readback before input is what gates Send.
+  plus `mcp__edi__<name>`, `mcp_servers` exactly `edi` connected, `plugins` exactly edi's besides the binary's own
+  built-in plugins (listed with `path: builtin` and `source: <name>@builtin`; they add no tools), `skills` each bundled
+  skill. A difference there fails that turn and retires the process; the account stays connected and the next message
+  starts a new process, checked again before its input. The readback before input is what gates Send.
   A pinned release that cannot answer both control requests before input cannot be pinned.
 - **Skills.** The same approved skill bytes as ADR-0058's `.agents/skills` are staged as a plugin,
   `<workspace>/.edi/claude-plugin/.claude-plugin/plugin.json` naming `edi` plus `skills/<id>/SKILL.md`. Plugin skills
@@ -290,14 +292,18 @@ claude -p --input-format stream-json --output-format stream-json --verbose --inc
   so a steer queued before Stop does not start a new turn. The turn ends at `result`; edi checks
   `is_error` and the assistant message's `error`, not only `subtype`, because a signed-out turn reports `success`
   with `is_error: true`.
-- **Models** come from the `initialize` reply (`value`, `displayName`, `supportedEffortLevels`). A model change during
+- **Models** come from the `initialize` reply (`value`, `displayName`, `supportedEffortLevels`), current models only:
+  the aliases (`default`, `opus`, `sonnet`, ...), not the pinned older versions and variants a subscription also lists.
+  A model change during
   a thread uses `set_model`; an effort change restarts the idle process with `--resume` before the next turn. For a
   model with no advertised default effort, an empty effort means edi passes no `--effort` (an amendment of ADR-0057,
   §14).
-- **Usage.** `rate_limit_event` is a status signal sent when a limit's status changes, not a per-turn feed. A window
-  shows only when the event carries `rate_limit_type` and `utilization`: `five_hour` as the session limit and
-  `seven_day` as the weekly limit, the windows ChatGPT already shows; other types are ignored. A warning or refusal
-  with its reset time shows as it is, and "Unavailable" is the normal state between events.
+- **Usage.** The plan's limits come from the `get_usage` control request (`skip_behaviors: true`), the data `/usage`
+  shows, read when the process is ready and after each turn: `rate_limits.five_hour` as the session limit and
+  `seven_day` as the weekly limit, the windows ChatGPT already shows, with `utilization` in percent and `resets_at`.
+  The request is marked experimental in the pinned binary, so a release bump checks it. An API key, Bedrock or Vertex
+  has no plan limits (`rate_limits` null) and shows as `Unsupported`. `rate_limit_event`, a status signal sent when a
+  limit's status changes, adds a warning or refusal with its reset time.
 - **Threads.** edi chooses the session id. A resumed thread starts a new process with `--resume`; its earlier rows come
   from edi's own history file, and `--system-prompt-snapshot off` makes it read edi's current instructions and skills.
 - **Version.** One pinned release. Every pin change repeats the owner's sign-in trial.
@@ -452,12 +458,16 @@ edi keeps the account list; a runtime only says who is signed in.
 ### 9. The Account dialog
 
 The account button (`connectionButton`) keeps its place, size and states, and keeps opening the Account dialog
-(`accountDialog`, ADR-0057's account card); it stays the one account surface. The dialog gains one group per provider:
-a header with the provider's name, one row per account with the active one checked and its e-mail, plan and state, a
+(`accountDialog`, ADR-0057's account card); it stays the one account surface, as wide as the connect dialog. It lists
+one group per provider, each account once: a header with the provider's name, one row per account with the active one
+checked and its e-mail, plan and, only when it applies, one short credential line ("Using your ANTHROPIC_API_KEY"), a
 Switch action on the others, Sign out (for Copilot, Remove from edi) on the active account, and "Add account" per
 installed provider (disabled when the runtime is not installed, with a tooltip naming the Maintenance Tool, or saying
-the provider is not included when this release leaves it out). Sign out (Remove from edi) stays available in the
-panel while the account is disconnected, so an account whose sign-in turned out to be someone else can be reset.
+the provider is not included when this release leaves it out). The ChatGPT sign-in from before accounts were recorded
+is listed as ChatGPT's default login, by the e-mail its saved conversations carry, until its record is written. In the
+header the account is a pill naming the provider, like Sessions and Usage. After a failure the panel shows one short
+line with Try again; Sign out (Remove from edi) stays beside it while the account is disconnected, so an account whose
+sign-in turned out to be someone else can be reset.
 While signing in, the panel shows the provider's page as a link, Copilot's device code with Copy and its plain-file
 question with Yes and No (No by default), and for Claude a field for a code the page may show. E-mail, plan and usage show for the
 active account where the provider has them. Every element copies the closest existing one in the panel and its

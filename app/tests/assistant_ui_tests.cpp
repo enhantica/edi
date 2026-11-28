@@ -336,7 +336,7 @@ private slots:
         auto account = test.value("account").toObject();
         const auto id = account.value("id").toString();
         const auto otherLogin = test.value("otherLogin").toString();
-        const auto accountParent = QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation)
+        const auto accountParent = edi_app::app_local_data_location()
             + "/assistant/accounts/" + provider + "/";
         const auto home = accountParent + id;
         QVERIFY2(QDir().mkpath(home), "Each selected account needs its own config home");
@@ -438,13 +438,20 @@ private slots:
             QVERIFY2(dialog && dialog->setProperty("parent", QVariant::fromValue(window->contentItem())) &&
                             QMetaObject::invokeMethod(dialog, "open"),
                      "The desktop Account dialog must open on the test window");
-            // The credential line itself, not any text naming a key: the Claude note always names ANTHROPIC_API_KEY.
+            // The credential line itself, shown only for a key or token: it names the key's environment variable. The
+            // account rows are a Repeater's, so they are found through the item tree, not as QObject children.
             const auto showsCredentialSource = [&] {
-                for (const auto* item : dialog->findChildren<QQuickItem*>()) {
-                    if (item->objectName() != "assistant.accountCredential" || !item->isVisible()) continue;
-                    if (item->property("text").toString().contains("own API key", Qt::CaseInsensitive)) return true;
-                }
-                return false;
+                const auto shows = [](QQuickItem* item, auto&& self) -> bool {
+                    if (item->objectName() == "assistant.accountCredential" && item->isVisible()) {
+                        const auto text = item->property("text").toString();
+                        if (text.contains("ANTHROPIC_API_KEY") || text.contains("own API key", Qt::CaseInsensitive)) return true;
+                    }
+                    for (auto* child : item->childItems())
+                        if (self(child, self)) return true;
+                    return false;
+                };
+                auto* content = dialog->property("contentItem").value<QQuickItem*>();
+                return content && shows(content, shows);
             };
             QTRY_VERIFY2_WITH_TIMEOUT(dialog->property("visible").toBool(),
                                       "The Account dialog must actually open", 500);
@@ -522,7 +529,7 @@ private slots:
     void initTestCase() {
         qputenv("QT_QUICK_CONTROLS_HOVER_ENABLED", "1");
         edi_app::use_fresh_settings();
-        QVERIFY(QDir().mkpath(QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation)));
+        QVERIFY(QDir().mkpath(edi_app::app_local_data_location()));
         const auto root = QString::fromUtf8(EDI_SOURCE_DIR);
         const auto cod = QUrl::fromLocalFile(root + "/tests/fixtures/online_sources/cod/").toString();
         const auto edb = QUrl::fromLocalFile(root + "/tests/fixtures/online_sources/easydiffraction/").toString();

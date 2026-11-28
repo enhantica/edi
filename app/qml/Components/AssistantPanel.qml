@@ -32,8 +32,19 @@ Popup {
         return ApplicationInfo.assistantAllowanceWindow(panel, minutes);
     }
     readonly property string accountPlanLabel: ApplicationInfo.assistantAccountPlanLabel(panel)
+    // One short line, only when the account does not use the provider's own sign-in.
+    function credentialLine() {
+        const kind = panel.accountData.credentialKind || "";
+        const source = panel.accountData.credentialSource || "";
+        if (kind === "cloudProvider")
+            return qsTr("Using %1; usage is billed there").arg(source);
+        if (kind === "token")
+            return qsTr("Using your own token");
+        if (kind === "apiKey" || kind.length > 0)
+            return /^[A-Z][A-Z0-9_]*$/.test(source) ? qsTr("Using your %1").arg(source) : qsTr("Using your own API key");
+        return "";
+    }
     readonly property color actionBackground: EaStyle.Colors.sideBarButtonBackgroundHovered
-    readonly property real headerActionExtent: EaStyle.Sizes.toolButtonHeight * 0.75
     property var noticeState: null
     property var noticeProjection: ({})
     function captureNotice() {
@@ -371,57 +382,42 @@ Popup {
                         readonly property bool accountView: !pendingConnection && panel.assistant.connected
                         text: pendingConnection ? qsTr("Cancel connection") : accountView ? qsTr("%1 account").arg(panel.assistant.activeProvider.name) : qsTr("Connect")
                         enabled: !pendingConnection || panel.assistant.canCancel
-                        leftPadding: connectionButton.accountView ? 0 : AppSizes.unit * 0.75
+                        leftPadding: AppSizes.unit * 0.75
                         rightPadding: leftPadding
-                        contentItem: Item {
-                            implicitWidth: connectionButton.accountView ? avatarText.implicitWidth : connectionText.implicitWidth
-                            implicitHeight: connectionButton.accountView ? avatarText.implicitHeight : connectionText.implicitHeight
+                        // Signed in, it is a pill like Sessions and Usage that names the provider; otherwise the filled
+                        // Connect button.
+                        readonly property color labelColor: accountView ? foregroundColor() : !enabled ? EaStyle.Colors.themeForegroundDisabled : EaStyle.Colors.isDarkPalette ? "black" : "white"
+                        contentItem: RowLayout {
+                            id: connectionText
+                            spacing: AppSizes.unit * 0.4
                             EaElements.Label {
-                                id: avatarText
-                                anchors.fill: parent
-                                visible: connectionButton.accountView
                                 text: connectionButton.fontIcon
                                 font.family: EaStyle.Fonts.iconsFamily
-                                font.pixelSize: EaStyle.Sizes.fontPixelSize
-                                horizontalAlignment: Text.AlignHCenter
-                                verticalAlignment: Text.AlignVCenter
-                                color: !connectionButton.enabled ? EaStyle.Colors.themeForegroundDisabled : EaStyle.Colors.isDarkPalette ? "black" : "white"
+                                color: connectionButton.labelColor
+                                Accessible.ignored: true
                             }
-                            RowLayout {
-                                id: connectionText
-                                anchors.centerIn: parent
-                                visible: !connectionButton.accountView
-                                spacing: AppSizes.unit * 0.4
-                                EaElements.Label {
-                                    text: connectionButton.fontIcon
-                                    font.family: EaStyle.Fonts.iconsFamily
-                                    color: !connectionButton.enabled ? EaStyle.Colors.themeForegroundDisabled : EaStyle.Colors.isDarkPalette ? "black" : "white"
-                                    Accessible.ignored: true
-                                }
-                                EaElements.Label {
-                                    text: connectionButton.text
-                                    font: connectionButton.font
-                                    color: !connectionButton.enabled ? EaStyle.Colors.themeForegroundDisabled : EaStyle.Colors.isDarkPalette ? "black" : "white"
-                                }
+                            EaElements.Label {
+                                text: connectionButton.accountView ? panel.assistant.activeProvider.name : connectionButton.text
+                                font: connectionButton.font
+                                color: connectionButton.labelColor
                             }
                         }
-                        Layout.preferredWidth: connectionButton.accountView ? panel.headerActionExtent : implicitWidth
-                        Layout.minimumWidth: connectionButton.accountView ? panel.headerActionExtent : 0
-                        Layout.maximumWidth: connectionButton.accountView ? panel.headerActionExtent : Math.max(0, header.width - AppSizes.unit)
+                        Layout.preferredWidth: implicitWidth
+                        Layout.maximumWidth: Math.max(0, header.width - AppSizes.unit)
                         Layout.preferredHeight: EaStyle.Sizes.toolButtonHeight
                         Layout.minimumHeight: EaStyle.Sizes.toolButtonHeight
                         Layout.maximumHeight: EaStyle.Sizes.toolButtonHeight
                         background: Item {
-                            implicitWidth: connectionButton.accountView ? panel.headerActionExtent : EaStyle.Sizes.toolButtonHeight
+                            implicitWidth: EaStyle.Sizes.toolButtonHeight
                             implicitHeight: implicitWidth
                             Rectangle {
                                 border.width: 0
                                 objectName: "assistant.avatarCircle"
                                 anchors.centerIn: parent
-                                width: connectionButton.accountView ? EaStyle.Sizes.toolButtonHeight * 0.75 : parent.width
+                                width: parent.width
                                 height: EaStyle.Sizes.toolButtonHeight * 0.75
                                 radius: height * 0.5
-                                color: !connectionButton.enabled ? panel.actionBackground : connectionButton.hovered || connectionButton.down || connectionButton.visualFocus ? EaStyle.Colors.themeAccent : (EaStyle.Colors.isDarkPalette ? "white" : "black")
+                                color: connectionButton.accountView ? (connectionButton.visualFocus ? EaStyle.Colors.themeRowHovered : panel.actionBackground) : !connectionButton.enabled ? panel.actionBackground : connectionButton.hovered || connectionButton.down || connectionButton.visualFocus ? EaStyle.Colors.themeAccent : (EaStyle.Colors.isDarkPalette ? "white" : "black")
                             }
                         }
                         ToolTip.text: connectionButton.accountView ? qsTr("Account") : text
@@ -631,7 +627,7 @@ Popup {
                     flickableDirection: Flickable.VerticalFlick
                     boundsBehavior: Flickable.StopAtBounds
                     interactive: contentHeight > height
-                    visible: signedOutNotice.noticeText.length > 0 || (panel.assistant.canCancel && panel.assistant.state !== "connecting") || signInSteps.visible || disconnectedSignOut.visible
+                    visible: signedOutNotice.noticeText.length > 0 || (panel.assistant.canCancel && panel.assistant.state !== "connecting") || signInSteps.visible || failureActions.visible
                     Column {
                         id: signedOutControls
                         width: parent.width
@@ -768,17 +764,35 @@ Popup {
                                 }
                             }
                         }
-                        // An account whose connection ended (another person signed in, for example) can still be
-                        // signed out here; the Account dialog opens only while connected.
-                        SignInButton {
-                            id: disconnectedSignOut
-                            objectName: "assistant.signOutDisconnected"
-                            anchors.horizontalCenter: parent.horizontalCenter
-                            visible: signedOutNotice.visible && !panel.assistant.connected && panel.assistant.state !== "connecting" && panel.assistant.activeProvider.provider !== "chatgpt" && panel.assistant.accounts.some(entry => entry.active)
-                            fontIcon: "sign-out-alt"
-                            // Copilot's sign-out is not yet qualified, so the account is removed from edi instead.
-                            text: panel.assistant.activeProvider.provider === "copilot" ? qsTr("Remove from edi") : qsTr("Sign out")
-                            onClicked: panel.assistant.signOut()
+                        // After a failure: try again first; an account whose connection ended (another person signed
+                        // in, for example) can still be signed out, as the Account dialog opens only while connected.
+                        Row {
+                            id: failureActions
+                            visible: signedOutNotice.visible && !panel.assistant.connected && panel.assistant.state !== "connecting" && panel.assistant.accounts.some(entry => entry.active)
+                            spacing: AppSizes.unit * 0.5
+                            EaElements.Button {
+                                objectName: "assistant.tryAgain"
+                                padding: EaStyle.Sizes.fontPixelSize * 0.5
+                                fontIcon: "redo"
+                                text: qsTr("Try again")
+                                highlighted: true
+                                Accessible.name: text
+                                onClicked: {
+                                    if (!panel.assistant.resumeConnection())
+                                        ApplicationInfo.panelConnectionActivated();
+                                }
+                            }
+                            EaElements.Button {
+                                id: disconnectedSignOut
+                                objectName: "assistant.signOutDisconnected"
+                                visible: panel.assistant.activeProvider.provider !== "chatgpt"
+                                padding: EaStyle.Sizes.fontPixelSize * 0.5
+                                fontIcon: "sign-out-alt"
+                                // Copilot's sign-out is not yet qualified, so the account is removed from edi instead.
+                                text: panel.assistant.activeProvider.provider === "copilot" ? qsTr("Remove from edi") : qsTr("Sign out")
+                                Accessible.name: text
+                                onClicked: panel.assistant.signOut()
+                            }
                         }
                     }
                     ScrollBar.vertical: ScrollBar {}
@@ -918,7 +932,8 @@ Popup {
             title: qsTr("Account")
             standardButtons: Dialog.Close
             readonly property real viewportHeight: Math.max(0, parent.height - AppSizes.unit * 2)
-            width: Math.min(AppSizes.unit * 24, Math.max(0, parent.width - AppSizes.unit * 2))
+            // The connection dialog's width, so the two read as one family.
+            width: Math.min(AppSizes.unit * 40 + leftPadding + rightPadding, Math.max(0, parent.width - AppSizes.unit * 2))
             height: Math.min(implicitHeight, viewportHeight)
             contentWidth: Math.max(0, width - leftPadding - rightPadding)
             contentHeight: Math.min(accountContent.implicitHeight, Math.max(0, viewportHeight - topPadding - bottomPadding - (implicitHeaderHeight > 0 ? implicitHeaderHeight + spacing : 0) - (implicitFooterHeight > 0 ? implicitFooterHeight + spacing : 0)))
@@ -936,79 +951,7 @@ Popup {
                 Column {
                     id: accountContent
                     width: Math.max(0, accountDialog.contentWidth - AppSizes.unit)
-                    spacing: 0
-                    Column {
-                        width: parent.width
-                        spacing: AppSizes.unit * 0.25
-                        EaElements.Label {
-                            objectName: "assistant.accountIdentity"
-                            width: parent.width
-                            text: panel.accountData.email || qsTr("Account email unavailable")
-                            textFormat: Text.PlainText
-                            wrapMode: Text.WrapAnywhere
-                        }
-                        EaElements.Label {
-                            objectName: "assistant.accountCredential"
-                            width: parent.width
-                            visible: panel.accountData.credentialKind.length > 0
-                            text: panel.accountData.credentialKind === "cloudProvider" ? qsTr("%1 is using %2 from your environment, not a %1 sign-in. Usage is billed there.").arg(panel.assistant.activeProvider.name).arg(panel.accountData.credentialSource) : (panel.accountData.credentialKind === "token" ? qsTr("%1 is using your own token, not a %1 sign-in.") : qsTr("%1 is using your own API key, not a %1 sign-in.")).arg(panel.assistant.activeProvider.name) + (panel.accountData.credentialSource.length > 0 ? " " + qsTr("Source: %1.").arg(panel.accountData.credentialSource) : "") + " " + qsTr("edi does not show it.")
-                            textFormat: Text.PlainText
-                            wrapMode: Text.WordWrap
-                        }
-                        EaElements.Label {
-                            objectName: "assistant.accountPlan"
-                            width: parent.width
-                            visible: panel.accountPlanLabel.length > 0
-                            text: panel.accountPlanLabel
-                            color: EaStyle.Colors.themeForegroundMinor
-                            textFormat: Text.PlainText
-                            wrapMode: Text.WrapAnywhere
-                        }
-                        // Which Claude sign-ins work in edi: its settings files are not read (edi ADR-0108 §4).
-                        EaElements.Label {
-                            objectName: "assistant.claudeCredentialNote"
-                            width: parent.width
-                            visible: panel.assistant.activeProvider.provider === "claude"
-                            text: qsTr("edi uses Claude's own sign-in or a key set in your environment (ANTHROPIC_API_KEY). A key helper or env block in your Claude settings file is not used.")
-                            color: EaStyle.Colors.themeForegroundMinor
-                            textFormat: Text.PlainText
-                            wrapMode: Text.WordWrap
-                        }
-                    }
-                    Item {
-                        width: 1
-                        height: AppSizes.unit * 1.5
-                    }
-                    EaElements.Button {
-                        id: signOutButton
-                        objectName: "assistant.signOut"
-                        fontIcon: "sign-out-alt"
-                        // Copilot's sign-out is not yet qualified, so the account is removed from edi instead.
-                        text: panel.assistant.activeProvider.provider === "copilot" ? qsTr("Remove from edi") : qsTr("Sign out")
-                        contentItem: Row {
-                            spacing: AppSizes.unit * 0.5
-                            EaElements.Label {
-                                anchors.verticalCenter: parent.verticalCenter
-                                text: signOutButton.fontIcon
-                                font.family: EaStyle.Fonts.iconsFamily
-                                color: signOutButton.foregroundColor()
-                            }
-                            EaElements.Label {
-                                anchors.verticalCenter: parent.verticalCenter
-                                text: signOutButton.text
-                                color: signOutButton.foregroundColor()
-                            }
-                        }
-                        width: Math.min(implicitWidth, parent.width)
-                        enabled: panel.assistant.connected
-                        Accessible.name: text
-                        onClicked: panel.assistant.signOut()
-                    }
-                    Item {
-                        width: 1
-                        height: AppSizes.unit * 1.5
-                        visible: panel.assistant.managedSettingsNotice.length > 0
-                    }
+                    spacing: AppSizes.unit
                     EaElements.Label {
                         objectName: "assistant.managedSettingsNotice"
                         width: parent.width
@@ -1018,38 +961,23 @@ Popup {
                         wrapMode: Text.WordWrap
                     }
                     EaElements.Button {
-                        id: acknowledgeButton
                         objectName: "assistant.acknowledgeManagedSettings"
                         visible: panel.assistant.managedSettingsNotice.length > 0
+                        padding: EaStyle.Sizes.fontPixelSize * 0.5
                         fontIcon: "check"
                         text: qsTr("I understand")
-                        contentItem: Row {
-                            spacing: AppSizes.unit * 0.5
-                            EaElements.Label {
-                                anchors.verticalCenter: parent.verticalCenter
-                                text: acknowledgeButton.fontIcon
-                                font.family: EaStyle.Fonts.iconsFamily
-                                color: acknowledgeButton.foregroundColor()
-                            }
-                            EaElements.Label {
-                                anchors.verticalCenter: parent.verticalCenter
-                                text: acknowledgeButton.text
-                                color: acknowledgeButton.foregroundColor()
-                            }
-                        }
-                        width: Math.min(implicitWidth, parent.width)
                         Accessible.name: text
                         onClicked: panel.assistant.acknowledgeManagedSettings()
-                    }
-                    Item {
-                        width: 1
-                        height: AppSizes.unit * 1.5
                     }
                     AssistantAccountList {
                         objectName: "assistant.accountList"
                         width: parent.width
                         assistant: panel.assistant
+                        activeEmail: panel.accountData.email || ""
+                        activePlan: panel.accountPlanLabel
+                        activeCredential: panel.credentialLine()
                         onAddRequested: provider => panel.assistant.addAccount(provider, "")
+                        onSignOutRequested: panel.assistant.signOut()
                     }
                 }
             }

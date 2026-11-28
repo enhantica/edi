@@ -1573,7 +1573,7 @@ struct AssistantViewModel::State {
         auto path=history_path;
         if(!history_session.isEmpty()) {
             const auto digest=QCryptographicHash::hash(history_session.toUtf8(),QCryptographicHash::Sha256).toHex();
-            path=QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation)+"/assistant/history/"+QString::fromLatin1(digest)+".json";
+            path=edi_app::app_local_data_location()+"/assistant/history/"+QString::fromLatin1(digest)+".json";
         }
         const auto original=history_session;
         auto prepared=std::make_unique<AssistantHistoryArchive>(&owner,path,[this,receiver](const AssistantHistoryArchive::View&) {
@@ -2535,7 +2535,7 @@ struct AssistantViewModel::State {
         if(generation==UINT64_MAX)throw std::runtime_error("The original session binding retired");
         const auto binding=generation+1;auto active=std::make_shared<bool>(false);
         auto prepared=make_controller(target,binding,active);
-        const auto root=QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation)+"/assistant/input-cache";
+        const auto root=edi_app::app_local_data_location()+"/assistant/input-cache";
         if(!QDir().mkpath(root))throw std::runtime_error("The attachment cache is unavailable");
         auto cache=std::make_unique<QTemporaryDir>(root+"/restored-XXXXXX");
         if(!cache->isValid())throw std::runtime_error("The attachment cache is unavailable");
@@ -2777,7 +2777,7 @@ struct AssistantViewModel::State {
     void start_session_account_check() {
         if(!session_account_preflight || session_account_operation!=session_operation || session_restore_target!=session_account_target ||
             generic_connecting || generic_busy || generic_retiring || !agent || agent->outputOwnerState()!=AssistantProvider::OutputOwnerState::Released)return;
-        const auto root=QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation)+"/assistant";
+        const auto root=edi_app::app_local_data_location()+"/assistant";
         if(!QDir().mkpath(root))throw std::runtime_error("edi could not prepare the account check.");
         session_account_workspace=std::make_unique<QTemporaryDir>(root+"/account-check-XXXXXX");
         if(!session_account_workspace->isValid())throw std::runtime_error("edi could not prepare the account check.");
@@ -11311,7 +11311,7 @@ struct AssistantViewModel::State {
         creation_worker_frames.reserve(creation_worker_frames.size()+1);creation_worker_frames.push_back(creation);
     }
     std::unique_ptr<QTemporaryDir> native_input_snapshot() {
-        const auto appData=QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation);
+        const auto appData=edi_app::app_local_data_location();
         if(appData.isEmpty())throw std::runtime_error("Native input host directory is unavailable");
         const auto base=QDir(appData).filePath("assistant");
         if(!QDir().mkpath(base))throw std::runtime_error("Native input host directory is unavailable");
@@ -14737,7 +14737,7 @@ struct AssistantViewModel::State {
         if (preparedDirectory.isEmpty() && !generic_input_cache) {
             // All host-owned immutable caches must remain outside a selectable
             // grant, including a user-selected temporary-directory parent.
-            const auto cacheRoot = QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation) + "/assistant/input-cache";
+            const auto cacheRoot = edi_app::app_local_data_location() + "/assistant/input-cache";
             if (!QDir().mkpath(cacheRoot)) throw std::runtime_error("Selected snapshot cache is unavailable");
             generic_input_cache = std::make_unique<QTemporaryDir>(cacheRoot + "/selected-XXXXXX");
             if (!generic_input_cache->isValid()) throw std::runtime_error("Selected snapshot cache is unavailable");
@@ -14797,7 +14797,7 @@ struct AssistantViewModel::State {
     }
     SessionWorkspace prepare_skill_workspace(const std::shared_ptr<const AssistantSkillInventory>& inventory) {
         if(!inventory)throw std::runtime_error("The captured skill inventory is unavailable");
-        const auto location=QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation)+"/assistant/agent";
+        const auto location=edi_app::app_local_data_location()+"/assistant/agent";
         if(!QDir().mkpath(location))throw std::runtime_error("Agent conversation could not be prepared");
         SessionWorkspace result;result.root=std::make_unique<QTemporaryDir>(location+"/prepared-XXXXXX");
         if(!result.root->isValid())throw std::runtime_error("Agent conversation could not be prepared");
@@ -15070,7 +15070,7 @@ struct AssistantViewModel::State {
             (void)queue_history(history);
             if(!publication.input_current())return;
             history_session.clear();
-            history_path=QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation)+"/assistant/history/draft-"+QUuid::createUuid().toString(QUuid::WithoutBraces)+".json";
+            history_path=edi_app::app_local_data_location()+"/assistant/history/draft-"+QUuid::createUuid().toString(QUuid::WithoutBraces)+".json";
         }
         if (!publish({},false,nullptr,true)) { archive_refused = was_refused; error = storage_error; notify(); return; }
         if (discarded) *discarded = true; // Logical discard; archive revision/commit is tracked independently.
@@ -15124,6 +15124,8 @@ struct AssistantViewModel::State {
     void generic_response_failure(const QString& method, const char* reason, const QString& detail = {}) noexcept {
         const auto publication = file_projection();
         try {
+            // The panel shows only the stage; the session log keeps the runtime's own reason for a report.
+            qWarning().noquote() << "assistant:" << method << "failed:" << reason << bounded_error(detail.trimmed());
             if(method=="account/read") {
                 QString cause;
                 const QLatin1StringView code(reason);
@@ -18381,7 +18383,7 @@ struct AssistantViewModel::State {
             QMetaObject::invokeMethod(&owner, std::move(delivery), Qt::QueuedConnection);
 #endif
         });
-        history_path = QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation) + "/assistant/history.json";
+        history_path = edi_app::app_local_data_location() + "/assistant/history.json";
         try {initialize_history();}
         catch(...) {history_unqueued=true;history_error=storage_error;}
         messages.assign(history);
@@ -19363,7 +19365,7 @@ std::shared_ptr<AssistantViewModel::ProjectResetInputs> AssistantViewModel::prep
             if(files.empty())return result->proof.input_current() && result->window==original->action_window?result:nullptr;
             auto input=std::make_unique<State::SessionInputs>();input->generation=original->generation+1;input->active=std::make_shared<bool>(false);
             input->controller=original->make_controller(nullptr,input->generation,input->active);
-            const auto root=QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation)+"/assistant/input-cache";
+            const auto root=edi_app::app_local_data_location()+"/assistant/input-cache";
             if(!QDir().mkpath(root))throw std::runtime_error("The pending attachment cache is unavailable; the project was kept");
             input->cache=std::make_unique<QTemporaryDir>(root+"/reset-XXXXXX");
             if(!input->cache->isValid())throw std::runtime_error("The pending attachment cache could not be prepared; the project was kept");
@@ -21649,6 +21651,28 @@ void AssistantViewModel::acknowledgeManagedSettings() {
     emit managedSettingsNoticeChanged();
 #endif
 }
+#ifndef __EMSCRIPTEN__
+namespace {
+// The e-mail of the newest ChatGPT conversation saved before accounts were recorded (no account field), if any.
+QString legacy_chatgpt_email() {
+    const auto path = edi_app::settings_file_path();
+    if (path.isEmpty()) return {};
+    QSettings settings(path, QSettings::IniFormat);
+    const auto document = QJsonDocument::fromJson(settings.value(QStringLiteral("Assistant/Providers/chatgpt/sessions")).toByteArray());
+    QString email;
+    double newest = -1;
+    for (const auto& value : document.object().value(QStringLiteral("threads")).toObject()) {
+        const auto record = value.toObject();
+        if (record.contains(QStringLiteral("account")) || record.value(QStringLiteral("email")).toString().isEmpty()) continue;
+        const auto updated = record.value(QStringLiteral("updatedAt")).toDouble(0);
+        if (updated < newest) continue;
+        newest = updated;
+        email = record.value(QStringLiteral("email")).toString();
+    }
+    return email;
+}
+}  // namespace
+#endif
 QList<AssistantAccountEntry> AssistantViewModel::accounts() const {
     QList<AssistantAccountEntry> result;
 #ifndef __EMSCRIPTEN__
@@ -21660,6 +21684,12 @@ QList<AssistantAccountEntry> AssistantViewModel::accounts() const {
         for (const auto& record : records)
             result.append({assistant_provider_key(id), assistant_provider_name(id), record.id, record.email, record.plan,
                            record.host, record.provider == active.provider && record.id == active.id, installed});
+        // The ChatGPT sign-in from before accounts were recorded is the default login; its record is written only
+        // when it is first read, so until then it is listed by the e-mail its saved conversations carry.
+        if (id == AssistantProviderId::ChatGpt && installed &&
+            std::none_of(records.cbegin(), records.cend(), [](const auto& record) { return record.home.isEmpty(); }))
+            result.append({assistant_provider_key(id), assistant_provider_name(id), QString(), legacy_chatgpt_email(), QString(),
+                           QString(), active.provider == id && active.home.isEmpty(), installed});
     }
 #endif
     return result;
@@ -21669,6 +21699,19 @@ void AssistantViewModel::switchAccount(const QString& provider, const QString& i
     const auto which = assistant_provider_from_key(provider);
     std::optional<AssistantAccountRecord> record;
     try { if (which) record = state_->account_store().find(*which, id); } catch (...) {}
+    // The listed pre-update ChatGPT sign-in (no id): its default-login record, made now if it was never read.
+    if (!record && which == AssistantProviderId::ChatGpt && id.isEmpty()) {
+        const auto& current = state_->active_provider_account;
+        if (current.provider == AssistantProviderId::ChatGpt && current.home.isEmpty()) return;
+        try {
+            auto store = state_->account_store();
+            record = store.defaultChatGpt();
+            if (!record) {
+                record = store.createDefaultChatGpt();
+                store.save(*record);
+            }
+        } catch (...) { record.reset(); }
+    }
     if (!record) { state_->error = tr("That account is no longer saved on this computer."); state_->notify(); return; }
     if (!assistant_provider_available(record->provider)) {
         state_->error = (provider_distribution_public(assistant_provider_key(record->provider))
