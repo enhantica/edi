@@ -408,14 +408,20 @@ private slots:
         assistant->switchAccount(provider, id);
         QVERIFY2(assistant->activeProvider().provider == provider,
                  "The connection offer must use the installed provider the user selected");
-        const auto selection = assistant->beginFileSelection();
-        QVERIFY2(!selection.isEmpty(), "The assistant must accept file selection before the connection offer");
-        QVERIFY2(assistant->addSelectedFiles(selection, {QUrl::fromLocalFile(test.value("file").toString())}),
-                 qPrintable(assistant->lastError()));
-        const auto fileId = assistant->selectedFiles()->text(0, "id");
-        QVERIFY2(!fileId.isEmpty(), "The attached sample must have an edi file identity");
+        // The owner's order (attach-after-connect): connect with nothing attached and no project, then attach
+        // files and send them in the first turn.
+        const bool attachLater = scenario == "attach-after-connect";
+        QString fileId;
+        if (!attachLater) {
+            const auto selection = assistant->beginFileSelection();
+            QVERIFY2(!selection.isEmpty(), "The assistant must accept file selection before the connection offer");
+            QVERIFY2(assistant->addSelectedFiles(selection, {QUrl::fromLocalFile(test.value("file").toString())}),
+                     qPrintable(assistant->lastError()));
+            fileId = assistant->selectedFiles()->text(0, "id");
+            QVERIFY2(!fileId.isEmpty(), "The attached sample must have an edi file identity");
+        }
         const auto consent = assistant->contextConsentIdentity();
-        QVERIFY2(!consent.isEmpty() && assistant->contextConsentRequired(),
+        QVERIFY2(!consent.isEmpty() && (attachLater || assistant->contextConsentRequired()),
                  "The newly attached sample must be covered by the user's outgoing context approval");
         const auto approval = assistant->acceptConnectionOffer(consent);
         QVERIFY2(approval == "submitted", qPrintable(assistant->lastError() + " Approval: " + approval));
@@ -461,6 +467,24 @@ private slots:
             QVERIFY2(showsCredentialSource(), "The Account dialog must identify the active Claude environment key");
             return;
         }
+        if (attachLater) {
+            QTRY_VERIFY2_WITH_TIMEOUT(assistant->state() == "idle" && assistant->draftAdmissionReady(),
+                                     qPrintable(assistant->lastError()), 3000);
+            QVERIFY2(!session->project(), "This case has no project open");
+            QList<QUrl> files;
+            for (const auto& path : test.value("files").toArray()) files.append(QUrl::fromLocalFile(path.toString()));
+            QVERIFY2(files.size() >= 2, "The case attaches two files, as the owner did");
+            const auto selection = assistant->beginFileSelection();
+            QVERIFY2(!selection.isEmpty() && assistant->addSelectedFiles(selection, files), qPrintable(assistant->lastError()));
+            QCOMPARE(assistant->selectedFiles()->rowCount(), files.size());
+            fileId = assistant->selectedFiles()->text(0, "id");
+            const auto attached = assistant->contextConsentIdentity();
+            QVERIFY2(!attached.isEmpty() && assistant->contextConsentRequired(),
+                     "Files attached after connecting must be covered by a new approval");
+            // What the panel does when Send finds new attachments: the dialog's approval, then the held draft.
+            const auto again = assistant->acceptConnectionOffer(attached);
+            QVERIFY2(again == "approved", qPrintable(assistant->lastError() + " Approval: " + again));
+        }
         const auto prompt = "Read the attached sample. fixture-file-id=" + fileId;
         if (scenario == "wrong-login" || scenario == "wrong-host") {
             const QString differing = scenario == "wrong-login" ? "different-user" : "other.ghe.com";
@@ -485,6 +509,15 @@ private slots:
         const auto errorObservation = QObject::connect(assistant, &edi_app::AssistantViewModel::lastErrorChanged,
             [&] { errors.append(assistant->lastError()); });
         const auto disconnectErrors = qScopeGuard([&] { QObject::disconnect(errorObservation); });
+        if (attachLater) {
+            // The held draft goes once the panel's conditions hold (composerSubmitApprovedDraft); the model choice
+            // above restarts Claude's process first.
+            QTRY_VERIFY2_WITH_TIMEOUT(!assistant->connected() || (!assistant->contextConsentRequired() &&
+                                          assistant->state() == "idle" && !assistant->canCancel()),
+                                      qPrintable(assistant->lastError()), 3000);
+            QVERIFY2(assistant->connected(), qPrintable("Opening the conversation for the attached files kept the "
+                                                        "account connected: " + assistant->lastError()));
+        }
         assistant->send(prompt);
         const auto appearsInTranscript = [&] {
             auto* rows = assistant->messages();
@@ -500,6 +533,18 @@ private slots:
                 qPrintable(errors.join(u'\n')), 3000);
             QVERIFY2(!appearsInTranscript(), "An unlisted tool must stop the turn without a tool reply");
             return;
+        }
+        if (attachLater) {
+            // The first turn with attachments and no project keeps the account connected: no connection failure.
+            QTRY_VERIFY2_WITH_TIMEOUT(appearsInTranscript() || !assistant->connected() ||
+                                          std::any_of(errors.cbegin(), errors.cend(), [](const QString& failure) {
+                                              return failure.contains("could not connect");
+                                          }),
+                                      qPrintable(assistant->lastError()), 3000);
+            QVERIFY2(std::none_of(errors.cbegin(), errors.cend(), [](const QString& failure) {
+                         return failure.contains("could not connect");
+                     }), qPrintable(errors.join(u'\n')));
+            QVERIFY2(assistant->connected(), "The account must stay connected through its first turn");
         }
         QTRY_VERIFY2_WITH_TIMEOUT(appearsInTranscript(), qPrintable(assistant->lastError()), 3000);
         QTRY_COMPARE_WITH_TIMEOUT(assistant->state(), QString("idle"), 3000);

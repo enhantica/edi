@@ -202,7 +202,9 @@ The guard, the catalogue and the dispatcher stay one implementation for all thre
 
 ### 4. Claude
 
-One long-lived process per open thread, started through the guard in edi's prepared workspace:
+One long-lived process per open thread, started through the guard in edi's prepared workspace. Claude's and Copilot's
+runtimes keep the workspace they started in for the whole connection and open no conversation in another one, so a
+new conversation on the same connection (after files are attached, for example) reuses it; ChatGPT's gets a fresh one:
 
 ```
 claude -p --input-format stream-json --output-format stream-json --verbose --include-partial-messages
@@ -467,7 +469,8 @@ the provider is not included when this release leaves it out). The ChatGPT sign-
 is listed as ChatGPT's default login, by the e-mail its saved conversations carry, until its record is written. In the
 header the account is a pill naming the provider, like Sessions and Usage. After a failure the panel shows one short
 line with Try again; Sign out (Remove from edi) stays beside it while the account is disconnected, so an account whose
-sign-in turned out to be someone else can be reset.
+sign-in turned out to be someone else can be reset. A connection that already had a conversation open stays connected
+when the runtime refuses to open the next one: the line asks to send again, and Send opens a conversation again.
 While signing in, the panel shows the provider's page as a link, Copilot's device code with Copy and its plain-file
 question with Yes and No (No by default), and for Claude a field for a code the page may show. E-mail, plan and usage show for the
 active account where the provider has them. Every element copies the closest existing one in the panel and its

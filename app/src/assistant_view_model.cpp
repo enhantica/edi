@@ -14932,6 +14932,13 @@ struct AssistantViewModel::State {
             generic_context_pending = false; generic_clear_interrupt_sent = false; generic_revoke_pending = false; generic_stop_requested = false;
         }
     }
+    // The next conversation of a process that stays gets a fresh prepared folder. Claude's and GitHub Copilot's
+    // runtimes keep the folder they started in for the whole connection and open no conversation in another one, so
+    // theirs stays; its staged skills are checked again before the next conversation (generic_prepare_workspace).
+    void retire_prepared_workspace() {
+        if (agent && agent->providerId() != AssistantProviderId::ChatGpt && !generic_workspace.isEmpty()) return;
+        generic_workspace.clear(); generic_skill_paths.clear(); staged_skill_inventory.reset(); generic_skill_declarations={};
+    }
     void generic_retire_context(bool reuse = false) {
         // Only execution context is obsolete. The real process/account/catalog,
         // historical rows and host-owned selected snapshots are different owners.
@@ -14949,7 +14956,7 @@ struct AssistantViewModel::State {
         generic_items.clear(); generic_item_rows.clear(); generic_final_items.clear();
         generic_item_bytes = 0; generic_progress_bytes = 2;
         generic_plan_progress = {}; generic_summary_parts.clear();
-        if (!reuse) { generic_workspace.clear(); generic_skill_paths.clear(); staged_skill_inventory.reset(); generic_skill_declarations={}; }
+        if (!reuse) retire_prepared_workspace();
         // Retained staging is not rewritten from GUI data and is never adopted
         // as current scientific truth. Every next input carries fresh context.
     }
@@ -15140,6 +15147,18 @@ struct AssistantViewModel::State {
             }
             if (method == "account/login/start" && !detail.trimmed().isEmpty()) {
                 generic_fail(bounded_error(detail.trimmed()));
+                return;
+            }
+            // A connection that already had a conversation open stays connected when the runtime refuses the next
+            // one: the account and its process are fine, and Send opens a conversation again.
+            if (method == "thread/start" && QLatin1StringView(reason) == QLatin1StringView("RPC_REFUSED") && agent &&
+                generic_authenticated && !generic_retiring && !generic_revoke_pending && generic_thread.isEmpty() &&
+                generic_native.value("status") == "ready") {
+                generic_connecting = false;
+                agent->settleOperation();
+                error = QObject::tr("%1 could not open the conversation. Your draft is kept; send it again to retry.")
+                            .arg(provider_label());
+                notify();
                 return;
             }
             if (const auto* stage = generic_bootstrap_stage(method)) {
@@ -19220,7 +19239,7 @@ struct AssistantViewModel::State {
                 generic_thread.clear(); generic_thread_has_input=false; invalidate_policy(); generic_turn.clear(); generic_terminal_turn.clear();
                 generic_items.clear(); generic_item_rows.clear(); generic_final_items.clear();
                 if (!generic_retire_question() || !current()) return false;
-                generic_workspace.clear(); generic_skill_paths.clear(); staged_skill_inventory.reset(); generic_skill_declarations={};
+                retire_prepared_workspace();
                 generic_item_bytes = 0; generic_progress_bytes = 2; generic_plan_progress = {}; generic_summary_parts.clear();
                 // Keep only the actual managed process/account/catalog. No old thread/call/context authority survives.
             } else if(!preserveSetup) {
@@ -20847,6 +20866,8 @@ QString AssistantViewModel::submitDraftImpl(const QString& text,bool* accountWai
         return row.value("id").toString();
 
     } catch (...) {
+        // The panel shows a short refusal; the session log keeps its cause for a report.
+        try { throw; } catch (const std::exception& failure) { qWarning().noquote() << "assistant: message refused:" << failure.what(); } catch (...) {}
         if (!projection.current()) return {};
 #ifndef __EMSCRIPTEN__
         if (state_->generic_mode) {
