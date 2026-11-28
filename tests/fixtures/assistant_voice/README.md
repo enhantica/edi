@@ -25,5 +25,6 @@ environment variables:
 The test host substitutes the microphone and permission boundary. The app's
 recording state, recognition worker and composer use their usual paths.
 
-The native fixture addresses the controls by their QML object names
-`assistant.voice` and `assistant.voiceCancel`.
+The native fixture presses `assistant.voice`, observes `assistant.voiceIndicator`
+and its dots, and cancels with Escape. With absent weights it checks the
+`assistant.voiceMissing` note and the normal Send action.

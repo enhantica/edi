@@ -142,7 +142,14 @@ def test_voice_choice_follows_all_assistant_choices():
 
 def test_desktop_composer_registers_voice_controls_for_native_input():
     composer = (ROOT / 'app/qml/Components/AssistantComposer.qml').read_text(encoding='utf-8')
+    main = (ROOT / 'app/qml/Main.qml').read_text(encoding='utf-8')
     controls = set(re.findall(r'objectName:\s*"([^"]+)"', composer))
-    assert {'assistant.voice', 'assistant.voiceCancel'} <= controls, (
-        'The native composer exposes microphone and recording cancellation controls'
+    assert {'assistant.voice', 'assistant.voiceIndicator', 'assistant.voiceMissing'} <= controls, (
+        'The native composer exposes the microphone, dots and optional voice installation note'
     )
+    assert controls.isdisjoint({'assistant.voiceCancel', 'assistant.voiceStatus'}), (
+        'The microphone and moving dots need no separate cancellation button or status label'
+    )
+    assert re.search(r'MissingComponentDialog\s*\{[^}]*"assistant\.voiceMissing"', composer) and (
+        re.search(r'MissingComponentDialog\s*\{[^}]*"assistant\.desktopOnly"', main)
+    ), 'The voice and AI buttons use the same missing-component dialog'

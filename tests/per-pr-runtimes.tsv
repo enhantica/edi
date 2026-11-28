@@ -10,9 +10,9 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-27T17:23:46Z
+# measured_utc = 2026-11-28T00:53:47Z
 #
-# Recorded from: focused maintenance update and Finder geometry replays, carrying the committed inventory
+# Recorded from: focused voice UI adaptation, retaining the committed inventory
 # Collected tests: 267562; with a reported duration: 86304
 # Module-scoped fixture costs recorded: 222
 #
@@ -31,8 +31,8 @@
 # measurement nobody took and which passes every tier threshold.
 # inventory_python = 267562
 # inventory_cpp = 0
-# inventory_measured = 187619
-# inventory_unmeasured = 79943
+# inventory_measured = 187620
+# inventory_unmeasured = 79942
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
 # inventory_pr_python = 92651
 
@@ -1635,7 +1635,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_shipment.py:
 0.010	tests/integration/py/test_assistant_voice_installer.py::test_core_installer_prepares_without_a_voice_model[linux]
 0.010	tests/integration/py/test_assistant_voice_installer.py::test_core_installer_prepares_without_a_voice_model[macos]
 0.010	tests/integration/py/test_assistant_voice_installer.py::test_core_installer_prepares_without_a_voice_model[windows]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_assistant_voice_installer.py::test_desktop_composer_registers_voice_controls_for_native_input
+0.000	tests/integration/py/test_assistant_voice_installer.py::test_desktop_composer_registers_voice_controls_for_native_input
 0.010	tests/integration/py/test_assistant_voice_installer.py::test_model_is_installed_only_with_the_opt_in_voice_component[linux]
 0.010	tests/integration/py/test_assistant_voice_installer.py::test_model_is_installed_only_with_the_opt_in_voice_component[macos]
 0.020	tests/integration/py/test_assistant_voice_installer.py::test_model_is_installed_only_with_the_opt_in_voice_component[windows]
@@ -187219,7 +187219,7 @@ UNMEASURED:failed-in-this-run	tests/system/app/test_assistant_step_folding.py::t
 UNMEASURED:not-completed-in-this-run	tests/system/app/test_assistant_voice_input.py::test_cancel_discards_captured_audio_and_leaves_the_draft_unsent
 UNMEASURED:not-completed-in-this-run	tests/system/app/test_assistant_voice_input.py::test_microphone_refusals_explain_the_problem_without_editing[no-device]
 UNMEASURED:not-completed-in-this-run	tests/system/app/test_assistant_voice_input.py::test_microphone_refusals_explain_the_problem_without_editing[permission-denied]
-UNMEASURED:not-completed-in-this-run	tests/system/app/test_assistant_voice_input.py::test_missing_model_hides_microphone_but_preserves_send
+UNMEASURED:not-completed-in-this-run	tests/system/app/test_assistant_voice_input.py::test_missing_model_opens_installation_note_and_preserves_send
 UNMEASURED:not-completed-in-this-run	tests/system/app/test_assistant_voice_input.py::test_pressing_microphone_twice_inserts_editable_speech_at_the_cursor
 UNMEASURED:not-completed-in-this-run	tests/system/app/test_feedback_attachment_typing.py::test_typing_with_a_real_attachment_stays_responsive
 UNMEASURED:not-completed-in-this-run	tests/system/app/test_large_collection_open.py::test_collection_first_open[large_offline]

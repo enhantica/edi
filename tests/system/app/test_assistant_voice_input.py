@@ -15,7 +15,9 @@ ROOT = Path(__file__).resolve().parents[3]
 FIXTURE = ROOT / 'tests/fixtures/assistant_voice'
 MODEL_SHA256 = '818710568da3ca15689e31a743197b520007872ff9576237bda97bd1b469c3d7'
 MIC = 'assistant.voice'
-CANCEL = 'assistant.voiceCancel'
+INDICATOR = 'assistant.voiceIndicator'
+METER = 'assistant.voiceLevel'
+MISSING = 'assistant.voiceMissing'
 COMPOSER = 'assistant.composer'
 PREFIX = 'Keep this: '
 SUFFIX = ' [draft tail]'
@@ -87,15 +89,43 @@ def draft(actor):
     return read_control(actor, COMPOSER, 'item && item.text')
 
 
-def visible_text(actor):
-    return set(
-        qml(
-            actor,
-            'testAppObjects.snapshot().filter(item=>Qt.isQtObject(item)&&'
-            'item.visible===true&&typeof item.text==="string"&&item.text.trim())'
-            '.map(item=>item.text.trim())',
-        )
+def meter_snapshot(actor):
+    return read_control(
+        actor,
+        METER,
+        '(function(){if(!item||!item.visible)return null;'
+        'const dots=[];for(const row of Array.from(item.children)){'
+        'for(const dot of Array.from(row.children)){'
+        'if(dot.objectName==="voiceDot"&&dot.visible)dots.push(dot);}}'
+        'dots.sort((a,b)=>a.x-b.x);'
+        'return {heights:dots.map(dot=>dot.height), recognising:item.recognising, '
+        'animated:item.animated, level:item.level};})()',
     )
+
+
+def wait_for_voice_dots(actor, *, recognising=False):
+    first = None
+
+    def active(_row):
+        nonlocal first
+        first = meter_snapshot(actor)
+        return first and first['recognising'] is recognising
+
+    actor.until(active)
+    assert first and len(first['heights']) == 16, (
+        'Voice activity displays all sixteen dots in the composer'
+    )
+    if recognising:
+        assert first['level'] == 0, 'The dots show recognition without new microphone input'
+    if first['animated']:
+        actor.until(
+            lambda _row: (
+                (meter := meter_snapshot(actor))
+                and meter['recognising'] is recognising
+                and len(meter['heights']) == len(first['heights'])
+                and meter['heights'] != first['heights']
+            )
+        )
 
 
 def assert_unsent(actor):
@@ -143,10 +173,18 @@ def test_pressing_microphone_twice_inserts_editable_speech_at_the_cursor(voice_a
         'The microphone is a visible, enabled action immediately beside Send'
     )
 
+    placeholder = read_control(actor, COMPOSER, 'item && item.placeholderText')
     actor.command('click', name=MIC)
-    actor.until(lambda _row: visible(actor, CANCEL))
+    wait_for_voice_dots(actor)
+    assert read_control(actor, COMPOSER, 'item && item.placeholderText') == placeholder, (
+        'Recording leaves the composer placeholder intact while the dots ripple'
+    )
     assert draft(actor) == PREFIX + SUFFIX, 'Listening preserves the existing unsent draft'
     actor.command('click', name=MIC)
+    wait_for_voice_dots(actor, recognising=True)
+    assert read_control(actor, COMPOSER, 'item && item.placeholderText') == placeholder, (
+        'Recognising speech keeps the ordinary composer placeholder and uses the moving dots'
+    )
     actor.until(lambda _row: draft(actor) != PREFIX + SUFFIX)
     updated = draft(actor)
     assert updated.startswith(PREFIX) and updated.endswith(SUFFIX), (
@@ -163,10 +201,11 @@ def test_pressing_microphone_twice_inserts_editable_speech_at_the_cursor(voice_a
 def test_cancel_discards_captured_audio_and_leaves_the_draft_unsent(voice_actor, tiny_model):
     actor = voice_actor(tiny_model)
     actor.command('click', name=MIC)
-    actor.until(lambda _row: visible(actor, CANCEL))
-    assert visible(actor, CANCEL), 'An active recording exposes a cancellation control'
-    actor.command('click', name=CANCEL)
-    actor.until(lambda _row: not visible(actor, CANCEL))
+    actor.until(lambda _row: visible(actor, INDICATOR))
+    actor.command('click', name=COMPOSER)
+    actor.command('manual_key', key='escape')
+    actor.until(lambda _row: not visible(actor, INDICATOR))
+    assert visible(actor, COMPOSER), 'Escape cancels recording while keeping the composer open'
     assert draft(actor) == PREFIX + SUFFIX, 'Cancelling a recording discards the captured speech'
     assert_unsent(actor)
 
@@ -192,21 +231,44 @@ def test_microphone_refusals_explain_the_problem_without_editing(
     assert visible(actor, MIC), (
         'An installed model exposes the microphone before permission checks'
     )
-    before = visible_text(actor)
     actor.command('click', name=MIC)
-    actor.until(lambda _row: bool(visible_text(actor) - before))
-    assert any(re.search(message, text, re.IGNORECASE) for text in visible_text(actor) - before), (
+    actor.until(lambda _row: visible(actor, 'assistant.voiceMessage'))
+    detail = read_control(actor, 'assistant.voiceMessage', 'item && item.text')
+    assert detail and re.search(message, detail, re.IGNORECASE), (
         'A refused capture reports the specific missing device or permission problem'
     )
-    assert not visible(actor, CANCEL) and draft(actor) == PREFIX + SUFFIX, (
+    assert not visible(actor, INDICATOR) and draft(actor) == PREFIX + SUFFIX, (
         'A refused capture never enters recording or changes the draft'
     )
     assert_unsent(actor)
 
 
-def test_missing_model_hides_microphone_but_preserves_send(voice_actor, tmp_path):
+def test_missing_model_opens_installation_note_and_preserves_send(voice_actor, tmp_path):
     actor = voice_actor(tmp_path / 'uninstalled-model.bin')
-    assert not visible(actor, MIC), 'The app hides the microphone when voice weights are absent'
+    assert read_control(actor, MIC, 'item && item.visible && item.enabled'), (
+        'The microphone remains visible and can open its note when the model is absent'
+    )
+    actor.command('click', name=MIC)
+    actor.until(lambda _row: read_control(actor, MISSING, 'item && item.opened'))
+    message = read_control(actor, MISSING + '.message', 'item && item.visible && item.text')
+    assert message and re.search(r'voice input.*not installed', message, re.IGNORECASE), (
+        'The missing-component note explains why voice input is unavailable'
+    )
+    updates = read_control(
+        actor, MISSING + '.updates', 'item && ({visible:item.visible,text:item.text})'
+    )
+    assert updates and re.search(r'updates in preferences', updates['text'], re.IGNORECASE), (
+        'The voice note names Updates in Preferences as the way to add the module'
+    )
+    assert updates['visible'] is qml(actor, 'DesktopUpdates.managed'), (
+        'The voice note offers the Updates link on installations managed by Maintenance Tool'
+    )
+    assert not visible(actor, INDICATOR) and draft(actor) == PREFIX + SUFFIX, (
+        'Opening the voice installation note leaves capture idle and preserves the draft'
+    )
+    actor.command('dialog_ok', name=MISSING, role='ok')
+    actor.until(lambda _row: not visible(actor, MISSING))
     assert read_control(actor, 'assistant.send', 'item && item.visible && item.enabled'), (
         'The normal Send control remains usable without the optional voice installation'
     )
+    assert_unsent(actor)
