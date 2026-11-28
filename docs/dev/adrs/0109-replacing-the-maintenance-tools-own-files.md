@@ -105,10 +105,12 @@ update replaces while the tool runs. So the runtime takes the bundle's design ra
    - The tool component's script runs the cleanup on `installer.installationFinished` when an update has succeeded,
      and the release when it has not.
      Component scripts come from the repository being installed, so the new script runs inside an older tool too.
-     This is the only cleanup during an update: the control script no longer removes the backup itself. It runs after
-     the Framework has dropped any rights it gained, and must, since the backup is the rollback's until the update has
-     succeeded; macOS and Linux install into folders the user can write (`/Applications`, the home folder; ADR-0071),
-     so it needs none. In a folder only an administrator can write, the backup and the staging folder stay.
+     This is the only cleanup during an update: the control script no longer removes the backup itself. It has to wait
+     for that signal, since the backup is the rollback's until the update has succeeded, and the Framework has dropped
+     the rights it gained for a protected folder by then. So the script records in `beginInstallation` whether the
+     update holds such rights, and takes them again for the cleanup: the Framework keeps its elevated helper running,
+     so this asks nothing (`RemoteClient::setActive` in Qt Installer Framework 4.11). The app component's script does
+     the same for the runtime copy (decision 8).
    - The app runs the same cleanup at start on macOS and Linux, under the lock and with two more guards, since an
      update unpacking holds no lock. It leaves `maintenance-update/` alone while the tool its claim names runs,
      whatever the folder holds yet; a folder without a claim, or whose tool has exited, is left over and goes. It
@@ -125,9 +127,12 @@ update replaces while the tool runs. So the runtime takes the bundle's design ra
    has gone. An operation runs while the update holds the rights it gained for a protected folder such as Program Files,
    which the Framework drops before `installer.installationFinished`, and a failed operation stops the update. The app
    component is in every update, the tool's only when the tool changed. A first installation may keep the
-   staged tool as the installed tool's bytes. The app touches no Windows staging: it cannot tell when an update starts
-   to need its staged tool, whose bytes may equal the installed one's, and without it the Framework would write an
-   unsigned tool (ADR-0091). The rollback of a failed update leaves the tool it staged (measured on CI),
+   staged tool as the installed tool's bytes. What can still be left, a staged tool the Framework failed to delete or
+   the old folder after the user chose Ignore on its failed removal, the app removes at start, but only while no
+   Maintenance Tool runs: every running tool holds its run-once lock, `<temp>\MaintenanceTool1234865.lock`, open with
+   read sharing only, so the file opens for writing only when none runs. An update that starts later writes its staged
+   tool only after it has downloaded and unpacked it, and without it the Framework would write an unsigned tool
+   (ADR-0091). The rollback of a failed update leaves the tool it staged (measured on CI),
    so the tool component adds an operation after its unpack whose undo deletes `MaintenanceTool.update.exe`; the
    rollback runs it, and so do the next update's and the purge's undo of the saved operations. Both commands run
    `cmd.exe` in the installation folder and name only the file or folder, so no part of the folder's path, which may
@@ -175,8 +180,8 @@ update replaces while the tool runs. So the runtime takes the bundle's design ra
   - Windows: the staged `MaintenanceTool.update.exe` is present when the update fails; after the rollback it is absent
     or the same file as before the update, and its checksum is printed either way. Before the first update the check
     plants the empty `maintenancetool\` an earlier update left; after each successful update, once the tool has been
-    replaced with the app never started, neither it nor the staged file is there. The app's test shows the app leaves
-    both alone.
+    replaced with the app never started, neither it nor the staged file is there. The app's test shows it keeps both
+    while a tool's run-once lock is held and removes them once it is free.
   - Linux: a failed update leaves `installer-runtime/` intact, its `dependencies.json` matching the libraries, the
     tool still answers an update check, and the purge removes the runtime and the lock file. The old exception that
     let a rolled-back Linux tool fail to start is gone.

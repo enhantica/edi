@@ -185,25 +185,46 @@ private slots:
         QVERIFY(!updates.startMaintenance());
         QCOMPARE(updates.status(), "The Maintenance Tool could not be opened.");
     }
-    void windowsStagingIsLeftToTheUpdate() {
-        // An update may need its staged tool from unpacking until the Framework writes the tool from it, whatever its
-        // bytes, and the update removes the folder older releases staged into itself (ADR-0109): the app touches none.
+    void windowsStagingGoesOnlyWhileNoToolRuns() {
+        // A running Maintenance Tool holds <temp>/<name>1234865.lock open with read sharing only, so the file does not
+        // open for writing (ADR-0109). A read-only file stands in for it here; a unique name keeps a real tool's lock
+        // out of the test.
         QTemporaryDir temp;
-        const QString executable = temp.filePath("MaintenanceTool.exe");
+        const QString name = QStringLiteral("EdiTestTool%1").arg(QCoreApplication::applicationPid());
+        const QString executable = temp.filePath(name + ".exe");
         const QString staged = temp.filePath("MaintenanceTool.update.exe");
         const QString legacy = temp.filePath("maintenancetool");
+        const QString lock = QDir::tempPath() + "/" + name + "1234865.lock";
         const auto write = [](const QString& path, const QByteArray& bytes) {
             QFile file(path);
             return file.open(QIODevice::WriteOnly) && file.write(bytes) == bytes.size();
         };
         QVERIFY(write(executable, "new tool"));
+        QVERIFY(!edi_app::remove_maintenance_tool_leftovers(executable));
+        QVERIFY(write(lock, "1234"));
+        QVERIFY(QFile::setPermissions(lock, QFile::ReadOwner));
+        const auto unlock = qScopeGuard([&] {
+            QFile::setPermissions(lock, QFile::ReadOwner | QFile::WriteOwner);
+            QFile::remove(lock);
+        });
+        if (QFile probe(lock); probe.open(QIODevice::ReadWrite)) QSKIP("Read-only files open for writing here");
+        // While a tool runs, a staged tool of any bytes and the old folder stay: an update may be using them.
         QVERIFY(write(staged, "new tool"));
         QVERIFY(QDir().mkdir(legacy));
-        QVERIFY(!edi_app::remove_maintenance_tool_leftovers(executable));
-        QVERIFY(write(staged, "partly unpacked"));
+        QVERIFY(write(legacy + "/MaintenanceTool.exe", "old tool"));
         QVERIFY(!edi_app::remove_maintenance_tool_leftovers(executable));
         QVERIFY(QFileInfo::exists(staged));
         QVERIFY(QFileInfo::exists(legacy));
+        // Once none runs, both are left over from an update that has ended.
+        QVERIFY(QFile::setPermissions(lock, QFile::ReadOwner | QFile::WriteOwner));
+        QVERIFY(edi_app::remove_maintenance_tool_leftovers(executable));
+        QVERIFY(!QFileInfo::exists(staged));
+        QVERIFY(!QFileInfo::exists(legacy));
+        // A tool that never ran leaves no lock: nothing runs.
+        QVERIFY(QFile::remove(lock));
+        QVERIFY(write(staged, "partly unpacked"));
+        QVERIFY(edi_app::remove_maintenance_tool_leftovers(executable));
+        QVERIFY(!QFileInfo::exists(staged));
     }
 #ifndef Q_OS_WIN
     void stagingFolderStaysWhileItsUpdateRuns() {
