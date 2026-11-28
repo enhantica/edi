@@ -8678,7 +8678,10 @@ struct AssistantViewModel::State {
             if(!project->analysis()->aliases()->parameterNames().contains(action.text))throw ActionRefusal("target_unavailable","value");
         } else if(op=="alias_remove")action.kind=K::AliasRemove;
         else if(op=="constraint_rename")action.kind=K::ConstraintId;
-        else if(op=="constraint_expression")action.kind=K::ConstraintExpression;
+        else if(op=="constraint_expression") {
+            action.kind=K::ConstraintExpression;
+            if(!view.admits(action.text.toStdString()))throw ActionRefusal("target_unavailable","value");  // review 33
+        }
         else if(op=="constraint_enabled"){action.kind=K::ConstraintEnabled;action.enabled=args.value("value").toBool();}
         else if(op=="constraint_remove")action.kind=K::ConstraintRemove;
         else throw std::invalid_argument("The original relation operation is unavailable");
@@ -8817,7 +8820,8 @@ struct AssistantViewModel::State {
             else (void)edi::prepare_background_point(*project->assistantProject(), *background.experiment, background.input,
                 background.experiment->background.size()+1, Limits::id_bytes,
                 background.experiment->data?background.experiment->data->axis().size():0,
-                edi::ActiveView(*project->assistantProject()).aliases().size(), true);
+                // A whole-model capacity counts the model it checks: every saved alias (review 33).
+                project->assistantProject()->aliases.size(), true);
             if(!background.names)widget_background_prepare(run);
         } else if (tool == "add_relations") {
             const auto aliases = args.value("aliases").toArray(), constraints = args.value("constraints").toArray();

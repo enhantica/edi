@@ -237,11 +237,10 @@ void AliasListModel::remove(int row) {
         return;
     }
     edi::Project& project = project_;
-    // The row's own alias: the table leaves a disabled phase's out (review 31), so a row is not a project index.
-    const auto at = std::find_if(project.aliases.begin(), project.aliases.end(),
-                                 [this, row](const auto& alias) { return alias.get() == keyAt(row); });
-    if (at == project.aliases.end()) return;
-    const auto index = static_cast<std::size_t>(std::distance(project.aliases.begin(), at));
+    // The row's own alias: a shown row maps to the model in one place, edi::ActiveView (reviews 31 and 33).
+    const std::optional<std::size_t> found = edi::ActiveView(project).alias_index(static_cast<std::size_t>(row));
+    if (!found || project.aliases[*found].get() != keyAt(row)) return;
+    const std::size_t index = *found;
     editor_.apply_relation_control(edi::Edit::erase(project.aliases, index), {ProjectEditor::RelationAction::Kind::AliasRemove,keyAt(row)});
 }
 
@@ -277,6 +276,7 @@ bool ConstraintListModel::setText(int row, const QString& role, const QString& v
         return editor_.apply_relation_control(edi::Edit::rename_constraint(*constraint, text), {ProjectEditor::RelationAction::Kind::ConstraintId,constraint,value}).isEmpty();
     }
     if (role == QLatin1String("expression")) {
+        if (!edi::ActiveView(project_).admits(text)) return false;  // no alias of a disabled phase (review 33)
         return editor_.apply_relation_control(edi::Edit::constraint_expression(project_, *constraint, text), {ProjectEditor::RelationAction::Kind::ConstraintExpression,constraint,value}).isEmpty();
     }
     return false;
@@ -334,6 +334,8 @@ void ConstraintListModel::append() {
 
 ProjectEditor::RelationOutcome ConstraintListModel::appendComplete(const QString& id, const QString& expression, bool enabled) {
     edi::ParameterConstraint row; row.id=id.toStdString(); row.expression=expression.toStdString(); row.enabled=enabled;
+    if (!edi::ActiveView(project_).admits(row.expression.value()))  // no alias of a disabled phase (review 33)
+        return {false, false, QObject::tr("A constraint cannot name an alias of a disabled phase")};
     ProjectEditor::RelationAction action; action.kind=ProjectEditor::RelationAction::Kind::ConstraintAppend;
     action.text=id; action.expression=expression; action.enabled=enabled;
     return editor_.append_constraint(project_, std::move(row), action);
@@ -356,11 +358,10 @@ void ConstraintListModel::remove(int row) {
         return;
     }
     edi::Project& project = project_;
-    // The row's own constraint: the table leaves a disabled phase's out (review 31), so a row is not a project index.
-    const auto at = std::find_if(project.constraints.begin(), project.constraints.end(),
-                                 [this, row](const auto& constraint) { return constraint.get() == keyAt(row); });
-    if (at == project.constraints.end()) return;
-    const auto index = static_cast<std::size_t>(std::distance(project.constraints.begin(), at));
+    // The row's own constraint: a shown row maps to the model in one place, edi::ActiveView (reviews 31 and 33).
+    const std::optional<std::size_t> found = edi::ActiveView(project).constraint_index(static_cast<std::size_t>(row));
+    if (!found || project.constraints[*found].get() != keyAt(row)) return;
+    const std::size_t index = *found;
     editor_.apply_relation_control(edi::Edit::erase(project.constraints, index), {ProjectEditor::RelationAction::Kind::ConstraintRemove,keyAt(row)});
 }
 
