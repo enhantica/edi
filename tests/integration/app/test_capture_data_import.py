@@ -45,9 +45,9 @@ def capture_results(tmp_path_factory):
                 'page': 'experiment',
                 'description': 'Publish the measured-data input',
                 'actions': actions,
-                'highlights': [
-                    f'experiments.file.{i}' for i in range(len(names))
-                ] if valid else [],
+                'highlights': [f'experiments.file.{i}' for i in range(len(names))]
+                if valid
+                else [],
             }
             script.write_text(
                 f'({{schema: 2, workflow: "reference", example: "{EXAMPLE}", '
@@ -87,9 +87,11 @@ def test_capture_import_outcome_follows_its_own_read(capture_results, operation)
     )
 
     bad_code, refused, _, _ = capture_results[operation, False]
-    assert bad_code != 0 and refused['status'] == 'failed' and operation in {
-        action['action'].split(':', 1)[0] for action in refused['actions']
-    }, f'The capture must reach {operation} and report the read refusal as a failure'
+    assert (
+        bad_code != 0
+        and refused['status'] == 'failed'
+        and operation in {action['action'].split(':', 1)[0] for action in refused['actions']}
+    ), f'The capture must reach {operation} and report the read refusal as a failure'
     assert not refused['scenes'] and 'cannot load' in refused['error'], (
         'A refused read cannot publish a successful capture scene'
     )

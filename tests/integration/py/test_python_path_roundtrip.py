@@ -81,6 +81,4 @@ def test_python_refuses_a_path_cp1252_cannot_represent_before_creating_it(tmp_pa
     with pytest.raises(ValueError, match=r'Windows code page.*Łódź'):
         project.save_as(target)
     listed = os.listdir(str(tmp_path))  # noqa: PTH208
-    assert not listed, (
-        'Refusing before the native writer leaves the output parent empty'
-    )
+    assert not listed, 'Refusing before the native writer leaves the output parent empty'

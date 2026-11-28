@@ -62,7 +62,8 @@ def test_crysta_job_group_receives_subject_and_reports_it_in_each_job():
         'The reusable crysta gate cannot choose a different implicit pin'
     )
     tests = [
-        job for job in workflow['jobs'].values()
+        job
+        for job in workflow['jobs'].values()
         if 'runs-on' in job and not job.get('name', '').startswith('crysta SDK')
     ]
     assert tests, 'The reusable workflow must execute the migrated crysta gates'
@@ -80,7 +81,8 @@ def test_skip_input_covers_files_the_edi_verification_reads():
     path = ROOT / 'tools/ci/crysta-inputs.txt'
     assert path.is_file(), 'The skip boundary needs a committed closed verification input list'
     entries = [
-        line.strip() for line in path.read_text(encoding='utf-8').splitlines()
+        line.strip()
+        for line in path.read_text(encoding='utf-8').splitlines()
         if line.strip() and not line.lstrip().startswith('#')
     ]
     assert len(entries) == len(set(entries)) and set(entries) == CRYSTA_INPUTS, (
@@ -98,7 +100,8 @@ def test_diagnostic_dispatch_is_a_distinct_non_pin_workflow():
         'Dispatch accepts a subject distinct from the pin and the requested gate set'
     )
     calls = [
-        spec for spec in workflow['jobs'].values()
+        spec
+        for spec in workflow['jobs'].values()
         if spec.get('uses') in {SDK_CALL, './.github/workflows/crysta.yml'}
     ]
     assert calls and all(

@@ -64,8 +64,15 @@ def test_launcher_uses_three_exact_versions_and_refuses_a_range(tmp_path):
     for result, wanted in [
         (invoke(child), versions['baseline']),
         (invoke(child, selected_manifest=manifests['engine']), versions['engine']),
-        (invoke(child, '--manifest-path', manifests['consumer'],
-                selected_manifest=manifests['engine']), versions['consumer']),
+        (
+            invoke(
+                child,
+                '--manifest-path',
+                manifests['consumer'],
+                selected_manifest=manifests['engine'],
+            ),
+            versions['consumer'],
+        ),
         (invoke(tree_root), versions['baseline']),
     ]:
         assert result.returncode == 0 and result.stdout.strip() == wanted, (
