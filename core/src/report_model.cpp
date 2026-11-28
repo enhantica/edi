@@ -216,6 +216,33 @@ std::optional<ReportCorrelations> correlations_of(const Project& project, const 
         const std::size_t shown = options.correlation_experiment < experiments.size() ? options.correlation_experiment : 0;
         matrix_of_rows(rows, other_experiment_prefixes(experiments, shown), names, matrix);
     }
+    // A disabled linked structure's or link's parameter is in no chart, a file's saved pairs included (review 23).
+    {
+        std::set<std::string> hidden_names;
+        const std::vector<const Parameter*> hidden = const_cast<Project&>(project).hidden_parameters();
+        for (const NamedParameter& named : named_parameters(project)) {
+            if (std::find(hidden.begin(), hidden.end(), named.parameter) != hidden.end()) {
+                hidden_names.insert(named.unique_name);
+            }
+        }
+        const std::size_t n = names.size();
+        std::vector<std::size_t> keep;
+        for (std::size_t i = 0; i < n; ++i) {
+            if (!hidden_names.contains(names[i])) keep.push_back(i);
+        }
+        if (keep.size() != n && matrix.size() == n * n) {
+            std::vector<std::string> kept_names;
+            std::vector<double> kept(keep.size() * keep.size());
+            for (std::size_t a = 0; a < keep.size(); ++a) {
+                kept_names.push_back(names[keep[a]]);
+                for (std::size_t b = 0; b < keep.size(); ++b) {
+                    kept[a * keep.size() + b] = matrix[keep[a] * n + keep[b]];
+                }
+            }
+            names = std::move(kept_names);
+            matrix = std::move(kept);
+        }
+    }
     if (!fitted && names.empty()) {
         return std::nullopt;
     }
@@ -1401,7 +1428,10 @@ std::unordered_map<const Parameter*, SuMarks> su_marks(const Project& project) {
     std::unordered_map<const Parameter*, SuMarks> marks;
     const std::unordered_map<const Parameter*, std::string> variants = parameter_variants(project);
     std::unordered_map<std::string, const Parameter*> by_name;
+    // A hidden parameter is no partner and gets no mark (review 23).
+    const std::vector<const Parameter*> hidden = const_cast<Project&>(project).hidden_parameters();
     for (const NamedParameter& named : named_parameters(project)) {
+        if (std::find(hidden.begin(), hidden.end(), named.parameter) != hidden.end()) continue;
         by_name.emplace(named.unique_name, named.parameter);
         const Parameter& parameter = *named.parameter;
         const std::optional<double> su = parameter.uncertainty.get();
