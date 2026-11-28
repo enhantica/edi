@@ -159,10 +159,12 @@ def test_fit_from_fitted_start_keeps_dependent_in_range(tmp_path, geometry, capf
         ), 'Sequential fits must continue successfully from the constrained fitted start'
 
 
-def test_joint_mode_over_declared_scan_refuses_before_outputs(tmp_path):
+def test_joint_mode_over_declared_scan_writes_every_point(tmp_path):
     directory = phase_scan.materialize(tmp_path / 'scan', 'joint')
-    with pytest.raises((ValueError, RuntimeError), match=r'joint|scan|sequential'):
-        engine.Project.load(directory).analysis.fit()
-    assert not (directory / 'analysis/results.csv').exists(), (
-        'Joint mode over a declared scan must refuse without writing scan results'
+    engine.Project.load(directory).analysis.fit()
+    inputs = sorted(path.name for path in (directory / 'experiments/scan').glob('*.xy'))
+    rows = (directory / 'analysis/results.csv').read_text().splitlines()
+    published = csv.DictReader(line for line in rows if not line.startswith('#'))
+    assert [row['file_path'].rsplit('/', 1)[-1] for row in published] == inputs, (
+        'Joint mode over a declared scan publishes one row per measured pattern'
     )

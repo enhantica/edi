@@ -1,4 +1,4 @@
-# Parametric series references
+# Joint scan references
 
 The fixtures use authored inputs and a closed-form linear model. The three-point scan contains five observations per point with unit uncertainty. Its line-segment background is `3.25 * (1 - t) + b[k] * t`, where `t = (two_theta - 12) / 93` and `b = (7.75, 9.25, 6.5)`. The common endpoint may be fixed or free. The other endpoint stays local.
 

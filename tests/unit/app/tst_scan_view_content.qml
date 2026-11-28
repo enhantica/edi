@@ -1510,7 +1510,7 @@ Rectangle {
                     "The private scan has enough measured points to open the tabs during a fit");
             verify(Session.openProject(root), "The app opens an unfitted multi-point scan");
             const project = Session.project;
-            project.analysis.fittingMode = "parametric";
+            project.analysis.fittingMode = "joint";
             project.analysis.maxIterations = 8;
             const fit = project.fit;
             chart = analysisFactory.createObject(surface);
@@ -1525,7 +1525,7 @@ Rectangle {
             openTab("pattern");
             fit.start();
             tryVerify(() => fit.running && fit.iterations !== "", 8000,
-                "The real Parametric scan publishes an iteration before completion");
+                "The real Joint scan publishes an iteration before completion");
             if (data.tag !== "pattern")
                 openTab(data.tag);
             function hasFitData() {
@@ -1605,7 +1605,7 @@ Rectangle {
                 compare(count(), before, "Save after Undo, Reset or consumption emits no pending-edit warning");
         }
         function test_scan_value_edit_lifecycle_data() {
-            return ["sequential", "independent", "parametric"].map(mode => ({tag: mode}));
+            return ["sequential", "independent", "joint"].map(mode => ({tag: mode}));
         }
         function test_scan_value_edit_lifecycle(data) {
             const root = SettingsProof.copyProject(Probe.repoUrl("tests/fixtures/parametric_series/cubic"));
@@ -1678,13 +1678,13 @@ Rectangle {
             compare(scanRows(root), first, "Fit after Reset reproduces the untouched template fit");
         }
         function test_scan_edit_consumption_data() {
-            return ["sequential", "independent", "parametric"].map(mode => ({tag: mode}));
+            return ["sequential", "independent", "joint"].map(mode => ({tag: mode}));
         }
         function test_scan_edit_consumption(data) {
             const root = SettingsProof.copyProject(Probe.repoUrl("tests/fixtures/parametric_series/cubic"));
             const analysis = "analysis/analysis.edi";
             const configured = SettingsProof.text(root, analysis).split("loop_")[0]
-                .replace("_fitting_mode.type parametric", "_fitting_mode.type " + data.tag)
+                .replace("_fitting_mode.type joint", "_fitting_mode.type " + data.tag)
                 .replace("_minimizer.max_iterations 100", "_minimizer.max_iterations 1");
             verify(SettingsProof.write(root, analysis, configured), "The fit is limited to one iteration so the start has an observable effect");
             verify(Session.openProject(root), "The live subject opens the same nonlinear scan data as each control");
@@ -1734,7 +1734,7 @@ Rectangle {
             }
         }
         function test_scan_drag_and_unfitted_point_data() {
-            return ["sequential", "independent", "parametric"].map(mode => ({tag: mode}));
+            return ["sequential", "independent", "joint"].map(mode => ({tag: mode}));
         }
         function test_scan_drag_and_unfitted_point(data) {
             const root = SettingsProof.copyProject(Probe.repoUrl("tests/fixtures/parametric_series/cubic"));
@@ -1772,7 +1772,7 @@ Rectangle {
         }
         function test_parametric_shared_edit_uses_shown_value() {
             const root = SettingsProof.copyProject(Probe.repoUrl("tests/fixtures/parametric_series/cubic"));
-            verify(Session.openProject(root), "The app opens the Parametric project before sharing the cell");
+            verify(Session.openProject(root), "The app opens the Joint scan project before sharing the cell");
             fitCompleteScan(root);
             scanSelect(1);
             const fitted = scanCell().value;
@@ -1810,7 +1810,7 @@ Rectangle {
             scanSaveWithPendingCount(root, 0);
         }
         function test_scan_reset_replays_first_fit_data() {
-            return [{tag: "sequential"}, {tag: "independent"}, {tag: "parametric"}];
+            return [{tag: "sequential"}, {tag: "independent"}, {tag: "joint"}];
         }
         function test_scan_reset_replays_first_fit(data) {
             const root = SettingsProof.copyProject(Probe.repoUrl("tests/fixtures/parametric_series/cubic"));
@@ -1843,7 +1843,7 @@ Rectangle {
             const root = SettingsProof.copyProject(Probe.repoUrl("tests/fixtures/parametric_series/cubic"));
             verify(Session.openProject(root), "The status test opens an actual multi-file scan");
             const project = Session.project;
-            project.analysis.fittingMode = "parametric";
+            project.analysis.fittingMode = "joint";
             project.analysis.maxIterations = 1;
             project.analysis.chiSquareTolerance = 1e-12;
             project.analysis.shiftTolerance = 1e-12;
@@ -1852,7 +1852,7 @@ Rectangle {
             const fit = project.fit;
             fit.start();
             tryVerify(() => !fit.running && fit.scanFitted > 1, 15000, "The forced stop still publishes multiple fitted files");
-            compare(fit.outcome, "maxIterations", "One parametric solve reports its iteration limit");
+            compare(fit.outcome, "maxIterations", "One Joint scan solve reports its iteration limit");
             const values = findChild(applicationWindow, "statusBar.fit.values");
             verify(values !== null, "The real status bar supplies the displayed fit metrics");
             verify(!values.children.some(item => item.shown && item.keyText === "Failed"), "A joint stop never appears as a tally of failed files");
@@ -1863,9 +1863,9 @@ Rectangle {
             tryCompare(results, "opened", true, 2000, "The fit results window shows the finished scan");
             const summary = Probe.rows(findChild(results, "fit.results.list").sourceModel);
             compare(summary.filter(row => row.outcome !== "").length, 1,
-                "The results window assigns one outcome to the entire Parametric fit");
+                "The results window assigns one outcome to the entire Joint scan");
             verify(!summary.some(row => ["Files fitted", "Converged", "Failed"].includes(row.metric)),
-                "The Parametric results window does not summarize patterns as separate outcomes");
+                "The Joint scan results window does not summarize patterns as separate outcomes");
             results.close();
 
             const dialog = findChild(applicationWindow, "fit.error");
@@ -2564,7 +2564,7 @@ Rectangle {
             const shared = "bank.background.P1.intensity";
             verify(rows[0].split(",").includes(shared), "The authored CSV includes the parameter that will be excluded from Evolution");
             verify(SettingsProof.write(root, "analysis/analysis.edi",
-                analysis.replace("_fitting_mode.type sequential", "_fitting_mode.type parametric") +
+                analysis.replace("_fitting_mode.type sequential", "_fitting_mode.type joint") +
                 "\nloop_\n_parametric_fit_shared.parameter_unique_name\n" + shared + "\n"),
                 "The private fitted scan declares a series-shared parameter");
             verify(Session.openProject(root), "The saved fitted scan opens through the real app");

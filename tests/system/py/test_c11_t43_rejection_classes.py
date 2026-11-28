@@ -28,10 +28,13 @@ CORPUS_ROOT = Path(
 )
 CASE = CORPUS_ROOT / 'cosio-d20-scan-3f'
 REFERENCE = CASE / 'diffraction-lib' / 'project' / 'analysis' / 'results.csv'
-DECLARED_MODES = {'single', 'joint', 'sequential', 'independent', 'parametric'}
+DECLARED_MODES = {'single', 'joint', 'sequential', 'independent'}
 LOOKALIKES = ('Sequential', 'sequentially', 'independent ', 'parallel', '', ' ', '\t')
-NATIVE_ENTRY_BY_MODE = {
-    mode: 'fit' if mode == 'single' else f'fit_{mode}' for mode in DECLARED_MODES
+NATIVE_SCAN_ENTRY_BY_MODE = {
+    'single': 'fit',
+    'joint': 'fit_parametric',
+    'sequential': 'fit_sequential',
+    'independent': 'fit_independent',
 }
 
 
@@ -585,12 +588,8 @@ def test_mode_contract_is_closed_across_edi_loader_setters_dispatch_native_and_s
     reloaded = edi.Project.load(saved)
     if reloaded.analysis.fitting_mode != 'independent':
         violations.append(f'independent round-trip returned {reloaded.analysis.fitting_mode!r}')
-    native_scan_entries = {
-        name
-        for name in dir(reloaded)
-        if name.startswith('fit_') and name.endswith(tuple(DECLARED_MODES))
-    }
-    expected_native_entries = {'fit_independent', 'fit_sequential', 'fit_parametric'}
+    native_scan_entries = {name for name in dir(reloaded) if name.startswith('fit_')}
+    expected_native_entries = set(NATIVE_SCAN_ENTRY_BY_MODE.values()) - {'fit'}
     missing_native_entries = expected_native_entries - native_scan_entries
     if missing_native_entries:
         violations.append(f'native scan entry points absent: {sorted(missing_native_entries)!r}')
@@ -632,6 +631,23 @@ def test_mode_contract_is_closed_across_edi_loader_setters_dispatch_native_and_s
                         f'{files}'
                     )
 
+    joint_dir = _copy_bounded_project(tmp_path, 'joint-cli')
+    _rewrite(joint_dir, 'sequential\n', 'joint\n')
+    completed = _run_cli(joint_dir, '--report', 'machine', '--verbosity', 'off')
+    if completed.returncode:
+        violations.append(f'CLI refused canonical Joint scan mode: {completed.stderr!r}')
+    elif not (joint_dir / 'analysis/results.csv').is_file():
+        violations.append('CLI used the experiment fit and did not publish the Joint scan rows')
+    else:
+        expected_paths = sorted(
+            path.name for path in (joint_dir / 'experiments/d20_scan').glob('*.dat')
+        )
+        published_paths = sorted(Path(row['file_path']).name for row in _read_results(joint_dir))
+        if not expected_paths or published_paths != expected_paths:
+            violations.append(
+                f'CLI Joint results cover {published_paths!r}, expected {expected_paths!r}'
+            )
+
     # The autoloaded fit-policy fixture wraps edi.Analysis.fit during every repo pytest session;
     # that sentinel deliberately has no docstring.  Judge the production facade definition that
     # ships to users, rather than the test harness object installed around it.
@@ -640,17 +656,17 @@ def test_mode_contract_is_closed_across_edi_loader_setters_dispatch_native_and_s
     if missing_docs:
         violations.append(f'Analysis.fit docs omit {missing_docs!r}')
     assert not violations, (
-        ' declares exactly single/joint/sequential/independent/parametric across the loader, '
-        'both setters, facade dispatch, direct native entries, save/reload and docs; violations='
+        ' declares exactly single/joint/sequential/independent across the loader, '
+        'both setters, native entries, facade dispatch, save/reload, CLI and docs. '
         f'{violations!r}'
     )
 
 
 def test_declared_mode_by_native_entry_matrix_is_exact(tmp_path: Path) -> None:
-    """Every native refinement entry accepts exactly its declared mode, not a family."""
+    """Each native entry accepts its declared mode and matching input shape."""
     probe = edi.Project.load(CASE / 'project')
     discovered_entries = {name for name in dir(probe) if name == 'fit' or name.startswith('fit_')}
-    expected_entries = set(NATIVE_ENTRY_BY_MODE.values())
+    expected_entries = {*NATIVE_SCAN_ENTRY_BY_MODE.values(), 'fit_joint'}
     assert discovered_entries == expected_entries, (
         ' native-entry matrix must classify every public refinement entry; '
         f'missing={sorted(expected_entries - discovered_entries)!r}, '
@@ -666,7 +682,7 @@ def test_declared_mode_by_native_entry_matrix_is_exact(tmp_path: Path) -> None:
             try:
                 getattr(project, entry)()
             except ValueError as error:
-                if entry == NATIVE_ENTRY_BY_MODE[mode]:
+                if entry == NATIVE_SCAN_ENTRY_BY_MODE[mode]:
                     violations.append(f'{mode}->{entry} refused its matching route: {error!s}')
                 elif not re.search(r'fitting_mode|fitting mode|mode', str(error), re.IGNORECASE):
                     violations.append(
@@ -674,8 +690,28 @@ def test_declared_mode_by_native_entry_matrix_is_exact(tmp_path: Path) -> None:
                         f'mode boundary: {error!s}'
                     )
             else:
-                if entry != NATIVE_ENTRY_BY_MODE[mode]:
+                if entry != NATIVE_SCAN_ENTRY_BY_MODE[mode]:
                     violations.append(f'{mode}->{entry} accepted a cross-mode call')
+
+    experiment_dir = _copy_bounded_project(tmp_path, 'matrix-joint-experiments')
+    analysis = experiment_dir / 'analysis/analysis.edi'
+    clauses = analysis.read_text().splitlines()
+    analysis.write_text(
+        '\n'.join(line for line in clauses if not line.startswith('_sequential_fit.')) + '\n'
+    )
+    _rewrite(experiment_dir, 'sequential\n', 'joint\n')
+    experiment_joint = edi.Project.load(experiment_dir)
+    try:
+        experiment_joint.fit_joint()
+    except ValueError as error:
+        violations.append(f'ordinary Joint refused fit_joint: {error!s}')
+    try:
+        experiment_joint.fit_parametric()
+    except ValueError as error:
+        if not re.search(r'fitting_mode|fitting mode|mode', str(error), re.IGNORECASE):
+            violations.append(f'ordinary Joint reached a later error: {error!s}')
+    else:
+        violations.append('the native scan route accepted Joint without a scan declaration')
 
     assert not violations, (
         ' requires the full declared-mode x native-entry matrix to be exact; '

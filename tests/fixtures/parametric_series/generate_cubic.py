@@ -3,7 +3,6 @@
 import json
 from pathlib import Path
 
-import crysta
 import numpy as np
 
 from tests.fixtures.joint_series import cases
@@ -17,6 +16,8 @@ TRUTH = {
 
 
 def generate(root):
+    import crysta  # noqa: PLC0415 - analysis metadata generation does not load the engine
+
     root = cases.base_project(root)
     (root / 'experiments/1_alpha.edi').unlink()
     structure = cases.structure().replace('_cell.length_b 5.3', '_cell.length_b 4.1')
@@ -48,14 +49,18 @@ def generate(root):
         old = next(line for line in text.splitlines() if line.startswith('_peak.' + name + ' '))
         text = text.replace(old, f'_peak.{name} {start}()')
     experiment.write_text(text)
-    analysis.write_text(
-        '_edi.schema_version 3\n_fitting_mode.type parametric\n'
+    write_scan_analysis(root)
+    (root.parent / 'cubic-truth.json').write_text(json.dumps(TRUTH, indent=2) + '\n')
+
+
+def write_scan_analysis(root):
+    (root / 'analysis/analysis.edi').write_text(
+        '_edi.schema_version 3\n_fitting_mode.type joint\n'
         '_minimizer.max_iterations 100\n_minimizer.chi_square_tolerance 1e-12\n'
         '_sequential_fit.data_dir scan\n_sequential_fit.file_pattern p?.xy\n'
         'loop_\n_parametric_fit_shared.parameter_unique_name\n'
         + ''.join(f'zeta.peak.{name}\n' for name in TRUTH['profile'])
     )
-    (root.parent / 'cubic-truth.json').write_text(json.dumps(TRUTH, indent=2) + '\n')
 
 
 if __name__ == '__main__':

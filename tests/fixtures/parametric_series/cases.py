@@ -63,7 +63,7 @@ def model(root, mode='joint'):
     return root
 
 
-def scan(root, *, shared=True, fixed=False, mode='parametric'):
+def scan(root, *, shared=True, fixed=False, mode='joint'):
     root = cases.base_project(root)
     (root / 'experiments/1_alpha.edi').unlink()
     (root / 'structures/phase.edi').write_text(cases.structure(free=False))
@@ -144,7 +144,7 @@ def scale_scan(root, *, fixed=False):
         + ''.join(f'{a} {b} 1\n' for a, b in zip(x, data[:, 1], strict=True))
     )
     (root / 'analysis/analysis.edi').write_text(
-        '_edi.schema_version 3\n_fitting_mode.type parametric\n'
+        '_edi.schema_version 3\n_fitting_mode.type joint\n'
         '_minimizer.max_iterations 60\n_minimizer.chi_square_tolerance 1e-12\n'
         '_sequential_fit.data_dir scan\n_sequential_fit.file_pattern "p?.xy"\n'
     )

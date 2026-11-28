@@ -52,7 +52,7 @@ TestCase {
         options([["single", "Single experiment"]]);
         jointCategory(false);
         verify(Session.project.duplicateExperiment(), "The mode witness must grow to several experiments through a real project edit");
-        options([["joint", "Joint: all experiments at once"]]);
+        options([["joint", "Joint: all patterns as one fit"], ["independent", "Independent: each from the same start"]]);
         Session.project.analysis.fittingMode = "joint";
         jointCategory(true);
         Session.project.undo();
@@ -74,11 +74,14 @@ TestCase {
     }
     function test_scan(data) {
         open("tests/fixtures/correlations/scan-" + data.mode);
-        options([["sequential", "Sequential: each from the previous"], ["independent", "Independent: each from the same start"], ["single", "Single experiment"]]);
+        options([["sequential", "Sequential: each from the previous"], ["independent", "Independent: each from the same start"], ["joint", "Joint: all patterns as one fit"], ["single", "Single experiment"]]);
         jointCategory(false);
         const other = data.mode === "sequential" ? "independent" : "sequential";
         Session.project.analysis.fittingMode = other;
         compare(Session.project.analysis.fittingMode, other, "Selecting the other scan mode must preserve its stored token");
+        jointCategory(false);
+        Session.project.analysis.fittingMode = "joint";
+        compare(Session.project.analysis.fittingMode, "joint", "The picker selects Joint for a declared scan");
         jointCategory(false);
     }
 }

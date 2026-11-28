@@ -19,7 +19,12 @@ def test_native_connection_observers_reject_swapped_dispatch_enabled_joint_and_w
 ):
     if channel == 'dispatch':
         dispatch = (Path(__file__).resolve().parents[3] / 'core/src/fit_job.cpp').read_text()
-        expected = ['sequential:0:0:33:55:44:66', 'independent:0:0:33:55:44:66']
+        expected = [
+            'sequential:0:0:33:55:44:66',
+            'independent:0:0:33:55:44:66',
+            'joint scan:11:0:33:55:44:66:77',
+            'joint:11:22:33',
+        ]
         assert worker_dispatch(dispatch, tmp_path) == expected, (
             'Scan worker wiring: the control must forward distinct subscriber identities'
         )
@@ -51,18 +56,20 @@ def test_native_connection_observers_reject_swapped_dispatch_enabled_joint_and_w
     if channel == 'joint':
         model = source('src/analysis_view_model.cpp')
         good = model
-        assert joint_options(good, tmp_path) == ['1', '0', '1'], (
+        assert joint_options(good, tmp_path) == ['1', '1', '1'], (
             'Scan mode wiring: the guard control updates the consumed options table'
         )
         selector = (Path(__file__).resolve().parents[3] / 'core/src/selectors.cpp').read_text()
-        wrong = selector.replace(
-            'if (project.sequential_fit.declared())', 'if (!project.sequential_fit.declared())'
-        )
+        start = selector.index('std::vector<std::string> applicable_fitting_modes(')
+        scan = selector.index('if (project.sequential_fit.declared())', start)
+        scan_done = selector.index('}', selector.index('return {', scan) + len('return {'))
+        options = selector[scan:scan_done]
+        wrong = selector[:scan] + options.replace(', "joint"', '') + selector[scan_done:]
         assert wrong != selector, (
-            'Scan mode wiring: the mutation reaches the actual availability branch'
+            'Scan mode wiring: the mutation removes the Joint option from the actual scan branch'
         )
-        assert joint_options(good, tmp_path, selector_text=wrong) != ['1', '0', '1'], (
-            'Scan mode wiring: a scan mention on the wrong joint branch is rejected'
+        assert joint_options(good, tmp_path, selector_text=wrong) != ['1', '1', '1'], (
+            'Scan mode wiring: the probe detects the missing Joint choice on a declared scan'
         )
     if channel == 'follow':
         model = source('src/project_view_model.cpp')

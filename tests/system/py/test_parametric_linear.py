@@ -17,7 +17,7 @@ def test_shared_linear_fit_recovers_truth_and_undamped_covariance(tmp_path, fixe
     project = engine.Project.load(root)
     project.analysis.fit()
     assert (root / 'analysis/results.csv').is_file(), (
-        'A parametric fit publishes one row per admitted scan point'
+        'A Joint scan publishes one row per admitted scan point'
     )
     rows = cases.rows(root)
     assert len(rows) == 3, 'The authored three-point scan fits every file'
@@ -56,19 +56,19 @@ def test_shared_linear_fit_recovers_truth_and_undamped_covariance(tmp_path, fixe
 
 def test_nothing_shared_matches_independent_with_global_uncertainty_scale(tmp_path):
     outputs = []
-    for mode in ('independent', 'parametric'):
+    for mode in ('independent', 'joint'):
         root = cases.scan(tmp_path / mode, shared=False, mode=mode)
         engine.Project.load(root).analysis.fit()
         assert (root / 'analysis/results.csv').is_file(), (
             'Both modes publish their complete scan results'
         )
         outputs.append(cases.rows(root))
-    independent, parametric = outputs
-    assert len(independent) == len(parametric) == 3, (
+    independent, joint = outputs
+    assert len(independent) == len(joint) == 3, (
         'Both modes admit the same three observations files'
     )
     covariance = cases.linear_covariance(shared=False)
-    for index, (old, new) in enumerate(zip(independent, parametric, strict=True)):
+    for index, (old, new) in enumerate(zip(independent, joint, strict=True)):
         for endpoint in ('1', '2'):
             name = f'zeta.background.{endpoint}.intensity'
             assert float(new[name]) == pytest.approx(float(old[name]), abs=1e-8), (
@@ -89,7 +89,7 @@ def test_repeated_fit_never_turns_results_into_start_rows(tmp_path):
         project = engine.Project.load(root)
         project.analysis.fit()
         assert (root / 'analysis/results.csv').is_file(), (
-            'Each parametric invocation publishes a complete result'
+            'Each Joint scan invocation publishes a complete result'
         )
         project.save_as(tmp_path / 'saved')
         cases.assert_no_persisted_starts(tmp_path / 'saved')
@@ -123,9 +123,7 @@ def test_cancel_preserves_the_prior_published_generation(tmp_path):
     engine.Project.load(root).analysis.fit()
     analysis = root / 'analysis/analysis.edi'
     analysis.write_text(
-        analysis.read_text().replace(
-            '_fitting_mode.type independent', '_fitting_mode.type parametric'
-        )
+        analysis.read_text().replace('_fitting_mode.type independent', '_fitting_mode.type joint')
     )
     prior = {
         'results.csv': (root / 'analysis/results.csv').read_bytes(),
@@ -141,7 +139,7 @@ def test_cancel_preserves_the_prior_published_generation(tmp_path):
         return True
 
     project.analysis.fit(should_cancel=cancel)
-    assert called, 'Cancellation must reach the actual parametric solve boundary'
+    assert called, 'Cancellation must reach the actual Joint scan solve boundary'
     assert {name: (root / 'analysis' / name).read_bytes() for name in prior} == prior, (
         'A cancelled fit preserves every prior result file byte'
     )
@@ -183,7 +181,7 @@ def test_iteration_delivery_has_one_series_record_per_round(tmp_path):
 
     project.analysis.fit(on_iteration=observe, on_file_complete=read_back)
     assert published == expected_files, 'A subscriber receives every published row in scan order'
-    assert iterations, 'The real parametric driver delivers iteration progress'
+    assert iterations, 'The real Joint scan driver delivers iteration progress'
     assert iterations == sorted(set(iterations)), (
         'A nonlinear shared fit delivers one increasing series record per accepted round'
     )

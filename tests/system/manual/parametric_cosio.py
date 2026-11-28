@@ -1,4 +1,4 @@
-"""Compare full no-sharing Parametric and Independent fits on the staged CoSiO 213f project."""
+"""Compare full no-sharing Joint and Independent fits on the staged CoSiO 213f project."""
 
 import argparse
 import csv
@@ -46,8 +46,8 @@ def main():
     with tempfile.TemporaryDirectory(prefix='parametric-cosio-') as scratch:
         root = Path(scratch)
         reference, reference_time = fit(args.project, root / 'independent', 'independent')
-        actual, actual_time = fit(args.project, root / 'parametric', 'parametric')
-    print(f'Independent {reference_time:.2f} s, Parametric {actual_time:.2f} s', flush=True)
+        actual, actual_time = fit(args.project, root / 'joint', 'joint')
+    print(f'Independent {reference_time:.2f} s, Joint {actual_time:.2f} s', flush=True)
     metric = 'fit_result.reduced_chi_square'
     exhausted = [
         name
@@ -61,7 +61,7 @@ def main():
         if not math.isclose(float(row[metric]), float(reference[name][metric]), rel_tol=0.01)
     ]
     assert not exhausted and not deviations and actual_time <= 2 * reference_time, (
-        'No-sharing Parametric must keep the Independent agreement within 1%, avoid introducing '
+        'No-sharing Joint must keep the Independent agreement within 1%, avoid introducing '
         f'maximum-iteration stops, and take at most twice as long. Exhausted: {exhausted}; '
         f'agreement differences: {deviations}'
     )

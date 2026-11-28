@@ -819,7 +819,7 @@ statusBarIconForeground:'neutral'}};"""
         )
         if run:
             assert striped == (not scan or parametric), (
-                'Single and Parametric fits stripe, while per-file scans have determinate fill'
+                'Single fits and Joint scans stripe, while per-file scans have determinate fill'
             )
             if scan and not parametric:
                 assert isinstance(fill, (int, float)) and isinstance(maximum, (int, float)), (

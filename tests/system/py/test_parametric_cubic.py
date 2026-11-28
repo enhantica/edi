@@ -19,7 +19,7 @@ def test_five_cubic_patterns_recover_shared_profile_and_local_parameters(tmp_pat
     shutil.copytree(FIXTURE / 'cubic', root)
     engine.Project.load(root).analysis.fit()
     rows = cases.rows(root)
-    assert len(rows) == 5, 'Every frozen cubic pattern participates in the parametric solution'
+    assert len(rows) == 5, 'Every frozen cubic pattern participates in the Joint scan solution'
     for index, row in enumerate(rows):
         values = {
             'phase.cell.length_a': truth['cell'][index],
@@ -46,7 +46,7 @@ def published_value(row, name):
     return value, Decimal('0.5').scaleb(exponent)
 
 
-SCAN_MODES = ('sequential', 'independent', 'parametric')
+SCAN_MODES = ('sequential', 'independent', 'joint')
 POINT_FILES = tuple(f'p{index}.xy' for index in range(5))
 FIT_COLUMNS = ('success', 'termination', 'iterations', 'reduced_chi_square')
 SEED_COLUMNS = (
@@ -61,7 +61,7 @@ def stage_scan_cubic(root, mode, pattern='p?.xy', *, shared_w=None):
     analysis = root / 'analysis/analysis.edi'
     text = analysis.read_text().split('loop_', 1)[0]
     analysis.write_text(
-        text.replace('_fitting_mode.type parametric', '_fitting_mode.type ' + mode).replace(
+        text.replace('_fitting_mode.type joint', '_fitting_mode.type ' + mode).replace(
             'p?.xy', pattern
         )
     )
@@ -198,7 +198,7 @@ def test_scan_with_results_removed_replays_first_fit(tmp_path, mode):
 
 def test_parametric_refit_uses_the_common_value_and_each_points_row(tmp_path):
     root = tmp_path / 'scan'
-    project = stage_scan_cubic(root, 'parametric', shared_w='0.15')
+    project = stage_scan_cubic(root, 'joint', shared_w='0.15')
     project.analysis.fit()
     first = point_results(root)
     shared_name = 'zeta.peak.broad_gauss_w'
@@ -209,7 +209,7 @@ def test_parametric_refit_uses_the_common_value_and_each_points_row(tmp_path):
     )
 
     reference_root = tmp_path / 'reference'
-    stage_scan_cubic(reference_root, 'parametric', shared_w='0.30')
+    stage_scan_cubic(reference_root, 'joint', shared_w='0.30')
     shutil.copy2(root / 'analysis/results.csv', reference_root / 'analysis/results.csv')
     engine.Project.load(reference_root).analysis.fit()
 

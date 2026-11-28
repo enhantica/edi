@@ -202,10 +202,32 @@ def test_retired_point_identity_and_value_drop_on_directory_copy(tmp_path):
     ), 'Removing a retired point start leaves the authored template intact'
 
 
-def test_parametric_mode_requires_a_scan(tmp_path):
-    root = cases.model(tmp_path / 'source', mode='parametric')
-    with pytest.raises((ValueError, RuntimeError), match=r'(?i)(scan|sequential|data_dir)'):
-        engine.Project.load(root)
+def test_legacy_parametric_scan_loads_and_saves_as_joint(tmp_path):
+    root = cases.scan(tmp_path / 'source', mode='parametric')
+    loaded = engine.Project.load(root)
+    assert loaded.analysis.fitting_mode == 'joint', (
+        'A scan saved with the branch-era Parametric token loads as Joint'
+    )
+
+    saved = tmp_path / 'saved'
+    loaded.save_as(saved)
+    analysis = (saved / 'analysis/analysis.edi').read_text()
+    mode_lines = [
+        line.split() for line in analysis.splitlines() if line.startswith('_fitting_mode.type ')
+    ]
+    assert mode_lines == [['_fitting_mode.type', 'joint']], (
+        'Re-saving a legacy scan writes exactly one canonical Joint token'
+    )
+    reopened = engine.Project.load(saved)
+    assert reopened.analysis.fitting_mode == 'joint', (
+        'A re-saved legacy scan reopens in Joint mode'
+    )
+    for surface in (reopened, reopened.analysis):
+        with pytest.raises((ValueError, RuntimeError), match='parametric'):
+            surface.fitting_mode = 'parametric'
+        assert surface.fitting_mode == 'joint', (
+            'Refusing the branch-era Python token preserves the canonical Joint mode'
+        )
 
 
 def test_retired_shared_local_and_unknown_starts_all_drop(tmp_path):
