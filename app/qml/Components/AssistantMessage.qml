@@ -221,7 +221,8 @@ Rectangle {
                         Layout.preferredWidth: AppSizes.unit
                         horizontalAlignment: Text.AlignHCenter
                         verticalAlignment: Text.AlignVCenter
-                        font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.75
+                        // The size of the folded steps' icons (IconLine), so a step reads the same open or folded.
+                        font.pixelSize: EaStyle.Sizes.fontPixelSize
                         font.family: EaStyle.Fonts.iconsFamily
                         color: row.compactPresentation.state === "in_progress" ? EaStyle.Colors.themeAccent : FitOutcomes.color(row.compactPresentation.outcomeKey)
                         Accessible.ignored: true

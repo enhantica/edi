@@ -40,12 +40,15 @@ QString readonly_sandbox_mismatch(const QJsonValue& value, QStringList* extra) {
 QString thread_settings_mismatch(const QJsonObject& actual, const ThreadSettingsWanted& wanted, const QString& effortKey,
                                  const QString& sandboxKey, QStringList* extra, bool windows) {
     if (!same_path(actual.value(QLatin1String("cwd")), wanted.workspace, windows)) return QStringLiteral("cwd");
-    if (actual.value(QLatin1String("modelProvider")) != QLatin1String("openai")) return QStringLiteral("modelProvider");
+    if (actual.value(QLatin1String("modelProvider")) != wanted.modelProvider) return QStringLiteral("modelProvider");
     if (actual.value(QLatin1String("model")) != wanted.model) return QStringLiteral("model");
     if (actual.value(effortKey) != wanted.effort) return QStringLiteral("effort");
     if (actual.value(QLatin1String("approvalPolicy")) != QLatin1String("never")) return QStringLiteral("approvalPolicy");
-    if (actual.value(QLatin1String("approvalsReviewer")) != QLatin1String("user"))
+    const bool full = wanted.policy.isEmpty();
+    if ((full || wanted.policy.contains(QLatin1String("approvalsReviewer"))) &&
+        actual.value(QLatin1String("approvalsReviewer")) != QLatin1String("user"))
         return QStringLiteral("approvalsReviewer");
+    if (!full && !wanted.policy.contains(QLatin1String("sandbox"))) return {};
     return readonly_sandbox_mismatch(actual.value(sandboxKey), extra);
 }
 

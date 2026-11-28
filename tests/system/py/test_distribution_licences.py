@@ -88,7 +88,12 @@ def require_actual_artifact(root, surface):
 def test_delivered_surface_lists_only_its_bundled_components(surface, variable):
     matrix = dependency_matrix()
     require_production_components(matrix)
-    root = Path(os.environ.get(variable, ROOT / 'build/distribution-licences' / surface))
+    staged = os.environ.get(variable)
+    if surface == 'web' and os.environ.get('GITHUB_ACTIONS') == 'true':
+        assert staged, (
+            'The CI web licence check requires the staging step to export EDI_WEB_BUNDLE'
+        )
+    root = Path(staged or ROOT / 'build/distribution-licences' / surface)
     assert root.is_dir(), (
         'Build the licence packages with tests/fixtures/distribution_licences/stage.py; '
         'the licence-surfaces CI job supplies ' + variable + ': ' + str(root)
@@ -156,7 +161,7 @@ def test_delivered_surface_lists_only_its_bundled_components(surface, variable):
             )
 
 
-def test_web_licence_staging_replaces_old_serial_delivery(tmp_path, monkeypatch):
+def test_licence_staging_replaces_old_serial_delivery(tmp_path, monkeypatch):
     source = tmp_path / 'source'
     site = source / 'build/wasm/site'
     site.mkdir(parents=True)

@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-28T02:52:32Z
+# measured_utc = 2026-11-28T18:20:21Z
 #
-# Recorded from: measured test run (20 node(s) measured once, 187657 banked, 0 stale row(s) dropped)
-# Collected tests: 267611; with a reported duration: 86302
+# Recorded from: measured test run (4 node(s) measured once, 187707 banked, 0 stale row(s) dropped)
+# Collected tests: 267653; with a reported duration: 86336
 # Module-scoped fixture costs recorded: 222
 #
 # Breaches are decided PER TIER against the table
@@ -29,12 +29,12 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 267611
+# inventory_python = 267653
 # inventory_cpp = 0
-# inventory_measured = 187677
-# inventory_unmeasured = 79934
+# inventory_measured = 187711
+# inventory_unmeasured = 79942
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
-# inventory_pr_python = 92700
+# inventory_pr_python = 92742
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -121,6 +121,7 @@ UNMEASURED:not-completed-in-this-run	tests/integration/app/test_assistant_startu
 0.000	tests/integration/app/test_assistant_startup_reopen.py::test_different_account_reopen_does_not_authorize_fresh_context
 UNMEASURED:not-completed-in-this-run	tests/integration/app/test_assistant_startup_reopen.py::test_fallback_refusal_settles_the_original_startup_selection
 0.000	tests/integration/app/test_assistant_startup_reopen.py::test_intentional_startup_cancel_does_not_report_failed_open
+0.002	tests/integration/app/test_assistant_startup_reopen.py::test_pre_account_chatgpt_conversation_reopens_with_the_default_login
 0.000	tests/integration/app/test_assistant_startup_reopen.py::test_reopen_retired_during_failure_publication_cannot_authorize_context
 UNMEASURED:not-completed-in-this-run	tests/integration/app/test_assistant_startup_reopen.py::test_startup_failure_publication_rechecks_ownership_after_sessions_changed
 UNMEASURED:not-completed-in-this-run	tests/integration/app/test_assistant_startup_reopen.py::test_startup_local_reconnect_failure_settles_original_recovery[reconnect-start-words1]
@@ -639,6 +640,11 @@ UNMEASURED:failed-in-this-run	tests/integration/app/test_phase_scan_state.py::te
 0.580	tests/integration/app/test_phase_scan_state.py::test_description_tab_keeps_literal_authors_including_cif_nulls[.]
 0.690	tests/integration/app/test_phase_scan_state.py::test_description_tab_keeps_literal_authors_including_cif_nulls[?]
 0.580	tests/integration/app/test_phase_scan_state.py::test_description_tab_keeps_literal_authors_including_cif_nulls[A. Author; B. Author]
+0.520	tests/integration/app/test_provider_runtime.py::test_claude_identity_mismatch_refuses_before_a_prompt
+0.690	tests/integration/app/test_provider_runtime.py::test_copilot_denies_permission_and_stops_an_unlisted_tool
+0.430	tests/integration/app/test_provider_runtime.py::test_copilot_refuses_input_for_a_different_account[wrong-host]
+0.390	tests/integration/app/test_provider_runtime.py::test_copilot_refuses_input_for_a_different_account[wrong-login]
+0.660	tests/integration/app/test_provider_runtime.py::test_copilot_shows_edi_tool_reply_after_account_readback
 0.000	tests/integration/app/test_report_deferred_save.py::test_real_save_route_keeps_finished_content_and_completed_rows[deferred-excluded]
 0.000	tests/integration/app/test_report_deferred_save.py::test_real_save_route_keeps_finished_content_and_completed_rows[deferred-html]
 0.000	tests/integration/app/test_report_deferred_save.py::test_real_save_route_keeps_finished_content_and_completed_rows[deferred-pdf]
@@ -177354,6 +177360,28 @@ UNMEASURED:not-completed-in-this-run	tests/integration/py/test_collection_bundle
 0.000	tests/integration/py/test_compiler_launcher_probes.py::test_real_initial_and_nested_compiler_configuration_preserves_launcher_policy[CXX-default]
 0.000	tests/integration/py/test_compiler_launcher_probes.py::test_real_initial_and_nested_compiler_configuration_preserves_launcher_policy[CXX-empty]
 0.000	tests/integration/py/test_compiler_launcher_probes.py::test_real_initial_and_nested_compiler_configuration_preserves_launcher_policy[CXX-list]
+0.110	tests/integration/py/test_component_release_delivery.py::test_a_held_runtimes_recipe_checksum_still_governs_its_identity[org.easydiffraction.app.claude-claude-runtime]
+0.100	tests/integration/py/test_component_release_delivery.py::test_a_held_runtimes_recipe_checksum_still_governs_its_identity[org.easydiffraction.app.copilot-copilot-runtime]
+0.230	tests/integration/py/test_component_release_delivery.py::test_packaged_input_change_changes_only_its_component_version[valid-build-number-org.easydiffraction.app.maintenancetool]
+0.230	tests/integration/py/test_component_release_delivery.py::test_packaged_input_change_changes_only_its_component_version[valid-maintenance-page-org.easydiffraction.app.maintenancetool]
+0.370	tests/integration/py/test_component_release_delivery.py::test_packaged_input_change_changes_only_its_component_version[valid-release-date-and-built-bytes-None]
+0.240	tests/integration/py/test_component_release_delivery.py::test_packaged_input_change_changes_only_its_component_version[valid-runtime-sha256-org.easydiffraction.app.assistant]
+0.020	tests/integration/py/test_component_release_delivery.py::test_promotion_refuses_a_damaged_release[archive]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_component_release_delivery.py::test_promotion_refuses_a_damaged_release[changed-record-archive]
+0.010	tests/integration/py/test_component_release_delivery.py::test_promotion_refuses_a_damaged_release[extra-identity]
+0.010	tests/integration/py/test_component_release_delivery.py::test_promotion_refuses_a_damaged_release[invalid-identity]
+0.020	tests/integration/py/test_component_release_delivery.py::test_promotion_refuses_a_damaged_release[metadata]
+0.010	tests/integration/py/test_component_release_delivery.py::test_promotion_refuses_a_damaged_release[missing-identities]
+0.010	tests/integration/py/test_component_release_delivery.py::test_promotion_refuses_a_damaged_release[missing-identity]
+0.020	tests/integration/py/test_component_release_delivery.py::test_promotion_refuses_a_damaged_release[record-archive]
+0.020	tests/integration/py/test_component_release_delivery.py::test_promotion_refuses_a_damaged_release[record-version]
+0.010	tests/integration/py/test_component_release_delivery.py::test_promotion_refuses_a_damaged_release[too-new]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_component_release_delivery.py::test_promotion_refuses_a_damaged_release[unlisted-claude]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_component_release_delivery.py::test_promotion_refuses_a_damaged_release[unlisted-copilot]
+0.010	tests/integration/py/test_component_release_delivery.py::test_promotion_refuses_a_damaged_release[withheld-claude]
+0.010	tests/integration/py/test_component_release_delivery.py::test_promotion_refuses_a_damaged_release[withheld-copilot]
+0.030	tests/integration/py/test_component_release_delivery.py::test_promotion_reuses_the_original_component_release[valid]
+0.050	tests/integration/py/test_component_release_delivery.py::test_release_attaches_flat_assets_and_serves_framework_index
 0.350	tests/integration/py/test_constraint_alias_lifetime.py::test_alias_first_handle_owns_storage_and_obeys_detachment[destroy-background]
 0.180	tests/integration/py/test_constraint_alias_lifetime.py::test_alias_first_handle_owns_storage_and_obeys_detachment[destroy-cell]
 0.160	tests/integration/py/test_constraint_alias_lifetime.py::test_alias_first_handle_owns_storage_and_obeys_detachment[destroy-instrument]
@@ -181918,17 +181946,19 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_independent_heidi_case.p
 0.100	tests/integration/py/test_installer_identity.py::test_failed_release_workflow_reaches_owned_draft_cleanup[release-plan.yml]
 0.020	tests/integration/py/test_installer_identity.py::test_failed_release_workflow_reaches_owned_draft_cleanup[release-publish.yml]
 0.000	tests/integration/py/test_installer_identity.py::test_installed_windows_maintenance_tool_requires_signature
+UNMEASURED:failed-in-this-run	tests/integration/py/test_installer_identity.py::test_installer_component_rows_expose_descriptions[built-in]
+0.170	tests/integration/py/test_installer_identity.py::test_installer_component_rows_expose_descriptions[component]
 0.000	tests/integration/py/test_installer_identity.py::test_macos_bundle_declares_the_project_owned_identifier
 0.000	tests/integration/py/test_installer_identity.py::test_metadata_preserves_existing_component_updates[linux]
 0.000	tests/integration/py/test_installer_identity.py::test_metadata_preserves_existing_component_updates[macos]
 0.000	tests/integration/py/test_installer_identity.py::test_metadata_preserves_existing_component_updates[windows]
-0.000	tests/integration/py/test_installer_identity.py::test_release_signs_assistant_executables_outside_the_app[macos]
-0.000	tests/integration/py/test_installer_identity.py::test_release_signs_assistant_executables_outside_the_app[windows]
+0.010	tests/integration/py/test_installer_identity.py::test_release_signs_assistant_executables_outside_the_app[macos]
+0.040	tests/integration/py/test_installer_identity.py::test_release_signs_assistant_executables_outside_the_app[windows]
 0.000	tests/integration/py/test_installer_identity.py::test_signing_enablement_keeps_pr_builds_unsigned[macos-1]
 0.000	tests/integration/py/test_installer_identity.py::test_signing_enablement_keeps_pr_builds_unsigned[macos-]
 0.000	tests/integration/py/test_installer_identity.py::test_signing_enablement_keeps_pr_builds_unsigned[windows-1]
 0.000	tests/integration/py/test_installer_identity.py::test_signing_enablement_keeps_pr_builds_unsigned[windows-]
-0.680	tests/integration/py/test_installer_identity.py::test_three_page_install_choices_gate_components_license_and_sizes
+0.340	tests/integration/py/test_installer_identity.py::test_three_page_install_choices_gate_components_license_and_sizes
 0.000	tests/integration/py/test_installer_identity.py::test_windows_installation_defaults[AdminTargetDir-@ApplicationsDirX64@/EasyDiffraction]
 0.000	tests/integration/py/test_installer_identity.py::test_windows_installation_defaults[StartMenuDir-EasyDiffraction]
 0.000	tests/integration/py/test_installer_identity.py::test_windows_installation_defaults[TargetDir-@ApplicationsDirUser@/EasyDiffraction]
@@ -183825,6 +183855,9 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_project_load_messages.py
 0.630	tests/integration/py/test_project_load_messages.py::test_every_project_load_route_has_a_per_attempt_visible_failure_channel[zip-GetStartedGroup.qml-openProject]
 UNMEASURED:not-completed-in-this-run	tests/integration/py/test_project_save_final_write.py::test_final_save_write_contains_the_adopted_complement_and_optional_dependent[calculated]
 UNMEASURED:not-completed-in-this-run	tests/integration/py/test_project_save_final_write.py::test_final_save_write_contains_the_adopted_complement_and_optional_dependent[uncalculated]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_provider_installer.py::test_each_provider_is_an_independent_installer_payload
+UNMEASURED:failed-in-this-run	tests/integration/py/test_provider_installer.py::test_release_signing_preserves_vendor_binary_bytes[macos--\xcf\xfa\xed\xfe]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_provider_installer.py::test_release_signing_preserves_vendor_binary_bytes[windows-.exe-MZ\x00\x00]
 0.150	tests/integration/py/test_public_trial_provenance.py::test_exported_trial_provenance_requires_its_real_committed_document[absolute]
 0.190	tests/integration/py/test_public_trial_provenance.py::test_exported_trial_provenance_requires_its_real_committed_document[dirty]
 0.190	tests/integration/py/test_public_trial_provenance.py::test_exported_trial_provenance_requires_its_real_committed_document[missing-argument]
@@ -187274,6 +187307,14 @@ UNMEASURED:not-completed-in-this-run	tests/system/app/test_assistant_cif_attachm
 UNMEASURED:failed-in-this-run	tests/system/app/test_assistant_project_replacement.py::test_saved_project_awaits_user_confirmation[quiet]
 UNMEASURED:failed-in-this-run	tests/system/app/test_assistant_project_replacement.py::test_saved_project_awaits_user_confirmation[shown]
 UNMEASURED:failed-in-this-run	tests/system/app/test_assistant_step_folding.py::test_different_finished_steps_share_one_expandable_row
+2.830	tests/system/app/test_claude_account_journey.py::test_claude_discloses_inherited_credential_before_input
+0.170	tests/system/app/test_claude_account_journey.py::test_claude_interactive_login_stays_owned_until_callback_or_cancel[cancel]
+0.210	tests/system/app/test_claude_account_journey.py::test_claude_interactive_login_stays_owned_until_callback_or_cancel[delayed-callback]
+1.440	tests/system/app/test_claude_account_journey.py::test_claude_shows_edi_tool_reply_and_switches_accounts
+UNMEASURED:failed-in-this-run	tests/system/app/test_claude_account_journey.py::test_claude_waits_for_the_mcp_catalogue_before_input
+1.930	tests/system/app/test_claude_account_journey.py::test_first_turn_reaches_the_connected_runtime_after_attaching_files[claude]
+0.700	tests/system/app/test_claude_account_journey.py::test_first_turn_reaches_the_connected_runtime_after_attaching_files[copilot]
+0.790	tests/system/app/test_claude_account_journey.py::test_refused_conversation_open_keeps_the_account_connected
 UNMEASURED:not-completed-in-this-run	tests/system/app/test_feedback_attachment_typing.py::test_typing_with_a_real_attachment_stays_responsive
 UNMEASURED:not-completed-in-this-run	tests/system/app/test_large_collection_open.py::test_collection_first_open[large_offline]
 UNMEASURED:not-completed-in-this-run	tests/system/app/test_large_collection_open.py::test_collection_first_open[large_online]
@@ -250419,7 +250460,7 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_distribution_licences.py::tes
 UNMEASURED:failed-in-this-run	tests/system/py/test_distribution_licences.py::test_delivered_surface_lists_only_its_bundled_components[desktop-EDI_DESKTOP_BUNDLE]
 UNMEASURED:failed-in-this-run	tests/system/py/test_distribution_licences.py::test_delivered_surface_lists_only_its_bundled_components[python-EDI_PYTHON_BUNDLE]
 UNMEASURED:failed-in-this-run	tests/system/py/test_distribution_licences.py::test_delivered_surface_lists_only_its_bundled_components[web-EDI_WEB_BUNDLE]
-0.010	tests/system/py/test_distribution_licences.py::test_web_licence_staging_replaces_old_serial_delivery
+0.000	tests/system/py/test_distribution_licences.py::test_licence_staging_replaces_old_serial_delivery
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_docs_image_reference.py::test_capture_command_manifest_covers_every_theme_image
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_docs_image_reference.py::test_declared_capture_command_freshly_produces_the_required_app_images
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_docs_image_reference.py::test_every_content_image_resolves_distinct_scheme_variants
@@ -266944,6 +266985,7 @@ UNMEASURED:not-completed-in-this-run	tests/unit/py/test_release_promotion.py::te
 UNMEASURED:not-completed-in-this-run	tests/unit/py/test_release_promotion.py::test_component_identity_and_original_checksums_are_verified[legacy-assistant]
 UNMEASURED:not-completed-in-this-run	tests/unit/py/test_release_promotion.py::test_component_identity_and_original_checksums_are_verified[missing]
 UNMEASURED:not-completed-in-this-run	tests/unit/py/test_release_promotion.py::test_component_identity_and_original_checksums_are_verified[none]
+0.000	tests/unit/py/test_release_promotion.py::test_component_identity_and_original_checksums_are_verified[recorded-earlier]
 UNMEASURED:not-completed-in-this-run	tests/unit/py/test_release_promotion.py::test_component_identity_and_original_checksums_are_verified[version]
 0.000	tests/unit/py/test_release_promotion.py::test_delivery_compares_download_and_executed_app_to_prepared_identity[linux-x86_64-.zip-bytes]
 0.000	tests/unit/py/test_release_promotion.py::test_delivery_compares_download_and_executed_app_to_prepared_identity[linux-x86_64-.zip-channel]
@@ -267661,7 +267703,7 @@ UNMEASURED:not-completed-in-this-run	tests/unit/py/test_web_science_identity.py:
 # module-cost: 30.584	tests/integration/app/test_assistant_misfit_workflow.py
 # module-cost: 70.695	tests/integration/app/test_assistant_review_receipts.py
 # module-cost: 16.504	tests/integration/app/test_assistant_shown_fit_details.py
-# module-cost: 65.778	tests/integration/app/test_assistant_startup_reopen.py
+# module-cost: 17.088	tests/integration/app/test_assistant_startup_reopen.py
 # module-cost: 14.161	tests/integration/app/test_assistant_status_order.py
 # module-cost: 119.960	tests/integration/app/test_assistant_trial_lock.py
 # module-cost: 216.944	tests/integration/app/test_assistant_trial_retirement.py

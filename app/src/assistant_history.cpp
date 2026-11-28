@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "assistant_history.hpp"
+#include "engine_setup.hpp"
 #include "background.hpp"
 #include <QCoreApplication>
 #include <QDir>
@@ -127,7 +128,7 @@ bool AssistantHistoryArchive::ClearBarrier::retry() noexcept {
     }catch(...) {return false;}
 }
 std::vector<AssistantHistoryArchive::ClearBarrier> AssistantHistoryArchive::clearCaches(QObject* receiver,const Notice& notice) {
-    const auto root=QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation)+"/assistant";
+    const auto root=edi_app::app_local_data_location()+"/assistant";
     QStringList paths{root+"/history.json"};
     const auto recovery=[](const QString& name) {return name.startsWith("history-recovered-") && !QUuid(name.mid(18)).isNull();};
     for(const auto& folder:{root,root+"/history"})for(const auto& file:QDir(folder).entryInfoList({QStringLiteral("*.json")},QDir::Files|QDir::NoSymLinks)) {

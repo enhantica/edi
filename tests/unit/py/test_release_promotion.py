@@ -308,6 +308,7 @@ def test_release_history_progression_refuses_stale_candidates(damage):
         'archive',
         'assistant_archive',
         'version',
+        'recorded-earlier',
         'missing',
         'declaration',
         'legacy-app',
@@ -322,15 +323,17 @@ def test_component_identity_and_original_checksums_are_verified(tmp_path, damage
             continue
         component = tmp_path / name
         component.mkdir()
-        archive = component / '2026.11.0content.7z'
+        version = '2026.11.0'
+        if optional and damage in {'version', 'recorded-earlier'}:
+            version = '2026.11.1' if damage == 'version' else '2026.10.31'
+        archive = component / f'{version}content.7z'
         archive.write_bytes(b'qualified component bytes')
-        metadata = component / '2026.11.0meta.7z'
+        metadata = component / f'{version}meta.7z'
         metadata.write_bytes(b'qualified component metadata')
         for path in [archive, metadata]:
             with path.open('rb') as stream:
                 checksum = hashlib.file_digest(stream, 'sha1').hexdigest()
             path.with_suffix(path.suffix + '.sha1').write_text(checksum)
-        version = '2026.11.1' if optional and damage == 'version' else '2026.11.0'
         content += (
             f'<PackageUpdate><Name>{name}</Name>'
             f'<Version>{version}</Version><DownloadableArchives>content.7z</DownloadableArchives>'
@@ -353,6 +356,12 @@ def test_component_identity_and_original_checksums_are_verified(tmp_path, damage
     (tmp_path / 'Updates.xml').write_text(content)
     if damage == 'none':
         PROMOTE.validate_repository(tmp_path, '2026.11.0')
+    elif damage == 'recorded-earlier':
+        PROMOTE.validate_repository(
+            tmp_path, '2026.11.0', reused={'org.easydiffraction.app.assistant': '2026.10.31'}
+        )
+        with pytest.raises(ValueError, match='does not match'):
+            PROMOTE.validate_repository(tmp_path, '2026.11.0')
     else:
         with pytest.raises(ValueError, match=r'checksum|match|declarations'):
             PROMOTE.validate_repository(tmp_path, '2026.11.0')

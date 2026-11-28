@@ -32,8 +32,19 @@ Popup {
         return ApplicationInfo.assistantAllowanceWindow(panel, minutes);
     }
     readonly property string accountPlanLabel: ApplicationInfo.assistantAccountPlanLabel(panel)
+    // One short line, only when the account does not use the provider's own sign-in.
+    function credentialLine() {
+        const kind = panel.accountData.credentialKind || "";
+        const source = panel.accountData.credentialSource || "";
+        if (kind === "cloudProvider")
+            return qsTr("Using %1; usage is billed there").arg(source);
+        if (kind === "token")
+            return qsTr("Using your own token");
+        if (kind === "apiKey" || kind.length > 0)
+            return /^[A-Z][A-Z0-9_]*$/.test(source) ? qsTr("Using your %1").arg(source) : qsTr("Using your own API key");
+        return "";
+    }
     readonly property color actionBackground: EaStyle.Colors.sideBarButtonBackgroundHovered
-    readonly property real headerActionExtent: EaStyle.Sizes.toolButtonHeight * 0.75
     property var noticeState: null
     property var noticeProjection: ({})
     function captureNotice() {
@@ -369,59 +380,44 @@ Popup {
                         fontIcon: accountView ? "user" : pendingConnection ? "times" : "comment-dots"
                         readonly property bool pendingConnection: panel.assistant.state === "connecting"
                         readonly property bool accountView: !pendingConnection && panel.assistant.connected
-                        text: pendingConnection ? qsTr("Cancel connection") : accountView ? qsTr("ChatGPT account") : qsTr("Connect ChatGPT")
+                        text: pendingConnection ? qsTr("Cancel connection") : accountView ? qsTr("%1 account").arg(panel.assistant.activeProvider.name) : qsTr("Connect")
                         enabled: !pendingConnection || panel.assistant.canCancel
-                        leftPadding: connectionButton.accountView ? 0 : AppSizes.unit * 0.75
+                        leftPadding: AppSizes.unit * 0.75
                         rightPadding: leftPadding
-                        contentItem: Item {
-                            implicitWidth: connectionButton.accountView ? avatarText.implicitWidth : connectionText.implicitWidth
-                            implicitHeight: connectionButton.accountView ? avatarText.implicitHeight : connectionText.implicitHeight
+                        // Signed in, it is a pill like Sessions and Usage that names the provider; otherwise the filled
+                        // Connect button.
+                        readonly property color labelColor: accountView ? foregroundColor() : !enabled ? EaStyle.Colors.themeForegroundDisabled : EaStyle.Colors.isDarkPalette ? "black" : "white"
+                        contentItem: RowLayout {
+                            id: connectionText
+                            spacing: AppSizes.unit * 0.4
                             EaElements.Label {
-                                id: avatarText
-                                anchors.fill: parent
-                                visible: connectionButton.accountView
                                 text: connectionButton.fontIcon
                                 font.family: EaStyle.Fonts.iconsFamily
-                                font.pixelSize: EaStyle.Sizes.fontPixelSize
-                                horizontalAlignment: Text.AlignHCenter
-                                verticalAlignment: Text.AlignVCenter
-                                color: !connectionButton.enabled ? EaStyle.Colors.themeForegroundDisabled : EaStyle.Colors.isDarkPalette ? "black" : "white"
+                                color: connectionButton.labelColor
+                                Accessible.ignored: true
                             }
-                            RowLayout {
-                                id: connectionText
-                                anchors.centerIn: parent
-                                visible: !connectionButton.accountView
-                                spacing: AppSizes.unit * 0.4
-                                EaElements.Label {
-                                    text: connectionButton.fontIcon
-                                    font.family: EaStyle.Fonts.iconsFamily
-                                    color: !connectionButton.enabled ? EaStyle.Colors.themeForegroundDisabled : EaStyle.Colors.isDarkPalette ? "black" : "white"
-                                    Accessible.ignored: true
-                                }
-                                EaElements.Label {
-                                    text: connectionButton.text
-                                    font: connectionButton.font
-                                    color: !connectionButton.enabled ? EaStyle.Colors.themeForegroundDisabled : EaStyle.Colors.isDarkPalette ? "black" : "white"
-                                }
+                            EaElements.Label {
+                                text: connectionButton.accountView ? panel.assistant.activeProvider.name : connectionButton.text
+                                font: connectionButton.font
+                                color: connectionButton.labelColor
                             }
                         }
-                        Layout.preferredWidth: connectionButton.accountView ? panel.headerActionExtent : implicitWidth
-                        Layout.minimumWidth: connectionButton.accountView ? panel.headerActionExtent : 0
-                        Layout.maximumWidth: connectionButton.accountView ? panel.headerActionExtent : Math.max(0, header.width - AppSizes.unit)
+                        Layout.preferredWidth: implicitWidth
+                        Layout.maximumWidth: Math.max(0, header.width - AppSizes.unit)
                         Layout.preferredHeight: EaStyle.Sizes.toolButtonHeight
                         Layout.minimumHeight: EaStyle.Sizes.toolButtonHeight
                         Layout.maximumHeight: EaStyle.Sizes.toolButtonHeight
                         background: Item {
-                            implicitWidth: connectionButton.accountView ? panel.headerActionExtent : EaStyle.Sizes.toolButtonHeight
+                            implicitWidth: EaStyle.Sizes.toolButtonHeight
                             implicitHeight: implicitWidth
                             Rectangle {
                                 border.width: 0
                                 objectName: "assistant.avatarCircle"
                                 anchors.centerIn: parent
-                                width: connectionButton.accountView ? EaStyle.Sizes.toolButtonHeight * 0.75 : parent.width
+                                width: parent.width
                                 height: EaStyle.Sizes.toolButtonHeight * 0.75
                                 radius: height * 0.5
-                                color: !connectionButton.enabled ? panel.actionBackground : connectionButton.hovered || connectionButton.down || connectionButton.visualFocus ? EaStyle.Colors.themeAccent : (EaStyle.Colors.isDarkPalette ? "white" : "black")
+                                color: connectionButton.accountView ? (connectionButton.visualFocus ? EaStyle.Colors.themeRowHovered : panel.actionBackground) : !connectionButton.enabled ? panel.actionBackground : connectionButton.hovered || connectionButton.down || connectionButton.visualFocus ? EaStyle.Colors.themeAccent : (EaStyle.Colors.isDarkPalette ? "white" : "black")
                             }
                         }
                         ToolTip.text: connectionButton.accountView ? qsTr("Account") : text
@@ -631,7 +627,7 @@ Popup {
                     flickableDirection: Flickable.VerticalFlick
                     boundsBehavior: Flickable.StopAtBounds
                     interactive: contentHeight > height
-                    visible: signedOutNotice.noticeText.length > 0 || (panel.assistant.canCancel && panel.assistant.state !== "connecting")
+                    visible: signedOutNotice.noticeText.length > 0 || (panel.assistant.canCancel && panel.assistant.state !== "connecting") || signInSteps.visible || failureActions.visible
                     Column {
                         id: signedOutControls
                         width: parent.width
@@ -677,15 +673,139 @@ Popup {
                             }
                             onClicked: panel.assistant.cancel()
                         }
+                        // What the runtime's sign-in shows besides its page: the page's address when it may not have
+                        // opened, a device code to type there, and its prompts (edi ADR-0108 §4, §5).
+                        Column {
+                            id: signInSteps
+                            objectName: "assistant.signInSteps"
+                            readonly property var details: panel.assistant.signInDetails
+                            width: parent.width
+                            spacing: AppSizes.unit * 0.5
+                            visible: panel.assistant.state === "connecting" && (details.url.length > 0 || details.code.length > 0 || details.prompt.length > 0)
+                            SignInButton {
+                                objectName: "assistant.signInOpenPage"
+                                visible: signInSteps.details.url.length > 0
+                                fontIcon: "external-link-alt"
+                                text: qsTr("Open sign-in page")
+                                ToolTip.visible: hovered
+                                ToolTip.text: qsTr("If the sign-in page did not open, open it here.")
+                                onClicked: Qt.openUrlExternally(signInSteps.details.url)
+                            }
+                            Row {
+                                visible: signInSteps.details.code.length > 0
+                                spacing: AppSizes.unit * 0.5
+                                EaElements.Label {
+                                    objectName: "assistant.signInCode"
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    text: qsTr("Code: %1").arg(signInSteps.details.code)
+                                    textFormat: Text.PlainText
+                                    font.bold: true
+                                }
+                                SignInButton {
+                                    objectName: "assistant.signInCopyCode"
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    fontIcon: "copy"
+                                    text: qsTr("Copy")
+                                    onClicked: ApplicationInfo.copyText(signInSteps.details.code)
+                                }
+                            }
+                            // Copilot asks whether to keep its token in a plain file; No is the default.
+                            EaElements.Label {
+                                objectName: "assistant.signInQuestion"
+                                width: parent.width
+                                visible: signInSteps.details.promptKind === "question"
+                                text: signInSteps.details.prompt
+                                textFormat: Text.PlainText
+                                wrapMode: Text.WordWrap
+                            }
+                            Row {
+                                visible: signInSteps.details.promptKind === "question"
+                                spacing: AppSizes.unit * 0.5
+                                SignInButton {
+                                    objectName: "assistant.signInAnswerNo"
+                                    fontIcon: "times"
+                                    text: qsTr("No")
+                                    highlighted: true
+                                    onClicked: panel.assistant.answerSignIn("no")
+                                }
+                                SignInButton {
+                                    objectName: "assistant.signInAnswerYes"
+                                    fontIcon: "check"
+                                    text: qsTr("Yes")
+                                    onClicked: panel.assistant.answerSignIn("yes")
+                                }
+                            }
+                            // Claude asks for a code only when its page shows one; what is typed goes to the sign-in only.
+                            Row {
+                                visible: signInSteps.details.promptKind === "code"
+                                width: parent.width
+                                spacing: AppSizes.unit * 0.5
+                                EaElements.TextField {
+                                    id: signInCodeField
+                                    objectName: "assistant.signInCodeField"
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    width: Math.max(0, parent.width - signInSubmit.width - parent.spacing)
+                                    horizontalAlignment: TextInput.AlignLeft
+                                    placeholderText: qsTr("Code (only if the page shows one)")
+                                    onAccepted: signInSubmit.clicked()
+                                }
+                                SignInButton {
+                                    id: signInSubmit
+                                    objectName: "assistant.signInSubmitCode"
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    fontIcon: "sign-in-alt"
+                                    text: qsTr("Submit")
+                                    enabled: signInCodeField.text.trim().length > 0
+                                    onClicked: {
+                                        const code = signInCodeField.text.trim();
+                                        signInCodeField.clear();
+                                        panel.assistant.answerSignIn(code);
+                                    }
+                                }
+                            }
+                        }
+                        // After a failure: try again first; an account whose connection ended (another person signed
+                        // in, for example) can still be signed out, as the Account dialog opens only while connected.
+                        Row {
+                            id: failureActions
+                            visible: signedOutNotice.visible && !panel.assistant.connected && panel.assistant.state !== "connecting" && panel.assistant.accounts.some(entry => entry.active)
+                            spacing: AppSizes.unit * 0.5
+                            EaElements.Button {
+                                objectName: "assistant.tryAgain"
+                                padding: EaStyle.Sizes.fontPixelSize * 0.5
+                                fontIcon: "redo"
+                                text: qsTr("Try again")
+                                highlighted: true
+                                Accessible.name: text
+                                onClicked: {
+                                    if (!panel.assistant.resumeConnection())
+                                        ApplicationInfo.panelConnectionActivated();
+                                }
+                            }
+                            EaElements.Button {
+                                id: disconnectedSignOut
+                                objectName: "assistant.signOutDisconnected"
+                                visible: panel.assistant.activeProvider.provider !== "chatgpt"
+                                padding: EaStyle.Sizes.fontPixelSize * 0.5
+                                fontIcon: "sign-out-alt"
+                                // Copilot's sign-out is not yet qualified, so the account is removed from edi instead.
+                                text: panel.assistant.activeProvider.provider === "copilot" ? qsTr("Remove from edi") : qsTr("Sign out")
+                                Accessible.name: text
+                                onClicked: panel.assistant.signOut()
+                            }
+                        }
                     }
                     ScrollBar.vertical: ScrollBar {}
                 }
                 EmptyStateLabel {
                     id: signInPrompt
                     objectName: "assistant.signInPrompt"
+                    // Centred on the whole panel, header included, so it sits on one line with the page's own empty
+                    // state ("No project yet"), which is centred on the full page height.
                     anchors.centerIn: parent
+                    anchors.verticalCenterOffset: -header.height / 2
                     width: Math.max(0, parent.width - AppSizes.unit * 2)
-                    text: panel.assistant.state === "connecting" ? panel.assistant.connectionLabel : qsTr("No ChatGPT connection")
+                    text: panel.assistant.state === "connecting" ? panel.assistant.connectionLabel : qsTr("No assistant connected")
                 }
             }
             // One real file boundary covers transcript and composer, not ordinary text or the header.
@@ -811,8 +931,19 @@ Popup {
             objectName: "assistant.accountDialog"
             title: qsTr("Account")
             standardButtons: Dialog.Close
+            // The connection dialog's buttons, so Close ends at the content's right edge as Connect does there.
+            footer: EaElements.DialogButtonBox {
+                id: accountButtons
+                visible: count > 0
+                delegate: EaElements.Button {
+                    highlighted: true
+                    padding: EaStyle.Sizes.fontPixelSize * 0.5
+                    fontIcon: accountButtons.roleIcon(DialogButtonBox.buttonRole)
+                }
+            }
             readonly property real viewportHeight: Math.max(0, parent.height - AppSizes.unit * 2)
-            width: Math.min(AppSizes.unit * 24, Math.max(0, parent.width - AppSizes.unit * 2))
+            // The connection dialog's width, so the two read as one family.
+            width: connectionDialog.width
             height: Math.min(implicitHeight, viewportHeight)
             contentWidth: Math.max(0, width - leftPadding - rightPadding)
             contentHeight: Math.min(accountContent.implicitHeight, Math.max(0, viewportHeight - topPadding - bottomPadding - (implicitHeaderHeight > 0 ? implicitHeaderHeight + spacing : 0) - (implicitFooterHeight > 0 ? implicitFooterHeight + spacing : 0)))
@@ -829,55 +960,41 @@ Popup {
                 clip: true
                 Column {
                     id: accountContent
-                    width: Math.max(0, accountDialog.contentWidth - AppSizes.unit)
-                    spacing: 0
-                    Column {
+                    // Full width, so the panel's sign-out ends at Close's right edge.
+                    width: accountDialog.contentWidth
+                    spacing: AppSizes.unit
+                    EaElements.Label {
+                        objectName: "assistant.managedSettingsNotice"
                         width: parent.width
-                        spacing: AppSizes.unit * 0.25
-                        EaElements.Label {
-                            objectName: "assistant.accountIdentity"
-                            width: parent.width
-                            text: panel.accountData.email || qsTr("Account email unavailable")
-                            textFormat: Text.PlainText
-                            wrapMode: Text.WrapAnywhere
-                        }
-                        EaElements.Label {
-                            objectName: "assistant.accountPlan"
-                            width: parent.width
-                            visible: panel.accountPlanLabel.length > 0
-                            text: panel.accountPlanLabel
-                            color: EaStyle.Colors.themeForegroundMinor
-                            textFormat: Text.PlainText
-                            wrapMode: Text.WrapAnywhere
-                        }
-                    }
-                    Item {
-                        width: 1
-                        height: AppSizes.unit * 1.5
+                        visible: text.length > 0
+                        text: panel.assistant.managedSettingsNotice
+                        textFormat: Text.PlainText
+                        wrapMode: Text.WordWrap
                     }
                     EaElements.Button {
-                        id: signOutButton
-                        objectName: "assistant.signOut"
-                        fontIcon: "sign-out-alt"
-                        text: qsTr("Sign out")
-                        contentItem: Row {
-                            spacing: AppSizes.unit * 0.5
-                            EaElements.Label {
-                                anchors.verticalCenter: parent.verticalCenter
-                                text: signOutButton.fontIcon
-                                font.family: EaStyle.Fonts.iconsFamily
-                                color: signOutButton.foregroundColor()
-                            }
-                            EaElements.Label {
-                                anchors.verticalCenter: parent.verticalCenter
-                                text: signOutButton.text
-                                color: signOutButton.foregroundColor()
-                            }
-                        }
-                        width: Math.min(implicitWidth, parent.width)
-                        enabled: panel.assistant.connected
+                        objectName: "assistant.acknowledgeManagedSettings"
+                        visible: panel.assistant.managedSettingsNotice.length > 0
+                        padding: EaStyle.Sizes.fontPixelSize * 0.5
+                        fontIcon: "check"
+                        text: qsTr("I understand")
                         Accessible.name: text
-                        onClicked: panel.assistant.signOut()
+                        onClicked: panel.assistant.acknowledgeManagedSettings()
+                    }
+                    AssistantAccountList {
+                        objectName: "assistant.accountList"
+                        width: parent.width
+                        assistant: panel.assistant
+                        activeEmail: panel.accountData.email || ""
+                        activePlan: panel.accountPlanLabel
+                        activeUsage: panel.usageWindow ? qsTr("%1% used").arg(panel.usageWindow.usedPercent) : ""
+                        activeCredential: panel.credentialLine()
+                        // A new account of the active provider, then the Connect dialog, where the provider can change.
+                        onAddRequested: {
+                            accountDialog.close();
+                            panel.assistant.addAccount(panel.assistant.activeProvider.provider, "");
+                            Qt.callLater(ApplicationInfo.panelConnectionActivated);
+                        }
+                        onSignOutRequested: panel.assistant.signOut()
                     }
                 }
             }
@@ -1018,5 +1135,97 @@ Popup {
             onRejected: ApplicationInfo.panelConnectionRejected()
             onContextApproved: offer => ApplicationInfo.panelContextApproved(offer)
         }
+        // A saved conversation of another account: switch to that account, connect, then open it (edi ADR-0108 §8).
+        AppDialog {
+            id: sessionAccountSwitch
+            objectName: "assistant.sessionAccountSwitch"
+            parent: Overlay.overlay
+            property string threadId: ""
+            property string provider: ""
+            property string accountId: ""
+            property string email: ""
+            // Opened once the switched account is connected and its conversations are listed.
+            property string pendingThread: ""
+            readonly property string providerName: panel.assistant.providers.find(entry => entry.provider === sessionAccountSwitch.provider)?.name ?? ""
+            title: qsTr("Switch account")
+            contentWidth: AppSizes.messagesDialogContentWidth
+            contentHeight: sessionAccountSwitchText.implicitHeight
+            EaElements.Label {
+                id: sessionAccountSwitchText
+                width: sessionAccountSwitch.contentWidth
+                wrapMode: Text.Wrap
+                textFormat: Text.PlainText
+                text: qsTr("This conversation belongs to %1 (%2).").arg(sessionAccountSwitch.email || qsTr("another account")).arg(sessionAccountSwitch.providerName)
+            }
+            footer: EaElements.DialogButtonBox {
+                EaElements.Button {
+                    objectName: "assistant.sessionAccountSwitch.switch"
+                    text: qsTr("Switch account")
+                    DialogButtonBox.buttonRole: DialogButtonBox.ActionRole
+                    onClicked: {
+                        const thread = sessionAccountSwitch.threadId;
+                        const accountId = sessionAccountSwitch.accountId;
+                        sessionAccountSwitch.close();
+                        panel.assistant.switchAccount(sessionAccountSwitch.provider, accountId);
+                        // A refused switch (a running turn) leaves the old account active and shows why.
+                        if (!panel.assistant.accounts.some(entry => entry.active && entry.id === accountId))
+                            return;
+                        sessionAccountSwitch.pendingThread = thread;
+                        connectionButton.clicked();
+                    }
+                }
+                EaElements.Button {
+                    objectName: "assistant.sessionAccountSwitch.cancel"
+                    text: qsTr("Cancel")
+                    DialogButtonBox.buttonRole: DialogButtonBox.RejectRole
+                }
+            }
+            Connections {
+                target: panel.assistant
+                function onSessionAccountSwitchRequested(threadId, provider, accountId, email) {
+                    sessionAccountSwitch.threadId = threadId;
+                    sessionAccountSwitch.provider = provider;
+                    sessionAccountSwitch.accountId = accountId;
+                    sessionAccountSwitch.email = email;
+                    sessionAccountSwitch.open();
+                }
+                function onConnectedChanged() {
+                    if (panel.assistant.connected && sessionAccountSwitch.pendingThread.length > 0)
+                        panel.assistant.refreshSessions();
+                }
+                function onSessionsLoadingChanged() {
+                    if (panel.assistant.sessionsLoading || !panel.assistant.connected || sessionAccountSwitch.pendingThread.length === 0)
+                        return;
+                    const thread = sessionAccountSwitch.pendingThread;
+                    sessionAccountSwitch.pendingThread = "";
+                    panel.assistant.selectSession(thread);
+                }
+                function onStateChanged() {
+                    // A connection that ended without connecting drops the wish to open the conversation.
+                    if (panel.assistant.state !== "connecting" && !panel.assistant.connected)
+                        sessionAccountSwitch.pendingThread = "";
+                }
+            }
+        }
+    }
+    // The account dialog's icon button, for the sign-in steps below.
+    component SignInButton: EaElements.Button {
+        id: signInButton
+        contentItem: Row {
+            spacing: AppSizes.unit * 0.5
+            EaElements.Label {
+                anchors.verticalCenter: parent.verticalCenter
+                text: signInButton.fontIcon
+                font.family: EaStyle.Fonts.iconsFamily
+                color: signInButton.foregroundColor()
+                Accessible.ignored: true
+            }
+            EaElements.Label {
+                anchors.verticalCenter: parent.verticalCenter
+                text: signInButton.text
+                color: signInButton.foregroundColor()
+            }
+        }
+        Accessible.name: text
     }
 }

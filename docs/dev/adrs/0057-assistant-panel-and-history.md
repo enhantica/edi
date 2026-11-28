@@ -5,6 +5,8 @@ Date: 2026-10-15
 Implementation: Partial; terminal-retention/app lifecycle unit pending independent verification
 Priority: High
 
+**Amended 2026-11-27 (ADR-0108):** edi assigns `CODEX_HOME` to an empty account home it created for each added ChatGPT account, and never reads or copies what the runtime keeps there; the account card becomes the Account dialog of every provider's accounts. The two `HOME/CODEX_HOME` sentences below read as ADR-0108 §14 states.
+
 The assistant is a Session-owned view model, separate from the currently open ProjectViewModel. It remains available without a project and rebinds the controller whenever the project changes. The controller borrows the existing project and worker; approved edits enter ProjectViewModel's existing apply/preview door (ADR-0020). External edits and manual fit completion invalidate the assistant revision. Queued provider requests are fenced across rebinds. Closing a session detaches before child project destruction.
 
 `app/qml/Components/Assistant*.qml` adopts edi's existing EasyApplication components, theme, font and AppSizes spacing. The owner's shared-sidebar decision supersedes the opposite second-sidebar/popup default: one persistent panel overlays the actual workflow sidebar at its exact bounds/side/width. The app-bar action alone changes session visibility through the device gate. Hiding reveals the retained manual controls without cancelling work. The main chart/content geometry does not change. The previous independent width preference is dormant rather than a second reserved strip; no resize handle or segmented selector is introduced.

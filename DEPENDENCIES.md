@@ -45,8 +45,10 @@ Each surface lists only its own column: the application's About window reads thi
 
 ## Assistant components
 
-The desktop app carries the official runtime beside the application. Its own notices and exact source/build
-references also travel in `libexec/edi/codex/edi-licenses`. This inventory does not certify complete binary
+The desktop app carries the official runtimes beside the application, each an optional installer component
+(edi ADR-0108). Codex's own notices and exact source/build references also travel in
+`libexec/edi/codex/edi-licenses`; Claude Code and the GitHub Copilot CLI ship unmodified with their licence files in
+`libexec/edi/claude` and `libexec/edi/copilot`. This inventory does not certify complete binary
 transitive attribution, corresponding-source delivery or platform installer qualification.
 
 | Component | Version | Licence | Desktop app | Web app | Python package | CLI | In edi |
@@ -60,6 +62,8 @@ transitive attribution, corresponding-source delivery or platform installer qual
 | rusty-V8 | 150.4.0 | MIT | bundled | — | — | — | Deno Rust bindings embedded in the code-mode host |
 | V8 (Codex code-mode host) | ac1e2398 | BSD-3-Clause AND additional notices | bundled | — | — | — | the V8 engine embedded in the code-mode host; distinct from Qt V8 |
 | ICU data (deno_core_icudata) | 0.77.0 / ee5f27ad | Unicode-3.0 AND additional notices | bundled | — | — | — | the ICU data embedded in the code-mode host via deno_core_icudata |
+| Claude Code | 2.1.326 | LicenseRef-Anthropic-terms | bundled | — | — | — | Anthropic's runtime for the Claude assistant, shipped unmodified |
+| GitHub Copilot CLI | 1.0.116 | LicenseRef-GitHub-Copilot-CLI | bundled | — | — | — | GitHub's runtime for the GitHub Copilot assistant, shipped unmodified |
 
 ## HTML report libraries
 

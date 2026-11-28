@@ -32,6 +32,8 @@ from pathlib import Path
 from unittest.mock import patch
 
 from package import (
+    ASSISTANT_COMPONENT,
+    ASSISTANT_COMPONENTS,
     ASSISTANT_RUNTIME,
     SUFFIX,
     SYSTEM,
@@ -60,6 +62,12 @@ def marker_stage(root: Path) -> Path:
     assistant = stage / ASSISTANT_RUNTIME / 'assistant.txt'
     assistant.parent.mkdir(parents=True)
     assistant.write_text('optional assistant marker\n')
+    # Claude and GitHub Copilot have rows of their own, each shown only once it is distributed.
+    for component, details in ASSISTANT_COMPONENTS.items():
+        if component != ASSISTANT_COMPONENT:
+            provider = stage / details['runtime'] / 'provider.txt'
+            provider.parent.mkdir(parents=True)
+            provider.write_text(component + '\n')
     return stage
 
 

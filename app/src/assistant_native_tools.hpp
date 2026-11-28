@@ -25,4 +25,8 @@ std::optional<edi::Edit> assistant_native_edit(edi::Project& project, const QStr
 struct NativeBackgroundInput { edi::ExperimentBase* experiment = nullptr; edi::BackgroundPointInput input; bool names=false; };
 NativeBackgroundInput assistant_native_background(edi::Project&, const QJsonObject&);
 void assistant_native_arguments(const QString& name, const QJsonObject& arguments);
+/// The catalogue of a Codex `thread/start` (its `dynamicTools`) as MCP tools for edi's tool server, plus
+/// `request_user_input`. A root oneOf, anyOf or allOf becomes one object schema. Throws when a description
+/// is longer than 4096 characters or an entry is malformed.
+QJsonArray assistant_native_mcp_tools(const QJsonArray& dynamicTools);
 } // namespace edi_app

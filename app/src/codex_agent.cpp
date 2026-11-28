@@ -6,6 +6,7 @@
 #include <cstddef>
 #include <QtCore/qmath.h>
 #include <type_traits>
+#include "assistant_guard_launch.hpp"
 #include "assistant_runtime_config.hpp"
 #include <QCoreApplication>
 #include <QEvent>
@@ -146,7 +147,7 @@ void CodexAgent::processOwnerReleased(quint64 birth) noexcept {
     process_owner_alive_=false;
     maybeOwnersReleased(); // No facade access after notification.
 }
-CodexAgent::CodexAgent(QObject* parent,std::shared_ptr<const void> releaseOwner) : QObject(parent),release_owner_(std::move(releaseOwner)) {
+CodexAgent::CodexAgent(QObject* parent,std::shared_ptr<const void> releaseOwner) : AssistantProvider(parent),release_owner_(std::move(releaseOwner)) {
     clock_.start(); timer_.setInterval(100);
     connect(&timer_, &QTimer::timeout, this, [this] {
         const QPointer<CodexAgent> receiver(this); const auto scope = generation_;  // NOLINT(clang-analyzer-core.NullDereference): this is the timer's owner.
@@ -357,6 +358,11 @@ QString CodexAgent::idKey(const QJsonValue& value) {
 
 QString CodexAgent::policyPatch() { return QString::fromLatin1(EDI_CODEX_SOURCE_PATCH_SHA256); }
 
+QJsonObject CodexAgent::threadPolicy() const {
+    return {{"sandbox", "read-only"}, {"approvalPolicy", "never"}, {"approvalsReviewer", "user"},
+            {"modelProvider", "openai"}};
+}
+
 QString CodexAgent::executable() {
     if (qEnvironmentVariableIsSet("EDI_CODEX_DEVELOPMENT_EXECUTABLE")) {
         const auto path = qEnvironmentVariable("EDI_CODEX_DEVELOPMENT_EXECUTABLE");
@@ -388,6 +394,17 @@ QString CodexAgent::executable() {
 }
 
 bool CodexAgent::start(const QString& executable, const QString& workspace) {
+    if (account_home_.isEmpty()) return startWith(executable, workspace, nullptr);
+    // An added account must never fall back to the ordinary profile, so a missing home refuses the start.
+    if (!QFileInfo(account_home_).isAbsolute() || !QFileInfo(account_home_).isDir()) return false;
+    auto environment = QProcessEnvironment::systemEnvironment();
+    environment.insert(QStringLiteral("CODEX_HOME"), account_home_);
+    return startWith(executable, workspace, &environment);
+}
+bool CodexAgent::start(const QString& executable, const QString& workspace, const QProcessEnvironment& environment) {
+    return startWith(executable, workspace, &environment);
+}
+bool CodexAgent::startWith(const QString& executable, const QString& workspace, const QProcessEnvironment* environment) {
     if ((release_owner_ && process_owner_alive_) || process_ || retired_process_ || active_frames_ || reading_ || executable.isEmpty() || !QFileInfo(workspace).isAbsolute() || !QFileInfo(workspace).isDir())
         return false;
     const QPointer<CodexAgent> receiver(this);
@@ -408,17 +425,8 @@ bool CodexAgent::start(const QString& executable, const QString& workspace) {
         // Birth/barrier publish with the original process_, before any original
         // start/error/started callback, including failed-to-start.
         if(release_owner_){process_birth_=scope;process_owner_alive_=true;}
-        const auto guardName =
-#ifdef Q_OS_WIN
-            QStringLiteral("edi_assistant_guard.exe");
-#else
-            QStringLiteral("edi_assistant_guard");
-#endif
-        auto guard = QDir(QCoreApplication::applicationDirPath()).filePath(guardName);
-        if (!QFileInfo(guard).isExecutable() && qEnvironmentVariableIsSet("EDI_CODEX_DEVELOPMENT_EXECUTABLE"))
-            guard = QDir(QString::fromUtf8(EDI_CODEX_BUILD_APP_DIR)).filePath(guardName);
-        if (!QFileInfo(guard).isExecutable()) throw std::runtime_error("The assistant lifetime guard is unavailable");
-        process->setProgram(guard);
+        const auto guard = assistant_guard_executable();
+        if (guard.isEmpty()) throw std::runtime_error("The assistant lifetime guard is unavailable");
         QStringList arguments{QStringLiteral("--listen"), QStringLiteral("stdio://"),
             QStringLiteral("-c"), QStringLiteral("sandbox_mode=\"read-only\""),
             QStringLiteral("-c"), QStringLiteral("approval_policy=\"never\""),
@@ -434,13 +442,11 @@ bool CodexAgent::start(const QString& executable, const QString& workspace) {
         if(policyPatch().isEmpty())arguments <<
             QStringLiteral("-c") << QStringLiteral("features.default_mode_request_user_input=true") <<
             QStringLiteral("-c") << QStringLiteral("tools.experimental_request_user_input.enabled=true");
-        arguments.prepend(executable);
-        arguments.prepend(QString::number(QCoreApplication::applicationPid()));
-        process->setArguments(arguments);
-        process->setWorkingDirectory(workspace);
-        process->setProcessChannelMode(QProcess::SeparateChannels);
-        // The runtime owns its ordinary profile and managed login. Never assign
-        // HOME/home/CODEX_HOME, open config/auth files, or copy provider tokens.
+        // cppcheck-suppress nullPointerRedundantCheck ; checked again below, after calls that can delete it
+        assistant_guard_prepare(*process, guard, executable, arguments, workspace, environment);
+        // The runtime owns its profile and managed login. Never assign HOME/home,
+        // open config/auth files, or copy provider tokens; CODEX_HOME is set only
+        // through the given environment, for an added account's empty home (ADR-0108 §8).
         connect(process, &QProcess::started, this, [this, original = prepared, scope] {
             const QPointer<CodexAgent> alive(this);
             const auto stillCurrent = [&] { return alive && original && process_ == original.data() && generation_ == scope; };
@@ -487,8 +493,7 @@ bool CodexAgent::start(const QString& executable, const QString& workspace) {
             // operation deadline still ends a write that fails while the guard runs.
             if (error == QProcess::WriteError) return;
             // Name what went wrong: the guard could not start, crashed, or stopped reading before the runtime's answer.
-            static const char* const kinds[] = {"start error", "crashed", "timed out", "read error", "write error", "unknown error"};
-            const auto kind = kinds[std::clamp(static_cast<int>(error), 0, 5)];
+            const auto kind = assistant_process_error_kind(error);
             try { exit_detail_ = QString::fromLatin1(kind) + QStringLiteral(": ") + original->errorString(); } catch (...) {}
             fail("The official agent process could not continue (%1).");
         });
@@ -682,15 +687,15 @@ void CodexAgent::read(QProcess* process, quint64 scope, bool finished) {
     if (!current() || !eof_pending_) return;
     eof_pending_=false;
     if (!failed_) {
-        // The guard exits 127 when the runtime could not start, 128 + n when a signal stopped it (macOS stops a
-        // program it refuses to run with signal 9), and the runtime's own code otherwise.
-        if (exit_code_ == 127) fail("The official agent could not be started by the system.");
-        else if (exit_code_ > 128 && exit_code_ < 160) {
-            exit_detail_ = QString::number(exit_code_ - 128);
+        // How the guard reports the runtime's end: assistant_guard_end.
+        const auto end = assistant_guard_end(exit_code_);
+        if (end.kind == AssistantGuardExit::NotStarted) fail("The official agent could not be started by the system.");
+        else if (end.kind == AssistantGuardExit::Signal) {
+            exit_detail_ = QString::number(end.number);
             fail("The official agent was stopped by the system (signal %1).");
-        } else if (exit_code_ == 125) fail("The assistant lifetime guard refused to start the official agent.");
-        else if (exit_code_ > 0) {
-            exit_detail_ = QString::number(exit_code_);
+        } else if (end.kind == AssistantGuardExit::Refused) fail("The assistant lifetime guard refused to start the official agent.");
+        else if (end.kind == AssistantGuardExit::ExitCode) {
+            exit_detail_ = QString::number(end.number);
             fail("The official agent process ended with exit code %1. Unfinished work was interrupted.");
         } else fail("The official agent process ended. Unfinished work was interrupted.");
     }

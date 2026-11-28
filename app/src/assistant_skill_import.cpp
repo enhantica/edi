@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "assistant_skill_import.hpp"
+#include "engine_setup.hpp"
 #ifndef __EMSCRIPTEN__
 #include "connection_services.hpp"
 #include "edi/assistant_limits.hpp"
@@ -150,7 +151,7 @@ struct AssistantSkillWebImport::State {
                 files.append({path,target,row.value("sha").toString()});break;
             }
         }
-        const auto parent=QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation)+"/assistant/skill-sources";
+        const auto parent=edi_app::app_local_data_location()+"/assistant/skill-sources";
         if(!QDir().mkpath(parent))throw std::runtime_error("The local skill-source cache is unavailable.");
         directory=std::make_unique<QTemporaryDir>(parent+"/import-XXXXXX");if(!directory->isValid())throw std::runtime_error("The local skill snapshot could not be staged.");
         download();

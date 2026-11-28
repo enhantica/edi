@@ -17,6 +17,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'tools/release'))
+from assistants import DISTRIBUTION_SETTINGS, component_distributed  # noqa: E402
 from legacy_feed import has_new, legacy, publishable, serialize  # noqa: E402
 from versions import PATTERN, version_key  # noqa: E402
 
@@ -264,6 +265,17 @@ def overlay_release(site: Path, incoming: Path) -> None:
     shutil.copy2(incoming / 'SHA256SUMS', site / 'SHA256SUMS')
 
 
+def refuse_undistributed(repository: Path) -> None:
+    """An assistant is published only once its distribution is public (edi ADR-0108)."""
+    names = {'claude_distribution': 'Claude', 'copilot_distribution': 'GitHub Copilot'}
+    updates = (repository / 'Updates.xml').read_bytes()
+    for component, setting in DISTRIBUTION_SETTINGS.items():
+        if not component_distributed(component) and (
+            (repository / component).exists() or component.encode() in updates
+        ):
+            raise RuntimeError(f'{names[setting]} is not distributed yet: {repository.name}')
+
+
 def overlay_installers(site: Path, incoming: Path) -> None:
     """Replace complete platform repositories while retaining the other published platforms."""
     channels = list(incoming.iterdir())
@@ -295,6 +307,7 @@ def overlay_installers(site: Path, incoming: Path) -> None:
         for part in parts:
             if not (part / 'Updates.xml').is_file():
                 raise RuntimeError(f'Installer repository is incomplete: {part.name}')
+            refuse_undistributed(part)
             path = policy['repository_paths'][channel.name].format(platform=part.name)
             repositories.append((part, site / path))
     for part, target in repositories:
@@ -366,6 +379,8 @@ def trim_testing_archives(repository: Path, keep: set[str]) -> None:
     packages = {
         'org.easydiffraction.app',
         'org.easydiffraction.app.assistant',
+        'org.easydiffraction.app.claude',
+        'org.easydiffraction.app.copilot',
         'org.easydiffraction.app.maintenancetool',
         'org.easyscience.edi',
         'org.easyscience.edi.assistant',

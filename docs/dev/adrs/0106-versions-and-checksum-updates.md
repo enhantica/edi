@@ -42,6 +42,8 @@ Once the tool was replaced, it still showed the old release's pages, which the f
    release dates. So installed 2026.11.x copies update to 26.17. A component whose content is the same in two
    releases is not offered; one rebuilt with other bytes but the same content is offered again, so packaging stays
    as reproducible as it is; the feed's version fields are shown, never compared.
+   **Amended 2026-11-28:** promotion now publishes an unchanged component's earlier copy, so it is not offered
+   again ([ADR-0111](0111-updates-carry-only-changed-components.md)).
 5. **An update replaces the Maintenance Tool** on macOS and Windows. The component that carries the signed tool
    unpacks it on an update too, from operations that run only for a component being updated. On Windows its script
    calls `installer.setInstallerBaseBinary` and the framework swaps the tool once it quits. On macOS the framework

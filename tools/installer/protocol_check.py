@@ -6,10 +6,12 @@ import base64
 import functools
 import json
 import os
+import re
 import shutil
 import subprocess
 import time
 import xml.etree.ElementTree as ET  # noqa: S405 - binarycreator's and our own XML only
+from itertools import combinations
 from pathlib import Path
 from unittest.mock import patch
 
@@ -18,6 +20,8 @@ from package import (
     APP_COMPONENT,
     ASSISTANT_COMPONENT,
     ASSISTANT_RUNTIME,
+    CLAUDE_COMPONENT,
+    COPILOT_COMPONENT,
     ROOT,
     SUFFIX,
     SYSTEM,
@@ -25,6 +29,7 @@ from package import (
     build_maintenance_tool,
     check_maintenance_tool,
     clean_environment,
+    distributed_assistants,
     installer_from_download,
     maintenance_script,
     maintenance_tool_executable,
@@ -35,6 +40,12 @@ from package import (
     verify_installed_maintenance_tool,
     write_resources,
 )
+
+ASSISTANT_MARKERS = {
+    ASSISTANT_COMPONENT: ASSISTANT_RUNTIME / 'chatgpt.txt',
+    CLAUDE_COMPONENT: Path('libexec/edi/claude/claude.txt'),
+    COPILOT_COMPONENT: Path('libexec/edi/copilot/copilot.txt'),
+}
 
 # The release users update from: its control script has no cleanup for the tool the macOS swap
 # keeps, and its .dat holds no replacement for the tool's pages.
@@ -212,21 +223,25 @@ def check(tools: Path, output: Path) -> None:
     )
     marker.parent.mkdir(parents=True)
     marker.write_text('first marker\n')
-    assistant_marker = stage / ASSISTANT_RUNTIME / 'assistant.txt'
-    assistant_marker.parent.mkdir(parents=True)
-    assistant_marker.write_text('optional assistant marker\n')
+    for component, relative in ASSISTANT_MARKERS.items():
+        assistant_marker = stage / relative
+        assistant_marker.parent.mkdir(parents=True)
+        assistant_marker.write_text(component + '\n', encoding='utf-8')
     repository = (output / 'online/repository').as_uri() + '/'
     # Substitute only the endpoint; install and maintenance use the real embedded configuration.
     # The update goes from the last old-form version to the first YY.N, which sorts lower by its
     # numbers: the repository offers it by content checksum (edi ADR-0106). The first release has
     # the released controller and stylesheet, another tick image, and no replacement for the
     # tool's default resource, so only the update can bring the new pages.
+    # The marker installers are internal builds, so they exercise Claude before its distribution is
+    # public; a public build of the same stage carries only the distributed assistants.
     with (
         patch('package.repository_urls', return_value=(repository,)),
         patch('package.write_controller', released_controller),
         patch('package.write_resources', first_release_resources),
     ):
-        offline = package_app(stage, tools, output / 'offline', '2026.11.31')
+        offline = package_app(stage, tools, output / 'offline', '2026.11.31', internal=True)
+        check_public(package_app(stage, tools, output / 'public', '2026.11.31'), output)
     if list((output / 'offline/source/packages').glob('*/data/**/' + RESOURCE_NAME)):
         raise RuntimeError(f'The first release ships {RESOURCE_NAME}, which 2026.11 did not')
     marker.write_text('second marker\n')
@@ -234,7 +249,9 @@ def check(tools: Path, output: Path) -> None:
     # update leaves the tool alone (edi ADR-0091), so only macOS and Windows build one.
     tool_builds = SYSTEM in {'macos', 'windows'}
     new_tool = build_maintenance_tool(tools, output / 'online tool', '1') if tool_builds else None
-    online = package_app(stage, tools, output / 'online', '26.17', repository, (), new_tool)
+    online = package_app(
+        stage, tools, output / 'online', '26.17', repository, (), new_tool, internal=True
+    )
     for name in ('Installer.qs', 'resources/CheckMark.png'):
         first, new = (output / kind / 'source/config' / name for kind in ('offline', 'online'))
         if first.read_bytes() == new.read_bytes():
@@ -253,27 +270,37 @@ def check(tools: Path, output: Path) -> None:
     ):
         failing = output / 'failing-26.18'
         package_app(
-            stage, tools, failing, '26.18', (failing / 'repository').as_uri() + '/', (), third_tool
+            stage,
+            tools,
+            failing,
+            '26.18',
+            (failing / 'repository').as_uri() + '/',
+            (),
+            third_tool,
+            internal=True,
         )
     update = output / 'update-26.18'
     package_app(
-        stage, tools, update, '26.18', (update / 'repository').as_uri() + '/', (), third_tool
+        stage,
+        tools,
+        update,
+        '26.18',
+        (update / 'repository').as_uri() + '/',
+        (),
+        third_tool,
+        internal=True,
     )
     (output / 'isolated home').mkdir()
     # The interrupted update leaves an installation the Framework can no longer update, so the
     # successful second update starts from an installation of its own.
     for kind, bootstrap in [('offline', offline), ('interrupted', offline), ('online', online)]:
-        exercise(
-            kind, bootstrap, output, marker.relative_to(stage), assistant_marker.relative_to(stage)
-        )
+        exercise(kind, bootstrap, output, marker.relative_to(stage))
     (output / 'passed.json').write_text(
         json.dumps({'passed': True, 'transport': 'file', 'application_test': False}) + '\n'
     )
 
 
-def exercise(
-    kind: str, bootstrap: Path, output: Path, marker: Path, assistant_marker: Path
-) -> None:
+def exercise(kind: str, bootstrap: Path, output: Path, marker: Path) -> None:
     env = clean_environment(output / 'isolated home' / kind)
     metadata = json.loads((bootstrap.parent / 'installer.json').read_text())
     executable = installer_command(
@@ -309,9 +336,7 @@ def exercise(
             expected = 'first marker\n' if first_release else 'second marker\n'
             if installed.read_text() != expected:
                 raise RuntimeError('Installer did not install the expected component')
-            installed_assistant = target / assistant_marker
-            if installed_assistant.exists():
-                raise RuntimeError('Default installation selected the optional component')
+            check_assistants(target, set())
             # The first release's install shows its pages, which proves the check below can tell
             # them apart; the online install shows the new ones.
             maintenance_pages(
@@ -324,7 +349,7 @@ def exercise(
             else:
                 if kind == 'offline':
                     second_update(target, maintenance, installed, output, options)
-                assistant(maintenance, installed, installed_assistant, kind, options)
+                assistant(maintenance, installed, target, kind, options)
         finally:
             if tool_runs:
                 run([maintenance, '--default-answer', '--confirm-command', 'purge'], **options)
@@ -332,19 +357,91 @@ def exercise(
                 shutil.rmtree(target)
         if installed.exists():
             raise RuntimeError('Maintenance tool left the component installed')
+        if kind == 'offline':
+            check_offline_subsets(executable, maintenance, target, installed, options)
 
 
-def assistant(
-    maintenance: Path, installed: Path, installed_assistant: Path, kind: str, options: dict
-) -> None:
-    """Install and remove the optional assistant, leaving the application as it was."""
+def check_public(bootstrap: Path, output: Path) -> None:
+    """Require a public installer to offer exactly the distributed assistants."""
+    metadata = json.loads((bootstrap.parent / 'installer.json').read_text())
+    offer = offered(
+        installer_command(
+            installer_from_download(
+                bootstrap.parent / metadata['download'], output / 'public/unpacked'
+            )
+        ),
+        clean_environment(output / 'public/home'),
+    )
+    if metadata['internal'] or offer & set(ASSISTANT_MARKERS) != set(distributed_assistants()):
+        raise RuntimeError('A public installer carries an assistant that is not distributed')
+
+
+def offered(executable: Path, env: dict) -> set[str]:
+    """The components an installer offers, as its search command lists them."""
+    result = subprocess.run(
+        [executable, 'search'], env=env, capture_output=True, text=True, timeout=60, check=True
+    )
+    return set(re.findall(r'<package name="([^"]+)"', result.stdout + result.stderr))
+
+
+def check_assistants(target: Path, expected: set[str]) -> None:
+    """Read the installed marker for each provider after an operation."""
+    for component, relative in ASSISTANT_MARKERS.items():
+        installed = target / relative
+        if component in expected:
+            if (
+                not installed.is_file()
+                or installed.read_text(encoding='utf-8') != component + '\n'
+            ):
+                raise RuntimeError(f'Installer did not preserve the selected {component} payload')
+        elif installed.exists():
+            raise RuntimeError(f'Installer installed the unselected {component} payload')
+
+
+def check_offline_subsets(executable, maintenance, target, installed, options) -> None:
+    install = [
+        executable,
+        '--root',
+        target,
+        '--accept-licenses',
+        '--default-answer',
+        '--confirm-command',
+        'install',
+    ]
+    subsets = [
+        subset
+        for count in range(1, len(ASSISTANT_MARKERS) + 1)
+        for subset in combinations(ASSISTANT_MARKERS, count)
+    ]
+    for index, subset in enumerate(subsets, 1):
+        # A fresh folder each time: on Windows the purged tool removes itself only after it exits,
+        # and an installer refuses a folder that is not empty.
+        folder = target.with_name(f'{target.name} {index}')
+        install[2] = folder
+        run([*install, *subset], **options)
+        try:
+            if (folder / installed.relative_to(target)).read_text() != 'first marker\n':
+                raise RuntimeError('Selecting assistants must retain the application')
+            check_assistants(folder, set(subset))
+        finally:
+            tool = folder / maintenance.relative_to(target)
+            run([tool, '--default-answer', '--confirm-command', 'purge'], **options)
+
+
+def assistant(maintenance: Path, installed: Path, target: Path, kind: str, options: dict) -> None:
+    """Install and remove each optional assistant, leaving the application as it was."""
     final = 'third marker\n' if kind == 'offline' else 'second marker\n'
     maintenance_args = [maintenance, '--accept-licenses', '--default-answer', '--confirm-command']
-    run([*maintenance_args, 'install', ASSISTANT_COMPONENT], **options)
-    if installed_assistant.read_text(encoding='utf-8') != 'optional assistant marker\n':
-        raise RuntimeError('Maintenance tool did not install the assistant')
-    run([*maintenance_args, 'remove', ASSISTANT_COMPONENT], **options)
-    if installed_assistant.exists() or installed.read_text(encoding='utf-8') != final:
+    selected = set()
+    for component in ASSISTANT_MARKERS:
+        run([*maintenance_args, 'install', component], **options)
+        selected.add(component)
+        check_assistants(target, selected)
+    for component in ASSISTANT_MARKERS:
+        run([*maintenance_args, 'remove', component], **options)
+        selected.remove(component)
+        check_assistants(target, selected)
+    if installed.read_text(encoding='utf-8') != final:
         raise RuntimeError('Removing the assistant changed the required application')
 
 

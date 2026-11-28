@@ -1,7 +1,9 @@
 # SPDX-License-Identifier: BSD-3-Clause
 """Offline installer boundaries from ADR-0091 and the installation contract."""
 
+import hashlib
 import importlib.util
+import json
 import re
 import runpy
 import shutil
@@ -29,27 +31,57 @@ def load(relative):
 PACKAGE = load('tools/installer/package.py')
 
 
-def test_three_page_install_choices_gate_components_license_and_sizes():
-    result = subprocess.run(
+def replay_install_choices(*flags):
+    return subprocess.run(
         [
             'node',
             str(ROOT / 'tests/fixtures/installer/choices.mjs'),
             str(ROOT / 'tools/installer'),
+            *flags,
         ],
         check=False,
         capture_output=True,
         text=True,
         timeout=10,
     )
-    assert result.returncode == 0, (
-        'The real installer callbacks keep the Install choices and summary consistent: '
-        + result.stdout
-        + result.stderr
-    )
+
+
+def test_three_page_install_choices_gate_components_license_and_sizes():
+    for flags in ([], ['--with-claude']):
+        result = replay_install_choices(*flags)
+        assert result.returncode == 0, (
+            'Installer callbacks must keep choices and the summary consistent whether or not '
+            'Claude is carried: ' + result.stdout + result.stderr
+        )
 
 
 def parse_metadata(path):
     return ET.parse(path)  # noqa: S314 - only locally generated installer XML
+
+
+@pytest.mark.parametrize('tool', ['built-in', 'component'])
+def test_installer_component_rows_expose_descriptions(tmp_path, tool):
+    PACKAGE.write_maintenance_tool_metadata(tmp_path, '26.20')
+    description = parse_metadata(tmp_path / 'package.xml').findtext('Description')
+    form = parse_metadata(ROOT / 'tools/installer/AssistantForm.ui')
+    box = form.find(".//widget[@class='QCheckBox'][@name='MaintenanceCheckBox']")
+    assert box is not None and description, (
+        'The Maintenance Tool must supply a checkbox and a component description'
+    )
+    initial = {
+        field: box.findtext(f"property[@name='{field}']/string")
+        for field in ('toolTip', 'accessibleDescription')
+    }
+    flags = ['--with-maintenance', '--with-claude'] if tool == 'component' else []
+    result = replay_install_choices(
+        '--check-descriptions',
+        json.dumps({'description': description, 'initial': initial}),
+        *flags,
+    )
+    assert result.returncode == 0, (
+        'Every visible component checkbox must expose its own description on hover and to '
+        'assistive technology: ' + result.stdout + result.stderr
+    )
 
 
 @pytest.mark.parametrize(
@@ -297,6 +329,35 @@ def test_draft_cleanup_preserves_other_sources_channels_and_published_releases(
     )
 
 
+def stage_vendor_fixtures(stage, sdk, suffix, magic):
+    vendors = {}
+    for provider in ('claude', 'copilot'):
+        folder = stage / 'libexec/edi' / provider
+        folder.mkdir(parents=True)
+        executable = folder / (provider + suffix)
+        payload = magic + provider.encode()
+        executable.write_bytes(payload)
+        vendors[executable] = payload
+        metadata = {'runtime': provider, 'version': '1.0', 'entrypoint': executable.name}
+        identity = folder / 'edi-runtime.json'
+        identity.write_text(json.dumps(metadata), encoding='utf-8')
+        digest = hashlib.sha256(payload).hexdigest()
+        pin = sdk / 'share/edi/assistant' / provider / '1.0' / 'input.json'
+        pin.parent.mkdir(parents=True)
+        pin.write_text(
+            json.dumps({
+                **metadata,
+                'archive_sha256': digest,
+                'files': {
+                    executable.name: digest,
+                    identity.name: hashlib.sha256(identity.read_bytes()).hexdigest(),
+                },
+            }),
+            encoding='utf-8',
+        )
+    return vendors
+
+
 @pytest.mark.parametrize('system', ['windows', 'macos'])
 def test_release_signs_assistant_executables_outside_the_app(tmp_path, monkeypatch, system):
     monkeypatch.syspath_prepend(str(ROOT / 'tools/installer'))
@@ -319,9 +380,16 @@ def test_release_signs_assistant_executables_outside_the_app(tmp_path, monkeypat
     magic = b'MZ\x00\x00' if system == 'windows' else b'\xcf\xfa\xed\xfe'
     for helper in helpers:
         helper.write_bytes(magic + b'fixture executable')
+    vendors = stage_vendor_fixtures(stage, sdk, suffix, magic)
+    (sdk / 'share/crysta-sdk').mkdir()
+    (sdk / 'share/crysta-sdk/manifest.json').write_text('{}', encoding='utf-8')
+    (sdk / 'lib').mkdir()
+    library = 'crysta_core.lib' if system == 'windows' else 'libcrysta_core.a'
+    (sdk / 'lib' / library).write_bytes(b'fixture SDK library')
     # The build owns stage creation. Simulate installation only when CMake is invoked.
     stage.rename(work / 'staged-fixture')
     signed = []
+    vendor_checks = []
 
     def external(args, **_kwargs):
         words = list(map(str, args))
@@ -342,6 +410,7 @@ def test_release_signs_assistant_executables_outside_the_app(tmp_path, monkeypat
         },
     )
     monkeypatch.setattr(build, 'acquire_sdk', lambda *_args: sdk)
+    monkeypatch.setattr(build, 'provisioned_prefix', lambda: sdk)
     monkeypatch.setattr(build, 'resolve_qt_prefix', lambda *_args: tmp_path / 'qt')
     for name in [
         'copy_windows_compiler_runtime',
@@ -353,13 +422,23 @@ def test_release_signs_assistant_executables_outside_the_app(tmp_path, monkeypat
     ]:
         monkeypatch.setattr(build, name, lambda *_args: None)
     monkeypatch.setattr(build, 'sign_windows', lambda path: signed.append(str(path)))
+    monkeypatch.setattr(
+        build,
+        'verify_vendor_signature',
+        lambda path, _signer: vendor_checks.append((path, bool(signed))),
+    )
     monkeypatch.setattr(build, 'audit_bundle', lambda *_args: {})
     monkeypatch.setattr(build, 'crysta_commit', lambda *_args: 'b' * 40)
-    monkeypatch.setattr(build, 'sha256', lambda *_args: 'c' * 64)
     build.build(sdk, work, None, None)
     assert all(str(helper) in signed for helper in helpers), (
-        'ADR-0091: every assistant helper outside the app bundle is signed in a release build'
+        'ADR-0091: each Codex helper outside the app bundle is signed in a release build'
     )
+    assert all(
+        str(path) not in signed and path.read_bytes() == data for path, data in vendors.items()
+    ), 'ADR-0108: release signing leaves the Claude and Copilot binaries byte for byte intact'
+    assert set(vendor_checks) == {
+        (path, signed_stage) for path in vendors for signed_stage in (False, True)
+    }, 'ADR-0108: the release checks each vendor signature before and after edi signing'
 
 
 def test_installed_windows_maintenance_tool_requires_signature(tmp_path, monkeypatch):

@@ -27,6 +27,7 @@ from package import (
     run,
     sha256,
     sign_windows,
+    signtool,
     windows_signing,
 )
 
@@ -264,19 +265,34 @@ MACHO_MAGIC = frozenset({
 })  # fmt: skip
 
 
+# Claude Code and the Copilot CLI ship unmodified: release signing never touches them (ADR-0108).
+VENDOR_RUNTIMES = ('libexec/edi/claude', 'libexec/edi/copilot')
+
+
+def vendor_runtime(stage: Path, path: Path) -> bool:
+    """True for a file inside a runtime that keeps its vendor's bytes and signature."""
+    relative = path.relative_to(stage).as_posix()
+    return any(relative == root or relative.startswith(root + '/') for root in VENDOR_RUNTIMES)
+
+
 def release_executables(stage: Path) -> list[Path]:
     """The programs a release signs outside the macOS app bundle (edi ADR-0091).
 
-    Windows: every .exe in the stage (the app, the assistant guard and the assistant runtime's
-    helpers). macOS: every Mach-O file of the assistant runtime, which lives beside the app.
+    Windows: every .exe in the stage (the app, the assistant guard and the Codex runtime's
+    helpers). macOS: every Mach-O file of the Codex runtime, which lives beside the app.
+    Claude's and Copilot's binaries are left out.
     """
     if SYSTEM == 'windows':
-        return sorted(path for path in stage.rglob('*.exe') if path.is_file())
+        return sorted(
+            path
+            for path in stage.rglob('*.exe')
+            if path.is_file() and not vendor_runtime(stage, path)
+        )
     if SYSTEM != 'macos':
         return []
     found = []
     for path in sorted((stage / 'libexec').rglob('*')):
-        if path.is_symlink() or not path.is_file():
+        if path.is_symlink() or not path.is_file() or vendor_runtime(stage, path):
             continue
         with path.open('rb') as stream:
             if stream.read(4) in MACHO_MAGIC:
@@ -298,6 +314,102 @@ def sign_release_executables(stage: Path) -> list[Path]:
             run(['codesign', '--force', *macos_signing_args(), path])
             run(['codesign', '--verify', '--strict', '--verbose=2', path])
     return executables
+
+
+# Who signs each vendor binary, checked on release builds: codesign's first Authority line and
+# signtool's "Issued to" name. The owner's trial confirms both at each new pin.
+VENDOR_SIGNERS = {
+    'claude': {
+        'macos': 'Developer ID Application: Anthropic PBC (Q6L2SF6YDW)',
+        'windows': 'Anthropic, PBC',
+    },
+    'copilot': {
+        'macos': 'Developer ID Application: GitHub (VEKTX9H2N7)',
+        'windows': 'GitHub, Inc.',
+    },
+}
+
+
+def provisioned_prefix() -> Path:
+    """The environment the runtime packages were installed into (cmake/assistant_runtime.cmake)."""
+    value = os.environ.get('PIXI_ENVIRONMENT_PREFIX') or os.environ.get('CONDA_PREFIX')
+    return Path(value) if value else Path(sys.prefix)
+
+
+def vendor_pins(root: Path, prefix: Path) -> tuple[dict[str, str], str]:
+    """The pinned member hashes of one vendor runtime and its executable's name.
+
+    The package's input.json records them; its recipe checked the binary against its pin.
+    """
+    runtime = root.name
+    identity = json.loads((root / 'edi-runtime.json').read_text(encoding='utf-8'))
+    manifest = prefix / 'share/edi/assistant' / runtime / identity['version'] / 'input.json'
+    if manifest.is_symlink() or not manifest.is_file():
+        raise RuntimeError(f'The pinned {runtime} package is not installed: {manifest}')
+    pins = json.loads(manifest.read_text(encoding='utf-8'))
+    entrypoint = identity['entrypoint']
+    if (
+        pins.get('runtime') != runtime
+        or pins.get('version') != identity['version']
+        or not pins.get('files', {}).get(entrypoint)
+        # Claude's download is the binary itself, so its pin is the binary's hash.
+        or (runtime == 'claude' and pins['files'][entrypoint] != pins.get('archive_sha256'))
+    ):
+        raise RuntimeError(f'The staged {runtime} runtime does not match its pinned package')
+    return pins['files'], entrypoint
+
+
+def verify_vendor_signature(path: Path, signer: dict[str, str]) -> None:
+    """The vendor's own signature, unchanged: codesign on macOS, signtool on Windows."""
+    if SYSTEM == 'macos':
+        run(['codesign', '--verify', '--strict', '--verbose=2', path])
+        result = subprocess.run(
+            ['codesign', '--display', '--verbose=2', str(path)],
+            check=True, capture_output=True, text=True,
+        )  # fmt: skip
+        authorities = [
+            line.removeprefix('Authority=')
+            for line in (result.stdout + result.stderr).splitlines()
+            if line.startswith('Authority=')
+        ]
+        if not authorities or authorities[0] != signer['macos']:
+            raise RuntimeError(f'{path.name} is signed by {authorities}, not {signer["macos"]}')
+    elif SYSTEM == 'windows':
+        result = subprocess.run(
+            [str(signtool()), 'verify', '/pa', '/v', str(path)],
+            check=True, capture_output=True, text=True,
+        )  # fmt: skip
+        print(result.stdout, flush=True)
+        if f'Issued to: {signer["windows"]}' not in result.stdout:
+            raise RuntimeError(f'{path.name} is not signed by {signer["windows"]}')
+
+
+def verify_vendor_runtimes(stage: Path, prefix: Path, *, signatures: bool) -> list[str]:
+    """Check Claude's and Copilot's staged files against their pins (edi ADR-0108).
+
+    On a release each binary must still carry its vendor's signature. Run after staging and again
+    after signing.
+    """
+    checked = []
+    for relative in VENDOR_RUNTIMES:
+        root = stage / relative
+        if not root.exists():
+            continue
+        if root.is_symlink() or not root.is_dir():
+            raise RuntimeError(f'{relative} is not a staged directory')
+        pins, entrypoint = vendor_pins(root, prefix)
+        actual = {}
+        for path in sorted(root.rglob('*')):
+            if path.is_symlink():
+                raise RuntimeError(f'{relative} holds a link: {path.name}')
+            if path.is_file():
+                actual[path.relative_to(root).as_posix()] = sha256(path)
+        if actual != pins:
+            raise RuntimeError(f'{relative} differs from its pinned package')
+        if signatures:
+            verify_vendor_signature(root / entrypoint, VENDOR_SIGNERS[root.name])
+        checked.append(relative)
+    return checked
 
 
 def verify_assistant_payload(stage: Path, expected: Path) -> None:
@@ -493,7 +605,10 @@ def build(
         sign_macos_app(stage / 'EasyDiffraction.app')
     # The runtime's upstream bytes are checked before the release signature changes them.
     verify_assistant_payload(stage, app / 'app/assistant-runtime-installed.json')
+    release = macos_signing() or windows_signing()
+    verify_vendor_runtimes(stage, provisioned_prefix(), signatures=release)
     sign_release_executables(stage)
+    verify_vendor_runtimes(stage, provisioned_prefix(), signatures=release)
     (stage / 'bundle-audit.json').write_text(
         json.dumps(audit_bundle(stage), indent=2) + '\n', encoding='utf-8'
     )

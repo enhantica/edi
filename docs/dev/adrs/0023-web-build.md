@@ -3,6 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-10-03
 - **Amended:** 2026-11-13 — ship only the multithreaded build; retire the blocking serial fallback.
+- **Amended:** 2026-11-27 (ADR-0108) — the desktop-only message names ChatGPT, Claude and GitHub Copilot.
 - **Implementation:** Toolchain, threaded app, file/settings access and site archive are implemented.
 - **Priority:** High
 - **Forward constraint (binding on new features):** the app builds with Qt's multithreaded wasm kit

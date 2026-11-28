@@ -21,11 +21,13 @@
 #include <QMouseEvent>
 #include <QRegularExpression>
 #include <QTimer>
+#include <QUuid>
 #include <algorithm>
 #include <iostream>
 #include <memory>
 #ifndef __EMSCRIPTEN__
 #include "codex_agent.hpp"
+#include "claude_session.hpp"
 #include "assistant_runtime_config.hpp"
 #endif
 #include "edi/io.hpp"
@@ -36,6 +38,7 @@
 #include "session.hpp"
 #include "assistant_test_settings.hpp"
 #include "assistant_widget_input.hpp"
+#include "row_table_model.hpp"
 #include "project_view_model.hpp"
 #include "run_log.hpp"
 #include "online_search.hpp"
@@ -44,6 +47,11 @@
 #include "assistant_file_primitives.hpp"
 #include <sys/stat.h>
 #include <sys/xattr.h>
+#endif
+#if defined(Q_OS_LINUX)
+#include <cerrno>
+#include <sys/inotify.h>
+#include <unistd.h>
 #endif
 
 // Keeps what a retried check found, for the steps after it, without an assignment inside the check.
@@ -265,13 +273,339 @@ private:
     QString state_ = "idle";
 };
 
+#ifndef __EMSCRIPTEN__
+class AssistantProviderProbe : public QObject {
+    Q_OBJECT
+private slots:
+    void claudeSignIn() {
+        const auto home = qEnvironmentVariable("EDI_PROVIDER_TEST_LOGIN_HOME");
+        QFile identity(home + "/fixture-account.txt");
+        QVERIFY2(identity.open(QIODevice::WriteOnly), "Prepare the offline login's own config home");
+        identity.close();
+
+        edi_app::ClaudeSession runtime;
+        edi_app::AssistantRuntimeLaunch launch;
+        launch.executable = qEnvironmentVariable("EDI_PROVIDER_TEST_LOGIN_EXECUTABLE");
+        launch.account.home = home;
+        launch.environment = QProcessEnvironment::systemEnvironment();
+        QSignalSpy opened(&runtime, &edi_app::AssistantRuntimeSession::signInOpened);
+        QSignalSpy finished(&runtime, &edi_app::AssistantRuntimeSession::signInFinished);
+        runtime.signIn(launch);
+        QTRY_VERIFY2_WITH_TIMEOUT(std::any_of(opened.cbegin(), opened.cend(), [](const auto& event) {
+            return event.at(0) == QString("https://claude.ai/oauth/authorize") &&
+                event.at(2) == QString("Paste the sign-in code") && event.at(3).toBool();
+        }), "The real login process must publish its browser and callback prompt", 3000);
+        QPointer<QProcess> login = runtime.findChild<QProcess*>();
+        QVERIFY2(login && login->state() == QProcess::Running && finished.isEmpty(),
+                 "The original process must remain alive while the fixture withholds the callback");
+        if (qEnvironmentVariableIsSet("EDI_PROVIDER_TEST_CANCEL_LOGIN")) {
+            runtime.cancelSignIn();
+            QTRY_VERIFY2_WITH_TIMEOUT(login.isNull(), "Cancel must stop and dispose of the login child", 3000);
+            QCOMPARE(finished.size(), 1);
+            QVERIFY2(!finished.at(0).at(0).toBool() &&
+                     finished.at(0).at(1).toString().contains("cancelled", Qt::CaseInsensitive),
+                     "Cancel must report one unsuccessful login without waiting for the callback");
+            return;
+        }
+        // Deliver any login deadline as Qt would, without waiting minutes for wall time.
+        for (auto* timer : login->findChildren<QTimer*>()) {
+            if (!timer->isActive()) continue;
+            QTimerEvent elapsed(timer->timerId());
+            QCoreApplication::sendEvent(timer, &elapsed);
+        }
+        QVERIFY2(login && login->state() == QProcess::Running && finished.isEmpty(),
+                 "The original login process must survive its former deadline");
+        runtime.answerSignIn("offline-fixture-code");
+        QTRY_COMPARE_WITH_TIMEOUT(finished.size(), 1, 3000);
+        QVERIFY2(finished.at(0).at(0).toBool() && finished.at(0).at(1).toString().isEmpty(),
+                 "The delayed callback must finish the same login successfully");
+        QTRY_VERIFY2_WITH_TIMEOUT(login.isNull(), "The successful login must dispose of its child", 3000);
+    }
+
+    void accountTurn() {
+        edi_app::use_fresh_settings();
+        QQmlApplicationEngine engine;
+        edi_app::configure_engine(engine);
+        edi_app::test::assistant_defaults();
+        QFile fixture(qEnvironmentVariable("EDI_PROVIDER_TEST_CASE"));
+        QVERIFY2(fixture.open(QIODevice::ReadOnly), "The provider probe needs an isolated account case");
+        const auto test = QJsonDocument::fromJson(fixture.readAll()).object();
+        QSettings settings(edi_app::settings_file_path(), QSettings::IniFormat);
+        const auto provider = test.value("provider").toString();
+        const auto scenario = test.value("scenario").toString();
+        auto account = test.value("account").toObject();
+        const auto id = account.value("id").toString();
+        const auto otherLogin = test.value("otherLogin").toString();
+        const auto accountParent = edi_app::app_local_data_location()
+            + "/assistant/accounts/" + provider + "/";
+        const auto home = accountParent + id;
+        QVERIFY2(QDir().mkpath(home), "Each selected account needs its own config home");
+        QVERIFY2(QFile::setPermissions(home, QFileDevice::ReadOwner | QFileDevice::WriteOwner |
+                                      QFileDevice::ExeOwner), "The fixture must have an owner-only account home");
+        account.insert("home", home);
+        QFile identity(home + "/fixture-account.txt");
+        QVERIFY2(identity.open(QIODevice::WriteOnly), "Set the identity returned by the offline runtime");
+        identity.write(test.value("runtimeEmail").toString().toUtf8());
+        identity.close();
+        QFile credential(home + "/.credentials.json");
+        QVERIFY2(credential.open(QIODevice::WriteOnly), "Plant a credential file that edi must leave alone");
+        credential.write("{\"fixture\": \"private account sentinel\"}");
+        credential.close();
+#if defined(Q_OS_LINUX)
+        const int watcher = ::inotify_init1(IN_CLOEXEC | IN_NONBLOCK);
+        QVERIFY2(watcher >= 0, "The credential test needs a real file-access observer");
+        const auto closeWatcher = qScopeGuard([&] { ::close(watcher); });
+        QVERIFY2(::inotify_add_watch(watcher, QFile::encodeName(credential.fileName()).constData(),
+                                  IN_OPEN | IN_ACCESS | IN_MODIFY | IN_MOVE_SELF | IN_DELETE_SELF) >= 0,
+                 "The credential observer must watch the planted file");
+        char activity[1024];
+        QVERIFY2(credential.open(QIODevice::ReadOnly), "Prove the credential observer detects a read");
+        credential.read(1);
+        credential.close();
+        QVERIFY2(::read(watcher, activity, sizeof(activity)) > 0,
+                 "An actual open and read must reach the observer");
+#endif
+        auto other = account;
+        const auto otherId = test.value("otherId").toString();
+        const auto otherHome = accountParent + otherId;
+        other.insert("id", otherId);
+        other.insert("email", otherLogin);
+        other.insert("home", otherHome);
+        QVERIFY2(QDir().mkpath(otherHome), "The other signed-in account must have a separate home");
+        QFile otherIdentity(otherHome + "/fixture-account.txt");
+        QVERIFY2(otherIdentity.open(QIODevice::WriteOnly), "Set the other account's offline identity");
+        otherIdentity.write(otherLogin.toUtf8());
+        otherIdentity.close();
+        const auto key = "Assistant/Providers/" + provider;
+        settings.setValue(key + "/accounts",
+                          QJsonDocument(QJsonObject{{"version", 1}, {"accounts", QJsonArray{other, account}}})
+                              .toJson(QJsonDocument::Compact));
+        settings.setValue("Assistant/activeAccount", provider + "/" + id);
+        const auto foreignThread = QUuid::createUuid().toString(QUuid::WithoutBraces);
+        const QJsonObject foreign{
+            {"thread", foreignThread}, {"originator", "edi"}, {"account", otherId},
+            {"provider", provider}, {"title", "Other account conversation"}};
+        settings.setValue(key + "/sessions",
+                          QJsonDocument(QJsonObject{{"version", 1}, {"threads", QJsonObject{{foreignThread, foreign}}}})
+                              .toJson(QJsonDocument::Compact));
+        settings.sync();
+        QVERIFY2(settings.status() == QSettings::NoError, "The account fixture must reach the settings store");
+
+        auto* session = engine.singletonInstance<edi_app::Session*>("edi.app", "Session");
+        QVERIFY2(session, "The probe must reach the application's normal desktop session");
+        auto* assistant = session->assistant();
+        QStringList available;
+        QStringList offered;
+        for (const auto& entry : assistant->providers()) {
+            offered.append(entry.provider);
+            if (entry.installed) available.append(entry.provider);
+        }
+        offered.sort();
+        QVERIFY2((offered == QStringList{"chatgpt", "claude", "copilot"}),
+                 "The Account dialog must get one availability record for each provider");
+        QVERIFY2((available == QStringList{provider}),
+                 "An installed runtime must be usable without enabling the other providers");
+        assistant->switchAccount(provider, id);
+        QVERIFY2(assistant->activeProvider().provider == provider,
+                 "The connection offer must use the installed provider the user selected");
+        // The owner's order (attach-after-connect): connect with nothing attached and no project, then attach
+        // files and send them in the first turn.
+        const bool refuseOpen = scenario == "refused-open";
+        const bool attachLater = scenario == "attach-after-connect" || refuseOpen;
+        QString fileId;
+        if (!attachLater) {
+            const auto selection = assistant->beginFileSelection();
+            QVERIFY2(!selection.isEmpty(), "The assistant must accept file selection before the connection offer");
+            QVERIFY2(assistant->addSelectedFiles(selection, {QUrl::fromLocalFile(test.value("file").toString())}),
+                     qPrintable(assistant->lastError()));
+            fileId = assistant->selectedFiles()->text(0, "id");
+            QVERIFY2(!fileId.isEmpty(), "The attached sample must have an edi file identity");
+        }
+        const auto consent = assistant->contextConsentIdentity();
+        QVERIFY2(!consent.isEmpty() && (attachLater || assistant->contextConsentRequired()),
+                 "The newly attached sample must be covered by the user's outgoing context approval");
+        const auto approval = assistant->acceptConnectionOffer(consent);
+        QVERIFY2(approval == "submitted", qPrintable(assistant->lastError() + " Approval: " + approval));
+        if (test.value("mismatch").toBool()) {
+            QTRY_VERIFY2_WITH_TIMEOUT(assistant->lastError().contains(test.value("runtimeEmail").toString()),
+                                     qPrintable(assistant->lastError()), 3000);
+            QVERIFY2(!assistant->connected(), "A mismatched runtime must not connect");
+            assistant->send("Do not send this prompt");
+            return;
+        }
+        if (test.value("credential").toBool()) {
+            QTRY_VERIFY2_WITH_TIMEOUT(assistant->connected() && assistant->draftAdmissionReady(),
+                                     qPrintable(assistant->lastError()), 3000);
+            QQmlComponent component(&engine);
+            component.setData("import edi.app\nMain { width: 1400; height: 1000; visible: true }", QUrl());
+            QScopedPointer<QObject> root(component.create());
+            auto* window = qobject_cast<QQuickWindow*>(root.data());
+            QVERIFY2(window, qPrintable(component.errorString()));
+            auto* dialog = root->findChild<QObject*>("assistant.accountDialog");
+            QVERIFY2(dialog && dialog->setProperty("parent", QVariant::fromValue(window->contentItem())) &&
+                            QMetaObject::invokeMethod(dialog, "open"),
+                     "The desktop Account dialog must open on the test window");
+            // The credential line itself, shown only for a key or token: it names the key's environment variable. The
+            // account rows are a Repeater's, so they are found through the item tree, not as QObject children.
+            const auto showsCredentialSource = [&] {
+                const auto shows = [](QQuickItem* item, auto&& self) -> bool {
+                    if (item->objectName() == "assistant.accountCredential" && item->isVisible()) {
+                        const auto text = item->property("text").toString();
+                        if (text.contains("ANTHROPIC_API_KEY") || text.contains("own API key", Qt::CaseInsensitive)) return true;
+                    }
+                    for (auto* child : item->childItems())
+                        if (self(child, self)) return true;
+                    return false;
+                };
+                auto* content = dialog->property("contentItem").value<QQuickItem*>();
+                return content && shows(content, shows);
+            };
+            QTRY_VERIFY2_WITH_TIMEOUT(dialog->property("visible").toBool(),
+                                      "The Account dialog must actually open", 500);
+            for (const auto* child : dialog->findChildren<QObject*>())
+                QVERIFY2(!child->property("text").toString().contains("fixture-api-key-never-displayed"),
+                         "Account details must never display the key value");
+            QVERIFY2(showsCredentialSource(), "The Account dialog must identify the active Claude environment key");
+            return;
+        }
+        bool connectionDropped = false;
+        QMetaObject::Connection connectionObservation;
+        const auto disconnectObservation = qScopeGuard([&] { QObject::disconnect(connectionObservation); });
+        if (attachLater) {
+            QTRY_VERIFY2_WITH_TIMEOUT(assistant->connected() && assistant->state() == "idle" &&
+                                          assistant->draftAdmissionReady(),
+                                     qPrintable(assistant->lastError()), 3000);
+            QVERIFY2(!session->project() && assistant->selectedFiles()->rowCount() == 0,
+                     "The account must connect before a project or any attachment is present");
+            if (refuseOpen) {
+                QFile receipt(test.value("runtimeReceipt").toString());
+                QVERIFY2(receipt.open(QIODevice::ReadOnly), "The connected runtime must record its launch");
+                QString instructions;
+                while (!receipt.atEnd() && instructions.isEmpty()) {
+                    const auto argv = QJsonDocument::fromJson(receipt.readLine()).object().value("argv").toArray();
+                    for (qsizetype index = 0; index + 1 < argv.size(); ++index)
+                        if (argv.at(index).toString() == "--append-system-prompt-file")
+                            instructions = argv.at(index + 1).toString();
+                }
+                QVERIFY2(QFile::remove(instructions) && QDir().mkdir(instructions),
+                         "A directory at the connected runtime's prompt-file path must refuse the next open");
+            }
+            connectionObservation = QObject::connect(assistant, &edi_app::AssistantViewModel::connectedChanged,
+                [&] { connectionDropped |= !assistant->connected(); });
+            QList<QUrl> files;
+            for (const auto& path : test.value("files").toArray()) files.append(QUrl::fromLocalFile(path.toString()));
+            QVERIFY2(files.size() >= 2, "The case attaches two files, as the owner did");
+            const auto selection = assistant->beginFileSelection();
+            QVERIFY2(!selection.isEmpty() && assistant->addSelectedFiles(selection, files), qPrintable(assistant->lastError()));
+            QCOMPARE(assistant->selectedFiles()->rowCount(), files.size());
+            fileId = assistant->selectedFiles()->text(0, "id");
+            const auto attached = assistant->contextConsentIdentity();
+            QVERIFY2(!attached.isEmpty() && assistant->contextConsentRequired(),
+                     "Files attached after connecting must be covered by a new approval");
+            // What the panel does when Send finds new attachments: the dialog's approval, then the held draft.
+            const auto again = assistant->acceptConnectionOffer(attached);
+            if (refuseOpen) {
+                QTRY_VERIFY2_WITH_TIMEOUT(assistant->lastError().contains("could not open the conversation") ||
+                                              !assistant->connected(), qPrintable(assistant->lastError()), 3000);
+                QVERIFY2(!connectionDropped && assistant->connected() &&
+                             assistant->account().email == account.value("email").toString(),
+                         qPrintable("A refused conversation open must keep the selected account connected: " +
+                                    assistant->lastError()));
+                return;
+            }
+            QVERIFY2(again == "approved", qPrintable(assistant->lastError() + " Approval: " + again));
+        }
+        const auto prompt = "Read the attached sample. fixture-file-id=" + fileId;
+        if (scenario == "wrong-login" || scenario == "wrong-host") {
+            const QString differing = scenario == "wrong-login" ? "different-user" : "other.ghe.com";
+            QTRY_VERIFY2_WITH_TIMEOUT(assistant->lastError().contains(differing),
+                                     qPrintable(assistant->lastError()), 3000);
+            QVERIFY2(!assistant->connected() && assistant->submitDraft(prompt).isEmpty(),
+                     "Copilot must refuse Send when its selected login or host differs");
+            return;
+        }
+        QTRY_VERIFY2_WITH_TIMEOUT(assistant->state() == "idle" && assistant->draftAdmissionReady(),
+                                 qPrintable(assistant->lastError()), 3000);
+        if (provider == "claude" && !attachLater) {
+            assistant->setSelectedModel("sonnet");
+            QVERIFY2(assistant->selectedModel() == "sonnet", "The selected model must come from Claude's readback");
+        }
+        assistant->refreshSessions();
+        QTRY_VERIFY2_WITH_TIMEOUT(!assistant->sessionsLoading(), "The account thread list must settle", 1000);
+        const auto* sessions = assistant->sessions();
+        for (int row = 0; row < sessions->rowCount(); ++row)
+            QVERIFY2(sessions->text(row, "id") != foreignThread, "Another account's thread must stay out of this list");
+        QStringList errors;
+        const auto errorObservation = QObject::connect(assistant, &edi_app::AssistantViewModel::lastErrorChanged,
+            [&] { errors.append(assistant->lastError()); });
+        const auto disconnectErrors = qScopeGuard([&] { QObject::disconnect(errorObservation); });
+        if (attachLater) {
+            // The panel submits the held draft once the conversation is ready.
+            QTRY_VERIFY2_WITH_TIMEOUT(!assistant->connected() || (!assistant->contextConsentRequired() &&
+                                          assistant->state() == "idle" && !assistant->canCancel()),
+                                      qPrintable(assistant->lastError()), 3000);
+            QVERIFY2(assistant->connected(), qPrintable("Opening the conversation for the attached files kept the "
+                                                        "account connected: " + assistant->lastError()));
+        }
+        assistant->send(prompt);
+        const auto appearsInTranscript = [&] {
+            auto* rows = assistant->messages();
+            for (int row = 0; row < rows->rowCount(); ++row)
+                if (rows->text(row, "kind") == "assistant" && rows->text(row, "text").contains("visible")) return true;
+            return false;
+        };
+        if (scenario == "foreign-tool") {
+            QTRY_VERIFY2_WITH_TIMEOUT(
+                std::any_of(errors.cbegin(), errors.cend(), [](const QString& failure) {
+                    return failure.contains("fixture_unlisted_tool") && failure.contains("turn was stopped");
+                }),
+                qPrintable(errors.join(u'\n')), 3000);
+            QVERIFY2(!appearsInTranscript(), "An unlisted tool must stop the turn without a tool reply");
+            return;
+        }
+        if (attachLater) {
+            // The first turn with attachments and no project keeps the account connected: no connection failure.
+            QTRY_VERIFY2_WITH_TIMEOUT(appearsInTranscript() || !assistant->connected() ||
+                                          std::any_of(errors.cbegin(), errors.cend(), [](const QString& failure) {
+                                              return failure.contains("could not connect");
+                                          }),
+                                      qPrintable(assistant->lastError()), 3000);
+            QVERIFY2(std::none_of(errors.cbegin(), errors.cend(), [](const QString& failure) {
+                         return failure.contains("could not connect");
+                     }), qPrintable(errors.join(u'\n')));
+            QVERIFY2(assistant->connected(), "The account must stay connected through its first turn");
+        }
+        QTRY_VERIFY2_WITH_TIMEOUT(appearsInTranscript(), qPrintable(assistant->lastError()), 3000);
+        QTRY_COMPARE_WITH_TIMEOUT(assistant->state(), QString("idle"), 3000);
+        QVERIFY2(!connectionDropped && assistant->connected(),
+                 "The account must stay connected through the tool reply");
+        if (provider == "claude") {
+            QVERIFY2(QMetaObject::invokeMethod(assistant, "switchAccount", Q_ARG(QString, provider), Q_ARG(QString, otherId)),
+                     "Switch account must reach the view model's normal account action");
+            if (!assistant->connected() && assistant->state() != "connecting")
+                QVERIFY2(assistant->resumeConnection(), "The newly selected saved account must be available to reconnect");
+            QTRY_VERIFY2_WITH_TIMEOUT(assistant->connected() && assistant->account().email == otherLogin,
+                                     "Switching must connect using the other account's own identity", 3000);
+            QVERIFY2(!appearsInTranscript(), "Switch account must not carry over the previous account's reply");
+        }
+
+#if defined(Q_OS_LINUX)
+        const auto events = ::read(watcher, activity, sizeof(activity));
+        const auto readError = errno;
+        QVERIFY2(events == -1 && readError == EAGAIN,
+                 "The credential observer must report no opens, reads or changes");
+#endif
+    }
+};
+#endif
+
 class AssistantUiTests : public QObject {
     Q_OBJECT
 private slots:
     void initTestCase() {
         qputenv("QT_QUICK_CONTROLS_HOVER_ENABLED", "1");
         edi_app::use_fresh_settings();
-        QVERIFY(QDir().mkpath(QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation)));
+        QVERIFY(QDir().mkpath(edi_app::app_local_data_location()));
         const auto root = QString::fromUtf8(EDI_SOURCE_DIR);
         const auto cod = QUrl::fromLocalFile(root + "/tests/fixtures/online_sources/cod/").toString();
         const auto edb = QUrl::fromLocalFile(root + "/tests/fixtures/online_sources/easydiffraction/").toString();
@@ -1649,6 +1983,12 @@ int main(int argc, char** argv) {
         QStandardPaths::setTestModeEnabled(true);
         QGuiApplication app(argc, argv);
         app.setAttribute(Qt::AA_Use96Dpi, true);
+#ifndef __EMSCRIPTEN__
+        if (qEnvironmentVariableIsSet("EDI_PROVIDER_TEST_CASE")) {
+            AssistantProviderProbe probe;
+            return QTest::qExec(&probe, argc, argv);
+        }
+#endif
         AssistantUiTests tests;
         QTEST_SET_MAIN_SOURCE_PATH
         return QTest::qExec(&tests, argc, argv);

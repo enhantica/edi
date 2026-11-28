@@ -4,8 +4,8 @@ import QtTest
 
 import edi.app
 
-// The finished steps between two replies of the assistant as one line (edi ADR-0057): it names their number and draws an
-// icon for each, keeps its text in a narrow panel, and a click asks for the other state, which the model holds.
+// The finished steps between two replies of the assistant as one line (edi ADR-0057): it names their number and draws
+// each kind's icon once, keeps its text in a narrow panel, and a click asks for the other state, which the model holds.
 TestCase {
     id: test
 
@@ -28,17 +28,15 @@ TestCase {
         signalName: "toggled"
     }
 
-    function line(count, open) {
-        const icons = [];
-        for (let step = 0; step < count; ++step)
-            icons.push("success");
+    function line(count, open, icons) {
         const made = createTemporaryObject(lineComponent, test);
         verify(made !== null);
         made.payload = {
             "type": "ediSteps",
             "group": "first",
             "open": open,
-            "icons": icons
+            "icons": icons ?? ["success"],
+            "count": count
         };
         toggled.target = made;
         toggled.clear();
@@ -48,9 +46,14 @@ TestCase {
 
     function test_a_names_its_steps() {
         const made = line(3, false);
-        compare(made.icons.length, 3);
+        compare(made.icons.length, 1);
         compare(findChild(made, "assistant.steps.toggle").text, "3 steps");
         verify(made.implicitHeight > 0);
+    }
+    function test_e_each_kind_shows_its_icon_once() {
+        const made = line(4, false, ["success", "success", "failed", "success"]);
+        compare(made.icons, ["success", "failed"]);
+        compare(findChild(made, "assistant.steps.toggle").text, "4 steps");
     }
     function test_b_a_click_asks_for_the_other_state() {
         const data = [[false, true], [true, false]];

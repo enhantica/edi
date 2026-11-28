@@ -38,11 +38,18 @@ def audit_bundle(stage: Path) -> dict:
         files.append({'path': relative, 'bytes': path.stat().st_size})
     if not files:
         raise RuntimeError('Cannot audit an empty application bundle')
-    assistant = [item for item in files if '/libexec/edi/codex/' in '/' + item['path']]
+    runtimes = {
+        runtime: sum(
+            item['bytes'] for item in files if f'/libexec/edi/{runtime}/' in '/' + item['path']
+        )
+        for runtime in ('codex', 'claude', 'copilot')
+    }
     return {
         'schema': 'edi.bundle-audit/1',
         'regular_file_bytes': sum(item['bytes'] for item in files),
-        'assistant_bytes': sum(item['bytes'] for item in assistant),
+        # ChatGPT's runtime; each provider's is in runtime_bytes (edi ADR-0108).
+        'assistant_bytes': runtimes['codex'],
+        'runtime_bytes': runtimes,
         'qt_modules': sorted(qt_modules),
         'largest_files': sorted(files, key=itemgetter('bytes'), reverse=True)[:15],
     }

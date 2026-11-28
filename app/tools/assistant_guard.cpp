@@ -2,6 +2,8 @@
 #include <QCoreApplication>
 #include <QProcess>
 #include <QByteArray>
+#include <QFile>
+#include <QLocalSocket>
 #include <QMetaObject>
 #include <atomic>
 #include <algorithm>
@@ -9,6 +11,7 @@
 #include <condition_variable>
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 #include <mutex>
 #include <thread>
 #ifdef Q_OS_WIN
@@ -35,9 +38,95 @@ void stopFamily(int) {
     std::_Exit(125);
 }
 #endif
+// `mcp` mode: a runtime starts this as its MCP server and it copies newline-delimited messages between its
+// stdin/stdout and edi's local tool server. It stays in the runtime's process group or job, so it ends with
+// the runtime.
+int runToolBridge(int argc, char** argv) {
+#ifdef Q_OS_WIN
+    _setmode(_fileno(stdin), _O_BINARY);
+    _setmode(_fileno(stdout), _O_BINARY);
+    _setmode(_fileno(stderr), _O_BINARY);
+#else
+    ::signal(SIGPIPE, SIG_IGN);
+#endif
+    std::setvbuf(stdout, nullptr, _IONBF, 0);
+    std::setvbuf(stderr, nullptr, _IONBF, 0);
+    const auto fail = [](const char* message) {
+        std::fprintf(stderr, "edi_assistant_guard mcp: %s\n", message);
+        return 1;
+    };
+    if (argc != 2) return fail("takes no further arguments");
+    const QByteArray name = qgetenv("EDI_ASSISTANT_TOOLS");
+    const QString keyPath = qEnvironmentVariable("EDI_ASSISTANT_TOOLS_FILE");
+    if (name.isEmpty() || keyPath.isEmpty()) return fail("EDI_ASSISTANT_TOOLS and EDI_ASSISTANT_TOOLS_FILE must be set");
+    // The key comes from a file because runtimes scrub credential-looking variables from MCP server environments.
+    QFile keyFile(keyPath);
+    if (!keyFile.open(QIODevice::ReadOnly)) return fail("cannot read the key file");
+    const QByteArray key = keyFile.read(256).trimmed();
+    keyFile.close();
+    if (key.isEmpty() || key.contains('\n')) return fail("the key file holds no key");
+    QCoreApplication app(argc, argv);
+    QLocalSocket socket;
+    socket.connectToServer(QString::fromLocal8Bit(name));
+    if (!socket.waitForConnected(10000)) return fail("cannot connect to edi");
+    const QByteArray first = key + '\n';
+    if (socket.write(first) != first.size()) return fail("cannot write to edi");
+    std::mutex mutex;
+    std::condition_variable writable;
+    std::size_t pending = 0;
+    QObject::connect(&socket, &QLocalSocket::bytesWritten, &app, [&](qint64 count) {
+        std::lock_guard lock(mutex);
+        pending -= std::min(pending, static_cast<std::size_t>(count));
+        writable.notify_one();
+    });
+    const auto forward = [&] {
+        const QByteArray bytes = socket.readAll();
+        if (!bytes.isEmpty() && std::fwrite(bytes.constData(), 1, static_cast<std::size_t>(bytes.size()), stdout) != static_cast<std::size_t>(bytes.size()))
+            std::_Exit(1);
+    };
+    QObject::connect(&socket, &QLocalSocket::readyRead, &app, forward);
+    QObject::connect(&socket, &QLocalSocket::disconnected, &app, [&] {
+        forward();
+        std::_Exit(0);
+    });
+    QObject::connect(&socket, &QLocalSocket::errorOccurred, &app, [&](QLocalSocket::LocalSocketError error) {
+        if (error == QLocalSocket::PeerClosedError) return; // disconnected() follows
+        std::fprintf(stderr, "edi_assistant_guard mcp: connection to edi failed\n");
+        std::_Exit(1);
+    });
+    const auto finish = [&] {
+        if (socket.state() == QLocalSocket::UnconnectedState) std::_Exit(0);
+        socket.disconnectFromServer(); // writes what is queued, then disconnected() ends the bridge
+    };
+    std::thread([&] {
+        char buffer[16384];
+        for (;;) {
+#ifdef Q_OS_WIN
+            const auto size = _read(_fileno(stdin), buffer, sizeof(buffer));
+#else
+            // NOLINTNEXTLINE(clang-analyzer-unix.BlockInCriticalSection): the lock below is scoped and released.
+            const auto size = ::read(STDIN_FILENO, buffer, sizeof(buffer));
+#endif
+            if (size <= 0) {
+                QMetaObject::invokeMethod(&socket, finish, Qt::QueuedConnection);
+                return;
+            }
+            {
+                std::unique_lock lock(mutex);
+                writable.wait(lock, [&] { return pending < std::size_t{1024} * 1024; });
+                pending += static_cast<std::size_t>(size);
+            }
+            const QByteArray bytes(buffer, size);
+            QMetaObject::invokeMethod(&socket, [&, bytes] { if (socket.write(bytes) != bytes.size()) std::_Exit(1); }, Qt::QueuedConnection);
+        }
+    }).detach();
+    return app.exec();
+}
 }
 
 int main(int argc, char** argv) {
+    // Before setsid(), so the bridge stays in the runtime's process group.
+    if (argc >= 2 && std::strcmp(argv[1], "mcp") == 0) return runToolBridge(argc, argv);
 #ifndef Q_OS_WIN
     if (::setsid() < 0) return 125;
     ::signal(SIGTERM, stopFamily);

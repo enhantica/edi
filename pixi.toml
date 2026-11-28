@@ -171,6 +171,8 @@ vcomp14 = { version = "==14.51.36247", build = "habf1de7_42" }
 # §6, ADR-0008).
 [feature.app.dependencies]
 edi-assistant-runtime = { path = "tools/deps/assistant-runtime" }
+edi-claude-runtime = { path = "tools/deps/claude-runtime" }
+edi-copilot-runtime = { path = "tools/deps/copilot-runtime" }
 # The app environment imports the extension the default environment builds, so it keeps that Python's minor.
 python = "3.14.*"
 # The same Qt as the web build's kits (EDI_WASM_QT, tools/ci/wasm-env.sh), which wasm-toolchain.sh checks.
@@ -251,7 +253,7 @@ app-moc = { cmd = ["bash", "tools/ci/app-moc.sh"] }
 app-test-assistant-groups = { cmd = "cmake --build build/app --target assistant_real_owner_probe -j 4 && python -m pytest tests/fixtures/assistant_fixes/check_grouped_flags.py --noconftest -o addopts= -q", depends-on = ["app-build"] }
 app-test-assistant-lifetime = { cmd = "cmake --build build/app --target edi_assistant_lifetime_host -j 4 && python -m pytest tests/fixtures/assistant_fixes/check_process_lifetime.py --noconftest -o addopts= -q", depends-on = ["app-build"] }
 app-test-skill-targets = { cmd = "python tools/checks/assistant_skill_targets.py && python tools/checks/assistant_control_routes.py && python tools/checks/assistant_demo_absent.py && python tools/checks/assistant_physics_pages.py --check && python -m pytest tests/unit/py/test_assistant_skill_targets.py --noconftest -o addopts= -q" }
-app-test-assistant-ui = { cmd = "cmake --build build/app --target edi_assistant_ui_tests -j 4 && QT_QPA_PLATFORM=offscreen build/app/app/edi_assistant_ui_tests", depends-on = ["app-build"] }
+app-test-assistant-ui = { cmd = "cmake --build build/app --target edi_assistant_ui_tests -j 4 && QT_QPA_PLATFORM=offscreen build/app/app/edi_assistant_ui_tests && python -m pytest tests/integration/app/test_provider_runtime.py tests/system/app/test_claude_account_journey.py --noconftest -o addopts= -q", depends-on = ["app-build"] }
 app-test-trial-lock = { cmd = "cmake --build build/app --target edi_trial_lock_tests -j 4 && QT_QPA_PLATFORM=offscreen build/app/app/edi_trial_lock_tests", depends-on = ["app-build"] }
 app-test-load-attempts = { cmd = "cmake --build build/app --target edi_load_attempt_tests -j 4 && QT_QPA_PLATFORM=offscreen build/app/app/edi_load_attempt_tests", depends-on = ["app-build"] }
 # Build, then start the app: `pixi run -e app app` (arguments pass through: `pixi run -e app app --demo out/`).

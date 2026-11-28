@@ -32,8 +32,9 @@ The assistant after it fitted La₀.₅Ba₀.₅CoO₃ on HRPT ([the tutorial](.
    an existing installation, open **Preferences → Updates → Open Maintenance Tool**, choose **Add or remove components**,
    select **Install the AI assistant**, then restart the application.
 2. Open a project workflow page and select the robot button in the toolbar.
-3. Select **Connect ChatGPT** and complete the OpenAI sign-in if prompted. The assistant needs
-   an internet connection and a ChatGPT account with access to a compatible Codex model.
+3. Select **Connect**, keep **ChatGPT** as the assistant, select **Connect** and complete the OpenAI
+   sign-in if prompted. The assistant needs an internet connection and a ChatGPT account with access to a
+   compatible Codex model.
 
 The assistant uses your ChatGPT plan’s Codex allowance. Model access and usage limits depend on the
 plan and workspace settings. OpenAI offers limited Codex access on some free accounts. Your account’s

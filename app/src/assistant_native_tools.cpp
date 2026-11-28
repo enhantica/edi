@@ -13,11 +13,13 @@
 #include "../../core/src/assistant_relation_edits.hpp"
 #include "edi/assistant_limits.hpp"
 #include "edi/assistant_files.hpp"
+#include <QHash>
 #include <QSet>
 #include <QStringList>
 #include <algorithm>
 #include <cmath>
 #include <limits>
+#include <optional>
 #include <stdexcept>
 namespace edi_app {
 namespace {
@@ -652,5 +654,112 @@ std::optional<edi::Edit> assistant_native_edit(edi::Project& project, const QStr
     }
     if (values) return edi::assistant::detail::prepare_parameter_edit(project, edits);
     return edi::assistant::detail::prepare_parameter_edit(project, flags, nullptr, &beforeFlags);
+}
+namespace {
+// MCP needs a root object schema and Claude refuses a root oneOf, anyOf or allOf, so each becomes one object:
+// every branch's properties, and the fields every branch requires (allOf: any branch requires).
+// assistant_native_arguments still checks the exact branch.
+std::optional<Array> mcp_choices(const Object& schema) {
+    if (schema.contains("const")) return Array{schema.value("const")};
+    if (schema.value("enum").isArray()) return schema.value("enum").toArray();
+    return std::nullopt;
+}
+Object mcp_merged_property(const QList<Object>& variants) {
+    struct Group { Object shape, first; Array values; bool choices = false; };
+    QList<Group> groups;
+    for (const auto& variant : variants) {
+        auto shape = variant;
+        for (const char* key : {"const", "enum", "description"}) shape.remove(key);
+        const auto choices = mcp_choices(variant);
+        const auto group = std::find_if(groups.begin(), groups.end(), [&](const Group& g) { return g.shape == shape && g.choices == choices.has_value(); });
+        if (group == groups.end()) {
+            groups.append({shape, variant, choices.value_or(Array{}), choices.has_value()});
+            continue;
+        }
+        if (choices) for (const auto& value : *choices) if (!group->values.contains(value)) group->values.append(value);
+    }
+    Array alternatives;
+    for (const auto& group : std::as_const(groups)) {
+        auto schema = group.first;
+        if (group.choices && group.values.size() > 1) {
+            schema.remove("const");
+            schema["enum"] = group.values;
+        }
+        alternatives.append(schema);
+    }
+    if (alternatives.size() == 1) return alternatives.first().toObject();
+    return {{"anyOf", alternatives}};
+}
+Object mcp_flattened(Object schema, const char* combinator) {
+    if (!schema.value(combinator).isArray()) return schema;
+    QStringList order;
+    QHash<QString, QList<Object>> variants;
+    const bool all = QLatin1StringView(combinator) == QLatin1StringView("allOf");
+    std::optional<QSet<QString>> common;
+    bool closed = true;
+    for (const auto& value : schema.value(combinator).toArray()) {
+        const auto branch = value.toObject();
+        const auto properties = branch.value("properties").toObject();
+        for (auto i = properties.constBegin(); i != properties.constEnd(); ++i) {
+            if (!variants.contains(i.key())) order.append(i.key());
+            variants[i.key()].append(i.value().toObject());
+        }
+        QSet<QString> required;
+        for (const auto& field : branch.value("required").toArray()) required.insert(field.toString());
+        common = common ? (all ? (*common | required) : (*common & required)) : required;
+        closed = closed && branch.value("additionalProperties") == QJsonValue(false);
+    }
+    // The root's own properties and required fields stay as they are.
+    auto properties = schema.value("properties").toObject();
+    for (const auto& name : std::as_const(order)) if (!properties.contains(name)) properties[name] = mcp_merged_property(variants.value(name));
+    auto required = schema.value("required").toArray();
+    for (const auto& name : std::as_const(order)) if (common && common->contains(name) && !required.contains(name)) required.append(name);
+    schema.remove(combinator);
+    schema["type"] = "object";
+    schema["properties"] = properties;
+    schema["required"] = required;
+    if (closed && !schema.contains("additionalProperties")) schema["additionalProperties"] = false;
+    return schema;
+}
+// The same tool and shape as Codex's request_user_input, so its calls reach the existing question card.
+Object mcp_request_user_input() {
+    const Object option = object({{"label", Object{{"type", "string"}, {"minLength", 1}, {"description", "User-facing label (1-5 words)."}}},
+                                  {"description", Object{{"type", "string"}, {"description", "One short sentence explaining what choosing this option means."}}}},
+                                 {"label", "description"});
+    const Object question = object({{"id", Object{{"type", "string"}, {"minLength", 1}, {"description", "Stable identifier for mapping answers (snake_case)."}}},
+                                    {"header", Object{{"type", "string"}, {"description", "Short header label shown in the UI (12 or fewer chars)."}}},
+                                    {"question", Object{{"type", "string"}, {"minLength", 1}, {"description", "Single-sentence prompt shown to the user."}}},
+                                    {"options", Object{{"type", "array"}, {"maxItems", static_cast<int>(edi::assistant::Limits::question_options)}, {"items", option},
+                                        {"description", "Two or three mutually exclusive choices to click. Do not add an Other option; the user can always type a free answer."}}}},
+                                   {"id", "header", "question", "options"});
+    return {{"name", "request_user_input"},
+            {"description", "Ask the user one to three short questions and wait for the answers. edi shows them as a question card with options to click and a free answer."},
+            {"inputSchema", object({{"questions", Object{{"type", "array"}, {"minItems", 1}, {"maxItems", 3}, {"items", question},
+                                       {"description", "Questions to show the user. Prefer one; never more than three."}}}},
+                                   {"questions"})}};
+}
+} // namespace
+QJsonArray assistant_native_mcp_tools(const QJsonArray& dynamicTools) {
+    const Object meta{{"anthropic/alwaysLoad", true}, {"anthropic/maxResultSizeChars", 500000}};
+    Array tools;
+    auto all = dynamicTools;
+    all.append(mcp_request_user_input());
+    for (const auto& value : std::as_const(all)) {
+        const auto spec = value.toObject();
+        const auto name = spec.value("name").toString();
+        if (name.isEmpty() || !spec.value("description").isString() || !spec.value("inputSchema").isObject())
+            throw std::invalid_argument("Native tool specification is invalid");
+        const auto description = spec.value("description").toString();
+        if (description.size() > 4096)
+            throw std::length_error(QStringLiteral("Tool %1 has a description longer than 4096 characters").arg(name).toStdString());
+        auto schema = spec.value("inputSchema").toObject();
+        for (const char* combinator : {"oneOf", "anyOf", "allOf"}) {
+            schema = mcp_flattened(schema, combinator);
+            if (schema.contains(combinator)) throw std::invalid_argument(QStringLiteral("Tool %1 has a malformed %2").arg(name, QLatin1StringView(combinator)).toStdString());
+        }
+        schema["type"] = "object";
+        tools.append(Object{{"name", name}, {"description", description}, {"inputSchema", schema}, {"_meta", meta}});
+    }
+    return tools;
 }
 } // namespace edi_app

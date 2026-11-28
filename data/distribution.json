@@ -3,9 +3,12 @@
   "release_page": "https://github.com/enhantica/edi/releases",
   "primary_base": "https://download.easydiffraction.org/",
   "mirror_bases": ["https://enhantica.github.io/edi-download/"],
+  "repository_mirror_bases": [],
   "repository_paths": {
     "stable": "repository/{platform}/",
     "testing": "repository/testing/{platform}/"
   },
-  "third_party_path": "third-party/"
+  "third_party_path": "third-party/",
+  "claude_distribution": "internal",
+  "copilot_distribution": "internal"
 }

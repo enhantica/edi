@@ -6,13 +6,15 @@ import EasyApplication.Gui.Style as EaStyle
 import EasyApplication.Gui.Elements as EaElements
 import edi.app
 
-// The finished steps between two replies of the assistant as one line: their icons in order and how many there are. A
+// The finished steps between two replies of the assistant as one line: each kind's icon once and how many there are. A
 // click shows or hides the steps; the model holds which are shown, so a reused row shows the right ones (edi ADR-0057).
 Item {
     id: steps
 
     property var payload: null
-    readonly property var icons: payload?.icons ?? []
+    // Each icon once, however many steps share it.
+    readonly property var icons: (payload?.icons ?? []).filter((key, index, all) => all.indexOf(key) === index)
+    readonly property int count: payload?.count ?? (payload?.icons ?? []).length
     readonly property bool open: payload?.open === true
     signal toggled(string group, bool shown)
 
@@ -24,7 +26,7 @@ Item {
         objectName: "assistant.steps.toggle"
         y: AppSizes.unit * 0.25
         width: steps.width
-        text: qsTr("%1 steps").arg(steps.icons.length)
+        text: qsTr("%1 steps").arg(steps.count)
         contentItem: Item {
             implicitHeight: line.implicitHeight
             IconLine {

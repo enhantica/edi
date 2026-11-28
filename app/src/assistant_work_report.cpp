@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "assistant_work_report.hpp"
+#include "engine_setup.hpp"
 #include "assistant_view_model.hpp"
 #include "assistant_file_primitives.hpp"
 #include "assistant_result.hpp"
@@ -527,7 +528,7 @@ QVariantMap AssistantWorkReports::capture(bool automaticTrigger,const AssistantW
             preparationCode="storage_root_unavailable";throw std::runtime_error("Report storage unavailable");
         }
         const auto projectRoot=storageRoot.toString();
-        const auto serializationRoot=QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation)+"/assistant/work-reports";
+        const auto serializationRoot=edi_app::app_local_data_location()+"/assistant/work-reports";
         const auto primaryRoot=serializationRoot+"/"+state->instance;
         ReportMirror mirror;mirror.root=projectRoot;mirror.current=state->mirrorCurrent;
         if(!projectRoot.isEmpty())try {

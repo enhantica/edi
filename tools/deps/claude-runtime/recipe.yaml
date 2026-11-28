@@ -1,0 +1,40 @@
+# The Claude Code release the stable channel named (downloads.claude.ai/claude-code-releases/stable).
+# Binary hashes are the checksums in that release's signed manifest.json.
+context:
+  version: "2.1.326"
+  platform: ${{ "linux-x64" if target_platform == "linux-64" else "darwin-arm64" if target_platform == "osx-arm64" else "win32-x64" }}
+  entrypoint: ${{ "claude.exe" if target_platform == "win-64" else "claude" }}
+  binary_sha256: ${{ "b6b3647d981130dc44fc670846ae97b6cde531ffb667cf9c4d17cfcafb38cb37" if target_platform == "linux-64" else "e214ad76dcc0e846b03be28ed1c2734aacd4e27acb527cb7f8a9e2bed644e837" if target_platform == "osx-arm64" else "44e85ac6d3e36b924a0d631d3f69c13a6907491115d71e97c8eb6160c82b2aed" }}
+package:
+  name: edi-claude-runtime
+  version: ${{ version }}
+source:
+  - url: https://downloads.claude.ai/claude-code-releases/${{ version }}/${{ platform }}/${{ entrypoint }}
+    sha256: ${{ binary_sha256 }}
+    file_name: ${{ entrypoint }}
+    target_directory: upstream
+  # The native download carries no licence text; the same release's npm package does.
+  - url: https://registry.npmjs.org/@anthropic-ai/claude-code/-/claude-code-${{ version }}.tgz
+    sha256: 57495fd88ffe08a91197e37da28b8ca5973a746fa8ee4eba9cd3d53c23725d0c
+    target_directory: npm
+build:
+  number: 0
+  skip: target_platform not in ["linux-64", "osx-arm64", "win-64"]
+  # The vendor's signed binary is shipped byte for byte.
+  prefix_detection:
+    ignore: true
+  dynamic_linking:
+    binary_relocation: false
+  script:
+    - if: win
+      then: 'python "%RECIPE_DIR%/install.py" --binary "%SRC_DIR%/upstream/${{ entrypoint }}" --licenses "%SRC_DIR%/npm" --prefix "%PREFIX%" --platform "${{ platform }}" --version "${{ version }}" --sha256 "${{ binary_sha256 }}"'
+      else: 'python "$RECIPE_DIR/install.py" --binary "$SRC_DIR/upstream/${{ entrypoint }}" --licenses "$SRC_DIR/npm" --prefix "$PREFIX" --platform "${{ platform }}" --version "${{ version }}" --sha256 "${{ binary_sha256 }}"'
+requirements:
+  build:
+    - python >=3.12
+about:
+  homepage: https://code.claude.com
+  summary: The official Claude Code binary, unmodified, for Edi's assistant
+  license: LicenseRef-Claude-Code
+  license_file:
+    - npm/LICENSE.md

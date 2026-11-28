@@ -23,21 +23,33 @@ appBar.tab.project	Project		archive
 appBar.tab.report	Report		clipboard-list
 appBar.tab.structure	Structure		layer-group
 assistant.accountDialog	Account		
+assistant.acknowledgeManagedSettings	I understand		check
 assistant.clear	New session		plus
-assistant.connectionFailure	ChatGPT connection was not completed		
+assistant.connection.hostMessage	Enter github.com or a GitHub Enterprise host such as name.ghe.com.		
 assistant.desktopOnly	AI assistant		
 assistant.desktopOnly.download	Open the desktop download page		external-link-alt
 assistant.desktopOnly.updates	Open Updates in Preferences to add the AI assistant		cog
 assistant.files.dialog	Add files to the assistant		
+assistant.managedClaudeNotice	Your organisation's Claude settings apply to this account.		
 assistant.modelEffort.popup	Model and reasoning effort		
 assistant.plan.approve	Approve plan		
 assistant.reportPageUnavailable	Report page unavailable		
 assistant.send	Send		arrow-up
+assistant.sessionAccountSwitch	Switch account		
+assistant.sessionAccountSwitch.cancel	Cancel		
+assistant.sessionAccountSwitch.switch	Switch account		
 assistant.sessions	Sessions		history
 assistant.sessionsDialog	Assistant sessions		
 assistant.showActions	Show actions		eye
+assistant.signInAnswerNo	No		times
+assistant.signInAnswerYes	Yes		check
+assistant.signInCopyCode	Copy		copy
+assistant.signInOpenPage	Open sign-in page		external-link-alt
+assistant.signInSubmitCode	Submit		sign-in-alt
 assistant.signOut	Sign out		sign-out-alt
 assistant.stop	Stop		stop
+assistant.switchAccount	Switch		exchange-alt
+assistant.tryAgain	Try again		redo
 assistant.usageDialog	Usage		
 atomSites.append	Append new atom site	Append	plus-circle
 atomSites.duplicate	Duplicate selected atom site	Duplicate	clone

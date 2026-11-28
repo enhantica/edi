@@ -661,8 +661,11 @@ EaComponents.ApplicationWindow {
                 objectName: "assistant.desktopOnly.message"
                 width: parent.width
                 wrapMode: Text.Wrap
-                // The web build's note (the owner, 2026-11-04): what the desktop app offers and how it signs in.
-                text: ApplicationInfo.assistantBuilt ? ApplicationInfo.assistantUnavailableReason : qsTr("The AI assistant is available in the desktop app with your ChatGPT account. It signs in through OpenAI's official app server; your plan's usage limits apply.")
+                // The web build's note (the owner, 2026-11-04): what the desktop app offers. It names only the providers
+                // public builds offer (the bundled distribution policy).
+                readonly property var publicProviders: ApplicationInfo.assistantPublicProviders
+                readonly property string providerNames: publicProviders.length > 1 ? qsTr("%1 or %2").arg(publicProviders.slice(0, -1).join(", ")).arg(publicProviders[publicProviders.length - 1]) : publicProviders.length === 1 ? publicProviders[0] : ""
+                text: ApplicationInfo.assistantBuilt ? ApplicationInfo.assistantUnavailableReason : qsTr("The AI assistant is available in the desktop app with your %1 account. Your plan's usage limits apply.").arg(providerNames)
             }
             IconLink {
                 objectName: "assistant.desktopOnly.updates"

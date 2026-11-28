@@ -12,9 +12,12 @@
 #include <QSvgRenderer>
 #include <QTemporaryDir>
 #include <QTimer>
+#include <array>
 #include <cmath>
 #include <stdexcept>
+#include <utility>
 
+#include "assistant_providers.hpp"
 #include "build_version.hpp"
 #include "codex_agent.hpp"
 #include "desktop_updates.hpp"
@@ -87,10 +90,17 @@ void start_installer_smoke(QQuickWindow& window, const QString& output) {
             report.insert("calculated_points", static_cast<qint64>(values.size()));
             const auto helper = edi_app::CodexAgent::executable();
             const bool assistantAvailable = !helper.isEmpty();
+            // The app offers the assistant when any provider's runtime is installed, as
+            // ApplicationInfo decides (app_info.cpp).
+            bool anyAvailable = false;
+            for (const auto id : {edi_app::AssistantProviderId::ChatGpt,
+                                  edi_app::AssistantProviderId::Claude,
+                                  edi_app::AssistantProviderId::Copilot})
+                anyAvailable = anyAvailable || edi_app::assistant_provider_available(id);
             const auto* aiTab = window.findChild<QObject*>("preferences.tab.aiAssistance");
-            if (!aiTab || aiTab->property("enabled").toBool() != assistantAvailable)
+            if (!aiTab || aiTab->property("enabled").toBool() != anyAvailable)
                 throw std::runtime_error("AI preferences do not match the installed components");
-            if (!assistantAvailable) {
+            if (!anyAvailable) {
                 auto* robot = window.findChild<QObject*>("assistant.toggle");
                 auto* dialog = window.findChild<QObject*>("assistant.desktopOnly");
                 if (!robot || !robot->property("enabled").toBool() || !dialog ||
@@ -108,6 +118,25 @@ void start_installer_smoke(QQuickWindow& window, const QString& output) {
                     throw std::runtime_error("Bundled assistant runtime did not start");
                 report.insert("assistant",
                               QString::fromUtf8(process.readAllStandardOutput()).trimmed());
+            }
+            // Claude and GitHub Copilot are components of their own (ADR-0108): each installed
+            // one must start.
+            const std::array<std::pair<QString, edi_app::AssistantProviderId>, 2> providers{{
+                {QStringLiteral("claude"), edi_app::AssistantProviderId::Claude},
+                {QStringLiteral("copilot"), edi_app::AssistantProviderId::Copilot},
+            }};
+            for (const auto& [key, id] : providers) {
+                const bool available = edi_app::assistant_provider_available(id);
+                report.insert(key + QStringLiteral("_available"), available);
+                if (!available) continue;
+                QProcess process;
+                process.start(edi_app::assistant_provider_executable(id),
+                              {QStringLiteral("--version")});
+                if (!process.waitForStarted(5000) || !process.waitForFinished(20000) ||
+                    process.exitStatus() != QProcess::NormalExit || process.exitCode() != 0)
+                    throw std::runtime_error("Bundled " + key.toStdString() +
+                                             " runtime did not start");
+                report.insert(key, QString::fromUtf8(process.readAllStandardOutput()).trimmed());
             }
             const auto image = window.grabWindow();
             if (image.isNull() || !image.save(QDir(output).filePath("window.png")))

@@ -36,7 +36,8 @@ if(EDI_APP_ASSISTANT)
         qml/Components/AssistantQuestion.qml
         qml/Components/AssistantTrial.qml
         qml/Components/AssistantSkillsDialog.qml
-        qml/Components/AssistantConnectionDialog.qml)
+        qml/Components/AssistantConnectionDialog.qml
+        qml/Components/AssistantAccountList.qml)
     set(EDI_APP_ASSISTANT_RESOURCES resources/logo/AssistantWorking.svg resources/logo/AssistantSpinner.svg)
     set(EDI_APP_ASSISTANT_LICENCES ${PROJECT_SOURCE_DIR}/third_party/jkqtmathtext/LICENSE
                                    ${PROJECT_SOURCE_DIR}/third_party/jkqtmathtext/lib/jkqtmathtext/resources/xits/OFL.txt)
@@ -742,15 +743,28 @@ if(TARGET edi_assistant_native AND EDI_APP_ASSISTANT)
     target_link_libraries(edi_app_tests PRIVATE edi_assistant_native)
 endif()
 if(NOT EMSCRIPTEN)
-    target_sources(edi_app_module PRIVATE src/codex_agent.hpp src/codex_agent.cpp
+    target_sources(edi_app_module PRIVATE src/assistant_provider.hpp src/codex_agent.hpp src/codex_agent.cpp
+        src/assistant_guard_launch.hpp src/assistant_guard_launch.cpp
+        src/assistant_process.hpp src/assistant_process.cpp
+        src/assistant_json_rpc.hpp src/assistant_json_rpc.cpp
+        src/assistant_providers.hpp src/assistant_providers.cpp
+        src/assistant_accounts.hpp src/assistant_accounts.cpp
+        src/assistant_runtime_translator.hpp src/assistant_runtime_translator.cpp
+        src/native_chatgpt_provider.hpp src/native_chatgpt_provider.cpp
+        src/assistant_runtime_session.hpp src/claude_session.hpp src/claude_session.cpp
+        src/assistant_tool_server.hpp src/assistant_tool_server.cpp
         src/assistant_native_tools.hpp src/assistant_native_tools.cpp
         src/assistant_native_create.hpp src/assistant_native_create.cpp)
+    target_sources(edi_app_module PRIVATE src/copilot_session.hpp src/copilot_session.cpp)
     file(GLOB_RECURSE EDI_RUNTIME_SKILL_FILES CONFIGURE_DEPENDS
          ${PROJECT_SOURCE_DIR}/data/assistant/skills/*)
     qt_add_resources(edi_app_module edi_runtime_skills PREFIX "/edi/assistant/skills"
         BASE ${PROJECT_SOURCE_DIR}/data/assistant/skills FILES ${EDI_RUNTIME_SKILL_FILES})
     include(${PROJECT_SOURCE_DIR}/cmake/assistant_runtime.cmake)
     edi_bundle_assistant_runtime()
+    foreach(runtime claude copilot)
+        edi_bundle_runtime(${runtime})
+    endforeach()
 endif()
 # Read-only documentation export, using the same linked dictionary as the app (ADR-0061).
 if(NOT EMSCRIPTEN)
@@ -806,7 +820,7 @@ endif()
 
 if(NOT EMSCRIPTEN)
     qt_add_executable(edi_assistant_guard tools/assistant_guard.cpp)
-    target_link_libraries(edi_assistant_guard PRIVATE Qt6::Core)
+    target_link_libraries(edi_assistant_guard PRIVATE Qt6::Core Qt6::Network)
     set_target_properties(edi_assistant_guard PROPERTIES WIN32_EXECUTABLE FALSE MACOSX_BUNDLE FALSE)
     add_dependencies(edi_app_module edi_assistant_guard)
     add_dependencies(edi_app edi_assistant_guard)
@@ -846,6 +860,9 @@ if(EDI_DEPLOY_APP)
     qt_generate_deploy_qml_app_script(TARGET edi_app OUTPUT_SCRIPT edi_deploy_script ${edi_deploy_filters})
     install(SCRIPT ${edi_deploy_script} COMPONENT desktop)
     edi_install_assistant_runtime("${EDI_ASSISTANT_RUNTIME_INSTALL_CHECK}" "${EDI_ASSISTANT_RUNTIME_INSTALL_ROOT}")
+    foreach(runtime claude copilot)
+        edi_install_runtime(${runtime})
+    endforeach()
 endif()
 
 set(EDI_RELEASE_HISTORY "${PROJECT_SOURCE_DIR}/data/releases.json" CACHE FILEPATH "Release history selected by release preparation")

@@ -3405,7 +3405,12 @@ ShownLabel Session::labelForms(const QString& key, const QString& variant) const
     const qsizetype equals = key.indexOf(QLatin1Char('='));
     QString text;
     if (equals > 0 && edi::has_item(key.left(equals).toStdString())) {
-        text = optionLabel(key.left(equals), key.mid(equals + 1));
+        // Only a value the dictionary lists as one option has its label; a set of them (both stop rules, for
+        // example) has none here, and its selector names it itself.
+        const auto token = key.mid(equals + 1).toStdString();
+        const auto listed = edi::options(key.left(equals).toStdString());
+        if (std::any_of(listed.cbegin(), listed.cend(), [&](const auto& option) { return option.token == token; }))
+            text = optionLabel(key.left(equals), key.mid(equals + 1));
     } else if (edi::has_item(key.toStdString())) {
         text = label(key, variant);
     } else if (!key.contains(QLatin1Char('.')) && !edi::category_label(key.toStdString()).empty()) {

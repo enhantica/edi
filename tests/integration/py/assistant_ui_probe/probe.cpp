@@ -31,6 +31,7 @@
 #include <cmath>
 #include <limits>
 #include "codex_agent.hpp"
+#include "assistant_guard_launch.hpp"
 #include <chrono>
 #include <cstdio>
 #include <type_traits>
@@ -61,6 +62,7 @@
 #include <cerrno>
 #if defined(Q_OS_UNIX)
 #include <fcntl.h>
+#include <signal.h>
 #include <unistd.h>
 #endif
 #include <QFile>
@@ -815,6 +817,16 @@ int main(int argc,char** argv) {
     edi_app::configure_engine(*engine,std::move(owned));
     auto* singleton=engine->singletonInstance<edi_app::Session*>("edi.app","Session");
     QPointer<QProcess> previous_startup_peer;
+    const auto resume_previous_guard=[&] {
+#if defined(Q_OS_LINUX)
+        if (previous_startup_peer && previous_startup_peer->state()==QProcess::Running) {
+            const auto pid=static_cast<pid_t>(previous_startup_peer->processId());
+            return pid>0 && ::kill(pid,SIGCONT)==0;
+        }
+#endif
+        return false;
+    };
+    const auto previous_guard_cleanup=qScopeGuard([&] { resume_previous_guard(); });
     const auto previous_executable=qEnvironmentVariable("EDI_TEST_STARTUP_PREVIOUS_PEER");
     if(!previous_executable.isEmpty()) {
         const QFileInfo previous(previous_executable), config(qEnvironmentVariable("EDI_TEST_CODEX_PEER_INPUT"));
@@ -825,8 +837,15 @@ int main(int argc,char** argv) {
         while(!QFileInfo::exists(previous_executable+".ready") && timer.elapsed()<3000)drain(1);
         const auto children=agents.front()->findChildren<QProcess*>(QString(),Qt::FindDirectChildrenOnly);
         if(!QFileInfo::exists(previous_executable+".ready") || children.size()!=1)return 62;
+#if defined(Q_OS_LINUX)
+        // Retirement signals the guard, which can stop a runtime that ignores SIGTERM.
+        const auto pid=static_cast<pid_t>(children.front()->processId());
+        if(pid<=0 || ::kill(pid,SIGSTOP)!=0)return 61;
         previous_startup_peer=children.front();
         agents.front()->retire();
+#else
+        return 61;
+#endif
     }
     engine->loadFromModule("edi.app","Main");
     if(engine->rootObjects().isEmpty()) return 96;
@@ -1806,10 +1825,31 @@ int main(int argc,char** argv) {
             } else if(op=="fit_boundary_fault") {
                 result=fit_fault;
             } else if(op=="release_previous_startup_peer") {
-                if(!previous_startup_peer || previous_startup_peer->state()!=QProcess::Running)
+                if(!resume_previous_guard())
                     throw std::runtime_error("the original retiring startup fixture peer is absent");
-                previous_startup_peer->kill();
-                result={{"killed",true}};
+                result={{"resumed",true}};
+            } else if(op=="startup_account_transport") {
+                const auto request=input["request_id"].toString();
+                const auto runtime=QFileInfo(qEnvironmentVariable("EDI_CODEX_DEVELOPMENT_EXECUTABLE")).canonicalFilePath();
+                const auto fixture=QFileInfo(qEnvironmentVariable("EDI_TEST_CODEX_PEER_INPUT")).canonicalPath();
+                const auto guard=QFileInfo(edi_app::assistant_guard_executable()).canonicalFilePath();
+                if(request.isEmpty() || runtime.isEmpty() || fixture.isEmpty() || guard.isEmpty() ||
+                    QFileInfo(runtime).canonicalPath()!=fixture)
+                    throw std::runtime_error("startup transport observation requires the exact offline fixture");
+                const auto agents=observed->assistant()->findChildren<edi_app::CodexAgent*>(QString(),Qt::FindDirectChildrenOnly);
+                QProcess* child=nullptr;
+                for(auto* agent:agents) {
+                    if(agent->outputOwnerState()!=edi_app::CodexAgent::OutputOwnerState::Live ||
+                        !edi_app::CodexAgentTestAccess::usageQueue(*agent).value("pending_account_read_ids").toArray().contains(request))continue;
+                    for(auto* process:agent->findChildren<QProcess*>(QString(),Qt::FindDirectChildrenOnly)) {
+                        if(process->state()!=QProcess::Running || QFileInfo(process->program()).canonicalFilePath()!=guard ||
+                            process->arguments().value(1)!=runtime)continue;
+                        if(child)throw std::runtime_error("ambiguous startup account transport");
+                        child=process;
+                    }
+                }
+                if(!child)throw std::runtime_error("the current guarded transport does not own this startup account request");
+                result={{"guard_pid",static_cast<double>(child->processId())}};
             } else if(op=="arm_reopen_release_fault") {
                 const auto mode=input["mode"].toString();
                 if(mode!="stale-proof" && mode!="reconnect-start")

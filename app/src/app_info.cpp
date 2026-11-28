@@ -5,7 +5,7 @@
 #include "assistant_panel_presentation.hpp"
 #if EDI_APP_ASSISTANT
 #include "assistant_view_model.hpp"
-#include "codex_agent.hpp"
+#include "assistant_providers.hpp"
 #endif
 #include "web_files.hpp"
 
@@ -219,13 +219,13 @@ QString read_resource(const QString& path) {
 
 
 namespace {
+// The assistant works with any provider's runtime installed, not only ChatGPT's (ADR-0108).
 bool assistant_device_available() {
 #if EDI_APP_ASSISTANT
-    try {
-        return !edi_app::CodexAgent::executable().isEmpty();
-    } catch (const std::runtime_error&) {
-        return false;
-    }
+    using edi_app::AssistantProviderId;
+    for (const auto id : {AssistantProviderId::ChatGpt, AssistantProviderId::Claude, AssistantProviderId::Copilot})
+        if (edi_app::assistant_provider_available(id)) return true;
+    return false;
 #else
     return false;
 #endif
@@ -286,6 +286,16 @@ QString ApplicationInfo::assistantUnavailableReason() const {
     return assistantBuilt()
         ? tr("The AI assistant component is not installed or is unavailable.")
         : tr("AI assistance is only available in the desktop version.");
+}
+QStringList ApplicationInfo::assistantPublicProviders() const {
+    // ChatGPT is always public; another provider only when the policy says "<key>_distribution": "public". The names
+    // are listed here because the web build carries no provider code.
+    QFile file(QStringLiteral(":/edi/distribution.json"));
+    const auto policy = file.open(QIODevice::ReadOnly) ? QJsonDocument::fromJson(file.readAll()).object() : QJsonObject{};
+    QStringList names{QStringLiteral("ChatGPT")};
+    if (policy.value(QStringLiteral("claude_distribution")).toString() == QLatin1String("public")) names.append(QStringLiteral("Claude"));
+    if (policy.value(QStringLiteral("copilot_distribution")).toString() == QLatin1String("public")) names.append(QStringLiteral("GitHub Copilot"));
+    return names;
 }
 
 void ApplicationInfo::useDemoIdentity() { g_demo_identity = true; }
@@ -2876,15 +2886,8 @@ void ApplicationInfo::connectionShowFailure() const {
     const auto f = panelUsageEngine(this);
     if (!panelUsageTruth(panelUsageContextRead(f, "connectionAttempt")) || !panelUsageReady(f)) return;
     if (assistantContextField(f, "assistant", "state").strictlyEquals(QJSValue(QStringLiteral("connecting")))) return;
+    // The attempt has ended. Its failure, if any, shows once, in the panel's notice: no dialog repeats it.
     panelUsageContextWrite(f, "connectionAttempt", QJSValue(false));
-    if (panelUsageTruth(assistantContextField(f, "assistant", "connected")) || !panelUsageReady(f)) return;
-    const auto error = assistantContextField(f, "assistant", "lastError");
-    if (!assistantRelation(f, panelUsageRead(f, error, "length"), QJSValue(0), 1)) return;
-    const auto failure = panelUsageContextRead(f, "connectionFailure");
-    const auto message = assistantContextField(f, "assistant", "lastError");
-    assistantMemberWrite(f, failure, "message", message);
-    const auto actual = panelUsageContextRead(f, "connectionFailure");
-    panelUsageMemberCall(f, actual, "open");
 }
 void ApplicationInfo::connectionRefreshContext() const {
     const auto f = panelUsageEngine(this);
@@ -2948,9 +2951,6 @@ void ApplicationInfo::connectionAccepted() const {
     if (!connectionOwnerCurrent(f, get)) return;
     values.append(offered);
     const auto current = [&] { return panelUsageTruth(connectionCurrent(f, get)); };
-    if (!current()) return;
-    const auto failure = panelUsageContextRead(f, "connectionFailure");
-    panelUsageMemberCall(f, failure, "close");
     if (!current()) return;
     panelUsageContextWrite(f, "connectionAttempt", QJSValue(!panelUsageTruth(connected)));
     const auto result = panelUsageMemberCall(f, original, "acceptConnectionOffer", {offered});
@@ -3031,8 +3031,10 @@ void ApplicationInfo::connectionUpdateAcceptButton() const {
         auto connected = assistantContextField(f, "assistant", "connected");
         if (!panelUsageReady(f)) return;
         if (auto* qml = qobject_cast<QQmlEngine*>(f.data())) qml->markCurrentFunctionAsTranslationBinding();
-        const auto text = QJSValue(QCoreApplication::translate("AssistantConnectionDialog", panelUsageTruth(connected)
-            ? "Share project information" : "Connect ChatGPT"));
+        // The provider is already the dialog's choice, so the button needs no name.
+        const auto text = QJSValue(panelUsageTruth(connected)
+            ? QCoreApplication::translate("AssistantConnectionDialog", "Share project information")
+            : QCoreApplication::translate("AssistantConnectionDialog", "Connect"));
         assistantMemberWrite(f, accept, "text", text);
         connected = assistantContextField(f, "assistant", "connected");
         assistantMemberWrite(f, accept, "fontIcon", QJSValue(panelUsageTruth(connected) ? QStringLiteral("check") : QStringLiteral("comment-dots")));
@@ -3058,8 +3060,6 @@ void ApplicationInfo::connectionResetOffer(bool refresh, bool retired) const {
     if (retired) {
         const auto current = panelUsageContextRead(f, "dialog");
         assistantMemberWrite(f, current, "connectionAttempt", QJSValue(false));
-        const auto failure = panelUsageContextRead(f, "connectionFailure");
-        panelUsageMemberCall(f, failure, "close");
     }
 }
 

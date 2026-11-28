@@ -132,22 +132,31 @@ def test_invalid_version_cannot_escape_installer_output(tmp_path, version):
 
 
 @pytest.mark.parametrize(('channel', 'prefix'), [('stable', ''), ('testing', 'testing/')])
+def test_installers_list_only_the_download_host(channel, prefix):
+    # The Pages site keeps the feeds but no repository (edi ADR-0071).
+    tail = f'repository/{prefix}{PACKAGE.PLATFORM_ID}/'
+    assert PACKAGE.repository_urls(channel) == (f'https://download.easydiffraction.org/{tail}',), (
+        'Installers list only the download host as their repository.'
+    )
+
+
+@pytest.mark.parametrize(('channel', 'prefix'), [('stable', ''), ('testing', 'testing/')])
 def test_mirror_is_enabled_only_for_production(tmp_path, channel, prefix):
     config, meta = tmp_path / 'config', tmp_path / 'meta'
     config.mkdir()
     meta.mkdir()
-    urls = PACKAGE.repository_urls(channel)
+    tail = f'repository/{prefix}{PACKAGE.PLATFORM_ID}/'
+    urls = (*PACKAGE.repository_urls(channel), f'https://mirror.example.org/{tail}')
     PACKAGE.write_metadata(
         config, meta, '2026.11.0', urls[0], urls[1:], enable_mirrors=channel == 'stable'
     )
     xml = ElementTree.parse(config / 'config.xml')
     repositories = xml.findall('RemoteRepositories/Repository')
     assert repositories[0].findtext('Enabled') == '1', 'Mirror is enabled only for production.'
-    tail = f'repository/{prefix}{PACKAGE.PLATFORM_ID}/'
     assert repositories[0].findtext('Url') == f'https://download.easydiffraction.org/{tail}', (
         'Mirror is enabled only for production.'
     )
-    assert repositories[1].findtext('Url') == f'https://enhantica.github.io/edi-download/{tail}', (
+    assert repositories[1].findtext('Url') == f'https://mirror.example.org/{tail}', (
         'Mirror is enabled only for production.'
     )
     assert repositories[1].find('DisplayName') is None, 'Mirror is enabled only for production.'
@@ -171,7 +180,10 @@ def copy_bundles(command, **_):
 
 
 @pytest.mark.parametrize('channel', ['stable', 'testing'])
-def test_offline_installer_retains_default_update_repositories(tmp_path, channel, monkeypatch):
+@pytest.mark.parametrize('internal', [False, True], ids=['public', 'internal'])
+def test_offline_installer_retains_default_update_repositories(
+    tmp_path, channel, internal, monkeypatch
+):
     monkeypatch.delenv('EDI_CODESIGN', raising=False)
     stage = tmp_path / 'stage'
     marker = stage / (
@@ -181,9 +193,10 @@ def test_offline_installer_retains_default_update_repositories(tmp_path, channel
     )
     marker.parent.mkdir(parents=True)
     marker.write_text('application marker')
-    assistant = stage / PACKAGE.ASSISTANT_RUNTIME / 'assistant.txt'
-    assistant.parent.mkdir(parents=True)
-    assistant.write_text('optional marker')
+    for runtime in ('codex', 'claude', 'copilot'):
+        assistant = stage / 'libexec/edi' / runtime / 'assistant.txt'
+        assistant.parent.mkdir(parents=True)
+        assistant.write_text(runtime, encoding='utf-8')
     if channel == 'stable':
         (stage / 'build-inputs.json').write_text(json.dumps({'release_history_sha256': 'fixture'}))
     archive = tmp_path / 'installer.zip'
@@ -209,6 +222,7 @@ def test_offline_installer_retains_default_update_repositories(tmp_path, channel
             output,
             '2026.11.0',
             maintenance_tool=signed_bundle(tmp_path),
+            internal=internal,
         )
     repositories = ElementTree.parse(output / 'source/config/config.xml').findall(
         'RemoteRepositories/Repository'
@@ -216,10 +230,9 @@ def test_offline_installer_retains_default_update_repositories(tmp_path, channel
     assert tuple(item.findtext('Url') for item in repositories) == PACKAGE.repository_urls(
         channel
     ), 'Offline maintenance retains the selected channel repositories.'
-    assert [item.findtext('Enabled') for item in repositories] == [
-        '1',
-        '1' if channel == 'stable' else '0',
-    ], 'Offline maintenance retains channel mirror policy.'
+    assert [item.findtext('Enabled') for item in repositories] == ['1'], (
+        'Offline maintenance lists the download host alone, enabled.'
+    )
     creators = [
         call.args[0]
         for call in builder.call_args_list
@@ -227,6 +240,33 @@ def test_offline_installer_retains_default_update_repositories(tmp_path, channel
     ]
     assert len(creators) == 1, 'Offline packaging builds one installer.'
     assert '--hybrid' in creators[0], 'Offline maintenance permits updates.'
+    policy = json.loads((PACKAGE.ROOT / 'data/distribution.json').read_text(encoding='utf-8'))
+    held = [
+        component
+        for component, setting in (
+            ('org.easydiffraction.app.claude', 'claude_distribution'),
+            ('org.easydiffraction.app.copilot', 'copilot_distribution'),
+        )
+        if not internal and policy[setting] != 'public'
+    ]
+    expected = {
+        'org.easydiffraction.app.assistant',
+        'org.easydiffraction.app.claude',
+        'org.easydiffraction.app.copilot',
+    } - set(held)
+    if not held:
+        assert '--exclude' not in creators[0], (
+            'The authorised installer carries all three providers.'
+        )
+    else:
+        excluded = creators[0][creators[0].index('--exclude') + 1]
+        assert excluded == ','.join(held), (
+            'A public installer excludes each provider whose distribution is internal.'
+        )
+    metadata = json.loads((output / 'installer.json').read_text(encoding='utf-8'))
+    assert set(metadata['assistants']) == expected, (
+        'The installer identifies every carried provider.'
+    )
     packages = output / 'source/packages'
     if PACKAGE.SYSTEM in {'macos', 'windows'}:
         tool = packages / PACKAGE.MAINTENANCE_COMPONENT / 'data/maintenancetool'

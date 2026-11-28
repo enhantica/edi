@@ -25,6 +25,10 @@
 #include <QWindow>
 #include <QUrl>
 #include <utility>
+#if defined(Q_OS_MACOS)
+#include <pwd.h>
+#include <unistd.h>
+#endif
 
 #if defined(Q_OS_WASM)
 #include <emscripten.h>
@@ -448,6 +452,18 @@ void use_design_font() {
 }
 
 QString fresh_settings_dir() { return fresh_config_dir(); }
+
+QString app_local_data_location() {
+    const auto path = QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation);
+#if defined(Q_OS_MACOS)
+    if (const auto* account = getpwuid(getuid()); account != nullptr && account->pw_dir != nullptr) {
+        const auto system = QDir::cleanPath(QString::fromLocal8Bit(account->pw_dir));
+        const auto home = QDir::cleanPath(QDir::homePath());
+        if (home != system && path.startsWith(system + QLatin1Char('/'))) return home + path.mid(system.size());
+    }
+#endif
+    return path;
+}
 
 void use_fresh_settings() {
     static QTemporaryDir dir;  // removed at exit

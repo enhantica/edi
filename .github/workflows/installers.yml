@@ -39,6 +39,10 @@ on:
       - tools/installer/**
       - cmake/assistant_runtime*
       - app/src/installer_smoke.cpp
+      - tools/deps/claude-runtime/**
+      - tools/deps/copilot-runtime/**
+      - tools/release/assistants.py
+      - data/distribution.json
 
   pull_request:
     types: [ready_for_review]
@@ -48,6 +52,10 @@ on:
       - tools/installer/**
       - cmake/assistant_runtime*
       - app/src/installer_smoke.cpp
+      - tools/deps/claude-runtime/**
+      - tools/deps/copilot-runtime/**
+      - tools/release/assistants.py
+      - data/distribution.json
 
 permissions:
   contents: read
@@ -374,7 +382,8 @@ jobs:
               '--installer', str(package / metadata['download']),
               '--repository', (package / 'repository').as_uri() + '/',
               '--output', str(root / 'build/installer/online-assistant-test'),
-              '--with-assistant',
+              # Every assistant component this installer carries (edi ADR-0108).
+              *[f'--assistant={name}' for name in metadata['assistants']],
           ], check=True)
           PYTHON
       - name: Prepare the tested platform repository
@@ -384,6 +393,11 @@ jobs:
           from pathlib import Path
           package = Path('build/installer/online')
           metadata = json.loads((package / 'installer.json').read_text())
+          offline = Path('build/installer/package')
+          offline_metadata = json.loads((offline / 'installer.json').read_text())
+          # An internal build may carry Claude before its distribution is public (tools/release/assistants.py).
+          if metadata.get('internal') is not False or offline_metadata.get('internal') is not False:
+              raise SystemExit('An internal installer build is never published')
           import os
           channel = 'stable' if os.environ.get('EDI_RELEASE_PLAN') else 'testing'
           target = Path('build/installer/components') / channel / metadata['platform']
@@ -400,8 +414,6 @@ jobs:
           shutil.copy2('build/installer/stage/build-inputs.json', delivery / 'build-inputs.json')
           shutil.copy2('build/installer/online-test/passed.json', delivery / 'qualification.json')
           # The tested offline installer goes onto the release beside the online one.
-          offline = Path('build/installer/package')
-          offline_metadata = json.loads((offline / 'installer.json').read_text())
           shutil.copy2(offline / 'installer.json', delivery / 'offline-installer.json')
           shutil.copy2('build/installer/test/passed.json', delivery / 'offline-qualification.json')
           os.link(offline / offline_metadata['download'], delivery / offline_metadata['download'])

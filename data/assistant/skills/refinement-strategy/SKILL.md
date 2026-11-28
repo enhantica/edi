@@ -8,7 +8,7 @@ description: Choose and revise a fitting strategy from actual model, data, nativ
 Say fit, fitting and fitted to the user, never refine or refinement: these are Edi's words. The
 references below keep their own titles.
 
-Version: 1.7.0. Follow the user's goal, supplied constraints and actually offered
+Version: 1.8.0. Follow the user's goal, supplied constraints and actually offered
 operations. This is a decision loop, not a fixed recipe, family, stage count or
 target statistic. Explicit user groups/subsets/order/flags override delegated
 planning; native eligibility and ownership still apply.
@@ -23,6 +23,17 @@ constraints. Assess each block before adding the next, as the tutorials and the
 documentation's analysis workflow do. The background is never the first fit by
 default: an estimated background is held as the starting model while scale,
 offset and cell are fitted, then fitted as its own block.
+
+## Every block is tried
+
+A delegated fit tries every eligible block in the order above before it is
+called complete; a good chi-square is not a reason to stop early. The peak
+profile block means all coefficients of the offered profile family: Gaussian
+U, V, W and Lorentzian X, Y, plus the mixing terms where the family has them.
+Try each one and keep or reject it on evidence: chi-square, Rwp and the
+residual at the peaks. A block that is not tried (not eligible, fixed by the
+user or a calibration, or outside the requested scope) is named in the reply
+with its reason. The user's own order, groups and fixed values still win.
 
 For a delegated full powder structure fit, track which eligible groups have actually
 been fitted and assessed: background intensities/terms, phase scale, required

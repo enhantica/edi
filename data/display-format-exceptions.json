@@ -166,6 +166,26 @@
    "reason": "a lookup key for a JSON-RPC request id, never shown"
   },
   {
+   "file": "app/src/assistant_json_rpc.cpp",
+   "match": "QStringLiteral(\"n:\") + QString::number(number, 'f', 0)",
+   "reason": "a lookup key for a JSON-RPC request id, never shown"
+  },
+  {
+   "file": "app/src/assistant_json_rpc.cpp",
+   "match": "return QString::number(number, 'f', 0);",
+   "reason": "a lookup key for a JSON-RPC request id, never shown"
+  },
+  {
+   "file": "app/src/assistant_runtime_translator.cpp",
+   "match": "QStringLiteral(\"n:\") + QString::number(number, 'f', 0)",
+   "reason": "a lookup key for a JSON-RPC request id, never shown"
+  },
+  {
+   "file": "app/src/assistant_tool_server.cpp",
+   "match": "QLatin1Char('n') + QString::number(id.toDouble(), 'g', 17)",
+   "reason": "a lookup key for a JSON-RPC request id, never shown"
+  },
+  {
    "file": "core/src/fit_inputs.hpp",
    "match": "settings << std::setprecision(17)",
    "reason": "an identity key of the fit settings, compared and never shown"
@@ -493,7 +513,7 @@
    "reason": "the online sources' name for the measured patterns they hold, the app's group title, not the data category"
   },
   {
-   "file": "app/src/codex_agent.cpp",
+   "file": "app/src/assistant_guard_launch.cpp",
    "literal": "start error",
    "reason": "the kind of process failure the assistant's error message names, not a dictionary name"
   },

@@ -653,7 +653,8 @@ Rectangle {
             EaElements.Button {
                 id: modelEffortButton
                 objectName: "assistant.modelEffort"
-                Layout.preferredWidth: choiceMetrics.advanceWidth(composer.modelLabel + " " + composer.selectedEffortLabel) + leftPadding + rightPadding
+                // The labels' own widths, so the effort is never cut; only the model name shortens when space runs out.
+                Layout.preferredWidth: modelPillLabel.implicitWidth + modelEffortText.spacing + effortPillLabel.implicitWidth + leftPadding + rightPadding
                 Layout.maximumWidth: composerToolbar.choiceWidth
                 implicitHeight: composer.actionSize
                 leftPadding: AppSizes.unit * 0.75
@@ -686,7 +687,7 @@ Rectangle {
                         textFormat: Text.PlainText
                         color: !modelEffortButton.enabled ? EaStyle.Colors.themeForegroundDisabled : modelEffortButton.hovered || modelEffortButton.down || modelEffortButton.visualFocus ? EaStyle.Colors.themeAccent : EaStyle.Colors.themeForegroundMinor
                         elide: Text.ElideRight
-                        width: Math.max(0, Math.min(implicitWidth, modelEffortButton.availableWidth * 0.45))
+                        width: Math.max(0, Math.min(implicitWidth, modelEffortButton.availableWidth))
                     }
                 }
                 ToolTip.text: qsTr("Model: %1 · Reasoning effort: %2").arg(composer.modelLabel).arg(composer.selectedEffortLabel)
