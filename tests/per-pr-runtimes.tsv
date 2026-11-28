@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-28T18:35:27Z
+# measured_utc = 2026-11-28T19:52:31Z
 #
-# Recorded from: measured test run (8 node(s) measured once, 187690 banked, 0 stale row(s) dropped)
-# Collected tests: 267636; with a reported duration: 86319
+# Recorded from: measured test run (17 node(s) measured once, 187685 banked, 2 stale row(s) dropped)
+# Collected tests: 267640; with a reported duration: 86321
 # Module-scoped fixture costs recorded: 223
 #
 # Breaches are decided PER TIER against the table
@@ -29,12 +29,12 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 267636
+# inventory_python = 267640
 # inventory_cpp = 0
-# inventory_measured = 187698
-# inventory_unmeasured = 79938
+# inventory_measured = 187701
+# inventory_unmeasured = 79939
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
-# inventory_pr_python = 92725
+# inventory_pr_python = 92729
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -1638,7 +1638,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_shipment.py:
 0.000	tests/integration/py/test_assistant_voice_installer.py::test_desktop_composer_registers_voice_controls_for_native_input
 0.010	tests/integration/py/test_assistant_voice_installer.py::test_model_is_installed_only_with_the_opt_in_voice_component[linux]
 0.010	tests/integration/py/test_assistant_voice_installer.py::test_model_is_installed_only_with_the_opt_in_voice_component[macos]
-0.020	tests/integration/py/test_assistant_voice_installer.py::test_model_is_installed_only_with_the_opt_in_voice_component[windows]
+0.010	tests/integration/py/test_assistant_voice_installer.py::test_model_is_installed_only_with_the_opt_in_voice_component[windows]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_assistant_voice_installer.py::test_voice_choice_follows_all_assistant_choices
 UNMEASURED:failed-in-this-run	tests/integration/py/test_background_basis_presence.py::test_clearing_minus_one_basis_refreshes_derives_and_round_trips[reload-chebyshev-x_max]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_background_basis_presence.py::test_clearing_minus_one_basis_refreshes_derives_and_round_trips[reload-chebyshev-x_min]
@@ -182983,12 +182983,14 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_token_readers.p
 0.260	tests/integration/py/test_magnetic_uncertainty_states.py::test_dependent_uncertainty_comes_from_the_relation_graph_after_reload[tied-0.2]
 0.300	tests/integration/py/test_magnetic_uncertainty_states.py::test_dependent_uncertainty_comes_from_the_relation_graph_after_reload[undefined-tied-None]
 0.090	tests/integration/py/test_magnetic_uncertainty_states.py::test_unrelated_undefined_seed_preserves_a_known_correlation_pair_on_second_save
-0.320	tests/integration/py/test_maintenance_update_rollback.py::test_failed_first_linux_update_preserves_the_released_tools_runtime
+0.300	tests/integration/py/test_maintenance_update_rollback.py::test_failed_first_linux_update_preserves_the_released_tools_runtime
 0.230	tests/integration/py/test_maintenance_update_rollback.py::test_linux_tool_starts_with_its_original_runtime_after_the_app_update_is_undone
+0.000	tests/integration/py/test_maintenance_update_rollback.py::test_windows_rollback_requires_the_observed_new_tool_to_be_undone[current-handoff-left-behind]
 0.000	tests/integration/py/test_maintenance_update_rollback.py::test_windows_rollback_requires_the_observed_new_tool_to_be_undone[failed-before-staging]
 0.000	tests/integration/py/test_maintenance_update_rollback.py::test_windows_rollback_requires_the_observed_new_tool_to_be_undone[new-tool-left-behind]
 0.000	tests/integration/py/test_maintenance_update_rollback.py::test_windows_rollback_requires_the_observed_new_tool_to_be_undone[previous-restored]
 0.010	tests/integration/py/test_maintenance_update_rollback.py::test_windows_rollback_requires_the_observed_new_tool_to_be_undone[removed]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_maintenance_update_rollback.py::test_windows_rollback_requires_the_observed_new_tool_to_be_undone[stale-handoff]
 0.000	tests/integration/py/test_metadata_transition_path_spelling.py::test_retained_seed_identity_and_byte_refusal_are_independent_of_host_paths[posix-cosio-d20-s1]
 0.000	tests/integration/py/test_metadata_transition_path_spelling.py::test_retained_seed_identity_and_byte_refusal_are_independent_of_host_paths[posix-cosio-d20-s4]
 0.000	tests/integration/py/test_metadata_transition_path_spelling.py::test_retained_seed_identity_and_byte_refusal_are_independent_of_host_paths[posix-cosio-d20-scan-3f]
@@ -254559,8 +254561,10 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_magnetic_token_consumer_inven
 UNMEASURED:failed-in-this-run	tests/system/py/test_magnetic_token_consumer_inventory.py::test_every_magnetic_value_path_reaches_the_decoder_and_strict_number_boundary
 0.036	tests/system/py/test_maintenance_update_macos.py::test_app_opens_the_kept_tool_after_a_stopped_swap
 0.030	tests/system/py/test_maintenance_update_macos.py::test_starting_app_during_live_swap_leaves_the_kept_bundle
-0.540	tests/system/py/test_maintenance_update_macos.py::test_success_removes_maintenance_tool_update_debris[2026.11.27]
-0.580	tests/system/py/test_maintenance_update_macos.py::test_success_removes_maintenance_tool_update_debris[current]
+0.250	tests/system/py/test_maintenance_update_macos.py::test_success_removes_maintenance_tool_update_debris[protected-2026.11.27]
+0.250	tests/system/py/test_maintenance_update_macos.py::test_success_removes_maintenance_tool_update_debris[protected-current]
+0.240	tests/system/py/test_maintenance_update_macos.py::test_success_removes_maintenance_tool_update_debris[writable-2026.11.27]
+0.250	tests/system/py/test_maintenance_update_macos.py::test_success_removes_maintenance_tool_update_debris[writable-current]
 0.030	tests/system/py/test_metadata_build_policy.py::test_an_innocently_named_target_cannot_hide_app_compilation[cmake]
 0.020	tests/system/py/test_metadata_build_policy.py::test_an_innocently_named_target_cannot_hide_app_compilation[ninja]
 0.090	tests/system/py/test_metadata_build_policy.py::test_metadata_permission_follows_commands_even_with_an_app_target_name[cmake-edi_app]

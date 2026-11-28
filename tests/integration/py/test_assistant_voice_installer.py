@@ -2,6 +2,7 @@
 """Offline checks at the generated installer component boundary."""
 
 import hashlib
+import json
 import re
 from pathlib import Path
 
@@ -12,10 +13,22 @@ from tools.installer import package
 
 ROOT = Path(__file__).resolve().parents[3]
 MODEL = Path('share/edi/voice/ggml-small-q5_1.bin')
+DETECTOR = MODEL.with_name('ggml-silero-v6.2.0.bin')
 VOICE_COMPONENT = 'org.easydiffraction.app.voice'
-MODEL_BYTES = b'fixture bytes for the separately selectable model'
+VOICE_ASSETS = {
+    MODEL: b'fixture bytes for the separately selectable model',
+    DETECTOR: b'distinct fixture bytes for the speech detector',
+}
 VOICE = re.compile(r'voice|speech|microphone', re.IGNORECASE)
 ASSISTANT = re.compile(r'assistant|chatgpt|claude|copilot', re.IGNORECASE)
+
+
+def pin(path, content):
+    return {
+        'file': path.name,
+        'bytes': len(content),
+        'sha256': hashlib.sha256(content).hexdigest(),
+    }
 
 
 @pytest.fixture
@@ -38,15 +51,15 @@ def installer_source(tmp_path, monkeypatch):
     def prepare(system, *, with_voice):
         monkeypatch.setattr(package, 'SYSTEM', system)
         if with_voice:
-            source = stage / MODEL
-            source.parent.mkdir(parents=True, exist_ok=True)
-            source.write_bytes(MODEL_BYTES)
-            pin = {
-                'file': MODEL.name,
-                'bytes': len(MODEL_BYTES),
-                'sha256': hashlib.sha256(MODEL_BYTES).hexdigest(),
-            }
-            monkeypatch.setattr(package, 'release_voice_pin', lambda: pin)
+            (stage / MODEL.parent).mkdir(parents=True)
+            for path, content in VOICE_ASSETS.items():
+                (stage / path).write_bytes(content)
+            monkeypatch.setattr(
+                package, 'release_voice_pin', lambda: pin(MODEL, VOICE_ASSETS[MODEL])
+            )
+            monkeypatch.setattr(
+                package, 'release_vad_pin', lambda: pin(DETECTOR, VOICE_ASSETS[DETECTOR])
+            )
         prepared, *_ = package.prepare_installer_source(
             stage, tmp_path / 'tools', tmp_path / 'output', '26.18', None, (), 'testing'
         )
@@ -73,7 +86,7 @@ def test_core_installer_prepares_without_a_voice_model(installer_source, system)
         'A build without voice weights cannot offer an empty voice component'
     )
     assert not list(packages.glob('*/data/**/ggml-*.bin')), (
-        'A build without voice weights leaves no model in the installer payloads'
+        'A build without voice weights leaves no recogniser or detector in the installer payloads'
     )
 
 
@@ -95,13 +108,24 @@ def test_model_is_installed_only_with_the_opt_in_voice_component(installer_sourc
     assert description and len(description.splitlines()) == 1, (
         'The voice component presents a one-line description'
     )
-    model = packages / VOICE_COMPONENT / 'data' / MODEL
-    assert list(packages.glob(f'*/data/**/{MODEL.name}')) == [model], (
-        'Only the voice component carries the model at its installed path'
+    voice_data = packages / VOICE_COMPONENT / 'data'
+    for path, content in VOICE_ASSETS.items():
+        asset = voice_data / path
+        assert list(packages.glob(f'*/data/**/{path.name}')) == [asset], (
+            f'Only the voice component carries {path.name} at its installed path'
+        )
+        assert asset.read_bytes() == content, (
+            f'The installer preserves the pinned bytes of {path.name}'
+        )
+    manifest = voice_data / MODEL.parent / 'voice-model.json'
+    assert list(packages.glob('*/data/**/voice-model.json')) == [manifest], (
+        'Only the optional voice component carries the installed model manifest'
     )
-    assert model.read_bytes() == MODEL_BYTES, (
-        'The installer preserves the model bytes at the optional component boundary'
-    )
+    assert json.loads(manifest.read_text(encoding='utf-8')) == {
+        'schema': 'edi.voice-model/1',
+        **pin(MODEL, VOICE_ASSETS[MODEL]),
+        'vad': pin(DETECTOR, VOICE_ASSETS[DETECTOR]),
+    }, 'The installed manifest identifies both models by their relative name, size and digest'
 
 
 def test_voice_choice_follows_all_assistant_choices():

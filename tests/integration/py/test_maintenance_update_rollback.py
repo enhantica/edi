@@ -3,6 +3,7 @@
 
 import hashlib
 import importlib
+import io
 import json
 import os
 import shutil
@@ -58,6 +59,7 @@ function signal() {
 }
 const QInstaller = {Success: 0, Failure: 1, Running: 2, Canceled: 3};
 const components = {};
+let admin = true;
 const installer = {
     status: QInstaller.Running,
     installationStarted: signal(),
@@ -66,11 +68,16 @@ const installer = {
     isInstaller: () => false,
     isPackageManager: () => false,
     isMaintainer: () => true,
+    hasAdminRights: () => admin,
+    gainAdminRights() { admin = true; return true; },
+    dropAdminRights() { admin = false; },
     value: key => ({TargetDir: target, os: 'x11'})[key] ?? '',
     componentByName: name => components[name],
     fileExists: file => fs.existsSync(file),
     interrupt() { this.status = QInstaller.Canceled; },
     execute(program, args) {
+        if (!admin)
+            return ['', 1];
         const expand = value => value.replaceAll('@TargetDir@', target);
         const ran = spawnSync(expand(program), args.map(expand), {
             stdio: ['ignore', 'pipe', 'pipe'], encoding: 'utf8'
@@ -140,7 +147,11 @@ if (fs.existsSync(runtime))
 for (const {payload} of [...selected].reverse())
     undoExtract(payload, target);
 installer.status = QInstaller.Failure;
+// IFW drops the rights it gained for the protected installation before the completion signal.
+admin = false;
 installer.installationFinished.emit();
+if (admin)
+    throw new Error('The rollback completion handlers must release the update rights');
 process.stdout.write(extracted);
 """
 
@@ -154,54 +165,93 @@ def windows_protocol(monkeypatch):
     monkeypatch.delenv('EDI_CODESIGN', raising=False)
     monkeypatch.setattr(protocol, 'maintenance_pages', lambda *_args, **_kwargs: None)
     monkeypatch.setattr(protocol, 'nothing_offered', lambda *_args: None)
+    # Qualification requires a clean installation. The rollback proof also has to cover
+    # installations that already held a staged file before the failed update.
+    monkeypatch.setattr(protocol, 'verify_installed_maintenance_tool', lambda *_args: None)
     return protocol
 
 
 @pytest.mark.parametrize(
-    ('observed_tool', 'staged_before', 'staged_after', 'error'),
+    ('observation', 'staged_before', 'staged_after', 'error'),
     [
-        (True, None, None, None),
-        (True, 'online', 'online', None),
-        (False, None, None, 'before it unpacked'),
-        (True, None, 'failing-26.18', r'left .*26\.18.*MaintenanceTool\.update\.exe'),
+        ('current', None, None, None),
+        ('current', 'online', 'online', None),
+        ('legacy', None, None, r'(?i)before it unpacked|handoff'),
+        ('current', None, 'installed', r'left .*MaintenanceTool\.update\.exe.*installation'),
+        ('stale', 'failing-26.18', 'failing-26.18', r'(?i)before it unpacked|stale|handoff'),
+        ('current', None, 'failing-26.18', r'left .*26\.18.*MaintenanceTool\.update\.exe'),
     ],
-    ids=['removed', 'previous-restored', 'failed-before-staging', 'new-tool-left-behind'],
+    ids=[
+        'removed',
+        'previous-restored',
+        'failed-before-staging',
+        'new-tool-left-behind',
+        'stale-handoff',
+        'current-handoff-left-behind',
+    ],
 )
 def test_windows_rollback_requires_the_observed_new_tool_to_be_undone(
-    windows_protocol, tmp_path, monkeypatch, observed_tool, staged_before, staged_after, error
+    windows_protocol,
+    tmp_path,
+    monkeypatch,
+    observation,
+    staged_before,
+    staged_after,
+    error,
 ):
     target = tmp_path / 'Program Files' / 'EasyDiffraction'
     target.mkdir(parents=True)
     tool = target / 'MaintenanceTool.exe'
     tool.write_bytes(RELEASES['online'])
-    staged = target / 'MaintenanceTool.update.exe'
+    temporary = tmp_path / 'isolated home' / 'tmp'
+    temporary.mkdir(parents=True)
+    staged = temporary / 'MaintenanceTool.update.exe'
     if staged_before:
         staged.write_bytes(RELEASES[staged_before])
-    before = hashlib.sha256(staged.read_bytes()).hexdigest() if staged.is_file() else None
     for release, content in RELEASES.items():
         (tmp_path / release).mkdir()
         (tmp_path / release / 'installer.json').write_text(
-            json.dumps({'maintenance_tool_sha256': hashlib.sha256(content).hexdigest()}),
+            json.dumps({
+                'maintenance_tool_sha256': hashlib.sha256(content).hexdigest(),
+                'repository_url': (tmp_path / release).as_uri(),
+            }),
             encoding='utf-8',
         )
 
-    evidence = tmp_path / 'failed-operation.txt'
+    evidence = tmp_path / windows_protocol.FAILURE_EVIDENCE_NAME
     app = target / 'bin/EasyDiffraction.exe'
-    unpacked = staged if observed_tool else target / 'maintenancetool' / tool.name
-    unpacked.parent.mkdir(exist_ok=True)
-    unpacked.write_bytes(RELEASES['failing-26.18' if observed_tool else 'online'])
-    evidence.write_text(
-        '\n'.join(str(path).replace('/', '\\') for path in (app, unpacked)) + '\n',
-        encoding='utf-8',
-    )
-    found = windows_protocol.failure_evidence(evidence, target)
-    found['staged_before'] = before
-    if staged_after:
-        staged.write_bytes(RELEASES[staged_after])
-    else:
-        staged.unlink(missing_ok=True)
-    monkeypatch.setattr(windows_protocol, 'failed_update', lambda *_args: found)
-    args = (target, tool, app, tmp_path, {'env': {}})
+
+    def run_update(command, **_kwargs):
+        paths = [str(app)]
+        if observation == 'legacy':
+            paths.append(str(target / 'maintenancetool' / tool.name))
+        if observation == 'current':
+            staged.write_bytes(RELEASES['failing-26.18'])
+        if staged.is_file():
+            paths.extend([
+                f'SHA256 hash of {staged.name}:',
+                hashlib.sha256(staged.read_bytes()).hexdigest(),
+                'CertUtil: -hashfile command completed successfully.',
+            ])
+        evidence.write_text(
+            '\n'.join(path.replace('/', '\\') for path in paths) + '\n', encoding='utf-8'
+        )
+        if staged_after == 'installed':
+            (target / staged.name).write_bytes(RELEASES['failing-26.18'])
+            staged.unlink()
+        elif staged_after:
+            staged.write_bytes(RELEASES[staged_after])
+        else:
+            staged.unlink(missing_ok=True)
+        return subprocess.CompletedProcess(command, 1, stdout=windows_protocol.ROLLBACK_TEXT)
+
+    monkeypatch.setattr(windows_protocol.subprocess, 'run', run_update)
+    options = {
+        'env': dict.fromkeys(('TEMP', 'TMP', 'TMPDIR'), str(temporary)),
+        'stdout': io.StringIO(),
+        'timeout': 4,
+    }
+    args = (target, tool, app, tmp_path, options)
     if error:
         with pytest.raises(RuntimeError, match=error):
             windows_protocol.interrupted_update(*args)

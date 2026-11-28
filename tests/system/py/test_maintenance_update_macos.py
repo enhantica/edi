@@ -36,7 +36,8 @@ def put_tool(folder, executable):
 
 
 @pytest.mark.parametrize('driver', ['2026.11.27', 'current'])
-def test_success_removes_maintenance_tool_update_debris(tmp_path, driver):
+@pytest.mark.parametrize('access', ['writable', 'protected'])
+def test_success_removes_maintenance_tool_update_debris(tmp_path, driver, access):
     node = shutil.which('node') or ROOT / '.pixi/envs/app/bin/node'
     controller = (
         ROOT / 'tools/installer/Installer.qs'
@@ -53,49 +54,34 @@ def test_success_removes_maintenance_tool_update_debris(tmp_path, driver):
     legacy_staging = target / 'maintenancetool'
     installed = put_tool(target / BUNDLE, OLD_BYTES)
     put_tool(legacy_staging / BUNDLE, OLD_BYTES)
+    payload = tmp_path / 'incoming'
+    put_tool(payload / BUNDLE, NEW_BYTES)
+    (payload / '.DS_Store').write_bytes(b'Finder view metadata')
     meta = tmp_path / 'meta'
     meta.mkdir()
     package.write_maintenance_tool_metadata(meta, '26.18')
-    for phase in ('claim', 'swap', 'finish'):
-        if phase == 'swap':
-            assert (staging / '.claim').is_file(), (
-                'The incoming component claims the update staging before IFW unpacks the bundle'
-            )
-            put_tool(staging / BUNDLE, NEW_BYTES)
-            (staging / '.DS_Store').write_bytes(b'Finder view metadata')
-        result = subprocess.run(
-            [
-                str(node),
-                str(FIXTURES / 'ifw_update.mjs'),
-                phase,
-                str(target),
-                str(controller),
-                str(meta / 'maintenancescript.qs'),
-            ],
-            capture_output=True,
-            text=True,
-            check=False,
-            timeout=8,
-        )
-        assert result.returncode == 0, (
-            'The update must complete through both the running controller and incoming component: '
-            + result.stderr
-        )
-        for command in json.loads(result.stdout):
-            if command[0] == '/usr/bin/xattr':
-                continue
-            action = subprocess.run(command, capture_output=True, timeout=5, check=False)
-            assert action.returncode == 0, (
-                'The shell action emitted by the update component or controller must succeed: '
-                + action.stderr.decode()
-            )
-        if phase == 'swap':
-            assert (target / f'{BUNDLE}.old' / EXECUTABLE).read_bytes() == OLD_BYTES, (
-                'The original installed tool must remain recoverable until the update finishes'
-            )
-            assert (target / f'{BUNDLE}.old-token').is_file(), (
-                'The kept tool has its ownership mark until the update finishes'
-            )
+    result = subprocess.run(
+        [
+            str(node),
+            str(FIXTURES / 'ifw_update.mjs'),
+            str(target),
+            str(controller),
+            str(meta / 'maintenancescript.qs'),
+            str(payload),
+            access,
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=8,
+    )
+    assert result.returncode == 0, (
+        'The update must complete through both the running controller and incoming component: '
+        + result.stderr
+    )
+    assert json.loads(result.stdout) == {'kept': OLD_BYTES.decode(), 'marked': True}, (
+        'The original installed tool remains recoverable with its ownership mark until success'
+    )
     assert installed.read_bytes() == NEW_BYTES, (
         'A successful update retains the newly installed tool'
     )
