@@ -12,7 +12,7 @@ sites:
     executing_projects: [pd-neut-cwl_lbco-hrpt_le-bail, pd-xray-cwl_pbso4-lab_pawley]
     why: The standalone CLI fits disposable byte-identical copies of two declared powder examples.
     assertion_feed: The persisted structure method and uniquely keyed intensities, with Pawley uncertainties.
-    audit: 2026-11-28; C31-T2 requires the Le Bail and Pawley CLI examples through their normal fit command.
+    audit: The Le Bail and Pawley examples run through the ordinary fit command.
   - file: tests/system/py/test_cosio_heidi_case.py
     catalogue: true
     why: Unit 9 fits a disposable byte-identical canonical three-temperature example.
