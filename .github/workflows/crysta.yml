@@ -377,6 +377,10 @@ jobs:
           cd "$RUNNER_TEMP/crysta"
           python3 "$GITHUB_WORKSPACE/tools/ci/crysta_findings.py" --root "$RUNNER_TEMP/crysta" run check "$RUNNER_TEMP/findings/docs-build.log" -- \
             pixi run -e lint-docs-ci docs-build
+      # The smoke maps a user namespace, which Ubuntu 24.04 refuses to unprivileged users by default.
+      - name: Let the smoke map its user namespace
+        if: ${{ needs.plan.outputs.skip != 'true' && (!cancelled() && matrix.platform == 'Linux') }}
+        run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
       - name: SDK consumer smoke (find_package + crysta --perf-info)
         if: ${{ needs.plan.outputs.skip != 'true' && (!cancelled()) }}
         run: |
