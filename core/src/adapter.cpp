@@ -6435,7 +6435,7 @@ void refresh_fittability(Project& project) {
     }
     // The extracted rows are in no walk: each is answered through its own crysta parameter (edi ADR-0109), and
     // one crysta cannot answer is one no fitted experiment can determine.
-    std::vector<std::pair<Parameter*, crysta::FitEligibility>> rows;
+    std::vector<std::pair<Parameter*, const crysta::ExtractedIntensity*>> rows;
     for (const auto& experiment : project.experiments) {
         for (const auto& row : experiment->extracted_intensities) {
             mark(row->f_squared, crysta::FitBlocker::Data);
@@ -6445,8 +6445,9 @@ void refresh_fittability(Project& project) {
         return;
     }
     std::optional<crysta::Fittability> rule;
+    RelationProject converted;
     try {
-        RelationProject converted = relation_project(project);
+        converted = relation_project(project);
         // An experiment that links nothing crosses with a placeholder link to the first structure, which is no use of it.
         std::vector<std::size_t> fitted;
         for (const std::size_t index : fit_context(project)) {
@@ -6463,14 +6464,19 @@ void refresh_fittability(Project& project) {
                 if (index >= held.size()) {
                     break;
                 }
-                rows.emplace_back(&held[index++]->f_squared, rule->status(row.f_squared));
+                rows.emplace_back(&held[index++]->f_squared, &row);
             }
         }
     } catch (const std::exception&) {  // NOLINT(bugprone-empty-catch) — a calculation or fit says why
         return;
     }
-    for (auto& [parameter, status] : rows) {
-        mark(*parameter, status.blocker, status.reason(), status.idle);
+    // Each row on its own, so a row crysta has no answer for keeps its mark and never costs the others theirs.
+    for (const auto& [parameter, row] : rows) {
+        try {
+            const crysta::FitEligibility& status = rule->status(row->f_squared);
+            mark(*parameter, status.blocker, status.reason(), status.idle);
+        } catch (const std::invalid_argument&) {  // NOLINT(bugprone-empty-catch) — stays not determined
+        }
     }
     std::set<const Parameter*> answered;
     for (const auto& [unique_name, parameter] : named) {
