@@ -37,6 +37,8 @@ os.environ.pop('PYTEST_ADDOPTS', None)
 if kept := os.pathsep.join(filter(_elsewhere, os.environ.pop('PYTHONPATH', '').split(os.pathsep))):
     os.environ['PYTHONPATH'] = kept
 sys.path[:] = [entry for entry in sys.path if not entry or _elsewhere(entry)]
+# crysta's tools take the repository they work on from GitHub's variable, which names edi here.
+os.environ['GITHUB_REPOSITORY'] = 'enhantica/crysta'
 
 
 def part() -> tuple[int, int] | None:
