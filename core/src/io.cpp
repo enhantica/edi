@@ -2851,34 +2851,58 @@ BraggPdExperiment parse_experiment_block(const Block& block, const std::string& 
         experiment.excluded_regions.assign(std::move(regions));
     }
 
-    // The intensities a Le Bail or Pawley fit holds (edi ADR-0109), as written: a loop, or one row as items. The
-    // project's load maps each row to its orbit and checks its structure (settle_extracted_intensities).
-    if (const Loop* extracted = block.loop_with("_extracted_intensity.f_squared");
-        extracted != nullptr || block.find("_extracted_intensity.f_squared") != nullptr) {
-        const std::vector<std::vector<std::string>> one_row{{}};
-        const auto cell = [&](const std::vector<std::string>& row, const char* tag) -> const std::string& {
-            return extracted != nullptr ? loop_cell(*extracted, row, tag, where) : block.require(tag, where);
-        };
-        const auto miller = [&](const std::vector<std::string>& row, const char* tag) {
-            const std::string& text = cell(row, tag);
-            const double value = to_double(text, where);
-            if (value != std::floor(value) || std::abs(value) > 1.0e6) {
-                fail_schema(where, "invalid-miller-index", std::string(tag) + " '" + text + "' is not a Miller index");
+    // The intensities a Le Bail or Pawley fit holds (edi ADR-0109), read as crysta reads them: one loop, never items,
+    // and no (0 0 0) row. The project's load maps each row to its orbit and checks its structure
+    // (settle_extracted_intensities).
+    {
+        static const std::string prefix = "_extracted_intensity.";
+        for (const auto& item : block.items) {
+            if (item.first.rfind(prefix, 0) == 0) {
+                fail_schema(where, "extracted-intensity-not-a-loop",
+                            item.first + " is a scalar item; the extracted intensities are one loop");
             }
-            return static_cast<int>(value);
-        };
-        std::vector<std::shared_ptr<ExtractedIntensity>> rows;
-        for (const auto& row : extracted != nullptr ? extracted->rows : one_row) {
-            auto item = std::make_shared<ExtractedIntensity>();
-            item->structure_id = cell(row, "_extracted_intensity.structure_id");
-            item->index_h = miller(row, "_extracted_intensity.index_h");
-            item->index_k = miller(row, "_extracted_intensity.index_k");
-            item->index_l = miller(row, "_extracted_intensity.index_l");
-            read_into(item->f_squared,
-                      parse_parameter(cell(row, spec::extracted_intensity_f_squared.edi_names[0]), where), where);
-            rows.push_back(std::move(item));
         }
-        experiment.extracted_intensities.assign(std::move(rows));
+        const Loop* extracted = nullptr;
+        for (const Loop& loop : block.loops) {
+            if (std::none_of(loop.tags.begin(), loop.tags.end(),
+                             [](const std::string& tag) { return tag.rfind(prefix, 0) == 0; })) {
+                continue;
+            }
+            if (extracted != nullptr) {
+                fail_schema(where, "duplicate-loop", "a second _extracted_intensity loop; the intensities are one loop");
+            }
+            extracted = &loop;
+        }
+        if (extracted != nullptr) {
+            const auto miller = [&](const std::vector<std::string>& row, const char* tag) {
+                const std::string& text = loop_cell(*extracted, row, tag, where);
+                const double value = to_double(text, where);
+                if (value != std::floor(value) || std::abs(value) > 1.0e6) {
+                    fail_schema(where, "invalid-miller-index", std::string(tag) + " '" + text + "' is not a Miller index");
+                }
+                return static_cast<int>(value);
+            };
+            std::vector<std::shared_ptr<ExtractedIntensity>> rows;
+            for (const auto& row : extracted->rows) {
+                auto item = std::make_shared<ExtractedIntensity>();
+                item->structure_id = loop_cell(*extracted, row, "_extracted_intensity.structure_id", where);
+                item->index_h = miller(row, "_extracted_intensity.index_h");
+                item->index_k = miller(row, "_extracted_intensity.index_k");
+                item->index_l = miller(row, "_extracted_intensity.index_l");
+                if (item->index_h.get() == 0 && item->index_k.get() == 0 && item->index_l.get() == 0) {
+                    fail_domain(where, "extracted-intensity-origin",
+                                "_extracted_intensity row (0 0 0) of structure '" + item->structure_id.value() +
+                                    "' is no reflection");
+                }
+                read_into(item->f_squared,
+                          parse_parameter(loop_cell(*extracted, row, spec::extracted_intensity_f_squared.edi_names[0],
+                                                    where),
+                                          where),
+                          where);
+                rows.push_back(std::move(item));
+            }
+            experiment.extracted_intensities.assign(std::move(rows));
+        }
     }
 
     experiment.carried_calculation =
