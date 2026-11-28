@@ -39,7 +39,7 @@ class ScanSession : public QObject {
     };
     // The result files a fresh run replaces, as they were (absent: none): a series' bank rows among them.
     struct Files {
-        std::optional<std::string> results, provenance, run, skipped, experiments, used_starts;
+        std::optional<std::string> results, provenance, run, skipped, experiments;
         std::string kept;  // where the taken files wait on disk until they are put back
     };
 

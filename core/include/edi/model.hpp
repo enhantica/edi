@@ -5000,11 +5000,11 @@ struct KeyTraits<ParametricSharedParameter> {
     static const char* category() { return "shared parameter"; }
 };
 
-// ADR-0107: one point's own start for one parameter of a scan fit, made by a value edit while the scan had results
-// (owner record 2026-11-28), in every scan mode: pending until a fit uses it and writes the point's row, which removes it
-// (crysta's apply_point_starts and consume_point_starts, ADR-0136 decision 9). The point is its data file relative to the
-// scan folder, or the text the `*` matches in a series of joint fits; a shared parameter's start is the whole series' one
-// start. Unkeyed: the load refuses a (point, name) given twice.
+// ADR-0107 decision 13: one point's own start for one parameter of a scan fit, made by a value edit while the scan had
+// results (owner records 2026-11-28), in every scan mode: pending in the running model only, never written to the
+// project files, until a fit uses it and writes the point's row (crysta's apply_point_starts, ADR-0136 decision 9). The
+// point is its data file relative to the scan folder, or the text the `*` matches in a series of joint fits; a shared
+// parameter's start is the whole series' one start. Its row schema is the collection's in-memory layout only.
 struct ParametricFitStart {
     detail::WrittenText point;
     detail::WrittenText parameter_unique_name;
@@ -5191,7 +5191,7 @@ struct SequentialFitConfig {
     // ADR-0107: the `_parametric_fit_shared` names, the parameters a parametric fit gives one value for every
     // point (each also free). Kept in every mode; only `parametric` reads them.
     ItemVec<ParametricSharedParameter> shared;
-    // ADR-0107: the parametric fit's sparse per-point starts (`_parametric_fit_start`).
+    // ADR-0107 decision 13: the pending point starts, in memory only (never saved).
     ItemVec<ParametricFitStart> starts;
     bool declared() const { return !data_dir.empty(); }
     bool joint() const { return !experiments.empty(); }

@@ -807,9 +807,38 @@ static void def_free_parameters(nb::class_<Class>& cls) {
         "free_parameters",
         [](Class& self) {
             edi::detail::point_parameters(self);  // X12: each handle's row
-            return self.free_parameters();
+            std::vector<edi::Parameter*> free = self.free_parameters();
+            if constexpr (std::is_same_v<Class, edi::Project>) {
+                // A Joint shared group is one fitted coordinate, free if any copy is (ADR-0107): listed once, by its
+                // listed copy, as the fit's ties count it.
+                if (!self.sequential_fit.declared() && self.fitting_mode == "joint" && !self.sequential_fit.shared.empty()) {
+                    std::vector<edi::Parameter*> out;
+                    for (edi::Parameter* parameter : free) {
+                        edi::Parameter* counted = parameter;
+                        if (edi::parametric_shared(self, *parameter)) {
+                            if (const edi::Parameter* leader = edi::shared_leader(self, *parameter)) {
+                                counted = const_cast<edi::Parameter*>(leader);  // the project's own parameter
+                            }
+                        }
+                        if (std::find(out.begin(), out.end(), counted) == out.end()) out.push_back(counted);
+                    }
+                    return out;
+                }
+            }
+            return free;
         },
-        nb::rv_policy::reference_internal, "The subset of `parameters` whose `free` is set.");
+        nb::rv_policy::reference_internal,
+        "The subset of `parameters` whose `free` is set; a Joint shared group counts once, by its listed copy.");
+}
+
+// Pending scan edits live in the running model only (owner record 2026-11-28): a save says how many it will not keep.
+// A warning raised as an error stops the save before it writes.
+static void warn_unfitted_edits(const edi::Project& project) {
+    const std::size_t pending = project.sequential_fit.starts.size();
+    if (pending == 0) return;
+    const std::string message = std::to_string(pending) + (pending == 1 ? " edit" : " edits") +
+                                " not yet fitted will not be kept";
+    if (PyErr_WarnEx(PyExc_UserWarning, message.c_str(), 1) != 0) throw nb::python_error();
 }
 
 // The Python edi.IoError type (subclass of ValueError), kept alive for the exception translator so a
@@ -5349,6 +5378,7 @@ NB_MODULE(_edi, m) {
         .def(
             "save_as",
             [](edi::Project& self, const std::filesystem::path& directory) {
+                warn_unfitted_edits(self);
                 // edi NARRATES its saves (the display facade is edi's, R6); the write itself
                 // is delegated to crysta's silent writer (:save_project validates and hands
                 // over).
@@ -5471,6 +5501,7 @@ NB_MODULE(_edi, m) {
                         "this project has no directory yet (never loaded or saved): use "
                         "save_as(directory) first");
                 }
+                warn_unfitted_edits(self);
                 nb::module_::import_("builtins").attr("print")(
                     "Saving project to '" + (self.archive.empty() ? self.path : self.archive) + "'");
                 // review-32 F2 +: advance before the write, roll back on failure.

@@ -72,15 +72,15 @@ equality (TOPAS, GSAS-II, FullProf, Jana); general fitting tools put a Share col
     writes the template unchanged. Fit on a scan whose every dataset is fitted or skipped fits them all again, each
     from its own latest result, as a new run; while some are not, it continues them. Reset fits clears the results,
     and the next fit starts every dataset from the template.
-13. **Edits while a scan has results** (owner decision 2026-11-28, every scan mode). A value typed or dragged at the
-    shown dataset is that dataset's pending start for the next fit, kept in the project's `_parametric_fit_start`
-    loop (crysta ADR-0136 decision 9); in a Parametric fit a shared value is the whole series' one start, and a newly
-    shared group takes the clicked copy's value as it (one write for a row's Shared box and the header menu);
-    unsharing drops it. The fit records the starts it applied with its results and the project then loses exactly
-    those; a start on a fixed parameter stays, the point's input. Reopening a project drops a start its results record
-    as used. Neither a pending start nor the Shared list makes the results out of date. Undo removes a start. Free, the
-    mode and every other edit reach the template with the template's own values kept; the template's values change
-    only where no results exist. Reset fits clears the starts with the results and their record.
+13. **Edits while a scan has results** (owner decisions 2026-11-28, every scan mode). A value typed or dragged at the
+    shown dataset is that dataset's pending start for the next fit, held in the running model only and never saved
+    (crysta ADR-0136 decision 9); in a Parametric fit a shared value is the whole series' one start, and a newly shared
+    group takes the clicked copy's value as it (one write for a row's Shared box and the header menu); unsharing drops
+    it. The fit removes exactly the starts it used, on a free parameter or a fixed one. A save says
+    how many edits not yet fitted it will not keep, and closing or reopening drops them. Neither a pending start nor the
+    Shared list makes the results out of date. Undo removes a start. Free, the mode and every other edit reach the
+    template with the template's own values kept; the template's values change only where no results exist. Reset fits
+    clears the starts with the results.
 
 ## Consequences
 

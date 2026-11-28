@@ -6121,6 +6121,12 @@ std::optional<ProjectViewModel::ShownPoint> ProjectViewModel::shownPoint() const
     return ShownPoint{files[static_cast<std::size_t>(current_dataset_)]};
 }
 
+void ProjectViewModel::announceUnfittedEdits() {
+    const auto pending = static_cast<int>(project_->sequential_fit.starts.size());
+    if (pending == 1) emit information(tr("1 edit not yet fitted will not be kept"));
+    if (pending > 1) emit information(tr("%1 edits not yet fitted will not be kept").arg(pending));
+}
+
 void ProjectViewModel::dropUsedStarts(const std::vector<std::tuple<std::string, std::string, double>>& used) {
     const std::set<std::tuple<std::string, std::string, double>> gone(used.begin(), used.end());
     const auto drop = [&gone](edi::ItemVec<edi::ParametricFitStart>& starts) {

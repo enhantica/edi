@@ -1463,6 +1463,8 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // After a scan fit: the point starts it used go from the model and the template, exactly those (an edit made while
     // it ran is kept); the project is modified when that changed it.
     void dropUsedStarts(const std::vector<std::tuple<std::string, std::string, double>>& used);
+    // Before a save: says how many pending scan edits it will not keep (they live in the running model only).
+    void announceUnfittedEdits();
 
    private:
     edi::Edit valueEdit(edi::Parameter& parameter, double value);
