@@ -11079,29 +11079,35 @@ MagneticPeak magnetic_peak_near(const Project& project, std::size_t experiment, 
         }
         return false;
     };
-    // Maxima are looked for within a few of the tap's widths; each counts only within its own half width (packet 9m;
-    // review 30), as the width varies along the pattern.
-    const double span = 4.0 * std::max(exact.half_width, 1e-9);
-    std::optional<MagneticPeak> best;
-    for (std::size_t i = 1; i + 1 < axis.size(); ++i) {
-        if (std::abs(axis[i] - x) > span || excluded(axis[i]) || excluded(axis[i - 1]) || excluded(axis[i + 1]) ||
-            !std::isfinite(y[i]) || !std::isfinite(y[i - 1]) || !std::isfinite(y[i + 1]))
-            continue;
-        // A maximum of the measured curve (review 23, F4): above the sample before it and not below the one after,
-        // so a completely flat run gives none and a plateau counts once, at its first sample; the nearest one wins.
-        if (!(y[i] > y[i - 1] && y[i] >= y[i + 1])) continue;
-        if (best && std::abs(axis[i] - x) >= std::abs(best->x - x)) continue;
-        MagneticPeak here;
+    // The nearest measured maximum whose own half width holds the click (packet 9m; reviews 30 and 31): maxima are
+    // taken outward from the click, nearest first, with no cap, since the width varies along the pattern (a TOF
+    // width can grow as d²). The first that holds the click is the nearest such one.
+    const KEngine k(project);
+    const crysta::Structure& structure = engine_structure(k.engine, project.structures[parent]->name.value());
+    const auto& engine_experiment = k.engine.experiments.at(experiment);
+    const auto maximum = [&](std::size_t i) {
+        return i > 0 && i + 1 < axis.size() && !excluded(axis[i]) && !excluded(axis[i - 1]) && !excluded(axis[i + 1]) &&
+               std::isfinite(y[i]) && std::isfinite(y[i - 1]) && std::isfinite(y[i + 1]) &&
+               // above the sample before and not below the one after: a flat run gives none, a plateau counts once
+               y[i] > y[i - 1] && y[i] >= y[i + 1];
+    };
+    std::vector<std::size_t> order(axis.size());
+    std::iota(order.begin(), order.end(), std::size_t{0});
+    std::stable_sort(order.begin(), order.end(), [&](std::size_t a, std::size_t b) {
+        return std::abs(axis[a] - x) < std::abs(axis[b] - x);
+    });
+    for (const std::size_t i : order) {
+        if (!maximum(i)) continue;
+        crysta::UnexplainedPeak here;
         try {
-            here = magnetic_peak_at(project, experiment, parent, axis[i]);
+            here = crysta::peak_at(structure, engine_experiment, axis[i]);
         } catch (const std::invalid_argument&) {
             continue;  // outside the calibration's range
         }
         if (std::abs(axis[i] - x) > std::max(here.half_width, 1e-9)) continue;
-        here.observed = true;
-        best = here;
+        return {here.x, here.d, here.tolerance, 0.0, here.half_width, false, false, true};
     }
-    return best ? *best : exact;
+    return exact;
 }
 
 std::vector<MagneticKRow> magnetic_k_search(const Project& project, std::size_t experiment, std::size_t parent,
