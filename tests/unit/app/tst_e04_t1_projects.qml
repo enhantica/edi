@@ -89,6 +89,9 @@ TestCase {
     function textVisible(fragment, message) {
         tryVerify(() => Ui.text(Ui.windowRoot(appWindow)).includes(fragment), 2000, message);
     }
+    function visibleTitle(text) {
+        return text.replace(/\u2060/g, "").replace(/\u00a0/g, " ");
+    }
     function populated(expected) {
         verify(Session.hasProject, "I19: selected project opens: " + expected.id + " " + Session.lastError);
         const project = Session.project;
@@ -205,9 +208,14 @@ TestCase {
         const preview = visibleControl("report.preview");
         tryVerify(() => {
             const title = findChild(preview, "report.preview.title");
-            return title !== null && title.text === (expected.metadata["_metadata.title"] || expected.metadata["_metadata.name"]);
+            const expectedTitle = expected.metadata["_metadata.title"] || expected.metadata["_metadata.name"];
+            return title !== null && visibleTitle(title.text) === visibleTitle(expectedTitle);
         }, 2000, "The rendered preview title belongs to the opened project: " + expected.id);
         tryVerify(() => preview.model.contents.some(item => item.key === "data" && item.included), 2000, "The preview includes the actual Data subsection before checking its measured summary");
+        tryVerify(() => {
+            const loaders = Render.descendants(preview).filter(item => item.asynchronous === true && item.active && item.sourceComponent !== undefined);
+            return loaders.length > 0 && loaders.every(loader => loader.status === Loader.Ready);
+        }, 5000, "The preview finishes loading its report sections before sampling their visible text");
         verify(waitForPolish(preview) && waitForRendering(preview), "The selected project's preview lays out and renders before reading its document");
         // Numeric cells render separate left, decimal-point and right Text items.
         // Join their actual rendered parts within each cell before parsing numbers.

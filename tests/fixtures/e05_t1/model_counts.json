@@ -14182,6 +14182,111 @@
         "source_case": "sc-neut-cwl_tb2ti2o7-heidi_basic",
         "rule": "Identical selected model and free flags; admission declarations add no parameters."
       }
+    },
+    {
+      "id": "pd-neut-cwl_lbco-hrpt_le-bail",
+      "n_parameters": 41,
+      "parameter_names": [
+        "lbco.cell.length_a",
+        "lbco.cell.length_b",
+        "lbco.cell.length_c",
+        "lbco.cell.angle_alpha",
+        "lbco.cell.angle_beta",
+        "lbco.cell.angle_gamma",
+        "lbco.atom_site.La.fract_x",
+        "lbco.atom_site.La.fract_y",
+        "lbco.atom_site.La.fract_z",
+        "lbco.atom_site.La.occupancy",
+        "lbco.atom_site.La.adp_iso",
+        "lbco.atom_site.Ba.fract_x",
+        "lbco.atom_site.Ba.fract_y",
+        "lbco.atom_site.Ba.fract_z",
+        "lbco.atom_site.Ba.occupancy",
+        "lbco.atom_site.Ba.adp_iso",
+        "lbco.atom_site.Co.fract_x",
+        "lbco.atom_site.Co.fract_y",
+        "lbco.atom_site.Co.fract_z",
+        "lbco.atom_site.Co.occupancy",
+        "lbco.atom_site.Co.adp_iso",
+        "lbco.atom_site.O.fract_x",
+        "lbco.atom_site.O.fract_y",
+        "lbco.atom_site.O.fract_z",
+        "lbco.atom_site.O.occupancy",
+        "lbco.atom_site.O.adp_iso",
+        "hrpt.linked_structure.lbco.scale",
+        "hrpt.peak.broad_gauss_u",
+        "hrpt.peak.broad_gauss_v",
+        "hrpt.peak.broad_gauss_w",
+        "hrpt.peak.broad_lorentz_x",
+        "hrpt.peak.broad_lorentz_y",
+        "hrpt.instrument.wavelength",
+        "hrpt.instrument.twotheta_offset",
+        "hrpt.instrument.sample_displacement",
+        "hrpt.instrument.sample_transparency",
+        "hrpt.background.1.intensity",
+        "hrpt.background.2.intensity",
+        "hrpt.background.3.intensity",
+        "hrpt.background.4.intensity",
+        "hrpt.background.5.intensity"
+      ],
+      "experiments": [
+        "hrpt"
+      ],
+      "reference_projection": {
+        "source_case": "pd-neut-cwl_lbco-hrpt_start-2",
+        "removed_prefixes": [
+          "hrpt.preferred_orientation.",
+          "hrpt.absorption."
+        ],
+        "rule": "Keep existing cell, linked scale and active experiment slots. Count saved sites regardless of free flags and exclude intensities generated during a fit."
+      }
+    },
+    {
+      "id": "pd-xray-cwl_pbso4-lab_pawley",
+      "n_parameters": 31,
+      "parameter_names": [
+        "pbso4.cell.length_a",
+        "pbso4.cell.length_b",
+        "pbso4.cell.length_c",
+        "pbso4.cell.angle_alpha",
+        "pbso4.cell.angle_beta",
+        "pbso4.cell.angle_gamma",
+        "lab.linked_structure.pbso4.scale",
+        "lab.peak.asym_beba_a0",
+        "lab.peak.asym_beba_b0",
+        "lab.peak.asym_beba_a1",
+        "lab.peak.asym_beba_b1",
+        "lab.peak.broad_gauss_u",
+        "lab.peak.broad_gauss_v",
+        "lab.peak.broad_gauss_w",
+        "lab.instrument.wavelength",
+        "lab.instrument.twotheta_offset",
+        "lab.instrument.sample_displacement",
+        "lab.instrument.sample_transparency",
+        "lab.background.1.coef",
+        "lab.background.2.coef",
+        "lab.background.3.coef",
+        "lab.background.4.coef",
+        "lab.background.5.coef",
+        "lab.background.6.coef",
+        "lab.peak.asym_beba_limit",
+        "lab.instrument.setup_polarization_coefficient",
+        "lab.instrument.setup_monochromator_twotheta",
+        "lab.instrument.setup_wavelength_2",
+        "lab.instrument.setup_wavelength_2_to_1_ratio",
+        "lab.peak.mixing_eta_0",
+        "lab.peak.mixing_eta_1"
+      ],
+      "experiments": [
+        "lab"
+      ],
+      "reference_projection": {
+        "source_case": "pd-xray-cwl_pbso4-lab",
+        "removed_prefixes": [
+          "pbso4.atom_site."
+        ],
+        "rule": "Keep existing cell, linked scale and active experiment slots. Count saved sites regardless of free flags and exclude intensities generated during a fit."
+      }
     }
   ],
   "previous_provenance": {

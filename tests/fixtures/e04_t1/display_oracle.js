@@ -236,7 +236,13 @@ var frozen = {
     "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_synthetic-100p/project/experiments/wish_3_8.edi": "25ca926bd7b1a851d734e1dcdb408ff6e1ad58b1fa04cff0a63da29d11dc126d",
     "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_synthetic-100p/project/experiments/wish_4_7.edi": "eb403a405d4ed37f9f49c6caaf0aa56961e04547aa260d0ee52cffb15e91b77e",
     "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_synthetic-100p/project/experiments/wish_5_6.edi": "86ba7e25c01e9f7e34f443f6d3a5f7ba6a6f10a9bf65cb79be8682e5ca7aa5d5",
-    "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_synthetic-100p/project/analysis/analysis.edi": "21b5c98f5c19e096c7e3f034a525b9cfdb868ac76fdcfe8a58657c74b179a2e2"
+    "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_synthetic-100p/project/analysis/analysis.edi": "21b5c98f5c19e096c7e3f034a525b9cfdb868ac76fdcfe8a58657c74b179a2e2",
+    "docs/user/cli/pd-neut-cwl_lbco-hrpt_le-bail/project/structures/lbco.edi": "4755fff9d90143ea1635c080e8788d36a315569df0faaea7167e9ce20a2c835d",
+    "docs/user/cli/pd-neut-cwl_lbco-hrpt_le-bail/project/experiments/hrpt.edi": "f0c0e3839ffa3b6043992fb768eef3794ced6c869ceb7da52a57b8a387cac3f2",
+    "docs/user/cli/pd-neut-cwl_lbco-hrpt_le-bail/project/analysis/analysis.edi": "ae205ba68be6b6b68ba2350d8b4ca0f931ed5f7a228ab4186be120f55de7899c",
+    "docs/user/cli/pd-xray-cwl_pbso4-lab_pawley/project/structures/pbso4.edi": "d1338ab4c7c7cd787055bbe9237e1a5130e0e34f782895bab07531d6727073ea",
+    "docs/user/cli/pd-xray-cwl_pbso4-lab_pawley/project/experiments/lab.edi": "96e368e945a2a52da2d34c0c8ef8500acb560d4f207b9278a404318ad7c011de",
+    "docs/user/cli/pd-xray-cwl_pbso4-lab_pawley/project/analysis/analysis.edi": "1e59c0da22d1a5246a031013c7dc61ac906ee4aa6c1cc4c72b321be27c9480d3"
   },
   "cases": [
     {
@@ -9736,6 +9742,226 @@ var frozen = {
     {
       "tag": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_synthetic-100p/project:engines",
       "path": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_synthetic-100p/project",
+      "page": "analysis",
+      "tier": "extras",
+      "group": "engines",
+      "selection": null,
+      "fields": [
+        [
+          "statusBar.calculator",
+          "crysta",
+          "label"
+        ],
+        [
+          "statusBar.minimizer",
+          "crysta",
+          "label"
+        ]
+      ]
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-cwl_lbco-hrpt_le-bail/project:space_group:lbco",
+      "path": "docs/user/cli/pd-neut-cwl_lbco-hrpt_le-bail/project",
+      "page": "structure",
+      "tier": "basic",
+      "group": "space_group",
+      "selection": "lbco",
+      "fields": [
+        [
+          "spaceGroup.crystalSystem",
+          "cubic",
+          "readonly"
+        ],
+        [
+          "spaceGroup.itNumber",
+          "221",
+          "text"
+        ],
+        [
+          "spaceGroup.nameHM",
+          "P m -3 m",
+          "text"
+        ],
+        [
+          "spaceGroup.coordSystemCode",
+          "1",
+          "text"
+        ]
+      ]
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-cwl_lbco-hrpt_le-bail/project:experiment_type:hrpt",
+      "path": "docs/user/cli/pd-neut-cwl_lbco-hrpt_le-bail/project",
+      "page": "experiment",
+      "tier": "basic",
+      "group": "experiment_type",
+      "selection": "hrpt",
+      "fields": [
+        [
+          "experimentType.sampleForm",
+          "powder",
+          "disabled"
+        ],
+        [
+          "experimentType.beamMode",
+          "constant wavelength",
+          "disabled"
+        ],
+        [
+          "experimentType.radiationProbe",
+          "neutron",
+          "disabled"
+        ],
+        [
+          "experimentType.scatteringType",
+          "bragg",
+          "disabled"
+        ]
+      ]
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-cwl_lbco-hrpt_le-bail/project:data:hrpt",
+      "path": "docs/user/cli/pd-neut-cwl_lbco-hrpt_le-bail/project",
+      "page": "experiment",
+      "tier": "extras",
+      "group": "data",
+      "selection": "hrpt",
+      "fields": [
+        [
+          "range.minimum",
+          10.0,
+          "number"
+        ],
+        [
+          "range.maximum",
+          164.85,
+          "number"
+        ],
+        [
+          "range.step",
+          0.049999999999999996,
+          "number"
+        ],
+        [
+          "range.points",
+          3098,
+          "number"
+        ]
+      ]
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-cwl_lbco-hrpt_le-bail/project:engines",
+      "path": "docs/user/cli/pd-neut-cwl_lbco-hrpt_le-bail/project",
+      "page": "analysis",
+      "tier": "extras",
+      "group": "engines",
+      "selection": null,
+      "fields": [
+        [
+          "statusBar.calculator",
+          "crysta",
+          "label"
+        ],
+        [
+          "statusBar.minimizer",
+          "crysta",
+          "label"
+        ]
+      ]
+    },
+    {
+      "tag": "docs/user/cli/pd-xray-cwl_pbso4-lab_pawley/project:space_group:pbso4",
+      "path": "docs/user/cli/pd-xray-cwl_pbso4-lab_pawley/project",
+      "page": "structure",
+      "tier": "basic",
+      "group": "space_group",
+      "selection": "pbso4",
+      "fields": [
+        [
+          "spaceGroup.crystalSystem",
+          "orthorhombic",
+          "readonly"
+        ],
+        [
+          "spaceGroup.itNumber",
+          "62",
+          "text"
+        ],
+        [
+          "spaceGroup.nameHM",
+          "P n m a",
+          "text"
+        ],
+        [
+          "spaceGroup.coordSystemCode",
+          "abc",
+          "text"
+        ]
+      ]
+    },
+    {
+      "tag": "docs/user/cli/pd-xray-cwl_pbso4-lab_pawley/project:experiment_type:lab",
+      "path": "docs/user/cli/pd-xray-cwl_pbso4-lab_pawley/project",
+      "page": "experiment",
+      "tier": "basic",
+      "group": "experiment_type",
+      "selection": "lab",
+      "fields": [
+        [
+          "experimentType.sampleForm",
+          "powder",
+          "disabled"
+        ],
+        [
+          "experimentType.beamMode",
+          "constant wavelength",
+          "disabled"
+        ],
+        [
+          "experimentType.radiationProbe",
+          "xray",
+          "disabled"
+        ],
+        [
+          "experimentType.scatteringType",
+          "bragg",
+          "disabled"
+        ]
+      ]
+    },
+    {
+      "tag": "docs/user/cli/pd-xray-cwl_pbso4-lab_pawley/project:data:lab",
+      "path": "docs/user/cli/pd-xray-cwl_pbso4-lab_pawley/project",
+      "page": "experiment",
+      "tier": "extras",
+      "group": "data",
+      "selection": "lab",
+      "fields": [
+        [
+          "range.minimum",
+          10.0,
+          "number"
+        ],
+        [
+          "range.maximum",
+          160.0,
+          "number"
+        ],
+        [
+          "range.step",
+          0.025,
+          "number"
+        ],
+        [
+          "range.points",
+          6001,
+          "number"
+        ]
+      ]
+    },
+    {
+      "tag": "docs/user/cli/pd-xray-cwl_pbso4-lab_pawley/project:engines",
+      "path": "docs/user/cli/pd-xray-cwl_pbso4-lab_pawley/project",
       "page": "analysis",
       "tier": "extras",
       "group": "engines",
