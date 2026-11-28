@@ -4515,6 +4515,10 @@ void ProjectViewModel::toggleKMarkAt(double x, double tolerance) {
             *project_, static_cast<std::size_t>(k_marks_.experiment), static_cast<std::size_t>(k_marks_.parent), x);
         for (std::size_t i = 0; i < k_marks_.candidates.size() && best < 0; ++i)
             if (std::abs(k_marks_.candidates[i].x - measured.x) <= 1e-9) best = static_cast<int>(i);
+        // A suggestion taken up again by a click is the user's mark from then on (review 30): a re-measure follows the
+        // measured samples for it, as for every click.
+        if (best >= 0 && std::find(k_marks_.marks.begin(), k_marks_.marks.end(), best) == k_marks_.marks.end())
+            k_marks_.candidates[static_cast<std::size_t>(best)].suggested = false;
         if (best < 0) {
             k_marks_.candidates.push_back(measured);
             best = static_cast<int>(k_marks_.candidates.size()) - 1;
