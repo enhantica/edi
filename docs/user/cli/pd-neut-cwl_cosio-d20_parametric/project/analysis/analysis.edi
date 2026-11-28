@@ -1,6 +1,6 @@
 _edi.schema_version 3
 
-_fitting_mode.type parametric
+_fitting_mode.type joint
 
 _minimizer.type crysta
 _minimizer.descent fast_descent

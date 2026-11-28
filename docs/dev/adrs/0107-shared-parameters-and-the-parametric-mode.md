@@ -1,4 +1,4 @@
-# 0107. Shared parameters and the parametric fitting mode
+# 0107. Shared parameters and the joint fit of a scan
 
 - **Status:** Proposed
 - **Date:** 2026-11-26
@@ -19,10 +19,12 @@ equality (TOPAS, GSAS-II, FullProf, Jana); general fitting tools put a Share col
 
 1. **Two independent flags.** A parameter is fixed or free, and per pattern or shared. The four combinations are all
    valid. In Python, `p.free` and `p.shared` are booleans that never change each other.
-2. **Mode.** The Fitting mode selector offers "Parametric: all as one fit" where a scan is declared, beside Sequential and
-   Independent.
+2. **Mode.** Where a scan is declared the Fitting mode selector offers Sequential, Independent and "Joint: all patterns
+   as one fit" (`_fitting_mode.type joint`), the joint fit of a project's experiments applied to the patterns of a scan.
+   A file saved with the token `parametric` from before the rename reads as `joint`. Inside edi the scan's Joint fit
+   is the fit kind `parametric` (`fit_kind`).
 3. **Where it is offered.**
-   - The Parameters table shows a Shared column, left of Free, in the Parametric and Joint modes only, so Free keeps its
+   - The Parameters table shows a Shared column, left of Free, in the Joint mode only, so Free keeps its
      place at the table's right edge.
    - The Shared title is a copy of Free's: its ▾ menu shares or unshares the shown rows (Shared, Not shared, and Mixed
      when they differ), as one undo step.
@@ -59,18 +61,18 @@ equality (TOPAS, GSAS-II, FullProf, Jana); general fitting tools put a Share col
    shows it (the Analysis page hides those rows). Each has a light and a dark tone and does not depend on the palette.
 9. **Sidebar**. While the table shows Shared, the sidebar's Auto and Full widths grow by that
    column, from the same width rule, so no other column gives way.
-10. **A running fit.** A Parametric fit redraws the selected pattern, Meas vs calc and Evolution from each iteration
+10. **A running fit.** A Joint fit of a scan redraws the selected pattern, Meas vs calc and Evolution from each iteration
     (at most four times a second, the last always); the status bar shows its iterations and joint χ², and the results
     window its one outcome, never files converged or failed.
 11. **Cores**. Preferences' one Cores for fitting (Auto: every core) is spent by the fit's mode: a single or Joint fit
-    and a Sequential scan inside each calculation, an Independent scan as that many files at once, a Parametric fit as
+    and a Sequential scan inside each calculation, an Independent scan as that many files at once, a Joint fit of a scan as
     that many patterns at once, its point loop on that team; the setting's tooltip says so.
 12. **The template and a fit again**. A scan fit never writes the template: the project keeps its values, and each shown
     dataset reads its own from the results files; saving after a fit writes the template unchanged. Fit on a scan whose
     every dataset is fitted or skipped fits them all again, each from its own latest result, as a new run; while some
     are not, it continues them. Reset fits clears the results, and the next fit starts every dataset from the template.
 13. **Edits while a scan has results**. A value typed or dragged at the shown dataset is that dataset's pending start
-    for the next fit, held in the running model only and never saved; in a Parametric fit a shared value is the whole
+    for the next fit, held in the running model only and never saved; in a Joint fit of a scan a shared value is the whole
     series' one start, and a newly shared group takes the clicked copy's value as it (one write for a row's Shared box
     and the header menu); unsharing drops it. The fit removes exactly the starts it used, on a free parameter or a fixed
     one. A save says how many edits not yet fitted it will not keep, and closing or reopening drops them. Neither a
@@ -84,7 +86,7 @@ equality (TOPAS, GSAS-II, FullProf, Jana); general fitting tools put a Share col
   writing constraint rows.
 - A Joint fit hands crysta each shared group as equality ties `<member> = <leader>`, built for that fit only and never
   saved or listed with the user's constraints; the result is the constrained fit's.
-- The Parametric fit is crysta's (its ADR-0136), for a scan of one experiment and for a series of joint fits, where a
+- The Joint fit of a scan is crysta's (its ADR-0136), for a scan of one experiment and for a series of joint fits, where a
   shared parameter is one experiment's, with one value at every point.
 - The owner's checks of the app removed what the first design added beside Shared: the Differences group, a second
   axis and "Compare with" in Evolution, and the many-bank map (records of 2026-11-26).
