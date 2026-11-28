@@ -1,5 +1,11 @@
 # ADR-0017 — The edi app's GUI design: layout, naming, colours and icons
 
+**Amended 2026-11-28:** the sidebar's tabs are given by role (the owner, 2026-11-28, "sidebar tabs by role"): Main and
+Extra hold only groups that edit `.edi` categories, a new Tools tab holds the groups that act on the project without
+being one, and Settings only the page's own settings (§2). It replaces the earlier placement of the k-vector search
+and Background estimation on Experiment → Extra, the magnetic symmetry analysis button inside Structure → Space
+group, Appearance and Polyhedra on Structure → Extra, and Export on Report → Main.
+
 **Amended 2026-11-13:** As of 2026-11-13 (ADR-0023 §3), browser delivery uses only the multithreaded kit. The former single-thread-browser performance-control state is no longer a shipped variant. Existing browser geometry behavior remains unchanged.
 
 - **Status:** Proposed (the owner's ideas of 2026-09-29, confirmed one by one in the loop)
@@ -123,8 +129,22 @@ The decisions it rests on, unchanged here:
   fixed once it has. A change makes the experiment again with the new type, keeping its name, its linked
   structure and, within one beam mode, its range. Dimensionality (1D) and polarization (None, shown for a
   neutron probe only) are placeholders, disabled until implemented (§4).
-- **The sidebar tabs** read **Main · Extra · Text** (owner, 2026-10-05). Code keys them by a stable id
-  (`sideBar.tab.basic`, `sideBar.tab.extras`, `sideBar.tab.text`), never by the label.
+- **The sidebar tabs** read **Main · Extra · Text · Tools · Settings** (owner, 2026-10-05; Tools added 2026-11-28).
+  Code keys them by a stable id (`sideBar.tab.basic`, `sideBar.tab.extras`, `sideBar.tab.text`, `sideBar.tab.tools`,
+  `sideBar.tab.settings`), never by the label. Each has one role (the owner, 2026-11-28):
+  - **Main** and **Extra** hold only groups that edit the page's `.edi` categories, Main the common ones and Extra the
+    rare and advanced ones.
+  - **Text** is the text of the same categories.
+  - **Tools** holds groups that act on the project but are not one of its categories: Experiment's Background
+    estimation and k-vector search, Structure's Magnetic symmetry analysis (a button that opens the symmetry popup
+    for the current Crystal structure), and Report's Export.
+  - **Settings** holds only the page's own settings: on Structure, the view's Appearance and Polyhedra.
+  - A button that acts on one category stays beside that category's data, in its group (Estimate in Linked
+    structures).
+
+  Earlier placements this replaces: the k-vector search and Background estimation on Experiment → Extra, the
+  magnetic symmetry analysis button inside Structure → Space group, Appearance and Polyhedra on Structure → Extra,
+  and Export on Report → Main.
 
 ### 3. Sidebar groups: titles, which one opens, borders
 
@@ -180,7 +200,8 @@ The decisions it rests on, unchanged here:
   (the owner, 2026-09-29) and **Linked structures last** (the owner, 2026-10-04, when Excluded regions moved to
   Basic), giving block selector · Experiments · Experiment type · Background · Instrument · Peak profile ·
   Excluded regions · Linked structures.
-- **Every page shows all four sidebar tabs**, Main, Extra, Text and Settings (the owner, 2026-11-10). A tab whose
+- **Every page shows all five sidebar tabs**, Main, Extra, Text, Tools and Settings (the owner, 2026-11-10; Tools
+  2026-11-28). A tab whose
   content waits for the page's first block says "Nothing to show yet: start in the Main tab"; a tab the page has no
   groups for yet (Structure and Project → Settings, Report → Extra and Settings) asks what it could hold, with a link
   that opens the feedback form as an idea. A group that only reports a Preferences value (Performance) shows the value
