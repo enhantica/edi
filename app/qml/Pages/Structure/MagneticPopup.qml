@@ -199,12 +199,14 @@ AppDialog {
         spacing: AppSizes.groupContentSpacing
 
         // One toolbar row, built from the chart toolbar's own boxes and buttons and spaced as Experiment → Pattern's
-        // (owner, 2026-11-28, header design B): k with its magnetic cell, the magnetic sites, the levels, the net
-        // moment, the starting moments, then the Graph and List buttons.
+        // (owner, 2026-11-28, header design B), in groups a toolbar group's gap apart: what is analysed (k with its
+        // magnetic cell, the sites), which groups are shown (levels, net moment), and how (Graph, List).
         Row {
             id: toolbar
             objectName: "magnetic.toolbar"
             spacing: AppSizes.toolbarSpacing
+            // The chart toolbar's gap between groups (ToolbarLines.groupSpacing), less the spacing around the gap item.
+            readonly property real groupGap: EaStyle.Sizes.fontPixelSize * 0.5 + 2 * AppSizes.toolbarSpacing - 2 * spacing
 
             readonly property var kEntries: popup.presets.map(p => {
                 const k = p.k.split(",").join(", ");
@@ -251,6 +253,10 @@ AppDialog {
                 chosen: popup.chosenSites
                 onToggled: (id, on) => popup.setSite(id, on)
             }
+            Item {
+                width: toolbar.groupGap
+                height: 1
+            }
             ToolbarComboBox {
                 objectName: "magnetic.levels"
                 enabled: !popup.busy
@@ -277,19 +283,8 @@ AppDialog {
                     popup.selected = popup.selected.filter(i => popup.selectable(i));
                 }
             }
-            ToolbarComboBox {
-                objectName: "magnetic.startMoments"
-                enabled: !popup.busy
-                toolTip: qsTr("The moments each new structure starts with: 2 to 3 μB along the allowed components, or zero")
-                model: [qsTr("Non-zero"), qsTr("Zero")]
-                closedTexts: [qsTr("start: Non-zero"), qsTr("start: Zero")]
-                fitShown: true
-                shownIndex: popup.startMoments ? 0 : 1
-                onActivated: index => popup.startMoments = index === 0
-            }
-            // A group's spacing, then the view buttons.
             Item {
-                width: EaStyle.Sizes.fontPixelSize * 0.5 + AppSizes.toolbarSpacing
+                width: toolbar.groupGap
                 height: 1
             }
             ChartToolButton {
@@ -518,6 +513,17 @@ AppDialog {
                 fontIcon: "times"
                 text: qsTr("Cancel")
                 onClicked: popup.close()
+            }
+            // What Add creates, so beside it (owner, 2026-11-28): the starting moments.
+            ToolbarComboBox {
+                objectName: "magnetic.startMoments"
+                enabled: !popup.busy
+                toolTip: qsTr("The moments each new structure starts with: 2 to 3 μB along the allowed components, or zero")
+                model: [qsTr("Non-zero"), qsTr("Zero")]
+                closedTexts: [qsTr("start: Non-zero"), qsTr("start: Zero")]
+                fitShown: true
+                shownIndex: popup.startMoments ? 0 : 1
+                onActivated: index => popup.startMoments = index === 0
             }
             EaElements.Button {
                 objectName: "magnetic.add"
