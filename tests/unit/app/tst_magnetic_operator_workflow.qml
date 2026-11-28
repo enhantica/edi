@@ -150,6 +150,7 @@ TestCase {
     }
     function wave(vector) {
         const combo = pcontrol("magnetic.k");
+        tryCompare(combo, "enabled", true, 5000, "The initial graph finishes before choosing another k");
         const label = Array.from({
             length: combo.count
         }, (_, i) => combo.textAt(i)).find(text => text.replace(/\s/g, "").includes("(" + vector + ")"));
@@ -275,9 +276,10 @@ TestCase {
         press(pin);
         mouseMove(levels, levels.width / 2, levels.height / 2);
         compare(edges(), lineage, "Moving the pointer keeps the pinned lineage");
-        keyClick(Qt.Key_Escape);
-        tryVerify(() => !pin.on, 2000, "Escape unpins the lineage while leaving the popup open");
-        verify(popup(), "Unpinning with Escape leaves the analysis open");
+        const net = pcontrol("magnetic.netMoment");
+        choose(net, expected[withChildren].fm ? "Zero" : "Ferromagnetic");
+        tryVerify(() => !card.visible && !pin.on, 2000, "A net filter that hides a pinned card also drops its pin");
+        choose(net, "Any");
 
         press(card);
         compare(popup().selected.length, 1, "A click selects exactly the clicked card");
@@ -291,7 +293,6 @@ TestCase {
         const list = pcontrol("magnetic.list");
         compare(list.count, expected.length, "The list retains every class shown by the expanded graph");
         verify(/Co1/.test(Ui.text(popup().contentItem)), "The list has per-site moment columns");
-        const net = pcontrol("magnetic.netMoment");
         for (const [label, predicate] of [["Ferromagnetic", node => node.fm], ["Zero", node => !node.fm], ["Any", () => true]]) {
             choose(net, label);
             const filtered = expected.filter(predicate).map(node => node.bns).sort();
@@ -300,6 +301,16 @@ TestCase {
             compare(shownNodes().map(item => item.data_.bns).sort(), filtered, "Graph uses the same independently classified identities for " + label);
             press(pcontrol("magnetic.listView"));
         }
+        press(pcontrol("magnetic.graphView"));
+        Ui.scrollIntoView(card);
+        const finalPoint = Ui.clickPoint(card);
+        verify(finalPoint, "The interior card is still reachable after the view switches");
+        mouseMove(card, finalPoint.x, finalPoint.y);
+        tryVerify(() => pin.visible, 2000, "The real pointer restores the card pin");
+        press(pin);
+        tryVerify(() => pin.on, 2000, "The card is pinned before pressing Escape");
+        keyClick(Qt.Key_Escape);
+        tryVerify(() => !!popup() && !pin.on, 2000, "Escape unpins the lineage while leaving the popup open");
     }
     function test_half_graph() {
         graph("half", "1/2,0,0");
@@ -324,7 +335,7 @@ TestCase {
         verify(originalProfile.length > 0, "The nuclear control has a calculated profile before Add");
         selectTwo();
         press(pcontrol("magnetic.add"));
-        tryVerify(() => !popup(), 1000, "Successful Add closes the popup");
+        tryVerify(() => !popup(), 1000, "Successful Add closes the popup: " + (popup()?.refusal ?? ""));
         tryCompare(Session.project, "calculating", false, 3000, "Added candidates publish their live calculations");
         const structures = Probe.rows(Session.project.structures);
         compare(structures.length, 4, "Two children are added beside the parent and unrelated phase");
@@ -398,9 +409,10 @@ TestCase {
         verify(bounds.every(point => Math.abs(point.y - bounds[0].y) < 1), "The controls align in one horizontal row");
         const gaps = bounds.slice(1).map((point, i) => point.x - bounds[i].x - controls[i].width);
         verify(gaps.every(gap => gap > 0) && [1, 3, 4].every(i => gaps[i] > Math.max(gaps[0], gaps[2], gaps[5])), "The toolbar orders k and sites, levels and net moment, start, then Graph and List");
-        verify(/^k: .*\(0, 0, 0\).*·.*1/.test(controls[0].displayText), "The closed k choice shows the Gamma vector and its magnetic cell");
+        verify(/^k:.*\(0,0,0\)·a,b,c$/.test(controls[0].displayText.replace(/\s/g, "")), "The closed k choice shows the independent Gamma cell a,b,c: " + controls[0].displayText);
         verify(!findChild(toolbar, "magnetic.zeroMoment"), "Zero-only groups have no header toggle");
         const sites = controls[1];
+        tryCompare(sites, "enabled", true, 5000, "The initial graph completes before opening the sites toolbar control");
         press(sites);
         tryCompare(sites.popup, "opened", true, 2000, "The actual sites toolbar button opens the Atom sites dropdown");
         const table = sites.popup.contentItem;
@@ -504,7 +516,7 @@ TestCase {
         openPopup();
         selectTwo();
         press(pcontrol("magnetic.add"));
-        tryVerify(() => !popup(), 1000, "The candidate batch is added before saving");
+        tryVerify(() => !popup(), 1000, "The candidate batch is added before saving: " + (popup()?.refusal ?? ""));
         tryCompare(Session.project, "calculating", false, 3000, "The added children finish their live calculation");
         const bank = Probe.rows(Session.project.experiments).find(row => row.name === "first").experiment;
         const profile = bank.measCalcPoints().calc.slice();
@@ -859,8 +871,15 @@ TestCase {
         verify(row && /1\/2,0,0/.test(Ui.text(row)), "The ranked table renders the non-default half-period vector");
         const cells = Render.texts(row).map(label => label.text);
         verify(cells.includes("2 parent cells") && cells.some(text => /^\d+\.\d{2}$/.test(text)), "The same row renders cell size and numeric misfit");
+        verify(results.rows.length > 1, "The ranked fixture supplies an independent row to select before the pointer click");
+        if (results.current === index) {
+            const other = index === 0 ? 1 : index - 1;
+            keyClick(index === 0 ? Qt.Key_Down : Qt.Key_Up);
+            tryCompare(results, "current", other, 2000, "The keyboard selects a different row before the pointer check");
+        }
+        verify(results.current !== index, "The intended half-period row starts unselected");
         pressChart(row);
-        compare(results.current, index, "A pointer click chooses the actual half-period row");
+        tryCompare(results, "current", index, 2000, "A pointer click chooses the previously unselected half-period row");
         indexedTooltip(results, row, index, [[peaks[satelliteIndex].x, "satellite", true]]);
         verify(results.rows.length > 1, "The ranked fixture supplies a second row for keyboard navigation");
         const adjacent = index === 0 ? 1 : index - 1;
@@ -1029,7 +1048,7 @@ TestCase {
         const profile = bank.measCalcPoints().calc.slice();
         selectTwo();
         press(pcontrol("magnetic.add"));
-        tryVerify(() => !popup(), 1000, "The normal candidate toggle starts from a committed Add");
+        tryVerify(() => !popup(), 1000, "The normal candidate toggle starts from a committed Add: " + (popup()?.refusal ?? ""));
         tryCompare(Session.project, "calculating", false, 3000, "The candidate Add completes its calculation");
         const links = Probe.rows(bank.linkedStructures);
         const candidates = links.map((row, index) => ({

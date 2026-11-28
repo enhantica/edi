@@ -1206,8 +1206,11 @@ TestCase {
                 for (const glyph of ["layer-group", "magnet"]) {
                     const tickLabel = labels.find(item => phase(item) === name && item.segments.some(part => part.icon === glyph));
                     const tick = tickRowFor(rows, tickLabel);
-                    const entry = entries.find(item => phase(item) === name && item.segments.some(part => part.icon === glyph));
-                    verify(entry && tick, "The " + glyph + " legend entry identifies its populated tick for " + name);
+                    const entry = entries.find(item => item.segments.some(part => part.text === name) &&
+                        item.segments.some(part => part.icon === glyph));
+                    const available = entries.map(item => item.named + " " + item.mark).join(", ");
+                    verify(entry, "The " + glyph + " legend identifies " + name + " among " + available);
+                    verify(tick, "The " + glyph + " label identifies its populated tick for " + name);
                     const shade = String(tick.color);
                     compare(String(entry.segments.find(part => part.icon === glyph).color), shade, "The legend icon and tick share the same shade for " + name);
                     verify(areas.some(area => String(area.outline.color) === shade), "The legend shade identifies a populated contribution curve for " + name);
