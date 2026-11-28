@@ -326,7 +326,10 @@ std::vector<SeriesStyle> pattern_style_table(ColourScheme scheme, std::size_t ex
     // Bragg ticks' 1 px lines as it draws them, the owner, 2026-10-02). Every colour is the palette's (ADR-0038): an
     // experiment's and a structure's at its position, the calculated, background and residual colours its role colours.
     const std::size_t measured_rows = std::max(experiments, kMeasuredRows);
-    const std::size_t structure_rows = std::max(structures, kStructureRows);
+    // Room for every structure's row and, past them, a magnetic part's row for each structure (edi ADR-0078): a magnetic
+    // row is placed after all the structures, so a project of more structures than the minimum still has its series
+    // and colour (owner report 2026-11-28: five candidates left every magnetic row empty and black).
+    const std::size_t structure_rows = std::max(2 * structures, kStructureRows);
     // The items at their positions, as given (they never collide) or as a project with none held takes them; the rows
     // past them at the next free positions.
     const bool given = positions.size() == experiments + structures;
