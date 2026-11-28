@@ -444,6 +444,7 @@
    "font": "PT Sans",
    "sites": [
     "app/qml/Components/DerivedCell.qml",
+    "app/qml/Pages/Experiment/LinkedStructureGroup.qml",
     "app/qml/Pages/Structure/AtomSiteMomentGroup.qml",
     "app/qml/Pages/Structure/MagneticFormFactorsGroup.qml",
     "app/src/app_info.cpp",
