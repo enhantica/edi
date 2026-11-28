@@ -6400,11 +6400,14 @@ FitBlocker fit_blocker_of(crysta::FitBlocker blocker) {
     return FitBlocker::None;
 }
 
-// crysta's reason with its detail, or for a blocker given alone its reason; empty when fittable.
-void mark(Parameter& parameter, crysta::FitBlocker blocker, std::string reason = {}, bool idle = false) {
+// crysta's reason with its detail, or for a blocker given alone its reason; empty when fittable. An idle mark with a
+// detail is the method's (crysta's method_idle_parameters reads it so).
+void mark(Parameter& parameter, crysta::FitBlocker blocker, std::string reason = {}, bool idle = false,
+          bool method_idle = false) {
     parameter.fit_blocker = fit_blocker_of(blocker);
     parameter.fit_reason = reason.empty() ? std::string(crysta::fit_reason(blocker)) : std::move(reason);
     parameter.fit_idle = idle;
+    parameter.fit_method_idle = method_idle;
 }
 }  // namespace
 
@@ -6420,6 +6423,25 @@ std::string fit_reason(FitBlocker blocker) {
         case FitBlocker::None: break;
     }
     return {};
+}
+
+bool fits_intensities(Project& project) {
+    const bool extracting = std::any_of(project.structures.begin(), project.structures.end(), [](const auto& structure) {
+        try {
+            return extracts_intensities(*structure);
+        } catch (const std::exception&) {  // an unknown token: the fit refuses it by name
+            return false;
+        }
+    });
+    if (!extracting) {
+        return false;
+    }
+    try {
+        RelationProject converted = relation_project(project);
+        return crysta::fits_intensities(*converted.project);
+    } catch (const std::exception&) {
+        return false;  // a project crysta cannot read: its fit says why
+    }
 }
 
 void refresh_fittability(Project& project) {
@@ -6486,7 +6508,7 @@ void refresh_fittability(Project& project) {
     for (const auto& [parameter, row] : rows) {
         try {
             const crysta::FitEligibility& status = rule->status(row->f_squared);
-            mark(*parameter, status.blocker, status.reason(), status.idle);
+            mark(*parameter, status.blocker, status.reason(), status.idle, status.idle && !status.detail.empty());
         } catch (const std::invalid_argument&) {  // NOLINT(bugprone-empty-catch) — stays not determined
         }
     }
@@ -6496,7 +6518,7 @@ void refresh_fittability(Project& project) {
         if (parameter->fit_blocker == FitBlocker::Descriptor || status == nullptr) {
             continue;
         }
-        mark(*parameter, status->blocker, status->reason(), status->idle);
+        mark(*parameter, status->blocker, status->reason(), status->idle, status->idle && !status->detail.empty());
         answered.insert(parameter);
     }
     // A parameter crysta's model does not hold (an inert slot of the other beam mode), or one of an experiment no fit
@@ -7953,8 +7975,10 @@ bool recorded_in_fit(const Parameter* parameter) {
 }
 
 // The free columns the fit varied, Pawley intensities included, as crysta counts them for its own record: every
-// value its result reports. `values` leaves the intensities out, so it is not that count.
-std::size_t fitted_columns(const FitResultBase& outcome) { return outcome.engine_values.size(); }
+// value its result reports and the intensity columns not held at 0.
+std::size_t fitted_columns(const FitResultBase& outcome) {
+    return outcome.engine_values.size() + outcome.intensity_columns;
+}
 
 void publish_fit_state(Project& project, crysta::Project& converted, const std::vector<detail::RefinedValue>& refined) {
     // The extracted rows as the fit left them, with their s.u., before anything walks the model.
@@ -8438,7 +8462,8 @@ FitResultBase Project::fit(const std::vector<double>& grid, const std::vector<do
         // adapter already propagated each Parameter.free into the crysta model, so this is
         // byte-identical to the CLI's free_from_model on the same project.
         std::vector<crysta::FreeParameter> free = crysta::free_from_model(project);
-        if (free.empty()) {
+        // A Le Bail or Pawley structure has its intensities to fit at a fixed cell and profile.
+        if (free.empty() && !crysta::fits_intensities(project)) {
             throw std::invalid_argument(
                 "edi fit: no free parameters (mark parameters refinable via their free flags)");
         }
@@ -8552,6 +8577,7 @@ FitResultBase Project::fit(const std::vector<double>& grid, const std::vector<do
             // Engine-keyed copies for the machine record (see FitResultBase::engine_values).
             outcome.engine_values = result.values;
             outcome.engine_uncertainty = result.uncertainty;
+            outcome.intensity_columns = result.intensity_columns;
             outcome.descent = result.descent;
             outcome.reflections_folded = result.reflections_folded;
             outcome.structure_factor_evaluations = result.structure_factor_evaluations;
@@ -9238,6 +9264,7 @@ FitResultBase Project::fit_scan(const IterationCallback& on_iteration,
         outcome.terminal_unevaluable_trials = result.terminal_unevaluable_trials;
         outcome.engine_values = result.values;
         outcome.engine_uncertainty = result.uncertainty;
+        outcome.intensity_columns = result.intensity_columns;
         outcome.descent = result.descent;
         outcome.reflections_folded = result.reflections_folded;
         outcome.structure_factor_evaluations = result.structure_factor_evaluations;
@@ -9400,7 +9427,7 @@ FitResultBase Project::fit_joint(const std::vector<PdDataBase>& patterns,
         }
 
         const auto finish = [&](auto& provider) -> FitResultBase {
-            if (provider.n_free() == 0) {
+            if (provider.n_free() == 0 && !crysta::fits_intensities(project)) {
                 throw std::invalid_argument("edi fit_joint: no free parameters (mark parameters "
                                             "refinable via their free flags)");
             }
@@ -9508,6 +9535,7 @@ FitResultBase Project::fit_joint(const std::vector<PdDataBase>& patterns,
             outcome.terminal_unevaluable_trials = result.terminal_unevaluable_trials;
             outcome.engine_values = result.values;
             outcome.engine_uncertainty = result.uncertainty;
+            outcome.intensity_columns = result.intensity_columns;
             outcome.descent = result.descent;
             outcome.reflections_folded = result.reflections_folded;
             outcome.structure_factor_evaluations = result.structure_factor_evaluations;

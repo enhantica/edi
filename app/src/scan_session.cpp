@@ -45,18 +45,19 @@ void own_analysis_dir(const edi::Project& project) {
     crysta::output::own_folder(analysis_dir(project) / ".edi-set-aside", working_root(project));
 }
 
-// A series of joint fits' bank rows are its results too (ADR-0132): taken, set aside and put back with the point rows,
-// so both files always come from the same run.
-const char* const kResultFiles[] = {"results.csv", "results-provenance.csv", "scan-run.json", "scan-notes.csv",
-                                    "results_experiments.csv"};
-constexpr int kResultFileCount = 5;
+// A series of joint fits' bank rows are its results too (ADR-0132), and so are a Le Bail or Pawley scan's intensities:
+// taken, set aside and put back with the point rows, so every file always comes from the same run.
+const char* const kResultFiles[] = {"results.csv",     "results-provenance.csv",  "scan-run.json",
+                                    "scan-notes.csv",  "results_experiments.csv", "results_intensities.csv"};
+constexpr int kResultFileCount = 6;
 
 std::optional<std::string>* slot(ScanSession::Files& files, int which) {
     return which == 0   ? &files.results
            : which == 1 ? &files.provenance
            : which == 2 ? &files.run
            : which == 3 ? &files.skipped
-                        : &files.experiments;
+           : which == 4 ? &files.experiments
+                        : &files.intensities;
 }
 
 const std::optional<std::string>* slot(const ScanSession::Files& files, int which) {
@@ -64,7 +65,8 @@ const std::optional<std::string>* slot(const ScanSession::Files& files, int whic
            : which == 1 ? &files.provenance
            : which == 2 ? &files.run
            : which == 3 ? &files.skipped
-                        : &files.experiments;
+           : which == 4 ? &files.experiments
+                        : &files.intensities;
 }
 
 // A file's bytes; nullopt when it does not exist; throws when it exists and cannot be read, or is not a regular

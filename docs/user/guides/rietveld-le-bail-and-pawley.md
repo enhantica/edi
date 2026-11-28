@@ -63,7 +63,8 @@ For a Le Bail or Pawley structure:
 
 - **Joint fits** share the cell; each experiment keeps its own intensities.
 - **Sequential scans** carry the intensities from one dataset to the next. Each dataset's values are saved in
-  `analysis/results_intensities.csv`, so a resumed scan continues where it stopped.
+  `analysis/results_intensities.csv`, so a resumed scan continues where it stopped. For now the app draws a dataset
+  of such a scan with the intensities the project holds, those of the last dataset fitted, not its own.
 - **Magnetic structures** use the reflections of their magnetic group, whatever the moments are. Where a magnetic
   reflection falls on a nuclear one, as for a zero propagation vector, the two cannot be told apart.
 - **Files:** the structure block holds `_structure.calc_method le_bail` (or `pawley`); it is left out for Rietveld.
@@ -71,7 +72,8 @@ For a Le Bail or Pawley structure:
   reflection, and the next fit starts from them. The report writes the standard `_pd_calc.method` and
   `_refln.F_squared_meas`.
 - **FullProf:** a phase with `Jbt=2` imports as Le Bail, with its atoms when it has any, and a Le Bail structure exports
-  as `Jbt=2`. FullProf has no Pawley mode, so a Pawley structure does not export.
+  as `Jbt=2`, except a magnetic one, which the export refuses for now. FullProf has no Pawley mode, so a Pawley
+  structure does not export.
 - **cryspy:** the export writes Rietveld phases only, so it refuses a Le Bail or Pawley structure.
 
 Two example projects show the methods: `docs/user/cli/pd-neut-cwl_lbco-hrpt_le-bail` (Le Bail, with the atoms kept for

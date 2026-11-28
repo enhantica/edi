@@ -26,6 +26,6 @@ python -m edi fit docs/user/cli/pd-xray-cwl_pbso4-lab_pawley/project --dry
 
 ## What is checked
 
-FullProf has no Pawley mode, so `expected.json` takes FullProf's Le Bail fit of the same start (`Jbt=2`) as its
-reference: the number of fitted points, R<sub>wp</sub> within 10 % and the three cell lengths. The sources are in
-`PROVENANCE.md`.
+FullProf has no Pawley mode, so `expected.json` takes FullProf's fits of the same pattern as its references: the
+number of fitted points and R<sub>wp</sub> within 10 % from its Le Bail fit (`Jbt=2`), and the three cell lengths
+within five of their s.u. from its Rietveld fit, which like Pawley minimises χ². The sources are in `PROVENANCE.md`.

@@ -541,6 +541,7 @@ FitResultBase fit_experiments_independently(Project& project, const IterationCal
         for (const auto& [label, value] : result.engine_uncertainty) {
             combined.engine_uncertainty[fitted.name.value() + "." + label] = value;
         }
+        combined.intensity_columns += result.intensity_columns;
         const FitResultRecord& own = one.copy.fit_result;
         const int own_dof = std::max(0, own.degrees_of_freedom);
         const double own_chi = own.reduced_chi_square.value_or(0.0) * static_cast<double>(own_dof);

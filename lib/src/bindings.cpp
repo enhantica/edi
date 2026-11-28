@@ -810,7 +810,10 @@ static void def_free_parameters(nb::class_<Class>& cls) {
             edi::detail::point_parameters(self);  // X12: each handle's row
             return self.free_parameters();
         },
-        nb::rv_policy::reference_internal, "The subset of `parameters` whose `free` is set.");
+        nb::rv_policy::reference_internal,
+        "The subset of `parameters` whose `free` is set and that a fit varies: a disabled link's, a structure no "
+        "enabled link names and, under Le Bail or Pawley, what crysta leaves out (atoms, the link scale) are not "
+        "listed.");
 }
 
 // The Python edi.IoError type (subclass of ValueError), kept alive for the exception translator so a
