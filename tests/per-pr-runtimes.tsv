@@ -10,11 +10,11 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-28T11:34:36Z
+# measured_utc = 2026-11-28T02:52:32Z
 #
-# Recorded from: measured release title cases with the existing bank
-# Collected tests: 267537; with a reported duration: 86290
-# Module-scoped fixture costs recorded: 221
+# Recorded from: measured test run (20 node(s) measured once, 187657 banked, 0 stale row(s) dropped)
+# Collected tests: 267611; with a reported duration: 86302
+# Module-scoped fixture costs recorded: 222
 #
 # Breaches are decided PER TIER against the table
 # below, which the loader validates against the code constants - a manifest must state
@@ -29,12 +29,12 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 267537
+# inventory_python = 267611
 # inventory_cpp = 0
-# inventory_measured = 187602
-# inventory_unmeasured = 79935
+# inventory_measured = 187677
+# inventory_unmeasured = 79934
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
-# inventory_pr_python = 92626
+# inventory_pr_python = 92700
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -2625,6 +2625,11 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_background_term_ids.py::
 0.000	tests/integration/py/test_c13_t9_shift_snapshot.py::test_zero_fixed_shift_snapshot_survives_save_load_undo[transparency-1-xray]
 0.020	tests/integration/py/test_c13_t9_shift_snapshot.py::test_zero_fixed_shift_snapshot_survives_save_load_undo[transparency-2-neutron]
 0.010	tests/integration/py/test_c13_t9_shift_snapshot.py::test_zero_fixed_shift_snapshot_survives_save_load_undo[transparency-2-xray]
+0.040	tests/integration/py/test_c14_t4_neutron_source.py::test_deuterium_spelling_preserves_signed_default_neutron_amplitude[None-2H]
+0.020	tests/integration/py/test_c14_t4_neutron_source.py::test_deuterium_spelling_preserves_signed_default_neutron_amplitude[None-D]
+0.020	tests/integration/py/test_c14_t4_neutron_source.py::test_deuterium_spelling_preserves_signed_default_neutron_amplitude[rauch2003ext-2H]
+0.020	tests/integration/py/test_c14_t4_neutron_source.py::test_deuterium_spelling_preserves_signed_default_neutron_amplitude[rauch2003ext-D]
+0.010	tests/integration/py/test_c14_t4_neutron_source.py::test_missing_default_neutron_isotope_names_the_working_sears_source
 0.020	tests/integration/py/test_c14_t4_neutron_source.py::test_named_default_matches_omission_and_independent_table_for_every_element[157Gd]
 0.010	tests/integration/py/test_c14_t4_neutron_source.py::test_named_default_matches_omission_and_independent_table_for_every_element[Ag]
 0.010	tests/integration/py/test_c14_t4_neutron_source.py::test_named_default_matches_omission_and_independent_table_for_every_element[Al]
@@ -2731,6 +2736,9 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_background_term_ids.py::
 0.000	tests/integration/py/test_c14_t4_neutron_source.py::test_wrong_probe_and_unknown_source_are_structured_errors[neutron-xray_form_factor-wk1995]
 0.000	tests/integration/py/test_c14_t4_neutron_source.py::test_wrong_probe_and_unknown_source_are_structured_errors[xray-neutron_scattering_length-rauch2003ext]
 0.000	tests/integration/py/test_c14_t4_neutron_source.py::test_wrong_probe_and_unknown_source_are_structured_errors[xray-neutron_scattering_length-sears1992]
+0.010	tests/integration/py/test_c14_t4_neutron_source.py::test_xray_isotope_calculates_with_the_neutral_elements_form_factor[13C-C]
+0.010	tests/integration/py/test_c14_t4_neutron_source.py::test_xray_isotope_calculates_with_the_neutral_elements_form_factor[2H-H]
+0.010	tests/integration/py/test_c14_t4_neutron_source.py::test_xray_isotope_calculates_with_the_neutral_elements_form_factor[D-H]
 0.000	tests/integration/py/test_c14_t4_reference.py::test_named_default_extension_set_matches_booklet
 0.000	tests/integration/py/test_c15_t1_xray.py::test_c33_lif_counter_is_derived_from_filename_difference
 0.080	tests/integration/py/test_c15_t1_xray.py::test_continuous_default_reaches_edi_at_nonlab_wavelength[0-False]
@@ -177218,6 +177226,62 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_import_contract.py::
 0.000	tests/integration/py/test_cif_reader_regression.py::test_main_reader_model_regression_pin_changes_only_published_parameter_state[structure:tests/fixtures/single_crystal/projects/sc-neut-tof_taurine_basic/structures/structure.edi]
 0.000	tests/integration/py/test_cif_reader_regression.py::test_main_reader_model_regression_pin_changes_only_published_parameter_state[structure:tests/fixtures/table_display/structures/structure.edi]
 0.000	tests/integration/py/test_cif_reader_regression.py::test_reader_regression_pin_population_is_not_empty
+0.950	tests/integration/py/test_cod_audit_offline.py::test_census_run_and_export_check_revisions_from_a_local_zip
+0.650	tests/integration/py/test_cod_audit_offline.py::test_snapshot_and_compare_classify_local_published_inputs
+0.020	tests/integration/py/test_cod_cif_compatibility.py::test_cif11_reads_a_bare_value_starting_with_a_curly_brace[{[Co4OH].2MeCN}n]
+0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif11_reads_a_bare_value_starting_with_a_curly_brace[}text]
+0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif11_refuses_an_unquoted_leading_square_bracket[[text]]
+0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif11_refuses_an_unquoted_leading_square_bracket[]text]
+0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif_accepts_matching_space_group_alias_with_one_setting_suffix[False]
+0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif_accepts_matching_space_group_alias_with_one_setting_suffix[True]
+0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif_import_reports_defaults_for_missing_site_values
+0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif_keeps_refusing_unlabelled_physical_sites
+0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif_preserves_a_legacy_sites_published_isotropic_value_without_a_tensor[Biso*-B]
+0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif_preserves_a_legacy_sites_published_isotropic_value_without_a_tensor[Bovl-B]
+0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif_preserves_a_legacy_sites_published_isotropic_value_without_a_tensor[U-U]
+0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif_preserves_a_legacy_sites_published_isotropic_value_without_a_tensor[Uequiv-U]
+0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif_preserves_a_legacy_sites_published_isotropic_value_without_a_tensor[Uij-U]
+0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif_preserves_a_legacy_sites_published_isotropic_value_without_a_tensor[Uiso*-U]
+0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif_preserves_a_legacy_sites_published_isotropic_value_without_a_tensor[Uovl-U]
+0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif_preserves_a_legacy_sites_published_isotropic_value_without_a_tensor[equiv-U]
+0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif_preserves_a_legacy_sites_published_isotropic_value_without_a_tensor[iso-B]
+0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif_preserves_a_legacy_sites_published_isotropic_value_without_a_tensor[iso-U]
+0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif_reads_an_ambiguous_hermann_mauguin_name_with_a_hall_symbol[R 3 2"]
+0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif_reads_an_ambiguous_hermann_mauguin_name_with_a_hall_symbol[R_3_2"]
+0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif_reads_an_origin_only_suffix_with_an_orthorhombic_symbol[\n_space_group_IT_coordinate_system_code 2abc]
+0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif_reads_an_origin_only_suffix_with_an_orthorhombic_symbol[]
+0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif_reads_legacy_adp_codes_using_the_supplied_tensor[Beq-U]
+0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif_reads_legacy_adp_codes_using_the_supplied_tensor[Bij-B]
+0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif_reads_legacy_adp_codes_using_the_supplied_tensor[Uaniso-U]
+0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif_reads_legacy_adp_codes_using_the_supplied_tensor[Ueq-B]
+0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif_reads_legacy_adp_codes_using_the_supplied_tensor[Uequi-U]
+0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif_reads_legacy_adp_codes_using_the_supplied_tensor[Uij-U]
+0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif_reads_legacy_adp_codes_using_the_supplied_tensor[ani-U]
+0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif_reads_legacy_adp_codes_using_the_supplied_tensor[aniso-B]
+0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif_reads_legacy_adp_codes_using_the_supplied_tensor[equiv-U]
+0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif_reads_the_number_in_an_annotated_displacement_value
+0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif_refuses_a_hall_symbol_inconsistent_with_the_hermann_mauguin_name
+0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif_refuses_a_legacy_adp_code_without_a_matching_tensor[Beq-None]
+0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif_refuses_a_legacy_adp_code_without_a_matching_tensor[Bij-U]
+0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif_refuses_a_legacy_adp_code_without_a_matching_tensor[Uaniso-B]
+0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif_refuses_a_legacy_adp_code_without_a_matching_tensor[Uij-B]
+0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif_refuses_a_legacy_adp_code_without_a_matching_tensor[aniso-None]
+0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif_refuses_a_legacy_adp_code_without_a_matching_tensor[equiv-None]
+0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif_refuses_a_legacy_isotropic_site_without_matching_scalar[Uovl-None]
+0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif_refuses_a_legacy_isotropic_site_without_matching_scalar[iso-None]
+0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif_refuses_a_legacy_isotropic_site_without_matching_scalar[iso-U]
+0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif_refuses_a_setting_conflicting_with_the_explicit_coordinate_code
+0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif_refuses_a_structure_with_only_dummy_placeholders
+0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif_refuses_conflicting_space_group_aliases[R -3 c :R]
+0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif_refuses_conflicting_space_group_aliases[R 3 c :H]
+0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif_refuses_incompatible_operations_with_an_origin_only_suffix
+0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif_refuses_malformed_annotated_displacement_values[*]
+0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif_refuses_malformed_annotated_displacement_values[4.4**]
+0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif_refuses_malformed_annotated_displacement_values[4.4*3]
+0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif_reports_and_omits_an_explicitly_marked_dummy_placeholder
+0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif_reports_the_row_and_column_of_an_absent_site_label
+0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif_reports_the_site_and_column_of_an_absent_fractional_coordinate[.]
+0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif_reports_the_site_and_column_of_an_absent_fractional_coordinate[?]
 UNMEASURED:not-completed-in-this-run	tests/integration/py/test_collection_bundle_size.py::test_bundle_keeps_small_payload_byte_for_byte[data/small.xye]
 UNMEASURED:not-completed-in-this-run	tests/integration/py/test_collection_bundle_size.py::test_bundle_keeps_small_payload_byte_for_byte[projects/small.zip]
 UNMEASURED:not-completed-in-this-run	tests/integration/py/test_collection_bundle_size.py::test_bundle_omits_large_payload[data/large.xye]
@@ -183778,6 +183842,14 @@ UNMEASURED:not-completed-in-this-run	tests/integration/py/test_project_save_fina
 0.170	tests/integration/py/test_public_workflow_ownership.py::test_reusable_workflow_allowance_refuses_unknown_or_missing_ownership[not-callable]
 0.170	tests/integration/py/test_public_workflow_ownership.py::test_reusable_workflow_allowance_refuses_unknown_or_missing_ownership[other-local]
 0.170	tests/integration/py/test_public_workflow_ownership.py::test_reusable_workflow_allowance_refuses_unknown_or_missing_ownership[remote]
+0.000	tests/integration/py/test_published_cif.py::test_calcite_space_group_suffix_selects_the_declared_axes[ :H-h-metric2]
+0.000	tests/integration/py/test_published_cif.py::test_calcite_space_group_suffix_selects_the_declared_axes[ :R-r-metric3]
+0.000	tests/integration/py/test_published_cif.py::test_calcite_space_group_suffix_selects_the_declared_axes[ H-h-metric0]
+0.000	tests/integration/py/test_published_cif.py::test_calcite_space_group_suffix_selects_the_declared_axes[ R-r-metric1]
+0.000	tests/integration/py/test_published_cif.py::test_missing_occupancy_is_filled_and_reported_for_each_published_site
+0.000	tests/integration/py/test_published_cif.py::test_published_cell_and_site_values_are_preserved
+0.000	tests/integration/py/test_published_cif.py::test_published_site_with_no_label_or_coordinates_is_refused_by_name
+0.000	tests/integration/py/test_published_cif.py::test_unquoted_publication_text_preserves_the_following_model_values
 0.000	tests/integration/py/test_published_prompt_evidence.py::test_actual_published_trial_retains_execution_and_distinct_scientific_findings[cli]
 0.000	tests/integration/py/test_published_prompt_evidence.py::test_actual_published_trial_retains_execution_and_distinct_scientific_findings[python]
 0.000	tests/integration/py/test_published_prompt_evidence.py::test_current_trials_cannot_rewrite_the_original_failed_export[changed-failure]
@@ -191612,7 +191684,7 @@ UNMEASURED:current named-title observer browser build and replay pending	tests/s
 1.100	tests/system/py/test_ci_source_workflows.py::test_full_cache_save_omits_source_diagnostics_in_new_and_untouched_restored_entries[pages-wasm]
 1.130	tests/system/py/test_ci_source_workflows.py::test_full_cache_save_omits_source_diagnostics_in_new_and_untouched_restored_entries[sdk]
 UNMEASURED:failed-in-this-run	tests/system/py/test_cif_app_import.py::test_app_load_structure_accepts_and_loads_the_published_cif
-UNMEASURED:failed-in-this-run	tests/system/py/test_cif_project_cli.py::test_cli_project_loads_a_published_cif_and_reports_its_cell_atoms_and_symmetry
+0.480	tests/system/py/test_cif_project_cli.py::test_cli_project_loads_a_published_cif_and_reports_its_cell_atoms_and_symmetry
 4.360	tests/system/py/test_cif_public_entrances.py::test_public_entrances_account_for_every_alias_and_loop_cell[_absorption.*:_absorption.*:s0:v0-column-experiment-app]
 0.250	tests/system/py/test_cif_public_entrances.py::test_public_entrances_account_for_every_alias_and_loop_cell[_absorption.*:_absorption.*:s0:v0-column-experiment-cli]
 0.650	tests/system/py/test_cif_public_entrances.py::test_public_entrances_account_for_every_alias_and_loop_cell[_absorption.*:_absorption.*:s0:v0-column-structure-app]
@@ -259834,6 +259906,8 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_structure_bonds_and_types.py:
 UNMEASURED:failed-in-this-run	tests/system/py/test_structure_bonds_and_types.py::test_real_structure_bonds_and_probe_types[test_active_probe_types_and_element_colour_regression_pin:neutron]
 UNMEASURED:failed-in-this-run	tests/system/py/test_structure_bonds_and_types.py::test_real_structure_bonds_and_probe_types[test_active_probe_types_and_element_colour_regression_pin:xray]
 UNMEASURED:failed-in-this-run	tests/system/py/test_structure_bonds_and_types.py::test_real_structure_bonds_and_probe_types[test_bond_cutoffs_change_displayed_cubic_distances_and_persist]
+0.000	tests/system/py/test_structure_bonds_and_types.py::test_real_structure_bonds_and_probe_types[test_default_neutron_offers_both_spellings_with_one_3d_colour_and_bonds]
+0.000	tests/system/py/test_structure_bonds_and_types.py::test_real_structure_bonds_and_probe_types[test_xray_text_apply_agrees_with_the_table_and_scene]
 0.590	tests/system/py/test_structure_cif_refusal_app.py::test_load_cif_imports_supported_values_and_refuses_ambiguous_blocks[dot]
 0.420	tests/system/py/test_structure_cif_refusal_app.py::test_load_cif_imports_supported_values_and_refuses_ambiguous_blocks[multiblock]
 0.420	tests/system/py/test_structure_cif_refusal_app.py::test_load_cif_imports_supported_values_and_refuses_ambiguous_blocks[underscore]
@@ -267766,6 +267840,7 @@ UNMEASURED:not-completed-in-this-run	tests/unit/py/test_web_science_identity.py:
 # module-cost: 8.957	tests/system/py/test_staging_cleanup.py
 # module-cost: 133.169	tests/system/py/test_status_fit_controls.py
 # module-cost: 9.952	tests/system/py/test_structure_backend.py
+# module-cost: 11.822	tests/system/py/test_structure_bonds_and_types.py
 # module-cost: 1.294	tests/system/py/test_survey_events.py
 # module-cost: 6.259	tests/system/py/test_thread_selector.py
 # module-cost: 44.335	tests/system/py/test_tutorial_app_lifecycle.py

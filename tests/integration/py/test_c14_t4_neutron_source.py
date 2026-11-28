@@ -123,7 +123,7 @@ def test_wrong_probe_and_unknown_source_are_structured_errors(tmp_path, radiatio
 DEFAULT_REFERENCE = json.loads((FIXTURE / 'rauch2003ext.json').read_text())['rows']
 
 
-def _closed_form(real_b, boron):
+def _closed_form(real_b, *, boron):
     amplitude = real_b - (5.30 if boron else 0)
     area = 6 * (0.7 * amplitude) ** 2 * math.exp(-1.6 / 16) / 100
     area /= math.sin(THETA) * math.sin(2 * THETA)
@@ -150,7 +150,7 @@ def test_named_default_matches_omission_and_independent_table_for_every_element(
             actual = np.asarray(project.experiments[0].data.intensity_calc).copy()
             np.testing.assert_allclose(
                 actual,
-                _closed_form(DEFAULT_REFERENCE[element]['b_real_fm'], boron),
+                _closed_form(DEFAULT_REFERENCE[element]['b_real_fm'], boron=boron),
                 rtol=2e-7,
                 atol=1e-9,
                 err_msg=' gate 6 each default path must use published signed b',
@@ -161,3 +161,76 @@ def test_named_default_matches_omission_and_independent_table_for_every_element(
             calculated[1],
             err_msg=' gate 6 declaring the default must change no calculated value',
         )
+
+
+# periodictable 2.1.0 averages Snow et al. Table I, doi:10.1103/PhysRevD.101.062004.
+SNOW_DEUTERIUM = 6.6681
+
+# Sears (1992), 13C: https://www.ncnr.nist.gov/resources/n-lengths/list.html
+SEARS_CARBON_13 = 6.19
+
+
+def _input(root, symbol, *, source=None, radiation='neutron', boron=False):
+    extra = '\n_scattering_source.xray_dispersion none\n' if radiation == 'xray' else ''
+    path = _project(root, source, radiation=radiation, extra=extra, boron=boron)
+    structure = path / 'structures/structure.edi'
+    structure.write_text(
+        structure.read_text(encoding='utf-8').replace('X a Gd ', f'X a {symbol} '),
+        encoding='utf-8',
+    )
+    return path
+
+
+@pytest.mark.parametrize('symbol', ['D', '2H'])
+@pytest.mark.parametrize('source', [None, 'rauch2003ext'])
+def test_deuterium_spelling_preserves_signed_default_neutron_amplitude(tmp_path, symbol, source):
+    project = engine.Project.load(_input(tmp_path / 'input', symbol, source=source, boron=True))
+    saved = tmp_path / 'saved'
+    project.save_as(saved)
+    project = engine.Project.load(saved)
+    assert project.structures[0].atom_sites['X'].type_symbol == symbol, (
+        'Saving and reloading keeps the entered isotope spelling'
+    )
+    project.analysis.calculate()
+    np.testing.assert_allclose(
+        project.experiments[0].data.intensity_calc,
+        _closed_form(SNOW_DEUTERIUM, boron=True),
+        rtol=2e-7,
+        atol=1e-9,
+        err_msg='The default neutron calculation uses the published signed deuterium length',
+    )
+
+
+@pytest.mark.parametrize(('isotope', 'element'), [('D', 'H'), ('2H', 'H'), ('13C', 'C')])
+def test_xray_isotope_calculates_with_the_neutral_elements_form_factor(tmp_path, isotope, element):
+    profiles = []
+    for symbol in (element, isotope):
+        project = engine.Project.load(_input(tmp_path / symbol, symbol, radiation='xray'))
+        project.analysis.calculate()
+        profiles.append(np.asarray(project.experiments[0].data.intensity_calc).copy())
+    assert np.all(np.isfinite(profiles[0])), 'The finite-angle X-ray control is finite'
+    assert np.max(profiles[0]) > 0, 'The finite-angle X-ray control produces a nonzero peak'
+    np.testing.assert_allclose(
+        profiles[1],
+        profiles[0],
+        rtol=1e-12,
+        atol=0,
+        err_msg='An isotope and its neutral element have the same X-ray form factor',
+    )
+
+
+def test_missing_default_neutron_isotope_names_the_working_sears_source(tmp_path):
+    default = _input(tmp_path / 'default', '13C')
+    with pytest.raises((KeyError, ValueError, RuntimeError), match=r'(?is)(?=.*13C)(?=.*Sears)'):
+        engine.Project.load(default).analysis.calculate()
+
+    sears = _input(tmp_path / 'sears', '13C', source='sears1992')
+    project = engine.Project.load(sears)
+    project.analysis.calculate()
+    np.testing.assert_allclose(
+        project.experiments[0].data.intensity_calc,
+        _closed_form(SEARS_CARBON_13, boron=False),
+        rtol=2e-7,
+        atol=1e-9,
+        err_msg='Sears supplies the isotope length named by the default-table refusal',
+    )

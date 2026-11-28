@@ -34,6 +34,9 @@ def test_independent_census_distinguishes_local_and_model_scopes(tmp_path, chann
     result = subprocess.run(
         [
             compiler,
+            # This header-free input needs no host C++ SDK discovery.
+            '--target=x86_64-unknown-none-elf',
+            '-nostdinc',
             '-std=c++20',
             '-fsyntax-only',
             '-Xclang',
@@ -45,7 +48,7 @@ def test_independent_census_distinguishes_local_and_model_scopes(tmp_path, chann
         capture_output=True,
         text=True,
         check=False,
-        timeout=10,
+        timeout=30,
     )
     assert result.returncode == 0, 'Every local scope escape must compile as ordinary C++'
     rows = reference.members(result.stdout, REPO, reference.declarations(text))

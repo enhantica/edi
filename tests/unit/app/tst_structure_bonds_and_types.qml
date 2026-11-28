@@ -58,10 +58,10 @@ Item {
             tryVerify(() => !group.folding, 1500, "Sidebar input waits for the real group to finish folding");
             return group;
         }
-        function open(probe) {
+        function open(probe, structureText) {
             Preferences.resetToDefaults();
             root = SettingsProof.copyProject(Qt.resolvedUrl("../../fixtures/legacy_structure_project/compact-project"));
-            verify(SettingsProof.write(root, "structures/cosio.edi", SettingsProof.repoText("tests/fixtures/structure_features/cubic.edi")), "The Structure witness supplies its independent seven-site cubic geometry");
+            verify(SettingsProof.write(root, "structures/cosio.edi", (structureText || SettingsProof.repoText("tests/fixtures/structure_features/cubic.edi"))), "The Structure witness supplies its independent seven-site cubic geometry");
             verify(SettingsProof.write(root, "experiments/d20.edi", SettingsProof.repoText("tests/fixtures/structure_features/" + probe + ".edi")), "The Structure witness declares its active probe and scattering source");
             verify(SettingsProof.write(root, "analysis/analysis.edi", "_edi.schema_version 3\n_fitting_mode.type single\n"), "The cubic input has no dangling site aliases");
             verify(Session.openProject(root), "The real loader opens the independent cubic Structure input");
@@ -170,7 +170,7 @@ Item {
             const index = Array.from({
                 length: box.count
             }, (_, i) => box.textAt(i)).indexOf(token);
-            verify(index >= 0, "The actual atom-type selector offers the independent natural, isotope or ion token");
+            verify(index >= 0, "The actual atom-type selector offers " + token);
             click(box);
             tryCompare(box.popup, "opened", true, 1000, "Actual pointer input opens the atom-type list");
             const list = box.popup.contentItem;
@@ -181,6 +181,63 @@ Item {
             tryCompare(box.popup, "visible", false, 1000, "The actual atom-type selection closes its popup");
             tryVerify(() => Probe.rows(Session.project.currentStructure.atomSites)[0].typeSymbol === token, 2000, "Choosing an active-profile type edits the actual atom-site model");
         }
+        function shortOxygenBonds() {
+            const input = SettingsProof.repoText("tests/fixtures/structure_features/cubic.edi");
+            return input.replace("0.84001 0.5 0.5", "0.66 0.5 0.5").replace("0.15999 0.5 0.5", "0.34 0.5 0.5") + "_geom.min_bond_distance_cutoff .1\n_geom.bond_distance_inc .15\n";
+        }
+        function isotopeAppearance(symbol) {
+            const legend = findChild(view, "structure.view.legend");
+            let entry;
+            tryVerify(() => {
+                entry = Ui.itemsWithProperty(legend, "segments").find(item => item.label === symbol);
+                return view.current && entry !== undefined;
+            }, 5000, "The current 3D scene legend shows the entered atom-type spelling");
+            compare(view.atomCount, 7, "The current scene draws all seven independently declared sites");
+            compare(view.bondCount, 2, "Hydrogen bonds to both oxygen sites at 0.96 angstrom");
+            const mark = entry.segments.find(part => part.icon !== undefined);
+            verify(mark !== undefined && mark.color.a > 0, "The drawn isotope has an opaque legend mark");
+            return String(mark.color);
+        }
+        function test_default_neutron_offers_both_spellings_with_one_3d_colour_and_bonds() {
+            open("neutron", shortOxygenBonds());
+            click(findChild(page, "sideBar.tab.basic"));
+            const atoms = expand("atom_site");
+            const box = findChild(atoms, "atomSite.typeSymbol.0");
+            verify(box !== null && box.visible && box.enabled, "The Structure table has an editable Type selector");
+            choose(box, "H");
+            const colour = isotopeAppearance("H");
+            for (const symbol of ["D", "2H"]) {
+                choose(box, symbol);
+                compare(isotopeAppearance(symbol), colour, "Both deuterium legend spellings take the same colour as hydrogen");
+            }
+        }
+        function test_xray_text_apply_agrees_with_the_table_and_scene() {
+            open("xray", shortOxygenBonds());
+            click(findChild(page, "sideBar.tab.basic"));
+            const atoms = expand("atom_site");
+            const box = findChild(atoms, "atomSite.typeSymbol.0");
+            verify(box !== null && box.visible && box.enabled, "The X-ray structure exposes its editable Type selector");
+            choose(box, "H");
+            const colour = isotopeAppearance("H");
+            for (const symbol of ["D", "2H"]) {
+                click(findChild(page, "sideBar.tab.text"));
+                let editor;
+                tryVerify(() => (editor = findChild(page, "text.view")) !== null && !editor.readOnly, 1000, "Structure Text opens its actual editable block");
+                const before = editor.text;
+                editor.text = before.replace(/^(\s*Fe1\s+[^\n]*?)\b(?:H|D)\b/m, (_, prefix) => prefix + symbol);
+                verify(editor.text !== before, "The isotope edit changes the actual atom row");
+                const apply = findChild(page, "text.apply");
+                tryCompare(apply, "enabled", true, 1000, "Changing the isotope enables the real Text Apply");
+                let point;
+                tryVerify(() => (point = Ui.clickPoint(apply)) !== null, 3000, "The real Apply button becomes exposed after the Text tab settles");
+                mouseClick(apply, point.x, point.y);
+                tryVerify(() => Probe.rows(Session.project.currentStructure.atomSites)[0].typeSymbol === symbol, 3000, "Applying Text puts the typed isotope in the atom table model");
+                compare(isotopeAppearance(symbol), colour, "Text and table deuterium edits share the hydrogen scene colour and geometry");
+            }
+            click(findChild(page, "sideBar.tab.basic"));
+            const current = findChild(expand("atom_site"), "atomSite.typeSymbol.0");
+            verify(current && current.textAt(current.currentIndex) === "2H", "Returning to Basic shows the exact type entered in Text");
+        }
         function test_active_probe_types_and_element_colour_regression_pin(data) {
             open(data.probe);
             click(findChild(page, "sideBar.tab.basic"));
@@ -190,7 +247,8 @@ Item {
             const actual = Array.from({
                 length: box.count
             }, (_, i) => box.textAt(i)).sort();
-            compare(JSON.stringify(actual), JSON.stringify(reference.atom_types[data.probe]), "The type selector lists exactly the independently committed active probe scattering table, including supported isotopes or ions");
+            const expected = Array.from(new Set([...reference.atom_types[data.probe], "D", "2H"])).sort();
+            compare(JSON.stringify(actual), JSON.stringify(expected), "The type selector lists the active scattering table and both deuterium spellings");
             choose(box, data.element);
             const natural = findChild(atoms, "atomSite.icon.0").segments.find(part => part.icon !== undefined);
             verify(natural !== undefined && natural.color.a > 0, "The actual natural element has a visible atom icon for the regression pin");
