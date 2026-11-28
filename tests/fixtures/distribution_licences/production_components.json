@@ -107,6 +107,13 @@
       ]
     },
     {
+      "witness": "app/CMakeLists.txt calls edi_bundle_runtime(claude) and edi_bundle_runtime(copilot) for the native app; cmake/assistant_runtime.cmake verifies, stages and installs each unmodified vendor binary under libexec/edi/claude and libexec/edi/copilot. tools/deps/claude-runtime/recipe.yaml and tools/deps/copilot-runtime/recipe.yaml fix the downloads by version and SHA-256 (edi ADR-0108). Each is its own optional installer component; neither is in the web app.",
+      "components": [
+        "Claude Code",
+        "GitHub Copilot CLI"
+      ]
+    },
+    {
       "witness": "Only the native assistant target includes the unmodified jwt-cpp v0.7.2 headers and its default picojson adapter. third_party/jwt-cpp/PROVENANCE.md and LICENSE identify their archive and origin; app/CMakeLists.txt links the native authentication implementation.",
       "components": [
         "jwt-cpp",
