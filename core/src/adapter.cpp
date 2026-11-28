@@ -7911,7 +7911,7 @@ std::vector<std::string> identity_paths(const IterationCallback& subscriber,
 // completion pass, because the pattern must describe the model a SAVE would serialise. The three paths share
 // one function rather than three agreeing copies: a fourth entry point cannot forget a step it never spells.
 void publish_fit_state(Project& project, crysta::Project& converted, const std::vector<detail::RefinedValue>& refined,
-                       bool surface_refusal = false) {
+                       bool surface_refusal = false, const std::vector<PdDataBase>* supplied = nullptr) {
     for (const auto& structure : project.structures) {  // every structure (phase)
         rebalance_positional_fit_state(*structure);  // review-9 F1: lossless snapshot hand-off
     }
@@ -7966,8 +7966,38 @@ void publish_fit_state(Project& project, crysta::Project& converted, const std::
         project.calculate();
         return;
     }
-    // Banks without their own pattern (all or some): the quality measured after this trial, and before the live
-    // write, calculates the fitted engine with every pattern the fit read and refuses there (publish_fit_transaction,
+    // Some banks with their own pattern and some on the caller's (review 26, F2): the banks without one borrow the
+    // pattern the fit read for one calculation, so the banks that keep a pattern get their fitted result with every
+    // bank and relation in place; the borrowed nodes go again after it. A supplied-only model keeps no output.
+    const bool some = std::any_of(project.experiments.begin(), project.experiments.end(),
+                                  [](const auto& experiment) { return experiment->data.has_value(); });
+    if (some && supplied != nullptr && supplied->size() == project.experiments.size()) {
+        std::vector<std::size_t> borrowed;
+        for (std::size_t e = 0; e < project.experiments.size(); ++e) {
+            BraggPdExperiment& bank = *project.experiments[e];
+            if (!bank.data.has_value() && !bank.reflections.has_value()) {
+                bank.data = (*supplied)[e];
+                borrowed.push_back(e);
+            }
+        }
+        const auto give_back = [&] {
+            for (const std::size_t e : borrowed) project.experiments[e]->data.reset();
+        };
+        try {
+            if (surface_refusal) {
+                project.calculate();
+            } else {
+                project.refresh_calculated_pattern();
+            }
+        } catch (...) {
+            give_back();
+            throw;
+        }
+        give_back();
+        return;
+    }
+    // Every bank on the caller's patterns: the quality measured after this trial, and before the live write,
+    // calculates the fitted engine with every pattern the fit read and refuses there (publish_fit_transaction,
     // reviews 24 and 25, F2); the host keeps no pattern of its own to calculate here.
     project.refresh_calculated_pattern();
 }
@@ -9505,7 +9535,7 @@ FitResultBase Project::fit_joint(const std::vector<PdDataBase>& patterns,
             const auto publish = [&](Project& host, std::vector<detail::RefinedValue>& items, bool trial) {
                 detail::write_back(items);
                 crysta::write_fit_result_into(project, result);  // crysta completes the dependents
-                publish_fit_state(host, project, items, trial);
+                publish_fit_state(host, project, items, trial, &patterns);
             };
             const auto restage = [&](Project& trial) {
                 std::vector<detail::RefinedValue> staged;
