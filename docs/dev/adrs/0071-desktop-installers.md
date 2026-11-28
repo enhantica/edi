@@ -529,5 +529,6 @@ empty); the Pages site keeps the update feeds and the package index and drops `r
 metadata would win: the installer keeps the higher component version, and it ranks 2026.11.31 above 26.17. Installers
 already in use still list the Pages site and skip it once its `Updates.xml` is gone.
 
-Rollback: releases still attach the complete `repository-stable-<platform>.tar.gz` for now, so the site can serve
-whole repositories again from any release made since.
+Rollback: releases still attach the complete `repository-stable-<platform>.tar.gz` for now, and edi-download serves
+them instead of the index when its publish workflow is run with `format` set to `full`. That works only for a release
+whose archives are all under 100 MiB, since GitHub refuses a larger file pushed to edi-sites.
