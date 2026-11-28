@@ -76,7 +76,11 @@ maintainer reviews and publishes the draft.
 
 Every release carries all its files: the installers, the CLI ZIPs, the
 wheels and a `SHA256SUMS` manifest of them. Each stable component archive is
-its own asset, `component-<platform>-<component>-<version><archive>.7z`.
+its own asset, `component-<platform>-<component>-<version><archive>.7z`,
+attached only by the release that changed the component: `components.json`
+records each component's version and input identity, and a component whose
+identity is unchanged keeps its earlier version and archives, so updates
+offer only what changed ([ADR-0111](adrs/0111-updates-carry-only-changed-components.md)).
 Per platform, `repoindex-stable-<platform>.tar.gz` holds what
 download.easydiffraction.org serves itself: `Updates.xml`, the `.sha1` and
 `meta.7z` files, and `redirect.htaccess`, the rules that redirect each archive

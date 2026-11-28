@@ -517,7 +517,8 @@ with `Updates.xml`, every `.sha1` and `meta.7z`, and `redirect.htaccess`, rules 
 puts in the site's `.htaccess`. They answer a request for an archive the site does not hold with a 302 to
 `https://github.com/enhantica/edi/releases/download/v<version>/<asset>`.
 The version in the archive's file name names the tag, so an earlier release's archives resolve for as long as that
-release exists. A file the site holds is always served first. The redirect names github.com, never the signed address
+release exists. A component that did not change keeps the earlier release's version and archives, which the release
+does not attach again ([ADR-0111](0111-updates-carry-only-changed-components.md)). A file the site holds is always served first. The redirect names github.com, never the signed address
 GitHub forwards to, which expires.
 
 The `.sha1` files and `Updates.xml` are never redirected. Qt Installer Framework 4.11 downloads an archive from the
