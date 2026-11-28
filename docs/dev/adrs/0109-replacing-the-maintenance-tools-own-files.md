@@ -93,11 +93,19 @@ update replaces while the tool runs. So the runtime takes the bundle's design ra
    this run's own, `EasyDiffraction-MaintenanceTool-<time>-<random>`, in the user's temporary folder (`%TEMP%`, or
    `%LOCALAPPDATA%\Temp`; without either the update stops) and points the Framework there. Neither an installation nor
    an update puts it in the installation folder, a copy the Framework fails to delete stays in the temporary folder,
-   and no tool an earlier run left can stand in for this run's: when the unpack fails and the user ignores it, the
-   Framework finds no file at this run's path and keeps the installed tool. The unpack's undo leaves out the file the
-   Framework is to write from (`ExtractArchiveOperation` in 4.11), so the component adds an operation whose undo
-   removes this run's folder: `cmd.exe` runs in the temporary folder and names only the folder, and exits 0, so a
-   later update's or a removal's undo, which finds the folder empty or gone, never asks.
+   and no tool an earlier run left can stand in for this run's. No operation of ours handles it, so none can be saved
+   and replayed by a later update or a removal. The component's script settles it itself:
+   - `beginInstallation`, before anything is unpacked, removes every `EasyDiffraction-MaintenanceTool-*` folder earlier
+     runs left: emptied by the Framework, or left by a run that stopped.
+   - After any run that did not succeed (`installer.installationFinished` with another status than success), it
+     removes this run's folder, trying for ten seconds while something holds the file, and logs it if the folder stays.
+     The unpack's own undo cannot: it leaves out the file the Framework is to write from (`ExtractArchiveOperation` in
+     4.11), and a run can fail before any operation of this component was recorded.
+   - After a successful update, if the file is missing because the unpack failed and the user ignored it, it unpacks
+     the component's archives again, which the Framework keeps for the whole run, before the Framework reads the file;
+     if that fails too, it tells the user the Maintenance Tool was not updated.
+
+   Each command runs `cmd.exe` in the temporary folder and names only the run's folder, never a path.
 
 4. **The app puts a kept item back.** On start, and before Maintenance or Update opens the tool, the app takes the
    lock; when it finds no usable `<item>` but a usable `<item>.old`, it moves the kept item back and removes its mark,
@@ -178,9 +186,10 @@ update replaces while the tool runs. So the runtime takes the bundle's design ra
   - macOS: an interrupted update rolls back through the same run's undo and leaves the old tool's checksum; after the
     update driven by the released control script and after the second update, no `.old`, `.old-token`,
     `maintenance-update/` or `maintenancetool/` is left, though the fixture planted a `.DS_Store` in both.
-  - Windows: the failing operation runs in the update's own folder in the temporary folder, writes that folder's name
-    and the staged tool's hash there, which must be the 26.18 tool's; after the rollback that folder is gone and the
-    installation holds no staged tool. Before the first update the check
+  - Windows: the failing operation runs in the update's own folder in the temporary folder and writes that folder's
+    name, never its path, and the staged tool's hash there, which must be the 26.18 tool's; the check joins the name to
+    the tool's own temporary folder and requires that folder gone after the rollback and no staged tool in the
+    installation. Before the first update the check
     plants the empty `maintenancetool\` an earlier update left; after each successful update, once the tool has been
     replaced with the app never started, neither it nor the staged file is there. The app's test shows the app leaves
     both alone.

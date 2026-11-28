@@ -7,6 +7,7 @@ import contextlib
 import functools
 import json
 import os
+import re
 import subprocess
 import time
 import xml.etree.ElementTree as ET  # noqa: S405 - binarycreator's and our own XML only
@@ -163,14 +164,18 @@ def failing_operation(evidence: Path, marker: Path) -> str:
         # Separate words: the tool quotes only the ones with spaces, and cmd.exe keeps a command
         # line that starts unquoted as it is. cd accepts the target's forward slashes, and a path
         # with spaces unquoted. It runs in this run's own folder in the temporary folder, where the
-        # component unpacked the staged tool (maintenancescript.qs): the folder's name and the
-        # tool's hash tie the evidence to this update.
-        command = [
-            'cmd.exe', '/c', 'echo', 'handoff', '%CD%', '>', str(evidence), '&', 'certutil',
-            '-hashfile', WINDOWS_STAGED_TOOL, 'SHA256', '>>', str(evidence), '&', 'cd', '/d',
-            '@TargetDir@', '&&', 'dir', '/b', '/s', '>>', str(evidence), '&', 'exit', '1',
+        # component unpacked the staged tool (maintenancescript.qs), and writes the folder's name,
+        # which is ASCII, never its path, which cmd.exe would write in its code page: the name and
+        # the tool's hash tie the evidence to this update.
+        before = ['cmd.exe', '/c', 'echo', 'handoff']
+        after = [
+            '>', str(evidence), '&', 'certutil', '-hashfile', WINDOWS_STAGED_TOOL, 'SHA256',
+            '>>', str(evidence), '&', 'cd', '/d', '@TargetDir@', '&&', 'dir', '/b', '/s',
+            '>>', str(evidence), '&', 'exit', '1',
         ]  # fmt: skip
-        parts = [json.dumps(part) for part in command]
+        parts = [json.dumps(part) for part in before]
+        parts.append('handoffFolder()')
+        parts += [json.dumps(part) for part in after]
         parts.append('"workingdirectory=" + windowsStaging() + "\\\\" + handoffFolder()')
         return FAILING_OPERATION % ', '.join(parts)
     command = ['/bin/sh', '-c', FAILURE_EVIDENCE, 'sh', '@TargetDir@', str(evidence)]
@@ -553,6 +558,9 @@ def failed_update(target: Path, maintenance: Path, output: Path, options: dict) 
         raise RuntimeError('The update failed before its failing operation ran')
     found = failure_evidence(evidence, target)
     print(f'protocol check: the failing operation found {sorted(found["paths"])}', flush=True)
+    # Where the tool unpacks on Windows, as the component's script finds it in this environment.
+    temp = options['env'].get('TEMP') or str(Path(options['env'].get('LOCALAPPDATA', '')) / 'Temp')
+    found['temporary'] = Path(temp)
     return found
 
 
@@ -591,12 +599,17 @@ def windows_staging_rolled_back(target: Path, found: dict) -> None:
     """Require the rollback to remove this run's folder with the tool it unpacked, and none here.
 
     The Framework's undo of the unpack leaves the tool it is to write from (IFW 4.11), so the tool
-    component's own operation removes the folder; the folder's name is this run's alone.
+    component's script removes the folder once the run has ended without success. The evidence
+    names the folder; its path is the tool's temporary folder joined here, never one read back
+    from cmd.exe.
     """
-    handoff = Path(found['handoff']) if found['handoff'] else None
+    name = found['handoff'] or ''
+    if not re.fullmatch(r'EasyDiffraction-MaintenanceTool-[0-9]+-[0-9]+', name):
+        raise RuntimeError(
+            f"The failing operation did not run in the update's own folder: {name!r}"
+        )
+    handoff = found['temporary'] / name
     print(f'protocol check: after the rollback the update unpacked into {handoff}', flush=True)
-    if handoff is None or not handoff.name.startswith('EasyDiffraction-MaintenanceTool-'):
-        raise RuntimeError("The failing operation did not run in the update's own folder")
     if handoff.exists():
         raise RuntimeError(f'The failed update left its folder {handoff} and what it holds')
     if (target / WINDOWS_STAGED_TOOL).exists():

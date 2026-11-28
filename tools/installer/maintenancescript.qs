@@ -16,7 +16,7 @@ function stagedTool() {
 }
 
 // Windows: this run's folder in the temporary folder, so a tool an earlier run left there can never stand in for this
-// update's: a missing one makes the Framework keep the installed tool (IFW 4.11).
+// update's.
 var handoffName = "";
 
 function handoffFolder() {
@@ -91,6 +91,11 @@ function withUpdateRights(run) {
 // stops here, before anything has changed.
 Component.prototype.beginInstallation = function () {
     updateRights = installer.hasAdminRights();
+    // Windows: what earlier runs left in the temporary folder, before this run unpacks into a folder of its own: a
+    // folder the Framework emptied, or one a run that stopped left. No other run uses them (the Framework runs once).
+    if (systemInfo.kernelType === "winnt" && windowsStaging() !== "")
+        inTemporaryFolder(["for", "/d", "%d", "in", "(EasyDiffraction-MaintenanceTool-*)", "do", "@rmdir", "/s", "/q",
+                           "%d", "2>nul", "&", "exit", "0"]);
     var swap = swapped();
     if (swap === null || !installer.isUpdater() || installer.value("TargetDir") === "")
         return;
@@ -124,23 +129,57 @@ Component.prototype.createOperations = function () {
                                swap.item, swap.probe);
         return;
     }
-    if (systemInfo.kernelType === "winnt" && windowsStaging() !== "") {
-        // The unpack leaves the tool the Framework is to write from out of what its undo removes (IFW 4.11
-        // ExtractArchiveOperation), so this operation's undo removes this run's folder on a rollback. cmd.exe runs in
-        // the temporary folder and names only the folder, so it never reads a path; a later update's or a removal's
-        // undo finds the folder empty or gone, and the exit code stays 0 so it never asks.
-        var folder = "workingdirectory=" + windowsStaging();
-        component.addOperation("Execute", "cmd.exe", "/c", "rem", folder, "UNDOEXECUTE", "cmd.exe", "/c", "rmdir", "/s",
-                               "/q", handoffFolder(), "2>nul", "&", "exit", "0", folder);
-    }
     if (installer.isUpdater() && stagedTool() !== "")
         installer.setInstallerBaseBinary(stagedTool());
 };
 
+// Windows: runs cmd.exe in the temporary folder with `words` after /c, so it names only this run's folder and never reads
+// a path; true when it exits 0.
+function inTemporaryFolder(words) {
+    return installer.performOperation("Execute", ["cmd.exe", "/c"].concat(words, ["workingdirectory=" + windowsStaging()]));
+}
+
+// Windows: the unpack leaves the tool the Framework is to write from out of what its undo removes (IFW 4.11
+// ExtractArchiveOperation), and a run can fail before any operation of this component was recorded. So after any run
+// that did not succeed this removes the run's folder, trying for ten seconds while something still holds the file.
+function removeHandoff() {
+    var name = handoffFolder();
+    inTemporaryFolder(["for", "/l", "%i", "in", "(1,1,10)", "do", "@(rmdir", "/s", "/q", name, "2>nul", "&", "if", "not",
+                       "exist", name, "exit", "0", "&", "ping", "-n", "2", "127.0.0.1", ">nul)", "&", "exit", "1"]);
+    if (installer.fileExists(windowsStaging() + "\\" + name))
+        console.log("The Maintenance Tool's update folder " + name + " could not be removed from the temporary folder");
+}
+
+// Windows, after a successful update: the Framework writes the installed tool from this run's staged tool as it quits.
+// If the unpack failed and was ignored the file is missing and the Framework would keep the installed tool, so it is
+// unpacked again from the component's archives, which the Framework keeps for the whole run; if that fails too the
+// user is told the Maintenance Tool was not updated.
+function handOff() {
+    if (installer.fileExists(stagedTool()))
+        return;
+    var archives = component.archives;
+    for (var i = 0; i < archives.length; ++i) {
+        if (!/\.sha1$/.test(archives[i]))
+            installer.performOperation("Extract", [archives[i], windowsStaging() + "\\" + handoffFolder()]);
+    }
+    if (!installer.fileExists(stagedTool()))
+        QMessageBox.warning("maintenanceToolNotUpdated", "Maintenance Tool",
+                            "The Maintenance Tool could not be updated. Run Update again to update it.",
+                            QMessageBox.Ok);
+}
+
 // After a successful update nothing of the swap is left: no backup and no staging folder, whichever tool drove the
 // update (edi ADR-0109). After a rollback the undo has put the kept item back, and only this run's claim on the
-// staging folder goes. Windows has nothing to remove here: the staged tool was unpacked into the temporary folder.
+// staging folder goes. On Windows a run that did not succeed leaves no folder of its own in the temporary folder, and
+// a successful update hands the Framework this run's tool.
 Component.prototype.removeLeftovers = function () {
+    if (systemInfo.kernelType === "winnt" && windowsStaging() !== "") {
+        if (installer.status !== QInstaller.Success)
+            removeHandoff();
+        else if (installer.isUpdater())
+            handOff();
+        return;
+    }
     var swap = swapped();
     var target = installer.value("TargetDir");
     if (!installer.isUpdater() || swap === null || target === "")
