@@ -28,6 +28,12 @@ def run(command, **kwargs):
     return subprocess.check_output(command, text=True, **kwargs)
 
 
+def demangle(prefix, symbol):
+    """The readable signature; Mach-O names carry an extra leading underscore, stripped first."""
+    strip = ['--strip-underscore'] if sys.platform == 'darwin' else []
+    return run([str(prefix / 'bin/llvm-cxxfilt'), *strip, symbol])
+
+
 def global_function_symbols(defined, scope, spelling, *, kind='T'):
     """Select the public namespace/name, excluding nested helpers and cold fragments."""
     encoded = ''.join(str(len(part)) + part for part in scope.split('::'))
@@ -91,8 +97,11 @@ def observe_fallible_core(prefix, output, core_observed, probe_defined):
             for symbol in matches:
                 role = ''
                 if spelling == 'load_project' and '15ProjectLoadModeE' in symbol:
-                    signature = run([str(prefix / 'bin/llvm-cxxfilt'), symbol]).strip()
-                    callback = signature.partition('std::function<void (')[2]
+                    signature = demangle(prefix, symbol).strip()
+                    # libc++ (macOS) spells it std::__1::function, libstdc++ std::function.
+                    callback = re.split(
+                        r'std::(?:__\w+::)?function<void \(', signature, maxsplit=1
+                    )[-1]
                     role = '_sourced_mode' if ' const&, ' in callback else '_mode'
                 alias = (
                     ('_' if sys.platform == 'darwin' else '')
@@ -146,7 +155,8 @@ def observe_fallible_core(prefix, output, core_observed, probe_defined):
 
 def observe_file_writes(prefix, observed, observer):
     """Bind each Qt call to the actual relocation made by its compiled typed delegate."""
-    undefined = run([str(prefix / 'bin/llvm-nm'), '--undefined-only', str(observed)])
+    # Without --undefined-only: for Mach-O it prints bare names, with no 'U' column to select on.
+    undefined = run([str(prefix / 'bin/llvm-nm'), str(observed)])
     actual = set()
     for scope, name in [
         ('QFile', 'open'),
@@ -205,6 +215,18 @@ def observe_file_writes(prefix, observed, observer):
     return names
 
 
+def filesystem_calls(trace, method):
+    """Calls to std::filesystem `method`: the plain name, the exported __ name or its inline."""
+    return set(
+        re.findall(
+            r'_+ZN[A-Za-z0-9_]*filesystem[A-Za-z0-9_]*'
+            f'(?:{len(method)}{method}|{len(method) + 2}__{method})'
+            r'(?:B\d+[a-z0-9]+)?E[A-Za-z0-9_]+',
+            trace,
+        )
+    )
+
+
 def observe_publication_files(prefix, command, output, observer, native):
     """Redirect the actual filesystem imports in private copies of every static input."""
     names = {}
@@ -221,17 +243,23 @@ def observe_publication_files(prefix, command, output, observer, native):
             '--disassemble-symbols=' + alias,
             str(observer),
         ])
-        typed = set(
-            re.findall(
-                r'_+ZN[A-Za-z0-9_]*filesystem[A-Za-z0-9_]*'
-                + str(len(method))
-                + method
-                + r'E[A-Za-z0-9_]+',
-                trace,
-            )
-        )
+        typed = filesystem_calls(trace, method)
+        tagged = {symbol for symbol in typed if re.search(r'B\d+[a-z0-9]+E', symbol)}
+        if len(typed) == 1 and tagged:
+            # libc++ (macOS) inlines the call into a hidden wrapper; follow it to the exported one.
+            inner = run([
+                str(prefix / 'bin/llvm-objdump'),
+                '-dr',
+                '--disassemble-symbols=' + next(iter(tagged)),
+                str(observer),
+            ])
+            typed = {s for s in filesystem_calls(inner, method) if f'__{method}E' in s}
         if len(typed) != 1:
-            raise RuntimeError('Every filesystem observer has exactly its compiler-typed delegate')
+            seen = sorted(set(re.findall(r'_+ZN[A-Za-z0-9_]*filesystem[A-Za-z0-9_]*', trace)))
+            raise RuntimeError(
+                'Every filesystem observer has exactly its compiler-typed delegate: '
+                f'{alias} calls {seen}'
+            )
         names[next(iter(typed))] = alias
     actual = set()
     originals = {}
@@ -248,7 +276,8 @@ def observe_publication_files(prefix, command, output, observer, native):
         used = set(
             re.findall(
                 r'_+ZN[A-Za-z0-9_]*filesystem[A-Za-z0-9_]*'
-                r'(?:4copy|9copy_file|6rename|16create_hard_link)E[A-Za-z0-9_]+',
+                r'(?:4copy|9copy_file|6rename|16create_hard_link'
+                r'|6__copy|11__copy_file|8__rename|18__create_hard_link)E[A-Za-z0-9_]+',
                 undefined,
             )
         )
@@ -351,8 +380,8 @@ def observe_fit_constructor(prefix, observed, probe_defined):
             'Fit observation requires one actual app constructor import and typed delegate'
         )
     original, target = next(iter(originals)), next(iter(targets))
-    actual = run([str(prefix / 'bin/llvm-cxxfilt'), original]).strip()
-    wrapper = run([str(prefix / 'bin/llvm-cxxfilt'), target]).strip()
+    actual = demangle(prefix, original).strip()
+    wrapper = demangle(prefix, target).strip()
     actual_args = actual.partition('(')[2]
     wrapper_args = wrapper.partition('(')[2]
     receiver = 'edi::FitJob*, '
@@ -419,10 +448,8 @@ def observe_browser_boundaries(prefix, output, observed, observer_object, probe_
                 raise RuntimeError(
                     'Every browser boundary requires one compiled method and observer'
                 )
-            signature = (
-                run([str(prefix / 'bin/llvm-cxxfilt'), actual[0]]).strip().partition('(')[2]
-            )
-            wrapper = run([str(prefix / 'bin/llvm-cxxfilt'), targets[0]]).strip().partition('(')[2]
+            signature = demangle(prefix, actual[0]).strip().partition('(')[2]
+            wrapper = demangle(prefix, targets[0]).strip().partition('(')[2]
             if scope == 'edi_app::WebStorage':
                 receiver = scope + '*, '
                 if not wrapper.startswith(receiver):

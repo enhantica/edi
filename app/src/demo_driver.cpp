@@ -5711,6 +5711,7 @@ void DemoDriver::settle_then(const std::function<void()>& next) {
         const bool opening = session != nullptr && session->openingExample();
         // A page still being made after a project opened keeps its tab disabled, which no frame shows.
         bool preparing = false;
+        bool sliding = false;
         // The app bar's tabs live as long as the window: found once, not by a walk of every item at each poll.
         static const QString kTabs[] = {QStringLiteral("appBar.tab.structure"), QStringLiteral("appBar.tab.experiment"),
                                         QStringLiteral("appBar.tab.analysis"), QStringLiteral("appBar.tab.report")};
@@ -5718,6 +5719,12 @@ void DemoDriver::settle_then(const std::function<void()>& next) {
             QPointer<QQuickItem>& item = app_bar_tabs_[tab];
             if (!item) item = find(tab, false);
             preparing = preparing || (item && item->property("preparing").toBool());
+            // The shown page slides into its view; on macOS the frames can repeat before it is in place (the Report
+            // page, busy on its first show), which left its sidebar off screen for the next action.
+            auto* page = item && item->property("checked").toBool() ? item->property("page").value<QQuickItem*>() : nullptr;
+            QQuickItem* view = page ? page->parentItem() : nullptr;
+            while (view && !view->clip()) view = view->parentItem();
+            sliding = sliding || (view && std::abs(page->mapToScene(QPointF()).x() - view->mapToScene(QPointF()).x()) >= 1);
         }
         const QImage frame = grab();
 #if EDI_UI_INSTRUMENTATION
@@ -5728,7 +5735,7 @@ void DemoDriver::settle_then(const std::function<void()>& next) {
 #if EDI_UI_INSTRUMENTATION
         trace_measurement(false, compare, QStringLiteral("compare-images"));
 #endif
-        if (!calculating && !opening && !preparing && same) {
+        if (!calculating && !opening && !preparing && !sliding && same) {
             next();
             return;
         }
@@ -5748,6 +5755,7 @@ void DemoDriver::settle_then(const std::function<void()>& next) {
                      .arg(calculating ? QStringLiteral("a calculation is in flight")
                           : opening   ? QStringLiteral("an example is being fetched")
                           : preparing ? QStringLiteral("a workflow page is preparing")
+                          : sliding   ? QStringLiteral("the shown page is not in place")
                                       : QStringLiteral("the window kept changing")));
             return;
         }
