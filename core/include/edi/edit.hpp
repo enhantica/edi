@@ -1469,8 +1469,8 @@ class Edit {
         };
         std::vector<const ParameterConstraint*> setting;
         for (const auto& constraint : project.constraints) {
-            for (const auto& [token, identifier] : tokens(constraint->expression.value())) {
-                if (!identifier) continue;
+            for (const auto& [token, is_name] : tokens(constraint->expression.value())) {
+                if (!is_name) continue;
                 if (parent_aliases.contains(token) && sound(constraint->expression.value()))
                     setting.push_back(constraint.get());
                 break;
@@ -1481,7 +1481,7 @@ class Edit {
         for (const auto& constraint : project.constraints) taken.insert(constraint->id.value());
         // An identifier the expression grammar reads: letters, digits and underscores, as a phase name may hold other
         // characters.
-        const auto identifier = [](std::string text) {
+        const auto safe_id = [](std::string text) {
             for (char& c : text)
                 if (!(std::isalnum(static_cast<unsigned char>(c)) != 0 || c == '_')) c = '_';
             return text;
@@ -1504,7 +1504,7 @@ class Edit {
                 for (std::size_t i = 0; i < parts.size(); ++i)
                     spelled += (i ? "." : "") + (i + 2 == parts.size() ? phase : parts[i]);
                 auto alias = std::make_shared<ParameterAlias>();
-                const std::string child_id = fresh(id + "_" + identifier(child));
+                const std::string child_id = fresh(id + "_" + safe_id(child));
                 renamed[id] = child_id;
                 alias->id = child_id;
                 alias->parameter_unique_name = spelled;
@@ -1512,12 +1512,12 @@ class Edit {
             }
             for (const ParameterConstraint* constraint : setting) {
                 std::string out;
-                for (const auto& [token, identifier] : tokens(constraint->expression.value())) {
-                    const auto hit = identifier ? renamed.find(token) : renamed.end();
+                for (const auto& [token, is_name] : tokens(constraint->expression.value())) {
+                    const auto hit = is_name ? renamed.find(token) : renamed.end();
                     out += hit != renamed.end() ? hit->second : token;
                 }
                 auto copy = std::make_shared<ParameterConstraint>(*constraint);
-                copy->id = fresh(constraint->id.value() + "_" + identifier(child));
+                copy->id = fresh(constraint->id.value() + "_" + safe_id(child));
                 copy->expression = out;
                 constraints.push_back(std::move(copy));
             }
