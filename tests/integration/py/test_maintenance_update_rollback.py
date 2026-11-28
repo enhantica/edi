@@ -253,6 +253,10 @@ def remove_extracted_files(payload, target):
 
 @pytest.fixture
 def linux_packaging(tmp_path, monkeypatch):
+    case_probe = tmp_path / 'MaintenanceTool-case-probe'
+    case_probe.touch()
+    if case_probe.with_name(case_probe.name.lower()).exists():
+        pytest.skip('Linux tool and staging names require a case-sensitive filesystem')
     monkeypatch.setattr(package, 'SYSTEM', 'linux')
     monkeypatch.setattr(package, 'SUFFIX', '')
     monkeypatch.setattr(package, 'write_resources', lambda *_args: None)

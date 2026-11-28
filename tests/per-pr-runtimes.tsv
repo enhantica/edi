@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-28T00:53:47Z
+# measured_utc = 2026-11-28T03:19:28Z
 #
-# Recorded from: focused voice UI adaptation, retaining the committed inventory
-# Collected tests: 267562; with a reported duration: 86304
+# Recorded from: focused release archive and Linux rollback replays, carrying the committed inventory
+# Collected tests: 267562; with a reported duration: 86307
 # Module-scoped fixture costs recorded: 222
 #
 # Breaches are decided PER TIER against the table
@@ -31,8 +31,8 @@
 # measurement nobody took and which passes every tier threshold.
 # inventory_python = 267562
 # inventory_cpp = 0
-# inventory_measured = 187620
-# inventory_unmeasured = 79942
+# inventory_measured = 187623
+# inventory_unmeasured = 79939
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
 # inventory_pr_python = 92651
 
@@ -182919,8 +182919,8 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_token_readers.p
 0.260	tests/integration/py/test_magnetic_uncertainty_states.py::test_dependent_uncertainty_comes_from_the_relation_graph_after_reload[tied-0.2]
 0.300	tests/integration/py/test_magnetic_uncertainty_states.py::test_dependent_uncertainty_comes_from_the_relation_graph_after_reload[undefined-tied-None]
 0.090	tests/integration/py/test_magnetic_uncertainty_states.py::test_unrelated_undefined_seed_preserves_a_known_correlation_pair_on_second_save
-UNMEASURED:failed-in-this-run	tests/integration/py/test_maintenance_update_rollback.py::test_failed_first_linux_update_preserves_the_released_tools_runtime
-0.110	tests/integration/py/test_maintenance_update_rollback.py::test_linux_tool_starts_with_its_original_runtime_after_the_app_update_is_undone
+0.150	tests/integration/py/test_maintenance_update_rollback.py::test_failed_first_linux_update_preserves_the_released_tools_runtime
+0.120	tests/integration/py/test_maintenance_update_rollback.py::test_linux_tool_starts_with_its_original_runtime_after_the_app_update_is_undone
 0.000	tests/integration/py/test_maintenance_update_rollback.py::test_windows_rollback_requires_the_observed_new_tool_to_be_undone[failed-before-staging]
 0.000	tests/integration/py/test_maintenance_update_rollback.py::test_windows_rollback_requires_the_observed_new_tool_to_be_undone[new-tool-left-behind]
 0.000	tests/integration/py/test_maintenance_update_rollback.py::test_windows_rollback_requires_the_observed_new_tool_to_be_undone[previous-restored]
@@ -266887,7 +266887,7 @@ UNMEASURED:not-completed-in-this-run	tests/unit/py/test_project_save_owned_alias
 0.000	tests/unit/py/test_release_presentation.py::test_whats_new_links_the_release_title_directly_to_its_change_sections[True-False]
 0.000	tests/unit/py/test_release_presentation.py::test_whats_new_links_the_release_title_directly_to_its_change_sections[True-True]
 0.000	tests/unit/py/test_release_promotion.py::test_cli_delivery_requires_the_executed_identity_and_unchanged_zip
-UNMEASURED:not-completed-in-this-run	tests/unit/py/test_release_promotion.py::test_component_archive_keeps_the_repository_paths_and_is_verified
+0.010	tests/unit/py/test_release_promotion.py::test_component_archive_keeps_the_repository_paths_and_is_verified
 UNMEASURED:not-completed-in-this-run	tests/unit/py/test_release_promotion.py::test_component_identity_and_original_checksums_are_verified[archive]
 UNMEASURED:not-completed-in-this-run	tests/unit/py/test_release_promotion.py::test_component_identity_and_original_checksums_are_verified[assistant_archive]
 UNMEASURED:not-completed-in-this-run	tests/unit/py/test_release_promotion.py::test_component_identity_and_original_checksums_are_verified[declaration]
@@ -266933,7 +266933,7 @@ UNMEASURED:not-completed-in-this-run	tests/unit/py/test_release_promotion.py::te
 0.000	tests/unit/py/test_release_promotion.py::test_release_retry_never_overwrites_an_existing_identity[notes]
 0.000	tests/unit/py/test_release_promotion.py::test_release_retry_never_overwrites_an_existing_identity[published-missing]
 0.000	tests/unit/py/test_release_promotion.py::test_release_retry_never_overwrites_an_existing_identity[source]
-UNMEASURED:not-completed-in-this-run	tests/unit/py/test_release_promotion.py::test_stable_release_attaches_every_platform_component_archive
+0.020	tests/unit/py/test_release_promotion.py::test_stable_release_attaches_every_platform_component_archive
 0.000	tests/unit/py/test_rendered_caption_contract.py::test_a_caption_without_valid_rendered_evidence_cannot_satisfy_the_census[changes0]
 0.000	tests/unit/py/test_rendered_caption_contract.py::test_a_caption_without_valid_rendered_evidence_cannot_satisfy_the_census[changes10]
 0.000	tests/unit/py/test_rendered_caption_contract.py::test_a_caption_without_valid_rendered_evidence_cannot_satisfy_the_census[changes11]
