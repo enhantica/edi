@@ -64,7 +64,10 @@ AppDialog {
     anchors.centerIn: parent
     onClosed: destroy()
 
-    readonly property string k: kChoice.currentIndex >= 0 && kChoice.currentIndex < presets.length ? presets[kChoice.currentIndex].k : [0, 1, 2].map(i => kFields.itemAt(i) ? (kFields.itemAt(i) as EaElements.TextField).text : "0").join(",")
+    // The chosen k's place in the list (a preset, or presets.length for Other): the one owner of the choice, which the
+    // box shows, the fields follow and every search reads (review 24).
+    property int kIndex: 0
+    readonly property string k: kIndex >= 0 && kIndex < presets.length ? presets[kIndex].k : [0, 1, 2].map(i => kFields.itemAt(i) ? (kFields.itemAt(i) as EaElements.TextField).text : "0").join(",")
 
     function selectable(i) {
         const n = nodes[i];
@@ -104,10 +107,10 @@ AppDialog {
     function setK(text) {
         const preset = presets.findIndex(p => p.k === text);
         if (preset >= 0) {
-            kChoice.currentIndex = preset;
+            kIndex = preset;
             return;
         }
-        kChoice.currentIndex = presets.length;
+        kIndex = presets.length;
         const parts = text.split(",");
         for (let i = 0; i < 3; ++i)
             (kFields.itemAt(i) as EaElements.TextField).text = parts[i];
@@ -214,6 +217,10 @@ AppDialog {
                 const named = p.label === "" ? `(${k})` : `${p.label} (${k})`;
                 return p.cell === undefined || p.cell === "" ? named : `${named} · ${p.cell.split(",").join(", ")}`;
             }).concat([qsTr("Other…")])
+            // Other, closed: the k typed and, once found, its magnetic cell, as a preset shows its own.
+            readonly property string otherShown: popup.found !== null && popup.kIndex === popup.presets.length
+                ? `(${popup.k.split(",").join(", ")}) · ${popup.found.cell.replace(";0,0,0", "").split(",").join(", ")}`
+                : qsTr("Other…")
 
             ToolbarComboBox {
                 id: kChoice
@@ -221,11 +228,12 @@ AppDialog {
                 enabled: !popup.busy
                 toolTip: qsTr("Propagation vector k and its magnetic cell")
                 model: toolbar.kEntries
-                closedTexts: toolbar.kEntries.map(e => qsTr("k: %1").arg(e))
+                closedTexts: toolbar.kEntries.map((e, i) => qsTr("k: %1").arg(i === popup.presets.length ? toolbar.otherShown : e))
                 fitShown: true
-                currentIndex: 0
-                onActivated: {
-                    if (currentIndex < popup.presets.length)
+                shownIndex: popup.kIndex
+                onActivated: index => {
+                    popup.kIndex = index;
+                    if (index < popup.presets.length)
                         popup.find();
                     else
                         popup.invalidateGraph();
@@ -237,7 +245,7 @@ AppDialog {
                 delegate: EaElements.TextField {
                     required property int index
                     enabled: !popup.busy
-                    visible: kChoice.currentIndex === popup.presets.length
+                    visible: popup.kIndex === popup.presets.length
                     width: EaStyle.Sizes.fontPixelSize * 4
                     height: AppSizes.toolbarControlSize
                     placeholderText: ["k₁", "k₂", "k₃"][index]
