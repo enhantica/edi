@@ -136,16 +136,22 @@ TestCase {
         if (analysis.text.text !== declarations)
             project.undo();
         reaches("Correlation labels", project.correlations.labels, active, active === "obsidian" ? active : null);
-        project.report.active = true;
-        tryVerify(() => !project.report.calculating && Object.keys(project.report.model).length > 0, 15000, "The real report publishes its populated model");
-        const report = project.report.model;
-        reaches("Report payload", report, active, active === "obsidian" ? active : null);
+        group.destroy();
+    }
+
+    function inspectReport(reportModel, active, previousRevision) {
+        tryCompare(reportModel, "calculating", false, 15000, "The bank settles after the link and relation edits");
+        reportModel.active = true;
+        tryVerify(() => reportModel.modelRevision > previousRevision, 15000, "The report publishes a new revision for the current enabled phase " + active);
+        const report = reportModel.model;
+        reaches("Report payload", report, active, active);
         for (const section of Object.keys(report)) {
             const content = (JSON.stringify(report[section]) ?? "").toLowerCase();
             if (phases.some(phase => phase !== active && content.includes(phase)))
                 console.log("Report sections with disabled phase data: " + section);
         }
-        group.destroy();
+        reportModel.active = false;
+        return reportModel.modelRevision;
     }
 
     function inspectChart(chart, project, active) {
@@ -315,10 +321,14 @@ TestCase {
             experiment: project.currentExperiment
         });
         verify(chart && waitForPolish(chart), "The real chart is attached to this bank");
+        const report = project.report;
+        report.active = false;
+        let reportRevision = 0;
         for (const active of phases) {
             if (active !== "obsidian")
                 switchPhase(project, active);
             inspectModel(project, active);
+            reportRevision = inspectReport(report, active, reportRevision);
             inspectChart(chart, project, active);
         }
         switchPhase(project, "obsidian");

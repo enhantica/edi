@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-28T07:55:03Z
+# measured_utc = 2026-11-28T11:05:24Z
 #
-# Recorded from: Banked rows plus the scoped disabled-phase projection expected red
-# Collected tests: 267591; with a reported duration: 86300
+# Recorded from: Banked rows plus the completed report revision replay on edi 65b44b83
+# Collected tests: 267591; with a reported duration: 86301
 # Module-scoped fixture costs recorded: 224
 #
 # Breaches are decided PER TIER against the table
@@ -31,8 +31,8 @@
 # measurement nobody took and which passes every tier threshold.
 # inventory_python = 267578
 # inventory_cpp = 13
-# inventory_measured = 187612
-# inventory_unmeasured = 79979
+# inventory_measured = 187613
+# inventory_unmeasured = 79978
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
 # inventory_pr_python = 92667
 
@@ -187215,7 +187215,7 @@ UNMEASURED:not-completed-in-this-run	tests/system/app/test_assistant_cif_attachm
 UNMEASURED:failed-in-this-run	tests/system/app/test_assistant_project_replacement.py::test_saved_project_awaits_user_confirmation[quiet]
 UNMEASURED:failed-in-this-run	tests/system/app/test_assistant_project_replacement.py::test_saved_project_awaits_user_confirmation[shown]
 UNMEASURED:failed-in-this-run	tests/system/app/test_assistant_step_folding.py::test_different_finished_steps_share_one_expandable_row
-UNMEASURED:failed-in-this-run	tests/system/app/test_disabled_phase_projection.py::test_active_phase_projection_reaches_every_scientific_consumer
+0.005	tests/system/app/test_disabled_phase_projection.py::test_active_phase_projection_reaches_every_scientific_consumer
 UNMEASURED:not-completed-in-this-run	tests/system/app/test_feedback_attachment_typing.py::test_typing_with_a_real_attachment_stays_responsive
 UNMEASURED:not-completed-in-this-run	tests/system/app/test_large_collection_open.py::test_collection_first_open[large_offline]
 UNMEASURED:not-completed-in-this-run	tests/system/app/test_large_collection_open.py::test_collection_first_open[large_online]
@@ -267693,7 +267693,7 @@ UNMEASURED:not-completed-in-this-run	tests/unit/py/test_web_science_identity.py:
 # module-cost: 6.489	tests/integration/py/test_tutorial_strategy.py
 # module-cost: 2.933	tests/integration/py/test_weight_fraction_app.py
 # module-cost: 4.815	tests/system/app/test_assistant_cif_attachment.py
-# module-cost: 139.287	tests/system/app/test_disabled_phase_projection.py
+# module-cost: 136.195	tests/system/app/test_disabled_phase_projection.py
 # module-cost: 0.951	tests/system/app/test_likes_feedback.py
 # module-cost: 1.390	tests/system/app/test_magnetic_operator_workflow.py
 # module-cost: 1.325	tests/system/app/test_magnetic_structure_type_native.py
