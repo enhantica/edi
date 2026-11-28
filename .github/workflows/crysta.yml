@@ -107,10 +107,13 @@ jobs:
             *) echo "unknown set '$set_'" >&2; exit 1 ;;
           esac
           if [ "$set_" = probe ]; then
-            # Ten A/A runs per platform: Linux on ten runners, macOS on five runners twice each.
-            performance='[{"platform":"Linux","runner":"ubuntu-24.04","part":"1"},{"platform":"Linux","runner":"ubuntu-24.04","part":"2"},{"platform":"Linux","runner":"ubuntu-24.04","part":"3"},{"platform":"Linux","runner":"ubuntu-24.04","part":"4"},{"platform":"Linux","runner":"ubuntu-24.04","part":"5"},{"platform":"Linux","runner":"ubuntu-24.04","part":"6"},{"platform":"Linux","runner":"ubuntu-24.04","part":"7"},{"platform":"Linux","runner":"ubuntu-24.04","part":"8"},{"platform":"Linux","runner":"ubuntu-24.04","part":"9"},{"platform":"Linux","runner":"ubuntu-24.04","part":"10"},{"platform":"macOS","runner":"macos-15","part":"1"},{"platform":"macOS","runner":"macos-15","part":"2"},{"platform":"macOS","runner":"macos-15","part":"3"},{"platform":"macOS","runner":"macos-15","part":"4"},{"platform":"macOS","runner":"macos-15","part":"5"}]'
-          else
+            # Ten A/A runs on ten Linux runners; macOS performance runs on main and at night only.
+            performance='[{"platform":"Linux","runner":"ubuntu-24.04","part":"1"},{"platform":"Linux","runner":"ubuntu-24.04","part":"2"},{"platform":"Linux","runner":"ubuntu-24.04","part":"3"},{"platform":"Linux","runner":"ubuntu-24.04","part":"4"},{"platform":"Linux","runner":"ubuntu-24.04","part":"5"},{"platform":"Linux","runner":"ubuntu-24.04","part":"6"},{"platform":"Linux","runner":"ubuntu-24.04","part":"7"},{"platform":"Linux","runner":"ubuntu-24.04","part":"8"},{"platform":"Linux","runner":"ubuntu-24.04","part":"9"},{"platform":"Linux","runner":"ubuntu-24.04","part":"10"}]'
+          elif [ "$set_" = night ] || [ "$set_" = main ]; then
             performance='[{"platform":"Linux","runner":"ubuntu-24.04","part":""},{"platform":"macOS","runner":"macos-15","part":""}]'
+          else
+            # As crysta's own CI: macOS performance on main and at night, not on pull requests.
+            performance='[{"platform":"Linux","runner":"ubuntu-24.04","part":""}]'
           fi
           json=$(python3 -c 'import json, sys; print(json.dumps(sys.argv[1].split()))' "$rows")
           echo "crysta rows ($set_): ${rows:-none}; inputs changed: $INPUTS_CHANGED"
