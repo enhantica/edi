@@ -28,6 +28,7 @@ from assistants import (  # noqa: E402
     COPILOT_COMPONENT,
     distributed_assistants,
 )
+from promote import require_archive_size  # noqa: E402
 
 sys.path.insert(0, str(ROOT / 'tools/installer'))
 import maintenance_resource  # noqa: E402
@@ -1200,12 +1201,20 @@ def deliver_installer(installer: Path, runtime: Path | None, *, ad_hoc: bool = T
 
 
 def write_repository(
-    tools: Path, packages: Path, repository: Path, environment: dict, excluded: list[str] = ()
+    tools: Path,
+    packages: Path,
+    repository: Path,
+    environment: dict,
+    excluded: list[str] = (),
+    *,
+    public: bool = True,
 ) -> None:
     """The online repository, every component with its content checksum (edi ADR-0106).
 
     repogen takes the argument after --sha-update as the components to checksum: every package of
     this platform's repository, by its id. Excluded components (withheld_components) stay out.
+    A public repository also meets the download site's file size limit, so an oversized
+    component fails here instead of at release staging; an internal one is never published.
     """
     names = sorted(
         path.name for path in packages.iterdir() if path.is_dir() and path.name not in excluded
@@ -1227,6 +1236,10 @@ def write_repository(
         env=environment,
     )
     require_content_checksums(repository / 'Updates.xml', names)
+    if public:
+        for path in sorted(repository.rglob('*')):
+            if path.is_file():
+                require_archive_size(path)
 
 
 def require_content_checksums(updates: Path, packages: list) -> None:
@@ -1246,7 +1259,8 @@ def require_content_checksums(updates: Path, packages: list) -> None:
 def withheld_components(packages: Path, *, internal: bool = False) -> list[str]:
     """Built components this installer and its repository leave out.
 
-    That is Claude until its distribution is public, except in an internal build.
+    That is each assistant whose distribution is not public yet (Claude, GitHub Copilot), except
+    in an internal build.
     """
     carried = distributed_assistants(internal=internal)
     return [
@@ -1337,7 +1351,7 @@ def package_app(  # noqa: PLR0913, PLR0914 - the stage's identity and how it shi
     *,
     internal: bool = False,
 ) -> Path:
-    """Package the stage; an internal build carries Claude before its distribution is public."""
+    """Package the stage; an internal build carries every assistant, distributed or not."""
     if not re.fullmatch(r'[0-9]+(?:[.-][0-9]+)*', version):
         raise RuntimeError('Installer version must contain only numeric components')
     stage, tools, output = stage.resolve(), tools.resolve(), output.resolve()
@@ -1377,7 +1391,12 @@ def package_app(  # noqa: PLR0913, PLR0914 - the stage's identity and how it shi
         # (edi ADR-0106). So a component with the same content in two releases is not offered,
         # one rebuilt with other bytes but the same content is, and Version is only shown.
         write_repository(
-            tools, source / 'packages', output / 'repository', tool_environment, excluded
+            tools,
+            source / 'packages',
+            output / 'repository',
+            tool_environment,
+            excluded,
+            public=not internal,
         )
     kind = 'online' if repository_url else 'offline'
     name = installer_stem(version, kind)
@@ -1432,8 +1451,8 @@ def package_app(  # noqa: PLR0913, PLR0914 - the stage's identity and how it shi
                 'edi_commit': inputs.get('edi_commit'),
                 'release_history_sha256': inputs.get('release_history_sha256'),
                 'maintenance_tool_sha256': maintenance_sha256,
-                # An internal build may carry Claude before its distribution is public, so
-                # publication refuses it (tools/release/assistants.py).
+                # An internal build may carry an assistant before its distribution is public,
+                # so publication refuses it (tools/release/assistants.py).
                 'internal': internal,
                 'assistants': [
                     name
@@ -1901,7 +1920,7 @@ def main() -> None:  # noqa: PLR0915 - one parser and one branch per subcommand
     package.add_argument(
         '--internal',
         action='store_true',
-        help='Also carry Claude while its distribution is internal; never published',
+        help='Also carry the assistants whose distribution is internal; never published',
     )
     maintenance = commands.add_parser('maintenance-tool')
     for option in ['--tools', '--output']:

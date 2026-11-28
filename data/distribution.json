@@ -8,5 +8,6 @@
     "testing": "repository/testing/{platform}/"
   },
   "third_party_path": "third-party/",
-  "claude_distribution": "internal"
+  "claude_distribution": "internal",
+  "copilot_distribution": "internal"
 }

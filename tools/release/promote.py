@@ -334,7 +334,7 @@ def stage_optional_assets(output: Path, assets: Path, release: dict) -> None:
 
 
 APP_COMPONENT = 'org.easydiffraction.app'
-# The app and its assistant components; Claude only once it is distributed (edi ADR-0108).
+# The app and its distributed assistant components (tools/release/assistants.py, edi ADR-0108).
 APP_COMPONENTS = frozenset({APP_COMPONENT, *distributed_assistants()})
 # macOS and Windows install their separately signed maintenance tool from it (edi ADR-0091).
 MAINTENANCE_COMPONENT = 'org.easydiffraction.app.maintenancetool'

@@ -17,7 +17,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'tools/release'))
-from assistants import CLAUDE_COMPONENT, claude_distributed  # noqa: E402
+from assistants import DISTRIBUTION_SETTINGS, component_distributed  # noqa: E402
 from legacy_feed import has_new, legacy, publishable, serialize  # noqa: E402
 from versions import PATTERN, version_key  # noqa: E402
 
@@ -266,12 +266,14 @@ def overlay_release(site: Path, incoming: Path) -> None:
 
 
 def refuse_undistributed(repository: Path) -> None:
-    """Claude is published only once its distribution is public (edi ADR-0108)."""
-    if not claude_distributed() and (
-        (repository / CLAUDE_COMPONENT).exists()
-        or CLAUDE_COMPONENT.encode() in (repository / 'Updates.xml').read_bytes()
-    ):
-        raise RuntimeError(f'Claude is not distributed yet: {repository.name}')
+    """An assistant is published only once its distribution is public (edi ADR-0108)."""
+    names = {'claude_distribution': 'Claude', 'copilot_distribution': 'GitHub Copilot'}
+    updates = (repository / 'Updates.xml').read_bytes()
+    for component, setting in DISTRIBUTION_SETTINGS.items():
+        if not component_distributed(component) and (
+            (repository / component).exists() or component.encode() in updates
+        ):
+            raise RuntimeError(f'{names[setting]} is not distributed yet: {repository.name}')
 
 
 def overlay_installers(site: Path, incoming: Path) -> None:

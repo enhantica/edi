@@ -6,7 +6,7 @@
 // Qt on it (edi #150). This is ChatGPT's component; its form has a row for each assistant component (edi ADR-0108).
 
 // Each assistant component, its row and its label; ChatGPT starts ticked when installing, the others do not. A
-// component the installer does not carry (Claude, until its distribution is public) has no row.
+// component the installer does not carry (Claude or GitHub Copilot, until its distribution is public) has no row.
 var CHOICES = [{row: "Assistant", name: "org.easydiffraction.app.assistant", label: "ChatGPT", ticked: true},
                {row: "Claude", name: "org.easydiffraction.app.claude", label: "Claude", ticked: false},
                {row: "Copilot", name: "org.easydiffraction.app.copilot", label: "GitHub Copilot", ticked: false}];
