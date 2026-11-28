@@ -14,6 +14,7 @@
 #include <QSvgRenderer>
 #include <QTemporaryDir>
 #include <QTimer>
+#include <algorithm>
 #include <cmath>
 #include <stdexcept>
 #include <string>
@@ -31,15 +32,22 @@
 #if EDI_APP_VOICE
 namespace {
 
-// The installed model loads and recognises a second of silence; the text may be empty (ADR-0107).
-bool voice_recognises(const QString& model) {
-    if (model.isEmpty())
+// What the microphone needs, as the app's voice input uses it (ADR-0107): the installed detector loads and finds no
+// speech in a second of silence, and the installed model loads and recognises that second; the text may be empty.
+bool voice_recognises(const QString& model, const QString& detector) {
+    if (model.isEmpty() || detector.isEmpty())
         return false;
     std::string error;
+    auto speech = edi_app::SpeechDetector::load(QFileInfo(detector).filesystemAbsoluteFilePath(), error);
+    if (!speech)
+        return false;
+    const std::vector<float> silence(edi_app::SpeechRecogniser::sample_rate, 0.0F);
+    const auto probabilities = speech->probabilities(silence);
+    if (probabilities.empty() || *std::max_element(probabilities.begin(), probabilities.end()) >= 0.5F)
+        return false;
     auto recogniser = edi_app::SpeechRecogniser::load(QFileInfo(model).filesystemAbsoluteFilePath(), error);
     if (!recogniser)
         return false;
-    const std::vector<float> silence(edi_app::SpeechRecogniser::sample_rate, 0.0F);
     return recogniser->recognise(silence, {}).error.empty();
 }
 
@@ -141,13 +149,15 @@ void start_installer_smoke(QQuickWindow& window, const QString& output) {
                 QMetaObject::invokeMethod(dialog, "close");
             }
             report.insert("assistant_available", assistantAvailable);
-            // The voice component's model, found and of its stated size on a processor that can run it, whether it
-            // recognises, and whether macOS can be asked for the microphone (ADR-0107).
+            // The voice component's model and detector, found and of their stated sizes on a processor that can run
+            // them, whether they work as the microphone uses them, and whether macOS can be asked for the microphone
+            // (ADR-0107).
 #if EDI_APP_VOICE
             const auto voiceModel = edi_app::VoiceInput::installedModel();
-            report.insert("voice_available",
-                          !voiceModel.isEmpty() && edi_app::SpeechRecogniser::cpu_supported());
-            report.insert("voice_recognition", voice_recognises(voiceModel));
+            const auto voiceDetector = edi_app::VoiceInput::installedDetector();
+            report.insert("voice_available", !voiceModel.isEmpty() && !voiceDetector.isEmpty() &&
+                                                 edi_app::SpeechRecogniser::cpu_supported());
+            report.insert("voice_recognition", voice_recognises(voiceModel, voiceDetector));
             report.insert("microphone_permission_backend", microphone_permission_backend());
 #else
             report.insert("voice_available", false);
