@@ -178,7 +178,7 @@ def windows_protocol(monkeypatch):
         ('current', 'online', 'online', None),
         ('legacy', None, None, r'(?i)before it unpacked|handoff'),
         ('current', None, 'installed', r'left .*MaintenanceTool\.update\.exe.*installation'),
-        ('stale', 'failing-26.18', 'failing-26.18', r'(?i)before it unpacked|stale|handoff'),
+        ('stale', 'failing-26.18', None, r'(?i)before it unpacked|stale|handoff'),
         ('current', None, 'failing-26.18', r'left .*26\.18.*MaintenanceTool\.update\.exe'),
     ],
     ids=[
@@ -241,7 +241,7 @@ def test_windows_rollback_requires_the_observed_new_tool_to_be_undone(
             staged.unlink()
         elif staged_after:
             staged.write_bytes(RELEASES[staged_after])
-        else:
+        elif observation != 'stale':
             staged.unlink(missing_ok=True)
         return subprocess.CompletedProcess(command, 1, stdout=windows_protocol.ROLLBACK_TEXT)
 
