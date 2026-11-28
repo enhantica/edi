@@ -1,12 +1,11 @@
 """Build invented public inputs for the native magnetic workflows."""
 
-import json
 from pathlib import Path
 
 ROOT = Path(__file__).parent
 
 
-def parent(group='P n m a', name='parent', gamma=90):
+def parent(group='P n m a', name='parent', gamma=90, letter='.'):
     return f'''data_{name}
 _edi.schema_version 3
 _cell.length_a 6
@@ -26,7 +25,7 @@ _atom_site.fract_z
 _atom_site.occupancy
 _atom_site.adp_iso
 _atom_site.adp_type
-Co1 Co . .13 .25 .31 1 .17 Biso
+Co1 Co {letter} .13 .25 .31 1 .17 Biso
 '''
 
 
@@ -42,11 +41,6 @@ def refusal_reuse():
 
 def main():
     source = ROOT.parent / 'adp_site_symmetry/gui/cubic'
-    (ROOT / 'source_text.js').write_text(
-        '.pragma library\nvar typeIv = '
-        + json.dumps((ROOT / 'pnma-d.edi').read_text().replace('data_type_iv', 'data_parent'))
-        + ';\n'
-    )
     for name in [
         'popup',
         'unlinked',
@@ -61,7 +55,8 @@ def main():
         root = ROOT / 'gui' / name
         (root / 'structures').mkdir(parents=True, exist_ok=True)
         (root / 'project.edi').write_text('_edi.schema_version 3\n_metadata.name magnetic_test\n')
-        text = parent()
+        # The save/reopen witness starts with the known Pnma 4c site (y = 1/4).
+        text = parent(letter='c') if name == 'popup' else parent()
         if name in {'type-iv', 'unverified'}:
             text = (ROOT / 'pnma-d.edi').read_text().replace('data_type_iv', 'data_parent')
             if name == 'unverified':
@@ -79,7 +74,10 @@ def main():
             continue
         (root / 'experiments').mkdir(exist_ok=True)
         if name in {'popup', 'overflow'}:
-            (root / 'structures/unrelated.edi').write_text(parent('P 1', 'unrelated'))
+            letter = 'a' if name == 'popup' else '.'
+            (root / 'structures/unrelated.edi').write_text(
+                parent('P 1', 'unrelated', letter=letter)
+            )
         bank = (source / 'experiments/bank.edi').read_text().replace('structure 1', 'parent 3.6')
         for filename, scale, enabled in [('first', 3.6, 'true'), ('second', 8.4, 'false')]:
             contents = bank.replace('data_bank', 'data_' + filename).replace(

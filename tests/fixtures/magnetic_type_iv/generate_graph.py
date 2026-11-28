@@ -18,8 +18,7 @@ def pmmm_origin_allows_moment(operators):
     for operation in operators:
         *coordinates, sign = operation.split(',')
         assert all(
-            value in {axis, '-' + axis}
-            for value, axis in zip(coordinates, 'xyz', strict=True)
+            value in {axis, '-' + axis} for value, axis in zip(coordinates, 'xyz', strict=True)
         ), 'The Pmmm origin oracle requires unshifted diagonal operations'
         diagonal = [(-1 if value.startswith('-') else 1) for value in coordinates]
         actions.append([int(sign) * math.prod(diagonal) * entry for entry in diagonal])
@@ -50,11 +49,11 @@ def main():
     origin_classes = census(hall, ('0', '0', '0'))['classes']
     result['pmmmOrigin'] = {
         'allowed': sorted(
-            node['bns'] for node in origin_classes
-            if pmmm_origin_allows_moment(node['members'][0])
+            node['bns'] for node in origin_classes if pmmm_origin_allows_moment(node['members'][0])
         ),
         'forbidden': sorted(
-            node['bns'] for node in origin_classes
+            node['bns']
+            for node in origin_classes
             if not pmmm_origin_allows_moment(node['members'][0])
         ),
     }

@@ -12,7 +12,6 @@ import "RenderedTable.js" as Render
 import "E04Review.js" as Review
 import "AtomsSelector.js" as Atoms
 import "NumericCellInk.js" as Ink
-import "ApprovedPalette.js" as Approved
 
 TestCase {
     id: test
@@ -1237,9 +1236,10 @@ TestCase {
     function test_phase_contributions_draw_two_independent_curves_and_fills() {
         openMagneticFitExample();
         priorChartPalette = Preferences.colourScheme;
-        Preferences.colourScheme = "earth";
-        const expectedPalette = Approved.colours(Probe, "earth", "structures", 2, false,
-                                                 {experiments: 1, structures: 2});
+        Preferences.colourScheme = "main";
+        const reference = JSON.parse(SettingsProof.text(Probe.repoUrl("tests/fixtures/single_crystal_pattern"), "powder-colours.json"));
+        const main = reference.palettes[reference.tokens.indexOf("main")];
+        const expectedPalette = main.light.slice(2, 4).map(shade => shade.toLowerCase());
         Preferences.structureCurves = true;
         Preferences.patternLegendShown = true;
         const chart = pattern.createObject(appWindow.contentItem, {

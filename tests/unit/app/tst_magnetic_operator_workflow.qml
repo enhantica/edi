@@ -10,7 +10,6 @@ import "NativeTurn.js" as Turn
 import "UiInteraction.js" as Ui
 import "RenderedTable.js" as Render
 import "../../fixtures/magnetic_type_iv/graph_oracle.js" as Oracle
-import "../../fixtures/magnetic_type_iv/source_text.js" as Source
 
 TestCase {
     id: test
@@ -37,6 +36,10 @@ TestCase {
             visible: true
         });
         verify(app && waitForRendering(app.contentItem), "Magnetic type checks use the rendered production application");
+    }
+    function keyboardWindow() {
+        app.requestActivate();
+        tryCompare(app, "active", true, 3000, "The production window receives native pointer and keyboard input");
     }
     function init() {
         selector = Turn.begin(test, Probe, message => test.warn(message));
@@ -110,7 +113,7 @@ TestCase {
         }, (_, i) => combo.textAt(i)).indexOf(label);
         verify(index >= 0, "The real selector contains the requested choice " + label);
         press(combo);
-        tryCompare(combo.popup, "opened", true, 2000, "Pointer input opens the selector");
+        tryCompare(combo.popup, "opened", true, 2000, "Pointer input opens the selector for " + combo.objectName);
         const list = combo.popup.contentItem;
         list.positionViewAtIndex(index, ListView.Contain);
         list.forceLayout();
@@ -158,6 +161,7 @@ TestCase {
         if (label !== undefined)
             choose(combo, label);
         else {
+            keyboardWindow();
             choose(combo, "Other…");
             const fields = Render.descendants(popup().contentItem).filter(item => ["k₁", "k₂", "k₃"].includes(item.placeholderText));
             compare(fields.length, 3, "Typed k has three visible reciprocal-basis components");
@@ -177,6 +181,7 @@ TestCase {
         }
         tryVerify(() => !popup().busy && popup().found !== null, 5000, "The bounded magnetic graph computation finishes from the submitted k");
         verify(popup().found !== null, "The selected k produces its magnetic graph: " + popup().refusal);
+        compare(popup().k.replace(/\s/g, ""), vector, "The graph uses exactly the entered or chosen k");
     }
     function shownNodes() {
         return Render.descendants(popup().contentItem).filter(item => item.visible && /^magnetic\.node\.\d+$/.test(item.objectName));
@@ -364,7 +369,7 @@ TestCase {
             for (const row of textures) {
                 compare([row.indexH, row.indexK, row.indexL].join(","), "2,1,0", "The child texture axis is D transpose times the parent axis");
                 compare(row.marchR.value, .7, "The child's texture value is inherited");
-                verify(row.marchR.free, "The carried texture parameter remains in the free set");
+                compare(row.marchR.free, true, "The carried March parameter retains the stored parent free flag for " + row.structureId);
             }
         }
         const changedBank = Probe.rows(Session.project.experiments).find(row => row.name === "first").experiment;
@@ -448,6 +453,7 @@ TestCase {
     }
     function test_type_iv_letters_and_coordinate_edit() {
         openInput("type-iv");
+        keyboardWindow();
         const owner = group("atom_site");
         const structure = Session.project.currentStructure;
         let row = Probe.rows(structure.atomSites)[0];
@@ -480,7 +486,7 @@ TestCase {
         verify(letter.readOnly === true || letter.editable === false || !letter.enabled, "An unverified operator-defined letter cannot be edited as an ordinary table letter");
     }
     function checkA10Refusal(message) {
-        verify(/Crystal structure it came from/i.test(message) && /Structure page.*Space group.*Magnetic symmetry analysis/i.test(message) && /Experiment.*Pattern.*Mark peaks for k/i.test(message), "The refusal identifies both analysis routes and describes the original Crystal structure by role");
+        verify(/Crystal structure it came from/i.test(message) && /Structure page.*Space group.*Magnetic symmetry analysis/i.test(message) && /Experiment page.*Extra.*k-vector search.*Mark peaks/i.test(message), "The refusal identifies the original Crystal role and both current analysis routes: " + message);
     }
     function test_k_field_refusal_is_atomic() {
         openInput("type-iv", false);
@@ -528,6 +534,8 @@ TestCase {
     }
     function test_added_children_reopen() {
         openPopup();
+        const writable = Session.save();
+        verify(writable, "The plain input must save before exercising an Add round trip: " + Session.lastError);
         selectTwo();
         press(pcontrol("magnetic.add"));
         tryVerify(() => !popup(), 1000, "The candidate batch is added before saving: " + (popup()?.refusal ?? ""));
@@ -535,7 +543,8 @@ TestCase {
         const bank = Probe.rows(Session.project.experiments).find(row => row.name === "first").experiment;
         const profile = bank.measCalcPoints().calc.slice();
         const before = Probe.rows(Session.project.experiments).map(row => row.experiment.text.text).join("\n");
-        verify(Session.save(), "The normal Save persists the added candidates and links");
+        const saved = Session.save();
+        verify(saved, "The normal Save persists the added candidates and links: " + Session.lastError);
         Session.closeProject();
         verify(Session.openProject(inputUrl), "The saved candidate project reopens through the normal loader");
         tryCompare(Session.project, "calculating", false, 3000, "Reopened candidates publish a current calculation");
@@ -762,13 +771,17 @@ TestCase {
 
         const layer = chartControl("chart.peaks");
         const axis = chartAxis(chart);
-        mouseWheel(layer, layer.px(x), layer.height * .55, 0, 960);
+        // The invented Gaussian is centred at the Bragg angle. The measured grid
+        // starts at 10° and is sampled every 0.05°, so the sample nearest the
+        // centre is the measured maximum. The pre-mark comes from smoothed data.
+        const measuredMaximum = 10 + .05 * Math.round((satellite - 10) / .05);
+        mouseWheel(layer, layer.px(measuredMaximum), layer.height * .55, 0, 960);
         tryVerify(() => (axis.max - axis.min) / layer.width < .035, 2000, "Zoom resolves the offset tap from the measured maximum");
-        const offset = clickPeak(chart, x + .07);
-        verify(Math.abs(offset - x) > .04 && Math.abs(offset - x) < .1, "The tap falls beside the maximum within the fixture's known half width");
+        const offset = clickPeak(chart, measuredMaximum + .07);
+        verify(Math.abs(offset - measuredMaximum) > .04 && Math.abs(offset - measuredMaximum) < .1, "The tap falls beside the maximum within the fixture's known half width");
         tryCompare(table, "count", peaks.length, 2000, "An offset tap restores the observed peak to the sidebar");
         const rebased = markedPeaks(chart).map(peak => peak.x);
-        verify(rebased.some(angle => Math.abs(angle - x) < 1e-8), "The offset tap at " + offset + " snaps to the measured maximum " + x + ", marks " + rebased);
+        verify(rebased.some(angle => Math.abs(angle - measuredMaximum) < 1e-8), "The offset tap at " + offset + " snaps to the independently sampled maximum " + measuredMaximum + ", marks " + rebased);
 
         const blank = 16.2;
         const clicked = clickPeak(chart, blank);
@@ -776,9 +789,9 @@ TestCase {
         const free = markedPeaks(chart).map(peak => peak.x).sort((a, b) => a - b).findIndex(angle => Math.abs(angle - clicked) < .02);
         verify(free >= 0, "With no maximum nearby the chart keeps the clicked angle");
         sidebarPeak(table, free, blank, "added by hand");
-        mouseClick(layer, Math.round(layer.px(x)), layer.height * .85);
+        mouseClick(layer, Math.round(layer.px(measuredMaximum)), layer.height * .85);
         tryCompare(table, "count", peaks.length, 2000, "Clicking down the line drops the snapped sidebar row");
-        verify(!markedPeaks(chart).some(peak => Math.abs(peak.x - x) < 1e-8), "The click drops only the snapped maximum");
+        verify(!markedPeaks(chart).some(peak => Math.abs(peak.x - measuredMaximum) < 1e-8), "The click drops only the snapped maximum");
         clickPeak(chart, clicked);
         tryCompare(table, "count", peaks.length - 1, 2000, "Clicking the new free mark removes it");
 
@@ -820,8 +833,10 @@ TestCase {
     function indexedTooltip(results, row, index, expected) {
         verify(!findChild(results.contentItem, "chart.kVectorRoles"), "The k dialog has no role details strip");
         const cell = findChild(row, "chart.kVector." + index + ".indexedCell");
-        verify(cell && Ui.exposed(cell), "The selected row exposes its actual Indexed cell");
-        mouseMove(cell, cell.width / 2, cell.height / 2);
+        const point = cell ? Ui.clickPoint(cell) : null;
+        verify(point, "The selected row exposes its actual Indexed cell");
+        mouseMove(results.contentItem, 1, 1);
+        mouseMove(cell, point.x, point.y);
         const tip = findChild(cell, "chart.kVector." + index + ".indexed");
         tryVerify(() => tip && tip.visible, 2500, "Hovering Indexed opens the application's data tooltip");
         const roles = Array.from(tip.contentItem.children).filter(item => item.modelData !== undefined);
@@ -873,6 +888,7 @@ TestCase {
     }
     function test_find_k_table_analyse_add_stays_on_pattern() {
         const chart = openPattern();
+        keyboardWindow();
         const project = Session.project;
         const bank = project.currentExperiment;
         const page = Ui.page(app);
@@ -1103,7 +1119,8 @@ TestCase {
         tryCompare(Session.project, "calculating", false, 3000, "The normal candidate switch publishes its own calculation");
         compareProfile(bank.measCalcPoints().calc, profile);
         const texture = Probe.rows(bank.preferredOrientation).find(row => row.structureId === candidates[1].row.structureId);
-        verify(texture.marchR.fittable && texture.marchR.free, "The enabled candidate's inherited March parameter remains eligible and free");
+        verify(texture && texture.marchR.fittable, "The newly enabled candidate's inherited March parameter is eligible");
+        compare(texture.marchR.free, true, "The newly enabled candidate retains the parent's stored March free flag");
         const inactive = Probe.rows(bank.preferredOrientation).find(row => row.structureId === candidates[0].row.structureId);
         verify(!inactive.marchR.fittable, "The disabled candidate's texture does not enter the live fit vector");
         const free = Probe.rows(Session.project.parameters).filter(row => row.parameter.free && row.parameter.fittable);
@@ -1188,7 +1205,8 @@ TestCase {
     function test_equivalent_signed_rows_retain_derived_identity() {
         openInput("type-iv");
         const structure = Session.project.currentStructure;
-        const before = Source.typeIv;
+        const before = structure.text.text;
+        verify(before.includes("_space_group_symop_magn_operation.xyz"), "The current saved structure text carries the signed operation loop");
         const changed = before.replace(/\bx\s*,\s*y\s*,\s*z\s*,\s*\+?1\b/, "x+1,y,z,+1");
         verify(changed !== before, "The equivalent signed-row edit actually changes an identity representative by an integral translation");
         compare(Session.project.applyText(structure.text.file, changed), "", "The live Text edit accepts an equivalent signed decomposition");
