@@ -84,6 +84,14 @@ std::optional<ResolvedParameter> resolve_instrument_label(ExperimentBase& experi
         LineSegment& point = *experiment.background[index];
         return ResolvedParameter{&point.intensity, path_prefix + "background[" + point.id.value() + "].intensity"};
     }
+    // A Pawley intensity names its row of the bank's extracted intensities by position; its path
+    // names the row by its structure and its reflection.
+    if (label.rfind("extracted_intensity[", 0) == 0 && label.back() == ']') {
+        const std::size_t index = static_cast<std::size_t>(std::stoul(label.substr(20, label.size() - 21)));
+        if (index >= experiment.extracted_intensities.size()) return std::nullopt;
+        ExtractedIntensity& row = *experiment.extracted_intensities[index];
+        return ResolvedParameter{&row.f_squared, extracted_intensity_path(row, path_prefix)};
+    }
     // An unprefixed scale or texture label names the bank's one link and its one row; a bank of
     // several phases is addressed through `<structure>.scale` / `<structure>.march_*` only, so a
     // bare label never lands on the first phase.
@@ -732,16 +740,71 @@ std::vector<DescriptorEntry> model_descriptors(Project& project) {
     return entries;
 }
 
+std::string extracted_intensity_path(const ExtractedIntensity& row, const std::string& prefix) {
+    return prefix + "extracted_intensities[" + row.structure_id.value() + " " + std::to_string(row.index_h.get()) + " " +
+           std::to_string(row.index_k.get()) + " " + std::to_string(row.index_l.get()) + "].f_squared";
+}
+
+void copy_extracted_intensities(ExperimentBase& to, const ExperimentBase& from) {
+    const auto take = [](Parameter& target, const Parameter& source) {
+        if (target.value.get() != source.value.get()) {
+            target.value = source.value.get();
+            target.epoch = detail::Epoch();
+        }
+        if (target.free.get() != source.free.get()) {
+            target.free = source.free.get();
+        }
+        if (target.uncertainty.get() != source.uncertainty.get()) {
+            target.uncertainty = source.uncertainty.get();
+        }
+        if (target.start_value.get() != source.start_value.get()) {
+            target.start_value = source.start_value.get();
+        }
+        if (target.start_uncertainty.get() != source.start_uncertainty.get()) {
+            target.start_uncertainty = source.start_uncertainty.get();
+        }
+    };
+    bool same = to.extracted_intensities.size() == from.extracted_intensities.size();
+    for (std::size_t i = 0; same && i < to.extracted_intensities.size(); ++i) {
+        const ExtractedIntensity& held = *to.extracted_intensities[i];
+        const ExtractedIntensity& wanted = *from.extracted_intensities[i];
+        same = held.structure_id.value() == wanted.structure_id.value() && held.index_h.get() == wanted.index_h.get() &&
+               held.index_k.get() == wanted.index_k.get() && held.index_l.get() == wanted.index_l.get();
+    }
+    if (same) {
+        for (std::size_t i = 0; i < to.extracted_intensities.size(); ++i) {
+            take(to.extracted_intensities[i]->f_squared, from.extracted_intensities[i]->f_squared);
+        }
+        return;
+    }
+    std::vector<std::shared_ptr<ExtractedIntensity>> rows;
+    rows.reserve(from.extracted_intensities.size());
+    for (const auto& wanted : from.extracted_intensities) {
+        auto row = std::make_shared<ExtractedIntensity>();
+        row->structure_id = wanted->structure_id.value();
+        row->index_h = wanted->index_h.get();
+        row->index_k = wanted->index_k.get();
+        row->index_l = wanted->index_l.get();
+        take(row->f_squared, wanted->f_squared);
+        rows.push_back(std::move(row));
+    }
+    to.extracted_intensities.assign(std::move(rows));
+}
+
 bool copy_parameter_states(Project& to, Project& from) {
     const std::vector<ParameterEntry> targets = parameter_entries(to);
     const std::vector<ParameterEntry> sources = parameter_entries(from);
-    if (targets.size() != sources.size()) {
+    if (targets.size() != sources.size() || to.experiments.size() != from.experiments.size()) {
         return false;
     }
     for (std::size_t i = 0; i < targets.size(); ++i) {
         if (targets[i].path != sources[i].path || targets[i].parameter == nullptr || sources[i].parameter == nullptr) {
             return false;
         }
+    }
+    // The extracted rows are fit state too, not in the walks above: a fit makes and drops them (edi ADR-0109 §1).
+    for (std::size_t i = 0; i < to.experiments.size(); ++i) {
+        copy_extracted_intensities(*to.experiments[i], *from.experiments[i]);
     }
     for (std::size_t i = 0; i < targets.size(); ++i) {
         Parameter& target = *targets[i].parameter;

@@ -254,6 +254,18 @@ void put_experiment(Output& out, const ExperimentBase& experiment, Scope scope) 
             put_text(out, region->axis.value());
         }
     }
+    // The extracted intensities a Le Bail or Pawley structure is calculated with (edi ADR-0109); none adds nothing.
+    if (!experiment.extracted_intensities.empty()) {
+        out += 'I';
+        put_u64(out, experiment.extracted_intensities.size());
+        for (const auto& row : experiment.extracted_intensities) {
+            put_text(out, row->structure_id.value());
+            put_u64(out, static_cast<std::uint64_t>(static_cast<std::int64_t>(row->index_h.get())));
+            put_u64(out, static_cast<std::uint64_t>(static_cast<std::int64_t>(row->index_k.get())));
+            put_u64(out, static_cast<std::uint64_t>(static_cast<std::int64_t>(row->index_l.get())));
+            put_parameter(out, row->f_squared, scope);
+        }
+    }
     // ADR-0040: in auto mode the estimate settings decide the points a calculation uses, so they are its
     // inputs; what the points came from (the two digests) is not.
     put_text(out, experiment.background_estimate_mode.value_or(""));
@@ -434,6 +446,12 @@ void put_structure(Output& out, const Structure& structure, Scope scope) {
     for (const auto& entry : structure.scattering_lengths_fm) {  // std::map: key-ordered
         put_text(out, entry.first);
         put_double(out, entry.second);
+    }
+    // How the intensities are calculated (edi ADR-0109), an input of the pattern; Rietveld adds nothing, so a
+    // Rietveld structure's identity is unchanged.
+    if (!structure.calc_method.empty()) {
+        out += 'C';
+        put_text(out, structure.calc_method.value());
     }
     // `geom` is model state a save persists, but no pattern or reflection reads a bond cutoff,
     // so it is not a CALCULATION input (crysta's computed-input table agrees).
@@ -746,6 +764,7 @@ void refresh_relation_values(std::string& encoding,
 template class OneRow<CellCategory>;
 template class OneRow<SpaceGroupCategory>;
 template class OneRow<GeomCategory>;
+template class OneRow<StructureCategory>;
 template class OneRow<ExperimentTypeCategory>;
 template class OneRow<ScatteringSourceCategory>;
 template class OneRow<PeakCategory>;

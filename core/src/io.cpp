@@ -773,7 +773,8 @@ const std::set<std::string>& covered_categories() {
                                                   "cell",       "data_range",       "experiment_type",
                                                   "instrument",  "linked_structure",
                                                   "fit_parameter", "peak", "preferred_orientation",
-                                                  "scattering_length", "scattering_source"};
+                                                  "scattering_length", "scattering_source", "structure",
+                                                  "extracted_intensity"};
     return categories;
 }
 
@@ -853,6 +854,11 @@ const std::set<std::string>& known_covered_tags() {
         // lengths, fm — the model home of `Structure.scattering_lengths_fm`; absent = the
         // built-in table applies by element lookup)
         "_scattering_length.length_fm", "_scattering_length.type_symbol",
+        // _structure (how the structure's intensities are calculated, edi ADR-0109)
+        "_structure.calc_method",
+        // _extracted_intensity (the intensities a Le Bail or Pawley fit holds)
+        "_extracted_intensity.structure_id", "_extracted_intensity.index_h", "_extracted_intensity.index_k",
+        "_extracted_intensity.index_l", "_extracted_intensity.f_squared",
         // _peak
         "_peak.broad_gauss_sigma_0", "_peak.broad_gauss_sigma_1", "_peak.broad_gauss_sigma_2",
         "_peak.broad_gauss_size", "_peak.broad_gauss_strain", "_peak.broad_gauss_u",
@@ -1157,7 +1163,7 @@ Structure structure_from_block(const Block& block, const std::string& where) {
     for (const Loop& loop : block.loops) {
         for (const std::string& tag : loop.tags) {
             const std::string category = detail::one_row_category(tag);
-            if (category == "_cell" || category == "_space_group" || category == "_geom") {
+            if (category == "_cell" || category == "_space_group" || category == "_geom" || category == "_structure") {
                 fail_schema(where, "scalar-item-in-loop", tag + " is a scalar item, not a loop column");
             }
         }
@@ -1228,14 +1234,30 @@ Structure structure_from_block(const Block& block, const std::string& where) {
         }
     }
 
+    // How the structure's intensities are calculated (edi ADR-0109), absent for Rietveld. Its CIF name is read
+    // too; crysta decides which tokens there are.
+    const std::string* method = block.find("_structure.calc_method");
+    if (method == nullptr) {
+        method = block.find("_edi_structure.calc_method");
+    }
+    if (method != nullptr) {
+        structure.calc_method = *method == "rietveld" ? std::string() : *method;
+        try {
+            (void)calc_method_token(structure);
+        } catch (const std::exception& error) {
+            fail_domain(where, "unknown-calc-method", "_structure.calc_method '" + *method + "': " + error.what());
+        }
+    }
+
+    // A Le Bail or Pawley structure needs no atoms (edi ADR-0109); a Rietveld one does.
     const Loop* loop = block.loop_with("_atom_site.id");
-    if (loop == nullptr) {
+    if (loop == nullptr && !extracts_intensities(structure)) {
         fail_schema(where, "missing-atom-site-loop", "missing _atom_site loop");
     }
     // A site keeps the type its file declares (ADR-0027): `adp_iso` is read in that type,
     // and a file that declares none is Biso. An unknown type refuses.
-    const int adp_type_column = loop->column("_atom_site.adp_type");
-    for (const auto& row : loop->rows) {
+    const int adp_type_column = loop != nullptr ? loop->column("_atom_site.adp_type") : -1;
+    for (const auto& row : loop != nullptr ? loop->rows : std::vector<std::vector<std::string>>{}) {
         AtomSite site;
         site.id = loop_cell(*loop, row, "_atom_site.id", where);
         site.type_symbol = loop_cell(*loop, row, "_atom_site.type_symbol", where);
@@ -2111,6 +2133,11 @@ BraggPdExperiment single_crystal_from_block(const Block& block, const std::strin
             refuse_pattern_category(tag);
         }
     }
+    // Le Bail and Pawley take intensities from a powder pattern only (edi ADR-0109).
+    if (block_has_tag(block, "_extracted_intensity.f_squared") || block_has_tag(block, "_extracted_intensity.structure_id")) {
+        fail_schema(where, "pattern-category-on-single-crystal",
+                    "_extracted_intensity on a single crystal, which has no powder pattern");
+    }
     if (const std::string* probe = block.find("_experiment_type.radiation_probe")) {
         if (*probe != "neutron") {
             fail_schema(where, "unknown-radiation-probe",
@@ -2822,6 +2849,36 @@ BraggPdExperiment parse_experiment_block(const Block& block, const std::string& 
             regions.push_back(std::make_shared<ExcludedRegion>(region));
         }
         experiment.excluded_regions.assign(std::move(regions));
+    }
+
+    // The intensities a Le Bail or Pawley fit holds (edi ADR-0109), as written: a loop, or one row as items. The
+    // project's load maps each row to its orbit and checks its structure (settle_extracted_intensities).
+    if (const Loop* extracted = block.loop_with("_extracted_intensity.f_squared");
+        extracted != nullptr || block.find("_extracted_intensity.f_squared") != nullptr) {
+        const std::vector<std::vector<std::string>> one_row{{}};
+        const auto cell = [&](const std::vector<std::string>& row, const char* tag) -> const std::string& {
+            return extracted != nullptr ? loop_cell(*extracted, row, tag, where) : block.require(tag, where);
+        };
+        const auto miller = [&](const std::vector<std::string>& row, const char* tag) {
+            const std::string& text = cell(row, tag);
+            const double value = to_double(text, where);
+            if (value != std::floor(value) || std::abs(value) > 1.0e6) {
+                fail_schema(where, "invalid-miller-index", std::string(tag) + " '" + text + "' is not a Miller index");
+            }
+            return static_cast<int>(value);
+        };
+        std::vector<std::shared_ptr<ExtractedIntensity>> rows;
+        for (const auto& row : extracted != nullptr ? extracted->rows : one_row) {
+            auto item = std::make_shared<ExtractedIntensity>();
+            item->structure_id = cell(row, "_extracted_intensity.structure_id");
+            item->index_h = miller(row, "_extracted_intensity.index_h");
+            item->index_k = miller(row, "_extracted_intensity.index_k");
+            item->index_l = miller(row, "_extracted_intensity.index_l");
+            read_into(item->f_squared,
+                      parse_parameter(cell(row, spec::extracted_intensity_f_squared.edi_names[0]), where), where);
+            rows.push_back(std::move(item));
+        }
+        experiment.extracted_intensities.assign(std::move(rows));
     }
 
     experiment.carried_calculation =
@@ -3808,6 +3865,9 @@ static BraggPdExperiment load_experiment_file_unrecorded(const std::string& path
     return experiment;
 }
 
+static void settle_extracted_intensities(const Project& project, ExperimentBase& experiment, const std::string& where,
+                                         const std::function<void(const std::string&)>& warn);
+
 std::vector<BraggPdExperiment> load_experiment_edi_files(const Project& project,
                                                          const std::vector<std::string>& paths,
                                                          const WarningSink& on_warning) {
@@ -3820,6 +3880,7 @@ std::vector<BraggPdExperiment> load_experiment_edi_files(const Project& project,
         BraggPdExperiment experiment = load_experiment_file(path, on_warning);
         link_savable_names(experiment);
         require_held_links(project, experiment, path + ": ");
+        settle_extracted_intensities(project, experiment, path + ": ", on_warning);
         if (!names.insert(KeyTraits<BraggPdExperiment>::canonical(experiment.name)).second) {
             throw IoError(path + ": an experiment named '" +
                           detail::printable_id(experiment.name) + "' is already " +
@@ -3856,6 +3917,91 @@ void require_held_links(const Project& project, const BraggPdExperiment& experim
                           "' (_linked_structure.structure_id), which the project does not hold");
         }
     }
+}
+
+// A loaded experiment's extracted rows against the project's structures (edi ADR-0109): each row names a
+// structure the project holds and is moved to its orbit's key, one row per orbit. A Rietveld structure's rows are not
+// read, with one warning.
+static void settle_extracted_intensities(const Project& project, ExperimentBase& experiment, const std::string& where,
+                                         const std::function<void(const std::string&)>& warn) {
+    if (experiment.extracted_intensities.empty()) {
+        return;
+    }
+    const std::string named = where + "experiment '" + detail::printable_id(experiment.name.value()) + "': ";
+    const auto structure_of = [&project](const std::string& id) -> const Structure* {
+        const std::string key = datablock_key(id, "structure");
+        for (const auto& held : project.structures) {
+            if (datablock_key(held->name, "structure") == key) {
+                return held.get();
+            }
+        }
+        return nullptr;
+    };
+    // The rows of each structure, so its symmetry is resolved once.
+    std::map<const Structure*, std::vector<std::size_t>> rows_of;
+    std::set<std::string> dropped;
+    for (std::size_t index = 0; index < experiment.extracted_intensities.size(); ++index) {
+        const ExtractedIntensity& row = *experiment.extracted_intensities[index];
+        const Structure* structure = structure_of(row.structure_id.value());
+        if (structure == nullptr) {
+            throw IoError(named + "_extracted_intensity names the structure '" +
+                          detail::printable_id(row.structure_id.value()) + "', which the project does not hold");
+        }
+        if (!extracts_intensities(*structure)) {
+            dropped.insert(structure->name.value());
+            continue;
+        }
+        rows_of[structure].push_back(index);
+    }
+    std::vector<std::array<int, 3>> orbit(experiment.extracted_intensities.size());
+    for (const auto& [structure, indices] : rows_of) {
+        std::vector<std::array<int, 3>> written;
+        written.reserve(indices.size());
+        for (const std::size_t index : indices) {
+            const ExtractedIntensity& row = *experiment.extracted_intensities[index];
+            written.push_back({row.index_h.get(), row.index_k.get(), row.index_l.get()});
+        }
+        std::vector<std::array<int, 3>> keys;
+        try {
+            keys = extracted_intensity_keys(*structure, written);
+        } catch (const std::exception& error) {
+            throw IoError(named + "_extracted_intensity of the structure '" +
+                          detail::printable_id(structure->name.value()) + "': " + error.what());
+        }
+        std::set<std::array<int, 3>> seen;
+        for (std::size_t at = 0; at < indices.size(); ++at) {
+            if (!seen.insert(keys.at(at)).second) {
+                throw IoError(named + "_extracted_intensity gives two rows of the reflection " +
+                              std::to_string(keys[at][0]) + " " + std::to_string(keys[at][1]) + " " +
+                              std::to_string(keys[at][2]) + " of the structure '" +
+                              detail::printable_id(structure->name.value()) + "'");
+            }
+            orbit[indices[at]] = keys[at];
+        }
+    }
+    // Fresh rows in file order, each at its orbit's key.
+    std::vector<std::shared_ptr<ExtractedIntensity>> kept;
+    for (std::size_t index = 0; index < experiment.extracted_intensities.size(); ++index) {
+        const ExtractedIntensity& row = *experiment.extracted_intensities[index];
+        const Structure* structure = structure_of(row.structure_id.value());
+        if (structure == nullptr || !extracts_intensities(*structure)) {
+            continue;
+        }
+        auto settled = std::make_shared<ExtractedIntensity>();
+        settled->structure_id = row.structure_id.value();
+        settled->index_h = orbit[index][0];
+        settled->index_k = orbit[index][1];
+        settled->index_l = orbit[index][2];
+        settled->f_squared = row.f_squared;
+        kept.push_back(std::move(settled));
+    }
+    for (const std::string& name : dropped) {
+        if (warn) {
+            warn(named + "the extracted intensities of the Rietveld structure '" + detail::printable_id(name) +
+                 "' are not read");
+        }
+    }
+    experiment.extracted_intensities.assign(std::move(kept));
 }
 
 void add_loaded_experiment(Project& project, BraggPdExperiment experiment) {
@@ -4165,6 +4311,7 @@ static Project load_project_folder(const std::string& directory, const WarningSi
         // prior save-value adoption role omits this separate check (ADR-0052).
         if (policy!=ProjectLoadPolicy::SavedValues) {
             require_held_links(project, experiment, "project " + directory + ": ", file.string());
+            settle_extracted_intensities(project, experiment, "project " + directory + ": ", warn);
         }
         experiment_source[datablock_key(experiment.name, "experiment")] = source;
         project.experiments.push_back(std::move(experiment));

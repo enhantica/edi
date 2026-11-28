@@ -147,6 +147,8 @@ struct StructuresUndo {
         const ExperimentBase* experiment = nullptr;
         std::vector<LinkedStructure> links;
         std::vector<PrefOrient> texture;
+        // The structures' extracted intensities (edi ADR-0109), which a switch of method or a removal changes.
+        std::vector<ExtractedIntensity> extracted{};
     };
     std::vector<Structure> structures;
     std::vector<ExperimentRows> experiments;
@@ -168,6 +170,9 @@ inline StructuresUndo capture_structures(const Project& project) {
         }
         for (const auto& row : experiment->preferred_orientation) {
             rows.texture.push_back(*row);
+        }
+        for (const auto& row : experiment->extracted_intensities) {
+            rows.extracted.push_back(*row);
         }
         before.experiments.push_back(std::move(rows));
     }
@@ -882,6 +887,15 @@ class Edit {
     static Edit magnetic_space_group(Structure& structure, std::string number_bns) {
         return Edit([&structure, number_bns = std::move(number_bns)] { set_magnetic_space_group(structure, number_bns); });
     }
+    // A structure's calculation method (select_calc_method) with the scale starts a switch to Rietveld gives its links,
+    // one step to undo (edi ADR-0109 §2). `outcome`, when given, receives which links took a start.
+    static Edit calc_method(Project& project, Structure& structure, std::string token,
+                            const std::shared_ptr<CalcMethodOutcome>& outcome = nullptr) {
+        return Edit([&project, &structure, token = std::move(token), outcome] {
+            CalcMethodOutcome done = select_calc_method(project, structure, token);
+            if (outcome) *outcome = std::move(done);
+        });
+    }
     // Crystal or Magnetic (set_structure_magnetic).
     static Edit structure_magnetic(Structure& structure, bool magnetic) {
         return Edit([&structure, magnetic] { set_structure_magnetic(structure, magnetic); });
@@ -1315,6 +1329,7 @@ class Edit {
             structures.erase(structures.begin() + static_cast<std::ptrdiff_t>(index));
             std::vector<std::vector<ItemVec<LinkedStructure>::Ptr>> links;
             std::vector<std::vector<ItemVec<PrefOrient>::Ptr>> texture;
+            std::vector<std::vector<ItemVec<ExtractedIntensity>::Ptr>> extracted;
             for (const auto& experiment : project.experiments) {
                 auto& kept_links = links.emplace_back();
                 for (const auto& link : experiment->linked_structures) {
@@ -1328,10 +1343,20 @@ class Edit {
                         kept_texture.push_back(row);
                     }
                 }
+                // Its extracted intensities go with it.
+                auto& kept_rows = extracted.emplace_back();
+                for (const auto& row : experiment->extracted_intensities) {
+                    if (spelled_structure(row->structure_id.value()) != name) {
+                        kept_rows.push_back(row);
+                    }
+                }
             }
             for (std::size_t i = 0; i < project.experiments.size(); ++i) {
                 project.experiments[i]->linked_structures.assign(std::move(links[i]));
                 project.experiments[i]->preferred_orientation.assign(std::move(texture[i]));
+                if (extracted[i].size() != project.experiments[i]->extracted_intensities.size()) {
+                    project.experiments[i]->extracted_intensities.assign(std::move(extracted[i]));
+                }
             }
             project.structures.assign(std::move(structures));
         });
@@ -1423,7 +1448,8 @@ class Edit {
             ItemVec<Structure> prepared_structures(std::move(structures));
             std::vector<ItemVec<LinkedStructure>> links;
             std::vector<ItemVec<PrefOrient>> textures;
-            links.reserve(experiments.size()); textures.reserve(experiments.size());
+            std::vector<ItemVec<ExtractedIntensity>> extracted;
+            links.reserve(experiments.size()); textures.reserve(experiments.size()); extracted.reserve(experiments.size());
             for (const auto& rows : before->experiments) {
                 std::vector<ItemVec<LinkedStructure>::Ptr> linked;
                 linked.reserve(rows.links.size());
@@ -1433,6 +1459,10 @@ class Edit {
                 texture.reserve(rows.texture.size());
                 for (const auto& row : rows.texture) texture.push_back(std::make_shared<PrefOrient>(row));
                 textures.emplace_back(std::move(texture));
+                std::vector<ItemVec<ExtractedIntensity>::Ptr> intensities;
+                intensities.reserve(rows.extracted.size());
+                for (const auto& row : rows.extracted) intensities.push_back(std::make_shared<ExtractedIntensity>(row));
+                extracted.emplace_back(std::move(intensities));
             }
             std::vector<std::pair<Parameter*,const RelationsUndo::ParameterState*>> targets;
             ItemVec<ParameterAlias> aliases;
@@ -1475,6 +1505,7 @@ class Edit {
             for (std::size_t i=0;i<experiments.size();++i) {
                 experiments[i]->linked_structures=std::move(links[i]);
                 experiments[i]->preferred_orientation=std::move(textures[i]);
+                experiments[i]->extracted_intensities=std::move(extracted[i]);
             }
             if (before->related) {
                 project.aliases=std::move(aliases);project.constraints=std::move(constraints);

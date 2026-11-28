@@ -249,6 +249,27 @@ void set_background_domain(ExperimentBase& experiment, bool end, double value);
 // An empty token clears the item back to its default.
 void select_scattering_source(ExperimentBase& experiment, ScatteringSourceItem item,
                               const std::string& token);
+// A structure's calculation method (edi ADR-0109): the tokens crysta offers it, Rietveld first; its own token; and
+// crysta's reason when it offers Rietveld alone (a link to a single crystal or a total-scattering experiment), else
+// empty. When crysta cannot read the project yet, the structure's own token alone, with crysta's refusal as the reason.
+struct CalcMethodChoice {
+    std::vector<std::string> tokens;
+    std::string current;
+    std::string reason;
+};
+CalcMethodChoice calc_method_choice(const Project& project, const Structure& structure);
+// What a switch did to the scales: after a switch to Rietveld, the experiments in which an enabled link of the structure,
+// with measured data, took crysta's scale start, and those in which it kept its scale because crysta gives none.
+struct CalcMethodOutcome {
+    std::vector<std::string> scaled;
+    std::vector<std::string> unscaled;
+};
+// Switch the structure's method through crysta's set_calc_method: a token crysta does not offer is refused with its
+// reason and nothing changes. The structure's extracted rows follow crysta (cleared in every experiment on a switch to
+// Rietveld, freed from Le Bail to Pawley). After a switch to Rietveld every enabled link of the structure, in an
+// experiment with measured data, takes crysta's rietveld_scale_start. Atoms, displacements, moments and their free
+// flags are never changed.
+CalcMethodOutcome select_calc_method(Project& project, Structure& structure, const std::string& token);
 // The fitting mode a fit runs: the declared one, else `single` (the Python Analysis.fit dispatch's
 // fall-through for an undeclared mode).
 inline std::string effective_fitting_mode(const Project& project) {

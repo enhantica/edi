@@ -163,6 +163,8 @@ inline constexpr const char* kScaleCif[] = {"_easydiffraction_sc_crystal_block.s
 inline constexpr const char* kBackgroundIntensity[] = {"_background.intensity"};
 inline constexpr const char* kBackgroundIntensityCif[] = {"_pd_background.line_segment_intensity",
                                                    "_pd_background_line_segment_intensity"};
+inline constexpr const char* kExtractedIntensity[] = {"_extracted_intensity.f_squared"};
+inline constexpr const char* kExtractedIntensityCif[] = {"_edi_extracted_intensity.f_squared"};
 inline constexpr const char* kBackgroundCoef[] = {"_background.coef"};
 inline constexpr const char* kBackgroundCoefCif[] = {"_pd_background.Chebyshev_coef"};
 inline constexpr const char* kAbscor1[] = {"_absorption.abscor1"};
@@ -297,6 +299,10 @@ inline const ParameterSpec instrument_wavelength_2_to_1_ratio{"instrument", "set
 
 inline const ParameterSpec linked_structure_scale{"linked_structure", "scale", "dimensionless", detail::kUnbounded, detail::kScale, detail::kScaleCif};
 inline const ParameterSpec background_intensity{"background", "intensity", "arbitrary", detail::kUnbounded, detail::kBackgroundIntensity, detail::kBackgroundIntensityCif};
+
+// A Laue orbit's extracted |F|² in the units of F² calc (crysta's dictionary row
+// extracted_intensity.f_squared, ge 0); fitted on a Pawley structure only.
+inline const ParameterSpec extracted_intensity_f_squared{"extracted_intensity", "f_squared", "dimensionless", {0.0, detail::kInf}, detail::kExtractedIntensity, detail::kExtractedIntensityCif};
 
 // A polynomial or Chebyshev background term's coefficient (diffraction-lib
 // `PolynomialTerm.coef`).
