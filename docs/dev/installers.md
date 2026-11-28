@@ -74,12 +74,16 @@ For a testing prerelease, manually run **Desktop installers** with
 installers, and attaches the online ZIPs to a GitHub prerelease draft. A
 maintainer reviews and publishes the draft.
 
-Every release carries all its files: the online ZIPs, the CLI ZIPs, the
-wheels, one `EasyDiffraction-<version>-<platform>-<channel>-components.zip`
-per platform holding the tested component repository with its relative
-paths, and a `SHA256SUMS` manifest of them. The Pages site keeps only the
-current release's wheels next to the package index; older versions in the
-index link their GitHub release assets.
+Every release carries all its files: the installers, the CLI ZIPs, the
+wheels and a `SHA256SUMS` manifest of them. Each stable component archive is
+its own asset, `component-<platform>-<component>-<version><archive>.7z`.
+Per platform, `repoindex-stable-<platform>.tar.gz` holds what
+download.easydiffraction.org serves itself: `Updates.xml`, the `.sha1` and
+`meta.7z` files, and an `.htaccess` that redirects each archive to its asset
+([ADR-0071](adrs/0071-desktop-installers.md)). `repository-stable-<platform>.tar.gz`
+still holds the complete repository. The Pages site keeps only the current
+release's wheels next to the package index; older versions in the index link
+their GitHub release assets.
 
 Enable `publish_components` to deploy the qualified component repositories
 under `repository/testing/<platform>/` and refresh the testing update feed.
