@@ -502,6 +502,14 @@ def failed_update(target: Path, maintenance: Path, output: Path, options: dict) 
     # Kept in the installation's log with the rest of its output.
     options['stdout'].write(result.stdout)
     options['stdout'].flush()
+    if SYSTEM == 'windows':
+        # The diagnostics upload needs a later step, so the job log shows what the rollback undid.
+        undone = [
+            line
+            for line in result.stdout.splitlines()
+            if any(word in line.casefold() for word in ('undo', 'roll', 'maintenancetool'))
+        ]
+        print('protocol check: the failed update says', *undone[-60:], sep='\n  ', flush=True)
     if result.returncode == 0:
         raise RuntimeError('The update meant to fail succeeded')
     if ROLLBACK_TEXT not in result.stdout.casefold():

@@ -59,6 +59,13 @@ Component.prototype.createOperations = function () {
                                swap.item, swap.probe);
         return;
     }
+    if (systemInfo.kernelType === "winnt") {
+        // A failed update's rollback leaves the staged tool it unpacked (measured on CI), so this operation's undo
+        // removes it. A successful update has moved it into place already. cmd.exe needs backslashes here.
+        var staged = installer.value("TargetDir").replace(/\//g, "\\") + "\\maintenancetool\\MaintenanceTool.exe";
+        component.addOperation("Execute", "cmd.exe", "/c", "rem", "UNDOEXECUTE", "cmd.exe", "/c", "if", "exist", staged,
+                               "del", "/f", "/q", staged);
+    }
     if (installer.isUpdater() && stagedTool() !== "")
         installer.setInstallerBaseBinary(stagedTool());
 };

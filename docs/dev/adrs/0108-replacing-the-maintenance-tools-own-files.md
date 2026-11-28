@@ -111,7 +111,10 @@ update replaces while the tool runs. So the runtime takes the bundle's design ra
    moves it into place as the update's tool quits, after every script has run, and leaves `maintenancetool\` empty
    (measured on CI). The app at start removes the folder when it is empty, or when the installed `MaintenanceTool.exe`
    has the same bytes as the staged one, as after a first installation: until then an update may still need it, and
-   without it the Framework would write an unsigned tool (ADR-0091).
+   without it the Framework would write an unsigned tool (ADR-0091). The rollback of a failed update leaves the tool
+   it staged (measured on CI), so the tool component adds an operation after its unpack whose undo deletes
+   `maintenancetool\MaintenanceTool.exe`; the rollback runs it, and so do the next update's and the purge's undo of the
+   saved operations, after which the staged tool is no longer needed.
 
 6. **Purge.** On a successful uninstallation the control script removes `<item>.old`, `<item>.old-token`,
    `maintenancetool/` and `.MaintenanceTool.lock`, and on Linux `installer-runtime/`, which no operation owns any
