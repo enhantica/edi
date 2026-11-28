@@ -49,14 +49,20 @@ def test_success_removes_maintenance_tool_update_debris(tmp_path, driver):
             'The legacy run must load the controller shipped in 2026.11.27'
         )
     target = tmp_path / 'install with spaces'
-    staging = target / 'maintenancetool'
+    staging = target / 'maintenance-update'
+    legacy_staging = target / 'maintenancetool'
     installed = put_tool(target / BUNDLE, OLD_BYTES)
-    put_tool(staging / BUNDLE, NEW_BYTES)
-    (staging / '.DS_Store').write_bytes(b'Finder view metadata')
+    put_tool(legacy_staging / BUNDLE, OLD_BYTES)
     meta = tmp_path / 'meta'
     meta.mkdir()
     package.write_maintenance_tool_metadata(meta, '26.18')
-    for phase in ('swap', 'finish'):
+    for phase in ('claim', 'swap', 'finish'):
+        if phase == 'swap':
+            assert (staging / '.claim').is_file(), (
+                'The incoming component claims the update staging before IFW unpacks the bundle'
+            )
+            put_tool(staging / BUNDLE, NEW_BYTES)
+            (staging / '.DS_Store').write_bytes(b'Finder view metadata')
         result = subprocess.run(
             [
                 str(node),
@@ -87,12 +93,15 @@ def test_success_removes_maintenance_tool_update_debris(tmp_path, driver):
             assert (target / f'{BUNDLE}.old' / EXECUTABLE).read_bytes() == OLD_BYTES, (
                 'The original installed tool must remain recoverable until the update finishes'
             )
+            assert (target / f'{BUNDLE}.old-token').is_file(), (
+                'The kept tool has its ownership mark until the update finishes'
+            )
     assert installed.read_bytes() == NEW_BYTES, (
         'A successful update retains the newly installed tool'
     )
-    debris = [target / f'{BUNDLE}.old', target / f'{BUNDLE}.old-token', staging]
+    debris = [target / f'{BUNDLE}.old', target / f'{BUNDLE}.old-token', staging, legacy_staging]
     assert not any(path.exists() for path in debris), (
-        'Success removes the kept tool, its mark and nonempty staging with either controller'
+        'Success removes the kept tool, its mark and both staging layouts with either controller'
     )
 
 

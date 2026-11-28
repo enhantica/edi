@@ -10,9 +10,9 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-28T11:52:27Z
+# measured_utc = 2026-11-28T18:35:27Z
 #
-# Recorded from: merged pytest collection and matching banked parent records
+# Recorded from: measured test run (8 node(s) measured once, 187690 banked, 0 stale row(s) dropped)
 # Collected tests: 267636; with a reported duration: 86319
 # Module-scoped fixture costs recorded: 223
 #
@@ -182983,8 +182983,8 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_token_readers.p
 0.260	tests/integration/py/test_magnetic_uncertainty_states.py::test_dependent_uncertainty_comes_from_the_relation_graph_after_reload[tied-0.2]
 0.300	tests/integration/py/test_magnetic_uncertainty_states.py::test_dependent_uncertainty_comes_from_the_relation_graph_after_reload[undefined-tied-None]
 0.090	tests/integration/py/test_magnetic_uncertainty_states.py::test_unrelated_undefined_seed_preserves_a_known_correlation_pair_on_second_save
-0.150	tests/integration/py/test_maintenance_update_rollback.py::test_failed_first_linux_update_preserves_the_released_tools_runtime
-0.120	tests/integration/py/test_maintenance_update_rollback.py::test_linux_tool_starts_with_its_original_runtime_after_the_app_update_is_undone
+0.320	tests/integration/py/test_maintenance_update_rollback.py::test_failed_first_linux_update_preserves_the_released_tools_runtime
+0.230	tests/integration/py/test_maintenance_update_rollback.py::test_linux_tool_starts_with_its_original_runtime_after_the_app_update_is_undone
 0.000	tests/integration/py/test_maintenance_update_rollback.py::test_windows_rollback_requires_the_observed_new_tool_to_be_undone[failed-before-staging]
 0.000	tests/integration/py/test_maintenance_update_rollback.py::test_windows_rollback_requires_the_observed_new_tool_to_be_undone[new-tool-left-behind]
 0.000	tests/integration/py/test_maintenance_update_rollback.py::test_windows_rollback_requires_the_observed_new_tool_to_be_undone[previous-restored]
@@ -254559,8 +254559,8 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_magnetic_token_consumer_inven
 UNMEASURED:failed-in-this-run	tests/system/py/test_magnetic_token_consumer_inventory.py::test_every_magnetic_value_path_reaches_the_decoder_and_strict_number_boundary
 0.036	tests/system/py/test_maintenance_update_macos.py::test_app_opens_the_kept_tool_after_a_stopped_swap
 0.030	tests/system/py/test_maintenance_update_macos.py::test_starting_app_during_live_swap_leaves_the_kept_bundle
-0.240	tests/system/py/test_maintenance_update_macos.py::test_success_removes_maintenance_tool_update_debris[2026.11.27]
-0.170	tests/system/py/test_maintenance_update_macos.py::test_success_removes_maintenance_tool_update_debris[current]
+0.540	tests/system/py/test_maintenance_update_macos.py::test_success_removes_maintenance_tool_update_debris[2026.11.27]
+0.580	tests/system/py/test_maintenance_update_macos.py::test_success_removes_maintenance_tool_update_debris[current]
 0.030	tests/system/py/test_metadata_build_policy.py::test_an_innocently_named_target_cannot_hide_app_compilation[cmake]
 0.020	tests/system/py/test_metadata_build_policy.py::test_an_innocently_named_target_cannot_hide_app_compilation[ninja]
 0.090	tests/system/py/test_metadata_build_policy.py::test_metadata_permission_follows_commands_even_with_an_app_target_name[cmake-edi_app]

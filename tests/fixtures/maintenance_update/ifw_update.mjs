@@ -63,7 +63,9 @@ runInContext("new Controller()", controllerContext);
 const componentContext = createContext({ ...globals });
 runInContext(readFileSync(componentScript, "utf8"), componentContext);
 const tool = runInContext("new Component()", componentContext);
-if (phase === "swap") {
+if (phase === "claim") {
+    tool.beginInstallation();
+} else if (phase === "swap") {
     tool.createOperations();
     if (operations.length !== 1 || operations[0][0] !== "Execute")
         throw new Error("The repository tool component must schedule one executable swap");

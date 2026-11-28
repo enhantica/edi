@@ -70,10 +70,16 @@ const installer = {
     componentByName: name => components[name],
     fileExists: file => fs.existsSync(file),
     interrupt() { this.status = QInstaller.Canceled; },
-    execute(program, args, input) {
+    execute(program, args) {
         const expand = value => value.replaceAll('@TargetDir@', target);
-        const ran = spawnSync(expand(program), args.map(expand), {input, encoding: 'utf8'});
-        return ran.error ? [] : [ran.stdout, ran.status];
+        const ran = spawnSync(expand(program), args.map(expand), {
+            stdio: ['ignore', 'pipe', 'pipe'], encoding: 'utf8'
+        });
+        if (ran.error)
+            throw new Error(`Could not launch ${program}: ${ran.error.code}`);
+        if (ran.status !== 0)
+            process.stderr.write(ran.stderr);
+        return [ran.stdout, ran.status];
     }
 };
 function loadComponent(id, name) {
@@ -117,10 +123,20 @@ for (const {callbacks} of selected)
     callbacks.beginInstallation?.();
 if (installer.status !== QInstaller.Running)
     throw new Error('The update stopped before the injected failure');
+const library = 'lib/libQt6Core.so.6';
+const runtime = path.join(target, 'installer-runtime', library);
+const backup = path.join(target, 'installer-runtime.old', library);
+if (!fs.existsSync(backup) || !fs.readFileSync(backup).equals(fs.readFileSync(runtime))
+    || !fs.existsSync(path.join(target, 'installer-runtime.old-token')))
+    throw new Error('The updater must keep the released runtime before undoing its extraction');
+if (!fs.existsSync(path.join(target, 'maintenance-update', '.claim')))
+    throw new Error('The updater must claim staging before unpacking');
 undoExtract(oldApp, target);
 for (const {payload} of selected)
     fs.cpSync(payload, target, {recursive: true});
 const extracted = fs.readFileSync(path.join(target, appMarker), 'utf8');
+if (fs.existsSync(runtime))
+    throw new Error('The released extraction must have removed the runtime before the failure');
 for (const {payload} of [...selected].reverse())
     undoExtract(payload, target);
 installer.status = QInstaller.Failure;
@@ -142,26 +158,26 @@ def windows_protocol(monkeypatch):
 
 
 @pytest.mark.parametrize(
-    ('observed_tool', 'staged_after', 'error'),
+    ('observed_tool', 'staged_before', 'staged_after', 'error'),
     [
-        (True, None, None),
-        (True, 'online', None),
-        (False, None, 'before it unpacked'),
-        (True, 'failing-26.18', 'left the 26.18 maintenance tool'),
+        (True, None, None, None),
+        (True, 'online', 'online', None),
+        (False, None, None, 'before it unpacked'),
+        (True, None, 'failing-26.18', r'left .*26\.18.*MaintenanceTool\.update\.exe'),
     ],
     ids=['removed', 'previous-restored', 'failed-before-staging', 'new-tool-left-behind'],
 )
 def test_windows_rollback_requires_the_observed_new_tool_to_be_undone(
-    windows_protocol, tmp_path, monkeypatch, observed_tool, staged_after, error
+    windows_protocol, tmp_path, monkeypatch, observed_tool, staged_before, staged_after, error
 ):
     target = tmp_path / 'Program Files' / 'EasyDiffraction'
     target.mkdir(parents=True)
     tool = target / 'MaintenanceTool.exe'
     tool.write_bytes(RELEASES['online'])
-    staged = target / 'maintenancetool' / tool.name
-    if staged_after:
-        staged.parent.mkdir()
-        staged.write_bytes(RELEASES[staged_after])
+    staged = target / 'MaintenanceTool.update.exe'
+    if staged_before:
+        staged.write_bytes(RELEASES[staged_before])
+    before = hashlib.sha256(staged.read_bytes()).hexdigest() if staged.is_file() else None
     for release, content in RELEASES.items():
         (tmp_path / release).mkdir()
         (tmp_path / release / 'installer.json').write_text(
@@ -171,12 +187,19 @@ def test_windows_rollback_requires_the_observed_new_tool_to_be_undone(
 
     evidence = tmp_path / 'failed-operation.txt'
     app = target / 'bin/EasyDiffraction.exe'
-    paths = [app, staged] if observed_tool else [app]
+    unpacked = staged if observed_tool else target / 'maintenancetool' / tool.name
+    unpacked.parent.mkdir(exist_ok=True)
+    unpacked.write_bytes(RELEASES['failing-26.18' if observed_tool else 'online'])
     evidence.write_text(
-        '\n'.join(str(path).replace('/', '\\') for path in paths) + '\n',
+        '\n'.join(str(path).replace('/', '\\') for path in (app, unpacked)) + '\n',
         encoding='utf-8',
     )
     found = windows_protocol.failure_evidence(evidence, target)
+    found['staged_before'] = before
+    if staged_after:
+        staged.write_bytes(RELEASES[staged_after])
+    else:
+        staged.unlink(missing_ok=True)
     monkeypatch.setattr(windows_protocol, 'failed_update', lambda *_args: found)
     args = (target, tool, app, tmp_path, {'env': {}})
     if error:
@@ -253,10 +276,6 @@ def remove_extracted_files(payload, target):
 
 @pytest.fixture
 def linux_packaging(tmp_path, monkeypatch):
-    case_probe = tmp_path / 'MaintenanceTool-case-probe'
-    case_probe.touch()
-    if case_probe.with_name(case_probe.name.lower()).exists():
-        pytest.skip('Linux tool and staging names require a case-sensitive filesystem')
     monkeypatch.setattr(package, 'SYSTEM', 'linux')
     monkeypatch.setattr(package, 'SUFFIX', '')
     monkeypatch.setattr(package, 'write_resources', lambda *_args: None)
@@ -349,11 +368,18 @@ def test_failed_first_linux_update_preserves_the_released_tools_runtime(tmp_path
     )  # fmt: skip
     assert (result.returncode, result.stdout) == (0, b'26.18'), (
         'The first update reaches the injected failure after extracting the new app'
+        + result.stderr.decode(errors='replace')
     )
-    assert not (target / APP).exists() and tool.read_bytes() == tool_bytes, (
-        'First-update rollback removes the new app and preserves the released executable'
-    )
+    assert (
+        not (target / APP).exists()
+        and tool.read_bytes() == tool_bytes
+        and os.access(tool, os.X_OK)
+    ), 'First-update rollback removes the new app and preserves the released executable and mode'
     after = subprocess.run([tool], capture_output=True, timeout=4, check=False)
     assert (after.returncode, after.stdout) == (0, original_runtime), (
         'A failed first update off 2026.11 leaves its tool able to load its original Qt runtime'
     )
+    assert not any(
+        (target / name).exists()
+        for name in ('installer-runtime.old', 'installer-runtime.old-token', 'maintenance-update')
+    ), 'Rollback consumes the runtime backup and releases the failed update staging'
