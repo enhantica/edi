@@ -32,9 +32,9 @@ FullProf's other fitted values, for comparison (`fullprof/le-bail.out`): zero 0.
 V -0.11505(667), W 0.11203(321), Y 0.10289(177), background 171.1, 162.1, 164.7, 172.1, 173.1. Its Rietveld fit of
 the same start (`pd-neut-cwl_lbco-hrpt`) gives the cell 3.8907845 Å and R<sub>wp</sub> 7.21 %.
 
-The project is not executing yet (`projects.yml`): it runs once edi fits a Le Bail structure. Then the two-s.u. cell
-bound becomes two of edi's s.u., as `tools/cli_projects/catalogue_expected.py` sets it, and the iterations and reduced
-χ² are added as regression pins.
+crysta's Le Bail fit of this project (`crysta fit`, 28 November 2026) gives R<sub>wp</sub> 7.537 % and the cell
+3.8907915 Å, 0.7 of FullProf's s.u. from its Le Bail cell. The iterations and reduced χ² are not pinned yet: the first
+CI run of edi's fit gives them.
 
 ## Files (sha256)
 
