@@ -784,9 +784,10 @@ void ClaudeSession::maybeReadbacksDone() {
     }
     readbacks_done_ = true;
     readback_timer_.stop();
-    // The plan's limits as /usage shows them (an experimental request of the pinned binary): read by the connect
-    // process, so they show before the first turn, and after each turn. A thread's input follows its readbacks directly.
-    if (purpose_ == Purpose::Probe) control(QStringLiteral("get_usage"), {{QStringLiteral("skip_behaviors"), true}});
+    // The plan's limits as /usage shows them (an experimental request of the pinned binary): read by every process
+    // once its readbacks pass, and after each turn. The connect process is retired as soon as a conversation opens,
+    // usually before its reply comes, so the thread's own process reads them again before the first turn.
+    control(QStringLiteral("get_usage"), {{QStringLiteral("skip_behaviors"), true}});
     // A model chosen while this process was starting.
     if (!model_.isEmpty() && model_ != process_model_ && purpose_ != Purpose::Probe) {
         control(QStringLiteral("set_model"), {{QStringLiteral("model"), model_}});
