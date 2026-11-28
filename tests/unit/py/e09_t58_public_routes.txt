@@ -54,6 +54,7 @@ BraggPdExperiment.excluded_region_ids	other-public
 BraggPdExperiment.excluded_regions	other-public
 BraggPdExperiment.extinction	other-public
 BraggPdExperiment.experiment_type	other-public
+BraggPdExperiment.extracted_intensities	other-public
 BraggPdExperiment.instrument	other-public
 BraggPdExperiment.linked_structure	other-public
 BraggPdExperiment.name	other-public
@@ -106,6 +107,7 @@ DomainValidationError.with_traceback	other-public
 ExperimentBase	other-public
 ExperimentBase.dataset_weight	other-public
 ExperimentBase.experiment_type	other-public
+ExperimentBase.extracted_intensities	other-public
 ExperimentBase.linked_structure	other-public
 ExperimentBase.name	other-public
 ExperimentBase.parameters	other-public
@@ -140,6 +142,13 @@ Experiments.names	other-public
 Experiments.remove	other-public
 Experiments.show_names	other-public
 Experiments.values	other-public
+ExtractedIntensity	other-public
+ExtractedIntensity.f_squared	other-public
+ExtractedIntensity.f_squared_su	other-public
+ExtractedIntensity.index_h	other-public
+ExtractedIntensity.index_k	other-public
+ExtractedIntensity.index_l	other-public
+ExtractedIntensity.structure_id	other-public
 FitPreamble	other-public
 FitPreamble.pre_fit	other-public
 FitResultBase	other-public
@@ -231,6 +240,7 @@ PdExperimentBase.excluded_region_ids	other-public
 PdExperimentBase.excluded_regions	other-public
 PdExperimentBase.extinction	other-public
 PdExperimentBase.experiment_type	other-public
+PdExperimentBase.extracted_intensities	other-public
 PdExperimentBase.linked_structure	other-public
 PdExperimentBase.name	other-public
 PdExperimentBase.parameters	other-public
@@ -308,6 +318,7 @@ ScanPreamble.total_files	other-public
 ScExperimentBase	other-public
 ScExperimentBase.dataset_weight	other-public
 ScExperimentBase.experiment_type	other-public
+ScExperimentBase.extracted_intensities	other-public
 ScExperimentBase.linked_structure	other-public
 ScExperimentBase.name	other-public
 ScExperimentBase.parameters	other-public
@@ -328,6 +339,7 @@ SpaceGroup.it_number	other-public
 SpaceGroup.name_h_m	other-public
 Structure	other-public
 Structure.atom_sites	other-public
+Structure.calc_method	other-public
 Structure.cell	other-public
 Structure.name	other-public
 Structure.parameters	other-public
