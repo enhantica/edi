@@ -7,6 +7,7 @@
 // entity-path rule are crysta's, reached through the adapter — one decision for both products rather
 // than a parity to prove.
 
+#include "crysta/expression.hpp"
 #include "edi/io.hpp"
 
 #include "edi/project_import.hpp"
@@ -788,7 +789,7 @@ const std::set<std::string>& known_covered_tags() {
         // _atom_site
         "_atom_site.adp_iso", "_atom_site.adp_type", "_atom_site.fract_x", "_atom_site.fract_y",
         "_atom_site.fract_z", "_atom_site.id", "_atom_site.multiplicity", "_atom_site.occupancy",
-        "_atom_site.type_symbol", "_atom_site.wyckoff_letter",
+        "_atom_site.type_symbol", "_atom_site.wyckoff_letter", "_atom_site.signed_site_symmetry",
         // _atom_site_aniso
         "_atom_site_aniso.adp_11", "_atom_site_aniso.adp_12", "_atom_site_aniso.adp_13",
         "_atom_site_aniso.adp_22", "_atom_site_aniso.adp_23", "_atom_site_aniso.adp_33",
@@ -1243,6 +1244,11 @@ Structure structure_from_block(const Block& block, const std::string& where) {
         if (wyckoff >= 0) {
             site.wyckoff_letter = row[static_cast<std::size_t>(wyckoff)];
         }
+        // A type IV site's saved symmetry, restored as written.
+        if (const int symmetry = loop->column("_atom_site.signed_site_symmetry"); symmetry >= 0) {
+            const std::string& stated = row[static_cast<std::size_t>(symmetry)];
+            if (stated != "." && stated != "?") site.signed_site_symmetry = stated;
+        }
         read_into(site.fract_x,
                   parse_parameter(
                       loop_cell(*loop, row, spec::atom_site_fract_x.edi_names[0], where), where),
@@ -1342,7 +1348,9 @@ Structure structure_from_block(const Block& block, const std::string& where) {
     if (!structure.magnetic->operations.empty() || !structure.magnetic->radial_coefficients.empty()) {
         try {
             check_magnetic_acceptance(structure);
-            complete_atom_site_moments(structure);  // tied components as crysta's load sets them
+            // Tied components as crysta's load sets them; a type IV site with a saved letter is restored
+            // from it.
+            complete_atom_site_moments(structure, true);
         } catch (const std::invalid_argument& error) {
             fail_schema(where, "magnetic-refused", error.what());
         }
@@ -4877,6 +4885,18 @@ static Project load_project_folder(const std::string& directory, const WarningSi
                     declared_plot_renderer = lexical_value(item.value, 0, renderer_tag);
                     continue;
                 }
+                // The project's Structure view settings, each checked as a structure's.
+                if (item.tag.starts_with("_structure_view.")) {
+                    const std::string name = item.tag.substr(std::string_view("_structure_view.").size());
+                    const std::string value = lexical_value(item.value, 0, item.tag);
+                    if (const std::string why = detail::structure_view_refusal(name, value); !why.empty()) {
+                        throw IoError("project.edi: " + why + ": " + record_where);
+                    }
+                    std::map<std::string, std::string> view = project.structure_view.get();
+                    view[name] = value;
+                    project.structure_view = std::move(view);
+                    continue;
+                }
                 if (tag_is(item, su_rule_tag)) {
                     if (declared_su_rule.has_value()) {
                         throw IoError(std::string("project.edi declares ").append(su_rule_tag).append(" more than once: ").append(record_where));
@@ -4974,6 +4994,10 @@ static Project load_project_folder(const std::string& directory, const WarningSi
                               "', expected iucr_19 or iucr_99: " + record_where);
             }
             project.su_rule = *declared_su_rule;
+        }
+        // A project saved before the view was the project's: its first structure's settings, once.
+        if (project.structure_view.get().empty() && !project.structures.empty()) {
+            project.structure_view = project.structures.front()->view.get();
         }
         restore("created", project.metadata.created);
         restore("last_modified", project.metadata.last_modified);
@@ -5100,7 +5124,8 @@ static Project load_project_folder(const std::string& directory, const WarningSi
     // A structure whose magnetic operators form no table setting takes no Wyckoff letter; each one a
     // file supplies is said, as crysta says it (edi ADR-0078).
     for (const auto& structure : project.structures) {
-        if (takes_wyckoff_letter(*structure)) {
+        // A type IV structure's letters are crysta's, which warns only on a differing one.
+        if (letter_source(*structure) != LetterSource::None) {
             continue;
         }
         const auto held = structure_source.find(datablock_key(structure->name, "structure"));
@@ -5290,6 +5315,132 @@ std::vector<FitStartRow> fit_start_rows(const Project& project) {
         }
     }
     return rows;
+}
+
+ActiveView::ActiveView(const Project& project) : project_(project) {
+    // hidden_parameters only reads; it is non-const for the pointers it hands back.
+    for (const Parameter* parameter : const_cast<Project&>(project).hidden_parameters()) hidden_.insert(parameter);
+    for (const auto& slot : parameter_slots(project)) {
+        by_name_[slot.id].push_back(slot.parameter);
+        if (slot.unique_name != slot.id) by_name_[slot.unique_name].push_back(slot.parameter);
+    }
+    for (auto& [name, parameters] : by_name_) {
+        std::sort(parameters.begin(), parameters.end());
+        parameters.erase(std::unique(parameters.begin(), parameters.end()), parameters.end());
+    }
+    for (const auto& alias : project.aliases) {
+        const Parameter* parameter = resolve(alias->parameter_unique_name.value());
+        if (parameter != nullptr && hidden_.contains(parameter)) hidden_aliases_.insert(alias->id.value());
+    }
+}
+
+const Parameter* ActiveView::resolve(const std::string& name) const {
+    const auto found = by_name_.find(name);
+    return found != by_name_.end() && found->second.size() == 1 ? found->second.front() : nullptr;
+}
+
+// The aliases a constraint names, read by crysta's own grammar: its target and its right-hand references.
+namespace {
+std::vector<std::string> constraint_aliases(const std::string& expression) {
+    try {
+        const crysta::ConstraintStatement statement = crysta::parse_constraint(expression);
+        std::vector<std::string> out{statement.lhs};
+        out.insert(out.end(), statement.rhs.references().begin(), statement.rhs.references().end());
+        return out;
+    } catch (const std::invalid_argument&) {
+        // A rule crysta cannot parse, inactive or kept for repair: every identifier it spells, read with crysta's
+        // number grammar so `1.e-3` stays a number. A disabled phase's alias in it still hides it.
+        std::vector<std::string> out;
+        const auto digit = [&](std::size_t i) { return i < expression.size() && std::isdigit(static_cast<unsigned char>(expression[i])); };
+        for (std::size_t i = 0; i < expression.size();) {
+            const char c = expression[i];
+            if (digit(i) || (c == '.' && digit(i + 1))) {  // digits, a point, digits, an exponent
+                while (digit(i) || (i < expression.size() && expression[i] == '.')) ++i;
+                if (i < expression.size() && (expression[i] == 'e' || expression[i] == 'E') &&
+                    (digit(i + 1) || ((i + 1 < expression.size() && (expression[i + 1] == '+' || expression[i + 1] == '-')) &&
+                                      digit(i + 2)))) {
+                    i += digit(i + 1) ? 1 : 2;
+                    while (digit(i)) ++i;
+                }
+                continue;
+            }
+            if (std::isalpha(static_cast<unsigned char>(c)) || c == '_') {
+                std::size_t end = i;
+                while (end < expression.size() &&
+                       (std::isalnum(static_cast<unsigned char>(expression[end])) || expression[end] == '_'))
+                    ++end;
+                out.push_back(expression.substr(i, end - i));
+                i = end;
+                continue;
+            }
+            ++i;
+        }
+        return out;
+    }
+}
+}  // namespace
+
+bool ActiveView::shown(const ParameterConstraint& constraint) const {
+    if (hidden_aliases_.empty()) return true;
+    for (const std::string& alias : constraint_aliases(constraint.expression.value()))
+        if (hidden_aliases_.contains(alias)) return false;
+    return true;
+}
+
+std::vector<const ParameterAlias*> ActiveView::aliases() const {
+    std::vector<const ParameterAlias*> out;
+    for (const auto& alias : project_.aliases)
+        if (shown(*alias)) out.push_back(alias.get());
+    return out;
+}
+
+std::vector<const Structure*> ActiveView::structures() const {
+    std::vector<const Structure*> out;
+    for (const auto& structure : project_.structures)
+        if (shown(*structure)) out.push_back(structure.get());
+    return out;
+}
+
+std::vector<const LinkedStructure*> ActiveView::links_of(const BraggPdExperiment& experiment) {
+    std::vector<const LinkedStructure*> out;
+    for (const auto& link : experiment.linked_structures)
+        if (link->enabled.get()) out.push_back(link.get());
+    return out;
+}
+
+bool ActiveView::admits(const std::string& expression) const {
+    for (const std::string& alias : constraint_aliases(expression))
+        if (hidden_aliases_.contains(alias)) return false;
+    return true;
+}
+
+std::set<std::string> ActiveView::spellings(const std::set<const Parameter*>& parameters) const {
+    std::set<std::string> out;
+    for (const auto& [name, held] : by_name_)
+        if (std::any_of(held.begin(), held.end(), [&](const Parameter* p) { return parameters.contains(p); }))
+            out.insert(name);
+    return out;
+}
+
+std::optional<std::size_t> ActiveView::alias_index(std::size_t row) const {
+    std::size_t shown_row = 0;
+    for (std::size_t i = 0; i < project_.aliases.size(); ++i)
+        if (shown(*project_.aliases[i]) && shown_row++ == row) return i;
+    return std::nullopt;
+}
+
+std::optional<std::size_t> ActiveView::constraint_index(std::size_t row) const {
+    std::size_t shown_row = 0;
+    for (std::size_t i = 0; i < project_.constraints.size(); ++i)
+        if (shown(*project_.constraints[i]) && shown_row++ == row) return i;
+    return std::nullopt;
+}
+
+std::vector<const ParameterConstraint*> ActiveView::constraints() const {
+    std::vector<const ParameterConstraint*> out;
+    for (const auto& constraint : project_.constraints)
+        if (shown(*constraint)) out.push_back(constraint.get());
+    return out;
 }
 
 std::vector<NamedParameter> named_parameters(const Project& project) {

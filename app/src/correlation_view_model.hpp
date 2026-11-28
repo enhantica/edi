@@ -11,6 +11,7 @@
 #include <map>
 #include <memory>
 #include <optional>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -44,6 +45,8 @@ class CorrelationViewModel : public QObject {
     Q_PROPERTY(int maxParameters READ maxParameters WRITE setMaxParameters NOTIFY maxParametersChanged)
 
    public:
+    // The names to leave out of the next chart (edi::correlation_hidden_names), set before each record or table.
+    void setExcluded(std::set<std::string> names) { excluded_ = std::move(names); }
     // diffraction-lib's default parameter count (DEFAULT_CORRELATION_MAX_PARAMETERS).
     static constexpr int kDefaultMaxParameters = 5;
 
@@ -106,6 +109,10 @@ class CorrelationViewModel : public QObject {
     // (row-major, 1 on the diagonal).
     std::optional<edi::CorrelationTable> table_;
     std::vector<std::string> names_;
+    // The names this chart leaves out: hidden parameters and the shown bank's disabled phases.
+    std::set<std::string> excluded_;
+    // The hidden set the shown table was filtered by, part of its cache key.
+    std::set<std::string> table_excluded_;
     std::vector<double> matrix_;
     // Each parameter's strongest correlation with another, in the fit's order.
     std::vector<double> strength_;

@@ -107,7 +107,30 @@ WorkflowPage {
                     shownTier: "Extras"
                     contents: page.extrasContents
                     measured: page.measured
+                    // Background estimation is a tool, on Tools (owner, 2026-11-28, sidebar tabs by role).
+                    admitted: categoryId !== "background_estimate"
                 }
+            }
+        }
+    }
+    // Tools (owner, 2026-11-28, sidebar tabs by role; edi ADR-0017 §2): what acts on the experiment without being one of
+    // its categories. Background estimation, then the k-vector search.
+    toolsItem: Component {
+        EaComponents.SideBarColumn {
+            Repeater {
+                model: CategoryListMirror {
+                    source: page.experiment ? page.experiment.categories : null
+                }
+                delegate: CategoryGroup {
+                    textSource: page.experiment ? page.experiment.text : null
+                    shownTier: "Extras"
+                    contents: page.extrasContents
+                    measured: page.measured
+                    admitted: categoryId === "background_estimate"
+                }
+            }
+            KSearchGroup {
+                visible: page.measured
             }
         }
     }

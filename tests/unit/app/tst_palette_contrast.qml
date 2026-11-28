@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 import QtQuick
+import "UiInteraction.js" as Ui
 import "ApprovedPalette.js" as Approved
 import QtQuick.Controls
 import QtTest
@@ -21,6 +22,7 @@ Rectangle {
         AppPreferencesDialog {}
     }
     TestCase {
+        id: test
         name: "PublishedPaletteContrast"
         when: windowShown
         property int oldTheme
@@ -247,6 +249,7 @@ Rectangle {
             const failures = [];
             if (String(measured.color) !== lightMeasured || String(bragg.color) !== lightStructure)
                 failures.push("preview measured=" + measured.color + " Bragg=" + bragg.color + "; light expected=" + lightMeasured + "/" + lightStructure);
+            Ui.selectSidebarTab(test, page, "tools");
             const exportGroup = findChild(page, "group.reportExport");
             verify(exportGroup !== null, "The palette gate reaches the actual Export writer action");
             Session.project.report.embedLibraries = true;

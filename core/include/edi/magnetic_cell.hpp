@@ -1,0 +1,191 @@
+#pragma once
+
+// The magnetic popup's engine calls (edi ADR-0078, "The magnetic popup"): the preset
+// propagation vectors, the graph of the magnetic groups a propagation vector allows, and the
+// candidate structures added from it. crysta computes everything; edi only converts.
+
+#include <array>
+#include <cstddef>
+#include <cstdint>
+#include <memory>
+#include <optional>
+#include <string>
+#include <vector>
+
+#include "edi/model.hpp"
+
+namespace edi {
+
+struct MagneticPreset {
+    std::string k;      ///< `1/2,0,0`
+    std::string label;  ///< `X`, or empty
+    std::string cell;   ///< its magnetic cell's basis, `a,b,2c` (crysta's magnetic_cell_of), or empty past the limit
+};
+/// The preset k list of a Crystal structure, k = 0 first.
+std::vector<MagneticPreset> magnetic_presets(const Structure& parent);
+
+/// The parent's sites whose element has a magnetic form factor: the popup ticks them by default.
+std::vector<std::string> magnetic_default_sites(const Structure& parent);
+
+struct MagneticCandidateNode {
+    std::string bns;            ///< `62.452`, empty when not identified
+    std::string name;           ///< `P_cnma`
+    int type = 0;               ///< 1, 3 or 4
+    int row = 1;                ///< 1: maximal among the moment-allowing groups
+    std::size_t embedding = 1;  ///< `#n` among the nodes with this BNS number
+    std::size_t domains = 1;
+    bool net_moment = false;
+    bool moment_allowed = true;
+    std::vector<std::size_t> subgroups;  ///< covering edges
+    std::string transform_to_bns;
+    std::string moments;  ///< per ticked site, `Mn1_1 Mx,My,Mz · Mn2 0,0,Mz`
+};
+struct MagneticEngineGraph;  // crysta's graph and the parent it was built from (adapter.cpp)
+struct MagneticCandidateGraph {
+    std::string cell;  ///< `2a,b,c;0,0,0`
+    long long parent_cells = 1;
+    std::vector<MagneticCandidateNode> nodes;
+    std::vector<std::string> sites;  ///< the ticked sites it was built for
+    std::shared_ptr<const MagneticEngineGraph> engine;
+    std::string parent_key;  ///< magnetic_parent_key of the parent it was built from
+};
+/// Everything of `structure` a magnetic search or Add reads (name, cell, group, sites, tensors and its magnetic
+/// description), exactly, as one text: two structures with the same key give the same graph and candidates.
+std::string magnetic_parent_key(const Structure& structure);
+/// The k-compatible magnetic groups of `parent` (crysta::magnetic_subgroups); it takes seconds for
+/// a large group, so the app calls it off the GUI thread on a copy of the parent. Throws
+/// std::invalid_argument with crysta's one message for a k it does not build.
+MagneticCandidateGraph magnetic_candidate_graph(const Structure& parent, const std::string& k,
+                                                const std::vector<std::string>& sites,
+                                                bool with_zero_moment_groups);
+
+/// One node's allowed moment components per magnetic site, `Mn1_1 Mx,My,Mz · Mn2 0,0,Mz`.
+/// Safe to call off the GUI thread: it reads only `graph`.
+std::string magnetic_candidate_moments(const MagneticCandidateGraph& graph, std::size_t node);
+
+/// Everything an Add changes, built and validated before anything is applied.
+struct PreparedMagneticCandidates {
+    std::string parent;
+    /// The sources the batch was built from: the parent's content key and each experiment linking it, by row,
+    /// name and inputs. Apply refuses when any of them is no longer what the project holds.
+    std::string parent_key;
+    struct Bank {
+        std::size_t experiment = 0;
+        std::string name;
+        std::optional<std::uint64_t> inputs;  // none: a bank without measured data
+    };
+    std::vector<Bank> banks;
+    // The children: held by the batch alone. A child is copied in while the batch is built and copied out to be read,
+    // so nothing outside the batch holds a row of the payload Apply publishes, and a batch shared as const cannot
+    // change.
+    void add(const Structure& child) { children_.push_back(std::make_shared<const Structure>(child)); }
+    std::size_t size() const { return children_.size(); }
+    bool empty() const { return children_.empty(); }
+    std::string name(std::size_t index) const { return children_.at(index)->name.value(); }
+    /// Detached copies of the children, in order: what a preview reads and what Apply adds.
+    std::vector<std::shared_ptr<const Structure>> children() const {
+        std::vector<std::shared_ptr<const Structure>> out;
+        out.reserve(children_.size());
+        for (const auto& child : children_) out.push_back(std::make_shared<const Structure>(*child));
+        return out;
+    }
+    struct Link {
+        std::size_t experiment = 0;
+        std::string structure;
+        double scale = 1.0;
+        bool enabled = false;
+        // The parent link's free scale, carried to the first (enabled) child only (owner, 2026-11-27).
+        bool scale_free = false;
+    };
+    std::vector<Link> links;
+    struct Texture {
+        std::size_t experiment = 0;
+        std::string structure;
+        double march_r = 1.0;
+        double march_random_fract = 0.0;
+        bool march_r_free = false;
+        bool march_random_fract_free = false;
+        std::optional<double> march_r_uncertainty;
+        std::optional<double> march_random_fract_uncertainty;
+        std::array<int, 3> axis{0, 0, 1};
+    };
+    std::vector<Texture> textures;
+
+   private:
+    std::vector<std::shared_ptr<const Structure>> children_;
+};
+/// The whole batch checked against `project` before any of it is published: the parent present
+/// and linked to powder experiments only, candidate names new and distinct, every candidate
+/// accepted by crysta's magnetic rule (the disabled ones too), and every link and texture row
+/// naming a powder experiment and a candidate of the batch, with a positive scale, at most one
+/// enabled link per experiment, and a texture axis that is not zero and stays within
+/// 1000. Throws std::invalid_argument naming the first fault.
+void check_magnetic_candidates(const Project& project, const PreparedMagneticCandidates& prepared);
+/// A7: the candidates of the batch that give no magnetic intensity at the reflections of every powder
+/// experiment with data linking the parent (crysta's lacks_magnetic_intensity); none when no such experiment
+/// exists.
+std::vector<std::string> magnetic_candidates_without_intensity(const Project& project,
+                                                               const PreparedMagneticCandidates& prepared);
+/// Builds the selected nodes' structures and their links and texture rows, all or none (edi
+/// ADR-0078): each powder experiment linking the parent links every child at scale S/N², only the
+/// first enabled, and the parent's link disabled; a March-Dollase row of the parent is carried
+/// with its axis in the child's basis. Throws std::invalid_argument, naming the reason, when the
+/// parent is linked to a single-crystal experiment, a texture axis cannot be carried, or a child
+/// cannot be built. Nothing in `project` changes.
+std::shared_ptr<const PreparedMagneticCandidates> prepare_magnetic_candidates(
+    const Project& project, std::size_t parent, const MagneticCandidateGraph& graph,
+    const std::vector<std::size_t>& nodes, bool start_moments);
+
+/// Find k from data (ADR-0078). The hash of what experiment `experiment`'s calculated curve depends on and of its
+/// measured data (crysta::fit_inputs_hash): recorded when a fit is kept, compared before the experiment is offered
+/// and again when a row is chosen.
+std::uint64_t magnetic_fit_inputs_hash(const Project& project, std::size_t experiment);
+
+struct MagneticPeak {
+    double x = 0.0;
+    double d = 0.0;
+    double tolerance = 0.0;
+    double significance = 0.0;
+    double half_width = 0.0;  ///< half the local FWHM on the experiment's axis
+    bool on_allowed_reflection = false;  ///< on a reflection the crystal group allows
+    /// Offered to the user: at no allowed reflection, or on one the experiment's current calculation leaves
+    /// unexplained. Every observed peak stays a target for marking by hand either way.
+    bool suggested = false;
+    /// A maximum of the measured pattern, the only kind a click snaps to; a residual excess or a clicked position is
+    /// not one.
+    bool observed = false;
+};
+/// Find k's candidate peaks on the pattern chart (owner, 2026-11-27): the observed peaks at no reflection the parent's
+/// space group allows, from the measured data alone, then, when the experiment holds a calculated curve, its
+/// unexplained peaks on allowed reflections as suggestions (crysta's forbidden_peaks).
+std::vector<MagneticPeak> magnetic_mark_candidates(const Project& project, std::size_t experiment, std::size_t parent);
+/// A mark the user sets at `x` where no observed maximum is near: its d, tolerance and half width from the
+/// experiment's calibration and instrument (crysta's peak_at).
+MagneticPeak magnetic_peak_at(const Project& project, std::size_t experiment, std::size_t parent, double x);
+/// A click's mark: the highest measured maximum within the peak's half width of `x`, whether or not a detector listed
+/// it (`observed`), else `x` itself; outside the excluded regions.
+MagneticPeak magnetic_peak_near(const Project& project, std::size_t experiment, std::size_t parent, double x);
+/// The peaks the experiment's current calculated curve leaves unexplained, over its included points (crysta's
+/// unexplained_peaks), highest first. Throws std::invalid_argument naming the reason.
+std::vector<MagneticPeak> magnetic_unexplained_peaks(const Project& project, std::size_t experiment,
+                                                     std::size_t parent);
+
+struct MagneticKRow {
+    std::string k;
+    std::string label;
+    int stage = 1;
+    std::size_t explained = 0;
+    double worst_misfit = 0.0;
+    bool equally_good = false;
+    std::string verdict;  ///< buildable, over the limit, incommensurate, underdetermined
+    long long parent_cells = 1;
+    std::size_t undetermined = 0;
+    std::string estimate;
+    std::vector<std::string> roles;  ///< per input peak: satellite, forbidden, allowed or empty
+};
+/// The ranked propagation vectors for `peaks` (crysta's search_propagation_vectors). Reads only its arguments'
+/// copies, so it runs off the GUI thread.
+std::vector<MagneticKRow> magnetic_k_search(const Project& project, std::size_t experiment, std::size_t parent,
+                                            const std::vector<MagneticPeak>& peaks);
+
+}  // namespace edi

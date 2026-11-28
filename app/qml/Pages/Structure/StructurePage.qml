@@ -89,6 +89,22 @@ WorkflowPage {
                     contents: page.contents
                 }
             }
+        }
+    }
+    // Tools (owner, 2026-11-28, sidebar tabs by role; edi ADR-0017 §2): the magnetic symmetry analysis.
+    toolsItem: Component {
+        EaComponents.SideBarColumn {
+            MagneticAnalysisGroup {
+                project: page.project
+                structure: page.structure
+                popupComponent: magneticAnalysisComponent
+            }
+        }
+    }
+    // Settings: how the page shows the structure, the view's appearance and polyhedra (moved from Extra, owner,
+    // 2026-11-28, sidebar tabs by role).
+    settingsItem: Component {
+        EaComponents.SideBarColumn {
             AppearanceGroup {
                 options: page.project ? page.project.structureViewOptions : null
                 controller: page.pageViewItem ? page.pageViewItem.structureController : null
@@ -112,6 +128,10 @@ WorkflowPage {
         SpaceGroupGroup {
             structure: page.structure
         }
+    }
+    Component {
+        id: magneticAnalysisComponent
+        MagneticPopup {}
     }
     Component {
         id: cellContent

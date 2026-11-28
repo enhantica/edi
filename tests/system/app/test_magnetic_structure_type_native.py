@@ -11,7 +11,7 @@ from tests.integration.app.native_actor import NativeActor
 CASES = [
     'a_create_defaults_to_crystal',
     'b_magnetic_cif_selects_magnetic',
-    'c_switch_to_magnetic_uses_the_grey_group',
+    'c_switch_to_magnetic_opens_the_parent_popup',
     'd_return_to_crystal_requires_confirmation',
     'e_bns_fields_are_linked_and_searchable',
     'f_setting_shows_the_nontrivial_transform',

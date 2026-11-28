@@ -3,6 +3,7 @@
 
 #include <cstddef>
 #include <optional>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -48,5 +49,15 @@ CorrelationSelection correlation_matrix(const CorrelationMatrix& matrix, double 
 /// One experiment's chart of a fit of several leaves out the others' parameters, as the Correlations tab shows it: the
 /// name prefixes to leave out, each other experiment's datablock key and a dot. One experiment leaves out nothing.
 std::vector<std::string> other_experiment_prefixes(const std::vector<std::string>& experiment_names, std::size_t shown);
+
+class Project;
+/// The unique names a correlation chart leaves out (reviews 23 and 24): every hidden parameter (a disabled link's,
+/// a structure no enabled link names), and with `bank`, the parameters of the structures that bank leaves disabled
+/// and of its disabled links, even where another bank enables them. The app's Correlations tab and the report both
+/// read it, for live, saved and scan pairs alike.
+std::set<std::string> correlation_hidden_names(Project& project, std::optional<std::size_t> bank);
+/// `names` and their square `matrix` without the names in `hidden`.
+void drop_correlation_names(std::vector<std::string>& names, std::vector<double>& matrix,
+                            const std::set<std::string>& hidden);
 
 }  // namespace edi

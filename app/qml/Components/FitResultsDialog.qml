@@ -59,22 +59,32 @@ AppDialog {
     // The agreement factors (edi ADR-0045), below the summary: one column per factor, one row per dataset.
     readonly property FitAgreementModel agreement: dialog.results ? dialog.results.agreement : null
     readonly property var factorColumns: dialog.agreement ? dialog.agreement.columns : []
-    // Wide enough for the longest structure name under a phase factor, with its icon, and for the widest value: neither
-    // is ever cut ("undefined" is wider than a number).
-    readonly property real factorWidth: Math.max(EaStyle.Sizes.fontPixelSize * 4.5, structureMetrics.advanceWidth + EaStyle.Sizes.fontPixelSize * 2.5, dialog.widestValue + AppSizes.tableCellMargin * 2)
     property int valuesRevision: 0
-    readonly property real widestValue: {
-        let widest = 0;
-        for (let row = 0; dialog.valuesRevision >= 0 && row < factorValues.count; ++row) {
-            const texts = factorValues.objectAt(row) as FactorTexts;
-            widest = Math.max(widest, texts?.widest ?? 0);
-        }
-        return Math.ceil(widest);
+    // Each factor column as wide as its own header (the factor, and under a phase factor its structure with the icon)
+    // and its widest value, with the cell margins (owner, 2026-11-27): no column takes another's width.
+    readonly property var columnWidths: {
+        const plain = text => valueMetrics.advanceWidth(String(text).replace(/<[^>]*>/g, ""));
+        return dialog.factorColumns.map((column, index) => {
+            let widest = plain(column.factor);
+            if (column.structure !== "")
+                widest = Math.max(widest, dialog.structureIconWidth + dialog.structureIconSpacing + plain(column.structure));
+            for (let row = 0; dialog.valuesRevision >= 0 && row < factorValues.count; ++row) {
+                const texts = factorValues.objectAt(row) as FactorTexts;
+                if (texts && index < texts.values.length)
+                    widest = Math.max(widest, plain(texts.values[index]));
+            }
+            return Math.ceil(Math.max(EaStyle.Sizes.fontPixelSize * 3, widest) + 2 * AppSizes.tableCellMargin);
+        });
+    }
+    // A phase factor's structure header: its icon and the gap before the name.
+    readonly property real structureIconWidth: EaStyle.Sizes.fontPixelSize * 1.2
+    readonly property real structureIconSpacing: EaStyle.Sizes.fontPixelSize * 0.25
+    function columnWidth(index) {
+        return index >= 0 && index < columnWidths.length ? columnWidths[index] : 0;
     }
 
     component FactorTexts: QtObject {
         required property var values
-        readonly property real widest: Math.max(0, ...values.map(text => valueMetrics.advanceWidth(text)))
     }
     Instantiator {
         id: factorValues
@@ -89,12 +99,6 @@ AppDialog {
         font.pixelSize: EaStyle.Sizes.fontPixelSize
     }
 
-    TextMetrics {
-        id: structureMetrics
-        font.family: EaStyle.Fonts.fontFamily
-        font.pixelSize: EaStyle.Sizes.fontPixelSize
-        text: ApplicationInfo.fitResultProjection(0)
-    }
     readonly property bool structureHeaders: ApplicationInfo.fitResultProjection(1)
 
     // The summary table is as wide as its content (the owner, 2026-10-21): each text column its widest entry.
@@ -269,14 +273,15 @@ AppDialog {
         readonly property real datasetWidth: Math.max(EaStyle.Sizes.fontPixelSize * 6, agreementTable.typeColumnWidth("text", qsTr("Dataset")) + agreementTable.autoColumnPadding)
         // Any room beyond the natural table width belongs to the dataset column.
         readonly property real datasetColumnWidth: datasetWidth + Math.max(0, width - naturalWidth)
-        readonly property real naturalWidth: AppSizes.iconOnlyColumnWidth + datasetWidth + dialog.factorColumns.length * dialog.factorWidth + (dialog.factorColumns.length + 1) * EaStyle.Sizes.tableColumnSpacing + 2 * agreementTable.rowPadding + 2 * EaStyle.Sizes.borderThickness
+        readonly property real naturalWidth: AppSizes.iconOnlyColumnWidth + datasetWidth + dialog.columnWidths.reduce((sum, w) => sum + w, 0) + (dialog.factorColumns.length + 1) * EaStyle.Sizes.tableColumnSpacing + 2 * agreementTable.rowPadding + 2 * EaStyle.Sizes.borderThickness
         // Never wider than the window: a wider table scrolls sideways, so every column can be reached.
         // Read the window itself, not the overlay whose layout includes this dialog.
         readonly property real widthCap: Window.window ? Math.max(0, Window.window.width - dialog.leftPadding - dialog.rightPadding - EaStyle.Sizes.fontPixelSize * 4) : naturalWidth
         readonly property bool scrolls: naturalWidth > widthCap
 
         y: listArea.y + listArea.height + (shown ? EaStyle.Sizes.fontPixelSize : 0)
-        width: shown ? Math.max(Math.min(AppSizes.messagesDialogContentWidth, widthCap), Math.min(naturalWidth, widthCap)) : 0
+        // As wide as the table needs, within the window: the dialog takes the width of its tables (owner, 2026-11-27).
+        width: shown ? Math.min(naturalWidth, widthCap) : 0
         height: shown ? agreementScroll.height + unitNote.height + EaStyle.Sizes.fontPixelSize * 0.5 : 0
         visible: shown
 
@@ -309,7 +314,7 @@ AppDialog {
                 sourceModel: dialog.agreement
 
                 // The icon, the dataset, then one real column per factor.
-                columns: ApplicationInfo.fitResultProjection(2)
+                columns: [AppSizes.iconOnlyColumnWidth, agreementArea.datasetColumnWidth].concat(dialog.columnWidths)
 
                 header: EaComponents.ListViewHeader {
                     height: (dialog.structureHeaders ? 2 : 1) * EaStyle.Sizes.tableRowHeight
@@ -336,7 +341,7 @@ AppDialog {
                             required property var modelData
                             required property int index
 
-                            width: dialog.factorWidth
+                            width: dialog.columnWidth(factorHeader.index)
                             height: datasetHeader.height
 
                             EaComponents.ListViewLabel {
@@ -344,7 +349,9 @@ AppDialog {
                                 objectName: `fit.results.agreement.header.${factorHeader.index}`
                                 width: parent.width
                                 height: EaStyle.Sizes.tableRowHeight
-                                horizontalAlignment: Text.AlignHCenter
+                                // A number column's header to the right, as its values (owner, 2026-11-27).
+                                horizontalAlignment: Text.AlignRight
+                                rightPadding: AppSizes.tableCellMargin
                                 textFormat: Text.RichText
                                 text: factorHeader.modelData.factor
                             }
@@ -352,20 +359,20 @@ AppDialog {
                             Row {
                                 visible: factorHeader.modelData.structure !== ""
                                 y: EaStyle.Sizes.tableRowHeight
-                                anchors.horizontalCenter: parent.horizontalCenter
+                                anchors.right: parent.right
+                                anchors.rightMargin: AppSizes.tableCellMargin
                                 height: EaStyle.Sizes.tableRowHeight
-                                spacing: EaStyle.Sizes.fontPixelSize * 0.25
+                                spacing: dialog.structureIconSpacing
 
                                 IconCell {
-                                    width: EaStyle.Sizes.fontPixelSize * 1.2
+                                    width: dialog.structureIconWidth
                                     icon: "layer-group"
                                     iconColor: factorHeader.modelData.place >= 0 ? AppColors.structure(factorHeader.modelData.place) : ""
                                 }
                                 EaComponents.ListViewLabel {
                                     objectName: `fit.results.agreement.structure.${factorHeader.index}`
                                     height: parent.height
-                                    width: Math.min(implicitWidth, dialog.factorWidth - EaStyle.Sizes.fontPixelSize * 1.5)
-                                    elide: Text.ElideRight
+                                    width: implicitWidth  // its column is as wide as the name, so it is never cut
                                     // The structure's chart colour, as its icon (the owner, 2026-10-21).
                                     color: factorHeader.modelData.place >= 0 ? AppColors.structure(factorHeader.modelData.place) : EaStyle.Colors.themeForeground
                                     text: factorHeader.modelData.structure
@@ -409,9 +416,10 @@ AppDialog {
                             required property int index
 
                             objectName: `fit.results.agreement.value.${datasetRow.index}.${index}`
-                            width: dialog.factorWidth
+                            width: dialog.columnWidth(index)
                             height: datasetName.height
-                            horizontalAlignment: Text.AlignHCenter
+                            horizontalAlignment: Text.AlignRight
+                            rightPadding: AppSizes.tableCellMargin
                             color: EaStyle.Colors.themeForeground
                             number: modelData
                         }

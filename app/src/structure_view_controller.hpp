@@ -264,6 +264,7 @@ class StructureViewController : public QObject {
     // others, and a view first showing a structure takes the view another already has of it.
     void shareView();
     const StructureViewController* viewedPeer() const;
+    bool sharesCamera(const StructureViewController* peer) const;
     void placeTexts();
     void setCurrent(bool current);
     void setDetail(int drawn);

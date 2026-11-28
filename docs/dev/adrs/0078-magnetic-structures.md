@@ -31,14 +31,18 @@ without computing any of them itself.
   Messages center, never as a lasting label. Setting shows the dictionary default `a,b,c;0,0,0` when a file gives no
   transform.
 - **Viewer.** The structure view draws each magnetic atom's moment as an arrow, from the moments in the cell crysta
-  computed. The toolbar shows or hides them (`_structure_view.show_moments`, saved with the structure only when
-  stated). Appearance sets the arrow length per Bohr magneton and where the arrow sits (`_structure_view.moment_view`:
-  through the atom, from its centre or from its surface). The shaft has one thickness at every length; the head is
-  the standard one (0.6 Å long, 0.3 Å wide) shortened to at most 35 % of the arrow and narrowed with it, never below
-  1.6 times the shaft, so a 1 μB arrow at the default scale keeps a visible shaft and a long arrow the standard head.
-  The toolbar's Atoms choice draws every atom, the crystal's asymmetric unit (for a magnetic structure, its parent
-  group's, as crysta decides), the
-  magnetic one, the magnetic atoms or none; moments follow the drawn atoms, and with none stay at every magnetic site.
+  computed. The toolbar shows or hides them (`_structure_view.show_moments`, saved only when stated). Appearance sets
+  the arrow length per Bohr magneton (1 Å by default) and where the arrow sits (`_structure_view.moment_view`:
+  through the atom, from its centre or from its surface).
+- **One view for the project** (it replaces the per-structure settings above). The `_structure_view` items (which atoms, bonds, polyhedra, moments
+  shown, the moment scale, the arrow position and the appearance) are one set for the whole project, saved in `project.edi` and in no structure
+  file, so switching structures keeps the view. The camera too is one for the project (owner record 0958fb450 item 7): rotation, zoom and pan stay
+  when switching structures, so only the moments change; a different cell keeps the orientation and zoom and is centred the same way. The camera
+  is not saved. A project saved before reads its first structure's items once as the project's; a scale a project saved keeps. The shaft has one
+  thickness at every length; the head is the standard one (0.6 Å long, 0.3 Å wide) shortened to at most 35 % of the arrow and narrowed with it,
+  never below 1.6 times the shaft, so a 1 μB arrow at the default scale keeps a visible shaft and a long arrow the standard head. The toolbar's
+  Atoms choice draws every atom, the crystal's asymmetric unit (for a magnetic structure, its parent group's, as crysta decides), the magnetic
+  one, the magnetic atoms or none; moments follow the drawn atoms, and with none stay at every magnetic site.
 - **Moment forms.** The moments table shows a moment in crystal-axis, Cartesian or spherical form, with |M|, each
   derived value with its s.u. After a fit the s.u. come from the fit's covariance (correlations, and the cell where it
   was fitted, included); before one they are propagated as if the components were uncorrelated, and the tooltip says
@@ -92,11 +96,37 @@ without computing any of them itself.
   extension; the magnetic form factors keep the dictionary's `_atom_type_scat.neutron_magnetic_j0`…`_j6` coefficients
   where they apply, with the approximation and C₂ as edi's extension.
 - **Symmetry from the operators** (2026-11-08). When a structure's magnetic operators form no table setting (a type IV
-  group, a setting the table does not hold), crysta
-  decides it once and edi reads that decision: no position, cell or displacement ties, the cell and positions not
-  fittable, no Wyckoff letter (the site table shows none, and the multiplicity is the operators' orbit), and an
-  anisotropic site refused, with the reason, at load, at the type change and at the group selector, which then keeps
-  the prior model.
+  group, a setting the table does not hold), crysta decides it once and edi reads that decision: no position, cell or
+  displacement ties, the cell and positions not fittable, no Wyckoff letter (the site table shows none, and the
+  multiplicity is the operators' orbit), and an anisotropic site refused, with the reason, at load, at the type change
+  and at the group selector, which then keeps the prior model. A type IV structure instead takes crysta's admitted
+  site for each atom: its position, displacement and moment ties, its BNS Wyckoff letter (`.` when none applies) and
+  the cell ties the group's metric allows. Its BNS number and name stay while crysta verifies the operators against
+  that entry, a setting change carries the entry through the new transform, and FullProf export and new atoms take
+  their orbits from the operators.
+- **One completion of an edit** (2026-11-27). Every magnetic edit (k, the group, a setting, and a coordinate, cell
+  or displacement edit of a type IV structure) builds the structure as it would become and hands it to crysta's
+  `complete_magnetic`. Only the completed result replaces the model; a refusal keeps the prior one.
+- **The magnetic popup** (2026-11-26). Crystal → Magnetic on an atom-based Crystal structure opens a popup instead of
+  setting the grey group; Cancel changes nothing. It takes a propagation vector (crysta's presets, k = 0 first, or
+  three exact fractions), the magnetic sites (ticked by default where the element has a magnetic form factor), and
+  whether to add non-zero starting moments. crysta finds the magnetic groups k allows off the GUI thread; the popup
+  draws them as rows of maximal groups and their subgroups with the covering edges, each node with its BNS symbol and
+  number, `#n` for a second embedding, its type, FM when a net moment is allowed, and the allowed moment components
+  of each split site. Greyed nodes (groups without moments, unidentified classes) cannot be selected. **Add** makes
+  one structure per selected group, named `<parent>_<BNS>` (a second embedding `_2`), and, as one undoable change,
+  links each to every powder experiment linking the parent at scale S/N² (N parent cells), only the first enabled,
+  keeps the parent's link disabled, and carries a March-Dollase texture row with its axis in the child's basis. A
+  texture axis component above 1000, a child that cannot be built, or a link to a single-crystal experiment refuses
+  the whole Add, naming the reason.
+- **Find k from data.** Beside the k list, Find k from data offers each powder experiment linking the parent whose
+  kept fit still matches its inputs (recorded when a fit is kept, compared again before a row is chosen; Calculate
+  records nothing). It lists the peaks the fit leaves unexplained, ticked by default, and ranks propagation vectors
+  for the ticked ones by crysta's search. Only a buildable row can be chosen; it sets k. A row that needs more than
+  24 parent cells, is underdetermined or incommensurate at this resolution says so.
+- **Picking a BNS group in place.** The Number BNS and Name BNS fields of a Magnetic structure take another group
+  only within the structure's cell, its propagation vectors and its atoms (crysta's `admit_magnetic_space_group`);
+  otherwise the refusal says to run the magnetic symmetry analysis again from the crystal structure it came from.
 - **Identity.** The magnetic description and the moments are inputs of the structure's geometry and of every
   calculation it takes part in; a structure without them keeps its identity and its saved bytes.
 

@@ -20,6 +20,10 @@ QtObject {
         Report
     }
 
+    // The Experiment page's pattern chart while it is shown: its k search's marks, which the sidebar's Propagation vector
+    // (k) search group lists and edits (owner, 2026-11-27).
+    property Item kChart: null
+
     // The Continue area at the bottom of every page's sidebar, hidden for now (the owner, 2026-10-06), so the
     // sidebar's content runs down to its bottom. The one switch: true brings Continue back as it was.
     readonly property bool continueAreaShown: false

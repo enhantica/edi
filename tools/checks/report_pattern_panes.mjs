@@ -20,8 +20,9 @@ for (const pane of ['main', 'bragg', 'residual']) {
 expect(/readonly property real paneGap: em\b/.test(qml), "the app's pane gap is no longer one em");
 
 // The app's toolbar: each button's icon and its first tooltip, in order. The report draws one
-// dataset per chart, so the app's dataset highlight has no counterpart there.
-const APP_ONLY = new Set(['highlighter']);
+// dataset per chart, so the app's dataset highlight has no counterpart there; nor has Find k, which marks peaks for an
+// analysis the report does not run.
+const APP_ONLY = new Set(['highlighter', 'magnet']);
 const toolbarQml = readFileSync(new URL('app/qml/Components/ChartToolbar.qml', root), 'utf8');
 const appButtons = [...toolbarQml.matchAll(/fontIcon: "([a-z-]+)"\s*\n\s*toolTip: [^\n]*?qsTr\("([^"]+)"\)/g)].map(
   ([, icon, tip]) => [icon, tip]).filter(([icon]) => !APP_ONLY.has(icon));

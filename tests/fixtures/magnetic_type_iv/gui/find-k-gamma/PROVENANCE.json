@@ -1,0 +1,18 @@
+{
+  "source": "Closed-form orthorhombic d^-2=(h+kx)^2/a^2+k^2/b^2+l^2/c^2; Bragg 2theta, unit errors and Gaussian FWHM 0.2 degrees",
+  "k": [
+    0,
+    0,
+    0
+  ],
+  "cell": [
+    6,
+    7,
+    8
+  ],
+  "peak_positions": [
+    11.046538510046192,
+    18.462163727075797
+  ],
+  "fit": "Only a constant background is free. The parent is enabled and fixed; its tiny scale isolates the invented satellites."
+}

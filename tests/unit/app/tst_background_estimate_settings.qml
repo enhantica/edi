@@ -83,9 +83,9 @@ TestCase {
         Ui.click(test, Probe, appWindow, "appBar.tab.experiment");
         tryVerify(() => Math.abs(Ui.page(appWindow).mapToItem(appWindow.contentItem, 0, 0).x) < 1,
                   2000, "The Experiment page must enter the actual viewport before reading its sidebar");
-        const label = tier === "basic" ? "Main" : "Extra";
+        const label = tier === "basic" ? "Main" : "Tools";
         const tabItems = objects(Ui.page(appWindow), "text").filter(control =>
-            ["Main", "Extra"].indexOf(String(control.text).trim()) >= 0);
+            ["Main", "Tools"].indexOf(String(control.text).trim()) >= 0);
         const tabs = tabItems.filter(control => String(control.text).trim() === label &&
             control.checked !== undefined && typeof control.clicked === "function");
         compare(tabs.length, 1, "The active Experiment sidebar must expose its " +
@@ -97,9 +97,9 @@ TestCase {
         tryCompare(tabs[0], "checked", true, 1000, "Real input must select the requested estimate settings tab");
         let sidebar = tabs[0].parent;
         while (sidebar && sidebar.items === undefined) sidebar = sidebar.parent;
-        const paneIndex = tier === "basic" ? 0 : 1;
-        verify(sidebar !== null && sidebar.items.length > paneIndex,
-               "The Main/Extra tab control must belong to a sidebar with the selected content pane");
+        const paneIndex = sidebar ? Array.from(sidebar.tabs).indexOf(tabs[0]) : -1;
+        verify(sidebar !== null && paneIndex >= 0 && sidebar.items.length > paneIndex,
+               "The Main or Tools tab control must belong to a sidebar with the selected content pane");
         sidebarPane = sidebar.items[paneIndex];
         tryVerify(() => sidebarPane.SwipeView.isCurrentItem &&
                   Math.abs(sidebarPane.mapToItem(sidebarPane.SwipeView.view, 0, 0).x) < 1,
@@ -109,7 +109,7 @@ TestCase {
         verify(waitForPolish(appWindow, 2000), "The selected estimate settings pane must finish layout");
         verify(waitForRendering(appWindow.contentItem), "The selected estimate settings pane must render");
         tryVerify(() => Ui.groupNames(Ui.page(appWindow)).some(name => name.indexOf("background") >= 0),
-                  2000, "The selected Main or Extra pane must expose its background category header");
+                  2000, "The selected Main or Tools pane must expose its background category header");
         Ui.groupNames(Ui.page(appWindow)).filter(name => name.indexOf("background") >= 0).forEach(name =>
             Ui.expandGroup(test, Probe, appWindow, "group." + name));
     }
@@ -143,6 +143,7 @@ TestCase {
     function pointer(control) {
         Ui.scrollIntoView(control);
         verify(waitForPolish(appWindow, 2000), "The selected estimate control must finish layout before input");
+        appWindow.update();
         verify(waitForRendering(appWindow.contentItem), "The selected estimate control must render before pointer input");
         Ui.scrollIntoView(control);
         const point = Ui.clickPoint(control);
@@ -170,7 +171,7 @@ TestCase {
         const fields = objects(sidebarPane, "label").filter(control => Ui.inPane(control) &&
             (identity ? String(control.objectName) === identity :
              labels.indexOf(String(control.label).toLowerCase()) >= 0) && control.fieldValue !== undefined);
-        compare(fields.length, 1, "Extra must expose one estimate override field labelled " + labels.join(" or ") +
+        compare(fields.length, 1, "Tools must expose one estimate override field labelled " + labels.join(" or ") +
                 (identity ? "; objectName=" + identity : ""));
         return fields[0];
     }
@@ -186,7 +187,7 @@ TestCase {
         const controls = objects(sidebarPane, "model").filter(control => Ui.inPane(control) &&
             String(control.objectName) === "background_estimate.use_model" &&
             control.currentIndex !== undefined && typeof control.activated === "function");
-        compare(controls.length, 1, "Extra must expose one enabled selector with objectName background_estimate.use_model, model/options and activated role");
+        compare(controls.length, 1, "Tools must expose one enabled selector with objectName background_estimate.use_model, model/options and activated role");
         compare(optionTokens(controls[0]).slice().sort().join("|"), "auto|ignore|subtract",
                 "The calculated-peaks selector must offer exactly auto, subtract and ignore");
         return controls[0];
@@ -220,13 +221,13 @@ TestCase {
                 "observed=" + selectorIdentity());
         compare(estimateButtons().length, 0, "Auto mode must disable the Main Estimate action");
         compare(selectors(["auto", "arpls", "snip", "fabc"]).length, 0,
-                "The advanced estimate method belongs in Extra rather than Main");
+                "The advanced estimate method belongs in Experiment Tools");
         choose(modes[0], "manual");
-        pane("extras");
+        pane("tools");
         compare(selectors(["manual", "auto"]).length, 0, "The manual/auto choice must remain on Main");
         compare(estimateButtons().length, 0, "The Estimate action must remain on Main");
         const methods = selectors(["auto", "arpls", "snip", "fabc"]);
-        compare(methods.length, 1, "Extra must expose one method selector with options/model tokens " +
+        compare(methods.length, 1, "Tools must expose one method selector with options/model tokens " +
                 "auto, arpls, snip and fabc; observed=" + selectorIdentity());
         choose(methods[0], "fabc");
         type(valueField([], "background_estimate.width"), "7.25");
@@ -239,11 +240,11 @@ TestCase {
                 "The three-way selector must use the public Calculated peaks label");
         choose(modelControl, "subtract");
         const destination = Probe.scratchProjectUrl();
-        verify(Session.saveAs(destination), "Actual Main and Extra inputs must save to the project category");
+        verify(Session.saveAs(destination), "Actual Main and Tools inputs must save to the project category");
         const expected = {mode: "manual", method: "fabc", width: 7.25, smoothness: 2468.5, n_points: 9, tolerance: 0.75, in_peaks: "drop", use_model: "subtract"};
         const actual = savedSettings(destination);
         Object.keys(expected).forEach(name => compare(actual[name], expected[name],
-            "Real Main and Extra controls must write the stored setting: " + name));
+            "Real Main and Tools controls must write the stored setting: " + name));
         console.log("BACKGROUND_MODEL_CONTROL " + JSON.stringify({objectName: String(modelControl.objectName), label: String(modelControl.label), use_model: actual.use_model}));
         console.log("BACKGROUND_SETTINGS_UI " + JSON.stringify(actual));
     }
@@ -258,10 +259,10 @@ TestCase {
                "The default control must remove every explicitly authored estimator setting");
         verify(Session.openProject(input), "The app must load a project with no estimate category");
         for (let turn = 0; turn < 2; ++turn) {
-            pane("extras");
+            pane("tools");
             const tolerance = valueField([], "background_estimate.tolerance");
-            compare(String(tolerance.fieldValue), "", "A blank tolerance must remain a derived override in Extra");
-            compare(String(tolerance.placeholderText), "2", "Extra must show the twice-noise default as the whole-number hint 2");
+            compare(String(tolerance.fieldValue), "", "A blank tolerance must remain a derived override in Tools");
+            compare(String(tolerance.placeholderText), "2", "Tools must show the twice-noise default as the whole-number hint 2");
             compare(String(modelChoice().token), "auto", "Blank projects must select automatic calculated-peak handling");
             const destination = Probe.scratchProjectUrl();
             verify(Session.saveAs(destination), "Blank estimate defaults must save through the actual app");
@@ -377,7 +378,7 @@ TestCase {
                "The keyboard control must start with an Auto table before any included-data estimate");
         verify(Session.openProject(input), "The keyboard actor must load the bounded Auto-row control");
         // The real Main BackgroundGroup is hosted directly, keeping this saved
-        // keyboard workflow bounded. Separate cases retain Main/Extra placement
+        // keyboard workflow bounded. Separate cases retain Main and Tools placement
         // and the independent saved-auto estimator equality checks.
         enablementGroup = manualGroup.createObject(appWindow.contentItem);
         verify(enablementGroup !== null, "The Manual keyboard actor must use the production Main BackgroundGroup");

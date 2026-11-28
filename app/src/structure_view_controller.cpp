@@ -110,7 +110,11 @@ void StructureViewController::setStructure(StructureViewModel* structure) {
     disconnect(stale_connection_);
     structure_ = structure;
     source_ = {};  // another structure's frame is never kept
-    viewed_ = false;
+    // One camera for the project (owner record 0958fb450 item 7, amending 516c0dcc7): a live view keeps its rotation,
+    // zoom and pan across structures, so switching changes only what they hold. Zoom and pan are relative to the
+    // fitted cell, so another cell keeps the orientation and zoom and is centred as this one was. Home and the
+    // orientation buttons set this one camera. It is not saved. A report's view opens as the report saved it.
+    if (report_) viewed_ = false;
     if (structure_ != nullptr) {
         source_connection_ = connect(structure_, &StructureViewModel::sceneSourceChanged, this,
                                      &StructureViewController::sourceChanged);
@@ -162,6 +166,9 @@ void StructureViewController::setReportStructure(const QString& id) {
 
 void StructureViewController::setActive(bool active) {
     if (active != active_) {
+        // A view left mid-animation settles where it is and shares that pose, so the page shown next opens on the
+        // project's one camera, not on its own earlier pose.
+        if (!active) stopAnimation();
         active_ = active;
         emit activeChanged();
         if (active_ && dirty_) {
@@ -330,6 +337,7 @@ void StructureViewController::stopAnimation() {
     if (animating()) {
         view_animation_->stop();
         emit animatingChanged();
+        shareView();  // the pose an interrupted Home or axis turn reached is the project's camera too
     }
 }
 
@@ -571,9 +579,16 @@ void StructureViewController::draw() {
     placeCamera();
 }
 
+// One camera for the project (owner record 0958fb450 item 7): every live view of one of its structures, whichever,
+// shares it; a report's figure keeps its own.
+bool StructureViewController::sharesCamera(const StructureViewController* peer) const {
+    return peer != this && !report_ && !peer->report_ && peer->viewed_ && structure_ != nullptr &&
+           peer->structure_ != nullptr && peer->structure_->parent() == structure_->parent();
+}
+
 const StructureViewController* StructureViewController::viewedPeer() const {
     for (const StructureViewController* peer : live_controllers()) {
-        if (peer != this && !peer->report_ && structure_ != nullptr && peer->structure_ == structure_ && peer->viewed_) {
+        if (sharesCamera(peer)) {
             return peer;
         }
     }
@@ -585,10 +600,13 @@ void StructureViewController::shareView() {
         return;  // a report figure keeps the view it was saved with
     }
     for (StructureViewController* peer : live_controllers()) {
-        if (peer == this || peer->report_ || peer->structure_ != structure_ || !peer->viewed_) {
+        if (!sharesCamera(peer)) {
             continue;
         }
-        peer->stopAnimation();
+        if (peer->animating()) {  // stopped without sharing back: this view's pose is the camera now
+            peer->view_animation_->stop();
+            emit peer->animatingChanged();
+        }
         peer->view_ = view_;
         peer->placeCamera();  // a hidden view only notes it, and places its camera when shown
     }

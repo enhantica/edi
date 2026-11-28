@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "edi/correlation_matrix.hpp"
 
+#include "edi/categories.hpp"
 #include "edi/model.hpp"
 
 #include <algorithm>
@@ -104,6 +105,56 @@ std::vector<std::string> other_experiment_prefixes(const std::vector<std::string
         }
     }
     return out;
+}
+
+std::set<std::string> correlation_hidden_names(Project& project, std::optional<std::size_t> bank) {
+    std::vector<const Parameter*> left_out = project.hidden_parameters();
+    if (bank && *bank < project.experiments.size()) {
+        const BraggPdExperiment& experiment = *project.experiments[*bank];
+        const auto enables = [&](const std::string& name) {
+            return std::any_of(experiment.linked_structures.begin(), experiment.linked_structures.end(),
+                               [&](const auto& link) {
+                                   return link->enabled.get() &&
+                                          (link->structure_id.value() == name ||
+                                           (link->structure_id.value().empty() && project.structures.size() == 1));
+                               });
+        };
+        for (const auto& structure : project.structures) {
+            if (enables(structure->name.value())) continue;
+            for (Parameter* parameter : structure->parameters()) left_out.push_back(parameter);
+        }
+        for (const auto& link : experiment.linked_structures) {
+            if (link->enabled.get()) continue;
+            left_out.push_back(&link->scale);
+            for (const auto& row : experiment.preferred_orientation) {
+                if (row->structure_id.value() == link->structure_id.value()) {
+                    left_out.push_back(&row->march_r);
+                    left_out.push_back(&row->march_random_fract);
+                }
+            }
+        }
+    }
+    // Every spelling of each left-out parameter, constrained ones included, by the one view (edi::ActiveView): a pair a
+    // fit saved under either name is dropped.
+    return ActiveView(project).spellings(std::set<const Parameter*>(left_out.begin(), left_out.end()));
+}
+
+void drop_correlation_names(std::vector<std::string>& names, std::vector<double>& matrix,
+                            const std::set<std::string>& hidden) {
+    const std::size_t n = names.size();
+    std::vector<std::size_t> keep;
+    for (std::size_t i = 0; i < n; ++i) {
+        if (!hidden.contains(names[i])) keep.push_back(i);
+    }
+    if (keep.size() == n || matrix.size() != n * n) return;
+    std::vector<std::string> kept_names;
+    std::vector<double> kept(keep.size() * keep.size());
+    for (std::size_t a = 0; a < keep.size(); ++a) {
+        kept_names.push_back(names[keep[a]]);
+        for (std::size_t b = 0; b < keep.size(); ++b) kept[a * keep.size() + b] = matrix[keep[a] * n + keep[b]];
+    }
+    names = std::move(kept_names);
+    matrix = std::move(kept);
 }
 
 }  // namespace edi

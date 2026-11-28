@@ -2701,6 +2701,9 @@ struct AtomSite : std::enable_shared_from_this<AtomSite> {
     // Scattering type symbol, e.g. "Ca". A geometry input: it records its own writes.
     detail::WrittenText type_symbol;
     detail::WrittenText wyckoff_letter = "";  // Wyckoff letter (optional; "" = general)
+    // A type IV site's signed stabiliser as its file saved it (`;`-joined signed triplets), so a load restores the
+    // site's symmetry as written and never detects it again.
+    detail::WrittenText signed_site_symmetry = "";
     // `_atom_site.adp_type`, the type the site's values are in: Biso, Uiso, Bani, Uani or beta
     // (ADR-0027). A file that declares none reads as Biso; a save writes it. A geometry
     // input: it records its own writes.
@@ -2904,8 +2907,8 @@ namespace crysta {
 template <>
 struct RowSchema<edi::AtomSite> {
     static constexpr const char* name = "_atom_site";
-    static constexpr auto fields = std::tuple{&edi::AtomSite::id, &edi::AtomSite::type_symbol, &edi::AtomSite::wyckoff_letter, &edi::AtomSite::adp_type, &edi::AtomSite::fract_x, &edi::AtomSite::fract_y, &edi::AtomSite::fract_z, &edi::AtomSite::occupancy, &edi::AtomSite::adp_iso};
-    static constexpr std::array items{"id", "type_symbol", "wyckoff_letter", "adp_type", "fract_x", "fract_y", "fract_z", "occupancy", "adp_iso"};
+    static constexpr auto fields = std::tuple{&edi::AtomSite::id, &edi::AtomSite::type_symbol, &edi::AtomSite::wyckoff_letter, &edi::AtomSite::signed_site_symmetry, &edi::AtomSite::adp_type, &edi::AtomSite::fract_x, &edi::AtomSite::fract_y, &edi::AtomSite::fract_z, &edi::AtomSite::occupancy, &edi::AtomSite::adp_iso};
+    static constexpr std::array items{"id", "type_symbol", "wyckoff_letter", "signed_site_symmetry", "adp_type", "fract_x", "fract_y", "fract_z", "occupancy", "adp_iso"};
 };
 
 // The columns of the `_atom_site_aniso` table.
@@ -5416,6 +5419,10 @@ class Project : public detail::ProjectAnchor {
     // `iucr_99` (always two digits, the default since the owner's record of 2026-10-24) or `iucr_19` (IUCr
     // recommendation 12), by crysta's rule.
     std::string su_rule = kDefaultSuRule;
+    // `project.edi` `_structure_view`: how the Structure view shows every structure, one
+    // set for the project, by item name; switching structures keeps it. A project saved before reads its first
+    // structure's items once. Camera and zoom are per structure and never saved.
+    detail::Written<std::map<std::string, std::string>> structure_view;
     // `reports/report.edi` `_report` (ADR-0036 §7): the report's settings, each absent until the file or the app
     // states it: whether Save report writes the HTML, the PDF and the CIF report, whether the HTML embeds its chart
     // libraries, and the groups the report leaves out (their keys separated by spaces; empty leaves out none). Its
@@ -5527,6 +5534,11 @@ class Project : public detail::ProjectAnchor {
     // `Project.parameters` / `Project.free_parameters`).
     std::vector<Parameter*> parameters();
     std::vector<Parameter*> free_parameters();
+    // A disabled linked structure appears nowhere but the Structures and Linked structures tables: a structure
+    // some link names while no enabled link does, and the parameters views leave out, its own and each disabled
+    // link's scale and texture. One rule for every view; files keep them all.
+    bool structure_hidden(const std::string& name) const;
+    std::vector<const Parameter*> hidden_parameters();
 
     // An admitted edit through an editor transaction. The app's one write door
     // (ProjectEditor::apply) calls it after every change it runs, so every GUI edit — any field,
@@ -6017,6 +6029,16 @@ struct SuFormatCategory {
     static constexpr std::array items{"rule"};
 };
 static_assert(detail::one_entry_per_column(SuFormatCategory::columns, SuFormatCategory::items));
+// The project's Structure view settings: the `_structure_view` items of project.edi, which its reader and crysta's
+// writer place there by hand. Named apart from a structure's own `_structure_view`, which a project saved before
+// still carries and loads read once.
+struct ProjectStructureViewCategory {
+    using Owner = Project;
+    static constexpr const char* name = "project_structure_view";
+    static constexpr auto columns = std::tuple{&Project::structure_view};
+    static constexpr std::array items{"adp_probability atom_scale atom_view atoms axes bonds cell colour_scheme labels"};
+};
+static_assert(detail::one_entry_per_column(ProjectStructureViewCategory::columns, ProjectStructureViewCategory::items));
 
 struct ReportSettingsCategory {
     using Owner = Project;
@@ -6657,6 +6679,41 @@ inline std::vector<Parameter*> Project::parameters() {
         }
     }
     return out;
+}
+inline bool Project::structure_hidden(const std::string& name) const {
+    bool named = false;
+    for (const std::shared_ptr<BraggPdExperiment>& experiment : experiments) {
+        for (const std::shared_ptr<LinkedStructure>& link : experiment->linked_structures) {
+            const std::string& linked = link->structure_id.value();
+            // A lone link with no name reads as the lone structure, as crysta resolves it.
+            const bool names = linked == name || (linked.empty() && structures.size() == 1 &&
+                                                  structures.front()->name.value() == name);
+            if (!names) continue;
+            if (link->enabled.get()) return false;
+            named = true;
+        }
+    }
+    return named;
+}
+inline std::vector<const Parameter*> Project::hidden_parameters() {
+    std::vector<const Parameter*> hidden;
+    for (const std::shared_ptr<BraggPdExperiment>& experiment : experiments) {
+        for (const std::shared_ptr<LinkedStructure>& link : experiment->linked_structures) {
+            if (link->enabled.get()) continue;
+            hidden.push_back(&link->scale);
+            for (const std::shared_ptr<PrefOrient>& row : experiment->preferred_orientation) {
+                if (row->structure_id.value() == link->structure_id.value()) {
+                    hidden.push_back(&row->march_r);
+                    hidden.push_back(&row->march_random_fract);
+                }
+            }
+        }
+    }
+    for (const std::shared_ptr<Structure>& structure : structures) {
+        if (!structure_hidden(structure->name.value())) continue;
+        for (Parameter* parameter : structure->parameters()) hidden.push_back(parameter);
+    }
+    return hidden;
 }
 // The free parameters a fit refines: what no enabled phase reads is left out — a disabled link's
 // scale and texture, and every parameter of a structure no enabled link names (crysta's rule).

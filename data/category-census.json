@@ -36,6 +36,16 @@
           ]
         },
         {
+          "member": "AtomSite::signed_site_symmetry",
+          "type": "detail::WrittenText",
+          "items": [
+            "signed_site_symmetry"
+          ],
+          "storage": [
+            "crysta::Column<std::string>"
+          ]
+        },
+        {
           "member": "AtomSite::adp_type",
           "type": "detail::WrittenText",
           "items": [
@@ -1920,6 +1930,28 @@
       "owner": "Project"
     },
     {
+      "name": "project_structure_view",
+      "form": "aggregate",
+      "columns": [
+        {
+          "member": "Project::structure_view",
+          "type": "detail::Written<std::map<std::string, std::string>>",
+          "items": [
+            "adp_probability",
+            "atom_scale",
+            "atom_view",
+            "atoms",
+            "axes",
+            "bonds",
+            "cell",
+            "colour_scheme",
+            "labels"
+          ]
+        }
+      ],
+      "owner": "Project"
+    },
+    {
       "name": "_report",
       "form": "one row",
       "columns": [
@@ -3524,6 +3556,11 @@
     },
     {
       "member": "AtomSite::wyckoff_letter",
+      "type": "detail::WrittenText",
+      "category": "_atom_site"
+    },
+    {
+      "member": "AtomSite::signed_site_symmetry",
       "type": "detail::WrittenText",
       "category": "_atom_site"
     },
@@ -6163,6 +6200,11 @@
       "member": "Project::su_rule",
       "type": "std::string",
       "category": "_su_format"
+    },
+    {
+      "member": "Project::structure_view",
+      "type": "detail::Written<std::map<std::string, std::string>>",
+      "category": "project_structure_view"
     },
     {
       "member": "Project::report_html",

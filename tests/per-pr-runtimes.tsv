@@ -10,11 +10,11 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-28T02:52:32Z
+# measured_utc = 2026-11-28T15:16:15Z
 #
-# Recorded from: measured test run (20 node(s) measured once, 187657 banked, 0 stale row(s) dropped)
-# Collected tests: 267611; with a reported duration: 86302
-# Module-scoped fixture costs recorded: 222
+# Recorded from: Banked rows from both parents of the origin/main merge
+# Collected tests: 267665; with a reported duration: 86313
+# Module-scoped fixture costs recorded: 225
 #
 # Breaches are decided PER TIER against the table
 # below, which the loader validates against the code constants - a manifest must state
@@ -29,12 +29,12 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 267611
-# inventory_cpp = 0
-# inventory_measured = 187677
-# inventory_unmeasured = 79934
+# inventory_python = 267652
+# inventory_cpp = 13
+# inventory_measured = 187688
+# inventory_unmeasured = 79977
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
-# inventory_pr_python = 92700
+# inventory_pr_python = 92741
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -1346,6 +1346,19 @@ UNMEASURED:failed-in-this-run	tests/integration/app/test_web_control_geometry.py
 UNMEASURED:failed-in-this-run	tests/integration/app/test_web_control_geometry.py::test_transformed_control_extent_is_independent_of_ink_and_clip[populated]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_web_control_geometry.py::test_transformed_control_extent_is_independent_of_ink_and_clip[unclipped]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_web_control_geometry.py::test_visual_children_remain_discoverable_without_qobject_parentage
+UNMEASURED:failed-in-this-run	tests/integration/cpp/test_magnetic_candidate_transaction.cpp::An invalid disabled second candidate row refuses the whole transaction
+0.034	tests/integration/cpp/test_magnetic_candidate_transaction.cpp::The candidate transaction accepts three independently valid staged rows
+0.064	tests/integration/cpp/test_magnetic_legacy_editor.cpp::Regression pin preserves type I native and FullProf editor paths
+0.023	tests/integration/cpp/test_magnetic_legacy_editor.cpp::Regression pin preserves type III native and FullProf editor paths
+UNMEASURED:failed-in-this-run	tests/integration/cpp/test_type_iv_site_symmetry.cpp::Edi save and reopen preserve a type IV site's written general position
+UNMEASURED:failed-in-this-run	tests/integration/cpp/test_type_iv_site_symmetry.cpp::Edi type IV CIF loading detects a mirror only when its letter is absent
+UNMEASURED:expected-red-on-499909374	tests/integration/cpp/test_type_iv_site_symmetry.cpp::Equivalent type IV signed rows retain verified metadata in the native editor
+UNMEASURED:expected-red-on-499909374	tests/integration/cpp/test_type_iv_site_symmetry.cpp::Native type IV ADP conversion and new atoms use magnetic site geometry
+UNMEASURED:expected-red-on-499909374	tests/integration/cpp/test_type_iv_site_symmetry.cpp::The native structure page accepts verified type IV Wyckoff letters
+UNMEASURED:expected-red-on-499909374	tests/integration/cpp/test_type_iv_site_symmetry.cpp::The native type IV anisotropic input reaches the structure page
+UNMEASURED:expected-red-on-499909374	tests/integration/cpp/test_type_iv_site_symmetry.cpp::The native type IV mirror exposes its two free coordinates
+UNMEASURED:expected-red-on-499909374	tests/integration/cpp/test_type_iv_site_symmetry.cpp::The native type IV mirror projects a near-special imported coordinate
+UNMEASURED:expected-red-on-499909374	tests/integration/cpp/test_type_iv_site_symmetry.cpp::The native type IV setting edit derives its letter in the requested axes
 UNMEASURED:failed-in-this-run	tests/integration/py/test_adp_exact_zeros.py::test_isotropic_tensor_preserves_exact_zeros_and_oblique_values[change-Bani-cubic]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_adp_exact_zeros.py::test_isotropic_tensor_preserves_exact_zeros_and_oblique_values[change-Bani-hexagonal]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_adp_exact_zeros.py::test_isotropic_tensor_preserves_exact_zeros_and_oblique_values[change-Bani-monoclinic]
@@ -187274,6 +187287,7 @@ UNMEASURED:not-completed-in-this-run	tests/system/app/test_assistant_cif_attachm
 UNMEASURED:failed-in-this-run	tests/system/app/test_assistant_project_replacement.py::test_saved_project_awaits_user_confirmation[quiet]
 UNMEASURED:failed-in-this-run	tests/system/app/test_assistant_project_replacement.py::test_saved_project_awaits_user_confirmation[shown]
 UNMEASURED:failed-in-this-run	tests/system/app/test_assistant_step_folding.py::test_different_finished_steps_share_one_expandable_row
+0.005	tests/system/app/test_disabled_phase_projection.py::test_active_phase_projection_reaches_every_scientific_consumer
 UNMEASURED:not-completed-in-this-run	tests/system/app/test_feedback_attachment_typing.py::test_typing_with_a_real_attachment_stays_responsive
 UNMEASURED:not-completed-in-this-run	tests/system/app/test_large_collection_open.py::test_collection_first_open[large_offline]
 UNMEASURED:not-completed-in-this-run	tests/system/app/test_large_collection_open.py::test_collection_first_open[large_online]
@@ -187298,9 +187312,48 @@ UNMEASURED:not-completed-in-this-run	tests/system/app/test_likes_feedback.py::te
 UNMEASURED:not-completed-in-this-run	tests/system/app/test_likes_feedback.py::test_likes_bar_actions[h_opt_out_survives_a_new_bar_instance]
 UNMEASURED:not-completed-in-this-run	tests/system/app/test_likes_feedback.py::test_likes_bar_actions[i_preferences_offer_both_feedback_switches:likes]
 UNMEASURED:not-completed-in-this-run	tests/system/app/test_likes_feedback.py::test_likes_bar_actions[i_preferences_offer_both_feedback_switches:survey]
+0.550	tests/system/app/test_magnetic_operator_workflow.py::test_magnetic_workflow_in_the_real_qt_application[a10_refusal_ignores_renamed_and_reused_parent_name]
+UNMEASURED:failed-in-this-run	tests/system/app/test_magnetic_operator_workflow.py::test_magnetic_workflow_in_the_real_qt_application[a_setting_presets]
+UNMEASURED:failed-in-this-run	tests/system/app/test_magnetic_operator_workflow.py::test_magnetic_workflow_in_the_real_qt_application[add_links_and_undo]
+UNMEASURED:failed-in-this-run	tests/system/app/test_magnetic_operator_workflow.py::test_magnetic_workflow_in_the_real_qt_application[add_unlinked]
+UNMEASURED:failed-in-this-run	tests/system/app/test_magnetic_operator_workflow.py::test_magnetic_workflow_in_the_real_qt_application[added_children_reopen]
+1.130	tests/system/app/test_magnetic_operator_workflow.py::test_magnetic_workflow_in_the_real_qt_application[bns_field_refusal_is_atomic]
+UNMEASURED:failed-in-this-run	tests/system/app/test_magnetic_operator_workflow.py::test_magnetic_workflow_in_the_real_qt_application[candidate_toggle_preserves_profile_and_free_set]
+UNMEASURED:failed-in-this-run	tests/system/app/test_magnetic_operator_workflow.py::test_magnetic_workflow_in_the_real_qt_application[equivalent_signed_rows_retain_derived_identity]
+UNMEASURED:failed-in-this-run	tests/system/app/test_magnetic_operator_workflow.py::test_magnetic_workflow_in_the_real_qt_application[f_cubic_presets]
+3.240	tests/system/app/test_magnetic_operator_workflow.py::test_magnetic_workflow_in_the_real_qt_application[find_k_disabled_parent_refuses]
+3.920	tests/system/app/test_magnetic_operator_workflow.py::test_magnetic_workflow_in_the_real_qt_application[find_k_gamma_labels_forbidden_and_allowed_marks]
+UNMEASURED:failed-in-this-run	tests/system/app/test_magnetic_operator_workflow.py::test_magnetic_workflow_in_the_real_qt_application[find_k_late_choice_after_calibration_edit_refuses]
+UNMEASURED:failed-in-this-run	tests/system/app/test_magnetic_operator_workflow.py::test_magnetic_workflow_in_the_real_qt_application[find_k_late_choice_after_link_edit_refuses]
+UNMEASURED:failed-in-this-run	tests/system/app/test_magnetic_operator_workflow.py::test_magnetic_workflow_in_the_real_qt_application[find_k_late_choice_after_mask_edit_refuses]
+4.190	tests/system/app/test_magnetic_operator_workflow.py::test_magnetic_workflow_in_the_real_qt_application[find_k_marks_without_kept_fit]
+4.380	tests/system/app/test_magnetic_operator_workflow.py::test_magnetic_workflow_in_the_real_qt_application[find_k_mask_excludes_observed_peak]
+3.800	tests/system/app/test_magnetic_operator_workflow.py::test_magnetic_workflow_in_the_real_qt_application[find_k_multiple_crystal_links_refuse]
+UNMEASURED:failed-in-this-run	tests/system/app/test_magnetic_operator_workflow.py::test_magnetic_workflow_in_the_real_qt_application[find_k_table_analyse_add_stays_on_pattern]
+UNMEASURED:failed-in-this-run	tests/system/app/test_magnetic_operator_workflow.py::test_magnetic_workflow_in_the_real_qt_application[half_graph]
+1.190	tests/system/app/test_magnetic_operator_workflow.py::test_magnetic_workflow_in_the_real_qt_application[k_field_refusal_is_atomic]
+UNMEASURED:failed-in-this-run	tests/system/app/test_magnetic_operator_workflow.py::test_magnetic_workflow_in_the_real_qt_application[legacy_grey_fields_obey_current_cell_admission]
+UNMEASURED:failed-in-this-run	tests/system/app/test_magnetic_operator_workflow.py::test_magnetic_workflow_in_the_real_qt_application[rendered_bns_name_refusal]
+UNMEASURED:failed-in-this-run	tests/system/app/test_magnetic_operator_workflow.py::test_magnetic_workflow_in_the_real_qt_application[rendered_bns_number_refusal]
+UNMEASURED:failed-in-this-run	tests/system/app/test_magnetic_operator_workflow.py::test_magnetic_workflow_in_the_real_qt_application[single_crystal_disabled_refuses]
+UNMEASURED:failed-in-this-run	tests/system/app/test_magnetic_operator_workflow.py::test_magnetic_workflow_in_the_real_qt_application[single_crystal_enabled_refuses]
+UNMEASURED:failed-in-this-run	tests/system/app/test_magnetic_operator_workflow.py::test_magnetic_workflow_in_the_real_qt_application[start_above_cancellation_cutoff]
+UNMEASURED:failed-in-this-run	tests/system/app/test_magnetic_operator_workflow.py::test_magnetic_workflow_in_the_real_qt_application[start_batch_notes_are_per_candidate]
+UNMEASURED:failed-in-this-run	tests/system/app/test_magnetic_operator_workflow.py::test_magnetic_workflow_in_the_real_qt_application[start_below_cancellation_cutoff]
+UNMEASURED:failed-in-this-run	tests/system/app/test_magnetic_operator_workflow.py::test_magnetic_workflow_in_the_real_qt_application[start_longitudinal_note]
+UNMEASURED:failed-in-this-run	tests/system/app/test_magnetic_operator_workflow.py::test_magnetic_workflow_in_the_real_qt_application[start_mn3o4_has_no_note]
+UNMEASURED:failed-in-this-run	tests/system/app/test_magnetic_operator_workflow.py::test_magnetic_workflow_in_the_real_qt_application[start_uniform_dilution_has_no_note]
+UNMEASURED:failed-in-this-run	tests/system/app/test_magnetic_operator_workflow.py::test_magnetic_workflow_in_the_real_qt_application[start_unlinked_has_no_note]
+UNMEASURED:failed-in-this-run	tests/system/app/test_magnetic_operator_workflow.py::test_magnetic_workflow_in_the_real_qt_application[structure_analysis_entry_keeps_k_in_popup]
+UNMEASURED:failed-in-this-run	tests/system/app/test_magnetic_operator_workflow.py::test_magnetic_workflow_in_the_real_qt_application[texture_overflow_is_atomic]
+UNMEASURED:failed-in-this-run	tests/system/app/test_magnetic_operator_workflow.py::test_magnetic_workflow_in_the_real_qt_application[third_graph]
+UNMEASURED:failed-in-this-run	tests/system/app/test_magnetic_operator_workflow.py::test_magnetic_workflow_in_the_real_qt_application[three_candidate_texture_failure_is_atomic]
+UNMEASURED:failed-in-this-run	tests/system/app/test_magnetic_operator_workflow.py::test_magnetic_workflow_in_the_real_qt_application[type_iv_adp_cell_and_new_atom_edits_complete]
+UNMEASURED:failed-in-this-run	tests/system/app/test_magnetic_operator_workflow.py::test_magnetic_workflow_in_the_real_qt_application[type_iv_letters_and_coordinate_edit]
+UNMEASURED:failed-in-this-run	tests/system/app/test_magnetic_operator_workflow.py::test_magnetic_workflow_in_the_real_qt_application[unverified_letter_is_retracted]
 UNMEASURED:not-completed-in-this-run	tests/system/app/test_magnetic_structure_type_native.py::test_magnetic_structure_controls[a_create_defaults_to_crystal]
 UNMEASURED:not-completed-in-this-run	tests/system/app/test_magnetic_structure_type_native.py::test_magnetic_structure_controls[b_magnetic_cif_selects_magnetic]
-UNMEASURED:not-completed-in-this-run	tests/system/app/test_magnetic_structure_type_native.py::test_magnetic_structure_controls[c_switch_to_magnetic_uses_the_grey_group]
+UNMEASURED:failed-in-this-run	tests/system/app/test_magnetic_structure_type_native.py::test_magnetic_structure_controls[c_switch_to_magnetic_opens_the_parent_popup]
 UNMEASURED:not-completed-in-this-run	tests/system/app/test_magnetic_structure_type_native.py::test_magnetic_structure_controls[d_return_to_crystal_requires_confirmation]
 UNMEASURED:not-completed-in-this-run	tests/system/app/test_magnetic_structure_type_native.py::test_magnetic_structure_controls[e_bns_fields_are_linked_and_searchable]
 UNMEASURED:not-completed-in-this-run	tests/system/app/test_magnetic_structure_type_native.py::test_magnetic_structure_controls[f_setting_shows_the_nontrivial_transform]
@@ -256090,7 +256143,8 @@ UNMEASURED:not-completed-in-this-run	tests/system/py/test_project_creation_overw
 0.670	tests/system/py/test_project_file_text_contract.py::test_real_text_tab_actor[ProjectText::test_invalid_edits_are_atomic:short-loop-row]
 0.760	tests/system/py/test_project_file_text_contract.py::test_real_text_tab_actor[ProjectText::test_invalid_edits_are_atomic:unknown-category]
 0.750	tests/system/py/test_project_file_text_contract.py::test_real_text_tab_actor[ProjectText::test_invalid_edits_are_atomic:unknown-item]
-1.070	tests/system/py/test_project_file_text_contract.py::test_real_text_tab_actor[ProjectText::test_per_structure_appearance]
+UNMEASURED:failed-in-this-run	tests/system/py/test_project_file_text_contract.py::test_real_text_tab_actor[ProjectText::test_legacy_appearance_migrates_first_structure_once]
+UNMEASURED:failed-in-this-run	tests/system/py/test_project_file_text_contract.py::test_real_text_tab_actor[ProjectText::test_project_appearance_survives_structure_switch_and_reopen]
 0.800	tests/system/py/test_project_file_text_contract.py::test_real_text_tab_actor[ProjectText::test_report_asks_for_location]
 0.910	tests/system/py/test_project_file_text_contract.py::test_real_text_tab_actor[ProjectText::test_report_is_written_inside_opened_zip]
 0.740	tests/system/py/test_project_file_text_contract.py::test_real_text_tab_actor[ProjectText::test_syntax_colours]
@@ -267713,7 +267767,10 @@ UNMEASURED:not-completed-in-this-run	tests/unit/py/test_web_science_identity.py:
 # module-cost: 6.489	tests/integration/py/test_tutorial_strategy.py
 # module-cost: 2.933	tests/integration/py/test_weight_fraction_app.py
 # module-cost: 4.815	tests/system/app/test_assistant_cif_attachment.py
+# module-cost: 136.195	tests/system/app/test_disabled_phase_projection.py
 # module-cost: 0.951	tests/system/app/test_likes_feedback.py
+# module-cost: 1.390	tests/system/app/test_magnetic_operator_workflow.py
+# module-cost: 1.325	tests/system/app/test_magnetic_structure_type_native.py
 # module-cost: 12.650	tests/system/app/test_rendered_caption_capitalisation.py
 # module-cost: 84.777	tests/system/app/test_replaced_data_drawn.py
 # module-cost: 52.130	tests/system/app/test_shown_assistant_create_draft.py

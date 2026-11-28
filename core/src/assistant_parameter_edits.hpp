@@ -24,7 +24,11 @@ Edit prepare_parameter_edit(Project& project, const std::vector<std::pair<std::s
     std::map<const Parameter*, std::string> names;
     for (const auto& slot : named_slots(project)) names.emplace(slot.parameter, slot.unique_name);
     std::map<std::string, ParameterEntry> metadata;
-    for (const auto& entry : parameter_entries(project)) if (names.count(entry.parameter)) metadata.emplace(entry.path, entry);
+    // Only what the user's views show (edi::ActiveView): a disabled phase's parameter is no edit target, for the
+    // native tools and the restricted controller alike.
+    const ActiveView shown(project);
+    for (const auto& entry : parameter_entries(project))
+        if (names.count(entry.parameter) && shown.shown(entry.parameter)) metadata.emplace(entry.path, entry);
     std::set<std::string> seen;
     std::vector<std::pair<std::string, T>> edits;
     for (const auto& [path, value] : requested) {

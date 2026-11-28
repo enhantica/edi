@@ -15,6 +15,7 @@
 #include <cmath>
 #include <cstddef>
 #include <map>
+#include <set>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -399,6 +400,47 @@ struct NamedParameter {
     const Parameter* parameter = nullptr;
 };
 std::vector<NamedParameter> named_parameters(const Project& project);
+// ActiveView: the project as every user-facing view sees it under the disabled-link ruling (owner, 2026-11-27;
+// reviews 31 and 32). It is the one place that decides whether a parameter, an alias or a constraint belongs to a
+// phase no enabled link reads; Analysis, the report and the assistant read relations only through it, so none can
+// show a disabled phase's rows. The declarations stay in the project for save and re-enable.
+//   - A parameter is hidden when it is one of Project::hidden_parameters.
+//   - An alias resolves its parameter by either spelling crysta accepts (the slot id or the unique name), dependent
+//     parameters included; it is hidden when that parameter is. An alias that resolves to nothing stays shown, for
+//     the user to repair.
+//   - A constraint is hidden when any alias it names is hidden.
+class ActiveView {
+   public:
+    explicit ActiveView(const Project& project);
+    const Parameter* resolve(const std::string& name) const;  // nullptr when no parameter or more than one has it
+    bool shown(const Parameter* parameter) const { return !hidden_.contains(parameter); }
+    bool shown(const ParameterAlias& alias) const { return !hidden_aliases_.contains(alias.id.value()); }
+    bool shown(const ParameterConstraint& constraint) const;
+    std::vector<const ParameterAlias*> aliases() const;
+    std::vector<const ParameterConstraint*> constraints() const;
+    // Phases: a structure no enabled link reads, and a disabled link, are left out of every scientific view; the
+    // Structures and Linked structures management views list them all.
+    bool shown(const Structure& structure) const { return !project_.structure_hidden(structure.name.value()); }
+    std::vector<const Structure*> structures() const;
+    std::vector<const LinkedStructure*> links(const BraggPdExperiment& experiment) const { return links_of(experiment); }
+    static std::vector<const LinkedStructure*> links_of(const BraggPdExperiment& experiment);
+    // A constraint expression a user or the assistant proposes: false when it names an alias of a disabled
+    // phase, so nothing written can name, or later vanish into, one. Unknown aliases are the relation check's
+    // to report.
+    bool admits(const std::string& expression) const;
+    // The project index of the shown row `row`: the one place a filtered row maps back to the model. Every name crysta
+    // accepts for each of `parameters` (the slot id and the unique name, dependents included): what a reader keyed by
+    // name (correlations, saved pairs) drops for them (the report).
+    std::set<std::string> spellings(const std::set<const Parameter*>& parameters) const;
+    std::optional<std::size_t> alias_index(std::size_t row) const;
+    std::optional<std::size_t> constraint_index(std::size_t row) const;
+
+   private:
+    const Project& project_;
+    std::set<const Parameter*> hidden_;
+    std::map<std::string, std::vector<const Parameter*>> by_name_;
+    std::set<std::string> hidden_aliases_;
+};
 // One exact member, formatted only by the FIRST writer slot walk. Callers own
 // this preparation bound through the lookup and output ownership transfer.
 std::size_t named_parameter_preparation_bytes(std::size_t maximum_name_bytes);

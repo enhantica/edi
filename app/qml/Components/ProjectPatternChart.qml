@@ -17,6 +17,8 @@ Item {
     property ProjectViewModel axisProject: null
     // "pattern" for a page's chart, which follows the app's one pattern view (edi ADR-0017 §15).
     property string settingsPage: ""
+    // Find k's peak marking: on Experiment → Pattern only (owner, 2026-11-27).
+    property bool findKPage: false
     property bool shown: true
     property PatternChart chart: null
     // A single crystal has reflections, not a pattern: its F²calc-vs-F²meas chart shows instead.
@@ -40,6 +42,7 @@ Item {
             experiment: holder.experiment
             axisProject: holder.axisProject
             settingsPage: holder.settingsPage
+            findKPage: holder.findKPage
             shown: holder.shown && visible
         }
     }

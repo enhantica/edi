@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 import QtQuick
+import "UiInteraction.js" as Ui
 import QtTest
 import edi.app
 import EdiAcceptance 1.0
@@ -14,6 +15,7 @@ Item {
         Main {}
     }
     TestCase {
+        id: test
         name: "ReportDeferredSave"
         when: windowShown
         property var window
@@ -95,6 +97,7 @@ Item {
             report.setIncluded("evolution", data.figures);
             const preview = findChild(page, "report.preview");
             verify(preview !== null && waitForPolish(preview), "The actual preview applies included and excluded figure options");
+            Ui.selectSidebarTab(test, page, "tools");
             const group = findChild(page, "group.reportExport");
             verify(group !== null, "The navigation witness reaches the production Export group");
             const actions = Render.descendants(group).filter(item => item.text === "Save report" && typeof item.clicked === "function");

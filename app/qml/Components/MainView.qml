@@ -299,6 +299,7 @@ EaComponents.MainContent {
             experiment: view.project ? view.project.currentExperiment : null
             axisProject: view.project
             settingsPage: "pattern"
+            findKPage: view.pageKey === "experiment"
             visible: view.hasExperiments
             shown: view.shown && SwipeView.isCurrentItem
         },

@@ -225,6 +225,8 @@ qt_add_qml_module(edi_app_module
         qml/Components/ParameterField.qml
         qml/Components/ParameterGrid.qml
         qml/Components/PaletteStrip.qml
+        qml/Components/KVectorPopup.qml
+        qml/Components/MagneticAddedDialog.qml
         qml/Components/PatternChart.qml
         qml/Components/ProjectPatternChart.qml
         qml/Components/EvolutionChart.qml
@@ -298,6 +300,8 @@ qt_add_qml_module(edi_app_module
         qml/Pages/Experiment/ReflectionAdmissionRow.qml
         qml/Pages/Experiment/BackgroundGroup.qml
         qml/Pages/Experiment/ExcludedRegionsGroup.qml
+        qml/Pages/Experiment/KSearchGroup.qml
+        qml/Pages/Structure/MagneticAnalysisGroup.qml
         qml/Pages/Experiment/ExperimentPage.qml
         qml/Pages/Experiment/ExperimentTypeGroup.qml
         qml/Pages/Experiment/ExperimentsGroup.qml
@@ -334,7 +338,10 @@ qt_add_qml_module(edi_app_module
         qml/Pages/Structure/AtomSiteAdpGroup.qml
         qml/Pages/Structure/AtomSiteMomentGroup.qml
         qml/Pages/Structure/MagneticFormFactorsGroup.qml
+        qml/Pages/Structure/MagneticPopup.qml
+        qml/Pages/Structure/MagneticSitesBox.qml
         qml/Pages/Structure/MagneticSpaceGroupGroup.qml
+        qml/Pages/Structure/MagneticSubgroupGraph.qml
         qml/Pages/Structure/MagneticSymbolsGroup.qml
         qml/Pages/Structure/ParentSpaceGroupGroup.qml
         qml/Pages/Structure/PolyhedraGroup.qml

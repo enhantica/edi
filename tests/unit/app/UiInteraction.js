@@ -124,6 +124,25 @@ function groupNames(root) {
     return names;
 }
 
+function selectSidebarTab(testCase, page, suffix, sidebar = null) {
+    const name = "sideBar.tab." + suffix;
+    let tab;
+    testCase.tryVerify(() => {
+        tab = find(page, name);
+        return tab && tab.visible && tab.enabled;
+    }, 5000, "The real sidebar exposes " + name + " after its page arrives");
+    if (!tab.checked)
+        testCase.mouseClick(tab, tab.width / 2, tab.height / 2);
+    testCase.tryCompare(tab, "checked", true, 2000, "Pointer input selects " + name);
+    testCase.tryVerify(() => !moving(page), 2000, "The selected sidebar pane finishes sliding");
+    const owner = sidebar || testCase.findChild(page, "workflow." + page.pageName + ".manualSidebar");
+    testCase.verify(owner, "The selected tab belongs to the workflow sidebar: " + name);
+    const index = Array.from(owner.tabs).indexOf(tab);
+    const pane = owner.items[index];
+    testCase.verify(pane && pane.opacity === 1, "The selected sidebar pane is drawn: " + name);
+    return pane;
+}
+
 function text(root) {
     if (!root || !root.visible) return "";
     let result = typeof root.text === "string" && rendered(root) ? root.text : "";

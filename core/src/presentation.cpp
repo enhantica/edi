@@ -326,7 +326,10 @@ std::vector<SeriesStyle> pattern_style_table(ColourScheme scheme, std::size_t ex
     // Bragg ticks' 1 px lines as it draws them, the owner, 2026-10-02). Every colour is the palette's (ADR-0038): an
     // experiment's and a structure's at its position, the calculated, background and residual colours its role colours.
     const std::size_t measured_rows = std::max(experiments, kMeasuredRows);
-    const std::size_t structure_rows = std::max(structures, kStructureRows);
+    // Room for every structure's row and, past them, a magnetic part's row for each structure (edi ADR-0078): a magnetic
+    // row is placed after all the structures, so a project of more structures than the minimum still has its series
+    // and colour (owner report 2026-11-28: five candidates left every magnetic row empty and black).
+    const std::size_t structure_rows = std::max(2 * structures, kStructureRows);
     // The items at their positions, as given (they never collide) or as a project with none held takes them; the rows
     // past them at the next free positions.
     const bool given = positions.size() == experiments + structures;
@@ -620,9 +623,10 @@ PatternSource single_crystal_pattern(const Project& project, std::size_t experim
         return values.empty() ? nullptr : std::make_shared<const std::vector<double>>(std::move(values));
     };
     // The linked structure's ticks, in its colour and named by it, as a powder pattern's phase. With a magnetic part,
-    // two rows and two components, as a powder pattern's magnetic structure has (edi ADR-0078): the nuclear
-    // reflections and part, and the magnetic ones in the colour of the next structure, its part stacked on the nuclear.
-    if (!experiment.linked_structures.empty()) {
+    // two rows and two components, as a powder pattern's magnetic structure has (edi ADR-0078): the nuclear reflections
+    // and part, and the magnetic ones in the colour of the next structure, its part stacked on the nuclear. A disabled
+    // link gives no ticks.
+    if (!experiment.linked_structures.empty() && experiment.linked_structures[0]->enabled.get()) {
         PatternSource::Phase phase;
         phase.structure_id = experiment.linked_structures[0]->structure_id;
         phase.label = phase.structure_id;
@@ -744,6 +748,21 @@ PatternSource capture_pattern(const Project& project, std::size_t experiment_ind
     source.components = structure_components(data.component_order.values(), data.component_intensities_net.values(),
                                               data.axis().size(), names, data.component_intensities_magnetic.values(),
                                               data.component_intensities_nuclear.values());
+    // Computed rows cached before a link was disabled still name its structure: a disabled link shows no ticks or
+    // component.
+    const auto disabled = [&experiment](const std::string& key) {
+        // A magnetic structure's magnetic rows are keyed `<id>/magnetic`: they belong to <id>.
+        constexpr std::string_view kMagnetic = "/magnetic";
+        const std::string structure = key.ends_with(kMagnetic) ? key.substr(0, key.size() - kMagnetic.size()) : key;
+        return std::none_of(experiment.linked_structures.begin(), experiment.linked_structures.end(),
+                            [&structure, &experiment](const auto& link) {
+                                return link->enabled.get() &&
+                                       (link->structure_id.value() == structure ||
+                                        (link->structure_id.value().empty() && experiment.linked_structures.size() == 1));
+                            });
+    };
+    std::erase_if(source.phases, [&](const PatternSource::Phase& phase) { return disabled(phase.structure_id); });
+    std::erase_if(source.components, [&](const PatternSource::Component& part) { return disabled(part.structure_id); });
     if (axis != PatternAxis::Native) {
         to_d_axis(source, data, refln);
         return pattern_on_axis(std::move(source), axis);

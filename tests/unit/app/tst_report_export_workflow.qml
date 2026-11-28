@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 import QtQuick
+import "UiInteraction.js" as Ui
 import "ApprovedPalette.js" as Approved
 import QtTest
 import QtQuick.Controls
@@ -18,6 +19,7 @@ Rectangle {
         ReportPage {}
     }
     TestCase {
+        id: test
         name: "ReportExportWorkflow"
         when: windowShown
         property var page
@@ -61,8 +63,12 @@ Rectangle {
             verify(page !== null && waitForPolish(page), "The real Report page lays out its export controls");
         }
         function group() {
-            const value = webGroup || findChild(page, "group.reportExport");
-            verify(value !== null, "The Report page exposes its actual Export group");
+            let value = webGroup;
+            if (!value) {
+                const pane = Ui.selectSidebarTab(test, page, "tools");
+                value = findChild(pane, "group.reportExport");
+            }
+            verify(value !== null, "The selected Report Tools pane exposes Export");
             if (value.collapsed)
                 mouseClick(value.titleArea, value.titleArea.width / 2, value.titleArea.height / 2);
             tryCompare(value, "collapsed", false, 1000, "The Export group is open before pointer input");
@@ -132,6 +138,7 @@ Rectangle {
             signalName: "saveFailed"
         }
         function browserBoundary() {
+            Ui.selectSidebarTab(test, page, "tools");
             const desktop = findChild(page, "group.reportExport");
             verify(desktop !== null, "The browser witness starts at the actual Export group");
             desktop.visible = false;
@@ -369,6 +376,7 @@ Rectangle {
         function test_browser_path_rows_use_the_session_file_state(data) {
             prepare(undefined, "tests/fixtures/report_options/pairs");
             Session.project.report.setIncluded("charts", false);
+            Ui.selectSidebarTab(test, page, "tools");
             const desktop = findChild(page, "group.reportExport");
             verify(desktop !== null, "The browser capability seam starts with the actual app's Report group and model");
             desktop.visible = false;

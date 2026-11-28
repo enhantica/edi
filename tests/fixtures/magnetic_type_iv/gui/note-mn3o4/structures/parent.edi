@@ -1,0 +1,24 @@
+data_parent
+_edi.schema_version 3
+_cell.length_a 3.032
+_cell.length_b 9.842
+_cell.length_c 9.568
+_cell.angle_alpha 90
+_cell.angle_beta 90
+_cell.angle_gamma 90
+_space_group.name_h_m "Pbcm"
+loop_
+_atom_site.id
+_atom_site.type_symbol
+_atom_site.wyckoff_letter
+_atom_site.fract_x
+_atom_site.fract_y
+_atom_site.fract_z
+_atom_site.occupancy
+_atom_site.adp_iso
+_atom_site.adp_type
+Mn1 Mn . 0.308 0.114 0.07 1.0 .01 Biso
+Mn2 Mn . 0.76 0.137 0.75 1.0 .01 Biso
+O1 O . 0.824 0.25 0 1.0 .01 Biso
+O2 O . 0.332 0.194 0.25 1.0 .01 Biso
+O3 O . 0.8 0.968 0.105 1.0 .01 Biso

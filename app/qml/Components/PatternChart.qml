@@ -2,12 +2,14 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
+import QtQuick.Controls
 import QtQuick.Window
 import QtQml.Models
 import QtGraphs
 
 import EasyApplication.Gui.Style as EaStyle
 import EasyApplication.Gui.Elements as EaElements
+import EasyApplication.Gui.Globals as EaGlobals
 
 import edi.app
 
@@ -18,6 +20,113 @@ import edi.app
 // the presentation and replaces the series below; this file only lays them out and passes the pointer on.
 Item {
     id: chart
+
+    // Find k on the chart (owner, 2026-11-27): the peaks the parent's kept fit leaves unexplained, the strongest marked
+    // to start with; a click marks or drops the one nearest it, and Find k ranks the propagation vectors the marked
+    // ones allow.
+    property bool findKPage: false
+    // The current experiment's k search, held by the project: this chart draws its candidates and marks and
+    // passes clicks on; the Experiment page's k search group shows and edits the same marks.
+    readonly property var kState: chart.axisProject ? chart.axisProject.kSearch : ({})
+    readonly property bool peakMode: chart.findKPage && kState.active === true
+    // A marking session ends with its pending tap and its click state.
+    onPeakModeChanged: {
+        markClick.stop();
+        pointer.lastClickAt = 0;
+    }
+    // The marks stay drawn and listed when marking stops, for the experiment they were made on (owner, 2026-11-27):
+    // marking is a mode over them, and only Clear empties them.
+    readonly property bool marksShown: chart.findKPage && chart.axisProject !== null &&
+                                       kState.experiment === chart.axisProject.currentExperimentIndex
+    readonly property var peakCandidates: marksShown ? kState.candidates : []
+    readonly property var peakMarks: marksShown ? kState.marks : []
+    readonly property string peakNote: peakMode ? kState.note : ""
+    // Each marked peak's role under the best-ranked k of the last search on these marks, by candidate index.
+    readonly property var peakRoles: marksShown ? kState.roles : ({})
+    // The marked peak under the pointer or under its table row in the k search group, by candidate index, else -1: its
+    // line and pin turn grey, and its row is highlighted (owner, 2026-11-27).
+    property int hoveredMark: -1
+    // A few pixels on the chart's axis: how near a line a click drops its mark, and the pointer finds it.
+    readonly property real markReach: 4 * (controller.xMax - controller.xMin) / Math.max(1, pointer.width)
+    // A zoom, pan or resize moves the lines under a still pointer: the hover is found again at the next move, and the
+    // grey line and hand do not stay on a line the pointer no longer covers.
+    onMarkReachChanged: chart.hoveredMark = -1
+    readonly property real viewStart: controller.xMin
+    onViewStartChanged: chart.hoveredMark = -1
+    // The mark under the pointer, decided where a click's removal is (kMarkAt), so hover and click agree.
+    function markAt(x) {
+        return chart.marksShown && chart.axisProject ? chart.axisProject.kMarkAt(x, chart.markReach) : -1;
+    }
+    // The Experiment page's chart is the one the sidebar's k search group edits.
+    Binding {
+        target: AppState
+        property: "kChart"
+        value: chart
+        when: chart.findKPage
+        restoreMode: Binding.RestoreBindingOrValue
+    }
+    readonly property Component kVector: kVectorComponent
+    readonly property Component analysis: analysisComponent
+
+    function setPeakMode(on) {
+        // Marks are placed and drawn on the pattern's own axis: marking shows it, and the axis box waits until
+        // marking stops.
+        if (on && controller.xAxis !== "native") {
+            if (chart.axisProject)
+                chart.axisProject.patternXAxis = "native";
+            else
+                controller.xAxis = "native";
+        }
+        if (chart.axisProject)
+            chart.axisProject.setKSearchActive(on);
+    }
+    // Find k: one snapshot of the parent, the experiment, its calculation and the marks, taken now and kept by the
+    // project; the k dialog, the analysis and Add receive its identity and Add refuses it once anything in it
+    // changed.
+    function openKVectors() {
+        const snapshot = chart.axisProject.kSnapshot();
+        if (snapshot.id === undefined)
+            return;
+        const popup = chart.kVector.createObject(Overlay.overlay, {
+            project: chart.axisProject,
+            snapshot: snapshot
+        }) as KVectorPopup;
+        popup.chosen.connect((k, rank) => chart.openAnalysis(k, rank, snapshot));
+        popup.open();
+    }
+    function openAnalysis(k, rank, snapshot) {
+        if (!chart.axisProject.kSnapshotCurrent(snapshot.id))
+            return;
+        const analysis = chart.analysis.createObject(Overlay.overlay, {
+            project: chart.axisProject,
+            structureIndex: snapshot.parent,
+            structure: chart.axisProject.structureAt(snapshot.parent),
+            initialK: k,
+            kSnapshotId: snapshot.id,
+            kRow: rank
+        }) as MagneticPopup;
+        analysis.added.connect(count => {
+            // Each added structure, in the order of its groups, with its BNS symbol (owner, 2026-11-28: no note).
+            const added = chart.axisProject.lastMagneticAdded();
+            const entries = added.map((a, i) => {
+                const node = analysis.nodes[analysis.selected[i]];
+                return {
+                    "name": a.name,
+                    "symbol": node ? `${node.name} ${node.bns}` : ""
+                };
+            });
+            const dialog = addedComponent.createObject(Overlay.overlay, {
+                entries: entries
+            }) as MagneticAddedDialog;
+            // The first added structure is already the Structure page's current one (Add selects it).
+            dialog.openStructure.connect(() => EaGlobals.Vars.appBarCurrentIndex = 2);
+            dialog.open();
+        });
+        analysis.open();
+    }
+    function togglePeakAt(x, reach) {
+        chart.axisProject.toggleKMarkAt(x, reach);
+    }
 
     // One accessible part in the browser, where Qt reads a flat page again for each of its items.
     Accessible.role: Accessible.Grouping
@@ -470,8 +579,8 @@ Item {
             // d, Q and sinθ/λ can be chosen once a calculation has given the experiment its d column (the owner,
             // 2026-10-22); the box shows the axis drawn, and names it as its list does; the d axis is "x: d-spacing"
             // in both (the owner, 2026-10-22). Q = 4π sinθ/λ and sinθ/λ come from d (the owner, 2026-11-14).
-            enabled: chart.experiment !== null && controller.dAvailable
-            toolTip: controller.dAvailable ? qsTr("X axis") : qsTr("X axis: d-spacing, Q and sinθ/λ can be chosen after a calculation")
+            enabled: chart.experiment !== null && controller.dAvailable && !chart.peakMode
+            toolTip: chart.peakMode ? qsTr("X axis: the pattern's own axis while peaks are marked") : controller.dAvailable ? qsTr("X axis") : qsTr("X axis: d-spacing, Q and sinθ/λ can be chosen after a calculation")
             readonly property var tokens: ["native", "d_spacing", "q", "sin_theta_over_lambda"]
             readonly property var entries: [Session.label(chart.nativeAxis === "timeOfFlight" ? "data.time_of_flight" : "data.two_theta"), qsTr("x: %1").arg(Session.optionLabel("pattern_chart.x_axis", "d_spacing")), qsTr("x: Q"), qsTr("x: %1").arg(Session.label("refln.sin_theta_over_lambda"))]
             model: entries
@@ -969,6 +1078,7 @@ Item {
                     "color": ink
                 },
                 {
+                    // The name alone; the magnet icon marks the magnetic row (owner, 2026-11-27).
                     "text": modelData.text,
                     "elides": true
                 }
@@ -1046,6 +1156,9 @@ Item {
         property real pressX: 0
         property real pressY: 0
         property real lastX: 0
+        property double lastClickAt: 0
+        property real lastClickX: 0
+        property real lastClickY: 0
 
         objectName: "chart.pointer"
         enabled: chart.interactive
@@ -1054,11 +1167,69 @@ Item {
         width: mainView.plotArea.width
         height: mainView.plotArea.height
         acceptedButtons: Qt.LeftButton | Qt.RightButton
-        hoverEnabled: toolbar.hoverShown
+        hoverEnabled: toolbar.hoverShown || chart.peakMode
+        // Over a marked line while marking: a pointing hand (owner, 2026-11-27: no tooltip).
+        cursorShape: chart.peakMode && chart.hoveredMark >= 0 ? Qt.PointingHandCursor : Qt.ArrowCursor
 
         onPressed: mouse => ApplicationInfo.patternPointer(mouse, 0)
-        onPositionChanged: mouse => ApplicationInfo.patternPointer(mouse, 1)
-        onReleased: mouse => ApplicationInfo.patternPointer(mouse, 2)
+        onPositionChanged: mouse => {
+            if (chart.peakMode && peakLayer.native_ && !pressed)
+                chart.hoveredMark = chart.markAt(controller.xMin + mouse.x / Math.max(1, width) * (controller.xMax - controller.xMin));
+            ApplicationInfo.patternPointer(mouse, 1);
+        }
+        // While marking peaks for k, a click that does not move marks or drops a peak; a drag still zooms or pans and
+        // the wheel still zooms, through this one pointer, so no layer above it takes the gesture (owner, 2026-11-27).
+        // The mark waits for the double-click interval, so a double click resets the view instead.
+        onReleased: mouse => {
+            const still = Math.abs(mouse.x - pressX) < chart.em * 0.3 && Math.abs(mouse.y - pressY) < chart.em * 0.3;
+            // A second still left click within the double-click interval resets the view, marking or not; counted here
+            // from the releases themselves, so it never depends on a double-click event reaching this area. Only a
+            // second click on the same spot is a double click: one on another peak marks it too.
+            if (mouse.button === Qt.LeftButton && still) {
+                const now = Date.now();
+                const samePlace = Math.abs(mouse.x - lastClickX) < chart.em * 0.5 && Math.abs(mouse.y - lastClickY) < chart.em * 0.5;
+                if (samePlace && now - lastClickAt <= Qt.styleHints.mouseDoubleClickInterval) {
+                    lastClickAt = 0;
+                    markClick.stop();
+                    controller.reset();
+                    return;
+                }
+                lastClickAt = now;
+                lastClickX = mouse.x;
+                lastClickY = mouse.y;
+            }
+            if (chart.peakMode && peakLayer.native_ && mouse.button === Qt.LeftButton && still) {
+                if (markClick.running) {  // the earlier tap, elsewhere, marks now
+                    markClick.stop();
+                    markClick.fire();
+                }
+                markClick.at = controller.xMin + mouse.x / Math.max(1, width) * (controller.xMax - controller.xMin);
+                markClick.reach = chart.markReach;  // the target shown at the tap, whatever zoom follows
+                markClick.experiment = chart.axisProject ? chart.axisProject.currentExperimentIndex : -1;
+                markClick.session = chart.kState.session ?? -1;
+                markClick.restart();
+                return;
+            }
+            ApplicationInfo.patternPointer(mouse, 2);
+        }
+        // A tap waiting out the double-click interval: it marks only in the context it was made in, so a change of the
+        // shown experiment or the end of marking before it fires drops it.
+        Timer {
+            id: markClick
+            property real at: 0
+            property real reach: 0
+            property int experiment: -1
+            property real session: -1
+            interval: Qt.styleHints.mouseDoubleClickInterval
+            function fire() {
+                if (!chart.peakMode || chart.axisProject === null || chart.axisProject.currentExperimentIndex !== experiment ||
+                    chart.kState.session !== session)
+                    return;
+                chart.togglePeakAt(at, reach);
+                chart.hoveredMark = -1;
+            }
+            onTriggered: fire()
+        }
         // On the report's preview the wheel scrolls the page, not the chart.
         onWheel: wheel => {
             if (chart.report) {
@@ -1067,7 +1238,10 @@ Item {
             }
             controller.wheelAt(wheel.x, wheel.angleDelta.y);
         }
-        onExited: hoverLabel.show("", 0, 0)
+        onExited: {
+            hoverLabel.show("", 0, 0);
+            chart.hoveredMark = -1;
+        }
 
         // The box being dragged, as the base's chart draws it (gui-components QtCharts1dBase.qml, easydiffractionbeta's
         // charts): a border in the theme's app-border colour, filled with the same colour half transparent (the
@@ -1122,6 +1296,81 @@ Item {
         hoverEnabled: true
         onPositionChanged: mouse => hoverLabel.read(2, residualPointer, mouse)
         onExited: hoverLabel.show("", 0, 0)
+    }
+
+    // Find k's marks over the main plot area, on the native axis; the pointer handlers mark and drop them.
+    Item {
+        id: peakLayer
+        objectName: "chart.peaks"
+        // The marks stay drawn after marking stops; the unmarked candidates only while marking.
+        visible: chart.marksShown
+        x: mainView.x + mainView.plotArea.x
+        y: mainView.y + mainView.plotArea.y
+        width: mainView.plotArea.width
+        height: mainView.plotArea.height
+        readonly property bool native_: controller.xAxis === "native"
+        function px(value) {
+            return (value - controller.xMin) / Math.max(1e-12, controller.xMax - controller.xMin) * width;
+        }
+
+        Repeater {
+            model: peakLayer.native_ ? chart.peakCandidates : []
+            delegate: Item {
+                id: mark
+                required property var modelData
+                required property int index
+                readonly property bool marked: chart.peakMarks.indexOf(index) >= 0
+                readonly property bool hovered: marked && chart.hoveredMark === index
+                objectName: `chart.peak.${index}`
+                x: Math.round(peakLayer.px(modelData.x))  // whole pixels, as the grid lines, so a line stays one pixel
+                // Every observed peak can be marked by a click; only the marked, the forbidden-line and the suggested
+                // ones are drawn.
+                visible: x >= 0 && x <= peakLayer.width &&
+                         (marked || (chart.peakMode && (!modelData.onAllowed || modelData.suggested)))
+                // A marked peak: a short tick at the top of the plot and a faint line through it; a candidate not
+                // marked: the tick alone, grey.
+                Rectangle {
+                    width: EaStyle.Sizes.borderThickness
+                    height: peakLayer.height
+                    visible: mark.marked
+                    // Hovered, the line and its pin turn grey (owner, 2026-11-27), in a table row's hover time.
+                    color: mark.hovered ? chart.colors.themeForegroundMinor : EaStyle.Colors.themeAccent
+                    opacity: mark.hovered ? 1 : 0.35
+                    Behavior on color {
+                        ColorAnimation {
+                            duration: EaStyle.Sizes.tableHighlightMoveDuration
+                        }
+                    }
+                }
+                Rectangle {
+                    // Centred on the line on whole pixels: four or two of the border's widths.
+                    width: (mark.marked ? 4 : 2) * EaStyle.Sizes.borderThickness
+                    x: -Math.round((width - EaStyle.Sizes.borderThickness) / 2)
+                    height: Math.round(chart.em * 0.8)
+                    radius: EaStyle.Sizes.borderThickness
+                    color: mark.hovered ? chart.colors.themeForegroundMinor : mark.marked ? EaStyle.Colors.themeAccent : chart.colors.themeForegroundDisabled
+                    Behavior on color {
+                        ColorAnimation {
+                            duration: EaStyle.Sizes.tableHighlightMoveDuration
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+
+    Component {
+        id: kVectorComponent
+        KVectorPopup {}
+    }
+    Component {
+        id: analysisComponent
+        MagneticPopup {}
+    }
+    Component {
+        id: addedComponent
+        MagneticAddedDialog {}
     }
 
     // The hover read-out, beside the pointer: diffraction-lib's lines, each value in its series' colour

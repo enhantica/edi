@@ -24,6 +24,7 @@
 #include <QKeyEvent>
 #include <QKeySequence>
 #include <QMouseEvent>
+#include <QWheelEvent>
 #include <QPointer>
 #include <QQmlEngine>
 #include <QQuickItem>
@@ -1233,9 +1234,11 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
         if (inventory.isEmpty()) {
             const QList<std::pair<QString, QStringList>> builtin{
                 {QStringLiteral("structure/basic"), {"structures", "space_group", "cell", "atom_site", "atom_site_aniso"}},
-                {QStringLiteral("structure/extras"), {"scattering_length", "geom", "space_group_symop", "expanded_atom_site", "appearance", "polyhedra"}},
+                {QStringLiteral("structure/extras"), {"scattering_length", "geom", "space_group_symop", "expanded_atom_site"}},
+                {QStringLiteral("structure/settings"), {"appearance", "polyhedra"}},
                 {QStringLiteral("experiment/basic"), {"experiments", "background", "instrument", "peak", "excluded_region", "linked_structure"}},
-                {QStringLiteral("experiment/extras"), {"background_estimate", "peak", "absorption", "preferred_orientation", "scattering_source", "data", "refln"}},
+                {QStringLiteral("experiment/extras"), {"peak", "absorption", "preferred_orientation", "scattering_source", "data", "refln"}},
+                {QStringLiteral("experiment/tools"), {"background_estimate"}},
                 {QStringLiteral("analysis/extras"), {"minimizer", "fitting_mode", "alias", "constraint", "fit_parameter", "fit_result", "fit_result_bank", "fit_result_phase"}}};
             for (const auto& [where, groups] : builtin)
                 for (const QString& group : groups) inventory.append({where.section(QLatin1Char('/'), 0, 0), where.section(QLatin1Char('/'), 1), "group." + group});
@@ -1265,7 +1268,8 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
             {QStringLiteral("structure/basic"), {"structures", "space_group", "cell", "atom_site", "atom_site_aniso"}},
             {QStringLiteral("structure/extras"), {"scattering_length", "geom", "space_group_symop", "expanded_atom_site"}},
             {QStringLiteral("experiment/basic"), {"experiments", "background", "instrument", "peak", "excluded_region", "linked_structure"}},
-            {QStringLiteral("experiment/extras"), {"background_estimate", "absorption", "data", "refln"}},
+            {QStringLiteral("experiment/extras"), {"absorption", "data", "refln"}},
+            {QStringLiteral("experiment/tools"), {"background_estimate"}},
             {QStringLiteral("analysis/basic"), {"parameters"}},
             {QStringLiteral("analysis/extras"), {"alias", "constraint", "fit_parameter", "fit_result_bank", "fit_result_phase"}}};
         int n = 0;
@@ -4242,6 +4246,11 @@ void DemoDriver::next_action() {
             wait_assistant_then([this] { settle_then([this] { next_action(); }); });
             return;
         }
+        // A control that background work makes (a search's results): the step waits until it is shown.
+        if (action.startsWith(QLatin1String("wait-control:"))) {
+            wait_control_then(action.mid(13), [this] { settle_then([this] { next_action(); }); });
+            return;
+        }
         // A From web search or load runs on the network; the dialog says when it is done.
         if (action == QLatin1String("wait-online")) {
             wait_online_then([this] { settle_then([this] { next_action(); }); });
@@ -5075,6 +5084,37 @@ bool DemoDriver::perform(const QString& action) {
         QCoreApplication::sendEvent(&window_, &release);
         return true;
     }
+    if (action.startsWith(QLatin1String("wheel:")) || action.startsWith(QLatin1String("double-click:"))) {
+        // wheel:<name>:<x>,<y>,<steps> turns the wheel over the item, at fractions of its size, by whole notches
+        // (positive away from the user); double-click:<name>:<x>,<y> double-clicks the left button there.
+        const bool wheel = action.startsWith(QLatin1String("wheel:"));
+        const QStringList parts = action.mid(wheel ? 6 : 13).split(QLatin1Char(':'));
+        QQuickItem* item = find(parts.value(0), true);
+        const QStringList at = parts.value(1, wheel ? QStringLiteral("0.5,0.5,1") : QStringLiteral("0.5,0.5"))
+                                   .split(QLatin1Char(','));
+        if (item == nullptr || at.size() != (wheel ? 3 : 2)) {
+            fail(QStringLiteral("step %1: cannot %2").arg(steps_[current_].image, action));
+            return false;
+        }
+        const QPointF to = item->mapToScene(QPointF(at[0].toDouble() * item->width(), at[1].toDouble() * item->height()));
+        if (wheel) {
+            QWheelEvent turn(to, window_.mapToGlobal(to), QPoint(), QPoint(0, 120 * at[2].toInt()), Qt::NoButton,
+                             Qt::NoModifier, Qt::NoScrollPhase, false);
+            QCoreApplication::sendEvent(&window_, &turn);
+            return true;
+        }
+        const auto send = [this, &to](QEvent::Type type, Qt::MouseButtons buttons) {
+            QMouseEvent event(type, to, window_.mapToGlobal(to), Qt::LeftButton, buttons, Qt::NoModifier);
+            QCoreApplication::sendEvent(&window_, &event);
+        };
+        // The order a real mouse gives: the second press comes before the double-click event.
+        send(QEvent::MouseButtonPress, Qt::LeftButton);
+        send(QEvent::MouseButtonRelease, Qt::NoButton);
+        send(QEvent::MouseButtonPress, Qt::LeftButton);
+        send(QEvent::MouseButtonDblClick, Qt::LeftButton);
+        send(QEvent::MouseButtonRelease, Qt::NoButton);
+        return true;
+    }
     if (action.startsWith(QLatin1String("hover:"))) {
         // hover:<name>:<x>,<y> moves the pointer over the item, at fractions of its size, with no button down.
         const QStringList parts = action.mid(6).split(QLatin1Char(':'));
@@ -5689,7 +5729,19 @@ void DemoDriver::park_pointer() {
     // action: a capture then never shows the hover state of whatever lies under the host's own cursor. Without
     // it the images differed by host: a headless Linux display keeps its cursor at the window's centre, which
     // highlighted the Messages row drawn there, and a macOS runner's cursor did not (edi PR 97).
-    const QPointF corner(1, 1);
+    // A modal dialog takes every move outside it, so the controls a step used inside it would keep their hover; the
+    // pointer then rests just inside the topmost open popup's corner instead, where nothing reacts either.
+    QPointF corner(1, 1);
+    for (QQuickItem* layer : window_.contentItem()->childItems()) {
+        if (QString::fromLatin1(layer->metaObject()->className()) != QLatin1String("QQuickOverlay")) continue;
+        const QList<QQuickItem*> popups = layer->childItems();
+        for (auto it = popups.crbegin(); it != popups.crend(); ++it) {
+            if ((*it)->isVisible() && (*it)->inherits("QQuickPopupItem")) {
+                corner = (*it)->mapToScene(QPointF(2, 2));
+                break;
+            }
+        }
+    }
     QMouseEvent move(QEvent::MouseMove, corner, window_.mapToGlobal(corner), Qt::NoButton, Qt::NoButton,
                      Qt::NoModifier);
     QCoreApplication::sendEvent(&window_, &move);
@@ -7432,6 +7484,20 @@ void DemoDriver::wait_assistant_then(const std::function<void()>& next, int wait
         wait_assistant_then(next, waited_ms + 500, idle_polls);
     });
 #endif
+}
+
+void DemoDriver::wait_control_then(const QString& name, const std::function<void()>& next, int waited_ms) {
+    QQuickItem* item = find(name, false);
+    if (item != nullptr && item->isVisible()) {
+        next();
+        return;
+    }
+    if (waited_ms > kFitWaitMs) {
+        fail(QStringLiteral("step %1: control '%2' did not appear").arg(steps_[current_].image, name));
+        return;
+    }
+    QTimer::singleShot(kSettleIntervalMs, this,
+                       [this, name, next, waited_ms] { wait_control_then(name, next, waited_ms + kSettleIntervalMs); });
 }
 
 void DemoDriver::wait_online_then(const std::function<void()>& next, int waited_ms) {

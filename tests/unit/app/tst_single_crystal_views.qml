@@ -1035,8 +1035,9 @@ TestCase {
         report.writesHtml = true;
         report.writesPdf = true;
         report.setIncluded("charts", true);
+        Ui.click(test, Probe, appWindow, "sideBar.tab.tools");
         const action = Ui.find(Ui.page(appWindow), "report.save", true);
-        verify(action !== null && action.enabled, "The report workflow must expose its actual Save report action");
+        verify(action !== null && action.enabled, "Report Tools must expose its actual Save report action");
         Ui.scrollIntoView(action);
         Ui.click(test, Probe, appWindow, "report.save");
         tryVerify(() => report.savedReports.some(row => row.format === "html" && row.state === "current") && report.savedReports.some(row => row.format === "pdf" && row.state === "current"), 30000, "The actual export action must publish both HTML and PDF for the fitted single crystal");

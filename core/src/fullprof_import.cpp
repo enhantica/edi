@@ -2158,7 +2158,7 @@ void structure_block(const PCR& pcr, Project& project, std::vector<Pattern>& pat
     }
     if (magnetic) {
         check_magnetic_acceptance(*structure);
-        complete_atom_site_moments(*structure);
+        complete_atom_site_moments(*structure, true);  // an import: restored where lettered, else detected once
     }
     project.structures.push_back(structure);
 
@@ -2499,7 +2499,7 @@ void classic_magnetic_overlay(const PCR& pcr, Project& project, Pattern& pattern
         pcr.fail("Enumerated FullProf magnetic orbits do not match the native sites", phase);
     }
     check_magnetic_acceptance(structure);
-    complete_atom_site_moments(structure);
+    complete_atom_site_moments(structure, true);  // an import: restored where lettered, else detected once
 }
 
 std::vector<std::size_t> phase_starts(const PCR& pcr) {

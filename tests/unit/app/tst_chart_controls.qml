@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 import QtQuick
+import "UiInteraction.js" as Ui
 import QtQuick.Window
 import QtQuick.Controls
 import QtTest
@@ -210,6 +211,7 @@ Rectangle {
             tryCompare(Session.project, "calculating", false, 15000, "The real input finishes calculating before export");
             reportPage = reportFactory.createObject(surface);
             verify(reportPage !== null && waitForPolish(reportPage), "The real Report page creates its export figures");
+            Ui.selectSidebarTab(test, reportPage, "tools");
             const group = findChild(reportPage, "group.reportExport");
             verify(group !== null, "The light export witness invokes the actual report writer");
             Session.project.report.embedLibraries = true;

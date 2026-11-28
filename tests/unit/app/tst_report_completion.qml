@@ -101,6 +101,7 @@ Item {
         }
         function test_save_report_to_self_contained_html() {
             prepare("html");
+            Ui.selectSidebarTab(test, page, "tools");
             expand("group.reportExport");
             for (const [name, checked] of [["report.writesHtml", true], ["report.writesPdf", false], ["report.embedLibraries", true]]) {
                 const box = findChild(page, name);

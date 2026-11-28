@@ -26,6 +26,7 @@
 // Outside the claim: an allocation failing inside an operation's write.
 
 #include <algorithm>
+#include <cctype>
 #include <cmath>
 #include <cstddef>
 #include <functional>
@@ -41,6 +42,8 @@
 #include <utility>
 #include <vector>
 
+#include "crysta/expression.hpp"
+#include "edi/magnetic_cell.hpp"
 #include "edi/background_estimate.hpp"
 #include "edi/edits.hpp"
 #include "edi/io.hpp"
@@ -1307,6 +1310,320 @@ class Edit {
             return AppliedResult{inserted, nullptr,
                 inserted->atom_sites.size()==1?inserted->atom_sites[0].get():nullptr};
         });
+    }
+    // The magnetic popup's Add (edi ADR-0078): the prepared candidate structures, each powder experiment's links to
+    // them with only the first enabled, its parent's link disabled, and the carried texture rows, all or none. The
+    // parent link's free scale and texture move to the first child: free there, fixed on the parent (owner,
+    // 2026-11-27), and Undo restores both.
+    static Edit add_magnetic_candidates(Project& project, std::shared_ptr<const PreparedMagneticCandidates> prepared) {
+        return Edit([&project, prepared = std::move(prepared)] {
+            check_magnetic_candidates(project, *prepared);  // the whole batch, before any of it lands
+            // The whole resulting constraint graph, by the validator a user's edit is checked with: every problem
+            // crysta reports, compared with the project's own as a multiset (review 38), so a new problem behind a
+            // retained one still counts. A problem the project already had is the user's to repair and does not
+            // block Add.
+            Project probe(project);
+            place_magnetic_candidates(probe, *prepared);
+            {
+                std::multiset<std::string> before;
+                for (std::string& problem : relation_problems(project)) before.insert(std::move(problem));
+                for (const std::string& problem : relation_problems(probe)) {
+                    const auto held = before.find(problem);
+                    if (held == before.end())
+                        throw std::invalid_argument("The aliases and constraints would no longer hold: " + problem);
+                    before.erase(held);
+                }
+            }
+            // The relations the batch adds or changes, checked on their own whatever the old ones' state: a copy of the
+            // prospective project keeping only the affected declarations must compile and complete in crysta. Affected
+            // are the new aliases, the old ones the batch binds (an alias left unresolved by a removed child that this
+            // Add brings back), every alias bound to a parameter one of those names, and every constraint naming any of
+            // them. A copied self-cycle or a parameter with two writers refuses here, with nothing changed; an
+            // unrelated original error names none of them and stays for the user to repair.
+            {
+                const auto named_by = [](const std::string& expression) {
+                    std::vector<std::string> out;
+                    try {
+                        const crysta::ConstraintStatement statement = crysta::parse_constraint(expression);
+                        out.push_back(statement.lhs);
+                        out.insert(out.end(), statement.rhs.references().begin(), statement.rhs.references().end());
+                    } catch (const std::invalid_argument&) {
+                    }
+                    return out;
+                };
+                std::set<std::string> old_aliases, old_constraints;
+                for (const auto& alias : project.aliases) old_aliases.insert(alias->id.value());
+                for (const auto& constraint : project.constraints) old_constraints.insert(constraint->id.value());
+                const ActiveView before_view(project), after_view(probe);
+                std::set<std::string> affected;
+                std::set<const Parameter*> touched;
+                for (const auto& alias : probe.aliases) {
+                    const std::string& id = alias->id.value();
+                    const Parameter* now = after_view.resolve(alias->parameter_unique_name.value());
+                    const bool fresh = !old_aliases.contains(id);
+                    const bool bound = !fresh && now != nullptr &&
+                                       before_view.resolve(alias->parameter_unique_name.value()) == nullptr;
+                    if (fresh || bound) {
+                        affected.insert(id);
+                        if (now != nullptr) touched.insert(now);
+                    }
+                }
+                // Every rule downstream or upstream of an affected alias, to a fixed point (review 39): a rule naming an
+                // affected alias makes every alias it names affected, and each of those brings the aliases bound to
+                // its parameter and the rules naming them, so a value computed from a rebound alias through retained
+                // rules is evaluated too.
+                std::vector<ItemVec<ParameterConstraint>::Ptr> checked;
+                std::set<std::string> named;
+                std::set<std::string> taken;
+                for (bool grew = true; grew;) {
+                    grew = false;
+                    for (const auto& alias : probe.aliases)
+                        if (!affected.contains(alias->id.value()) &&
+                            touched.contains(after_view.resolve(alias->parameter_unique_name.value()))) {
+                            affected.insert(alias->id.value());
+                            grew = true;
+                        }
+                    for (const auto& constraint : probe.constraints) {
+                        if (taken.contains(constraint->id.value())) continue;
+                        const bool fresh = !old_constraints.contains(constraint->id.value());
+                        const std::vector<std::string> aliases = named_by(constraint->expression.value());
+                        if (fresh && aliases.empty())
+                            throw std::invalid_argument("the added structures' texture constraint '" + constraint->id.value() +
+                                                        "' does not parse");
+                        const bool relevant = fresh || std::any_of(aliases.begin(), aliases.end(), [&](const std::string& id) {
+                                                           return affected.contains(id);
+                                                       });
+                        if (!relevant) continue;
+                        taken.insert(constraint->id.value());
+                        checked.push_back(std::make_shared<ParameterConstraint>(*constraint));  // the delta's own rows
+                        named.insert(aliases.begin(), aliases.end());
+                        for (const std::string& id : aliases) {
+                            if (!affected.insert(id).second) continue;
+                            grew = true;
+                            for (const auto& alias : probe.aliases)
+                                if (alias->id.value() == id)
+                                    if (const Parameter* on = after_view.resolve(alias->parameter_unique_name.value()))
+                                        touched.insert(on);
+                        }
+                    }
+                }
+                std::vector<ItemVec<ParameterAlias>::Ptr> kept;
+                for (const auto& alias : probe.aliases)
+                    if (affected.contains(alias->id.value()) || named.contains(alias->id.value()))
+                        kept.push_back(std::make_shared<ParameterAlias>(*alias));
+                if (!checked.empty() || !affected.empty()) {
+                    Project delta(probe);
+                    delta.aliases.assign(std::move(kept));
+                    delta.constraints.assign(std::move(checked));
+                    try {
+                        complete_relations(delta);
+                    } catch (const std::exception& broken) {
+                        throw std::invalid_argument(std::string("the added structures' texture relations would not hold: ") +
+                                                    broken.what());
+                    }
+                }
+            }
+            place_magnetic_candidates(project, *prepared);
+        });
+    }
+    static void place_magnetic_candidates(Project& project, const PreparedMagneticCandidates& prepared) {
+        std::vector<ItemVec<Structure>::Ptr> structures(project.structures.begin(), project.structures.end());
+        for (const auto& structure : prepared.children()) structures.push_back(std::make_shared<Structure>(*structure));
+        std::vector<std::vector<ItemVec<LinkedStructure>::Ptr>> links;
+        std::vector<std::vector<ItemVec<PrefOrient>::Ptr>> texture;
+        // A link or texture row with no id is the parent's while the parent is the project's one structure; it is
+        // written with the parent's id before the children make that ambiguous.
+        const bool lone = project.structures.size() == 1 && project.structures.front()->name.value() == prepared.parent;
+        const auto parents = [&](const std::string& id) { return id == prepared.parent || (id.empty() && lone); };
+        for (std::size_t e = 0; e < project.experiments.size(); ++e) {
+            const auto& experiment = project.experiments[e];
+            auto& kept_links = links.emplace_back();
+            for (const auto& link : experiment->linked_structures) {
+                auto row = std::make_shared<LinkedStructure>(*link);
+                if (parents(row->structure_id.value())) {
+                    row->structure_id = prepared.parent;
+                    row->enabled = false;
+                    row->scale.free = false;
+                }
+                kept_links.push_back(std::move(row));
+            }
+            for (const auto& add : prepared.links) {
+                if (add.experiment != e) continue;
+                auto row = std::make_shared<LinkedStructure>();
+                row->structure_id = add.structure;
+                row->scale.value = add.scale;
+                row->scale.free = add.scale_free;
+                row->enabled = add.enabled;
+                kept_links.push_back(std::move(row));
+            }
+            auto& kept_texture = texture.emplace_back();
+            for (const auto& held : experiment->preferred_orientation) {
+                auto row = std::make_shared<PrefOrient>(*held);
+                if (parents(row->structure_id.value())) {
+                    row->structure_id = prepared.parent;
+                    row->march_r.free = false;
+                    row->march_random_fract.free = false;
+                }
+                kept_texture.push_back(std::move(row));
+            }
+            for (const auto& add : prepared.textures) {
+                if (add.experiment != e) continue;
+                auto row = std::make_shared<PrefOrient>();
+                row->structure_id = add.structure;
+                row->march_r.value = add.march_r;
+                row->march_r.free = add.march_r_free;
+                row->march_random_fract.value = add.march_random_fract;
+                row->march_random_fract.free = add.march_random_fract_free;
+                row->march_r.uncertainty = add.march_r_uncertainty;
+                row->march_random_fract.uncertainty = add.march_random_fract_uncertainty;
+                row->index_h = add.axis[0];
+                row->index_k = add.axis[1];
+                row->index_l = add.axis[2];
+                kept_texture.push_back(std::move(row));
+            }
+        }
+        // The parent's own texture parameters, by identity: an alias is the parent's only when it resolves to one.
+        std::set<const Parameter*> parent_texture;
+        for (const auto& experiment : project.experiments)
+            for (const auto& row : experiment->preferred_orientation)
+                if (parents(row->structure_id.value())) {
+                    parent_texture.insert(&row->march_r);
+                    parent_texture.insert(&row->march_random_fract);
+                }
+        carry_texture_relations(project, prepared, parent_texture);
+        for (std::size_t i = 0; i < project.experiments.size(); ++i) {
+            project.experiments[i]->linked_structures.assign(std::move(links[i]));
+            project.experiments[i]->preferred_orientation.assign(std::move(texture[i]));
+        }
+        project.structures.assign(std::move(structures));
+    }
+    // The parent texture's relations, carried to each child's own texture parameters (reviews 29 and 30). Only a
+    // constraint that sets a parent March–Dollase parameter is copied, as one setting the child's: its target is
+    // then a new parameter, so no target gains a second writer. One that the parent's texture drives elsewhere stays
+    // single. An alias's parameter keeps its experiment and field; only the phase part names the child.
+    static void carry_texture_relations(Project& project, const PreparedMagneticCandidates& prepared,
+                                        const std::set<const Parameter*>& parent_texture) {
+        const auto split = [](const std::string& text) {
+            std::vector<std::string> parts;
+            std::size_t start = 0;
+            for (std::size_t dot; (dot = text.find('.', start)) != std::string::npos; start = dot + 1)
+                parts.push_back(text.substr(start, dot - start));
+            parts.push_back(text.substr(start));
+            return parts;
+        };
+        std::vector<std::string> children;
+        for (const auto& texture : prepared.textures)
+            if (std::find(children.begin(), children.end(), texture.structure) == children.end())
+                children.push_back(texture.structure);
+        std::map<std::string, std::vector<std::string>> parent_aliases;  // alias id -> its parameter name's parts
+        const ActiveView view(project);
+        for (const auto& alias : project.aliases) {
+            // Only an alias that resolves to the parent's own texture parameter is the parent's: one naming a missing
+            // bank or anything else is left as it is, never multiplied.
+            if (!parent_texture.contains(view.resolve(alias->parameter_unique_name.value()))) continue;
+            const std::vector<std::string> parts = split(alias->parameter_unique_name.value());
+            // The phase part is the structure's name (the long form) or its datablock key (the short form).
+            if (parts.size() >= 2 && (parts.back() == "march_r" || parts.back() == "march_random_fract") &&
+                (parts[parts.size() - 2] == prepared.parent ||
+                 parts[parts.size() - 2] == datablock_key(prepared.parent, "structure")))
+                parent_aliases[alias->id.value()] = parts;
+        }
+        if (parent_aliases.empty() || children.empty()) return;
+        const auto word = [](char c) { return std::isalnum(static_cast<unsigned char>(c)) != 0 || c == '_'; };
+        // The tokens of an expression: identifiers (dots allowed) and the characters between them.
+        const auto tokens = [&word](const std::string& text) {
+            std::vector<std::pair<std::string, bool>> out;
+            for (std::size_t i = 0; i < text.size();) {
+                if (!word(text[i])) {
+                    out.emplace_back(std::string(1, text[i++]), false);
+                    continue;
+                }
+                std::size_t end = i;
+                while (end < text.size() && (word(text[end]) || text[end] == '.')) ++end;
+                out.emplace_back(text.substr(i, end - i), true);
+                i = end;
+            }
+            return out;
+        };
+        // The constraints that set a parent texture parameter: the first identifier, before '=', is its alias. Only a
+        // sound rule is copied: every alias it names exists and resolves to a parameter. A rule that names an
+        // undeclared or unresolved alias stays the user's to repair and is never multiplied.
+        std::map<std::string, const ParameterAlias*> declared;
+        for (const auto& alias : project.aliases) declared[alias->id.value()] = alias.get();
+        const auto sound = [&](const std::string& expression) {
+            // crysta's own grammar: an unknown function or a malformed rule does not parse.
+            std::vector<std::string> named;
+            try {
+                const crysta::ConstraintStatement statement = crysta::parse_constraint(expression);
+                named.push_back(statement.lhs);
+                named.insert(named.end(), statement.rhs.references().begin(), statement.rhs.references().end());
+            } catch (const std::invalid_argument&) {
+                return false;
+            }
+            for (const std::string& alias : named) {
+                const auto found = declared.find(alias);
+                if (found == declared.end() || view.resolve(found->second->parameter_unique_name.value()) == nullptr)
+                    return false;
+            }
+            return true;
+        };
+        std::vector<const ParameterConstraint*> setting;
+        for (const auto& constraint : project.constraints) {
+            for (const auto& [token, is_name] : tokens(constraint->expression.value())) {
+                if (!is_name) continue;
+                if (parent_aliases.contains(token) && sound(constraint->expression.value()))
+                    setting.push_back(constraint.get());
+                break;
+            }
+        }
+        std::set<std::string> taken;
+        for (const auto& alias : project.aliases) taken.insert(alias->id.value());
+        for (const auto& constraint : project.constraints) taken.insert(constraint->id.value());
+        // An identifier the expression grammar reads: letters, digits and underscores, as a phase name may hold other
+        // characters.
+        const auto safe_id = [](std::string text) {
+            for (char& c : text)
+                if (!(std::isalnum(static_cast<unsigned char>(c)) != 0 || c == '_')) c = '_';
+            return text;
+        };
+        const auto fresh = [&taken](const std::string& base) {
+            std::string id = base;
+            for (int n = 2; taken.contains(id); ++n) id = base + "_" + std::to_string(n);
+            taken.insert(id);
+            return id;
+        };
+        std::vector<ItemVec<ParameterAlias>::Ptr> aliases(project.aliases.begin(), project.aliases.end());
+        std::vector<ItemVec<ParameterConstraint>::Ptr> constraints(project.constraints.begin(), project.constraints.end());
+        for (const std::string& child : children) {
+            std::map<std::string, std::string> renamed;  // parent alias id -> the child's
+            for (const auto& [id, parts] : parent_aliases) {
+                std::string spelled;
+                // The child's phase part in the same form as the parent's.
+                const std::string phase =
+                    parts[parts.size() - 2] == prepared.parent ? child : datablock_key(child, "structure");
+                for (std::size_t i = 0; i < parts.size(); ++i)
+                    spelled += (i ? "." : "") + (i + 2 == parts.size() ? phase : parts[i]);
+                auto alias = std::make_shared<ParameterAlias>();
+                const std::string child_id = fresh(id + "_" + safe_id(child));
+                renamed[id] = child_id;
+                alias->id = child_id;
+                alias->parameter_unique_name = spelled;
+                aliases.push_back(std::move(alias));
+            }
+            for (const ParameterConstraint* constraint : setting) {
+                std::string out;
+                for (const auto& [token, is_name] : tokens(constraint->expression.value())) {
+                    const auto hit = is_name ? renamed.find(token) : renamed.end();
+                    out += hit != renamed.end() ? hit->second : token;
+                }
+                auto copy = std::make_shared<ParameterConstraint>(*constraint);
+                copy->id = fresh(constraint->id.value() + "_" + safe_id(child));
+                copy->expression = out;
+                constraints.push_back(std::move(copy));
+            }
+        }
+        project.aliases.assign(std::move(aliases));
+        project.constraints.assign(std::move(constraints));
     }
     // A structure removed with every experiment's link to it and texture row for it, all or none.
     static Edit remove_structure(Project& project, std::size_t index) {

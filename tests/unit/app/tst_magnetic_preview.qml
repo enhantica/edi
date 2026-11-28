@@ -12,7 +12,6 @@ import "RenderedTable.js" as Render
 import "E04Review.js" as Review
 import "AtomsSelector.js" as Atoms
 import "NumericCellInk.js" as Ink
-import "ApprovedPalette.js" as Approved
 
 TestCase {
     id: test
@@ -106,12 +105,12 @@ TestCase {
         verify(Session.openProject(scratch), "The published 2.3 K example opens for the Extra sidebar check");
         tryCompare(Session.project, "calculating", false, 15000, "The example's computed Extra groups finish calculating");
         const shown = groups("structure", "extras").filter(item => item.visible &&
-            (item.shownTier === "Extras" && item.listed || /^Appearance/.test(item.title)));
+            (item.shownTier === "Extras" && item.listed));
         shown.sort((a, b) => a.mapToItem(appWindow.contentItem, 0, 0).y -
                              b.mapToItem(appWindow.contentItem, 0, 0).y);
         const titles = shown.map(item => item.title.replace(/\s*\(\d+\)$/, ""));
         compare(titles, ["Scattering lengths", "Magnetic form factors", "Symmetry operators", "Atoms in the cell",
-                         "Bonds", "Magnetic operators", "Moments in the cell", "Appearance"],
+                         "Bonds", "Magnetic operators", "Moments in the cell"],
                 "The rendered 2.3 K Extra groups use the approved names and order");
     }
     function test_magnetic_operators_are_read_only() {
@@ -815,6 +814,7 @@ TestCase {
         }
     }
     function test_magnetic_selector_and_scale_use_one_editing_surface() {
+        compare(Session.project.structureViewOptions.momentScale, 1, "Default moment length is one Angstrom per Bohr magneton");
         const dialog = preferences.createObject(appWindow.contentItem);
         verify(dialog !== null, "The magnetic preference check uses the production dialog");
         dialog.open();
@@ -827,17 +827,17 @@ TestCase {
         verify(!preferenceItems.some(item => /moment.*(?:scale|length)|(?:scale|length).*moment/i.test(String(item.text || item.label || item.objectName || ""))), "The moment length preference is removed when project Appearance owns the field");
         dialog.close();
         dialog.destroy();
+        const appearances = groups("structure", "settings").filter(item => item.objectName === "group.appearance" && Ui.inPane(Ui.target(item)));
+        compare(appearances.length, 1, "Magnetic scale is edited in the single Appearance group under Structure Settings");
+        appearances[0].collapsed = false;
+        const atom = findChild(appearances[0], "structure.appearance.atomScale");
+        const moment = findChild(appearances[0], "structure.appearance.momentScale");
+        verify(atom && atom.visible && moment && moment.visible, "Appearance exposes both scale controls");
+        compare([atom.parameter.shortPrettyName, moment.parameter.shortPrettyName], ["Atom scale", "Moment scale"],
+                "The settings retain the Atom scale and Moment scale labels");
         const magnetic = group("space_group_magn");
         const selectors = Render.descendants(magnetic).filter(item => typeof item.textAt === "function" && item.editable === true);
         compare(selectors.length, 1, "The magnetic name fields share one searchable selector");
-        const appearances = groups("structure", "extras").filter(item => /^Appearance/.test(item.title));
-        compare(appearances.length, 1, "Magnetic scale is edited in the single Appearance group");
-        appearances[0].collapsed = false;
-        const fields = Render.descendants(appearances[0]).filter(item => typeof item.label === "string");
-        const atom = fields.find(item => item.label === "Atom scale");
-        const moment = fields.find(item => item.label === "Moment scale");
-        verify(atom !== undefined && moment !== undefined, "Appearance places Moment scale alongside Atom scale");
-        compare(Session.project.structureViewOptions.momentScale, .75, "Default moment length is 1.5 times the preview length");
         Session.project.structureViewOptions.momentScale = 1.125;
         verify(Session.save(), "The selected appearance scale saves through the real project");
         Session.closeProject();
@@ -1131,13 +1131,116 @@ TestCase {
         compare(String(magnet.color), String(magnetic.color), "The magnet icon matches its own magnetic tick shade");
         compare(String(structure.color), String(nuclear.color), "The structure icon matches its own nuclear tick shade");
         chart.destroy();
+        checkMagneticTicksWithDisabledAlternates();
+    }
+    function checkMagneticTicksWithDisabledAlternates() {
+        const root = SettingsProof.copyProject(Probe.repoUrl("docs/user/cli/pd-neut-cwl_cosio-d20_2k/project"));
+        const frozen = Probe.readFile("tests/fixtures/magnetic_pnma/cosio-2k-reference.edi");
+        const alternates = ["alt_a", "alt_b", "alt_c", "alt_d"];
+        const activeLengths = {"cosio": 10.30806, "zz_magnetic": 12.6};
+        const names = [...alternates, ...Object.keys(activeLengths)];
+        for (const name of names) {
+            const length = activeLengths[name] ?? 9.25;
+            const content = frozen.replace(/^data_cosio/m, "data_" + name)
+                                  .replace(/^_cell\.length_a .+$/m, "_cell.length_a " + length);
+            verify(SettingsProof.write(root, "structures/" + name + ".edi", content), "The independent magnetic input supplies " + name);
+        }
+        const patternPath = "experiments/d20.edi";
+        const original = SettingsProof.text(root, patternPath);
+        const inputLinks = /^_linked_structure\.scale\ncosio .+$/m;
+        verify(inputLinks.test(original), "The documented bank initially has a single named link");
+        const records = names.map(name => name + " 1 " + (activeLengths[name] !== undefined ? "true" : "false"));
+        const updated = original.replace(inputLinks, "_linked_structure.scale\n_linked_structure.enabled\n" + records.join("\n"));
+        verify(SettingsProof.write(root, patternPath, updated), "The bank names two active phases and four disabled alternates");
+        Session.closeProject();
+        verify(Session.openProject(root), "The mixed magnetic bank opens normally");
+        tryCompare(Session.project, "calculating", false, 15000, "The mixed magnetic bank finishes its input calculation");
+        const bank = Session.project.currentExperiment;
+        const links = Probe.rows(bank.linkedStructures);
+        compare(links.filter(link => !link.enabled).map(link => link.structureId).sort(), alternates, "All four disabled magnetic alternatives occupy project positions");
+        compare(links.filter(link => link.enabled).map(link => link.structureId).sort(), Object.keys(activeLengths), "The experiment has both intended enabled magnetic phases");
+
+        Preferences.structureCurves = true;
+        Preferences.patternLegendShown = true;
+        const chart = pattern.createObject(appWindow.contentItem, {
+            experiment: bank,
+            settingsPage: "pattern",
+            colors: createTemporaryObject(lightFigure, appWindow)
+        });
+        verify(chart && waitForPolish(chart), "The mixed bank uses the real pattern chart");
+        const controller = Probe.objectsWithProperty(chart, "braggLabels")[0];
+        verify(controller, "The mixed bank has a real tick controller");
+        const phase = label => label.segments.find(part => part.text !== undefined)?.text;
+        function checkVisible(expected) {
+            appWindow.update();
+            verify(waitForRendering(chart, 5000), "A rendered frame publishes the bank's current tick rows");
+            tryVerify(() => tickLabels(chart).length === 2 * expected.length && tickRows(chart).length === 2 * expected.length, 5000,
+                      "Every enabled phase draws two populated tick rows and labels");
+            const labels = tickLabels(chart), rows = tickRows(chart);
+            const legend = findChild(chart, "chart.legend");
+            verify(legend && legend.visible, "The same chart exposes its live contribution legend");
+            const entries = Render.descendants(legend).filter(item => item.objectName === "chart.legend.entry" && item.visible && item.bragg);
+            const areas = Render.series(chart).filter(area => /^chart\.series\.structure\.\d+$/.test(area.objectName) &&
+                area.outline.count > 0 && area.upperSeries.count > 0 && area.lowerSeries.count > 0 &&
+                area.outline.color.a > 0 && area.color.a > 0);
+            compare(areas.length, 2 * expected.length, "Both visible contributions of every enabled phase have populated curves and fills");
+            for (const icon of ["layer-group", "magnet"]) {
+                const matching = labels.filter(label => label.segments.some(part => part.icon === icon));
+                compare(matching.map(phase).sort(), expected, "Only the enabled phases have the expected " + icon + " tick label");
+            }
+            const columns = Math.floor(controller.plotWidth * controller.devicePixelRatio);
+            verify(columns > 1, "The chart has distinct rendered pixel columns");
+            const width = controller.xMax - controller.xMin;
+            const column = angle => Math.floor((angle - controller.xMin) * columns / width);
+            const seen = new Set();
+            for (const name of expected) {
+                const label = labels.find(item => phase(item) === name && item.segments.some(part => part.icon === "magnet"));
+                const row = tickRowFor(rows, label);
+                verify(row && !seen.has(row), "The magnetic label resolves to a distinct nonempty rendered series for " + name);
+                seen.add(row);
+                // The independent Pnma 100 satellite uses d=a and the documented D20 wavelength and zero.
+                const angle = 360 / Math.PI * Math.asin(1.87 / (2 * activeLengths[name])) + .29433;
+                verify(controller.xMin < angle && angle < controller.xMax, "The independently placed 100 satellite is on screen for " + name);
+                verify(row.points.some(point => Number.isFinite(point.x) && point.y < label.modelData.centre &&
+                    Math.abs(column(point.x) - column(angle)) <= 1), "The actual magnetic row draws its own independently positioned 100 satellite for " + name);
+                for (const glyph of ["layer-group", "magnet"]) {
+                    const tickLabel = labels.find(item => phase(item) === name && item.segments.some(part => part.icon === glyph));
+                    const tick = tickRowFor(rows, tickLabel);
+                    const entry = entries.find(item => item.segments.some(part => part.text === name) &&
+                        item.segments.some(part => part.icon === glyph));
+                    const available = entries.map(item => item.named + " " + item.mark).join(", ");
+                    verify(entry, "The " + glyph + " legend identifies " + name + " among " + available);
+                    verify(tick, "The " + glyph + " label identifies its populated tick for " + name);
+                    const shade = String(tick.color);
+                    compare(String(entry.segments.find(part => part.icon === glyph).color), shade, "The legend icon and tick share the same shade for " + name);
+                    verify(areas.some(area => String(area.outline.color) === shade), "The legend shade identifies a populated contribution curve for " + name);
+                }
+            }
+            return labels.filter(item => item.segments.some(part => part.icon === "magnet")).map(item => String(item.segments.find(part => part.icon === "magnet").color));
+        }
+        const both = Object.keys(activeLengths);
+        priorChartPalette = Preferences.colourScheme;
+        Preferences.colourScheme = "main";
+        const main = checkVisible(both);
+        Preferences.colourScheme = "colourBlindSafe";
+        const accessible = checkVisible(both);
+        verify(main.some((shade, i) => shade !== accessible[i]), "Changing palette recolours the rendered magnetic rows");
+        const last = links.findIndex(link => link.structureId === "zz_magnetic");
+        verify(last >= 0 && bank.linkedStructures.setEnabled(last, false), "A real link edit disables the second magnetic phase");
+        tryCompare(Session.project, "calculating", false, 10000, "The reduced enabled set publishes its calculation");
+        checkVisible(["cosio"]);
+        verify(bank.linkedStructures.setEnabled(last, true), "Re-enabling the later magnetic phase grows the same chart again");
+        tryCompare(Session.project, "calculating", false, 10000, "The restored enabled set publishes its calculation");
+        checkVisible(both);
+        chart.destroy();
     }
     function test_phase_contributions_draw_two_independent_curves_and_fills() {
         openMagneticFitExample();
         priorChartPalette = Preferences.colourScheme;
-        Preferences.colourScheme = "earth";
-        const expectedPalette = Approved.colours(Probe, "earth", "structures", 2, false,
-                                                 {experiments: 1, structures: 2});
+        Preferences.colourScheme = "main";
+        const reference = JSON.parse(SettingsProof.text(Probe.repoUrl("tests/fixtures/single_crystal_pattern"), "powder-colours.json"));
+        const main = reference.palettes[reference.tokens.indexOf("main")];
+        const expectedPalette = main.light.slice(2, 4).map(shade => shade.toLowerCase());
         Preferences.structureCurves = true;
         Preferences.patternLegendShown = true;
         const chart = pattern.createObject(appWindow.contentItem, {

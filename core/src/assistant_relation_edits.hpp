@@ -47,7 +47,10 @@ inline Edit prepare_relation_append(Project& project, const std::vector<NativeAl
     std::map<const Parameter*, std::string> names;
     for (const auto& slot : named_slots(project)) names.emplace(slot.parameter, slot.unique_name);
     std::map<std::string, const Parameter*> paths;
-    for (const auto& entry : parameter_entries(project)) if (names.count(entry.parameter)) paths.emplace(entry.path, entry.parameter);
+    // Only parameters the user's views show (edi::ActiveView): no alias to a disabled phase.
+    const ActiveView shown(project);
+    for (const auto& entry : parameter_entries(project))
+        if (names.count(entry.parameter) && shown.shown(entry.parameter)) paths.emplace(entry.path, entry.parameter);
     RelationsUndo declaration;
     std::set<std::string> alias_ids, constraint_ids;
     for (const auto& row : project.aliases) { alias_ids.insert(row->id.value()); declaration.aliases.push_back(*row); }
@@ -66,6 +69,13 @@ inline Edit prepare_relation_append(Project& project, const std::vector<NativeAl
     }
     Project validated = project;
     Edit::restore_relations(validated, declaration)();
+    // Every new constraint names only aliases that exist and are shown, in the declaration as it will be.
+    {
+        const ActiveView prospective(validated);
+        for (const auto& row : constraints)
+            if (!prospective.admits(row.expression))
+                refuse("invalid_argument", "A native constraint names an alias of a disabled phase");
+    }
     complete_relations(validated); // Existing SDK grammar/cycles/ranges/symmetry/physical validation, not another solver.
     // Parameter-state list is intentionally empty. The actual editor's completion
     // derives dependents; the actual RelationsUndo capture records what changed.

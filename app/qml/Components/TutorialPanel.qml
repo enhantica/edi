@@ -1544,7 +1544,7 @@ Popup {
         return load !== null && load.visible ? load : panel.locate(`experiments.dataMore.${row}`) as T.AbstractButton;
     }
     // The sidebar's tabs, in their order.
-    readonly property var sidebarTabs: ["sideBar.tab.basic", "sideBar.tab.extras", "sideBar.tab.text", "sideBar.tab.settings"]
+    readonly property var sidebarTabs: ["sideBar.tab.basic", "sideBar.tab.extras", "sideBar.tab.text", "sideBar.tab.tools", "sideBar.tab.settings"]
     // Whether `view` is a page's sidebar (inside its `workflow.<page>.sidebarHost`).
     function inSidebar(view) {
         for (let ancestor = view; ancestor !== null; ancestor = ancestor.parent) {

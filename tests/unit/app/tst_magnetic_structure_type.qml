@@ -135,33 +135,12 @@ TestCase {
         const ids = groups("basic").map(item => item.categoryId);
         verify(ids.includes("space_group_magn") && !ids.includes("space_group"), "Magnetic space group replaces Space group on Main");
     }
-    function test_c_switch_to_magnetic_uses_the_grey_group() {
+    function test_c_switch_to_magnetic_opens_the_parent_popup() {
         openInput("crystal");
+        const before = Session.project.currentStructure.text.text;
         choose(typeChoice(), "Magnetic");
-        const structure = Session.project.currentStructure;
-        compare(structure.magneticGroup.number_bns, "62.442", "Switching Pnma to Magnetic chooses its grey group BNS 62.442");
-        compare(String(structure.magneticGroup.name_bns).replace(/[\s′]/g, c => c === "′" ? "'" : ""), "Pnma1'", "The grey group is Pnma with pure time reversal");
-        const table = Render.descendants(group("atom_site_moment")).find(item => item.sourceModel !== undefined && typeof item.itemAtIndex === "function");
-        verify(table && table.count > 0, "The grey group's moment constraints are visible for actual sites");
-        table.positionViewAtIndex(0, ListView.Contain);
-        table.forceLayout();
-        const ion = findChild(table.itemAtIndex(0), "atomSiteMoment.ion.0");
-        verify(ion, "The first cobalt site exposes its actual magnetic-ion selector");
-        choose(ion, "Co2+");
-        let checked = 0;
-        for (let i = 0; i < table.count; ++i) {
-            table.positionViewAtIndex(i, ListView.Contain);
-            table.forceLayout();
-            const row = table.itemAtIndex(i);
-            verify(row, "Every grey-group site row is instantiated");
-            const components = Render.descendants(row).filter(item => item.item && /^atomSiteMoment\.m[xyz]\./.test(item.objectName));
-            for (const component of components) {
-                compare(Number(component.item.value), 0, "Pure time reversal fixes every moment component to zero");
-                verify(!component.item.fittable, "Grey-group moments cannot be fitted against symmetry");
-                ++checked;
-            }
-        }
-        verify(checked >= 3, "The zero-moment check reaches all components of a real cobalt moment");
+        tryVerify(() => Probe.objectsWithProperty(app, "opened").some(item => item.opened && item.objectName === "structures.magneticPopup"), 1000, "Crystal to Magnetic opens the parent candidate popup");
+        compare(Session.project.currentStructure.text.text, before, "Opening candidate selection preserves the parent structure");
     }
     function confirmation() {
         let dialog;

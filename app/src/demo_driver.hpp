@@ -141,6 +141,8 @@ class DemoDriver : public QObject {
     QElapsedTimer mark_;  // `mark`: when a timed click began
     qint64 popup_shown_ms_ = -1;  // the first frame drawing a parameter popup after the last click
     void wait_online_then(const std::function<void()>& next, int waited_ms = 0);
+    // A control that appears when background work ends (the magnetic popup's groups): waits until it is shown.
+    void wait_control_then(const QString& name, const std::function<void()>& next, int waited_ms = 0);
     void wait_assistant_then(const std::function<void()>& next, int waited_ms = 0, int idle_polls = 0);
     // Applies `change` and waits for the first frame swapped after a scene synchronisation that follows it, and
     // follows `ready()` turning true when given; the milliseconds from the change to that swap, or -1 when none came.

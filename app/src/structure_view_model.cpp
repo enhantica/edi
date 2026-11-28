@@ -310,7 +310,7 @@ QString wyckoff_coordinates_display(const std::string& representative) {
 
 void AtomSiteListModel::sync() {
     QList<Row> rows;
-    const bool lettered = edi::takes_wyckoff_letter(structure_);
+    const bool lettered = edi::letter_source(structure_) != edi::LetterSource::None;  // type IV: crysta's letter
     for (const auto& site : structure_.atom_sites) {
         rows.append({site.get(),
                      {QString::fromStdString(site->id), QString::fromStdString(site->type_symbol),
@@ -478,7 +478,21 @@ namespace {
 // A refusal in plain words for the page (the owner, 2026-11-19): crysta's text names the item it refused
 // (`_category.item 'value' ...`), which the page does not show; the known propagation-vector reasons are said as
 // what the user can do.
+QString plain_reason(const QString& raw);
+
+// The plain reason, then where the analysis is run when the core named it (A10): the rewording below must not drop
+// the routes the core appended to a magnetic structure's refusal.
 QString plain_refusal(const QString& raw) {
+    static const QString marker = QStringLiteral("; run the magnetic symmetry analysis again");
+    const qsizetype at = raw.indexOf(marker);
+    if (at < 0) return plain_reason(raw);
+    QString reason = plain_reason(raw.left(at));
+    if (!reason.endsWith(QLatin1Char('.'))) reason += QLatin1Char('.');
+    const QString routes = raw.mid(at + 2);
+    return reason + QLatin1Char(' ') + routes.left(1).toUpper() + routes.mid(1) + QLatin1Char('.');
+}
+
+QString plain_reason(const QString& raw) {
     QString text = raw;
     static const QRegularExpression tag(QStringLiteral(R"(^_[A-Za-z0-9_]+\.[A-Za-z0-9_.-]+\s+'[^']*'\s*:?\s*)"));
     text.remove(tag);

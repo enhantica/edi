@@ -80,9 +80,6 @@ WorkflowPage {
             StandardUncertaintiesGroup {
                 project: page.project
             }
-            SaveDataGroup {
-                project: page.project
-            }
             // The rest of `project.edi`, each category in a group made from the dictionary; the standard
             // uncertainties have theirs above, the report's settings theirs on the Report page.
             Repeater {
@@ -92,6 +89,15 @@ WorkflowPage {
                     textSource: page.project ? page.project.metadataText : null
                     admitted: categoryId !== "su_format" && categoryId !== "report"
                 }
+            }
+        }
+    }
+    // Settings: whether this project's measured data is saved with it, kept in the app's settings for the project,
+    // never in its `.edi` text (owner, 2026-11-28, sidebar tabs by role; edi ADR-0017 §2).
+    settingsItem: Component {
+        EaComponents.SideBarColumn {
+            SaveDataGroup {
+                project: page.project
             }
         }
     }
