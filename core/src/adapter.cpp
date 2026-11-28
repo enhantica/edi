@@ -7977,18 +7977,31 @@ void publish_fit_state(Project& project, crysta::Project& converted, const std::
     const bool some = std::any_of(project.experiments.begin(), project.experiments.end(),
                                   [](const auto& experiment) { return experiment->data.has_value(); });
     if (some && supplied != nullptr && supplied->size() == project.experiments.size()) {
-        std::vector<std::size_t> borrowed;
-        for (std::size_t e = 0; e < project.experiments.size(); ++e) {
-            BraggPdExperiment& bank = *project.experiments[e];
-            if (!bank.data.has_value() && !bank.reflections.has_value()) {
-                bank.data = (*supplied)[e];
-                borrowed.push_back(e);
-            }
-        }
+        // What a borrowed bank held before (review 27): its reflection rows and its calculation record go back with
+        // the node, so nothing of the temporary input stays. The give-back is owned before the first borrow.
+        struct Borrowed {
+            std::size_t bank;
+            decltype(BraggPdExperiment::refln) refln;
+            decltype(BraggPdExperiment::computed_source) source;
+        };
+        std::vector<Borrowed> borrowed;
         const auto give_back = [&] {
-            for (const std::size_t e : borrowed) project.experiments[e]->data.reset();
+            for (Borrowed& held : borrowed) {
+                BraggPdExperiment& bank = *project.experiments[held.bank];
+                bank.data.reset();
+                bank.refln = std::move(held.refln);
+                bank.computed_source = std::move(held.source);
+            }
+            borrowed.clear();
         };
         try {
+            for (std::size_t e = 0; e < project.experiments.size(); ++e) {
+                BraggPdExperiment& bank = *project.experiments[e];
+                if (!bank.data.has_value() && !bank.reflections.has_value()) {
+                    borrowed.push_back({e, bank.refln, bank.computed_source});
+                    bank.data = (*supplied)[e];
+                }
+            }
             if (surface_refusal) {
                 project.calculate();
             } else {
