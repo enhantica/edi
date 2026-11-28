@@ -6766,8 +6766,8 @@ QString ProjectViewModel::apply_calc_method(edi::Structure& structure, const std
         undo_history_.emplace_back(std::move(before));
         syncUndo();
         for (const std::string& experiment : outcome->unscaled) {
-            emit message(tr("%1: crysta gives the structure %2 no scale start after the switch to Rietveld, so its "
-                            "scale is kept")
+            emit message(tr("%1: no scale start could be worked out for the structure %2 after the switch to "
+                            "Rietveld, so its scale is kept")
                              .arg(QString::fromStdString(experiment), QString::fromStdString(structure.name.value())));
         }
     }
