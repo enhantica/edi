@@ -794,6 +794,8 @@ def test_installed_linux_tool_needs_its_whole_runtime(tmp_path, monkeypatch, dam
     [
         (False, 'other', False),
         (True, 'installed', False),
+        # The update moved the staged tool into place; the app's next start removes the folder.
+        (True, 'empty', False),
         (True, 'other', True),
         (True, 'extra', True),
     ],
@@ -806,8 +808,9 @@ def test_windows_staged_tool_after_an_update_is_the_installed_one(
     bundle = signed_bundle(tmp_path)
     staging = tmp_path / 'maintenancetool'
     staging.mkdir()
-    copy = staging / bundle.name
-    copy.write_bytes(bundle.read_bytes() if staged != 'other' else b'older tool')
+    if staged != 'empty':
+        copy = staging / bundle.name
+        copy.write_bytes(bundle.read_bytes() if staged != 'other' else b'older tool')
     if staged == 'extra':
         (staging / 'leftover.txt').write_text('debris\n')
     metadata = {'maintenance_tool_sha256': PACKAGE.sha256(bundle)}

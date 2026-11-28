@@ -107,10 +107,11 @@ update replaces while the tool runs. So the runtime takes the bundle's design ra
    backup without the lock once the update has succeeded. That removal and the new cleanup remove the same files and
    either may come first, so they overlap harmlessly.
 
-   On Windows the staged `maintenancetool\MaintenanceTool.exe` goes after a successful update too. The component's
-   script removes `maintenancetool\` on success once the installed tool holds the staged bytes. The app at start
-   removes it only when the installed `MaintenanceTool.exe` has the same bytes as the staged one: until then an update
-   may still need it, and without it the Framework would write an unsigned tool (ADR-0091).
+   On Windows the staged `maintenancetool\MaintenanceTool.exe` goes after a successful update too. The Framework
+   moves it into place as the update's tool quits, after every script has run, and leaves `maintenancetool\` empty
+   (measured on CI). The app at start removes the folder when it is empty, or when the installed `MaintenanceTool.exe`
+   has the same bytes as the staged one, as after a first installation: until then an update may still need it, and
+   without it the Framework would write an unsigned tool (ADR-0091).
 
 6. **Purge.** On a successful uninstallation the control script removes `<item>.old`, `<item>.old-token`,
    `maintenancetool/` and `.MaintenanceTool.lock`, and on Linux `installer-runtime/`, which no operation owns any
@@ -152,7 +153,7 @@ update replaces while the tool runs. So the runtime takes the bundle's design ra
     `maintenancetool/` is left, though the fixture planted a `.DS_Store` in the staging folder.
   - Windows: the staged `MaintenanceTool.exe` is present when the update fails; after the rollback `maintenancetool\`
     is gone or holds no copy of the new tool, and the leftover's checksum is printed either way; after a successful
-    update no `maintenancetool\` is left.
+    update `maintenancetool\` is gone or empty, and the app's test removes an empty one.
   - Linux: a failed update leaves `installer-runtime/` intact, its `dependencies.json` matching the libraries, the
     tool still answers an update check, and the purge removes the runtime and the lock file. The old exception that
     let a rolled-back Linux tool fail to start is gone.

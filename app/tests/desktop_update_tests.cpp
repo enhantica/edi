@@ -184,6 +184,29 @@ private slots:
         QVERIFY(!updates.startMaintenance());
         QCOMPARE(updates.status(), "The Maintenance Tool could not be opened.");
     }
+    void windowsStagingFolderGoesOnceTheToolIsInPlace() {
+        QTemporaryDir temp;
+        const QString executable = temp.filePath("MaintenanceTool.exe");
+        const QString staging = temp.filePath("maintenancetool");
+        const auto write = [](const QString& path, const QByteArray& bytes) {
+            QFile file(path);
+            return file.open(QIODevice::WriteOnly) && file.write(bytes) == bytes.size();
+        };
+        QVERIFY(write(executable, "new tool"));
+        QVERIFY(!edi_app::remove_maintenance_tool_leftovers(executable));
+        // A fresh installation keeps the staged tool until the installed one has its bytes.
+        QVERIFY(QDir().mkdir(staging));
+        QVERIFY(write(staging + "/MaintenanceTool.exe", "old tool"));
+        QVERIFY(!edi_app::remove_maintenance_tool_leftovers(executable));
+        QVERIFY(QFileInfo::exists(staging + "/MaintenanceTool.exe"));
+        QVERIFY(write(staging + "/MaintenanceTool.exe", "new tool"));
+        QVERIFY(edi_app::remove_maintenance_tool_leftovers(executable));
+        QVERIFY(!QFileInfo::exists(staging));
+        // An update moves the staged tool into place and leaves the folder empty.
+        QVERIFY(QDir().mkdir(staging));
+        QVERIFY(edi_app::remove_maintenance_tool_leftovers(executable));
+        QVERIFY(!QFileInfo::exists(staging));
+    }
     void updateActionSettlesUnsavedWorkBeforeLaunch() {
         QQmlApplicationEngine engine;
         edi_app::configure_engine(engine);

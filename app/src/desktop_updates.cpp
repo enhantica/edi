@@ -185,7 +185,9 @@ bool restore_kept_maintenance_tool(const QString& executable) {
 bool remove_maintenance_tool_leftovers(const QString& executable) {
     if (executable.endsWith(QStringLiteral(".exe"), Qt::CaseInsensitive)) {
         // The staged copy is what the Framework writes the tool from (ADR-0091), so it goes only once it is in place.
+        // An update moves it into place and leaves the folder empty; rmdir removes nothing else.
         const QString staging = QFileInfo(executable).absolutePath() + QStringLiteral("/maintenancetool");
+        if (QDir().rmdir(staging)) return true;
         return same_bytes(executable, staging + QStringLiteral("/MaintenanceTool.exe")) &&
                QDir(staging).removeRecursively();
     }
