@@ -51,7 +51,7 @@ AppDialog {
     readonly property real maximumHeight: parent ? parent.height - 2 * (EaStyle.Sizes.appBarHeight + EaStyle.Sizes.fontPixelSize) : 480
     width: parent ? Math.min(Math.round(parent.width * 0.6), 760) : 700
     height: Math.round(Math.min(maximumHeight, implicitHeight))
-    anchors.centerIn: parent
+    // Centred on whole pixels by AppDialog, as the app's other dialogs are, so its text is sharp (owner, Retina).
     onClosed: destroy()
 
     Component.onCompleted: project.findPropagationVectors(snapshot.id)
@@ -205,15 +205,15 @@ AppDialog {
                         data: true
                         text: popup.markRoles(row.modelData).map(r => r.text).join("\n")
                         contentItem: Column {
-                            spacing: EaStyle.Sizes.fontPixelSize * 0.25
+                            spacing: Math.round(EaStyle.Sizes.fontPixelSize * 0.25)
                             Repeater {
                                 model: popup.markRoles(row.modelData)
                                 delegate: Row {
                                     id: roleRow
                                     required property var modelData
-                                    spacing: EaStyle.Sizes.fontPixelSize * 0.4
+                                    spacing: Math.round(EaStyle.Sizes.fontPixelSize * 0.4)
                                     IconCell {
-                                        width: EaStyle.Sizes.fontPixelSize * 1.2
+                                        width: Math.round(EaStyle.Sizes.fontPixelSize * 1.2)
                                         height: roleText.height
                                         icon: roleRow.modelData.indexed ? "check-circle" : "times-circle"
                                         iconColor: String(roleRow.modelData.indexed ? EaStyle.Colors.green : EaStyle.Colors.red)

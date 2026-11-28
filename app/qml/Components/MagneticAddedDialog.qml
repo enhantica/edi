@@ -29,14 +29,14 @@ AppDialog {
     Column {
         id: column
         width: dialog.contentWidth
-        spacing: EaStyle.Sizes.fontPixelSize * 0.75
+        spacing: Math.round(EaStyle.Sizes.fontPixelSize * 0.75)
         Repeater {
             model: dialog.entries
             delegate: Column {
                 id: entry
                 required property var modelData
                 required property int index
-                spacing: EaStyle.Sizes.fontPixelSize * 0.25
+                spacing: Math.round(EaStyle.Sizes.fontPixelSize * 0.25)
                 EaElements.Label {
                     width: column.width
                     elide: Text.ElideRight

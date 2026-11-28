@@ -61,7 +61,7 @@ AppDialog {
     readonly property real maximumHeight: parent ? parent.height - 2 * (EaStyle.Sizes.appBarHeight + EaStyle.Sizes.fontPixelSize) : 800
     width: parent ? Math.round(parent.width * 0.9) : 1000
     height: Math.round(Math.min(maximumHeight, implicitHeight))
-    anchors.centerIn: parent
+    // Centred on whole pixels by AppDialog, as the app's other dialogs are, so its text is sharp (owner, Retina).
     onClosed: destroy()
 
     // The chosen k's place in the list (a preset, or presets.length for Other): the one owner of the choice, which the
@@ -209,7 +209,8 @@ AppDialog {
             objectName: "magnetic.toolbar"
             spacing: AppSizes.toolbarSpacing
             // The chart toolbar's gap between groups (ToolbarLines.groupSpacing), less the spacing around the gap item.
-            readonly property real groupGap: EaStyle.Sizes.fontPixelSize * 0.5 + 2 * AppSizes.toolbarSpacing - 2 * spacing
+            // Whole pixels, so the boxes after it sit on the pixel grid and their text stays sharp (owner, Retina).
+            readonly property real groupGap: Math.round(EaStyle.Sizes.fontPixelSize * 0.5 + 2 * AppSizes.toolbarSpacing - 2 * spacing)
 
             readonly property var kEntries: popup.presets.map(p => {
                 const k = p.k.split(",").join(", ");

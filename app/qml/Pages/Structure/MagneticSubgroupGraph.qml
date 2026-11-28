@@ -65,10 +65,11 @@ Flickable {
     // A card as wide as its longest name or second line needs, with its inner margins, so more fit on a line; as tall
     // as its two lines with the same margin around and between them (owner, 2026-11-27).
     readonly property real cardMargin: AppSizes.tableCellMargin
-    readonly property real cardSpacing: AppSizes.tableCellMargin * 0.5
+    // Whole pixels for every offset text is placed at, so it stays sharp on a high-density screen (owner, Retina).
+    readonly property real cardSpacing: Math.round(AppSizes.tableCellMargin * 0.5)
     // The text's own room above its capitals: the visible gap at the top is the margin plus it, so the left side and
     // the bottom (less the second line's descent) take the same visible gap (owner, 2026-11-27).
-    readonly property real capRoom: Math.max(0, nameMetrics.ascent + nameMetrics.tightBoundingRect("H").y)
+    readonly property real capRoom: Math.round(Math.max(0, nameMetrics.ascent + nameMetrics.tightBoundingRect("H").y))
     readonly property real cardPadding: cardMargin + capRoom
     // The width of a highlighted card's border and of the lines between cards (owner, 2026-11-27).
     readonly property real lineWidth: 1.5
@@ -100,7 +101,7 @@ Flickable {
     FontMetrics {
         id: lineMetrics
         font.family: EaStyle.Fonts.fontFamily
-        font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.85
+        font.pixelSize: Math.round(EaStyle.Sizes.fontPixelSize * 0.85)
     }
     function shown(i) {
         return (!maximalOnly || Math.max(1, nodes[i].row) === 1) &&
@@ -296,7 +297,7 @@ Flickable {
                 EaElements.Label {
                     width: parent.width
                     elide: Text.ElideRight
-                    font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.85
+                    font.pixelSize: Math.round(EaStyle.Sizes.fontPixelSize * 0.85)
                     horizontalAlignment: Text.AlignLeft
                     color: node.textColor
                     text: graph.lineOf(node.data_)
@@ -321,14 +322,14 @@ Flickable {
                     objectName: `magnetic.node.${node.index}.pin`
                     readonly property bool on: graph.pinned === node.index
                     visible: on || graph.hovered === node.index
-                    x: parent.width - width - graph.cardMargin * 0.5
-                    y: graph.cardMargin * 0.5
-                    width: EaStyle.Sizes.fontPixelSize * 1.25
+                    x: Math.round(parent.width - width - graph.cardMargin * 0.5)
+                    y: Math.round(graph.cardMargin * 0.5)
+                    width: Math.round(EaStyle.Sizes.fontPixelSize * 1.25)
                     height: width
                     horizontalAlignment: Text.AlignHCenter
                     verticalAlignment: Text.AlignVCenter
                     font.family: EaStyle.Fonts.iconsFamily
-                    font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.8
+                    font.pixelSize: Math.round(EaStyle.Sizes.fontPixelSize * 0.8)
                     rotation: on ? 0 : 45
                     // On a selected (blue) card always white: faded until hovered or pinned, so it never sinks into
                     // the fill (owner, 2026-11-27).
@@ -355,7 +356,7 @@ Flickable {
                     contentItem: GridLayout {
                         columns: 2
                         columnSpacing: EaStyle.Sizes.fontPixelSize
-                        rowSpacing: EaStyle.Sizes.fontPixelSize * 0.2
+                        rowSpacing: Math.round(EaStyle.Sizes.fontPixelSize * 0.2)
                         Repeater {
                             // Always the card's own rows (owner bug): gated on the hover or on the tooltip's visibility,
                             // the frame showed empty as it appeared or faded out, or while the pointer swept across cards.
