@@ -1433,6 +1433,9 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     EditOutcome estimateBackgroundFor(const edi::ExperimentBase* expected,EditOutcome* receipt);
     EditOutcome* estimate_receipt_ = nullptr;
     EditOutcome applyEdit(const edi::Edit& change, bool structural, bool restoring = false);
+    // Sets every flag of `parameters` that differs from `free`, one Undo step that also puts back extracted
+    // intensities, which no parameter walk names: a Pawley row's Free box and the Free header with such a row.
+    EditOutcome applyFreeFlags(const std::vector<edi::Parameter*>& parameters, bool free);
     QString editReadinessRefusal(bool restoring, bool trial = false) const;
     bool calculating_ = false;
     bool adjusting_ = false;

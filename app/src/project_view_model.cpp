@@ -4010,13 +4010,14 @@ bool ProjectViewModel::setParametersFree(const QList<ParameterItem*>& parameters
         for(const auto* member:input->members) {
             const auto* item=registry_->find(member);
             if(!item || std::count(input->members.begin(),input->members.end(),member)!=1)return false;
-            if(free?item->isFittable():item->isFree())++expected;
+            if(free?item->isFittable():(item->isFree() || item->partiallyFree()))++expected;
         }
         if(expected!=static_cast<std::size_t>(parameters.size()))return false;
         for(const auto* item:parameters) {
             if(!item || registry_->find(item->parameter())!=item ||
                 std::count(input->members.begin(),input->members.end(),item->parameter())!=1 ||
-                std::count(parameters.begin(),parameters.end(),item)!=1 || (free?!item->isFittable():!item->isFree()))return false;
+                std::count(parameters.begin(),parameters.end(),item)!=1 ||
+                (free?!item->isFittable():(!item->isFree() && !item->partiallyFree())))return false;
         }
         input->consumed=true;widget_input_executing_=true;
     }
@@ -4024,20 +4025,41 @@ bool ProjectViewModel::setParametersFree(const QList<ParameterItem*>& parameters
         announceRefused(refusal);
         return false;
     }
-    std::map<const edi::Parameter*, std::string> names;
+    std::map<const edi::Parameter*, edi::NamedSlot> by_parameter;
     for (const edi::NamedSlot& slot : edi::named_slots(*project_)) {
-        names.emplace(slot.parameter, slot.unique_name);
+        by_parameter.emplace(slot.parameter, slot);
     }
     std::vector<std::pair<std::string, bool>> flags;
+    std::vector<edi::Parameter*> changed;
+    bool grouped = false;
     for (const ParameterItem* item : parameters) {
         if (item == nullptr || (free && !item->isFittable())) {
             continue;  // a flag is set only where a fit can vary the value; any is cleared (ADR-0053)
         }
-        const auto found = names.find(item->parameter());
-        if (found == names.end() || item->isFree() == free) {
+        if (item->groupSize() > 0) {
+            // A Pawley row: every intensity it stands for, partly free or not.
+            for (edi::Parameter* member : item->group()) {
+                if (member->free.get() != free) {
+                    changed.push_back(member);
+                    grouped = true;
+                }
+            }
             continue;
         }
-        flags.emplace_back(found->second, free);
+        const auto found = by_parameter.find(item->parameter());
+        if (found == by_parameter.end() || item->isFree() == free) {
+            continue;
+        }
+        flags.emplace_back(found->second.unique_name, free);
+        changed.push_back(found->second.parameter);
+    }
+    if (grouped) {
+        // The intensities are in no parameter walk, so this takes the Pawley row's own path, one Undo step for all.
+        const EditOutcome result = applyFreeFlags(changed, free);
+        if(input)input->outcome=result;
+        if (!self || retired_) return result.applied;
+        if (!result.applied) { announceRefused(result.message); return false; }
+        return true;
     }
     if (flags.empty()) {
         if(input)input->outcome={false,true,{}};
@@ -6050,21 +6072,29 @@ QString ProjectViewModel::assign_parameter_free(edi::Parameter& parameter, bool 
 QString ProjectViewModel::assign_group_free(const std::vector<edi::Parameter*>& parameters, bool free) {
     if (const auto refusal = free_refusal(); !refusal.isEmpty()) return refusal;
     const PublicationScope publication(*this);
+    const EditOutcome result = applyFreeFlags(parameters, free);
+    if (!retired_ && !result.applied && !result.message.isEmpty()) setLastError(result.message);
+    return result.applied ? QString{} : result.message;
+}
+
+ProjectViewModel::EditOutcome ProjectViewModel::applyFreeFlags(const std::vector<edi::Parameter*>& parameters, bool free) {
+    const PublicationScope publication(*this);
     const QPointer<ProjectViewModel> self(this);
     std::vector<std::pair<edi::Parameter*, bool>> flags;
     for (edi::Parameter* parameter : parameters) {
         if (parameter->free.get() != free) flags.emplace_back(parameter, free);
     }
-    if (flags.empty()) return {};
-    // The extracted intensities are in no parameter walk, so Undo puts back the rows they belong to (edi ADR-0109 §5).
-    edi::StructuresUndo before = edi::capture_structures(*project_);
-    const QString refusal = apply(edi::Edit::free_flags(std::move(flags)), false);
-    if (!self || retired_) return refusal;
-    if (refusal.isEmpty()) {
+    if (flags.empty()) return {false, true, {}};
+    // The extracted intensities are in no parameter walk, so Undo puts back the rows they belong to (edi ADR-0109 §5),
+    // and with them every other parameter's state.
+    edi::StructuresUndo before = edi::capture_structure_edit(*project_);
+    const EditOutcome result = applyEdit(edi::Edit::free_flags(std::move(flags)), false);
+    if (!self || retired_) return result;
+    if (result.applied) {
         undo_history_.emplace_back(std::move(before));
         syncUndo();
     }
-    return refusal;
+    return result;
 }
 
 QString ProjectViewModel::apply(const edi::Edit& change, bool structural) {

@@ -6681,7 +6681,7 @@ struct AssistantViewModel::State {
             auto* item=filter->parameterAt(row);
             // Free touches the shown fittable set; Fixed also clears free
             // flags whose current native eligibility has become blocked.
-            if(!item || (entry->free ? !item->isFittable() : (!item->isFittable() && !item->isFree())))continue;
+            if(!item || (entry->free ? !item->isFittable() : (!item->isFittable() && !item->isFree() && !item->partiallyFree())))continue;
             std::size_t matches=0;
             for(std::size_t at=range.first;at<range.second;++at) {
                 const auto& expected=run->parameter_entries[at];
