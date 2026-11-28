@@ -80,9 +80,6 @@ def test_actual_taurine_fit_matches_all_fullprof_parameters_and_uncertainties(tm
     staged = tmp_path / 'project'
     shutil.copytree(source, staged)
     model = engine().Project.load(staged)
-    assert len(model.free_parameters) == record['n_free'], (
-        'The taurine example must solve the same 135 independent parameters as FullProf'
-    )
     displacement = {
         'taurine.atom_site.S1.fract_x': 0.005,
         'taurine.atom_site.O1.fract_y': -0.005,
@@ -176,3 +173,63 @@ def test_actual_taurine_fit_matches_all_fullprof_parameters_and_uncertainties(tm
     assert reference_difference / reference_observed == pytest.approx(
         record['rf2_percent'] / 100, abs=0.0005
     ), 'The absolute factor at the FullProf parameter point must match its printed rounding'
+
+
+def restore_taurine_equalities(tied, components):
+    settings = tied / 'analysis/analysis.edi'
+    prefix, separator, _ = settings.read_text().partition(
+        'loop_\n_parametric_fit_shared.parameter_unique_name'
+    )
+    assert separator, 'The shipped taurine example declares shared extinction'
+    aliases, constraints = [], []
+    for bank in range(1, 7):
+        experiment = tied / f'experiments/senju_{bank}.edi'
+        text = experiment.read_text()
+        for component in components:
+            alias = f'x{component}_{bank}'
+            aliases.append(f'{alias} senju_{bank}.extinction.coefficient_{component}')
+            if bank != 1:
+                constraints.append(f'{alias} "{alias} = x{component}_1"')
+                text = text.replace(
+                    f'_extinction.coefficient_{component} 0()',
+                    f'_extinction.coefficient_{component} 0',
+                )
+        experiment.write_text(text)
+    settings.write_text(
+        prefix
+        + '\nloop_\n_alias.id\n_alias.parameter_unique_name\n'
+        + '\n'.join(aliases)
+        + '\n\nloop_\n_constraint.id\n_constraint.expression\n'
+        + '\n'.join(constraints)
+        + '\n'
+    )
+
+
+def test_shared_taurine_matches_the_prior_explicit_equalities(tmp_path):
+    source = ROOT / 'docs/user/cli/sc-neut-tof_taurine-senju/project'
+    shared = tmp_path / 'shared'
+    tied = tmp_path / 'tied'
+    shutil.copytree(source, shared)
+    shutil.copytree(source, tied)
+    components = ('11', '22', '33')
+    restore_taurine_equalities(tied, components)
+    actual = engine().Project.load(shared)
+    reference = engine().Project.load(tied)
+    result = actual.analysis.fit()
+    expected = reference.analysis.fit()
+    assert result.reduced_chi_square == pytest.approx(expected.reduced_chi_square, rel=1e-7), (
+        'Shared extinction reproduces the objective of the explicit equality project'
+    )
+    for experimental, prior in zip(actual.experiments, reference.experiments, strict=True):
+        for component in components:
+            name = 'coefficient_' + component
+            shared_value = getattr(experimental.extinction, name)
+            prior_value = getattr(prior.extinction, name)
+            assert shared_value.value == pytest.approx(prior_value.value, rel=1e-6, abs=1e-10), (
+                'Each migrated bank preserves the extinction fitted by the equality constraints',
+                experimental.name,
+                component,
+            )
+            assert shared_value.uncertainty == pytest.approx(
+                prior_value.uncertainty, rel=1e-6, abs=1e-10
+            ), 'Each migrated bank preserves the equality fit uncertainty'

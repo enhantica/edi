@@ -232,3 +232,37 @@ def test_shared_scale_and_local_background_follow_the_analytic_fit(tmp_path, fix
             assert float(row[name + '.uncertainty']) == pytest.approx(uncertainty, rel=1e-8), (
                 'Local uncertainty includes shared-scale coupling and global degrees of freedom'
             )
+
+
+def test_fixed_shared_start_reaches_every_parametric_block(tmp_path):
+    root = cases.scan(tmp_path / 'series', fixed=True)
+    project = engine.Project.load(root)
+    project.analysis.fit()
+    known = (7.75, 9.25, 6.5)
+    result = root / 'analysis/results.csv'
+    line = next(
+        line for line in result.read_bytes().splitlines() if line.startswith(b'scan/p1.xy,')
+    )
+    identity = 0xCBF29CE484222325
+    for byte in line:
+        identity = ((identity ^ byte) * 0x100000001B3) % (1 << 64)
+    analysis = root / 'analysis/analysis.edi'
+    analysis.write_text(
+        analysis.read_text()
+        + '\nloop_\n'
+        + '\n'.join((*cases.START_TAGS, '_parametric_fit_start.over'))
+        + f'\np1.xy zeta.background.1.intensity 4.25 {identity:016x}\n'
+    )
+    engine.Project.load(root).save()
+    engine.Project.load(root).analysis.fit()
+
+    new = cases.rows(root)
+    assert len(new) == len(known), 'A fixed series start applies without dropping any point'
+    # On the five evenly spaced samples, sum(t * (1 - t)) / sum(t**2) = 1/3.
+    # A unit increase of the fixed intercept moves every fitted endpoint down by that amount.
+    for point, truth in zip(new, known, strict=True):
+        endpoint = float(point['zeta.background.2.intensity'])
+        assert endpoint == pytest.approx(truth - 1 / 3, abs=0.008), (
+            'Every block must use the same fixed shared start in its linear fit and replay',
+            point['file_path'],
+        )

@@ -220,7 +220,7 @@ def test_parametric_mode_requires_a_scan(tmp_path):
         engine.Project.load(root)
 
 
-def test_unknown_and_shared_point_starts_are_dropped(tmp_path):
+def test_shared_start_survives_and_unknown_point_start_is_dropped(tmp_path):
     root = cases.scan(tmp_path / 'source')
     analysis = root / 'analysis/analysis.edi'
     analysis.write_text(
@@ -233,5 +233,5 @@ def test_unknown_and_shared_point_starts_are_dropped(tmp_path):
     engine.Project.load(root).save_as(tmp_path / 'saved')
     text = (tmp_path / 'saved/analysis/analysis.edi').read_text()
     assert '8.25' in text, 'A valid unshared point start survives reload'
-    assert '8.125' not in text, 'A point start cannot override a shared template value'
+    assert '8.125' in text, 'A shared start survives as the series start'
     assert '19.375' not in text, 'An unlisted point cannot acquire a persisted start'

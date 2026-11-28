@@ -71,27 +71,23 @@ def test_known_cells_and_unequal_bank_scales_recover_at_their_point(tmp_path, mo
             )
 
 
-def test_resume_is_noop_then_appends_only_the_new_point(tmp_path):
+def test_completed_series_refits_its_points_then_admits_new_data(tmp_path):
     root = cases.generated_series(tmp_path / 'series', engine)
     engine.Project.load(root).analysis.fit()
     result_tables(root)
-    paths = [root / f'analysis/{name}.csv' for name in ('results', 'results_experiments')]
-    before = [path.read_bytes() for path in paths]
-    engine.Project.load(root).analysis.fit()
-    assert [path.read_bytes() for path in paths] == before, (
-        'Reopening and continuing a completed joint series must not replay either table'
+    completed = []
+    engine.Project.load(root).analysis.fit(on_file_complete=completed.append)
+    assert len(completed) == len(cases.POINTS), (
+        'A completed joint series starts a fresh fit of every point'
     )
     for suffix in ('b5', 'b1'):
         shutil.copyfile(root / f'scan/T500K_{suffix}.xy', root / f'scan/T900K_{suffix}.xy')
     engine.Project.load(root).analysis.fit()
     (_, points), (_, banks) = result_tables(root)
     assert [row['point'] for row in points] == [*cases.POINTS, 'T900K'], (
-        'Continue must append just the newly completed point'
+        'The next scan admits the new point and publishes each point once'
     )
-    assert len(banks) == 8, 'Continue must append exactly the new point experiment rows'
-    assert all(
-        path.read_bytes().startswith(old) for path, old in zip(paths, before, strict=True)
-    ), 'Ordinary continuation must retain every previously committed result byte'
+    assert len(banks) == 8, 'The new scan publishes two experiment rows per point'
 
 
 def test_uncommitted_complete_experiment_rows_are_removed_before_resume(tmp_path):

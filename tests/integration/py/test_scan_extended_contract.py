@@ -763,6 +763,9 @@ using IterationCallback=int; using PreambleCallback=int; using CancelCallback=in
 
  using FileCompleteCallback=int; using ScanStartCallback=int; using FileFittedCallback=int;
 using FitResultBase=std::string;
+using ParametricIterateCallback=int;
+struct CoresBudget {};
+struct ScopedCores { explicit ScopedCores(const CoresBudget&) {} };
 std::string receipt(std::string mode,std::initializer_list<int> args){
 
 for(int arg:args)mode+=":"+std::to_string(arg);return mode;}
@@ -780,17 +783,20 @@ return receipt("sequential",{a,b,c,scan,d,fitted});
 }
 std::string fit_independent(int a,int b,int scan,int d,int c,int fitted){
 return receipt("independent",{a,b,c,scan,d,fitted});
+}
+std::string fit_parametric(int a,int b,int scan,int d,int c,int fitted,int iterate){
+return receipt("parametric",{a,b,c,scan,d,fitted,iterate});
 }};
 std::string effective_fitting_mode(Project& p){return p.mode;}
 BODY
 int main(){for(auto mode:{"sequential","independent"}){Project p{mode}
 
-;try{std::cout<<fit_by_mode(p,11,22,33,55,44,66)<<"\\n";}catch(std::exception&
+;try{std::cout<<fit_by_mode(p,11,22,33,55,44,66,77,{})<<"\\n";}catch(std::exception&
 e){std::cout<<"REFUSED\\n";}}}""".replace('BODY', dispatch)
     if 'ScanStartCallback' not in dispatch:
         program = program.replace('{a,b,c,scan,d,fitted}', '{a,b,c,d,fitted}')
         program = program.replace(
-            'fit_by_mode(p,11,22,33,55,44,66)', 'fit_by_mode(p,11,22,33,44,66)'
+            'fit_by_mode(p,11,22,33,55,44,66,77,{})', 'fit_by_mode(p,11,22,33,44,66)'
         )
     return cpp_probe(program, tmp_path)
 

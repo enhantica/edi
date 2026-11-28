@@ -225,3 +225,99 @@ def test_parametric_refit_uses_the_common_value_and_each_points_row(tmp_path):
     assert point_results(root) == point_results(reference_root), (
         'Automatic continuation matches the explicitly seeded shared and local fit'
     )
+
+
+def results_row_identity(root, file):
+    lines = (root / 'analysis/results.csv').read_bytes().splitlines()
+    line = next(line for line in lines if Path(line.split(b',', 1)[0].decode()).name == file)
+    # ADR-0136's persisted token is 64-bit FNV-1a over the CSV row bytes.
+    identity = 0xCBF29CE484222325
+    for byte in line:
+        identity = ((identity ^ byte) * 0x100000001B3) % (1 << 64)
+    return f'{identity:016x}'
+
+
+def add_point_start(root, file, value, over):
+    analysis = root / 'analysis/analysis.edi'
+    tags = cases.START_TAGS
+    tail = f'{file} {SEED_COLUMNS[0]} {value}'
+    if over is not None:
+        tags = (*tags, '_parametric_fit_start.over')
+        tail += f' {over}'
+    analysis.write_text(analysis.read_text() + '\nloop_\n' + '\n'.join((*tags, tail)) + '\n')
+
+
+def check_refit_against_explicit_seeds(root, reference, seeds):
+    expected = {file: fit_point_from_row(reference, file, row) for file, row in seeds.items()}
+    completed = []
+    engine.Project.load(root).analysis.fit(on_file_complete=completed.append)
+    assert len(completed) == len(POINT_FILES), 'A complete scan must refit every admitted point'
+    actual = point_results(root)
+    assert set(actual) == set(expected), 'The refit must retain each independent point identity'
+    for file, row in actual.items():
+        for name in SEED_COLUMNS:
+            value, rounding = published_value(row, name)
+            truth, truth_rounding = published_value(expected[file], name)
+            assert abs(value - truth) <= rounding + truth_rounding + abs(truth) * Decimal(
+                '1e-6'
+            ), (
+                'Refit must match the isolated solve from the selected explicit start',
+                file,
+                name,
+            )
+    return actual
+
+
+@pytest.mark.parametrize('mode', SCAN_MODES)
+def test_saved_point_start_overrides_one_result_generation(tmp_path, mode):
+    root = tmp_path / 'scan'
+    project = stage_scan_cubic(root, mode)
+    project.save()
+    template = template_documents(root)
+    project.analysis.fit()
+    first = point_results(root)
+    target = 'p1.xy'
+    original = results_row_identity(root, target)
+    value = '4.217'
+    add_point_start(root, target, value, original)
+    project = engine.Project.load(root)
+    project.save()
+    assert template_documents(root) == template, (
+        'Saving a point start leaves the experiment and structure template intact'
+    )
+    analysis = (root / 'analysis/analysis.edi').read_text()
+    assert value in analysis, 'Save preserves the authored start value'
+    assert original in analysis, 'Save preserves the identity of the row that the edit overrides'
+    seeded = {**first, target: {**first[target], SEED_COLUMNS[0]: value}}
+    second = check_refit_against_explicit_seeds(root, tmp_path / 'edited', seeded)
+    assert results_row_identity(root, target) != original, (
+        'The refit must publish a replacement row before testing start expiry'
+    )
+    check_refit_against_explicit_seeds(root, tmp_path / 'consumed', second)
+    assert template_documents(root) == template, 'Refitting never writes the scan template'
+
+
+@pytest.mark.parametrize('mode', SCAN_MODES)
+@pytest.mark.parametrize('over', [None, 'none'], ids=['legacy', 'explicit'])
+def test_start_for_point_without_row_survives_save_and_reopen(tmp_path, mode, over):
+    root = tmp_path / 'scan'
+    stage_scan_cubic(root, mode, 'p1.xy')
+    add_point_start(root, 'p1.xy', '4.217', over)
+    project = engine.Project.load(root)
+    project.save()
+    analysis = (root / 'analysis/analysis.edi').read_text()
+    assert '4.217' in analysis, 'A start made with no result row survives Save'
+    reference = stage_scan_cubic(tmp_path / 'reference', 'independent', 'p1.xy')
+    reference.structures['phase'].cell.length_a.value = 4.217
+    reference.analysis.fit()
+    engine.Project.load(root).analysis.fit()
+    actual = point_results(root)
+    expected = point_results(tmp_path / 'reference')
+    assert set(actual) == set(expected) == {'p1.xy'}, 'Both fits execute the same admitted point'
+    for field in SEED_COLUMNS:
+        value, rounding = published_value(actual['p1.xy'], field)
+        truth, truth_rounding = published_value(expected['p1.xy'], field)
+        assert abs(value - truth) <= rounding + truth_rounding + abs(truth) * Decimal('1e-6'), (
+            'A legacy or explicit no-row start reaches the solver after Save and reopen',
+            field,
+        )

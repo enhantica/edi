@@ -1551,6 +1551,219 @@ Rectangle {
             tryVerify(hasFitData, 4000, "The chart shows the completed fit without reselection: " + data.tag);
             verify(drawnWhileFitting, "The first chart opening displays live fitted data: " + data.tag);
         }
+        function test_scan_value_edit_lifecycle_data() {
+            return ["sequential", "independent", "parametric"].map(mode => ({tag: mode}));
+        }
+        function test_scan_value_edit_lifecycle(data) {
+            const root = SettingsProof.copyProject(Probe.repoUrl("tests/fixtures/parametric_series/cubic"));
+            const analysisFile = "analysis/analysis.edi", resultFile = "analysis/results.csv";
+            const structureFile = "structures/phase.edi";
+            const key = "phase.cell.length_a";
+            function cell() {
+                const rows = Probe.rows(Session.project.parameters);
+                const row = rows.find(each => each.parameter.blockName === "phase" &&
+                    each.parameter.uid === "cell.length_a");
+                verify(row !== undefined, "The real project exposes the scan cell parameter");
+                return row.parameter;
+            }
+            function templateCell() {
+                return SettingsProof.text(root, structureFile).match(/^_cell\.length_a\s+(\S+)/m)[1];
+            }
+            function analysis() {
+                return SettingsProof.text(root, analysisFile);
+            }
+            function startRows() {
+                return analysis().split(/\r?\n/).filter(line => /^\s*["']?p[0-4]\.xy\b/.test(line) && line.includes(key));
+            }
+            function resultRows() {
+                const receipt = SettingsProof.fileObservation(root, resultFile);
+                verify(!receipt.error, "The saved scan results remain readable");
+                return receipt.exists ? SettingsProof.text(root, resultFile).split(/\r?\n/)
+                    .filter(line => line && !line.startsWith("#")) : [];
+            }
+            function select(index) {
+                Session.project.currentExperimentIndex = index;
+                tryVerify(() => Session.project.currentExperimentIndex === index &&
+                    Probe.datasetReady(Session.project) && Session.project.readyForEdit(), 5000,
+                    "The requested scan point becomes available for edits");
+            }
+            function fitAll() {
+                const fit = Session.project.fit;
+                fit.start();
+                tryVerify(() => !fit.running && fit.canReset && resultRows().length === 6, 15000,
+                    "The real Start action publishes all five fitted points");
+            }
+
+            verify(Session.openProject(root), "The app opens the frozen scan project");
+            Session.project.analysis.fittingMode = data.tag;
+            cell().value = 4.11;
+            verify(Session.save(), "The app saves a value edit before results exist");
+            const template = templateCell();
+            verify(/^4\.11(?:\(\))?$/.test(template), "With no results the value goes into the template");
+            compare(startRows(), [], "A template edit creates no point starts");
+            fitAll();
+            const first = resultRows();
+            select(1);
+            const fitted = cell().value;
+            cell().value = 4.217;
+            compare(cell().value, 4.217, "The edit is immediately shown on the selected point");
+            verify(Session.save(), "Save persists the shown point's next start");
+            compare(templateCell(), template, "The fitted edit preserves the template value and Free flag");
+            compare(resultRows(), first, "A projected edit leaves the published result generation intact");
+            compare(startRows().length, 1, "A projected value edit writes exactly one point start");
+            verify(/p1\.xy.*4\.217.*[a-f0-9]{16}/.test(startRows()[0]),
+                "The start belongs to the shown file and its saved row identity");
+            Session.project.undo();
+            compare(cell().value, fitted, "One Undo restores the displayed fitted value");
+            verify(Session.save(), "Save persists Undo of the point start");
+            compare(startRows(), [], "Undo removes the persisted point start");
+            cell().value = 4.217;
+            compare(cell().value, 4.217, "The point accepts the same edit again after Undo");
+            verify(Session.save(), "Save persists the reapplied point start");
+            Session.closeProject();
+            verify(Session.openProject(root), "The real loader reopens the edited project");
+            select(1);
+            verify(startRows().some(line => line.includes("4.217")), "The saved start is still present on disk after reopen");
+            tryVerify(() => cell().value === 4.217, 5000, "The reopened point displays its stored next start");
+
+            const wasFree = cell().free;
+            cell().free = !wasFree;
+            compare(cell().free, !wasFree, "Free can be edited while a fitted point is shown");
+            verify(Session.save(), "Save persists the Free edit");
+            const afterFree = templateCell();
+            verify(afterFree !== template && /^4\.11(?:\(\))?$/.test(afterFree),
+                "Free changes the template flag while retaining the authored template value");
+            Session.project.undo();
+            Session.project.analysis.fittingMode = data.tag === "sequential" ? "independent" : "sequential";
+            verify(Session.save(), "Save persists a mode switch while a fitted point is shown");
+            compare(templateCell(), template, "Changing mode preserves the template values");
+            Session.project.undo();
+
+            Session.project.fit.reset();
+            tryVerify(() => !Session.project.fit.canReset && resultRows().length === 0, 5000,
+                "Reset clears the published results");
+            verify(Session.save(), "Save persists the Reset state");
+            compare(startRows(), [], "Reset clears stored starts as well as results");
+            compare(templateCell(), template, "Reset preserves the template");
+            Session.project.undo();
+            tryCompare(cell(), "value", 4.217, 5000, "Undo of Reset restores the visible point start");
+            compare(resultRows(), first, "Undo of Reset restores the original results");
+            verify(Session.save(), "Save persists the restored point start");
+            compare(startRows().length, 1, "Undo of Reset restores the stored start");
+            fitAll();
+            verify(JSON.stringify(resultRows()) !== JSON.stringify(first),
+                "Refit publishes a replacement generation after restoring a staged edit");
+            select(1);
+            tryVerify(() => cell().value !== 4.217, 5000,
+                "After its row is replaced the edit no longer overlays the fitted value");
+            Session.project.fit.reset();
+            fitAll();
+            compare(resultRows(), first, "The first fit after Reset starts from the untouched template");
+        }
+        Component {
+            id: scanEditParameters
+            ParametersGroup {
+                width: 900
+                tableViewportHeight: 240
+            }
+        }
+        function test_scan_drag_and_unfitted_point_data() {
+            return ["sequential", "independent", "parametric"].map(mode => ({tag: mode}));
+        }
+        function test_scan_drag_and_unfitted_point(data) {
+            const root = SettingsProof.copyProject(Probe.repoUrl("tests/fixtures/parametric_series/cubic"));
+            const results = "analysis/results.csv", settings = "analysis/analysis.edi";
+            verify(Session.openProject(root), "The private five-point scan opens in the app");
+            Session.project.analysis.fittingMode = data.tag;
+            verify(Session.save(), "The selected fitting mode is persisted before starting");
+            let fit = Session.project.fit;
+            fit.start();
+            tryVerify(() => !fit.running && fit.scanFitted === 5, 15000, "All five points are fitted before pruning one row");
+            Session.closeProject();
+            const full = SettingsProof.text(root, results).split(/\r?\n/);
+            const remains = full.filter(line => !/^["']?scan\/p4\.xy["']?,/.test(line));
+            compare(remains.length + 1, full.length, "The source has one row for the last point");
+            verify(SettingsProof.write(root, results, remains.join("\n")), "The private scan retains results for four points");
+            verify(Session.openProject(root), "The app reopens the scan with a genuine missing row");
+            const project = Session.project;
+            project.currentExperimentIndex = 4;
+            tryVerify(() => Probe.datasetReady(project) && project.readyForEdit(), 5000,
+                "The point without a result becomes the actual editable projection");
+            function cell() {
+                return Probe.rows(project.parameters).map(row => row.parameter)
+                    .find(parameter => parameter.blockName === "phase" && parameter.uid === "cell.length_a");
+            }
+            const original = cell().value;
+            const panel = scanEditParameters.createObject(surface, {project, selected: cell()});
+            verify(panel !== null && waitForPolish(panel), "The production Parameters slider is laid out");
+            const slider = findChild(panel, "parameters.slider");
+            verify(slider && slider.enabled && slider.handle, "The real value slider accepts a pointer drag");
+            const thumb = slider.handle.mapToItem(slider, slider.handle.width / 2, slider.handle.height / 2);
+            const delta = (thumb.x < slider.width / 2 ? 1 : -1) * slider.width / 5;
+            mousePress(slider, thumb.x, thumb.y);
+            verify(slider.pressed, "The pointer presses the production slider handle");
+            mouseMove(slider, thumb.x + delta, thumb.y);
+            mouseRelease(slider, thumb.x + delta, thumb.y);
+            tryVerify(() => cell().value !== original, 2000, "The real pointer drag changes the selected point's shown value");
+            panel.destroy();
+            verify(Session.save(), "Save persists the actual slider edit");
+            const analysis = SettingsProof.text(root, settings);
+            verify(/^\s*["']?p4\.xy\b.*phase\.cell\.length_a.*\bnone\s*$/m.test(analysis),
+                "An edit with other results but without a row uses the selected file and no prior identity");
+            compare(SettingsProof.text(root, results), remains.join("\n"), "The drag preserves the other points' rows");
+            project.undo();
+            compare(cell().value, original, "One Undo restores the selected point after a drag");
+            verify(Session.save(), "Save persists the undo of a multi-step drag");
+            verify(!/^\s*["']?p4\.xy\b.*phase\.cell\.length_a/m.test(SettingsProof.text(root, settings)),
+                "One Undo removes the drag's persisted start");
+        }
+        function test_parametric_shared_edit_uses_shown_value() {
+            const root = SettingsProof.copyProject(Probe.repoUrl("tests/fixtures/parametric_series/cubic"));
+            const settings = "analysis/analysis.edi";
+            const key = "phase.cell.length_a";
+            function cell() {
+                return Probe.rows(Session.project.parameters).map(row => row.parameter)
+                    .find(parameter => parameter.blockName === "phase" && parameter.uid === "cell.length_a");
+            }
+            function select(point) {
+                Session.project.currentExperimentIndex = point;
+                tryVerify(() => Probe.datasetReady(Session.project) && Session.project.readyForEdit(), 5000,
+                    "The requested point is shown and ready for a shared value edit");
+            }
+            function startRows() {
+                return SettingsProof.text(root, settings).split(/\r?\n/)
+                    .filter(line => /^\s*["']?p[0-4]\.xy\b/.test(line) && line.includes(key));
+            }
+            verify(Session.openProject(root), "The app opens the Parametric project before sharing the cell");
+            const fit = Session.project.fit;
+            fit.start();
+            tryVerify(() => !fit.running && fit.scanFitted === 5, 15000, "The source has fitted local values before sharing");
+            select(1);
+            const fitted = cell().value;
+            const originalFree = cell().free;
+            const template = SettingsProof.text(root, "structures/phase.edi").match(/^_cell\.length_a\s+(\S+)/m)[1];
+            verify(Math.abs(fitted - parseFloat(template)) > 1e-6, "The shown fitted value differs from the template");
+            cell().shared = true;
+            verify(cell().shared, "Shared is applied to the shown fitted parameter");
+            compare(cell().free, originalFree, "Sharing keeps the group's Free flag");
+            verify(Session.save(), "Save persists sharing and its proposed value together");
+            compare(startRows().length, 1, "Sharing at a fitted point stores one series-wide start");
+            verify(Math.abs(Number(startRows()[0].trim().split(/\s+/)[2]) - fitted) < 1e-9,
+                "The new shared start is the clicked point's displayed fit value");
+            cell().value = 4.217;
+            select(2);
+            tryCompare(cell(), "value", 4.217, 5000, "Every point displays the edit to the shared value");
+            verify(Session.save(), "Save persists the replacement shared start");
+            compare(startRows().length, 1, "Editing a shared value keeps one start across the series");
+            Session.project.undo();
+            tryCompare(cell(), "value", fitted, 5000, "Undo of a shared value edit restores the preceding shared start");
+            Session.project.undo();
+            verify(!cell().shared, "Undo of sharing restores the original unshared model");
+            verify(Session.save(), "Save persists the removal of the shared name and start");
+            compare(startRows(), [], "Undo of sharing clears its persisted start");
+            compare(SettingsProof.text(root, "structures/phase.edi").match(/^_cell\.length_a\s+(\S+)/m)[1],
+                template, "The template value survives sharing, a shared value edit, and both Undo operations");
+        }
         function test_scan_reset_replays_first_fit_data() {
             return [{tag: "sequential"}, {tag: "independent"}, {tag: "parametric"}];
         }
