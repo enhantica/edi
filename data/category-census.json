@@ -847,6 +847,16 @@
           "storage": [
             "crysta::Column<double>"
           ]
+        },
+        {
+          "member": "ParametricFitStart::over",
+          "type": "detail::WrittenText",
+          "items": [
+            "over"
+          ],
+          "storage": [
+            "crysta::Column<std::string>"
+          ]
         }
       ],
       "row": "ParametricFitStart"
@@ -5534,6 +5544,16 @@
       "not_storage": "one point of a parametric fit report"
     },
     {
+      "member": "IteratePoint::experiments",
+      "type": "std::vector<std::string>",
+      "not_storage": "one point of a parametric fit report"
+    },
+    {
+      "member": "IteratePoint::offsets",
+      "type": "std::vector<std::size_t>",
+      "not_storage": "one point of a parametric fit report"
+    },
+    {
       "member": "FitPreamble::joint",
       "type": "bool",
       "not_storage": "a fit report"
@@ -5804,6 +5824,11 @@
       "not_storage": "a fit report"
     },
     {
+      "member": "FitResultBase::n_free",
+      "type": "std::size_t",
+      "not_storage": "a fit report"
+    },
+    {
       "member": "FitResultBase::iterations_history",
       "type": "std::vector<IterationRecord>",
       "not_storage": "a fit report"
@@ -5986,6 +6011,11 @@
     {
       "member": "ParametricFitStart::value",
       "type": "detail::Written<double>",
+      "category": "_parametric_fit_start"
+    },
+    {
+      "member": "ParametricFitStart::over",
+      "type": "detail::WrittenText",
       "category": "_parametric_fit_start"
     },
     {

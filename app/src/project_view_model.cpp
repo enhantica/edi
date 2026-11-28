@@ -4014,7 +4014,10 @@ bool ProjectViewModel::setParametersShared(const QList<ParameterItem*>& paramete
         if (const auto found = names.find(item->parameter()); found != names.end()) changed.push_back(found->second);
     }
     if (changed.empty()) return true;
-    const EditOutcome result = applyRecordedEdit(edi::Edit::parameters_shared(*project_, std::move(changed), shared), false);
+    std::optional<std::pair<std::string, std::string>> at;
+    if (const std::optional<ShownPoint> point = shownPoint()) at.emplace(point->point, point->over);
+    const EditOutcome result =
+        applyRecordedEdit(edi::Edit::parameters_shared(*project_, std::move(changed), shared, std::move(at)), false);
     if (!retired_ && !result.applied) announceRefused(result.message);
     return result.applied;
 }
@@ -4970,6 +4973,7 @@ void ProjectViewModel::startViewRead() {
         }
         values = datasetValues(scan_session_->row(*project_, index), scanTemplateOrModel(), scan_session_->index(),
                                scan_session_->row(*project_, start), start != kStartUnknown);
+        overlayStarts(values, index);
         // A running parametric fit: the point's latest iterate values over its row's (ADR-0107), without s.u.
         if (live_iterate_ && (fit_ == nullptr || !fit_->running())) {
             live_iterate_.reset();
@@ -5192,9 +5196,21 @@ void ProjectViewModel::syncOutOfDate() {
 }
 
 void ProjectViewModel::promoteShownToTemplate() {
-    // The shown dataset's values become the template's, over the template's own data file (edi ADR-0017 §19).
+    // An edit at a shown dataset reaches the template, over the template's own data file (edi ADR-0017 §19). While the
+    // scan has results the shown values are a point's: the template takes the edit's structure, flags, Shared names
+    // and starts, and keeps its own values (owner records 10b08c160 and 2026-11-28); a value edit made a start.
     if (!scan_template_) return;
     edi::Project promoted = *project_;
+    if (scanProcessed()) {
+        std::map<std::string, const edi::Parameter*> kept;
+        for (const edi::NamedSlot& slot : edi::named_slots(*scan_template_)) kept.emplace(slot.unique_name, slot.parameter);
+        for (const edi::NamedSlot& slot : edi::named_slots(promoted)) {
+            const auto found = kept.find(slot.unique_name);
+            if (found == kept.end()) continue;
+            slot.parameter->value = found->second->value.get();
+            slot.parameter->uncertainty = found->second->uncertainty.get();
+        }
+    }
     // Every experiment keeps the template's own file: a series point showed one file of each.
     const std::size_t count = std::min(promoted.experiments.size(), scan_template_->experiments.size());
     for (std::size_t at = 0; at < count; ++at) {
@@ -5275,6 +5291,7 @@ QString ProjectViewModel::resetScan() {
     run.shown_dataset = projected_dataset_;
     for (const edi::NamedSlot& slot : edi::named_slots(*project_))
         run.shown_values.push_back({slot.unique_name, slot.parameter->value.get(), slot.parameter->uncertainty.get(), std::nullopt});
+    run.starts = project_->sequential_fit.starts;
     undo_history_.reserve(undo_history_.size() + 1);
     editing_ = true;
     const auto release = qScopeGuard([this] { editing_ = false; });
@@ -5287,6 +5304,9 @@ QString ProjectViewModel::resetScan() {
     try {
         project_->fit_result = {};
         if (scan_template_) scan_template_->fit_result = {};
+        // Reset returns to the template: the points' starts go with the results (owner record 2026-11-28).
+        project_->sequential_fit.starts = {};
+        if (scan_template_) scan_template_->sequential_fit.starts = {};
         syncCorrelations();
         if (retired_) return tr("The scan reset owner was replaced");
         syncUndo();
@@ -5346,6 +5366,10 @@ bool ProjectViewModel::restoreScanRun(const ScanRun& run, bool restoring) {
     if (records) {
         project_->fit_result = std::move(records->model);
         if (scan_template_ && records->stash) scan_template_->fit_result = std::move(*records->stash);
+    }
+    if (run.starts) {
+        project_->sequential_fit.starts = *run.starts;
+        if (scan_template_) scan_template_->sequential_fit.starts = *run.starts;
     }
     if (projection) { projection->commit(); project_->note_edit(); }
     if ((records || projection) && fit_) fit_->invalidateFitUndo();
@@ -6055,27 +6079,67 @@ std::shared_ptr<ProjectViewModel::WidgetParameterInput> ProjectViewModel::prepar
 void ProjectViewModel::finishWidgetInput(const std::shared_ptr<WidgetParameterInput>& input) noexcept {
     if (widget_input_ == input) widget_input_.reset(); // Never detach a replacement input.
 }
-bool ProjectViewModel::showingParametricPoint() const {
-    // ADR-0107: a point of a parametric scan other than the template's own file is shown.
-    if (!scan_ || !scan_template_ || scan_template_->fitting_mode != "parametric" || current_dataset_ < 0) return false;
+std::optional<ProjectViewModel::ShownPoint> ProjectViewModel::shownPoint() const {
+    // Owner record 2026-11-28: while a scan has results, a value edit is the shown point's start for the next Fit.
+    if (!scan_ || !scan_template_ || scan_session_ == nullptr || !scanProcessed() || current_dataset_ < 0) {
+        return std::nullopt;
+    }
     const std::vector<std::string>& files = scan_session_->datasets().files;
-    if (current_dataset_ >= static_cast<int>(files.size())) return false;
-    return files[static_cast<std::size_t>(current_dataset_)] != edi::effective_scan_template_file(*scan_template_);
+    if (current_dataset_ >= static_cast<int>(files.size())) return std::nullopt;
+    return ShownPoint{files[static_cast<std::size_t>(current_dataset_)],
+                      scan_session_->rowIdentity(*project_, current_dataset_)};
+}
+
+void ProjectViewModel::overlayStarts(std::vector<edi::Edit::ScanValue>& values, int dataset) {
+    // The shown point's starts that still count show as the next Fit starts them (owner record 2026-11-28): its own,
+    // and a shared parameter's one start, over the rows they were made over.
+    const auto& starts = project_->sequential_fit.starts;
+    if (starts.empty() || scan_session_ == nullptr) return;
+    const std::vector<std::string>& files = scan_session_->datasets().files;
+    if (dataset < 0 || dataset >= static_cast<int>(files.size())) return;
+    const std::string& shown = files[static_cast<std::size_t>(dataset)];
+    const std::string shown_over = scan_session_->rowIdentity(*project_, dataset);
+    std::map<std::string, edi::Parameter*> by_name;
+    for (const edi::NamedSlot& each : edi::named_slots(*project_)) by_name.emplace(each.unique_name, each.parameter);
+    for (const auto& start : starts) {
+        const auto found = by_name.find(start->parameter_unique_name.value());
+        if (found == by_name.end()) continue;
+        const bool shared = edi::parametric_shared(*project_, *found->second);
+        if (shared) {
+            const int at = scan_session_->place(start->point.value());
+            if (at < 0 || scan_session_->rowIdentity(*project_, at) != start->over.value()) continue;
+        } else if (start->point.value() != shown || start->over.value() != shown_over) {
+            continue;
+        }
+        std::set<const edi::Parameter*> copies;
+        if (shared) {
+            for (const edi::Parameter* copy : edi::shared_group(*project_, *found->second)) copies.insert(copy);
+        }
+        copies.insert(found->second);
+        for (edi::Edit::ScanValue& each : values) {
+            const auto named = by_name.find(each.unique_name);
+            if (named == by_name.end() || !copies.contains(named->second)) continue;
+            each.value = start->value.get();
+            each.uncertainty.reset();
+        }
+    }
 }
 
 edi::Edit ProjectViewModel::valueEdit(edi::Parameter& parameter, double value) {
-    if (edi::shared_group(*project_, parameter).size() > 1) return edi::Edit::group_value(*project_, parameter, value);
-    // At a point of a parametric scan a value is that point's own start, kept by its file or series key; a shared
-    // parameter's one value is the template's, taken by the edit below as before (ADR-0107).
-    if (showingParametricPoint() && !edi::parametric_shared(*project_, parameter)) {
-        for (const edi::NamedParameter& named : edi::named_parameters(*project_)) {
-            if (named.parameter != &parameter) continue;
-            return edi::Edit::point_start(*project_, parameter,
-                                          scan_session_->datasets().files[static_cast<std::size_t>(current_dataset_)],
-                                          named.unique_name, value);
+    const bool group = edi::shared_group(*project_, parameter).size() > 1;
+    if (const std::optional<ShownPoint> point = shownPoint()) {
+        const std::vector<edi::NamedParameter> named = edi::named_parameters(*project_);
+        // A shared parameter's start is the series' one start, under its group's listed name.
+        const bool shared = edi::parametric_shared(*project_, parameter);
+        const edi::Parameter* named_by = shared ? edi::shared_leader(*project_, parameter) : &parameter;
+        for (const edi::NamedParameter& each : named) {
+            if (each.parameter != named_by) continue;
+            return edi::Edit::point_start(*project_, parameter, point->point, each.unique_name, value, point->over,
+                                          shared);
         }
     }
-    return edi::Edit::value(parameter, value);
+    // No results: the value is the template's (record 10b08c160, part 3).
+    return group ? edi::Edit::group_value(*project_, parameter, value) : edi::Edit::value(parameter, value);
 }
 
 QString ProjectViewModel::assign_parameter_value(edi::Parameter& parameter, double value) {
@@ -6310,13 +6374,6 @@ ProjectViewModel::EditOutcome ProjectViewModel::applyEdit(const edi::Edit& chang
             } else if (scan_template_ && adjusting_ && !structural) {
                 // A drag step: the template takes the shown values once, on release (edi ADR-0070).
                 template_promotion_held_ = true;
-            } else if (scan_template_ && showingParametricPoint() && !structural) {
-                // A value at a parametric point is the point's own start (ADR-0107): the template takes the starts and
-                // the shared names, never the point's other values.
-                scan_template_->sequential_fit.starts = project_->sequential_fit.starts;
-                scan_template_->sequential_fit.shared = project_->sequential_fit.shared;
-                identityMemoFor(&*scan_template_).reset();
-                template_snapshot_.reset();
             } else if (scan_template_) {
                 promoteShownToTemplate();
             }

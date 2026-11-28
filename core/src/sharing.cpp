@@ -730,16 +730,13 @@ std::vector<std::string> settle_parametric_shared(Project& project) {
             }
         }
     }
-    // ADR-0107: a start for a name the project does not hold, a dependent's or a shared parameter's is dropped (a shared
-    // parameter's one value is the template's).
+    // ADR-0107: a start for a name the project does not hold or a dependent's is dropped. A shared parameter's start is
+    // kept: it is the whole series' one start (owner record 2026-11-28).
     for (std::size_t i = project.sequential_fit.starts.size(); i-- > 0;) {
         const std::string name = project.sequential_fit.starts[i]->parameter_unique_name.value();
         bool held = false;
         for (const NamedParameter& each : named) held = held || each.unique_name == name;
-        const char* why = !held ? "is not in the project or is set by a relation"
-                          : shared_row(project, group_key(project, named, name)) ? "is shared, so its one value is the "
-                                                                                    "template's"
-                                                                                  : nullptr;
+        const char* why = !held ? "is not in the project or is set by a relation" : nullptr;
         if (why != nullptr) {
             notes.push_back("start for '" + name + "' at point '" + project.sequential_fit.starts[i]->point.value() +
                             "' dropped: it " + why);

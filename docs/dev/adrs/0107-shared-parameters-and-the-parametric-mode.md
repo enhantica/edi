@@ -72,6 +72,12 @@ equality (TOPAS, GSAS-II, FullProf, Jana); general fitting tools put a Share col
     writes the template unchanged. Fit on a scan whose every dataset is fitted or skipped fits them all again, each
     from its own latest result, as a new run; while some are not, it continues them. Reset fits clears the results,
     and the next fit starts every dataset from the template.
+13. **Edits while a scan has results** (owner decision 2026-11-28, every scan mode). A value typed or dragged at the
+    shown dataset is that dataset's own start for the next fit, stored with the identity of the results row it was
+    made over (crysta ADR-0136 decision 9); a shared value is the whole series' one start, and a newly shared group
+    takes the shown copy's value as it. The start counts once, while that row is still the dataset's, and Undo removes
+    it. Free, Shared, the mode and every other edit reach the template with the template's own values kept; the
+    template's values change only where no results exist. Reset fits clears the starts with the results.
 
 ## Consequences
 

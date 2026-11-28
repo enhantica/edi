@@ -4561,13 +4561,16 @@ struct IterationRecord {
 
 
 // ADR-0107: one accepted iteration of a parametric fit, for live charts. Per point: its data file, its free
-// parameters' values by unique name, and its calculated pattern on its fitted grid.
+// parameters' values by unique name, and its calculated pattern on its fitted grid; for a series point, each
+// experiment's name and where its slice of the grid and pattern starts.
 struct ParametricIterate {
     struct IteratePoint {
         std::string name;
         std::map<std::string, double> values;
         std::vector<double> grid;
         std::vector<double> calculated;
+        std::vector<std::string> experiments;
+        std::vector<std::size_t> offsets;
     };
     int iteration = 0;
     double reduced_chi_square = 0.0;
@@ -4774,6 +4777,7 @@ struct FitResultBase {
     // first-class fields precisely so both paths can answer.
     std::size_t n_points_loaded = 0;
     std::size_t n_points_fitted = 0;
+    std::size_t n_free = 0;  // a parametric series: every point's and the shared ones; 0: the values' count
     // Per-iteration history. ALWAYS populated, callback or not: a notebook caller cannot consume a
     // streaming callback after the fact, so the history has to be readable off the result. Collected
     // by crysta::IterationHistoryCollector, the one place rwp/reduced-chi2/elapsed are derived.
@@ -4996,13 +5000,16 @@ struct KeyTraits<ParametricSharedParameter> {
     static const char* category() { return "shared parameter"; }
 };
 
-// ADR-0107: one point's own start for one parameter of a parametric fit, where it differs from the template's. The
-// point is its data file relative to the scan folder, or the text the `*` matches in a series of joint fits. Unkeyed:
-// the load refuses a (point, name) given twice.
+// ADR-0107: one point's own start for one parameter of a scan fit, made by a value edit while the scan had results
+// (owner record 2026-11-28), in every scan mode. The point is its data file relative to the scan folder, or the text
+// the `*` matches in a series of joint fits; a shared parameter's start is the whole series' one start. `over` is the
+// identity of the point's results row it was made over (crysta::scan_row_identity), or `none`: the start counts once,
+// while that row is still the point's. Unkeyed: the load refuses a (point, name) given twice.
 struct ParametricFitStart {
     detail::WrittenText point;
     detail::WrittenText parameter_unique_name;
     detail::Written<double> value{0.0};
+    detail::WrittenText over{"none"};
 };
 
 // ADR-0087: an experiment set, a template experiment and its members, each an ordinary experiment.
@@ -5061,8 +5068,8 @@ struct RowSchema<edi::ParametricFitStart> {
     static constexpr const char* name = "_parametric_fit_start";
     static constexpr auto fields = std::tuple{&edi::ParametricFitStart::point,
                                               &edi::ParametricFitStart::parameter_unique_name,
-                                              &edi::ParametricFitStart::value};
-    static constexpr std::array items{"point", "parameter_unique_name", "value"};
+                                              &edi::ParametricFitStart::value, &edi::ParametricFitStart::over};
+    static constexpr std::array items{"point", "parameter_unique_name", "value", "over"};
 };
 template <>
 struct RowSchema<edi::ExperimentSet> {

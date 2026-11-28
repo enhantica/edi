@@ -766,23 +766,32 @@ class Edit {
             (void)settle_parametric_shared(project);
         });
     }
-    // ADR-0107: a value entered at one point of a parametric scan is that point's own start: the shown value and the
-    // point's `_parametric_fit_start` row for the name, added or changed; the template keeps its value.
+    // A value entered while a scan has results is the shown point's own start for the next Fit (owner record
+    // 2026-11-28): the shown value and the point's `_parametric_fit_start` row for the name, made over the point's
+    // results row `over`; the template keeps its value. A shared parameter's start is the whole series' one start: the
+    // group takes the value, and a start for the name at any other point goes.
     static Edit point_start(Project& project, Parameter& parameter, std::string point, std::string unique_name,
-                            double value) {
-        return Edit([&project, &parameter, point = std::move(point), unique_name = std::move(unique_name), value] {
-            assign_value(parameter, value);
-            for (const auto& row : project.sequential_fit.starts) {
-                if (row->point.value() == point && row->parameter_unique_name.value() == unique_name) {
-                    row->value = value;
-                    return;
+                            double value, std::string over, bool shared) {
+        return Edit([&project, &parameter, point = std::move(point), unique_name = std::move(unique_name), value,
+                     over = std::move(over), shared] {
+            if (shared) {
+                for (Parameter* member : shared_group(project, parameter)) assign_value(*member, value);
+            } else {
+                assign_value(parameter, value);
+            }
+            auto& starts = project.sequential_fit.starts;
+            for (std::size_t i = starts.size(); i-- > 0;) {
+                if (starts[i]->parameter_unique_name.value() == unique_name &&
+                    (starts[i]->point.value() == point || shared)) {
+                    starts.erase_at(i);
                 }
             }
             ParametricFitStart row;
             row.point = point;
             row.parameter_unique_name = unique_name;
             row.value = value;
-            project.sequential_fit.starts.push_back(std::move(row));
+            row.over = over;
+            starts.push_back(std::move(row));
         });
     }
     // ADR-0107: share or unshare a parameter in the parametric fit; its free flag is left as it is.
@@ -790,14 +799,30 @@ class Edit {
         return Edit([&project, &parameter, shared] { set_parametric_shared(project, parameter, shared); });
     }
     // ADR-0107: share or unshare several parameters, by unique name, in one edit (the Shared header menu).
-    static Edit parameters_shared(Project& project, std::vector<std::string> names, bool shared) {
-        return Edit([&project, names = std::move(names), shared] {
+    // `at` (a point and its results row identity), while the scan has results: a newly shared group takes the shown
+    // copy's value as the whole series' one start (owner record 2026-11-28).
+    static Edit parameters_shared(Project& project, std::vector<std::string> names, bool shared,
+                                  std::optional<std::pair<std::string, std::string>> at = std::nullopt) {
+        return Edit([&project, names = std::move(names), shared, at = std::move(at)] {
             for (const std::string& name : names) {
                 for (const NamedSlot& slot : named_slots(project)) {
-                    if (slot.unique_name == name) {
-                        set_parametric_shared(project, *slot.parameter, shared);
-                        break;
+                    if (slot.unique_name != name) continue;
+                    const bool was = parametric_shared(project, *slot.parameter);
+                    const double shown = slot.parameter->value.get();
+                    set_parametric_shared(project, *slot.parameter, shared);
+                    if (shared && !was && at && parametric_shared(project, *slot.parameter)) {
+                        const Parameter* leader = shared_leader(project, *slot.parameter);
+                        for (const NamedSlot& listed : named_slots(project)) {
+                            if (listed.parameter != leader) continue;
+                            ParametricFitStart row;
+                            row.point = at->first;
+                            row.parameter_unique_name = listed.unique_name;
+                            row.value = shown;
+                            row.over = at->second;
+                            project.sequential_fit.starts.push_back(std::move(row));
+                        }
                     }
+                    break;
                 }
             }
         });

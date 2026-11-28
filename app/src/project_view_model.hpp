@@ -1146,6 +1146,8 @@ class ProjectViewModel : public QObject, public ProjectEditor {
         std::optional<FitRecords> fit_records;  // Reset fits only
         int shown_dataset = -1;                 // Reset fits only: the dataset the model showed, and its values
         std::vector<edi::Edit::ScanValue> shown_values;
+        // Reset fits only: the points' stored starts, which Reset clears with the results (owner record 2026-11-28).
+        std::optional<edi::ItemVec<edi::ParametricFitStart>> starts;
     };
     // Load data: the experiment as it was before (a simulation, or its earlier data, with its file name).
     struct LoadedData {
@@ -1452,7 +1454,13 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     bool modified_held_ = false;  // a drag step changed the project: modified and `edited` are announced on release  // a drag step changed a scan's template: its identity is hashed on release
     bool template_promotion_held_ = false;  // a drag step changed a shown dataset: the template takes it on release
     void promoteShownToTemplate();
-    bool showingParametricPoint() const;
+    // The shown scan point while the scan has results: its name (file, or series key) and its results row identity.
+    struct ShownPoint {
+        std::string point;
+        std::string over;
+    };
+    std::optional<ShownPoint> shownPoint() const;
+    void overlayStarts(std::vector<edi::Edit::ScanValue>& values, int dataset);
     edi::Edit valueEdit(edi::Parameter& parameter, double value);
     // What a held slider deferred, done once (release, or a save during the hold).
     void settleHeld();

@@ -566,6 +566,7 @@ parameters.sharedHeader	Shared
 parametric_fit_shared	Shared parameters		link
 parametric_fit_shared.parameter_unique_name	Parameter		
 parametric_fit_start	Point starts		flag
+parametric_fit_start.over	Over row		
 parametric_fit_start.parameter_unique_name	Parameter		
 parametric_fit_start.point	Point		
 parametric_fit_start.value	Value		

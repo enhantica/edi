@@ -184,6 +184,9 @@ bool scan_derived_column(const std::string& name);
 
 /// The cells of the row that starts at `offset`; throws when the file has no complete row there.
 std::vector<std::string> read_scan_row(const Project& project, std::int64_t offset);
+/// The identity of the results.csv row at `offset` (crysta::scan_row_identity of its text): a start made over the
+/// row records it, so the start counts once (owner record 2026-11-28).
+std::string scan_row_identity(const Project& project, std::int64_t offset);
 
 /// The parameters a scan's evolution charts list, the Evolution tab's and the report's: every free parameter of the
 /// template by its unique name, listed before any dataset is fitted, then each one `analysis/results.csv` records
