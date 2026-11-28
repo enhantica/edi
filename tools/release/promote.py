@@ -9,6 +9,7 @@ import re
 import shutil
 import stat
 import subprocess
+import tarfile
 import tempfile
 import xml.etree.ElementTree as ET  # noqa: S405 - bounded metadata rejects DTDs before parsing
 import zipfile
@@ -17,6 +18,7 @@ from pathlib import Path, PurePosixPath
 
 from legacy_feed import write_feeds
 from plan import installer_stem, markdown_notes, validate_history, version_key
+from versions import is_version
 
 PLATFORMS = {'Linux': 'linux-x86_64', 'macOS': 'macos-arm64', 'Windows': 'windows-x86_64'}
 ROOT = Path(__file__).resolve().parents[2]
@@ -394,8 +396,16 @@ def validate_repository(
     *,
     expected: frozenset[str] = APP_COMPONENTS,
     limit: int | None = None,
+    reused: dict[str, str] | None = None,
 ) -> None:
-    """Require matching component identity and the framework's original archive checksums."""
+    """Require matching component identity and the framework's original archive checksums.
+
+    Every component is at `version`, except those in `reused`, which keep the earlier version the
+    record names (reuse_unchanged).
+    """
+    reused = reused or {}
+    if any(version_key(earlier) >= version_key(version) for earlier in reused.values()):
+        raise ValueError('A reused component must come from an earlier release')
     # Publication copies the whole tree, so every file in it meets the size limit, listed or not.
     for path in sorted(folder.rglob('*')):
         if path.is_file():
@@ -408,7 +418,8 @@ def validate_repository(
     if len(packages) != len(expected) or {p.findtext('Name') for p in packages} != expected:
         raise ValueError('Component repository does not match the qualified release')
     for package in packages:
-        if package.findtext('Version') != version:
+        own = reused.get(package.findtext('Name'), version)
+        if package.findtext('Version') != own:
             raise ValueError('Component repository does not match the qualified release')
         component = folder / package.findtext('Name')
         archives = package.findtext('DownloadableArchives', '').split(',')
@@ -418,19 +429,185 @@ def validate_repository(
         ):
             raise ValueError('Component archive names are invalid')
         for name in archives:
-            path = component / (version + name)
+            path = component / (own + name)
             require_archive_size(path, limit)
             with path.open('rb') as stream:
                 actual = hashlib.file_digest(stream, 'sha1').hexdigest()
             if actual != path.with_suffix(path.suffix + '.sha1').read_text().strip():
                 raise ValueError('Component archive checksum differs')
-        require_archive_size(component / (version + 'meta.7z'), limit)
-        with (component / (version + 'meta.7z')).open('rb') as stream:
+        require_archive_size(component / (own + 'meta.7z'), limit)
+        with (component / (own + 'meta.7z')).open('rb') as stream:
             if hashlib.file_digest(stream, 'sha1').hexdigest() != package.findtext('SHA1'):
                 raise ValueError('Component metadata archive checksum differs')
 
 
-def stage(repo: str, identity: int, output: Path) -> None:
+# Each stable release attaches this record of its components: per platform and component, the
+# release that last changed it, its input identity and its archive assets (edi ADR-0111).
+RECORD = 'components.json'
+RECORD_SCHEMA = 'edi.components/1'
+IDENTITY = re.compile(r'[0-9a-f]{64}')
+
+Fetch = Callable[[str, str, Path], None]
+
+
+def component_identities(metadata: dict, platform: str) -> dict[str, str]:
+    """The input identity installer.json names for each component of the platform."""
+    identities = metadata.get('component_identities')
+    if (
+        not isinstance(identities, dict)
+        or set(identities) != component_names(platform)
+        or not all(isinstance(v, str) and IDENTITY.fullmatch(v) for v in identities.values())
+    ):
+        raise ValueError(f"{platform}: the installer does not name each component's identity")
+    return identities
+
+
+def archive_assets(platform: str, package: ET.Element) -> list[str]:
+    """The release assets of one Updates.xml entry's archives."""
+    name, version = package.findtext('Name'), package.findtext('Version')
+    archives = package.findtext('DownloadableArchives', '').split(',')
+    return [component_asset(platform, name, version, archive) for archive in archives if archive]
+
+
+def read_record(path: Path, version: str) -> dict:
+    """The component record of release `version`, refused unless every entry is well formed."""
+    record = json.loads(path.read_text(encoding='utf-8'))
+    platforms = record.get('platforms') if isinstance(record, dict) else None
+    if (
+        not isinstance(platforms, dict)
+        or (record.get('schema'), record.get('version')) != (RECORD_SCHEMA, version)
+        or not set(platforms) <= set(INSTALLER_PLATFORMS)
+        or not all(isinstance(c, dict) and c for c in platforms.values())
+    ):
+        raise ValueError(f'The {RECORD} of {version} is malformed')
+    for platform, components in record['platforms'].items():
+        for component, entry in components.items():
+            if not (
+                isinstance(entry, dict)
+                and set(entry) == {'version', 'identity', 'archives'}
+                and isinstance(entry['version'], str)
+                and is_version(entry['version'])
+                and version_key(entry['version']) <= version_key(version)
+                and isinstance(entry['identity'], str)
+                and IDENTITY.fullmatch(entry['identity'])
+                and isinstance(entry['archives'], list)
+                and all(isinstance(name, str) for name in entry['archives'])
+            ):
+                raise ValueError(f'The {RECORD} of {version} is malformed: {platform} {component}')
+    return record
+
+
+def release_asset(repo: str) -> Fetch:
+    """Download one asset of a published release into a folder."""
+
+    def fetch(tag: str, name: str, folder: Path) -> None:
+        subprocess.run(
+            ['gh', 'release', 'download', tag, '--repo', repo, '--pattern', name],
+            cwd=folder,
+            check=True,
+        )
+        if not (folder / name).is_file():
+            raise ValueError(f'{tag} has no asset {name}')
+
+    return fetch
+
+
+def previous_record(repo: str, version: str, fetch: Fetch) -> dict | None:
+    """The record of the latest published release; None if it was published without one."""
+    latest = api(repo, 'releases/latest')
+    earlier = latest['tag_name'].removeprefix('v')
+    if not is_version(earlier) or version_key(earlier) >= version_key(version):
+        raise ValueError(f'The latest release {latest["tag_name"]} is not older than {version}')
+    if RECORD not in {asset['name'] for asset in latest['assets']}:
+        return None
+    with tempfile.TemporaryDirectory() as scratch:
+        fetch(latest['tag_name'], RECORD, Path(scratch))
+        return read_record(Path(scratch) / RECORD, earlier)
+
+
+def reuse_unchanged(
+    repository: Path,
+    platform: str,
+    version: str,
+    identities: dict[str, str],
+    previous: dict | None,
+    fetch: Fetch,
+) -> dict[str, dict]:
+    """Give each unchanged component the files of the release that last changed it.
+
+    `repository` is this release's repository for `platform`, every component built at `version`.
+    A component whose identity equals the one the latest release's record (`previous`) holds takes
+    that release's Updates.xml entry, meta.7z and .sha1 files from its repository index, and its
+    archives from the release its version names. The Maintenance Tool then sees the version and
+    content checksum already installed and does not offer it. Returns this platform's record.
+    """
+    earlier = previous['platforms'].get(platform, {}) if previous else {}
+    tag = f'v{previous["version"]}' if previous else ''
+    updates = ET.fromstring((repository / 'Updates.xml').read_bytes())  # noqa: S314 - validated
+    record, index, listed = {}, None, None
+    with tempfile.TemporaryDirectory() as scratch:
+        for package in updates.findall('PackageUpdate'):
+            name = package.findtext('Name')
+            entry = earlier.get(name)
+            if entry is None or entry['identity'] != identities[name]:
+                record[name] = {
+                    'version': version,
+                    'identity': identities[name],
+                    'archives': archive_assets(platform, package),
+                }
+                continue
+            if index is None:
+                fetch(tag, f'repoindex-stable-{platform}.tar.gz', Path(scratch))
+                with tarfile.open(Path(scratch) / f'repoindex-stable-{platform}.tar.gz') as opened:
+                    opened.extractall(Path(scratch) / 'index', filter='data')
+                index = Path(scratch) / 'index/repository' / platform
+                listed = ET.fromstring((index / 'Updates.xml').read_bytes())  # noqa: S314
+            old = [p for p in listed.findall('PackageUpdate') if p.findtext('Name') == name]
+            if (
+                len(old) != 1
+                or old[0].findtext('Version') != entry['version']
+                or archive_assets(platform, old[0]) != entry['archives']
+            ):
+                raise ValueError(f'The record of {tag} disagrees with its index: {name}')
+            shutil.rmtree(repository / name)
+            (repository / name).mkdir()
+            prefix = entry['version']
+            shutil.copy2(index / name / f'{prefix}meta.7z', repository / name)
+            names = [a for a in old[0].findtext('DownloadableArchives', '').split(',') if a]
+            for archive, asset in zip(names, entry['archives'], strict=True):
+                shutil.copy2(index / name / f'{prefix}{archive}.sha1', repository / name)
+                fetch(f'v{prefix}', asset, repository / name)
+                (repository / name / asset).rename(repository / name / f'{prefix}{archive}')
+            updates.insert(list(updates).index(package), old[0])
+            updates.remove(package)
+            record[name] = dict(entry)
+    if any(entry['version'] != version for entry in record.values()):
+        ET.ElementTree(updates).write(
+            repository / 'Updates.xml', encoding='UTF-8', xml_declaration=True
+        )
+    return record
+
+
+def publish_components(
+    repository: Path,
+    platform: str,
+    version: str,
+    metadata: dict,
+    previous: dict | None,
+    fetch: Fetch,
+) -> dict[str, dict]:
+    """Turn a qualified repository into the one the release publishes; return its record.
+
+    `metadata` is the platform's installer.json, `previous` the latest release's record.
+    """
+    identities = component_identities(metadata, platform)
+    entries = reuse_unchanged(repository, platform, version, identities, previous, fetch)
+    reused = {name: e['version'] for name, e in entries.items() if e['version'] != version}
+    validate_repository(repository, version, expected=component_names(platform), reused=reused)
+    return entries
+
+
+def stage(repo: str, identity: int, output: Path) -> None:  # noqa: PLR0914 - one step after another
     """Download immutable qualified artifacts and assemble publication inputs."""
     if not re.fullmatch(r'[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+', repo) or identity <= 0:
         raise ValueError('Expected a repository and positive qualified run ID')
@@ -477,6 +654,9 @@ def stage(repo: str, identity: int, output: Path) -> None:
     assets, incoming = output / 'assets', output / 'incoming'
     assets.mkdir()
     engine_sources = set()
+    fetch = release_asset(repo)
+    previous = previous_record(repo, release['version'], fetch)
+    record: dict = {'schema': RECORD_SCHEMA, 'version': release['version'], 'platforms': {}}
     for platform, target in PLATFORMS.items():
         archive = validate_delivery(
             output / f'installer-{platform}',
@@ -496,6 +676,15 @@ def stage(repo: str, identity: int, output: Path) -> None:
             components / 'stable' / target, release['version'], expected=component_names(target)
         )
         shutil.copytree(components / 'stable' / target, incoming / 'repository/stable' / target)
+        record['platforms'][target] = publish_components(
+            incoming / 'repository/stable' / target,
+            target,
+            release['version'],
+            json.loads((output / f'installer-{platform}' / 'installer.json').read_text()),
+            previous,
+            fetch,
+        )
+    (assets / RECORD).write_text(json.dumps(record, indent=2, sort_keys=True) + '\n')
     stage_optional_assets(output, assets, release)
     if len(engine_sources) != 1 or not re.fullmatch(r'[0-9a-f]{40}', next(iter(engine_sources))):
         raise ValueError('All qualified platforms must build the same exact engine source')
