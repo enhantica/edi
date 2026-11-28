@@ -108,26 +108,37 @@ void EvolutionViewModel::clearIterate() {
 
 std::vector<EvolutionViewModel::Point> EvolutionViewModel::livePoints() const {
     std::vector<Point> live;
-    if (!live_ || session_ == nullptr || per_experiment_ || current_ < 0 || current_ >= names_.size()) {
+    if (!live_ || session_ == nullptr || current_ < 0 || current_ >= names_.size()) {
         return live;
     }
     const std::string name = names_[current_].toStdString();
+    // Per experiment a row names an experiment's parameter; the iterate names it by its full name, the experiment's
+    // first: the shown experiment's, or each one's when every bank is shown.
+    std::vector<std::pair<std::string, int>> keys;
+    if (per_experiment_) {
+        for (int e = 0; e < experiments_.size(); ++e) {
+            if (current_experiment_ >= 0 && e != current_experiment_) continue;
+            keys.emplace_back(experiments_[e].toStdString() + "." + name, allBanks() ? e : -1);
+        }
+    } else {
+        keys.emplace_back(name, -1);
+    }
     for (const edi::ParametricIterate::IteratePoint& each : live_->points) {
-        const auto value = each.values.find(name);
         const int dataset = session_->place(each.name);
-        if (value == each.values.end() || dataset < 0) {
-            continue;
-        }
-        Point point;
-        point.dataset = dataset;
-        point.error = std::numeric_limits<double>::quiet_NaN();
-        point.y = edi::scan_display_value(name, value->second);
+        if (dataset < 0) continue;
         const std::optional<double> x = xOf(dataset, session_->extracted(dataset));
-        if (!x || !drawable(*x, point.y, point.error)) {
-            continue;
+        for (const auto& [key, bank] : keys) {
+            const auto value = each.values.find(key);
+            if (value == each.values.end()) continue;
+            Point point;
+            point.dataset = dataset;
+            point.bank = bank;
+            point.error = std::numeric_limits<double>::quiet_NaN();
+            point.y = edi::scan_display_value(name, value->second);
+            if (!x || !drawable(*x, point.y, point.error)) continue;
+            point.x = *x;
+            live.push_back(point);
         }
-        point.x = *x;
-        live.push_back(point);
     }
     return live;
 }

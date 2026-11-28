@@ -59,8 +59,8 @@ struct CoresBudget {
 };
 CoresBudget cores_budget_for_mode(const std::string& mode) noexcept;
 
-// Holds a budget for one fit on the calling thread. The thread count is the calling thread's own; the scan workers are
-// one process value, so fits that hold a budget with scan workers run one at a time.
+// Holds a budget for one fit on the calling thread: the calculation threads and the scan workers are both that thread's
+// own, so another fit, here or on another thread, never changes them.
 class ScopedCores {
    public:
     explicit ScopedCores(const CoresBudget& budget);

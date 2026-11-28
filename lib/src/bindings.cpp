@@ -2327,10 +2327,7 @@ NB_MODULE(_edi, m) {
     nb::class_<CoresForFit>(m, "_cores_for_fit")
         .def(nb::init<const std::string&>(), "mode"_a)
         .def("__enter__",
-             [](CoresForFit& self) {
-                 const nb::gil_scoped_release unlocked;  // another fit may hold the scan workers
-                 self.held.emplace(self.budget);
-             })
+             [](CoresForFit& self) { self.held.emplace(self.budget); })
         .def("__exit__", [](CoresForFit& self, const nb::args&) { self.held.reset(); });
     m.def("_collection_defaults", [] {
         return nb::make_tuple(edi::online::default_collection_sources(), edi::online::default_tutorials_source());
@@ -5154,6 +5151,13 @@ NB_MODULE(_edi, m) {
                                                 edi::declared_fitting_modes());
                 }
                 self.fitting_mode = value;
+                // The stored shared groups are admitted again for the mode now in effect, as the app's mode
+                // edit admits them (ADR-0107): a group no longer whole is dropped and said.
+                for (const std::string& note : edi::settle_parametric_shared(self)) {
+                    if (PyErr_WarnEx(PyExc_UserWarning, ("crysta.domain.shared_ignored: " + note).c_str(), 1) != 0) {
+                        throw nb::python_error();
+                    }
+                }
             })
         .def(
             "reflection_admission",
