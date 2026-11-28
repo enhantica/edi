@@ -16,7 +16,8 @@ import edi.app
 // is picked from the project's structures; a row can be added for a structure not yet linked, removed while
 // another remains, and switched off: a disabled row is kept and saved but neither calculated nor fitted.
 // The weight fraction beside the scale is derived from the scales (Hill-Howard) and cannot be edited; a single
-// enabled structure shows 1.
+// enabled structure shows 1. A Le Bail or Pawley structure (edi ADR-0109) has no fitted scale and no amount, so its
+// scale cannot be freed and every weight fraction of the experiment shows "—".
 Column {
     id: group
 
@@ -77,6 +78,8 @@ Column {
             required property int colorIndex
             // The Hill-Howard weight fraction: `value` and `uncertainty` (0 without one), empty when there is none.
             required property var weightFraction
+            // The structure is Le Bail or Pawley: its intensities are extracted, not calculated from its atoms.
+            required property bool extracted
             // `scale` and `enabled` are Item properties, so these two roles are read through the model.
             required property var model
 
@@ -95,9 +98,12 @@ Column {
             }
             // The structure, picked from the project's structures as the aliases table picks a parameter. A link to a
             // structure the project does not hold (an experiment loaded from another project) shows that name in red
-            // until another is picked; nothing is calculated for the experiment meanwhile.
+            // until another is picked; nothing is calculated for the experiment meanwhile. A structure crysta cannot
+            // link here (a Le Bail or Pawley one on a single crystal) is greyed in the list, its reason on hover.
             ComboCell {
                 SearchableComboBox {
+                    id: structureBox
+
                     readonly property bool missing: group.rows !== null && group.rows.structureNames.indexOf(row.structureId) < 0
 
                     inTable: true
@@ -110,34 +116,83 @@ Column {
                     displayText: row.structureId
                     foregroundColor: missing ? EaStyle.Colors.red : _foregroundColor()
                     ToolTip.text: missing ? qsTr("The project holds no structure '%1'; pick one of its structures").arg(row.structureId) : row.structureId
-                    onActivated: index => ApplicationInfo.scientificSelectorChanged(index, 4, () => {
+                    onActivated: index => {
+                        const refusal = group.rows ? (group.rows.structureRefusals[index] ?? "") : "";
+                        if (refusal !== "") {
                             currentIndex = Qt.binding(() => group.rows ? group.rows.structureNames.indexOf(row.structureId) : -1);
-                        })
+                            Session.reportRefusal(refusal);
+                            return;
+                        }
+                        ApplicationInfo.scientificSelectorChanged(index, 4, () => {
+                            currentIndex = Qt.binding(() => group.rows ? group.rows.structureNames.indexOf(row.structureId) : -1);
+                        });
+                    }
+
+                    delegate: EaElements.MenuItem {
+                        id: entry
+
+                        required property int index
+                        required property var modelData
+                        readonly property string refusal: group.rows ? (group.rows.structureRefusals[entry.index] ?? "") : ""
+                        // Whether the entry passes the search, read from the name alone (the text may carry colour).
+                        readonly property bool matching: structureBox.matches(String(entry.modelData))
+
+                        width: entry.parent !== null ? entry.parent.width : 0
+                        height: matching ? EaStyle.Sizes.comboBoxHeight : 0
+                        opacity: matching ? 1 : 0
+                        font.family: structureBox.listFontFamily
+                        textFormat: Text.RichText
+                        elide: structureBox.elide
+                        text: refusal === "" ? String(entry.modelData) : `<font color="${EaStyle.Colors.themeForegroundDisabled}">${entry.modelData}</font>`
+                        enabled: refusal === ""
+                        highlighted: structureBox.highlightedIndex === entry.index
+                        hoverEnabled: structureBox.hoverEnabled
+
+                        // Hover is reported on a disabled entry too, so the reason shows where the entry cannot be picked.
+                        // The tooltip is made only while it shows.
+                        HoverHandler {
+                            id: entryHover
+                        }
+                        Loader {
+                            active: entryHover.hovered && entry.refusal !== ""
+                            sourceComponent: EaElements.ToolTip {
+                                parent: entry
+                                text: entry.refusal
+                                requested: entryHover.hovered
+                            }
+                        }
+                    }
                 }
             }
-            // Numbers right-aligned under their right-aligned headers (ADR-0029; the owner, 2026-11-21).
+            // Numbers right-aligned under their right-aligned headers (ADR-0029; the owner, 2026-11-21). A Le Bail or
+            // Pawley structure's scale is kept but not fitted: its popup has no Free box, and the cell says why with
+            // crysta's reason (edi ADR-0053, ADR-0109).
             ParameterCell {
                 columnAlignment: Text.AlignRight
                 objectName: `linkedStructure.scale.${row.index}`
                 enabled: row.model.enabled && refinable
                 item: row.model.scale
+                helpToolTip: row.extracted && item !== null && !item.fittable && !item.free
+                ToolTip.text: helpToolTip ? qsTr("Cannot be fitted: %1").arg(item.fitReason) : ""
             }
             // Derived from the scales: the dictionary's weight fraction, rounded by its s.u. under the project's rule, else
-            // by its display format; never edited or fitted.
+            // by its display format; never edited or fitted. "—" for every link while a Le Bail or Pawley structure is
+            // linked: its amount is unknown, so crysta gives no fraction.
             DerivedCell {
                 readonly property bool known: row.weightFraction !== undefined && row.weightFraction.value !== undefined
                 readonly property real fractionValue: known ? row.weightFraction.value : 0
                 readonly property real fractionError: known ? row.weightFraction.uncertainty : 0
+                readonly property bool extracting: !known && group.rows !== null && group.rows.extracting
 
                 objectName: `linkedStructure.weightFraction.${row.index}`
                 enabled: row.model.enabled
-                shownValue: known ? Session.valueText("linked_structure.weight_fraction", fractionValue, fractionError) : ""
+                shownValue: known ? Session.valueText("linked_structure.weight_fraction", fractionValue, fractionError) : extracting ? "—" : ""
                 fullValue: known ? NumberText.plainFull(fractionValue) : ""
                 uncertainty: known ? Session.suText("linked_structure.weight_fraction", fractionValue, fractionError) : ""
                 uid: "linked_structure.weight_fraction"
                 derivedName: row.model.scale ? row.model.scale.fullName.slice(0, row.model.scale.fullName.lastIndexOf(".") + 1) + "weight_fraction" : ""
                 color: EaStyle.Colors.themeForegroundMinor
-                ToolTip.text: Session.tooltip("linked_structure.weight_fraction")
+                ToolTip.text: extracting ? qsTr("No weight fraction: a linked structure's intensities are extracted (Le Bail or Pawley), so its amount is unknown") : Session.tooltip("linked_structure.weight_fraction")
             }
             // Disabled as a constraint is: kept and saved, but neither calculated nor fitted.
             EaComponents.ListViewButton {
