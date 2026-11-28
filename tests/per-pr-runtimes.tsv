@@ -10,11 +10,11 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-28T02:52:32Z
+# measured_utc = 2026-11-28T19:52:31Z
 #
-# Recorded from: measured test run (20 node(s) measured once, 187657 banked, 0 stale row(s) dropped)
-# Collected tests: 267611; with a reported duration: 86302
-# Module-scoped fixture costs recorded: 222
+# Recorded from: measured test run (17 node(s) measured once, 187685 banked, 2 stale row(s) dropped)
+# Collected tests: 267640; with a reported duration: 86321
+# Module-scoped fixture costs recorded: 223
 #
 # Breaches are decided PER TIER against the table
 # below, which the loader validates against the code constants - a manifest must state
@@ -29,12 +29,12 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 267611
+# inventory_python = 267640
 # inventory_cpp = 0
-# inventory_measured = 187677
-# inventory_unmeasured = 79934
+# inventory_measured = 187701
+# inventory_unmeasured = 79939
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
-# inventory_pr_python = 92700
+# inventory_pr_python = 92729
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -1632,6 +1632,14 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_shipment.py:
 0.000	tests/integration/py/test_app_fixture_host_isolation.py::test_configure_fixture_passes_the_provisioned_sdk[core-system-present]
 0.000	tests/integration/py/test_app_fixture_host_isolation.py::test_configure_fixture_passes_the_provisioned_sdk[explicit-app-system-absent]
 0.000	tests/integration/py/test_app_fixture_host_isolation.py::test_configure_fixture_passes_the_provisioned_sdk[explicit-app-system-present]
+0.010	tests/integration/py/test_assistant_voice_installer.py::test_core_installer_prepares_without_a_voice_model[linux]
+0.010	tests/integration/py/test_assistant_voice_installer.py::test_core_installer_prepares_without_a_voice_model[macos]
+0.010	tests/integration/py/test_assistant_voice_installer.py::test_core_installer_prepares_without_a_voice_model[windows]
+0.000	tests/integration/py/test_assistant_voice_installer.py::test_desktop_composer_registers_voice_controls_for_native_input
+0.010	tests/integration/py/test_assistant_voice_installer.py::test_model_is_installed_only_with_the_opt_in_voice_component[linux]
+0.010	tests/integration/py/test_assistant_voice_installer.py::test_model_is_installed_only_with_the_opt_in_voice_component[macos]
+0.010	tests/integration/py/test_assistant_voice_installer.py::test_model_is_installed_only_with_the_opt_in_voice_component[windows]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_assistant_voice_installer.py::test_voice_choice_follows_all_assistant_choices
 UNMEASURED:failed-in-this-run	tests/integration/py/test_background_basis_presence.py::test_clearing_minus_one_basis_refreshes_derives_and_round_trips[reload-chebyshev-x_max]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_background_basis_presence.py::test_clearing_minus_one_basis_refreshes_derives_and_round_trips[reload-chebyshev-x_min]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_background_basis_presence.py::test_clearing_minus_one_basis_refreshes_derives_and_round_trips[reload-polynomial-origin]
@@ -182975,6 +182983,14 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_token_readers.p
 0.260	tests/integration/py/test_magnetic_uncertainty_states.py::test_dependent_uncertainty_comes_from_the_relation_graph_after_reload[tied-0.2]
 0.300	tests/integration/py/test_magnetic_uncertainty_states.py::test_dependent_uncertainty_comes_from_the_relation_graph_after_reload[undefined-tied-None]
 0.090	tests/integration/py/test_magnetic_uncertainty_states.py::test_unrelated_undefined_seed_preserves_a_known_correlation_pair_on_second_save
+0.300	tests/integration/py/test_maintenance_update_rollback.py::test_failed_first_linux_update_preserves_the_released_tools_runtime
+0.230	tests/integration/py/test_maintenance_update_rollback.py::test_linux_tool_starts_with_its_original_runtime_after_the_app_update_is_undone
+0.000	tests/integration/py/test_maintenance_update_rollback.py::test_windows_rollback_requires_the_observed_new_tool_to_be_undone[current-handoff-left-behind]
+0.000	tests/integration/py/test_maintenance_update_rollback.py::test_windows_rollback_requires_the_observed_new_tool_to_be_undone[failed-before-staging]
+0.000	tests/integration/py/test_maintenance_update_rollback.py::test_windows_rollback_requires_the_observed_new_tool_to_be_undone[new-tool-left-behind]
+0.000	tests/integration/py/test_maintenance_update_rollback.py::test_windows_rollback_requires_the_observed_new_tool_to_be_undone[previous-restored]
+0.010	tests/integration/py/test_maintenance_update_rollback.py::test_windows_rollback_requires_the_observed_new_tool_to_be_undone[removed]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_maintenance_update_rollback.py::test_windows_rollback_requires_the_observed_new_tool_to_be_undone[stale-handoff]
 0.000	tests/integration/py/test_metadata_transition_path_spelling.py::test_retained_seed_identity_and_byte_refusal_are_independent_of_host_paths[posix-cosio-d20-s1]
 0.000	tests/integration/py/test_metadata_transition_path_spelling.py::test_retained_seed_identity_and_byte_refusal_are_independent_of_host_paths[posix-cosio-d20-s4]
 0.000	tests/integration/py/test_metadata_transition_path_spelling.py::test_retained_seed_identity_and_byte_refusal_are_independent_of_host_paths[posix-cosio-d20-scan-3f]
@@ -187274,6 +187290,11 @@ UNMEASURED:not-completed-in-this-run	tests/system/app/test_assistant_cif_attachm
 UNMEASURED:failed-in-this-run	tests/system/app/test_assistant_project_replacement.py::test_saved_project_awaits_user_confirmation[quiet]
 UNMEASURED:failed-in-this-run	tests/system/app/test_assistant_project_replacement.py::test_saved_project_awaits_user_confirmation[shown]
 UNMEASURED:failed-in-this-run	tests/system/app/test_assistant_step_folding.py::test_different_finished_steps_share_one_expandable_row
+UNMEASURED:not-completed-in-this-run	tests/system/app/test_assistant_voice_input.py::test_cancel_discards_captured_audio_and_leaves_the_draft_unsent
+UNMEASURED:not-completed-in-this-run	tests/system/app/test_assistant_voice_input.py::test_microphone_refusals_explain_the_problem_without_editing[no-device]
+UNMEASURED:not-completed-in-this-run	tests/system/app/test_assistant_voice_input.py::test_microphone_refusals_explain_the_problem_without_editing[permission-denied]
+UNMEASURED:not-completed-in-this-run	tests/system/app/test_assistant_voice_input.py::test_missing_model_opens_installation_note_and_preserves_send
+UNMEASURED:not-completed-in-this-run	tests/system/app/test_assistant_voice_input.py::test_pressing_microphone_twice_inserts_editable_speech_at_the_cursor
 UNMEASURED:not-completed-in-this-run	tests/system/app/test_feedback_attachment_typing.py::test_typing_with_a_real_attachment_stays_responsive
 UNMEASURED:not-completed-in-this-run	tests/system/app/test_large_collection_open.py::test_collection_first_open[large_offline]
 UNMEASURED:not-completed-in-this-run	tests/system/app/test_large_collection_open.py::test_collection_first_open[large_online]
@@ -254534,8 +254555,16 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_locked_dependencies.py::test_
 UNMEASURED:failed-in-this-run	tests/system/py/test_locked_dependencies.py::test_sdk_fingerprint_equals_configured_dependencies[system-present]
 UNMEASURED:failed-in-this-run	tests/system/py/test_log_startup_ownership.py::test_reserved_marker_before_log_creation_never_grants_another_run_ownership
 UNMEASURED:failed-in-this-run	tests/system/py/test_log_startup_ownership.py::test_two_simultaneous_launches_keep_separate_logs_markers_and_three_retained_runs
+1.080	tests/system/py/test_macos_disk_image_spacing.py::test_disk_image_has_equal_margins_with_finder_tab_bar[retina]
+0.300	tests/system/py/test_macos_disk_image_spacing.py::test_disk_image_has_equal_margins_with_finder_tab_bar[standard]
 UNMEASURED:failed-in-this-run	tests/system/py/test_magnetic_token_consumer_inventory.py::test_every_magnetic_field_and_consumer_has_qualified_route_witnesses
 UNMEASURED:failed-in-this-run	tests/system/py/test_magnetic_token_consumer_inventory.py::test_every_magnetic_value_path_reaches_the_decoder_and_strict_number_boundary
+0.036	tests/system/py/test_maintenance_update_macos.py::test_app_opens_the_kept_tool_after_a_stopped_swap
+0.030	tests/system/py/test_maintenance_update_macos.py::test_starting_app_during_live_swap_leaves_the_kept_bundle
+0.250	tests/system/py/test_maintenance_update_macos.py::test_success_removes_maintenance_tool_update_debris[protected-2026.11.27]
+0.250	tests/system/py/test_maintenance_update_macos.py::test_success_removes_maintenance_tool_update_debris[protected-current]
+0.240	tests/system/py/test_maintenance_update_macos.py::test_success_removes_maintenance_tool_update_debris[writable-2026.11.27]
+0.250	tests/system/py/test_maintenance_update_macos.py::test_success_removes_maintenance_tool_update_debris[writable-current]
 0.030	tests/system/py/test_metadata_build_policy.py::test_an_innocently_named_target_cannot_hide_app_compilation[cmake]
 0.020	tests/system/py/test_metadata_build_policy.py::test_an_innocently_named_target_cannot_hide_app_compilation[ninja]
 0.090	tests/system/py/test_metadata_build_policy.py::test_metadata_permission_follows_commands_even_with_an_app_target_name[cmake-edi_app]
@@ -266936,7 +266965,7 @@ UNMEASURED:not-completed-in-this-run	tests/unit/py/test_project_save_owned_alias
 0.000	tests/unit/py/test_release_presentation.py::test_whats_new_links_the_release_title_directly_to_its_change_sections[True-False]
 0.000	tests/unit/py/test_release_presentation.py::test_whats_new_links_the_release_title_directly_to_its_change_sections[True-True]
 0.000	tests/unit/py/test_release_promotion.py::test_cli_delivery_requires_the_executed_identity_and_unchanged_zip
-UNMEASURED:not-completed-in-this-run	tests/unit/py/test_release_promotion.py::test_component_archive_keeps_the_repository_paths_and_is_verified
+0.010	tests/unit/py/test_release_promotion.py::test_component_archive_keeps_the_repository_paths_and_is_verified
 UNMEASURED:not-completed-in-this-run	tests/unit/py/test_release_promotion.py::test_component_identity_and_original_checksums_are_verified[archive]
 UNMEASURED:not-completed-in-this-run	tests/unit/py/test_release_promotion.py::test_component_identity_and_original_checksums_are_verified[assistant_archive]
 UNMEASURED:not-completed-in-this-run	tests/unit/py/test_release_promotion.py::test_component_identity_and_original_checksums_are_verified[declaration]
@@ -266982,7 +267011,7 @@ UNMEASURED:not-completed-in-this-run	tests/unit/py/test_release_promotion.py::te
 0.000	tests/unit/py/test_release_promotion.py::test_release_retry_never_overwrites_an_existing_identity[notes]
 0.000	tests/unit/py/test_release_promotion.py::test_release_retry_never_overwrites_an_existing_identity[published-missing]
 0.000	tests/unit/py/test_release_promotion.py::test_release_retry_never_overwrites_an_existing_identity[source]
-UNMEASURED:not-completed-in-this-run	tests/unit/py/test_release_promotion.py::test_stable_release_attaches_every_platform_component_archive
+0.020	tests/unit/py/test_release_promotion.py::test_stable_release_attaches_every_platform_component_archive
 0.000	tests/unit/py/test_rendered_caption_contract.py::test_a_caption_without_valid_rendered_evidence_cannot_satisfy_the_census[changes0]
 0.000	tests/unit/py/test_rendered_caption_contract.py::test_a_caption_without_valid_rendered_evidence_cannot_satisfy_the_census[changes10]
 0.000	tests/unit/py/test_rendered_caption_contract.py::test_a_caption_without_valid_rendered_evidence_cannot_satisfy_the_census[changes11]
@@ -267787,6 +267816,7 @@ UNMEASURED:not-completed-in-this-run	tests/unit/py/test_web_science_identity.py:
 # module-cost: 1.692	tests/system/py/test_linked_save_inventory.py
 # module-cost: 15.301	tests/system/py/test_load_project_native_controls.py
 # module-cost: 1.504	tests/system/py/test_magnetic_token_consumer_inventory.py
+# module-cost: 15.354	tests/system/py/test_maintenance_update_macos.py
 # module-cost: 28.190	tests/system/py/test_onboarding_extra_tables.py
 # module-cost: 1.011	tests/system/py/test_online_collection.py
 # module-cost: 2.041	tests/system/py/test_online_file_loading.py

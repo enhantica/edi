@@ -6,6 +6,7 @@ import datetime
 import json
 import os
 import platform
+import plistlib
 import shutil
 import struct
 import subprocess
@@ -27,6 +28,7 @@ from package import (
     run,
     sha256,
     sign_windows,
+    stage_voice_model,
     windows_signing,
 )
 
@@ -222,6 +224,79 @@ def check_macos_load_paths(bundle: Path) -> None:
         )
 
 
+# The signature's permission to use the microphone (ADR-0107). The text macOS shows when the app
+# first asks for it comes from the app's own Info.plist (app/resources/macos/Info.plist.in).
+APP_ENTITLEMENTS = {'com.apple.security.device.audio-input': True}
+
+
+APP_INFO_PLIST = ROOT / 'app/resources/macos/Info.plist.in'
+
+
+def check_microphone_use() -> None:
+    """Require the microphone's usage text in the app's Info.plist template.
+
+    macOS refuses the microphone without it. CMake makes the bundle's Info.plist from this file,
+    and Qt links its microphone permission plugin only when the text is there; the installed app's
+    smoke receipt reports that plugin.
+    """
+    with APP_INFO_PLIST.open('rb') as handle:
+        text = plistlib.load(handle).get('NSMicrophoneUsageDescription')
+    if not isinstance(text, str) or not text.strip():
+        raise RuntimeError(
+            f'{APP_INFO_PLIST.relative_to(ROOT)} has no NSMicrophoneUsageDescription; '
+            'macOS would refuse voice input'
+        )
+
+
+# Qt Multimedia's media plugins play and record media files through FFmpeg and its codecs. The app
+# only records from the microphone, which Qt Multimedia does without a plugin (ADR-0107). Linux and
+# Windows never deploy them (EXCLUDE_PLUGIN_TYPES in app/CMakeLists.txt); macdeployqt cannot skip a
+# plugin type, so on macOS the plugins and the libraries only they load are removed here.
+def drop_media_plugins(bundle: Path) -> list[str]:
+    """Remove the bundle's media plugins and every library only they load; return what went."""
+    plugins = bundle / 'Contents/PlugIns/multimedia'
+    if not plugins.is_dir():
+        return []
+    native = {
+        path.resolve()
+        for path in bundle.rglob('*')
+        if path.is_file() and not path.is_symlink() and path.read_bytes()[:4] in MACHO_MAGIC
+    }
+    by_name = {}
+    for path in bundle.rglob('*'):
+        if path.exists() and path.resolve() in native:
+            by_name.setdefault(path.name, set()).add(path.resolve())
+    loads = {
+        path: {
+            library
+            for _, names, _ in macho_commands(path)
+            for name in names
+            for library in by_name.get(Path(name).name, ())
+        }
+        for path in native
+    }
+
+    def reached(roots: set) -> set:
+        found, todo = set(roots), list(roots)
+        while todo:
+            for library in loads.get(todo.pop(), ()):
+                if library not in found:
+                    found.add(library)
+                    todo.append(library)
+        return found
+
+    from_plugins = reached({path for path in native if path.is_relative_to(plugins.resolve())})
+    dropped = from_plugins - reached(native - from_plugins)
+    for path in sorted(dropped):
+        if path.exists():
+            path.unlink()
+    shutil.rmtree(plugins)
+    for path in sorted(bundle.rglob('*')):
+        if path.is_symlink() and not path.exists():
+            path.unlink()
+    return sorted(path.relative_to(bundle.resolve()).as_posix() for path in dropped)
+
+
 def macos_signing_args() -> list[str]:
     """Ad hoc by default; the Developer ID with a timestamp when signing is on (ADR-0091).
 
@@ -236,7 +311,7 @@ def macos_signing_args() -> list[str]:
 
 
 def sign_macos_app(bundle: Path) -> None:
-    """Sign the application bundle. The upstream runtime is staged outside it."""
+    """Sign the application bundle, with its entitlements. The upstream runtime is outside it."""
     signing = macos_signing_args()
     signatures = MACHO_MAGIC
     paths = sorted(bundle.rglob('*'), key=lambda path: len(path.parts), reverse=True)
@@ -254,7 +329,10 @@ def sign_macos_app(bundle: Path) -> None:
             and path.suffix in {'.framework', '.app', '.bundle', '.xpc'}
         ):
             run(['codesign', '--force', *signing, path])
-    run(['codesign', '--force', *signing, bundle])
+    with tempfile.TemporaryDirectory() as directory:
+        entitlements = Path(directory) / 'EasyDiffraction.entitlements'
+        entitlements.write_bytes(plistlib.dumps(APP_ENTITLEMENTS))
+        run(['codesign', '--force', *signing, '--entitlements', entitlements, bundle])
     run(['codesign', '--verify', '--deep', '--strict', bundle])
 
 
@@ -488,12 +566,17 @@ def build(
         strip_linux_cpp_debug(stage, qt / 'bin/strip')
     collect_notices(stage, qt, crysta, work / 'licence-inputs')
     if SYSTEM == 'macos':
+        check_microphone_use()
+        for name in drop_media_plugins(stage / 'EasyDiffraction.app'):
+            print('left out with the media plugins:', name, flush=True)
         drop_macos_build_rpaths(stage / 'EasyDiffraction.app')
         check_macos_load_paths(stage / 'EasyDiffraction.app')
         sign_macos_app(stage / 'EasyDiffraction.app')
     # The runtime's upstream bytes are checked before the release signature changes them.
     verify_assistant_payload(stage, app / 'app/assistant-runtime-installed.json')
     sign_release_executables(stage)
+    # The voice component's model, which package.py moves out of the app's payload (ADR-0107).
+    stage_voice_model(stage)
     (stage / 'bundle-audit.json').write_text(
         json.dumps(audit_bundle(stage), indent=2) + '\n', encoding='utf-8'
     )

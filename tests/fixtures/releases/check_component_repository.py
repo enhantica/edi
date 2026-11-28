@@ -55,7 +55,7 @@ def repository(folder, versions):
     ('platform', 'names'),
     [
         ('macos-arm64', {APP, ASSISTANT, MAINTENANCE}),
-        ('linux-x86_64', {APP, ASSISTANT}),
+        ('linux-x86_64', {APP, ASSISTANT, MAINTENANCE}),
         ('windows-x86_64', {APP, ASSISTANT, MAINTENANCE}),
     ],
 )
@@ -64,15 +64,8 @@ def test_release_admits_exactly_each_platform_component_set(tmp_path, platform, 
     PROMOTE.validate_repository(folder, '2026.11.3', expected=PROMOTE.component_names(platform))
 
 
-def test_release_refuses_the_maintenance_component_on_linux(tmp_path):
-    folder = repository(tmp_path / 'r', dict.fromkeys([APP, ASSISTANT, MAINTENANCE], '2026.11.3'))
-    with pytest.raises(ValueError, match='does not match'):
-        PROMOTE.validate_repository(
-            folder, '2026.11.3', expected=PROMOTE.component_names('linux-x86_64')
-        )
-
-
-@pytest.mark.parametrize('platform', ['macos-arm64', 'windows-x86_64'])
+# Linux's tool component carries the tool's runtime (ADR-0109).
+@pytest.mark.parametrize('platform', ['macos-arm64', 'linux-x86_64', 'windows-x86_64'])
 def test_release_refuses_a_platform_without_its_maintenance_component(tmp_path, platform):
     folder = repository(tmp_path / 'r', dict.fromkeys([APP, ASSISTANT], '2026.11.3'))
     with pytest.raises(ValueError, match='does not match'):
@@ -134,13 +127,13 @@ def preview_delivery(tmp_path, platform, names):
     [
         ('macos-arm64', {APP, MAINTENANCE}, True),
         ('macos-arm64', {APP, ASSISTANT, MAINTENANCE}, True),
-        ('linux-x86_64', {APP, ASSISTANT}, True),
-        ('linux-x86_64', {APP, MAINTENANCE}, False),
+        ('linux-x86_64', {APP, ASSISTANT, MAINTENANCE}, True),
+        ('linux-x86_64', {APP, ASSISTANT}, False),
         ('windows-x86_64', {APP, ASSISTANT, MAINTENANCE}, True),
         ('windows-x86_64', {APP, ASSISTANT}, False),
     ],
 )
-def test_preview_recovery_admits_the_maintenance_component_on_macos_and_windows(
+def test_preview_recovery_admits_the_maintenance_component_on_every_platform(
     tmp_path, platform, names, accepted
 ):
     preview, delivery, components, version, commit = preview_delivery(tmp_path, platform, names)

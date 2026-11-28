@@ -108,9 +108,15 @@ building a custom helper or packaging a replacement system C library for older s
 
 The Linux IFW bootstrap itself links portable X11 and utility libraries, even when its CLI uses the
 offscreen platform. Relocate a copy of `installerbase` before the framework appends its payload. Ship
-its non-glibc library closure and licence files beside the bootstrap in the Linux download ZIP and inside
-the component for the installed maintenance tool. Do not patch an already appended installer or
-rely on Pixi paths in the user's environment. The operating system still supplies glibc.
+its non-glibc library closure and licence files as `installer-runtime/` beside the bootstrap in the
+Linux download ZIP and, for the installed maintenance tool, in the tool's own component
+(`org.easydiffraction.app.maintenancetool`, which on Linux carries only this runtime). An update swaps
+the new runtime in and keeps the installed one until it has succeeded, a rollback puts that one back,
+and no undo ever removes the runtime in use; the control script removes it when the installation is
+purged ([ADR-0109](0109-replacing-the-maintenance-tools-own-files.md)). Earlier releases kept it in the
+app component, where a failed update's rollback deleted it and left the tool without its libraries.
+Do not patch an already appended installer or rely on Pixi paths in the user's environment. The
+operating system still supplies glibc.
 
 Before compiling the application, CI exercises the real framework with tiny marker components:
 unpack the distribution ZIP, install offline, update from a local file repository, uninstall, then
@@ -317,8 +323,13 @@ the space line, after EasyDiffraction's and the Maintenance Tool's boxes (both t
 tool's tooltip "Updates and uninstalls EasyDiffraction"), each with its size on the right, as the
 update summary lists them; then the licence and, on Windows and Linux, the desktop shortcut boxes.
 Every page and list orders the components EasyDiffraction, Maintenance Tool, AI assistant (their
-sorting priorities 200, 150, 100). The tool's component has no payload on Linux, so its row shows
-the size of the Framework's binary the installation writes as the tool. In Maintenance Tool's Change components flow
+sorting priorities 200, 150, 100). The optional voice input component (ADR-0107) follows as the last row,
+"Voice input for AI assistant", on the same page and in the same Change components page, unticked, with sorting
+priority 70. Every row is built the same way: a box named after its component (`<Row>Box`, `<Row>CheckBox`, its size
+label), whose name and tooltip are the component's own `DisplayName` and `Description` from `package.py`;
+`Installer.qs` lists the rows in their order (`componentRows`), and `assistantscript.qs` lists the optional ones with
+whether each starts ticked. On Linux the tool's component carries only the installer runtime (ADR-0109), and the Framework
+writes the tool from its own binary. In Maintenance Tool's Change components flow
 it is a page of its own whose box shows whether the assistant is installed; Update has no such page and goes straight
 to Ready to update, updating everything installed (owner, 2026-11-26). Ready to update lists the tool only when the update
 changes it: with checksum updates (ADR-0106) it can stay unchanged while EasyDiffraction changes, or be the only change.
@@ -343,7 +354,7 @@ holding the `.run` beside its runtime libraries. The website still finds the old
 before each change. The disk image's volume is `EasyDiffraction Installer` and holds only `EasyDiffraction
 Installer.app`; the branding licence the installer's icon asks for (BSD, its notice with the binaries) is
 `Contents/Resources/BRANDING-LICENSE.txt` inside the app. `dmgbuild` writes its Finder window into the image: 400 by
-250 points of content on a white background, as the website's, reading "Double-click to install" in the app's dark
+272 points of content on a white background, as the website's, reading "Double-click to install" in the app's dark
 text colour (PT Sans, `#333333`), the website's network (its two banks, at 0.42 of their size, in its light grey a
 little stronger) in the top-right and bottom-left corners with three blue charges along its lines, two crossing in
 the top-right and one in the bottom-left (`DiskImageBackground.png` and its `@2x` copy, written by
@@ -354,7 +365,9 @@ picture white (a macOS capture, 2026-11-26), and draws the icon's label black, w
 recolour nor hide; a light background is what reads in both,
 every bar off (toolbar, status, path, sidebar and tab bar), and the installer's icon as the volume icon.
 A Finder whose tab bar the user turned on shows it in this window too: the window setting cannot override
-it, so the icon sits high enough to keep its label in view under a tab bar. The volume icon is
+it, so the window is tall enough that, under a tab bar (40 points), the space below the icon's label equals the
+space above the text, about 36 points each (owner, 2026-11-27); without one the space below is 40 points larger.
+The volume icon is
 `.VolumeIcon.icns` with the volume's custom icon flag, both inside the image, so a downloaded image shows
 it once mounted (on the desktop, in the Finder sidebar and in the window's title); packaging mounts the
 image and refuses one without either. The image file gets the same icon on the build machine, but a file's
@@ -381,8 +394,9 @@ payload manifests and share the release version. Publication verifies the archiv
 
 At startup, the desktop app uses its existing runtime manifest and executable checks to determine
 assistant availability. When the component is unavailable, Preferences disables AI assistance and
-the toolbar robot opens a message about installing it through Maintenance Tool. Restart the app
-after changing the installed components. The web toolbar continues to describe the desktop app and
+the toolbar robot opens a message about installing it through Maintenance Tool. Without the voice input
+component the message box's microphone opens the same message for it (`MissingComponentDialog`, one design for
+both). Restart the app after changing the installed components. The web toolbar continues to describe the desktop app and
 offer its download page.
 
 The local IFW protocol test adds and removes the optional component without disturbing the

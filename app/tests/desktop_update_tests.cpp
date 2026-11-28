@@ -2,6 +2,7 @@
 #include <QtTest/QtTest>
 #include <QFile>
 #include <QJsonArray>
+#include <QProcess>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QQmlApplicationEngine>
@@ -184,6 +185,69 @@ private slots:
         QVERIFY(!updates.startMaintenance());
         QCOMPARE(updates.status(), "The Maintenance Tool could not be opened.");
     }
+    void windowsStagingIsLeftToTheUpdate() {
+        // An update may need its staged tool from unpacking until the Framework writes the tool from it, whatever its
+        // bytes, possibly in another session, and the update removes the folder older releases staged into itself
+        // (ADR-0109): the app touches none.
+        QTemporaryDir temp;
+        const QString executable = temp.filePath("MaintenanceTool.exe");
+        const QString staged = temp.filePath("MaintenanceTool.update.exe");
+        const QString legacy = temp.filePath("maintenancetool");
+        const auto write = [](const QString& path, const QByteArray& bytes) {
+            QFile file(path);
+            return file.open(QIODevice::WriteOnly) && file.write(bytes) == bytes.size();
+        };
+        QVERIFY(write(executable, "new tool"));
+        QVERIFY(write(staged, "new tool"));
+        QVERIFY(QDir().mkdir(legacy));
+        QVERIFY(!edi_app::remove_maintenance_tool_leftovers(executable));
+        QVERIFY(write(staged, "partly unpacked"));
+        QVERIFY(!edi_app::remove_maintenance_tool_leftovers(executable));
+        QVERIFY(QFileInfo::exists(staged));
+        QVERIFY(QFileInfo::exists(legacy));
+    }
+#ifndef Q_OS_WIN
+    void stagingFolderStaysWhileItsUpdateRuns() {
+        // macOS and Linux: an update claims the staging folder before it unpacks into it (ADR-0109). The app starting
+        // before the staged item's probe file has arrived keeps it while the claiming tool runs, here this test.
+        QTemporaryDir temp;
+        const QString executable = temp.filePath("MaintenanceTool");
+        const QString staging = temp.filePath("maintenance-update");
+        const auto write = [](const QString& path, const QByteArray& bytes) {
+            QFile file(path);
+            return file.open(QIODevice::WriteOnly) && file.write(bytes) == bytes.size();
+        };
+        QVERIFY(write(executable, "tool"));
+        QVERIFY(QDir().mkpath(temp.filePath("installer-runtime")));
+        QVERIFY(write(temp.filePath("installer-runtime/dependencies.json"), "{}"));
+        QVERIFY(QDir().mkpath(staging + "/installer-runtime/lib"));
+        QProcess ps;
+        auto environment = QProcessEnvironment::systemEnvironment();
+        environment.insert("TZ", "UTC0");
+        environment.insert("LC_ALL", "C");
+        ps.setProcessEnvironment(environment);
+        const QString pid = QString::number(QCoreApplication::applicationPid());
+        ps.start("/bin/ps", {"-o", "lstart=", "-p", pid});
+        QVERIFY(ps.waitForFinished(5000));
+        const QString started = QString::fromUtf8(ps.readAllStandardOutput()).simplified();
+        QVERIFY(!started.isEmpty());
+        QVERIFY(write(staging + "/.claim", ("claim " + pid + " " + started + "\n").toUtf8()));
+        QVERIFY(!edi_app::remove_maintenance_tool_leftovers(executable));
+        QVERIFY(QFileInfo::exists(staging + "/installer-runtime/lib"));
+        // A claim without the start time cannot be told from a later process with the same number: kept.
+        QVERIFY(write(staging + "/.claim", ("claim " + pid + "\n").toUtf8()));
+        QVERIFY(!edi_app::remove_maintenance_tool_leftovers(executable));
+        QVERIFY(QFileInfo::exists(staging + "/installer-runtime/lib"));
+        // The same process number with another start time is another process: that update has ended.
+        QVERIFY(write(staging + "/.claim", ("claim " + pid + " Thu Jan  1 00:00:00 1970\n").toUtf8()));
+        QVERIFY(edi_app::remove_maintenance_tool_leftovers(executable));
+        QVERIFY(!QFileInfo::exists(staging));
+        // A staging folder nobody claims is left over too.
+        QVERIFY(QDir().mkpath(staging + "/installer-runtime"));
+        QVERIFY(edi_app::remove_maintenance_tool_leftovers(executable));
+        QVERIFY(!QFileInfo::exists(staging));
+    }
+#endif
     void updateActionSettlesUnsavedWorkBeforeLaunch() {
         QQmlApplicationEngine engine;
         edi_app::configure_engine(engine);

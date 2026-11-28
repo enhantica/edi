@@ -7,7 +7,15 @@ import re
 from operator import itemgetter
 from pathlib import Path
 
-UNUSED_QT = re.compile(r'^(?:lib)?Qt6?(?:WebEngine|Charts|Multimedia|QuickTest|Test)(?:[^a-z]|$)')
+# Qt Multimedia itself records voice input (ADR-0107); its QML and widget parts are not used.
+UNUSED_QT = re.compile(
+    r'^(?:lib)?Qt6?(?:WebEngine|Charts|Multimedia(?:Quick|Widgets)|QuickTest|Test)(?:[^a-z]|$)'
+)
+# Qt Multimedia's FFmpeg plugin and FFmpeg itself, which build.py leaves out (ADR-0107).
+FFMPEG = re.compile(
+    r'^(?:lib)?(?:ffmpegmediaplugin|av(?:codec|device|filter|format|util)|postproc'
+    r'|sw(?:resample|scale))[-.]'
+)
 
 
 def audit_bundle(stage: Path) -> dict:
@@ -33,16 +41,20 @@ def audit_bundle(stage: Path) -> dict:
         }
         if native and UNUSED_QT.match(path.name):
             raise RuntimeError(f'Unused Qt component was deployed: {relative}')
+        if native and FFMPEG.match(path.name.lower()):
+            raise RuntimeError(f'FFmpeg was deployed: {relative}')
         if native and re.match(r'^(?:lib)?Qt6?[A-Z]', path.name):
             qt_modules.add(path.name)
         files.append({'path': relative, 'bytes': path.stat().st_size})
     if not files:
         raise RuntimeError('Cannot audit an empty application bundle')
     assistant = [item for item in files if '/libexec/edi/codex/' in '/' + item['path']]
+    voice = [item for item in files if '/share/edi/voice/' in '/' + item['path']]
     return {
         'schema': 'edi.bundle-audit/1',
         'regular_file_bytes': sum(item['bytes'] for item in files),
         'assistant_bytes': sum(item['bytes'] for item in assistant),
+        'voice_bytes': sum(item['bytes'] for item in voice),
         'qt_modules': sorted(qt_modules),
         'largest_files': sorted(files, key=itemgetter('bytes'), reverse=True)[:15],
     }

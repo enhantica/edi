@@ -32,6 +32,7 @@ if(EDI_APP_ASSISTANT)
         qml/Components/AssistantMessage.qml
         qml/Components/AssistantSteps.qml
         qml/Components/AssistantComposer.qml
+        qml/Components/AssistantVoiceMeter.qml
         qml/Components/AssistantPlan.qml
         qml/Components/AssistantQuestion.qml
         qml/Components/AssistantTrial.qml
@@ -45,6 +46,27 @@ else()
     set(EDI_APP_ASSISTANT_QML)
     set(EDI_APP_ASSISTANT_RESOURCES)
     set(EDI_APP_ASSISTANT_LICENCES)
+endif()
+
+# Voice input in the assistant's message box (ADR-0107): the speech recogniser and the microphone, built with the
+# assistant. The model is an optional installer component; without it the button says how to add it.
+set(EDI_APP_VOICE ${EDI_APP_ASSISTANT})
+if(EDI_APP_VOICE)
+    include(${PROJECT_SOURCE_DIR}/cmake/EdiWhisper.cmake)
+    find_package(Qt6 REQUIRED COMPONENTS Multimedia)
+    set(EDI_APP_VOICE_SOURCES
+        src/speech_recogniser.hpp src/speech_recogniser.cpp
+        src/audio_capture.hpp src/audio_capture.cpp
+        src/voice_input.hpp src/voice_input.cpp)
+    # Where the voice component puts the model, from the app's executable: beside the signed bundle on macOS, as the
+    # assistant runtime (ADR-0071).
+    if(EDI_DEPLOY_APP AND APPLE)
+        set(EDI_VOICE_INSTALL_RELATIVE "../../../share/edi/voice")
+    else()
+        set(EDI_VOICE_INSTALL_RELATIVE "../share/edi/voice")
+    endif()
+else()
+    set(EDI_APP_VOICE_SOURCES)
 endif()
 
 # What the app tells its user about itself (ApplicationInfo). Its version and date come from git at every build, as the
@@ -102,6 +124,7 @@ qt_add_qml_module(edi_app_module
         src/assistant_data.hpp
         src/assistant_data_summary.hpp
         ${EDI_APP_ASSISTANT_SOURCES}
+        ${EDI_APP_VOICE_SOURCES}
         src/example_list_model.hpp src/example_list_model.cpp
         src/engine_setup.hpp src/engine_setup.cpp
         src/demo_driver.hpp src/demo_driver.cpp src/demo_documentation.cpp
@@ -243,6 +266,7 @@ qt_add_qml_module(edi_app_module
         qml/Components/HomeIntro.qml
         qml/Components/IconLink.qml
         qml/Components/AssistantDownloadLink.qml
+        qml/Components/MissingComponentDialog.qml
         qml/Components/StatusBarButton.qml
         qml/Components/StatusBarFitButton.qml
         qml/Components/StatusBarItem.qml
@@ -353,6 +377,11 @@ qt_add_qml_module(edi_app_module
         ${EDI_APP_ASSISTANT_RESOURCES}
 )
 target_compile_definitions(edi_app_module PUBLIC EDI_APP_ASSISTANT=$<IF:$<BOOL:${EDI_APP_ASSISTANT}>,1,0>)
+target_compile_definitions(edi_app_module PUBLIC EDI_APP_VOICE=$<IF:$<BOOL:${EDI_APP_VOICE}>,1,0>)
+if(EDI_APP_VOICE)
+    target_compile_definitions(edi_app_module PRIVATE EDI_VOICE_INSTALL_RELATIVE="${EDI_VOICE_INSTALL_RELATIVE}")
+    target_link_libraries(edi_app_module PUBLIC Qt6::Multimedia PRIVATE whisper)
+endif()
 target_sources(edi_app_module PRIVATE "${EDI_APP_BUILD_VERSION_CPP}")
 add_dependencies(edi_app_module edi_app_build_version)
 # The Stacked view's line shader (edi ADR-0041), compiled for every graphics API Qt Quick runs on.
@@ -496,6 +525,12 @@ if(APPLE)
 endif()
 target_link_libraries(edi_app PRIVATE edi_app_module edi_app_moduleplugin ${EDI_GUI_BASE_TARGETS} Qt6::Svg)
 set_target_properties(edi_app PROPERTIES MACOSX_BUNDLE FALSE WIN32_EXECUTABLE TRUE)
+# Qt links its macOS microphone permission plugin when the target is finalized, and only if this Info.plist already
+# has the microphone's usage text (ADR-0107).
+if(APPLE AND NOT EMSCRIPTEN AND EDI_APP_VOICE)
+    set_target_properties(edi_app PROPERTIES
+        MACOSX_BUNDLE_INFO_PLIST ${CMAKE_CURRENT_SOURCE_DIR}/resources/macos/Info.plist.in)
+endif()
 if(NOT EMSCRIPTEN)
     qt_add_executable(edi_scan_refresh_tests EXCLUDE_FROM_ALL tests/scan_refresh_tests.cpp
         src/scan_view_model.hpp src/scan_view_model.cpp src/scan_session.hpp src/scan_session.cpp)
@@ -780,6 +815,31 @@ if(TARGET edi_assistant_native)
     target_link_libraries(edi_load_attempt_tests PRIVATE edi_assistant_native)
 endif()
 
+# Voice input from a recorded speech through the tiny model, with no microphone (ADR-0107).
+if(EDI_APP_VOICE)
+    qt_add_executable(edi_voice_input_tests EXCLUDE_FROM_ALL tests/voice_input_tests.cpp)
+    target_link_libraries(edi_voice_input_tests PRIVATE edi_app_module edi_app_moduleplugin ${EDI_GUI_BASE_TARGETS} Qt6::Test)
+    target_compile_definitions(edi_voice_input_tests PRIVATE EDI_SOURCE_DIR="${PROJECT_SOURCE_DIR}")
+    target_sources(edi_voice_input_tests PRIVATE "${EDI_APP_BUILD_COMMIT_CPP}")
+    add_dependencies(edi_voice_input_tests edi_app_build_commit)
+    set_target_properties(edi_voice_input_tests PROPERTIES AUTOMOC ON WIN32_EXECUTABLE FALSE MACOSX_BUNDLE FALSE)
+    if(TARGET edi_assistant_native)
+        target_link_libraries(edi_voice_input_tests PRIVATE edi_assistant_native)
+    endif()
+endif()
+
+# The microphone's conversion to 16 kHz mono, on computed sine waves (ADR-0107).
+if(EDI_APP_VOICE)
+    qt_add_executable(edi_audio_capture_tests EXCLUDE_FROM_ALL tests/audio_capture_tests.cpp)
+    target_link_libraries(edi_audio_capture_tests PRIVATE edi_app_module edi_app_moduleplugin ${EDI_GUI_BASE_TARGETS} Qt6::Test)
+    target_sources(edi_audio_capture_tests PRIVATE "${EDI_APP_BUILD_COMMIT_CPP}")
+    add_dependencies(edi_audio_capture_tests edi_app_build_commit)
+    set_target_properties(edi_audio_capture_tests PROPERTIES AUTOMOC ON WIN32_EXECUTABLE FALSE MACOSX_BUNDLE FALSE)
+    if(TARGET edi_assistant_native)
+        target_link_libraries(edi_audio_capture_tests PRIVATE edi_assistant_native)
+    endif()
+endif()
+
 qt_add_executable(edi_assistant_ui_tests tests/assistant_ui_tests.cpp)
 target_link_libraries(edi_assistant_ui_tests PRIVATE edi_app_module edi_app_moduleplugin ${EDI_GUI_BASE_TARGETS} Qt6::QuickTest)
 target_compile_definitions(edi_assistant_ui_tests PRIVATE EDI_SOURCE_DIR="${PROJECT_SOURCE_DIR}")
@@ -842,6 +902,11 @@ if(EDI_DEPLOY_APP)
     if(UNIX AND NOT APPLE)
         list(APPEND edi_deploy_filters POST_EXCLUDE_REGEXES "^/lib/" "^/lib64/" "^/usr/lib/"
             INCLUDE_PLUGINS qoffscreen qwayland)
+    endif()
+    # Voice input records through Qt Multimedia's own audio input; its media plugins and their FFmpeg are not shipped
+    # (ADR-0107). macdeployqt cannot skip a plugin type, so tools/installer/build.py removes them on macOS.
+    if(NOT APPLE)
+        list(APPEND edi_deploy_filters EXCLUDE_PLUGIN_TYPES multimedia)
     endif()
     qt_generate_deploy_qml_app_script(TARGET edi_app OUTPUT_SCRIPT edi_deploy_script ${edi_deploy_filters})
     install(SCRIPT ${edi_deploy_script} COMPONENT desktop)

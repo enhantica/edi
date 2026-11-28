@@ -1,9 +1,17 @@
 // SPDX-License-Identifier: BSD-3-Clause
 
-// The AI assistant is the installer's one choice, so it is a checkbox instead of the Framework's component tree: on
-// the installation folder page of the installer, and on a page of its own when the maintenance tool adds or removes
-// components. The tree page is hidden (Installer.qs) because macOS accessibility clients crashed the Framework's
-// Qt on it (edi #150).
+// The assistant's components are the installer's one choice, so they are checkboxes instead of the Framework's
+// component tree: on the installation folder page of the installer, and on a page of its own when the maintenance tool
+// adds or removes components. The tree page is hidden (Installer.qs) because macOS accessibility clients crashed the
+// Framework's Qt on it (edi #150). This is the AI assistant's component; its form has a row for each of them, voice
+// input last (edi ADR-0107).
+
+// Each optional component and its row, as Installer.qs lists them (componentRows), which also gives each row its
+// name, description and size from the component; the AI assistant starts ticked when installing, voice input does
+// not. A component the installer does not carry (voice input in a marker installer) has no row.
+var CHOICES = [{row: "Assistant", name: "org.easydiffraction.app.assistant", ticked: true},
+               {row: "Voice", name: "org.easydiffraction.app.voice", ticked: false}];
+
 function Component() {
     // The command line (install and remove by name, the protocol check) has no pages.
     if (installer.isCommandLineInstance())
@@ -14,7 +22,7 @@ function Component() {
     installer.addWizardPageItem(component, "DoneForm", QInstaller.InstallationFinished);
     if (installer.isInstaller())
         installer.addWizardPageItem(component, "AssistantForm", QInstaller.TargetDirectory);
-    // Changing components asks about the assistant on a page of its own; updating takes everything installed and
+    // Changing components asks about them on a page of its own; updating takes everything installed and
     // goes straight to its summary (owner, 2026-11-26).
     else if (installer.isPackageManager())
         installer.addWizardPage(component, "AssistantForm", QInstaller.ReadyForInstallation);
@@ -31,32 +39,38 @@ function Component() {
         return;
     // The form's parts are in row widgets, so they are looked for by name at any depth.
     function part(name) { return gui.findChild(form, name); }
-    var box = part("AssistantCheckBox");
+    // EasyDiffraction is always installed (ticked, fixed), each row with its size (Installer.qs).
+    part("AppBox").visible = true;
     if (installer.isInstaller()) {
-        // Ticked from the start (owner's choice); the command line still installs it only when named. Under
-        // EasyDiffraction, which is always installed (ticked, fixed), each with its size (Installer.qs).
-        part("AppBox").visible = true;
-        box.text = "AI assistant";
-        box.checked = true;
         // The folder field of our own (Installer.qs keeps the Framework's in step with it).
         part("FolderBox").visible = true;
-        installer.selectComponent(component.name);
     } else {
-        // The choice page when adding or removing components: EasyDiffraction is always kept (ticked, fixed), the AI
-        // assistant is ticked when installed.
-        part("AppBox").visible = true;
-        box.text = "AI assistant";
-        box.checked = component.installed;
         // The licence and shortcut belong to installing, not to this choice; the space line stays (Installer.qs).
         ["LicenseBox", "ShortcutBox", "NoticeBox"].forEach(function (name) {
             part(name).visible = false;
         });
     }
-    box.toggled.connect(function (checked) {
-        if (checked)
-            installer.selectComponent(component.name);
-        else
-            installer.deselectComponent(component.name);
+    CHOICES.forEach(function (choice) {
+        var box = part(choice.row + "CheckBox");
+        var carried = choice.name === component.name ? component : installer.componentByName(choice.name);
+        part(choice.row + "Box").visible = !!carried;
+        if (!carried || !box)
+            return;
+        if (installer.isInstaller()) {
+            // The owner's choice of what starts ticked; the command line still installs only what it names.
+            box.checked = choice.ticked;
+            if (choice.ticked)
+                installer.selectComponent(choice.name);
+        } else {
+            // Adding or removing components: each is ticked when installed.
+            box.checked = carried.installed;
+        }
+        box.toggled.connect(function (checked) {
+            if (checked)
+                installer.selectComponent(choice.name);
+            else
+                installer.deselectComponent(choice.name);
+        });
     });
 }
 

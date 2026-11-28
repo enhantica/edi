@@ -2,7 +2,11 @@
 
 // Shortcuts to the installed program: the Start menu and the desktop on Windows, the applications menu and the
 // desktop (when the home folder has one) on Linux. The installer undoes these operations when the app is removed.
-function Component() {}
+// On Linux an update also keeps the maintenance tool's runtime (keepsRuntime below); on Windows it removes the tool's
+// old staging folder first (removeOldStaging).
+function Component() {
+    installer.installationFinished.connect(this, Component.prototype.settleRuntime);
+}
 
 // What EasyDiffraction is, as the installer's pages say it (Installer.qs): the shortcut's and the menu entry's comment.
 var DESCRIPTION = "Calculate diffraction patterns and fit a structural model to your data.";
@@ -13,7 +17,83 @@ var DESCRIPTION = "Calculate diffraction patterns and fit a structural model to 
 // file instead and the Framework deletes it (edi ADR-0106).
 var MAINTENANCE_RESOURCE = "";
 
+// The first Linux update off a release whose app component carried the tool's runtime (installer-runtime/, edi
+// ADR-0109). The Framework undoes that release's operations of this component, which deletes the runtime, before
+// any operation of this update runs, and a rollback never brings it back. So the update keeps a copy first and
+// settles it at the end: back in place when no usable runtime is there, dropped otherwise. maintenance_swap.sh and
+// maintenance_restore.sh, written in by package.py, do it with copy as their last argument, under the lock and with
+// a mark naming this run.
+var SWAP_SCRIPT = "@EDI_SWAP_SCRIPT@";
+var RESTORE_SCRIPT = "@EDI_RESTORE_SCRIPT@";
+var RUNTIME_TOKEN = "runtime-" + String(Date.now()) + "-" + String(Math.floor(Math.random() * 1e9));
+
+function keepsRuntime() {
+    return systemInfo.kernelType === "linux" && installer.isUpdater();
+}
+
+function runtimeCommand(script) {
+    return ["-c", script, script, installer.value("TargetDir"), RUNTIME_TOKEN, "installer-runtime",
+            "dependencies.json", "copy"];
+}
+
+// IFW 4.11 calls this for each component it is about to install, before it undoes the installed release's
+// operations. Without the copy that undo could delete the only runtime, so the update stops here instead, before
+// anything has changed.
+Component.prototype.beginInstallation = function () {
+    updateRights = installer.hasAdminRights();
+    removeOldStaging();
+    if (!keepsRuntime() || installer.value("TargetDir") === "")
+        return;
+    var result = installer.execute("/bin/sh", runtimeCommand(SWAP_SCRIPT));
+    if (result.length !== 2 || result[1] !== 0)
+        throw new Error("The update could not keep a copy of the Maintenance Tool's files.");
+};
+
+// Whether this update holds rights it gained for a protected installation folder, as IFW 4.11 does before it calls
+// beginInstallation. It drops them before installationFinished but keeps its helper running, so taking them again
+// there asks nothing (RemoteClient::setActive); settling the copy needs them.
+var updateRights = false;
+
+// After a success or a rollback.
+Component.prototype.settleRuntime = function () {
+    if (!keepsRuntime() || installer.value("TargetDir") === "")
+        return;
+    var again = updateRights && !installer.hasAdminRights();
+    if (again)
+        installer.gainAdminRights();
+    try {
+        installer.execute("/bin/sh", runtimeCommand(RESTORE_SCRIPT));
+    } finally {
+        if (again)
+            installer.dropAdminRights();
+    }
+};
+
+// Windows: the folder releases before staged the Maintenance Tool into, which nothing uses any more (edi ADR-0109). It
+// goes before anything else changes: the update holds the rights it gained for a protected folder such as Program
+// Files here, and a folder that cannot go stops the update, where a failed operation would offer to ignore it. This
+// component is in every update, the tool's only when the tool changed. cmd.exe runs in the installation folder and
+// names only that folder, so it never reads the installation's path; rmdir's own exit code does not show whether the
+// folder went.
+function removeOldStaging() {
+    var target = installer.value("TargetDir");
+    if (systemInfo.kernelType !== "winnt" || !installer.isUpdater() || target === ""
+            || !installer.fileExists(target + "/maintenancetool"))
+        return;
+    var removed = installer.performOperation("Execute", ["cmd.exe", "/c", "rmdir", "/s", "/q", "maintenancetool", "2>nul",
+                                                         "&", "if", "exist", "maintenancetool", "(exit", "1)", "else",
+                                                         "(exit", "0)", "workingdirectory=" + target]);
+    if (!removed)
+        throw new Error("The update could not remove the folder maintenancetool. Close any program using it and "
+                        + "try again.");
+}
+
 Component.prototype.createOperations = function () {
+    // First, so that any later failure of this component undoes it: the copy goes back when the runtime is gone.
+    if (keepsRuntime()) {
+        var settle = ["/bin/sh"].concat(runtimeCommand(RESTORE_SCRIPT));
+        component.addOperation("Execute", settle.concat(["UNDOEXECUTE"], settle));
+    }
     component.createOperations();
     holdProgress();
     var target = installer.value("TargetDir");

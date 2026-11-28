@@ -6,6 +6,7 @@ import io
 import json
 import os
 import plistlib
+import re
 import shutil
 import subprocess
 import sys
@@ -156,6 +157,20 @@ def test_mirror_is_enabled_only_for_production(tmp_path, channel, prefix):
     )
 
 
+@pytest.mark.parametrize('system', ['linux', 'macos', 'windows'])
+def test_the_linux_app_brings_the_tool_component_with_an_update(tmp_path, monkeypatch, system):
+    # An update offers only installed components, but adds a missing dependency of one it updates;
+    # Linux installations from before ADR-0109 have no tool component, which now holds the runtime.
+    monkeypatch.setattr(PACKAGE, 'SYSTEM', system)
+    config, meta = tmp_path / 'config', tmp_path / 'meta'
+    config.mkdir()
+    meta.mkdir()
+    PACKAGE.write_metadata(config, meta, '26.18', None, [], enable_mirrors=False)
+    dependencies = ElementTree.parse(meta / 'package.xml').findtext('Dependencies')
+    expected = PACKAGE.MAINTENANCE_COMPONENT if system == 'linux' else None
+    assert dependencies == expected, 'Only the Linux app component depends on the tool component'
+
+
 def copy_bundles(command, **_):
     # Stands in for the subprocess so the macOS tool component gets its copied bundle.
     if command[0] == 'ditto':
@@ -188,8 +203,7 @@ def test_offline_installer_retains_default_update_repositories(tmp_path, channel
         (stage / 'build-inputs.json').write_text(json.dumps({'release_history_sha256': 'fixture'}))
     archive = tmp_path / 'installer.zip'
     archive.write_bytes(b'archive fixture')
-    runtime = tmp_path / 'runtime'
-    runtime.mkdir()
+    runtime = installer_runtime(tmp_path)
     output = tmp_path / 'output'
     with (
         mock.patch.object(
@@ -228,16 +242,49 @@ def test_offline_installer_retains_default_update_repositories(tmp_path, channel
     assert len(creators) == 1, 'Offline packaging builds one installer.'
     assert '--hybrid' in creators[0], 'Offline maintenance permits updates.'
     packages = output / 'source/packages'
-    if PACKAGE.SYSTEM in {'macos', 'windows'}:
-        tool = packages / PACKAGE.MAINTENANCE_COMPONENT / 'data/maintenancetool'
-        assert PACKAGE.maintenance_tool_executable(
-            tool / PACKAGE.maintenance_tool_name()
-        ).is_file(), 'The installer carries the separately built maintenance tool.'
+    data = packages / PACKAGE.MAINTENANCE_COMPONENT / 'data'
+    if PACKAGE.SYSTEM == 'windows':
+        # One staged file, which the Framework deletes once it has written the tool (ADR-0109).
+        assert (data / PACKAGE.WINDOWS_STAGED_TOOL).is_file(), (
+            'The installer carries the separately built maintenance tool.'
+        )
+    elif PACKAGE.SYSTEM == 'macos':
+        tool = data / PACKAGE.MAINTENANCE_STAGING / PACKAGE.maintenance_tool_name()
+        assert PACKAGE.maintenance_tool_executable(tool).is_file(), (
+            'The installer carries the separately built maintenance tool.'
+        )
     else:
-        assert not (packages / PACKAGE.MAINTENANCE_COMPONENT).exists(), (
-            'Only macOS and Windows ship the maintenance tool component.'
+        # Linux: the tool component carries only the tool's runtime, staged for the swap, and the
+        # app component no longer does (ADR-0109).
+        # Staged under a name unlike the tool's even on a case-insensitive disk.
+        assert sorted(path.relative_to(data).as_posix() for path in data.rglob('*')) == [
+            'maintenance-update',
+            'maintenance-update/installer-runtime',
+            'maintenance-update/installer-runtime/dependencies.json',
+            'maintenance-update/installer-runtime/lib',
+            'maintenance-update/installer-runtime/lib/library.so',
+        ], 'The Linux tool component carries only the staged runtime.'
+        app_data = packages / PACKAGE.APP_COMPONENT / 'data'
+        assert not (app_data / 'installer-runtime').exists(), (
+            'The app component does not carry the tool runtime.'
+        )
+        manifest = json.loads((app_data / 'payload-manifest.json').read_text())
+        assert not any(name.startswith('installer-runtime/') for name in manifest), (
+            'The app payload manifest lists no tool runtime file.'
         )
     assert not (output / 'repository').exists(), 'Offline packaging publishes no repository.'
+
+
+def installer_runtime(folder):
+    """A Linux tool runtime as linux_installer_runtime leaves it: one library and its listing."""
+    runtime = folder / 'installer-runtime'
+    (runtime / 'lib').mkdir(parents=True)
+    library = runtime / 'lib/library.so'
+    library.write_bytes(b'portable dependency')
+    (runtime / 'dependencies.json').write_text(
+        json.dumps({library.name: PACKAGE.sha256(library)}) + '\n'
+    )
+    return runtime
 
 
 def test_download_archive_keeps_bootstrap_libraries_and_permissions(tmp_path):
@@ -385,12 +432,33 @@ def test_packaging_uses_acquired_licenses_when_the_original_cache_is_absent(tmp_
             )
 
 
+# Voice input links Qt Multimedia itself (ADR-0107); its QML part is still refused.
 @pytest.mark.parametrize(
-    'name', ['libQt6WebEngineCore.so.6', 'Qt6Multimedia.dll', 'QtWebEngineCore']
+    'name', ['libQt6WebEngineCore.so.6', 'Qt6MultimediaQuick.dll', 'QtWebEngineCore']
 )
 def test_bundle_audit_rejects_unrelated_native_qt_components(tmp_path, name):
     (tmp_path / name).write_bytes(b'\x7fELFunneeded module')
     with pytest.raises(RuntimeError, match='Unused Qt component'):
+        AUDIT.audit_bundle(tmp_path)
+
+
+# Qt Multimedia's FFmpeg plugin and FFmpeg's libraries are left out of every bundle (ADR-0107).
+@pytest.mark.parametrize(
+    ('name', 'magic'),
+    [
+        (
+            'EasyDiffraction.app/Contents/PlugIns/multimedia/libffmpegmediaplugin.dylib',
+            b'\xcf\xfa\xed\xfe',
+        ),
+        ('plugins/multimedia/ffmpegmediaplugin.dll', b'MZ'),
+        ('lib/libavcodec.so.61', b'\x7fELF'),
+        ('bin/avformat-61.dll', b'MZ'),
+    ],
+)
+def test_bundle_audit_rejects_deployed_ffmpeg(tmp_path, name, magic):
+    (tmp_path / name).parent.mkdir(parents=True)
+    (tmp_path / name).write_bytes(magic + b'media library')
+    with pytest.raises(RuntimeError, match=f'^FFmpeg was deployed: {re.escape(name)}$'):
         AUDIT.audit_bundle(tmp_path)
 
 
@@ -687,7 +755,7 @@ def test_installed_maintenance_tool_must_be_the_shipped_one(tmp_path, monkeypatc
     if damage == 'written':
         PACKAGE.maintenance_tool_executable(bundle).write_bytes(b'written by the installer')
     else:
-        (tmp_path / 'maintenancetool').mkdir()
+        (tmp_path / 'maintenance-update').mkdir()
     with mock.patch.object(PACKAGE, 'run'), pytest.raises(RuntimeError, match='maintenance tool'):
         PACKAGE.verify_installed_maintenance_tool(tmp_path, {'maintenance_tool_sha256': expected})
 
@@ -700,6 +768,62 @@ def test_installed_maintenance_tool_check_passes_for_the_shipped_tool(tmp_path, 
     with mock.patch.object(PACKAGE, 'run') as verify:
         PACKAGE.verify_installed_maintenance_tool(tmp_path, {'maintenance_tool_sha256': expected})
     assert verify.call_args.args[0][:3] == ['codesign', '--verify', '--strict']
+
+
+@pytest.mark.parametrize('damage', [None, 'library', 'listing', 'staged', 'backup'])
+def test_installed_linux_tool_needs_its_whole_runtime(tmp_path, monkeypatch, damage):
+    # Linux has no signed tool: the check is the runtime the tool loads, swapped in (ADR-0109).
+    monkeypatch.setattr(PACKAGE, 'SYSTEM', 'linux')
+    (tmp_path / 'MaintenanceTool').write_bytes(b'tool')
+    runtime = installer_runtime(tmp_path)
+    if damage == 'library':
+        (runtime / 'lib/library.so').write_bytes(b'changed')
+    elif damage == 'listing':
+        (runtime / 'dependencies.json').unlink()
+    elif damage == 'staged':
+        (tmp_path / 'maintenance-update').mkdir()
+    elif damage == 'backup':
+        (tmp_path / 'installer-runtime.old').mkdir()
+    if damage is None:
+        PACKAGE.verify_installed_maintenance_tool(tmp_path, {})
+    else:
+        with pytest.raises(RuntimeError, match='maintenance tool'):
+            PACKAGE.verify_installed_maintenance_tool(tmp_path, {})
+
+
+# Windows stages the tool as one file and moves it to the temporary folder before the Framework
+# writes the tool from it, so neither an installation nor an update leaves it (edi ADR-0109).
+@pytest.mark.parametrize(
+    ('updated', 'staged', 'refused'),
+    [
+        (False, None, False),
+        (False, 'installed', True),
+        (False, 'other', True),
+        (True, None, False),
+        (True, 'installed', True),
+        (True, 'other', True),
+        # The folder releases before staged into; the update removes it as it ends.
+        (False, 'legacy', False),
+        (True, 'legacy', True),
+    ],
+)
+def test_windows_staged_tool_is_gone_after_an_update(
+    tmp_path, monkeypatch, updated, staged, refused
+):
+    monkeypatch.setattr(PACKAGE, 'SYSTEM', 'windows')
+    monkeypatch.delenv('EDI_CODESIGN', raising=False)
+    bundle = signed_bundle(tmp_path)
+    if staged == 'legacy':
+        (tmp_path / 'maintenancetool').mkdir()
+    elif staged:
+        copy = tmp_path / PACKAGE.WINDOWS_STAGED_TOOL
+        copy.write_bytes(bundle.read_bytes() if staged == 'installed' else b'older tool')
+    metadata = {'maintenance_tool_sha256': PACKAGE.sha256(bundle)}
+    if refused:
+        with pytest.raises(RuntimeError, match='maintenance tool'):
+            PACKAGE.verify_installed_maintenance_tool(tmp_path, metadata, updated=updated)
+    else:
+        PACKAGE.verify_installed_maintenance_tool(tmp_path, metadata, updated=updated)
 
 
 # The installed app's smoke run: two minutes, one more try after a timeout, never after a failure.
@@ -731,3 +855,52 @@ def test_smoke_run_retries_once_after_a_timeout(tmp_path, outcomes, calls, raise
                 PACKAGE.smoke_installed_app(tmp_path / 'app', tmp_path, {}, tmp_path)
     assert seen == [120] * calls
     assert (tmp_path / 'app.log').read_text().count('--- smoke run') == calls
+
+
+def test_voice_component_inputs_are_the_model_pin_and_whisper_release():
+    pins = json.loads((PACKAGE.ROOT / 'tools/deps/voice/models.json').read_text(encoding='utf-8'))
+    cmake = (PACKAGE.ROOT / 'cmake/EdiWhisper.cmake').read_text(encoding='utf-8')
+    whisper = re.search(r'^set\(EDI_WHISPER_VERSION (\S+)\)$', cmake, re.MULTILINE).group(1)
+    expected = {
+        'model_sha256': pins['models']['small']['sha256'],
+        'vad_sha256': pins['models']['vad']['sha256'],
+        'whisper_cpp': whisper,
+    }
+    build, files = PACKAGE.COMPONENT_INPUTS[PACKAGE.VOICE_COMPONENT]
+    assert {k: v for k, v in build.items() if k != 'build'} == expected, (
+        'The voice component is decided by its model and detector checksums and whisper.cpp '
+        'release only'
+    )
+    assert isinstance(build['build'], int), 'The voice build carries a number to raise by hand'
+    assert files == (), 'No whole file decides the voice component'
+
+
+def test_voice_stage_needs_the_pinned_detector_and_its_manifest_entry(tmp_path):
+    model, vad = tmp_path / 'model.bin', tmp_path / 'vad.bin'
+    model.write_bytes(b'speech model')
+    vad.write_bytes(b'speech detector')
+    pin = {'file': model.name, 'bytes': model.stat().st_size, 'sha256': PACKAGE.sha256(model)}
+    vad_pin = {'file': vad.name, 'bytes': vad.stat().st_size, 'sha256': PACKAGE.sha256(vad)}
+    PACKAGE.check_voice_model(tmp_path, pin, vad_pin)
+    PACKAGE.write_voice_manifest(tmp_path, pin, vad_pin)
+    manifest = json.loads((tmp_path / 'voice-model.json').read_text(encoding='utf-8'))
+    assert manifest == {'schema': 'edi.voice-model/1', **pin, 'vad': vad_pin}, (
+        'The manifest keeps the model fields and adds the detector'
+    )
+    for changed in [{'bytes': vad_pin['bytes'] + 1}, {'sha256': '0' * 64}]:
+        with pytest.raises(RuntimeError, match='differs from its pinned size or SHA-256'):
+            PACKAGE.check_voice_model(tmp_path, pin, {**vad_pin, **changed})
+    vad.unlink()
+    with pytest.raises(RuntimeError, match=r'no voice model vad\.bin'):
+        PACKAGE.check_voice_model(tmp_path, pin, vad_pin)
+
+
+def test_voice_row_sorts_after_the_assistant(tmp_path):
+    PACKAGE.write_voice_metadata(tmp_path, '26.18')
+    voice = ElementTree.parse(tmp_path / 'package.xml')
+    assert int(voice.findtext('SortingPriority')) < 100, (
+        'Voice input sorts below the AI assistant (100)'
+    )
+    assert voice.findtext('DisplayName') == 'Voice input for AI assistant', (
+        'The row names voice input'
+    )

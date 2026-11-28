@@ -3,13 +3,15 @@
 
 import argparse
 import base64
+import contextlib
 import functools
 import json
 import os
-import shutil
+import re
 import subprocess
 import time
 import xml.etree.ElementTree as ET  # noqa: S405 - binarycreator's and our own XML only
+from collections.abc import Iterator
 from pathlib import Path
 from unittest.mock import patch
 
@@ -18,14 +20,18 @@ from package import (
     APP_COMPONENT,
     ASSISTANT_COMPONENT,
     ASSISTANT_RUNTIME,
+    MAINTENANCE_STAGING,
     ROOT,
     SUFFIX,
     SYSTEM,
+    VOICE_COMPONENT,
+    VOICE_MODEL,
+    WINDOWS_STAGED_TOOL,
     add_maintenance_resource,
     build_maintenance_tool,
-    check_maintenance_tool,
     clean_environment,
     installer_from_download,
+    maintenance_item,
     maintenance_script,
     maintenance_tool_executable,
     maintenance_tool_name,
@@ -39,6 +45,8 @@ from package import (
 # The release users update from: its control script has no cleanup for the tool the macOS swap
 # keeps, and its .dat holds no replacement for the tool's pages.
 RELEASED_TAG = 'v2026.11.27'
+# The speech model's stand-in, in the voice component.
+VOICE_MARKER = VOICE_MODEL / 'voice.txt'
 
 # Added to one 26.18 build's component script: its update fails once the component's own
 # operations have run, so the Framework rolls it back.
@@ -71,6 +79,13 @@ exit 1
 
 # Where that operation writes, in the protocol output folder.
 FAILURE_EVIDENCE_NAME = 'failed update evidence.txt'
+
+# The folder the tool component unpacks into on macOS and Linux, the one releases before it used,
+# the Linux tool's runtime and the lock every writer of the tool's files takes (edi ADR-0109).
+STAGING = MAINTENANCE_STAGING
+LEGACY_STAGING = 'maintenancetool'
+RUNTIME = 'installer-runtime'
+LOCK_NAME = '.MaintenanceTool.lock'
 
 # IFW prints this once it has rolled a failed update back.
 ROLLBACK_TEXT = 'update aborted!'
@@ -147,14 +162,24 @@ def failing_operation(evidence: Path, marker: Path) -> str:
     """
     if SYSTEM == 'windows':
         # Separate words: the tool quotes only the ones with spaces, and cmd.exe keeps a command
-        # line that starts unquoted as it is. cd accepts the target's forward slashes.
-        command = [
-            'cmd.exe', '/c', 'cd', '/d', '@TargetDir@', '&&', 'dir', '/b', '/s',
-            '>', str(evidence), '&', 'exit', '1',
+        # line that starts unquoted as it is. cd accepts the target's forward slashes, and a path
+        # with spaces unquoted. It runs in this run's own folder in the temporary folder, where the
+        # component unpacked the staged tool (maintenancescript.qs), and writes the folder's name,
+        # which is ASCII, never its path, which cmd.exe would write in its code page: the name and
+        # the tool's hash tie the evidence to this update.
+        before = ['cmd.exe', '/c', 'echo', 'handoff']
+        after = [
+            '>', str(evidence), '&', 'certutil', '-hashfile', WINDOWS_STAGED_TOOL, 'SHA256',
+            '>>', str(evidence), '&', 'cd', '/d', '@TargetDir@', '&&', 'dir', '/b', '/s',
+            '>>', str(evidence), '&', 'exit', '1',
         ]  # fmt: skip
-    else:
-        command = ['/bin/sh', '-c', FAILURE_EVIDENCE, 'sh', '@TargetDir@', str(evidence)]
-        command.append(marker.as_posix())
+        parts = [json.dumps(part) for part in before]
+        parts.append('handoffFolder()')
+        parts += [json.dumps(part) for part in after]
+        parts.append('"workingdirectory=" + windowsStaging() + "\\\\" + handoffFolder()')
+        return FAILING_OPERATION % ', '.join(parts)
+    command = ['/bin/sh', '-c', FAILURE_EVIDENCE, 'sh', '@TargetDir@', str(evidence)]
+    command.append(marker.as_posix())
     return FAILING_OPERATION % ', '.join(json.dumps(part) for part in command)
 
 
@@ -166,7 +191,7 @@ def failing_tool_script(evidence: Path, marker: Path) -> str:
 def failing_app_resource(
     evidence: Path, marker: Path, source: Path, tools: Path, environment: dict | None
 ) -> None:
-    """Linux has no tool component, so the app component's update fails instead."""
+    """On Linux the app component's update fails: undoing it used to take the tool's runtime."""
     add_maintenance_resource(source, tools, environment)
     with (source / 'packages' / APP_COMPONENT / 'meta/installscript.qs').open(
         'a', encoding='utf-8'
@@ -177,14 +202,15 @@ def failing_app_resource(
 def failure_evidence(path: Path, target: Path) -> dict:
     """Read what the failing operation found: paths below `target`, the marker and the mark.
 
-    POSIX writes tagged lines; Windows writes the full paths dir /s lists, made relative here.
+    POSIX writes tagged lines; Windows writes the folder it ran in (tagged handoff), the staged
+    tool's hash and the full paths dir /s lists, made relative here.
     """
-    found = {'paths': set(), 'marker': None, 'token': None}
+    found = {'paths': set(), 'marker': None, 'token': None, 'handoff': None}
     prefix = str(target).replace('\\', '/').casefold() + '/'
     for line in path.read_text(encoding='utf-8', errors='replace').splitlines():
         tag, _, value = line.partition(' ')
-        if tag in {'marker', 'token'}:
-            found[tag] = value
+        if tag in {'marker', 'token', 'handoff'}:
+            found[tag] = value.strip()
         elif tag in {'name', 'exists'}:
             found['paths'].add(value)
         elif line.strip():
@@ -221,54 +247,99 @@ def check(tools: Path, output: Path) -> None:
     # numbers: the repository offers it by content checksum (edi ADR-0106). The first release has
     # the released controller and stylesheet, another tick image, and no replacement for the
     # tool's default resource, so only the update can bring the new pages.
-    with (
-        patch('package.repository_urls', return_value=(repository,)),
-        patch('package.write_controller', released_controller),
-        patch('package.write_resources', first_release_resources),
-    ):
-        offline = package_app(stage, tools, output / 'offline', '2026.11.31')
-    if list((output / 'offline/source/packages').glob('*/data/**/' + RESOURCE_NAME)):
-        raise RuntimeError(f'The first release ships {RESOURCE_NAME}, which 2026.11 did not')
-    marker.write_text('second marker\n')
-    # The new release's tool gets other bytes, so the update has a tool to replace. On Linux the
-    # update leaves the tool alone (edi ADR-0091), so only macOS and Windows build one.
-    tool_builds = SYSTEM in {'macos', 'windows'}
-    new_tool = build_maintenance_tool(tools, output / 'online tool', '1') if tool_builds else None
-    online = package_app(stage, tools, output / 'online', '26.17', repository, (), new_tool)
-    for name in ('Installer.qs', 'resources/CheckMark.png'):
-        first, new = (output / kind / 'source/config' / name for kind in ('offline', 'online'))
-        if first.read_bytes() == new.read_bytes():
-            raise RuntimeError(f'The first release and 26.17 have the same {name}')
-    # 26.18 changes the app and the tool again. One build of it fails its update and the other
-    # succeeds, each from a repository of its own.
-    marker.write_text('third marker\n')
-    third_tool = build_maintenance_tool(tools, output / 'tool 26.18', '2') if tool_builds else None
-    failure = (output / FAILURE_EVIDENCE_NAME, marker.relative_to(stage))
-    with (
-        patch('package.maintenance_script', functools.partial(failing_tool_script, *failure))
-        if tool_builds
-        else patch(
-            'package.add_maintenance_resource', functools.partial(failing_app_resource, *failure)
+    # The marker stands in for the speech model, so every release below checks it against its own
+    # pin.
+    with voice_stand_ins(stage):
+        with (
+            patch('package.repository_urls', return_value=(repository,)),
+            patch('package.write_controller', released_controller),
+            patch('package.write_resources', first_release_resources),
+        ):
+            offline = package_app(stage, tools, output / 'offline', '2026.11.31')
+        if list((output / 'offline/source/packages').glob('*/data/**/' + RESOURCE_NAME)):
+            raise RuntimeError(f'The first release ships {RESOURCE_NAME}, which 2026.11 did not')
+        marker.write_text('second marker\n')
+        # The new release's tool gets other bytes, so the update has a tool to replace. The Linux
+        # tool component carries only the runtime and the Framework writes the tool from its
+        # template (edi ADR-0091), so only macOS and Windows build one.
+        tool_builds = SYSTEM in {'macos', 'windows'}
+        new_tool = (
+            build_maintenance_tool(tools, output / 'online tool', '1') if tool_builds else None
         )
-    ):
-        failing = output / 'failing-26.18'
+        online = package_app(stage, tools, output / 'online', '26.17', repository, (), new_tool)
+        for name in ('Installer.qs', 'resources/CheckMark.png'):
+            first, new = (output / kind / 'source/config' / name for kind in ('offline', 'online'))
+            if first.read_bytes() == new.read_bytes():
+                raise RuntimeError(f'The first release and 26.17 have the same {name}')
+        # 26.18 changes the app and the tool again. One build of it fails its update and the other
+        # succeeds, each from a repository of its own.
+        marker.write_text('third marker\n')
+        third_tool = (
+            build_maintenance_tool(tools, output / 'tool 26.18', '2') if tool_builds else None
+        )
+        failure = (output / FAILURE_EVIDENCE_NAME, marker.relative_to(stage))
+        with (
+            patch('package.maintenance_script', functools.partial(failing_tool_script, *failure))
+            if tool_builds
+            else patch(
+                'package.add_maintenance_resource',
+                functools.partial(failing_app_resource, *failure),
+            )
+        ):
+            failing = output / 'failing-26.18'
+            package_app(
+                stage,
+                tools,
+                failing,
+                '26.18',
+                (failing / 'repository').as_uri() + '/',
+                (),
+                third_tool,
+            )
+        update = output / 'update-26.18'
         package_app(
-            stage, tools, failing, '26.18', (failing / 'repository').as_uri() + '/', (), third_tool
+            stage, tools, update, '26.18', (update / 'repository').as_uri() + '/', (), third_tool
         )
-    update = output / 'update-26.18'
-    package_app(
-        stage, tools, update, '26.18', (update / 'repository').as_uri() + '/', (), third_tool
-    )
     (output / 'isolated home').mkdir()
     # The interrupted update leaves an installation the Framework can no longer update, so the
     # successful second update starts from an installation of its own.
     for kind, bootstrap in [('offline', offline), ('interrupted', offline), ('online', online)]:
         exercise(
-            kind, bootstrap, output, marker.relative_to(stage), assistant_marker.relative_to(stage)
+            kind,
+            bootstrap,
+            output,
+            marker.relative_to(stage),
+            assistant_marker.relative_to(stage),
         )
     (output / 'passed.json').write_text(
         json.dumps({'passed': True, 'transport': 'file', 'application_test': False}) + '\n'
     )
+
+
+def write_voice_marker(stage: Path) -> dict:
+    """Stage a small stand-in for the speech model and return its pin."""
+    model = stage / VOICE_MARKER
+    model.parent.mkdir(parents=True)
+    model.write_text('optional voice marker\n', encoding='utf-8')
+    return {'file': model.name, 'bytes': model.stat().st_size, 'sha256': sha256(model)}
+
+
+def write_detector_marker(stage: Path) -> dict:
+    """Stage a small stand-in for the speech detector beside the model's and return its pin."""
+    detector = stage / VOICE_MODEL / 'detector.txt'
+    detector.parent.mkdir(parents=True, exist_ok=True)
+    detector.write_text('optional voice detector marker\n', encoding='utf-8')
+    return {'file': detector.name, 'bytes': detector.stat().st_size, 'sha256': sha256(detector)}
+
+
+@contextlib.contextmanager
+def voice_stand_ins(stage: Path) -> Iterator[None]:
+    """Package the voice component from the stand-ins instead of the pinned files."""
+    with (
+        patch('package.release_voice_pin', return_value=write_voice_marker(stage)),
+        patch('package.release_vad_pin', return_value=write_detector_marker(stage)),
+    ):
+        yield
 
 
 def exercise(
@@ -288,7 +359,6 @@ def exercise(
         else 'MaintenanceTool' + SUFFIX
     )
     first_release = kind != 'online'
-    tool_runs = True
     with (output / (kind + '.log')).open('w') as log:
         options = {'env': env, 'stdout': log, 'stderr': -2, 'timeout': 60}
         run(
@@ -310,8 +380,9 @@ def exercise(
             if installed.read_text() != expected:
                 raise RuntimeError('Installer did not install the expected component')
             installed_assistant = target / assistant_marker
-            if installed_assistant.exists():
-                raise RuntimeError('Default installation selected the optional component')
+            installed_voice = target / VOICE_MARKER
+            if installed_assistant.exists() or installed_voice.exists():
+                raise RuntimeError('Default installation selected an optional component')
             # The first release's install shows its pages, which proves the check below can tell
             # them apart; the online install shows the new ones.
             maintenance_pages(
@@ -320,32 +391,48 @@ def exercise(
             if first_release:
                 first_update(target, maintenance, installed, output, options)
             if kind == 'interrupted':
-                tool_runs = interrupted_update(target, maintenance, installed, output, options)
+                interrupted_update(target, maintenance, installed, output, options)
             else:
                 if kind == 'offline':
                     second_update(target, maintenance, installed, output, options)
-                assistant(maintenance, installed, installed_assistant, kind, options)
+                optional = [
+                    (ASSISTANT_COMPONENT, installed_assistant, 'optional assistant marker\n'),
+                    (VOICE_COMPONENT, installed_voice, 'optional voice marker\n'),
+                ]
+                for component, path, text in optional:
+                    add_and_remove(maintenance, installed, component, path, text, kind, options)
         finally:
-            if tool_runs:
-                run([maintenance, '--default-answer', '--confirm-command', 'purge'], **options)
-            else:
-                shutil.rmtree(target)
-        if installed.exists():
-            raise RuntimeError('Maintenance tool left the component installed')
+            run([maintenance, '--default-answer', '--confirm-command', 'purge'], **options)
+        purged(target, installed)
 
 
-def assistant(
-    maintenance: Path, installed: Path, installed_assistant: Path, kind: str, options: dict
+def purged(target: Path, installed: Path) -> None:
+    """Require the purge to take the app, the lock and the Linux runtime nothing else owns."""
+    if installed.exists():
+        raise RuntimeError('Maintenance tool left the component installed')
+    for name in (LOCK_NAME, RUNTIME):
+        if (target / name).exists():
+            raise RuntimeError(f'The purge left {name} in the installation')
+
+
+def add_and_remove(
+    maintenance: Path,
+    installed: Path,
+    component: str,
+    optional: Path,
+    text: str,
+    kind: str,
+    options: dict,
 ) -> None:
-    """Install and remove the optional assistant, leaving the application as it was."""
+    """Install and remove an optional component, leaving the application as it was."""
     final = 'third marker\n' if kind == 'offline' else 'second marker\n'
     maintenance_args = [maintenance, '--accept-licenses', '--default-answer', '--confirm-command']
-    run([*maintenance_args, 'install', ASSISTANT_COMPONENT], **options)
-    if installed_assistant.read_text(encoding='utf-8') != 'optional assistant marker\n':
-        raise RuntimeError('Maintenance tool did not install the assistant')
-    run([*maintenance_args, 'remove', ASSISTANT_COMPONENT], **options)
-    if installed_assistant.exists() or installed.read_text(encoding='utf-8') != final:
-        raise RuntimeError('Removing the assistant changed the required application')
+    run([*maintenance_args, 'install', component], **options)
+    if not optional.is_file() or optional.read_text(encoding='utf-8') != text:
+        raise RuntimeError(f'Maintenance tool did not install {component}')
+    run([*maintenance_args, 'remove', component], **options)
+    if optional.exists() or installed.read_text(encoding='utf-8') != final:
+        raise RuntimeError(f'Removing {component} changed the required application')
 
 
 def first_update(
@@ -360,16 +447,25 @@ def first_update(
         if old_tool == new_metadata['maintenance_tool_sha256']:
             raise RuntimeError('Old and new maintenance tools are the same file')
     run([maintenance, 'check-updates'], **options)
+    if SYSTEM == 'macos':
+        # What Finder leaves in a folder it showed; the owner's update kept the folder for it,
+        # under the name releases before this one staged into.
+        for name in (STAGING, LEGACY_STAGING):
+            (target / name).mkdir(exist_ok=True)
+            (target / name / '.DS_Store').write_bytes(b'')
+    elif SYSTEM == 'windows':
+        # The empty folder an earlier update left (edi ADR-0109); this update must remove it.
+        (target / LEGACY_STAGING).mkdir(exist_ok=True)
     # --verbose: the log says whether the tool component was updated.
     run([maintenance, *UPDATE], **options)
     if installed.read_text(encoding='utf-8') != 'second marker\n':
         raise RuntimeError('Maintenance tool did not apply the component update')
     # The update brings the newer release's signed tool along (edi ADR-0106). The Framework may
-    # swap the tool only once the updating process has ended, so the check waits for it a while,
+    # write the tool only once the updating process has ended, so the check waits for it a while,
     # and says what it found if it never comes. The released controller ran this update and has
-    # no cleanup for the tool the macOS swap kept, and the new controller loads only in the next
-    # process, so the backup stays until the next update's swap removes it.
-    tool_replaced(target, new_metadata, old_left=SYSTEM == 'macos')
+    # no cleanup of its own: the new tool component's scripts must leave no backup and no staging
+    # folder (edi ADR-0109).
+    tool_replaced(target, new_metadata)
     # Nothing is left to offer after the update.
     nothing_offered(maintenance, options['env'])
     # The new tool must show the new release's pages, not the ones the old .dat held.
@@ -389,10 +485,7 @@ def second_update(
     run([maintenance, '--set-temp-repository', third['repository_url'], *UPDATE], **options)
     if installed.read_text(encoding='utf-8') != 'third marker\n':
         raise RuntimeError('Maintenance tool did not apply the second component update')
-    # 26.17's controller ran this update, so the macOS backup goes once it has succeeded.
     tool_replaced(target, third)
-    if (target / 'MaintenanceTool.app.old-token').exists():
-        raise RuntimeError('The second update left the mark of the replaced maintenance tool')
     maintenance_pages(target, output / 'update-26.18/source', first_release=False)
     # The tool keeps asking the repositories it was installed with (its own settings), and here
     # each release has a repository of its own: ask 26.18's, as a release replaces the one.
@@ -403,49 +496,33 @@ def second_update(
 
 def interrupted_update(
     target: Path, maintenance: Path, installed: Path, output: Path, options: dict
-) -> bool:
+) -> None:
     """Require a failed update to 26.18 to leave 26.17's tool and pages, and no 26.18 files.
 
-    The update first undoes the operations 26.17's update saved, the macOS swap's included, then
-    unpacks and swaps in the new tool before its failing operation, so the rollback has the swap
-    to undo. On Linux the app component fails instead, there being no tool component. The
-    Framework's rollback undoes only what this update did: the app files the saved operations
-    removed stay removed and the app is no longer listed as installed (measured with IFW 4.11 on
-    Linux), so the tool answers but has nothing left to update.
-
-    Returns whether the tool can still run, so the caller knows whether it can purge.
+    The update first undoes the operations 26.17's update saved, then unpacks the new files before
+    its failing operation. On macOS and Windows the tool component fails, after the macOS swap, so
+    the rollback has the swap to undo. On Linux the app component fails: undoing it used to take
+    the tool's runtime. The Framework's rollback undoes only what this update did: the app files
+    the saved operations removed stay removed and the app is no longer listed as installed
+    (measured with IFW 4.11 on Linux), so the tool answers but has nothing left to update.
     """
     metadata = json.loads((output / 'online/installer.json').read_text())
-    # The mark the first update's swap left; this update's swap must write its own.
-    token = target / 'MaintenanceTool.app.old-token'
-    first_token = token.read_text(encoding='utf-8').rstrip('\n') if token.is_file() else None
     found = failed_update(target, maintenance, output, options)
     left = installed.read_text(encoding='utf-8') if installed.is_file() else None
     print(f'protocol check: after the failed update the app marker is {left!r}', flush=True)
     if left not in {None, 'second marker\n'}:
         raise RuntimeError('The failed update left files of the 26.18 application')
-    rolled_back(target, found, installed.relative_to(target).as_posix(), first_token)
+    rolled_back(target, found, output)
     if SYSTEM in {'macos', 'windows'}:
         bundle = target / maintenance_tool_name()
         if not maintenance_tool_executable(bundle).is_file():
             raise RuntimeError('The failed update left no maintenance tool in place')
         if sha256(maintenance_tool_executable(bundle)) != metadata['maintenance_tool_sha256']:
             raise RuntimeError("The failed update did not leave 26.17's maintenance tool")
-    if SYSTEM == 'macos' and (target / 'MaintenanceTool.app.new').exists():
-        raise RuntimeError('The failed update left MaintenanceTool.app.new behind')
-    # Signed, and on macOS no staged tool or backup left.
+    # Signed as shipped; on Linux the tool and every library of its runtime.
     verify_installed_maintenance_tool(target, metadata)
     maintenance_pages(target, output / 'online/source', first_release=False)
-    if SYSTEM != 'linux':
-        nothing_offered(maintenance, options['env'])
-        return True
-    if linux_runtime_gone(target, maintenance, found, left):
-        return False
-    try:
-        nothing_offered(maintenance, options['env'])
-    except RuntimeError as error:
-        raise RuntimeError(f'{error}, with installer-runtime intact: another cause') from error
-    return True
+    nothing_offered(maintenance, options['env'])
 
 
 def failed_update(target: Path, maintenance: Path, output: Path, options: dict) -> dict:
@@ -464,6 +541,14 @@ def failed_update(target: Path, maintenance: Path, output: Path, options: dict) 
     # Kept in the installation's log with the rest of its output.
     options['stdout'].write(result.stdout)
     options['stdout'].flush()
+    if SYSTEM == 'windows':
+        # The diagnostics upload needs a later step, so the job log shows what the rollback undid.
+        undone = [
+            line
+            for line in result.stdout.splitlines()
+            if any(word in line.casefold() for word in ('undo', 'roll', 'maintenancetool'))
+        ]
+        print('protocol check: the failed update says', *undone[-60:], sep='\n  ', flush=True)
     if result.returncode == 0:
         raise RuntimeError('The update meant to fail succeeded')
     if ROLLBACK_TEXT not in result.stdout.casefold():
@@ -473,60 +558,72 @@ def failed_update(target: Path, maintenance: Path, output: Path, options: dict) 
         raise RuntimeError('The update failed before its failing operation ran')
     found = failure_evidence(evidence, target)
     print(f'protocol check: the failing operation found {sorted(found["paths"])}', flush=True)
+    # Where the tool unpacks on Windows, as the component's script finds it in this environment.
+    temp = options['env'].get('TEMP') or str(Path(options['env'].get('LOCALAPPDATA', '')) / 'Temp')
+    found['temporary'] = Path(temp)
     return found
 
 
-def rolled_back(target: Path, found: dict, marker: str, first_token: str | None) -> None:
+def rolled_back(target: Path, found: dict, output: Path) -> None:
     """Require the failing operation to have seen 26.18's files, and the rollback to undo them.
 
-    The caller has already required the 26.18 app marker gone from the installation.
+    The caller has already required the 26.18 app marker gone from the installation. The first
+    update left no backup, mark or staging folder, so whatever the failing operation saw of them
+    is this update's.
     """
     if SYSTEM == 'macos':
         # The swap ran before the failure: it marks the backup it keeps with its own token.
-        if not found_path(found, 'MaintenanceTool.app.old-token'):
+        if not found_path(found, 'MaintenanceTool.app.old-token') or found['token'] is None:
             raise RuntimeError('The update failed before the macOS swap kept the installed tool')
-        if found['token'] in {None, first_token}:
-            raise RuntimeError("The failing operation saw the first update's mark, not the swap's")
-        # Without the swap's undo the 26.18 tool would be in place and 26.17's kept as .old.
-        for name in ('MaintenanceTool.app.old', 'MaintenanceTool.app.old-token'):
-            if (target / name).exists():
-                raise RuntimeError(f'The failed update left {name}: the swap was not undone')
     elif SYSTEM == 'windows':
-        # The tool component, which fails, comes after the app it depends on.
-        if not (
-            found_path(found, 'maintenancetool/MaintenanceTool.exe') or found_path(found, marker)
-        ):
-            raise RuntimeError('The failing operation saw no 26.18 file: nothing was unpacked')
-    elif found['marker'] != 'third marker':
-        raise RuntimeError(f'The failing operation saw the app marker {found["marker"]!r}')
+        # The tool component, which fails, comes after the app it depends on, and unpacked this
+        # update's tool into its own folder: certutil printed its hash there.
+        failing = json.loads((output / 'failing-26.18/installer.json').read_text())
+        hashes = {path.replace(' ', '').casefold() for path in found['paths']}
+        if failing['maintenance_tool_sha256'].casefold() not in hashes:
+            raise RuntimeError('The update failed before it unpacked the 26.18 maintenance tool')
+        windows_staging_rolled_back(target, found)
+        return
+    else:
+        if found['marker'] != 'third marker':
+            raise RuntimeError(f'The failing operation saw the app marker {found["marker"]!r}')
+        # The runtime ships in the tool component, so undoing the app leaves it (edi ADR-0109);
+        # the caller requires it complete.
+        if RUNTIME not in found['paths']:
+            raise RuntimeError(f'The failing operation saw no {RUNTIME}')
+    # Without the swap's undo the 26.18 tool would be in place and 26.17's kept as .old.
+    tool_files_settled(target)
 
 
-def linux_runtime_gone(target: Path, maintenance: Path, found: dict, left: str | None) -> bool:
-    """Record the known Linux defect: the failed update takes the tool's runtime with the app.
+def windows_staging_rolled_back(target: Path, found: dict) -> None:
+    """Require the rollback to remove this run's folder with the tool it unpacked, and none here.
 
-    The tool loads its Qt libraries from installer-runtime/, which the app component ships, so
-    undoing 26.17's app operations deletes them and the tool cannot start where the host lacks
-    them. With the runtime intact the defect does not apply and the caller checks as elsewhere.
+    The Framework's undo of the unpack leaves the tool it is to write from (IFW 4.11), so the tool
+    component's script removes the folder once the run has ended without success. The evidence
+    names the folder; its path is the tool's temporary folder joined here, never one read back
+    from cmd.exe.
     """
-    runtime = target / 'installer-runtime'
-    if runtime.is_dir() and any(runtime.iterdir()):
-        print('protocol check: installer-runtime survived the failed update', flush=True)
-        return False
-    if left is not None:
-        raise RuntimeError('The tool runtime is gone, yet an app marker is still installed')
-    # The failing operation runs after the app component's Extract: the runtime must have been
-    # there then, so the rollback, not the update itself, is what removed it.
-    if 'installer-runtime' not in found['paths']:
-        raise RuntimeError('The failing operation saw no installer-runtime: not the known defect')
-    # The defect takes the libraries, never the tool itself, which must still be in place.
-    if not maintenance.is_file():
-        raise RuntimeError('The failed update removed the maintenance tool executable')
-    print(
-        "protocol check: known Linux defect: the tool's runtime (installer-runtime) went with"
-        ' the app component, so the tool cannot start; removing the installation instead',
-        flush=True,
-    )
-    return True
+    name = found['handoff'] or ''
+    if not re.fullmatch(r'EasyDiffraction-MaintenanceTool-[0-9]+-[0-9]+', name):
+        raise RuntimeError(
+            f"The failing operation did not run in the update's own folder: {name!r}"
+        )
+    handoff = found['temporary'] / name
+    print(f'protocol check: after the rollback the update unpacked into {handoff}', flush=True)
+    if handoff.exists():
+        raise RuntimeError(f'The failed update left its folder {handoff} and what it holds')
+    if (target / WINDOWS_STAGED_TOOL).exists():
+        raise RuntimeError(f'The failed update left {WINDOWS_STAGED_TOOL} in the installation')
+
+
+def held(folder: Path) -> str:
+    """Name what a leftover folder holds, with each tool's or file's hash, to say whose it is."""
+    names = []
+    for path in sorted(folder.iterdir()):
+        is_tool = path.name == maintenance_tool_name()
+        file = maintenance_tool_executable(path) if is_tool else path
+        names.append(f'{path.name} (sha256 {sha256(file)})' if file.is_file() else path.name)
+    return ', '.join(names) or 'nothing'
 
 
 def default_resource(target: Path) -> dict[str, bytes]:
@@ -623,29 +720,36 @@ def nothing_offered(maintenance: Path, env: dict, repository: str | None = None)
         raise RuntimeError('The maintenance tool still offers an update')
 
 
-def tool_beside_backup(target: Path, metadata: dict) -> None:
-    """Require the update's tool in place with the macOS backup the released controller keeps."""
-    bundle = target / maintenance_tool_name()
-    check_maintenance_tool(bundle)
-    if sha256(maintenance_tool_executable(bundle)) != metadata['maintenance_tool_sha256']:
-        raise RuntimeError('The update did not put its maintenance tool in place')
-    if (target / 'maintenancetool').exists():
-        raise RuntimeError('The update left the shipped maintenance tool staged')
-    if not (target / 'MaintenanceTool.app.old').is_dir():
-        raise RuntimeError('The released controller leaves MaintenanceTool.app.old; none is there')
-    if not (target / 'MaintenanceTool.app.old-token').is_file():
-        raise RuntimeError('The kept MaintenanceTool.app.old has no mark beside it')
+def tool_files_settled(target: Path) -> None:
+    """Require no staging folder and no backup of the tool's swapped files (edi ADR-0109).
+
+    Windows has no staging folder; verify_installed_maintenance_tool checks its staged file. The
+    folder releases before this one staged into goes too, on every system: on a case-insensitive
+    disk that name is the Linux tool itself, so only a folder counts.
+    """
+    staging = target / STAGING
+    if SYSTEM != 'windows' and staging.is_dir():
+        raise RuntimeError(f'{STAGING}/ is left in the installation, holding {held(staging)}')
+    if SYSTEM != 'windows' and staging.exists():
+        raise RuntimeError(f'{STAGING} is left in the installation')
+    legacy = target / LEGACY_STAGING
+    if legacy.is_dir() and not legacy.is_symlink():
+        raise RuntimeError(
+            f'{LEGACY_STAGING}/ is left in the installation, holding {held(legacy)}'
+        )
+    item = maintenance_item()
+    for suffix in ('.old', '.old-token', '.new') if item else ():
+        if (target / (item + suffix)).exists():
+            raise RuntimeError(f'{item}{suffix} is left in the installation')
 
 
-def tool_replaced(
-    target: Path, metadata: dict, wait: float = 60, *, old_left: bool = False
-) -> None:
-    """Wait for the update's tool; `old_left` expects the macOS backup still beside it."""
-    verify = tool_beside_backup if old_left else verify_installed_maintenance_tool
+def tool_replaced(target: Path, metadata: dict, wait: float = 60) -> None:
+    """Wait for the update's tool in place, with no staging folder and no backup left."""
     deadline = time.monotonic() + wait
     while True:
         try:
-            verify(target, metadata)
+            tool_files_settled(target)
+            verify_installed_maintenance_tool(target, metadata, updated=True)
         # The signature probe fails with CalledProcessError while the bundle is being swapped.
         except (RuntimeError, subprocess.CalledProcessError):
             if time.monotonic() > deadline:

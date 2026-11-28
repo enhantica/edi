@@ -6,6 +6,7 @@
 #include <QQuickItem>
 #include <QQuickWindow>
 #include <QScopeGuard>
+#include <QSemaphore>
 #include <QStandardItemModel>
 #include <QStandardPaths>
 #include <QDir>
@@ -22,6 +23,7 @@
 #include <QRegularExpression>
 #include <QTimer>
 #include <algorithm>
+#include <cmath>
 #include <iostream>
 #include <memory>
 #ifndef __EMSCRIPTEN__
@@ -39,6 +41,9 @@
 #include "project_view_model.hpp"
 #include "run_log.hpp"
 #include "online_search.hpp"
+#include "desktop_updates.hpp"
+#include "speech_recogniser.hpp"
+#include "voice_input.hpp"
 #include "parameter_item.hpp"
 #if defined(Q_OS_UNIX)
 #include "assistant_file_primitives.hpp"
@@ -174,6 +179,29 @@ QQuickItem* namedItem(QQuickItem* item, const QString& name) {
     if (!item || item->objectName() == name) return item;
     for (auto* child : item->childItems())
         if (auto* match = namedItem(child, name)) return match;
+    return nullptr;
+}
+
+// Every item of that name under `item`. A Repeater's items are its parent's visual children, not QObject children.
+void namedItems(QQuickItem* item, const QString& name, QList<QQuickItem*>& found) {
+    if (item->objectName() == name) found.append(item);
+    for (auto* child : item->childItems())
+        namedItems(child, name, found);
+}
+
+// The tooltip gui-components' ToolButton shows on hover: its child with `requested` and `text`.
+QObject* hoverToolTip(QObject* control) {
+    for (auto* child : control->findChildren<QObject*>()) {
+        const auto* meta = child->metaObject();
+        if (meta->indexOfProperty("requested") >= 0 && meta->indexOfProperty("text") >= 0) return child;
+    }
+    return nullptr;
+}
+
+// The object behind `control`'s Accessible attached properties.
+QObject* accessibleOf(QObject* control) {
+    for (auto* child : control->findChildren<QObject*>(Qt::FindDirectChildrenOnly))
+        if (QByteArray(child->metaObject()->className()) == "QQuickAccessibleAttached") return child;
     return nullptr;
 }
 
@@ -1600,6 +1628,277 @@ private slots:
         click(down);
         click(down);
         QTRY_COMPARE(spin->property("value").toInt(), start - step);
+    }
+    // The microphone is always in the message box (the owner, 2026-11-27). Without the voice input component a press
+    // opens the same note as the assistant's button, on adding it in Updates; with it a press starts voice input.
+    void microphoneWithAndWithoutVoiceInput_data() {
+        QTest::addColumn<bool>("installed");
+        QTest::newRow("not installed") << false;
+        QTest::newRow("installed") << true;
+    }
+    void microphoneWithAndWithoutVoiceInput() {
+        QFETCH(bool, installed);
+        if (installed && !edi_app::SpeechRecogniser::cpu_supported())
+            QSKIP("This processor cannot run the speech engine");
+        QTemporaryDir dir;
+        QVERIFY(dir.isValid());
+        const QString model = dir.filePath("model.bin");
+        if (installed) {
+            QFile file(model);
+            QVERIFY(file.open(QIODevice::WriteOnly));
+            file.write("model");
+        }
+        // The app's test microphone (voice_input.cpp), which reports no device: a press never reaches a real one.
+        const QList<QPair<QByteArray, QByteArray>> values{
+            {"PYTEST_CURRENT_TEST", "assistant_ui_tests"},
+            {"EDI_TEST_ASSISTANT_VOICE_CAPTURE", "no-device"},
+            {"EDI_TEST_ASSISTANT_VOICE_MODEL", model.toUtf8()},
+        };
+        QList<QPair<QByteArray, QByteArray>> originals;
+        for (const auto& [name, value] : values) {
+            originals.append(qMakePair(name, qgetenv(name.constData())));
+            qputenv(name.constData(), value);
+        }
+        const auto restore = qScopeGuard([originals] {
+            for (const auto& [name, value] : originals) {
+                if (value.isNull()) qunsetenv(name.constData());
+                else qputenv(name.constData(), value);
+            }
+        });
+        QQmlApplicationEngine engine;
+        edi_app::configure_engine(engine);
+        WorkingAssistant assistant;
+        engine.rootContext()->setContextProperty("testAssistant", &assistant);
+        QQmlComponent component(&engine);
+        component.setData(R"(
+            import QtQuick
+            import QtQuick.Controls
+            import edi.app
+            ApplicationWindow {
+                width: 900; height: 500; visible: true
+                Item { id: toggle }
+                AssistantComposer { anchors.left: parent.left; anchors.right: parent.right; anchors.bottom: parent.bottom; assistant: testAssistant; toggleControl: toggle }
+            }
+        )", QUrl());
+        QScopedPointer<QObject> root(component.create());
+        QVERIFY2(root, qPrintable(component.errorString()));
+        auto* window = qobject_cast<QQuickWindow*>(root.data());
+        QVERIFY(window);
+        QVERIFY(QTest::qWaitForWindowExposed(window));
+        auto* voice = engine.singletonInstance<edi_app::VoiceInput*>("edi.app", "VoiceInput");
+        QVERIFY(voice);
+        QCOMPARE(voice->available(), installed);
+        auto* button = root->findChild<QQuickItem*>("assistant.voice");
+        auto* dialog = root->findChild<QObject*>("assistant.voiceMissing");
+        QVERIFY(button);
+        QVERIFY(dialog);
+        QTRY_VERIFY(button->isVisible());
+        // The dots alone show a recording: no status text exists (the owner, 2026-11-28).
+        QVERIFY(!root->findChild<QObject*>("assistant.voiceStatus"));
+        auto* indicator = root->findChild<QQuickItem*>("assistant.voiceIndicator");
+        QVERIFY(indicator);
+        QVERIFY(!indicator->isVisible());
+        QVERIFY(QMetaObject::invokeMethod(button, "clicked"));
+        if (!installed) {
+            QTRY_VERIFY(dialog->property("visible").toBool());
+            QCOMPARE(dialog->property("title").toString(), QString("Voice input"));
+            auto* message = root->findChild<QObject*>("assistant.voiceMissing.message");
+            auto* updates = root->findChild<QObject*>("assistant.voiceMissing.updates");
+            QVERIFY(message);
+            QVERIFY(updates);
+            QCOMPARE(message->property("text").toString(), QString("The voice input component is not installed."));
+            QCOMPARE(updates->property("text").toString(), QString("Open Updates in Preferences to add voice input"));
+            QCOMPARE(updates->property("fontIcon").toString(), QString("cog"));
+            auto* updatesService = engine.singletonInstance<edi_app::DesktopUpdates*>("edi.app", "DesktopUpdates");
+            QVERIFY(updatesService);
+            QCOMPARE(updates->property("visible").toBool(), updatesService->managed());
+            QCOMPARE(voice->state(), edi_app::VoiceInput::State::Idle);
+            QVERIFY(QMetaObject::invokeMethod(dialog, "close"));
+            QTRY_VERIFY(!dialog->property("visible").toBool());
+        } else {
+            // The press starts the test microphone, which finds no device: no note, and the message box says why.
+            QTRY_VERIFY(!voice->message().isEmpty());
+            QVERIFY2(voice->message().contains("microphone", Qt::CaseInsensitive), qPrintable(voice->message()));
+            QCOMPARE(voice->state(), edi_app::VoiceInput::State::Idle);
+            QVERIFY(!dialog->property("visible").toBool());
+        }
+    }
+    // While the speech is recognised the microphone shows no spinner, and neither it nor its tooltip on hover says the
+    // state in words; only the accessible description does (the owner, 2026-11-28; ADR-0107 §8).
+    void voiceButtonShowsNoStateWords() {
+        if (!edi_app::SpeechRecogniser::cpu_supported())
+            QSKIP("This processor cannot run the speech engine");
+        QTemporaryDir dir;
+        QVERIFY(dir.isValid());
+        const QString model = dir.filePath("model.bin");
+        {
+            QFile file(model);
+            QVERIFY(file.open(QIODevice::WriteOnly));
+            file.write("model");
+        }
+        // The app's test microphone plays the fixture, then silence, which stops the recording.
+        const QList<QPair<QByteArray, QByteArray>> values{
+            {"PYTEST_CURRENT_TEST", "assistant_ui_tests"},
+            {"EDI_TEST_ASSISTANT_VOICE_CAPTURE", "available"},
+            {"EDI_TEST_ASSISTANT_VOICE_WAV", EDI_SOURCE_DIR "/tests/fixtures/assistant_voice/inaugural.wav"},
+            {"EDI_TEST_ASSISTANT_VOICE_MODEL", model.toUtf8()},
+        };
+        QList<QPair<QByteArray, QByteArray>> originals;
+        for (const auto& [name, value] : values) {
+            originals.append(qMakePair(name, qgetenv(name.constData())));
+            qputenv(name.constData(), value);
+        }
+        const auto restore = qScopeGuard([originals] {
+            for (const auto& [name, value] : originals) {
+                if (value.isNull()) qunsetenv(name.constData());
+                else qputenv(name.constData(), value);
+            }
+        });
+        QQmlApplicationEngine engine;
+        edi_app::configure_engine(engine);
+        WorkingAssistant assistant;
+        engine.rootContext()->setContextProperty("testAssistant", &assistant);
+        QQmlComponent component(&engine);
+        component.setData(R"(
+            import QtQuick
+            import QtQuick.Controls
+            import edi.app
+            ApplicationWindow {
+                width: 900; height: 500; visible: true
+                Item { id: toggle }
+                AssistantComposer { anchors.left: parent.left; anchors.right: parent.right; anchors.bottom: parent.bottom; assistant: testAssistant; toggleControl: toggle }
+            }
+        )", QUrl());
+        QScopedPointer<QObject> root(component.create());
+        QVERIFY2(root, qPrintable(component.errorString()));
+        auto* window = qobject_cast<QQuickWindow*>(root.data());
+        QVERIFY(window);
+        QVERIFY(QTest::qWaitForWindowExposed(window));
+        window->requestActivate();
+        QVERIFY(QTest::qWaitForWindowActive(window));
+        auto* voice = engine.singletonInstance<edi_app::VoiceInput*>("edi.app", "VoiceInput");
+        auto* button = root->findChild<QQuickItem*>("assistant.voice");
+        auto* spinner = root->findChild<QQuickItem*>("assistant.voiceSpinner");
+        QVERIFY(voice && button && spinner);
+        QVERIFY(voice->available());
+        auto* tip = hoverToolTip(button);
+        auto* accessible = accessibleOf(button);
+        QVERIFY(tip && accessible);
+        // Hold the recognition thread, so the recording stays in Recognising while it is looked at.
+        auto gate = std::make_shared<QSemaphore>();
+        voice->workers().start([gate] { gate->acquire(); });
+        const auto open = qScopeGuard([gate, voice] {
+            gate->release();
+            voice->cancel();
+            voice->workers().waitForDone();
+        });
+        const auto statedInWords = [&] {
+            for (const auto& shown : {button->property("text").toString(), tip->property("text").toString()}) {
+                if (shown.contains("Listening", Qt::CaseInsensitive) || shown.contains("Recognis", Qt::CaseInsensitive))
+                    return shown;
+            }
+            return QString();
+        };
+        QCOMPARE(tip->property("text").toString(), QString("Voice input"));
+        QVERIFY(QMetaObject::invokeMethod(button, "clicked"));
+        QTRY_COMPARE(voice->state(), edi_app::VoiceInput::State::Listening);
+        QCOMPARE(statedInWords(), QString());
+        QCOMPARE(accessible->property("description").toString(), QString("Listening"));
+        QTRY_COMPARE_WITH_TIMEOUT(voice->state(), edi_app::VoiceInput::State::Recognising, 15000);
+        // The pointer rests on the button after the press, as with a mouse.
+        QTest::mouseMove(window, QPoint(5, 5));
+        QTest::mouseMove(window, button->mapToScene(QPointF(button->width() / 2, button->height() / 2)).toPoint());
+        QTRY_VERIFY(tip->property("requested").toBool());
+        QVERIFY(button->isVisible());
+        QVERIFY(!spinner->isVisible());
+        QCOMPARE(statedInWords(), QString());
+        QCOMPARE(tip->property("text").toString(), QString("Voice input"));
+        QCOMPARE(accessible->property("description").toString(), QString("Recognising speech"));
+    }
+    // The voice dots (ADR-0107 §8): a ripple from right to left even in silence, bars with the voice, a smaller ripple
+    // while recognising; with animations off they stay still and light from the left with the level.
+    void voiceDotsRippleAndRiseWithTheVoice() {
+        QQmlApplicationEngine engine;
+        edi_app::configure_engine(engine);
+        QQmlComponent component(&engine);
+        component.setData(R"(
+            import QtQuick
+            import QtQuick.Controls
+            import edi.app
+            ApplicationWindow {
+                width: 400; height: 200; visible: true
+                AssistantVoiceMeter { objectName: "meter"; anchors.centerIn: parent }
+            }
+        )", QUrl());
+        QScopedPointer<QObject> root(component.create());
+        QVERIFY2(root, qPrintable(component.errorString()));
+        auto* window = qobject_cast<QQuickWindow*>(root.data());
+        QVERIFY(window);
+        QVERIFY(QTest::qWaitForWindowExposed(window));
+        auto* meter = root->findChild<QQuickItem*>("meter");
+        QVERIFY(meter);
+        QList<QQuickItem*> dots;
+        namedItems(meter, "voiceDot", dots);
+        std::sort(dots.begin(), dots.end(), [](QQuickItem* a, QQuickItem* b) { return a->x() < b->x(); });
+        QCOMPARE(dots.size(), 16);
+        const qreal height = meter->height();
+        const qreal dot = meter->property("dot").toReal();
+        QVERIFY(height > 4 * dot);
+        const auto heights = [&dots] {
+            QList<qreal> values;
+            for (auto* item : dots)
+                values.append(item->height());
+            return values;
+        };
+        const auto highest = [&heights] {
+            const auto values = heights();
+            return *std::max_element(values.begin(), values.end());
+        };
+        // Where the ripple is highest, from the meter's own values (pixel heights round neighbours together).
+        const auto crest = [meter] {
+            QList<qreal> values;
+            for (int i = 0; i < 16; ++i) {
+                QVariant value;
+                QMetaObject::invokeMethod(meter, "ripple", Q_RETURN_ARG(QVariant, value), Q_ARG(QVariant, i));
+                values.append(value.toReal());
+            }
+            return int(std::max_element(values.begin(), values.end()) - values.begin());
+        };
+        if (!meter->property("animated").toBool()) {
+            meter->setProperty("running", true);
+            meter->setProperty("level", 0.5);
+            const auto values = heights();
+            for (int i = 0; i < 16; ++i)
+                QCOMPARE(values[i], i < 8 ? qreal(qRound(0.6 * height)) : dot);
+            QTest::qWait(200);
+            QCOMPARE(heights(), values);
+            return;
+        }
+        // Silence: the dots move, between about 0.12 and 0.28 of the height.
+        meter->setProperty("running", true);
+        meter->setProperty("level", 0.0);
+        const qreal start = meter->property("phase").toReal();
+        QTRY_VERIFY(!qFuzzyCompare(meter->property("phase").toReal(), start));
+        meter->setProperty("phase", 0.0);
+        const auto still = heights();
+        QVERIFY(*std::min_element(still.begin(), still.end()) < *std::max_element(still.begin(), still.end()));
+        QVERIFY(*std::min_element(still.begin(), still.end()) >= std::max(dot, std::floor(0.12 * height)));
+        QVERIFY(highest() <= std::ceil(0.28 * height));
+        // The crest moves towards the first dot as the phase grows.
+        constexpr double quarter = 1.5707963267948966;
+        meter->setProperty("phase", quarter - 8 * 0.55 + 2 * 3.141592653589793);
+        QCOMPARE(crest(), 8);
+        meter->setProperty("phase", quarter - 4 * 0.55 + 2 * 3.141592653589793);
+        QCOMPARE(crest(), 4);
+        // The voice raises the newest dot into a bar above the ripple.
+        meter->setProperty("level", 1.0);
+        QTRY_COMPARE(dots.last()->height(), height);
+        // Recognising takes no level: the bars run out and a smaller ripple stays.
+        meter->setProperty("recognising", true);
+        QTRY_VERIFY(highest() <= std::ceil(0.22 * height));
+        QVERIFY(highest() >= std::floor(0.12 * height));
+        meter->setProperty("running", false);
+        QCOMPARE(highest(), dot);
     }
 #if defined(Q_OS_UNIX)
     // An attached file stays the same input when only its metadata changes: macOS writes the last-used date as an
