@@ -19,11 +19,16 @@ AppDialog {
     property var entries: []
     signal openStructure
 
+    // The width, padding and placement of the app's standard dialogs (Messages, the error dialog): AppDialog
+    // centres it on whole pixels (owner: it was too narrow, its buttons clipped, and offset).
     title: qsTr("Magnetic structures added")
-    anchors.centerIn: parent
+    contentWidth: AppSizes.messagesDialogContentWidth
+    contentHeight: column.implicitHeight
     onClosed: destroy()
 
     Column {
+        id: column
+        width: dialog.contentWidth
         spacing: EaStyle.Sizes.fontPixelSize * 0.75
         Repeater {
             model: dialog.entries
@@ -33,6 +38,8 @@ AppDialog {
                 required property int index
                 spacing: EaStyle.Sizes.fontPixelSize * 0.25
                 EaElements.Label {
+                    width: column.width
+                    elide: Text.ElideRight
                     objectName: `chart.findK.added.${entry.index}`
                     text: `${entry.modelData.name} · ${entry.modelData.symbol}`
                 }
@@ -40,29 +47,23 @@ AppDialog {
         }
     }
 
-    // Close and Open in Structure page at the right, as the app's other dialogs place their actions.
-    footer: Item {
-        implicitHeight: actions.implicitHeight + 2 * EaStyle.Sizes.fontPixelSize
-        Row {
-            id: actions
-            anchors.right: parent.right
-            anchors.rightMargin: dialog.rightPadding
-            anchors.verticalCenter: parent.verticalCenter
-            spacing: EaStyle.Sizes.fontPixelSize
-            EaElements.Button {
-                objectName: "chart.findK.addedDialog.close"
-                fontIcon: "times"
-                text: qsTr("Close")
-                onClicked: dialog.close()
-            }
-            EaElements.Button {
-                objectName: "chart.findK.openStructure"
-                fontIcon: "layer-group"
-                text: qsTr("Open in Structure page")
-                onClicked: {
-                    dialog.close();
-                    dialog.openStructure();
-                }
+    // Close and Open in Structure page in the standard button row at the right.
+    footer: EaElements.DialogButtonBox {
+        EaElements.Button {
+            objectName: "chart.findK.addedDialog.close"
+            fontIcon: "times"
+            text: qsTr("Close")
+            DialogButtonBox.buttonRole: DialogButtonBox.RejectRole
+            onClicked: dialog.close()
+        }
+        EaElements.Button {
+            objectName: "chart.findK.openStructure"
+            fontIcon: "layer-group"
+            text: qsTr("Open in Structure page")
+            DialogButtonBox.buttonRole: DialogButtonBox.AcceptRole
+            onClicked: {
+                dialog.close();
+                dialog.openStructure();
             }
         }
     }
