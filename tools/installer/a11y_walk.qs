@@ -23,10 +23,13 @@ Controller.prototype.IntroductionPageCallback = function() {
 Controller.prototype.TargetDirectoryPageCallback = function() {
     var page = gui.currentPageWidget();
     page.TargetDirectoryLineEdit.setText(installer.value("A11yTarget"));
-    // The assistant checkbox where the installer has one: ticked, so the selection changes under the client.
-    var box = gui.findChild(page, "AssistantCheckBox");
-    if (box)
-        box.checked = true;
+    // The optional components' checkboxes where the installer has them: ticked, so the selection changes under the
+    // client.
+    ["AssistantCheckBox", "VoiceCheckBox"].forEach(function (name) {
+        var box = gui.findChild(page, name);
+        if (box)
+            box.checked = true;
+    });
     gui.clickButton(buttons.NextButton, PAUSE);
 };
 

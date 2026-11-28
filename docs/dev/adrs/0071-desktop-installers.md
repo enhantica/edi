@@ -323,9 +323,12 @@ the space line, after EasyDiffraction's and the Maintenance Tool's boxes (both t
 tool's tooltip "Updates and uninstalls EasyDiffraction"), each with its size on the right, as the
 update summary lists them; then the licence and, on Windows and Linux, the desktop shortcut boxes.
 Every page and list orders the components EasyDiffraction, Maintenance Tool, AI assistant (their
-sorting priorities 200, 150, 100). The optional voice input component (ADR-0107) follows as a fourth row,
+sorting priorities 200, 150, 100). The optional voice input component (ADR-0107) follows as the last row,
 "Voice input for AI assistant", on the same page and in the same Change components page, unticked, with sorting
-priority 90. On Linux the tool's component carries only the installer runtime (ADR-0109), and the Framework
+priority 70. Every row is built the same way: a box named after its component (`<Row>Box`, `<Row>CheckBox`, its size
+label), whose name and tooltip are the component's own `DisplayName` and `Description` from `package.py`;
+`Installer.qs` lists the rows in their order (`componentRows`), and `assistantscript.qs` lists the optional ones with
+whether each starts ticked. On Linux the tool's component carries only the installer runtime (ADR-0109), and the Framework
 writes the tool from its own binary. In Maintenance Tool's Change components flow
 it is a page of its own whose box shows whether the assistant is installed; Update has no such page and goes straight
 to Ready to update, updating everything installed (owner, 2026-11-26). Ready to update lists the tool only when the update

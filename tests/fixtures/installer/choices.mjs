@@ -8,9 +8,9 @@ import {createContext, runInContext} from 'node:vm';
 const root = process.argv[2];
 const source = name => readFileSync(join(root, name), 'utf8');
 const ui = source('AssistantForm.ui');
-for (const name of ['AssistantCheckBox', 'LicenseCheckBox'])
+for (const name of ['AssistantCheckBox', 'VoiceCheckBox', 'LicenseCheckBox'])
   assert.match(ui, new RegExp('<widget class="QCheckBox" name="' + name + '"'),
-    'Both install choices are actual checkbox widgets');
+    'Every install choice is an actual checkbox widget');
 assert.doesNotMatch(ui, /<widget class="QTree(?:View|Widget)"/,
   'The embedded choices contain no replacement component tree');
 
@@ -24,11 +24,16 @@ function signal() {
 }
 
 const assistantName = 'org.easydiffraction.app.assistant';
+const voiceName = 'org.easydiffraction.app.voice';
 const appName = 'org.easydiffraction.app';
 const selected = new Set([appName]);
 const fields = {
   AppBox: {},
+  AssistantBox: {},
   AssistantCheckBox: {checked: false, toggled: signal()},
+  VoiceBox: {},
+  VoiceCheckBox: {checked: false, toggled: signal()},
+  VoiceSizeLabel: {},
   FolderBox: {},
   LicenseCheckBox: {checked: false, toggled: signal()},
   LicenseLink: {},
@@ -50,7 +55,8 @@ const pages = Object.fromEntries(frameworkPages.map(name => [name + 'Page', {
 }]));
 pages.DynamicAssistantForm = {
   fields: {
-    AppBox: {}, AssistantCheckBox: {toggled: signal()}, LicenseBox: {}, ShortcutBox: {},
+    AppBox: {}, AssistantBox: {}, AssistantCheckBox: {toggled: signal()}, VoiceBox: {},
+    VoiceCheckBox: {toggled: signal()}, LicenseBox: {}, ShortcutBox: {},
     NoticeBox: {}, NoticeLabel: {}, SpaceBox: {},
   },
 };
@@ -70,6 +76,7 @@ let mode = 'install';
 const records = [
   [appName, 'EasyDiffraction', 123500000],
   [assistantName, 'AI assistant', 27500000],
+  [voiceName, 'Voice input for AI assistant', 190000000],
 ];
 const components = records.map(([name, displayName, bytes]) => ({
   name,
@@ -157,6 +164,10 @@ assert.deepEqual(buttonClicks.splice(0), ['Next'], 'Introduction passes without 
 wizard.TargetDirectoryPageCallback();
 assert.deepEqual(buttonClicks, [], 'Install waits for the user on the first stop');
 assert.equal(fields.AssistantCheckBox.checked, true, 'The assistant starts selected');
+assert.equal(fields.VoiceCheckBox.checked, false, 'Voice input starts unselected');
+assert.equal(fields.VoiceBox.visible, true, 'A carried voice component has its row');
+assert.equal(fields.VoiceCheckBox.text, 'Voice input for AI assistant', 'The voice row takes its component name');
+assert.equal(fields.VoiceSizeLabel.text, '190.00 MB', 'The voice row shows its own size');
 assert.match(fields.SpaceLabel.text, /^151\.00 MB needed/, 'Install space includes both components');
 assert.match(fields.LicenseLink.text, /https:\/\/www\.gnu\.org\/licenses\/gpl-3\.0\.html/, 'The checkbox has a link to the GPL');
 
@@ -166,6 +177,11 @@ assert.deepEqual(buttonClicks.splice(0), ['Back'], 'An unchecked license returns
 assert.equal(fields.NoticeBox.visible, true, 'The refusal displays its explanation on the Install page');
 assert.match(fields.NoticeLabel.text, /accept.*license/i, 'The refusal names the unmet license choice');
 
+fields.VoiceCheckBox.checked = true;
+fields.VoiceCheckBox.toggled.emit(true);
+assert.match(fields.SpaceLabel.text, /^341\.00 MB needed/, 'Ticking voice input adds its bytes');
+fields.VoiceCheckBox.checked = false;
+fields.VoiceCheckBox.toggled.emit(false);
 fields.AssistantCheckBox.checked = false;
 fields.AssistantCheckBox.toggled.emit(false);
 assert.match(fields.SpaceLabel.text, /^123\.50 MB needed/, 'Unticking the assistant removes its bytes');

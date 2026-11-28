@@ -3,9 +3,10 @@
 <!-- The folder field and the choices on the installer's one page (assistantscript.qs, Installer.qs): the folder
      with the space the installation needs under it, then one group of EasyDiffraction, the Maintenance Tool (both
      ticked and fixed), the AI assistant and voice input with their sizes, then the licence and a desktop shortcut on
-     Windows and Linux. Also the maintenance tool's choice page when adding, removing or updating: the logo and heading,
-     the space line and the same rows; it has no window title, so that page has no header. The Maintenance Tool's row
-     and the sizes are there from the start, so the rows are spaced once, with every row in place. -->
+     Windows and Linux. A component the installer does not carry has no row. Also the maintenance tool's choice page
+     when adding, removing or updating: the logo and heading, the space line and the same rows; it has no window
+     title, so that page has no header. The Maintenance Tool's row and the sizes are there from the start, so the rows
+     are spaced once, with every row in place. -->
 <ui version="4.0">
  <class>AssistantForm</class>
  <widget class="QWidget" name="AssistantForm">
@@ -367,7 +368,6 @@
      </layout>
     </widget>
    </item>
-   <!-- Voice input, under the AI assistant: shown where the installer has the component (Installer.qs). -->
    <item>
     <widget class="QWidget" name="VoiceRowGap">
      <property name="minimumSize">
@@ -386,9 +386,6 @@
    </item>
    <item>
     <widget class="QWidget" name="VoiceBox">
-     <property name="visible">
-      <bool>false</bool>
-     </property>
      <layout class="QHBoxLayout" name="VoiceRow">
       <property name="spacing">
        <number>8</number>
