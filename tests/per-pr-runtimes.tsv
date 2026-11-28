@@ -10,10 +10,11 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-27T05:02:24Z
+# measured_utc = 2026-11-28T02:52:32Z
 #
-# Recorded from: merge of main into the task branch; banked rows of both carried unchanged
-# Module-scoped fixture costs recorded: 221
+# Recorded from: measured test run (20 node(s) measured once, 187657 banked, 0 stale row(s) dropped)
+# Collected tests: 267611; with a reported duration: 86302
+# Module-scoped fixture costs recorded: 222
 #
 # Breaches are decided PER TIER against the table
 # below, which the loader validates against the code constants - a manifest must state
@@ -28,12 +29,12 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 267591
+# inventory_python = 267611
 # inventory_cpp = 0
-# inventory_measured = 187657
+# inventory_measured = 187677
 # inventory_unmeasured = 79934
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
-# inventory_pr_python = 92680
+# inventory_pr_python = 92700
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -2624,6 +2625,11 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_background_term_ids.py::
 0.000	tests/integration/py/test_c13_t9_shift_snapshot.py::test_zero_fixed_shift_snapshot_survives_save_load_undo[transparency-1-xray]
 0.020	tests/integration/py/test_c13_t9_shift_snapshot.py::test_zero_fixed_shift_snapshot_survives_save_load_undo[transparency-2-neutron]
 0.010	tests/integration/py/test_c13_t9_shift_snapshot.py::test_zero_fixed_shift_snapshot_survives_save_load_undo[transparency-2-xray]
+0.040	tests/integration/py/test_c14_t4_neutron_source.py::test_deuterium_spelling_preserves_signed_default_neutron_amplitude[None-2H]
+0.020	tests/integration/py/test_c14_t4_neutron_source.py::test_deuterium_spelling_preserves_signed_default_neutron_amplitude[None-D]
+0.020	tests/integration/py/test_c14_t4_neutron_source.py::test_deuterium_spelling_preserves_signed_default_neutron_amplitude[rauch2003ext-2H]
+0.020	tests/integration/py/test_c14_t4_neutron_source.py::test_deuterium_spelling_preserves_signed_default_neutron_amplitude[rauch2003ext-D]
+0.010	tests/integration/py/test_c14_t4_neutron_source.py::test_missing_default_neutron_isotope_names_the_working_sears_source
 0.020	tests/integration/py/test_c14_t4_neutron_source.py::test_named_default_matches_omission_and_independent_table_for_every_element[157Gd]
 0.010	tests/integration/py/test_c14_t4_neutron_source.py::test_named_default_matches_omission_and_independent_table_for_every_element[Ag]
 0.010	tests/integration/py/test_c14_t4_neutron_source.py::test_named_default_matches_omission_and_independent_table_for_every_element[Al]
@@ -2730,6 +2736,9 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_background_term_ids.py::
 0.000	tests/integration/py/test_c14_t4_neutron_source.py::test_wrong_probe_and_unknown_source_are_structured_errors[neutron-xray_form_factor-wk1995]
 0.000	tests/integration/py/test_c14_t4_neutron_source.py::test_wrong_probe_and_unknown_source_are_structured_errors[xray-neutron_scattering_length-rauch2003ext]
 0.000	tests/integration/py/test_c14_t4_neutron_source.py::test_wrong_probe_and_unknown_source_are_structured_errors[xray-neutron_scattering_length-sears1992]
+0.010	tests/integration/py/test_c14_t4_neutron_source.py::test_xray_isotope_calculates_with_the_neutral_elements_form_factor[13C-C]
+0.010	tests/integration/py/test_c14_t4_neutron_source.py::test_xray_isotope_calculates_with_the_neutral_elements_form_factor[2H-H]
+0.010	tests/integration/py/test_c14_t4_neutron_source.py::test_xray_isotope_calculates_with_the_neutral_elements_form_factor[D-H]
 0.000	tests/integration/py/test_c14_t4_reference.py::test_named_default_extension_set_matches_booklet
 0.000	tests/integration/py/test_c15_t1_xray.py::test_c33_lif_counter_is_derived_from_filename_difference
 0.080	tests/integration/py/test_c15_t1_xray.py::test_continuous_default_reaches_edi_at_nonlab_wavelength[0-False]
@@ -177217,6 +177226,8 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_import_contract.py::
 0.000	tests/integration/py/test_cif_reader_regression.py::test_main_reader_model_regression_pin_changes_only_published_parameter_state[structure:tests/fixtures/single_crystal/projects/sc-neut-tof_taurine_basic/structures/structure.edi]
 0.000	tests/integration/py/test_cif_reader_regression.py::test_main_reader_model_regression_pin_changes_only_published_parameter_state[structure:tests/fixtures/table_display/structures/structure.edi]
 0.000	tests/integration/py/test_cif_reader_regression.py::test_reader_regression_pin_population_is_not_empty
+0.950	tests/integration/py/test_cod_audit_offline.py::test_census_run_and_export_check_revisions_from_a_local_zip
+0.650	tests/integration/py/test_cod_audit_offline.py::test_snapshot_and_compare_classify_local_published_inputs
 0.020	tests/integration/py/test_cod_cif_compatibility.py::test_cif11_reads_a_bare_value_starting_with_a_curly_brace[{[Co4OH].2MeCN}n]
 0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif11_reads_a_bare_value_starting_with_a_curly_brace[}text]
 0.000	tests/integration/py/test_cod_cif_compatibility.py::test_cif11_refuses_an_unquoted_leading_square_bracket[[text]]
@@ -183831,6 +183842,14 @@ UNMEASURED:not-completed-in-this-run	tests/integration/py/test_project_save_fina
 0.170	tests/integration/py/test_public_workflow_ownership.py::test_reusable_workflow_allowance_refuses_unknown_or_missing_ownership[not-callable]
 0.170	tests/integration/py/test_public_workflow_ownership.py::test_reusable_workflow_allowance_refuses_unknown_or_missing_ownership[other-local]
 0.170	tests/integration/py/test_public_workflow_ownership.py::test_reusable_workflow_allowance_refuses_unknown_or_missing_ownership[remote]
+0.000	tests/integration/py/test_published_cif.py::test_calcite_space_group_suffix_selects_the_declared_axes[ :H-h-metric2]
+0.000	tests/integration/py/test_published_cif.py::test_calcite_space_group_suffix_selects_the_declared_axes[ :R-r-metric3]
+0.000	tests/integration/py/test_published_cif.py::test_calcite_space_group_suffix_selects_the_declared_axes[ H-h-metric0]
+0.000	tests/integration/py/test_published_cif.py::test_calcite_space_group_suffix_selects_the_declared_axes[ R-r-metric1]
+0.000	tests/integration/py/test_published_cif.py::test_missing_occupancy_is_filled_and_reported_for_each_published_site
+0.000	tests/integration/py/test_published_cif.py::test_published_cell_and_site_values_are_preserved
+0.000	tests/integration/py/test_published_cif.py::test_published_site_with_no_label_or_coordinates_is_refused_by_name
+0.000	tests/integration/py/test_published_cif.py::test_unquoted_publication_text_preserves_the_following_model_values
 0.000	tests/integration/py/test_published_prompt_evidence.py::test_actual_published_trial_retains_execution_and_distinct_scientific_findings[cli]
 0.000	tests/integration/py/test_published_prompt_evidence.py::test_actual_published_trial_retains_execution_and_distinct_scientific_findings[python]
 0.000	tests/integration/py/test_published_prompt_evidence.py::test_current_trials_cannot_rewrite_the_original_failed_export[changed-failure]
@@ -259887,6 +259906,8 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_structure_bonds_and_types.py:
 UNMEASURED:failed-in-this-run	tests/system/py/test_structure_bonds_and_types.py::test_real_structure_bonds_and_probe_types[test_active_probe_types_and_element_colour_regression_pin:neutron]
 UNMEASURED:failed-in-this-run	tests/system/py/test_structure_bonds_and_types.py::test_real_structure_bonds_and_probe_types[test_active_probe_types_and_element_colour_regression_pin:xray]
 UNMEASURED:failed-in-this-run	tests/system/py/test_structure_bonds_and_types.py::test_real_structure_bonds_and_probe_types[test_bond_cutoffs_change_displayed_cubic_distances_and_persist]
+0.000	tests/system/py/test_structure_bonds_and_types.py::test_real_structure_bonds_and_probe_types[test_default_neutron_offers_both_spellings_with_one_3d_colour_and_bonds]
+0.000	tests/system/py/test_structure_bonds_and_types.py::test_real_structure_bonds_and_probe_types[test_xray_text_apply_agrees_with_the_table_and_scene]
 0.590	tests/system/py/test_structure_cif_refusal_app.py::test_load_cif_imports_supported_values_and_refuses_ambiguous_blocks[dot]
 0.420	tests/system/py/test_structure_cif_refusal_app.py::test_load_cif_imports_supported_values_and_refuses_ambiguous_blocks[multiblock]
 0.420	tests/system/py/test_structure_cif_refusal_app.py::test_load_cif_imports_supported_values_and_refuses_ambiguous_blocks[underscore]
@@ -267819,6 +267840,7 @@ UNMEASURED:not-completed-in-this-run	tests/unit/py/test_web_science_identity.py:
 # module-cost: 8.957	tests/system/py/test_staging_cleanup.py
 # module-cost: 133.169	tests/system/py/test_status_fit_controls.py
 # module-cost: 9.952	tests/system/py/test_structure_backend.py
+# module-cost: 11.822	tests/system/py/test_structure_bonds_and_types.py
 # module-cost: 1.294	tests/system/py/test_survey_events.py
 # module-cost: 6.259	tests/system/py/test_thread_selector.py
 # module-cost: 44.335	tests/system/py/test_tutorial_app_lifecycle.py

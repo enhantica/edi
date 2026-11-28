@@ -11,6 +11,9 @@ import zipfile
 from pathlib import Path
 
 import edi
+import pytest
+
+from tools.probes import cod_cif_audit, cod_cif_census
 
 ROOT = Path(__file__).resolve().parents[3]
 PROBES = ROOT / 'tools/probes'
@@ -23,9 +26,9 @@ PUBLISHED_DIGESTS = {
 }
 
 
-def _cli(script, *args, check=True):
+def _snapshot(cache, output):
     process = subprocess.run(
-        [sys.executable, str(PROBES / script), *map(str, args)],
+        [sys.executable, str(PROBES / 'cod_cif_audit.py'), 'snapshot', str(cache), str(output)],
         cwd=ROOT,
         env={
             **os.environ,
@@ -37,9 +40,14 @@ def _cli(script, *args, check=True):
         text=True,
         timeout=15,
     )
-    if check:
-        assert process.returncode == 0, f'The offline tool runs successfully: {process.stderr}'
-    return process
+    assert process.returncode == 0, f'The offline snapshot runs successfully: {process.stderr}'
+
+
+def _compare(monkeypatch, baseline, candidate, output):
+    monkeypatch.setattr(
+        sys, 'argv', ['cod_cif_audit.py', 'compare', *map(str, (baseline, candidate, output))]
+    )
+    cod_cif_audit.main()
 
 
 def _rows(path):
@@ -60,7 +68,7 @@ def _assert_revisions_and_bytes(rows):
         )
 
 
-def test_snapshot_and_compare_classify_local_published_inputs(tmp_path):
+def test_snapshot_and_compare_classify_local_published_inputs(tmp_path, monkeypatch):
     pinned = _rows(PROBES / 'cod-cif-import.csv')
     for entry, digest in PUBLISHED_DIGESTS.items():
         assert pinned[entry]['source_url'].endswith(f'/{entry}.cif@{REVISIONS[entry]}'), (
@@ -74,9 +82,8 @@ def test_snapshot_and_compare_classify_local_published_inputs(tmp_path):
     shutil.copytree(FIXTURES, cache, ignore=shutil.ignore_patterns('*.py', '__pycache__'))
     baseline, changed = tmp_path / 'baseline.json', tmp_path / 'changed.json'
     output = tmp_path / 'comparison.csv'
-    tool = 'cod_cif_audit.py'
-    _cli(tool, 'snapshot', cache, baseline)
-    _cli(tool, 'compare', baseline, baseline, output)
+    _snapshot(cache, baseline)
+    _compare(monkeypatch, baseline, baseline, output)
     rows = _rows(output)
     _assert_revisions_and_bytes(rows)
     expected = {
@@ -98,10 +105,9 @@ def test_snapshot_and_compare_classify_local_published_inputs(tmp_path):
     edited['entries']['1000007']['sha256'] = '0' * 64
     changed.write_text(json.dumps(edited), encoding='utf-8')
     rejected = tmp_path / 'invalid.csv'
-    failure = _cli(tool, 'compare', baseline, changed, rejected, check=False)
-    assert failure.returncode != 0 and '1000007' in failure.stderr and not rejected.exists(), (
-        'The audit rejects a comparison of different CIF bytes before writing a result'
-    )
+    with pytest.raises(ValueError, match=r'COD 1000007: snapshot CIF bytes differ'):
+        _compare(monkeypatch, baseline, changed, rejected)
+    assert not rejected.exists(), 'The audit refuses differing CIF bytes before writing a result'
 
 
 def test_census_run_and_export_check_revisions_from_a_local_zip(tmp_path):
@@ -127,30 +133,31 @@ def test_census_run_and_export_check_revisions_from_a_local_zip(tmp_path):
 
     extension = Path(edi._edi.__file__).parent
     package = Path(edi.__file__).parents[1]
-    census = 'cod_cif_census.py'
-    _cli(
-        census,
+    run = [
         'run',
         '--database',
-        database,
+        str(database),
         '--ids',
-        ids,
+        str(ids),
         '--revisions',
-        revisions,
+        str(revisions),
         '--before-lib',
-        package,
+        str(package),
         '--after-lib',
-        package,
+        str(package),
         '--before-extension',
-        extension,
+        str(extension),
         '--after-extension',
-        extension,
+        str(extension),
         '--local-zip',
-        archive,
+        str(archive),
         '--jobs',
-        1,
+        '1',
+    ]
+    assert cod_cif_census.main(run) == 0, 'The census completes an offline run from the local ZIP'
+    assert cod_cif_census.main(['export', str(database), str(output)]) == 0, (
+        'The census exports the completed audit database through its CLI entry point'
     )
-    _cli(census, 'export', database, output)
     rows = _rows(output)
     _assert_revisions_and_bytes(rows)
     assert all(
