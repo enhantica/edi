@@ -478,7 +478,21 @@ namespace {
 // A refusal in plain words for the page (the owner, 2026-11-19): crysta's text names the item it refused
 // (`_category.item 'value' ...`), which the page does not show; the known propagation-vector reasons are said as
 // what the user can do.
+QString plain_reason(const QString& raw);
+
+// The plain reason, then where the analysis is run when the core named it (A10; review 29): the rewording below must
+// not drop the routes the core appended to a magnetic structure's refusal.
 QString plain_refusal(const QString& raw) {
+    static const QString marker = QStringLiteral("; run the magnetic symmetry analysis again");
+    const qsizetype at = raw.indexOf(marker);
+    if (at < 0) return plain_reason(raw);
+    QString reason = plain_reason(raw.left(at));
+    if (!reason.endsWith(QLatin1Char('.'))) reason += QLatin1Char('.');
+    const QString routes = raw.mid(at + 2);
+    return reason + QLatin1Char(' ') + routes.left(1).toUpper() + routes.mid(1) + QLatin1Char('.');
+}
+
+QString plain_reason(const QString& raw) {
     QString text = raw;
     static const QRegularExpression tag(QStringLiteral(R"(^_[A-Za-z0-9_]+\.[A-Za-z0-9_.-]+\s+'[^']*'\s*:?\s*)"));
     text.remove(tag);
