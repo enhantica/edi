@@ -27,6 +27,24 @@
 namespace edi_app {
 
 // Built only with the assistant, so the web build carries no provider types (ADR-0108).
+// The open sign-in as the panel shows it: the page, a device code and a question, each empty when absent.
+struct AssistantSignInDetails {
+    Q_GADGET
+    QML_VALUE_TYPE(assistantSignInDetails)
+    Q_PROPERTY(QString url MEMBER url CONSTANT)
+    Q_PROPERTY(bool browserOpened MEMBER browserOpened CONSTANT)
+    Q_PROPERTY(QString code MEMBER code CONSTANT)
+    Q_PROPERTY(QString prompt MEMBER prompt CONSTANT)
+    /// "question" for Copilot's yes-or-no question, "code" for a code to paste; empty without a prompt.
+    Q_PROPERTY(QString promptKind MEMBER promptKind CONSTANT)
+
+   public:
+    QString url;
+    bool browserOpened = false;
+    QString code, prompt, promptKind;
+    bool operator==(const AssistantSignInDetails&) const = default;
+};
+
 // One assistant provider as the connect and Account dialogs show it (edi ADR-0108).
 struct AssistantProviderInfo {
     Q_GADGET
@@ -159,7 +177,7 @@ class AssistantViewModel : public QObject {
     /// The open sign-in as the runtime reports it: `url`, `browserOpened` (the runtime opened the page itself), `code`
     /// (a device code to type on the page), `prompt` and `promptKind` (`code` for a pasted code, `question` for a yes or
     /// no question). Empty while no sign-in is open (ADR-0108 §4, §5).
-    Q_PROPERTY(QVariantMap signInDetails READ signInDetails NOTIFY signInDetailsChanged)
+    Q_PROPERTY(edi_app::AssistantSignInDetails signInDetails READ signInDetails NOTIFY signInDetailsChanged)
     Q_PROPERTY(QString contextPreview READ contextPreview NOTIFY contextPreviewChanged)
     Q_PROPERTY(QString contextConsentIdentity READ contextConsentIdentity NOTIFY contextConsentIdentityChanged)
     Q_PROPERTY(bool draftAdmissionReady READ draftAdmissionReady NOTIFY draftAdmissionReadyChanged)
@@ -312,7 +330,7 @@ class AssistantViewModel : public QObject {
     QString managedSettingsNotice() const;
     bool claudeManagedSettingsFound() const;
     AssistantProviderInfo activeProvider() const;
-    QVariantMap signInDetails() const;
+    AssistantSignInDetails signInDetails() const;
     /// Write the user's answer to the open sign-in's prompt to the sign-in process only; edi keeps no copy.
     Q_INVOKABLE void answerSignIn(const QString& answer);
     /// The user read the managed-settings notice for the active account; remembered per account.

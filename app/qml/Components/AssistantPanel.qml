@@ -705,10 +705,10 @@ Popup {
                             readonly property var details: panel.assistant.signInDetails
                             width: parent.width
                             spacing: AppSizes.unit * 0.5
-                            visible: panel.assistant.state === "connecting" && (details.url !== undefined || details.code !== undefined || details.prompt !== undefined)
+                            visible: panel.assistant.state === "connecting" && (details.url.length > 0 || details.code.length > 0 || details.prompt.length > 0)
                             SignInButton {
                                 objectName: "assistant.signInOpenPage"
-                                visible: signInSteps.details.url !== undefined
+                                visible: signInSteps.details.url.length > 0
                                 fontIcon: "external-link-alt"
                                 text: qsTr("Open sign-in page")
                                 ToolTip.visible: hovered
@@ -716,12 +716,12 @@ Popup {
                                 onClicked: Qt.openUrlExternally(signInSteps.details.url)
                             }
                             Row {
-                                visible: signInSteps.details.code !== undefined
+                                visible: signInSteps.details.code.length > 0
                                 spacing: AppSizes.unit * 0.5
                                 EaElements.Label {
                                     objectName: "assistant.signInCode"
                                     anchors.verticalCenter: parent.verticalCenter
-                                    text: qsTr("Code: %1").arg(signInSteps.details.code ?? "")
+                                    text: qsTr("Code: %1").arg(signInSteps.details.code)
                                     textFormat: Text.PlainText
                                     font.bold: true
                                 }
@@ -730,7 +730,7 @@ Popup {
                                     anchors.verticalCenter: parent.verticalCenter
                                     fontIcon: "copy"
                                     text: qsTr("Copy")
-                                    onClicked: ApplicationInfo.copyText(signInSteps.details.code ?? "")
+                                    onClicked: ApplicationInfo.copyText(signInSteps.details.code)
                                 }
                             }
                             // Copilot asks whether to keep its token in a plain file; No is the default.
@@ -738,7 +738,7 @@ Popup {
                                 objectName: "assistant.signInQuestion"
                                 width: parent.width
                                 visible: signInSteps.details.promptKind === "question"
-                                text: signInSteps.details.prompt ?? ""
+                                text: signInSteps.details.prompt
                                 textFormat: Text.PlainText
                                 wrapMode: Text.WordWrap
                             }

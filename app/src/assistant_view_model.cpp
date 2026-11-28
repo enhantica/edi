@@ -21589,23 +21589,22 @@ AssistantProviderInfo AssistantViewModel::activeProvider() const {
     return {QStringLiteral("chatgpt"), QStringLiteral("ChatGPT"), QStringLiteral("OpenAI"), false};
 #endif
 }
-QVariantMap AssistantViewModel::signInDetails() const {
-    QVariantMap details;
+AssistantSignInDetails AssistantViewModel::signInDetails() const {
+    AssistantSignInDetails details;
 #ifndef __EMSCRIPTEN__
     const auto* s = state_.get();
     if (!s->generic_mode || !s->generic_connecting || s->generic_authenticated || s->generic_login.isEmpty()) return details;
     const auto& info = s->generic_login_info;
     // The address was checked against the provider's sign-in hosts when it arrived.
-    if (info.value("authUrl").isString()) details["url"] = info.value("authUrl").toString();
-    details["browserOpened"] = info.value("browserOpened").toBool();
+    details.url = info.value("authUrl").toString();
+    details.browserOpened = info.value("browserOpened").toBool();
     // Shown as they are, so bounded and on one line.
     const auto line = [](const QJsonValue& value) { return State::bounded_error(value.toString().simplified()).left(200); };
-    if (info.value("userCode").isString() && !info.value("userCode").toString().isEmpty()) details["code"] = line(info.value("userCode"));
-    if (info.value("prompt").isString() && !info.value("prompt").toString().isEmpty()) {
-        details["prompt"] = line(info.value("prompt"));
-        // Claude asks for a code from its page; Copilot asks whether to keep its token in a plain file.
-        details["promptKind"] = s->active_provider_account.provider == AssistantProviderId::Copilot ? QStringLiteral("question") : QStringLiteral("code");
-    }
+    details.code = line(info.value("userCode"));
+    details.prompt = line(info.value("prompt"));
+    // Claude asks for a code from its page; Copilot asks whether to keep its token in a plain file.
+    if (!details.prompt.isEmpty())
+        details.promptKind = s->active_provider_account.provider == AssistantProviderId::Copilot ? QStringLiteral("question") : QStringLiteral("code");
 #endif
     return details;
 }
