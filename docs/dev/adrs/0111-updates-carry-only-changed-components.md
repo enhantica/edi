@@ -26,7 +26,8 @@ upload only those.
 1. **A component's input identity** is a sha256 over what it is built from, never over the built bytes:
    - its metadata folder, with `Version` and `ReleaseDate` taken out of `package.xml`;
    - the files `COMPONENT_INPUTS` in `tools/installer/package.py` declares for it, by their content: for the
-     AI assistant the runtime recipe, which pins the runtime's version and archive checksums, and its licences;
+     AI assistants (ChatGPT, Claude, GitHub Copilot) each runtime's recipe, which pins its version and archive
+     checksums, and ChatGPT's licences;
      for the Maintenance Tool the Installer Framework pin and the tool's pages and resources;
    - a build number from the same table, raised when a component's build changes in a way its files do not show.
 

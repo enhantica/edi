@@ -77,6 +77,8 @@ REPLACED_COMPONENTS = {
 COMPONENT_INPUTS = {
     # The recipe pins the runtime's version and archive checksums.
     ASSISTANT_COMPONENT: (1, ('tools/deps/assistant-runtime', 'data/assistant/runtime')),
+    CLAUDE_COMPONENT: (1, ('tools/deps/claude-runtime',)),
+    COPILOT_COMPONENT: (1, ('tools/deps/copilot-runtime',)),
     # The Framework pin, and the pages and resources the tool is built with.
     MAINTENANCE_COMPONENT: (
         1,

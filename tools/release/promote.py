@@ -16,7 +16,7 @@ import zipfile
 from collections.abc import Callable
 from pathlib import Path, PurePosixPath
 
-from assistants import distributed_assistants
+from assistants import DISTRIBUTION_SETTINGS, distributed_assistants
 from legacy_feed import write_feeds
 from plan import installer_stem, markdown_notes, validate_history, version_key
 from versions import is_version
@@ -362,8 +362,9 @@ COMPONENT_ID = r'org\.easydiffraction(?:\.[A-Za-z0-9_-]+)+'
 ARCHIVE_NAME = r'[A-Za-z][A-Za-z0-9._-]*\.7z'
 
 # The data/distribution.json setting that can keep a component off the release and the download
-# site; the component is published only while its setting says "public". None yet.
-WITHHOLDING_SETTINGS: dict[str, str] = {}
+# site; the component is published only while its setting says "public": Claude's and GitHub
+# Copilot's (tools/release/assistants.py, edi ADR-0108).
+WITHHOLDING_SETTINGS: dict[str, str] = DISTRIBUTION_SETTINGS
 
 
 def require_archive_size(path: Path, limit: int | None = None) -> None:
