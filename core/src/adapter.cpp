@@ -8909,10 +8909,18 @@ FitResultBase Project::fit_scan(const IterationCallback& on_iteration,
                 scan_preamble.completed_rows = read_scan_rows(resume_csv, csv_path);
                 // A complete scan (every file with a row or a note) is fitted again as a new pass that replaces
                 // its rows (owner decision 2026-11-27): none of them is this run's, so none is carried in.
-                if (scan_preamble_complete(scan_preamble.completed_rows, resume_csv.parent_path() / "scan-notes.csv",
-                                           *total_files, joint)) {
-                    scan_preamble.completed_rows.clear();
+                // The run's own decision (crysta's scan drivers): a Parametric fit always publishes a whole new set; a
+                // complete scan, or a pending start on a fitted point (crysta ADR-0136 decision 9), is a new pass.
+                bool new_pass = fitting_mode == "parametric" ||
+                                scan_preamble_complete(scan_preamble.completed_rows,
+                                                       resume_csv.parent_path() / "scan-notes.csv", *total_files, joint);
+                for (const auto& start : sequential_fit.starts) {
+                    for (const ScanFileRecord& row : scan_preamble.completed_rows) {
+                        new_pass = new_pass || scan_file_name(row.file_name) == start->point.value() ||
+                                   row.file_name == start->point.value();
+                    }
                 }
+                if (new_pass) scan_preamble.completed_rows.clear();
                 on_scan_start(scan_preamble);
                 preamble_delivered = true;
             }
