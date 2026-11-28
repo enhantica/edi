@@ -117,6 +117,7 @@ TestCase {
         tryVerify(() => list.itemAtIndex(index) && Ui.exposed(list.itemAtIndex(index)), 2000, "The requested choice is visibly instantiated");
         press(list.itemAtIndex(index));
         tryCompare(combo.popup, "opened", false, 2000, "The selector closes after pointer selection");
+        tryCompare(combo.popup, "visible", false, 2000, "The closed selector releases its popup pointer surface");
     }
     function identifies(item, suffix) {
         return String(item.uid || "").toLowerCase().replace(/-/g, "_").endsWith(suffix) || String(item.objectName || "").toLowerCase().startsWith("generated.") && String(item.objectName).toLowerCase().replace(/-/g, "_").endsWith(suffix);
@@ -162,6 +163,9 @@ TestCase {
             compare(fields.length, 3, "Typed k has three visible reciprocal-basis components");
             fields.sort((a, b) => a.placeholderText.localeCompare(b.placeholderText));
             vector.split(",").forEach((value, i) => {
+                if (fields[i].text === value)
+                    return;
+                tryCompare(fields[i], "enabled", true, 5000, "The typed k field becomes ready after the preceding entry");
                 press(fields[i]);
                 keyClick(Qt.Key_A, Qt.ControlModifier);
                 for (const character of value)
@@ -425,10 +429,15 @@ TestCase {
             return !!cobalt;
         }, 2000, "The selectable cobalt row reaches the dropdown");
         const choice = findChild(cobalt, "magnetic.site.0");
-        const cells = Array.from(cobalt.children).filter(item => item.visible && item.width > 0 && typeof item.horizontalAlignment === "number");
-        verify(choice && choice.checked && !choice.enabled && choice.parent === cells[cells.length - 1], "The checked cobalt has the selection checkbox in the last column");
-        verify(cells[0].marksCurrentRow && cells[0].text === "1" && cells[1].text === "Co1", "The dropdown leads with the grey-style row number and the actual site name");
-        verify(Render.descendants(cobalt).filter(item => item.locked === true && item.item).length === 4, "The dropdown renders the coordinates and occupancy as read-only Atom sites cells");
+        verify(choice && choice.checked && !choice.enabled, "The sole chosen cobalt site stays checked");
+        const cells = Render.descendants(cobalt).filter(item => item.visible);
+        const locked = cells.filter(item => item.locked === true && item.item);
+        const number = cells.find(item => item.marksCurrentRow && String(item.text) === "1");
+        const label = cells.find(item => item.text === "Co1");
+        const x = item => item.mapToItem(cobalt, 0, 0).x;
+        verify(number && label && x(number) < x(label), "The dropdown leads with the grey-style row number and the actual site name");
+        compare(locked.length, 4, "The dropdown renders the coordinates and occupancy as read-only Atom sites cells");
+        verify(locked.every(cell => x(cell) < x(choice)) && x(label) < x(choice), "The selection checkbox follows the last scientific value column");
         sites.popup.close();
         verify(!/Find k from data/i.test(Ui.text(popup().contentItem)), "Peak search is available from the experiment pattern");
     }
@@ -691,7 +700,7 @@ TestCase {
         compare(table.count, peaks.length, "Every chart pre-mark has one sidebar row");
         Ui.scrollIntoView(table.headerItem);
         const headings = Render.texts(table.headerItem).filter(Ui.rendered).map(label => label.text);
-        compare(headings, ["2θ (°)", "d (Å)", "Role"], "The table identifies the observed angle, spacing and indexing role");
+        compare(headings, ["2θ (°)", "d (Å)", "Role", "minus-circle"], "The table shows angle, spacing and role, with remove-all in the final header");
         checkMarkingNavigation(chart);
         const x = peaks[index].x;
         const peakLayer = chartControl("chart.peaks");
@@ -1017,7 +1026,8 @@ TestCase {
         tryCompare(Session.project, "calculating", false, 3000, "The Mn3O4 candidate finishes the linked powder calculation");
         const children = Probe.rows(Session.project.structures).filter(row => row.name !== "parent");
         compare(children.length, 1, "The published witness has exactly one added child");
-        const moments = Probe.rows(children[0].structure.atomSiteMoments);
+        const moments = Probe.rows(children[0].structure.atomSiteMoments).filter(row => row.ion !== "none");
+        verify(moments.length > 0 && moments.every(row => ["mx", "my", "mz"].every(axis => row[axis])), "The added Mn3O4 child exposes the real magnetic rows and their three components");
         verify(moments.some(row => ["mx", "my", "mz"].some(axis => Math.abs(row[axis].value) > 0)), "Mn3O4 retains a nonzero seeded magnetic moment");
         const bank = Probe.rows(Session.project.experiments)[0].experiment;
         const started = bank.measCalcPoints().calc.slice();
