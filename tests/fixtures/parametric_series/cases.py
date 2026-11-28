@@ -18,6 +18,21 @@ START_TAGS = (
 )
 
 
+def append_retired_starts(root, *rows, with_over=False):
+    """Write input in the removed point-start format for a compatibility witness."""
+    path = root / 'analysis/analysis.edi'
+    tags = (*START_TAGS, '_parametric_fit_start.over') if with_over else START_TAGS
+    path.write_text(path.read_text() + '\nloop_\n' + '\n'.join((*tags, *rows)) + '\n')
+
+
+def assert_no_persisted_starts(root):
+    text = (root / 'analysis/analysis.edi').read_text()
+    assert '_parametric_fit_start.' not in text, 'Project writes omit the retired start loop'
+    assert not (root / 'analysis/scan-starts-used.csv').exists(), (
+        'Scan runs keep no used-starts receipt on disk'
+    )
+
+
 def parameter(project, bank, path):
     experiment = project.experiments[bank]
     if path == 'linked_structure.phase.scale':

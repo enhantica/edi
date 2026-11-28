@@ -180,38 +180,26 @@ def test_parametric_fixed_and_free_shared_background_reload(tmp_path, fixed):
     )
 
 
-def test_sparse_start_duplicate_is_rejected(tmp_path):
+def test_duplicate_retired_starts_do_not_become_project_state(tmp_path):
     root = cases.scan(tmp_path / 'source', shared=False)
-    analysis = root / 'analysis/analysis.edi'
-    analysis.write_text(
-        analysis.read_text()
-        + '\nloop_\n'
-        + '\n'.join(cases.START_TAGS)
-        + '\np1.xy zeta.background.2.intensity 8\np1.xy zeta.background.2.intensity 9\n'
+    cases.append_retired_starts(
+        root, 'p1.xy zeta.background.2.intensity 8', 'p1.xy zeta.background.2.intensity 9'
     )
-    with pytest.raises((ValueError, RuntimeError), match=r'(?i)duplicate'):
-        engine.Project.load(root)
+    saved = tmp_path / 'saved'
+    engine.Project.load(root).save_as(saved)
+    cases.assert_no_persisted_starts(saved)
 
 
-def test_sparse_start_identity_survives_directory_copy(tmp_path):
+def test_retired_point_identity_and_value_drop_on_directory_copy(tmp_path):
     root = cases.scan(tmp_path / 'source', shared=False)
-    analysis = root / 'analysis/analysis.edi'
-    analysis.write_text(
-        analysis.read_text()
-        + '\nloop_\n'
-        + '\n'.join(cases.START_TAGS)
-        + '\np1.xy zeta.background.2.intensity 8.125\n'
-    )
-    engine.Project.load(root).save_as(tmp_path / 'saved')
-    text = (tmp_path / 'saved/analysis/analysis.edi').read_text()
-    assert all(tag in text for tag in cases.START_TAGS), (
-        'The sparse-start loop survives serialization'
-    )
-    assert 'p1.xy' in text, 'A start retains its data-relative point identity'
-    assert '8.125' in text, 'A start retains its independently authored value'
-    assert 'scan/p1.xy' not in text, (
-        'The persisted start key stays relative to the scan data directory'
-    )
+    cases.append_retired_starts(root, 'p1.xy zeta.background.2.intensity 8.125')
+    saved = tmp_path / 'saved'
+    engine.Project.load(root).save_as(saved)
+    cases.assert_no_persisted_starts(saved)
+    reopened = engine.Project.load(saved)
+    assert cases.parameter(reopened, 'zeta', 'background.1.intensity').value == pytest.approx(
+        3.25, abs=1e-12
+    ), 'Removing a retired point start leaves the authored template intact'
 
 
 def test_parametric_mode_requires_a_scan(tmp_path):
@@ -220,18 +208,20 @@ def test_parametric_mode_requires_a_scan(tmp_path):
         engine.Project.load(root)
 
 
-def test_shared_start_survives_and_unknown_point_start_is_dropped(tmp_path):
+def test_retired_shared_local_and_unknown_starts_all_drop(tmp_path):
     root = cases.scan(tmp_path / 'source')
-    analysis = root / 'analysis/analysis.edi'
-    analysis.write_text(
-        analysis.read_text()
-        + '\nloop_\n'
-        + '\n'.join(cases.START_TAGS)
-        + '\np1.xy zeta.background.1.intensity 8.125\np9.xy zeta.background.2.intensity 19.375\n'
-        + 'p1.xy zeta.background.2.intensity 8.25\n'
+    cases.append_retired_starts(
+        root,
+        'p1.xy zeta.background.1.intensity 8.125',
+        'p9.xy zeta.background.2.intensity 19.375',
+        'p1.xy zeta.background.2.intensity 8.25',
     )
-    engine.Project.load(root).save_as(tmp_path / 'saved')
-    text = (tmp_path / 'saved/analysis/analysis.edi').read_text()
-    assert '8.25' in text, 'A valid unshared point start survives reload'
-    assert '8.125' in text, 'A shared start survives as the series start'
-    assert '19.375' not in text, 'An unlisted point cannot acquire a persisted start'
+    saved = tmp_path / 'saved'
+    engine.Project.load(root).save_as(saved)
+    cases.assert_no_persisted_starts(saved)
+    reopened = engine.Project.load(saved)
+    shared = cases.parameter(reopened, 'zeta', 'background.1.intensity')
+    assert shared.shared, 'Removing pending values preserves the actual Shared declaration'
+    assert shared.value == pytest.approx(3.25, abs=1e-12), (
+        'A retired shared start leaves the template value intact'
+    )
