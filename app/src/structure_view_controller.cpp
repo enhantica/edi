@@ -166,6 +166,9 @@ void StructureViewController::setReportStructure(const QString& id) {
 
 void StructureViewController::setActive(bool active) {
     if (active != active_) {
+        // A view left mid-animation settles where it is and shares that pose, so the page shown next opens on the
+        // project's one camera, not on its own earlier pose (review 29).
+        if (!active) stopAnimation();
         active_ = active;
         emit activeChanged();
         if (active_ && dirty_) {
