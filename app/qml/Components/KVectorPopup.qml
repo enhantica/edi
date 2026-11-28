@@ -13,14 +13,14 @@ import edi.app
 
 // The k-vector popup (owner, 2026-11-27): the propagation vectors that index the peaks marked on the pattern chart,
 // a short list with the commensurate special points first, and only k whose magnetic cell holds at most 24 parent
-// cells (crysta ADR-0137 A2, A11). Choosing one opens the magnetic symmetry popup with that k.
+// cells. Choosing one opens the magnetic symmetry popup with that k.
 AppDialog {
     id: popup
     objectName: "chart.kVectorPopup"
 
     property ProjectViewModel project: null
-    // Find k's snapshot, taken when Find k was pressed (review 16, F4): the search runs on its marks, and Analyse
-    // carries it on to the analysis and Add.
+    // Find k's snapshot, taken when Find k was pressed: the search runs on its marks, and Analyse carries it on
+    // to the analysis and Add.
     property var snapshot: ({})
     readonly property var markedPeaks: snapshot.marks ?? []
 
@@ -47,7 +47,7 @@ AppDialog {
 
     title: qsTr("Possible propagation vectors")
     // As tall as its rows, up to the height that keeps the navigation bar and the status bar clear, centred on the
-    // window as the app's other dialogs are (conductor seq 48).
+    // window as the app's other dialogs are.
     readonly property real maximumHeight: parent ? parent.height - 2 * (EaStyle.Sizes.appBarHeight + EaStyle.Sizes.fontPixelSize) : 480
     width: parent ? Math.min(Math.round(parent.width * 0.6), 760) : 700
     height: Math.round(Math.min(maximumHeight, implicitHeight))
@@ -99,7 +99,7 @@ AppDialog {
             text: popup.refusal
         }
         // The ranked vectors, in the app's table (DataTable, as Excluded regions and the parameter table): the row
-        // number marks the chosen k, a click chooses it and a double click analyses it (conductor seq 50).
+        // number marks the chosen k, a click chooses it and a double click analyses it.
         DataTable {
             id: list
             objectName: "chart.kVectors"
@@ -141,8 +141,8 @@ AppDialog {
                 id: row
                 required property var modelData
                 objectName: `chart.kVector.${row.index}`
-                // A press anywhere on the row makes it current, from an area over all its cells (review 27): it
-                // takes no press for itself, so the cells and the double click below still get theirs.
+                // A press anywhere on the row makes it current, from an area over all its cells: it takes no
+                // press for itself, so the cells and the double click below still get theirs.
                 MouseArea {
                     objectName: `chart.kVector.${row.index}.press`
                     parent: row
@@ -260,7 +260,7 @@ AppDialog {
         });
     }
 
-    // Analyse the chosen k: the data, links and marks the search ran on must still hold (review 12, F19).
+    // Analyse the chosen k: the data, links and marks the search ran on must still hold.
     function analyse() {
         if (current < 0 || current >= rows.length)
             return;

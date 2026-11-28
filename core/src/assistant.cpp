@@ -41,7 +41,7 @@ J parameters(Project& project) {
     std::map<const Parameter*, std::string> names;
     for (const auto& slot : named_slots(project)) names[slot.parameter] = slot.unique_name;
     A rows;
-    // A disabled linked structure's or link's parameter is in no view (owner decision 2026-11-27): edi::ActiveView.
+    // A disabled linked structure's or link's parameter is in no view: edi::ActiveView.
     const ActiveView shown(project);
     for (const auto& entry : parameter_entries(project)) {
         if (!shown.shown(entry.parameter)) continue;
@@ -176,8 +176,8 @@ J reflection_admission_summary(const Project& project, const ExperimentBase& exp
 std::uint64_t project_metadata_size(const Project* project) {
     if (!project) return encoded_fields({{"structures", 2}, {"datasets", 2},
         {"relations", encoded_fields({{"aliases", 2}, {"constraints", 2}})}});
-    // The scientific context shows what the user's views show (edi::ActiveView, review 33): no disabled phase, and
-    // only enabled links. The size below and the payload in project_metadata walk the same rows.
+    // The scientific context shows what the user's views show (edi::ActiveView): no disabled phase, and only
+    // enabled links. The size below and the payload in project_metadata walk the same rows.
     const ActiveView shown(*project);
     const auto structures = encoded_rows(shown.structures(), [](const auto& structure) {
         const auto sites = encoded_rows(structure->atom_sites, [](const auto& site) {
@@ -339,7 +339,7 @@ J project_metadata(const Project* project) {
 J diagnostics(Project* project) {
     A rows;
     if (project) {
-        const ActiveView shown(*project);  // a disabled phase's parameters are no diagnostic (review 33)
+        const ActiveView shown(*project);  // a disabled phase's parameters are no diagnostic
         for (const auto& entry : parameter_entries(*project)) {
             if (!shown.shown(entry.parameter)) continue;
             const auto& p = *entry.parameter;
@@ -1096,7 +1096,7 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
         std::map<const Parameter*, std::string> names;
         for (const auto& slot : named_slots(project)) names[slot.parameter] = slot.unique_name;
         std::map<std::string, std::pair<Parameter*, std::string>> rows;
-        // Only what the user's views show can be named by the assistant (edi::ActiveView, review 33).
+        // Only what the user's views show can be named by the assistant (edi::ActiveView).
         const ActiveView shown(project);
         for (const auto& row : parameter_entries(project)) {
             if (!shown.shown(row.parameter)) continue;

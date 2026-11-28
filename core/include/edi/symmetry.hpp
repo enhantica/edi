@@ -81,9 +81,9 @@ std::vector<WyckoffOption> wyckoff_positions(const Structure& structure);
 // letter to show or choose.
 bool takes_wyckoff_letter(const Structure& structure);
 
-// Where a site's Wyckoff letter comes from (crysta ADR-0137 B.1.6): the ordinary table (editable),
-// crysta's type IV derivation (read-only; `.` until the group verifies), or none (a type I-III
-// structure whose operators form no table setting).
+// Where a site's Wyckoff letter comes from: the ordinary table (editable), crysta's type IV
+// derivation (read-only; `.` until the group verifies), or none (a type I-III structure whose
+// operators form no table setting).
 enum class LetterSource { Table, Magnetic, None };
 LetterSource letter_source(const Structure& structure);
 
@@ -96,7 +96,7 @@ void check_magnetic_acceptance(const Structure& structure);
 // symmetry ties or fixes set from the free ones, and the symmetry form crysta derives; crysta
 // reports each value it replaces.
 // `restore`: a load, or an edit that changes no symmetry: each type IV site whose letter is stated keeps it and is
-// restored from it, and only a site without one is detected (owner decision 2026-11-27, addendum 2).
+// restored from it, and only a site without one is detected.
 void complete_atom_site_moments(Structure& structure, bool restore = false);
 
 // The covariance of moment `site`'s crystal-axis components and its structure's cell that every

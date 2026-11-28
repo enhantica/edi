@@ -2702,7 +2702,7 @@ struct AtomSite : std::enable_shared_from_this<AtomSite> {
     detail::WrittenText type_symbol;
     detail::WrittenText wyckoff_letter = "";  // Wyckoff letter (optional; "" = general)
     // A type IV site's signed stabiliser as its file saved it (`;`-joined signed triplets), so a load restores the
-    // site's symmetry as written and never detects it again (crysta review 21; owner decision 2026-11-27).
+    // site's symmetry as written and never detects it again.
     detail::WrittenText signed_site_symmetry = "";
     // `_atom_site.adp_type`, the type the site's values are in: Biso, Uiso, Bani, Uani or beta
     // (ADR-0027). A file that declares none reads as Biso; a save writes it. A geometry
@@ -5419,7 +5419,7 @@ class Project : public detail::ProjectAnchor {
     // `iucr_99` (always two digits, the default since the owner's record of 2026-10-24) or `iucr_19` (IUCr
     // recommendation 12), by crysta's rule.
     std::string su_rule = kDefaultSuRule;
-    // `project.edi` `_structure_view` (owner decision 2026-11-27): how the Structure view shows every structure, one
+    // `project.edi` `_structure_view`: how the Structure view shows every structure, one
     // set for the project, by item name; switching structures keeps it. A project saved before reads its first
     // structure's items once. Camera and zoom are per structure and never saved.
     detail::Written<std::map<std::string, std::string>> structure_view;
@@ -5534,9 +5534,9 @@ class Project : public detail::ProjectAnchor {
     // `Project.parameters` / `Project.free_parameters`).
     std::vector<Parameter*> parameters();
     std::vector<Parameter*> free_parameters();
-    // A disabled linked structure appears nowhere but the Structures and Linked structures tables (owner decision
-    // 2026-11-27): a structure some link names while no enabled link does, and the parameters views leave out, its
-    // own and each disabled link's scale and texture. One rule for every view; files keep them all.
+    // A disabled linked structure appears nowhere but the Structures and Linked structures tables: a structure
+    // some link names while no enabled link does, and the parameters views leave out, its own and each disabled
+    // link's scale and texture. One rule for every view; files keep them all.
     bool structure_hidden(const std::string& name) const;
     std::vector<const Parameter*> hidden_parameters();
 

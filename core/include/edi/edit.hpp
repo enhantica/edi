@@ -1314,9 +1314,9 @@ class Edit {
     static Edit add_magnetic_candidates(Project& project, std::shared_ptr<const PreparedMagneticCandidates> prepared) {
         return Edit([&project, prepared = std::move(prepared)] {
             check_magnetic_candidates(project, *prepared);  // the whole batch, before any of it lands
-            // The whole prospective project first, relations included (packet A9; review 31): a copy takes the
-            // batch and must hold the aliases and constraints that held before, else Add refuses with nothing
-            // changed. Relations already broken are the user's to fix and do not block Add.
+            // The whole prospective project first, relations included: a copy takes the batch and must hold
+            // the aliases and constraints that held before, else Add refuses with nothing changed. Relations
+            // already broken are the user's to fix and do not block Add.
             bool held = true;
             try {
                 Project before(project);
@@ -1326,8 +1326,8 @@ class Edit {
             }
             Project probe(project);
             place_magnetic_candidates(probe, *prepared);
-            // Every alias the batch adds names a parameter of the prospective project (review 32), whatever the state
-            // of the relations it already had.
+            // Every alias the batch adds names a parameter of the prospective project, whatever the state of the
+            // relations it already had.
             {
                 std::set<std::string> before;
                 for (const auto& alias : project.aliases) before.insert(alias->id.value());
@@ -1338,10 +1338,10 @@ class Edit {
                         throw std::invalid_argument("the added structures' texture alias '" + alias->id.value() +
                                                     "' would name no parameter");
             }
-            // The relations the batch adds, checked on their own whatever the old ones' state (review 35): a copy of the
-            // prospective project keeping only the new constraints and the aliases they and the new rows name must
-            // compile and complete in crysta. A copied self-cycle or two copies setting one target refuses here, while
-            // an unrelated original error, left for the user to repair, does not block Add.
+            // The relations the batch adds, checked on their own whatever the old ones' state: a copy of the prospective
+            // project keeping only the new constraints and the aliases they and the new rows name must compile and
+            // complete in crysta. A copied self-cycle or two copies setting one target refuses here, while an unrelated
+            // original error, left for the user to repair, does not block Add.
             {
                 std::set<std::string> old_aliases, old_constraints;
                 for (const auto& alias : project.aliases) old_aliases.insert(alias->id.value());
@@ -1395,8 +1395,8 @@ class Edit {
         for (const auto& structure : prepared.children()) structures.push_back(std::make_shared<Structure>(*structure));
         std::vector<std::vector<ItemVec<LinkedStructure>::Ptr>> links;
         std::vector<std::vector<ItemVec<PrefOrient>::Ptr>> texture;
-        // A link or texture row with no id is the parent's while the parent is the project's one structure (review
-        // 27); it is written with the parent's id before the children make that ambiguous.
+        // A link or texture row with no id is the parent's while the parent is the project's one structure; it is
+        // written with the parent's id before the children make that ambiguous.
         const bool lone = project.structures.size() == 1 && project.structures.front()->name.value() == prepared.parent;
         const auto parents = [&](const std::string& id) { return id == prepared.parent || (id.empty() && lone); };
         for (std::size_t e = 0; e < project.experiments.size(); ++e) {
@@ -1461,10 +1461,10 @@ class Edit {
         }
         project.structures.assign(std::move(structures));
     }
-    // The parent texture's relations, carried to each child's own texture parameters (packet A9; reviews 29 and 30).
-    // Only a constraint that sets a parent March–Dollase parameter is copied, as one setting the child's: its target
-    // is then a new parameter, so no target gains a second writer. One that the parent's texture drives elsewhere
-    // stays single. An alias's parameter keeps its experiment and field; only the phase part names the child.
+    // The parent texture's relations, carried to each child's own texture parameters (reviews 29 and 30). Only a
+    // constraint that sets a parent March–Dollase parameter is copied, as one setting the child's: its target is
+    // then a new parameter, so no target gains a second writer. One that the parent's texture drives elsewhere stays
+    // single. An alias's parameter keeps its experiment and field; only the phase part names the child.
     static void carry_texture_relations(Project& project, const PreparedMagneticCandidates& prepared,
                                         const std::set<const Parameter*>& parent_texture) {
         const auto split = [](const std::string& text) {
@@ -1482,8 +1482,8 @@ class Edit {
         std::map<std::string, std::vector<std::string>> parent_aliases;  // alias id -> its parameter name's parts
         const ActiveView view(project);
         for (const auto& alias : project.aliases) {
-            // Only an alias that resolves to the parent's own texture parameter is the parent's (review 32): one naming
-            // a missing bank or anything else is left as it is, never multiplied.
+            // Only an alias that resolves to the parent's own texture parameter is the parent's: one naming a missing
+            // bank or anything else is left as it is, never multiplied.
             if (!parent_texture.contains(view.resolve(alias->parameter_unique_name.value()))) continue;
             const std::vector<std::string> parts = split(alias->parameter_unique_name.value());
             // The phase part is the structure's name (the long form) or its datablock key (the short form).
@@ -1509,13 +1509,13 @@ class Edit {
             }
             return out;
         };
-        // The constraints that set a parent texture parameter: the first identifier, before '=', is its alias.
-        // Only a sound rule is copied (review 33): every alias it names exists and resolves to a parameter. A rule that
-        // names an undeclared or unresolved alias stays the user's to repair and is never multiplied.
+        // The constraints that set a parent texture parameter: the first identifier, before '=', is its alias. Only a
+        // sound rule is copied: every alias it names exists and resolves to a parameter. A rule that names an
+        // undeclared or unresolved alias stays the user's to repair and is never multiplied.
         std::map<std::string, const ParameterAlias*> declared;
         for (const auto& alias : project.aliases) declared[alias->id.value()] = alias.get();
         const auto sound = [&](const std::string& expression) {
-            // crysta's own grammar (review 34): an unknown function or a malformed rule does not parse.
+            // crysta's own grammar: an unknown function or a malformed rule does not parse.
             std::vector<std::string> named;
             try {
                 const crysta::ConstraintStatement statement = crysta::parse_constraint(expression);
@@ -1543,8 +1543,8 @@ class Edit {
         std::set<std::string> taken;
         for (const auto& alias : project.aliases) taken.insert(alias->id.value());
         for (const auto& constraint : project.constraints) taken.insert(constraint->id.value());
-        // An identifier the expression grammar reads: letters, digits and underscores (review 31), as a phase name may
-        // hold other characters.
+        // An identifier the expression grammar reads: letters, digits and underscores, as a phase name may hold other
+        // characters.
         const auto identifier = [](std::string text) {
             for (char& c : text)
                 if (!(std::isalnum(static_cast<unsigned char>(c)) != 0 || c == '_')) c = '_';

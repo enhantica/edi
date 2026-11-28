@@ -109,7 +109,7 @@ class CorrelationViewModel : public QObject {
     // (row-major, 1 on the diagonal).
     std::optional<edi::CorrelationTable> table_;
     std::vector<std::string> names_;
-    // The names this chart leaves out: hidden parameters and the shown bank's disabled phases (review 24).
+    // The names this chart leaves out: hidden parameters and the shown bank's disabled phases.
     std::set<std::string> excluded_;
     // The hidden set the shown table was filtered by, part of its cache key.
     std::set<std::string> table_excluded_;

@@ -59,7 +59,7 @@ void ParameterTableModel::sync() {
         }
         if (item->isHidden()) continue;
         if (item->blockKind() == QLatin1String("structure") && scope_hidden_structures_.contains(item->blockName()))
-            continue;  // a structure the scoped experiment does not enable  // a disabled linked structure's or link's (owner decision 2026-11-27)
+            continue;  // a structure the scoped experiment does not enable // a disabled linked structure's or link's
         free_count += item->isFree() ? 1 : 0;
         // An s.u. the column would show: one read or fitted, above zero (an unset or zero one shows nothing).
         any_uncertainty = any_uncertainty || (item->hasUncertainty() && std::isfinite(item->uncertainty()) && item->uncertainty() > 0.0);

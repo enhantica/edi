@@ -8663,8 +8663,8 @@ struct AssistantViewModel::State {
         run->go(widget_route(run));
         const auto& projectModel=*project->assistantProject();
         qsizetype position=0;bool found=false;
-        // Positions in the rows the Analysis tables show (edi::ActiveView, review 32), so a position is a table row; a
-        // disabled phase's relation is not one the assistant can reach.
+        // Positions in the rows the Analysis tables show (edi::ActiveView), so a position is a table row; a disabled
+        // phase's relation is not one the assistant can reach.
         const edi::ActiveView view(projectModel);
         if(run->relation_constraint){for(const edi::ParameterConstraint* row:view.constraints()){if(row->id.value()==id){if(found)throw ActionRefusal("target_unavailable","relation");found=true;run->relation_key=row;run->relation_base=position;}++position;}}
         else {for(const edi::ParameterAlias* row:view.aliases()){if(row->id.value()==id){if(found)throw ActionRefusal("target_unavailable","relation");found=true;run->relation_key=row;run->relation_base=position;}++position;}}
@@ -8820,7 +8820,7 @@ struct AssistantViewModel::State {
             else (void)edi::prepare_background_point(*project->assistantProject(), *background.experiment, background.input,
                 background.experiment->background.size()+1, Limits::id_bytes,
                 background.experiment->data?background.experiment->data->axis().size():0,
-                // A whole-model capacity counts the model it checks: every saved alias (review 33).
+                // A whole-model capacity counts the model it checks: every saved alias.
                 project->assistantProject()->aliases.size(), true);
             if(!background.names)widget_background_prepare(run);
         } else if (tool == "add_relations") {

@@ -9,8 +9,8 @@ import EasyApplication.Gui.Elements as EaElements
 
 import edi.app
 
-// After a magnetic Add from the pattern chart (owner decision 2026-11-27, replacing the line above the chart): each
-// added structure with its name and BNS symbol (owner, 2026-11-28: no note). Nothing stays on the chart once it closes.
+// After a magnetic Add from the pattern chart: each added structure with its name and BNS symbol (owner, 2026-11-28: no
+// note). Nothing stays on the chart once it closes.
 AppDialog {
     id: dialog
     objectName: "chart.findK.addedDialog"

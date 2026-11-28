@@ -11,10 +11,10 @@ import EasyApplication.Gui.Components as EaComponents
 
 import edi.app
 
-// Crystal → Magnetic (edi ADR-0078 "The magnetic popup", crysta ADR-0137): pick a propagation vector and the magnetic
-// sites, then the magnetic groups to add; each picked group becomes a new structure linked where the parent is. The
-// layout follows the owner's decision of 2026-11-27: at most about 90 % of the window, a fixed footer, Maximal only by
-// default, a header per level, a Graph / List switch and a details strip. Cancel changes nothing.
+// Crystal → Magnetic (ADR-0078): pick a propagation vector and the magnetic sites, then the magnetic groups to add;
+// each picked group becomes a new structure linked where the parent is. The layout follows the owner's decision of
+// 2026-11-27: at most about 90 % of the window, a fixed footer, Maximal only by default, a header per level, a Graph /
+// List switch and a details strip. Cancel changes nothing.
 AppDialog {
     id: popup
     objectName: "structures.magneticPopup"
@@ -27,11 +27,11 @@ AppDialog {
     // After Add the first new structure becomes the Structure page's current one, from either origin; the page shown
     // stays as it is (owner, 2026-11-27).
     property bool selectAfterAdd: true
-    // Opened from Find k: the snapshot the chosen k was found for; Add refuses once it is no longer current
-    // (review 16, F4). Empty from the Structure page.
+    // Opened from Find k: the snapshot the chosen k was found for; Add refuses once it is no longer
+    // current. Empty from the Structure page.
     property real kSnapshotId: 0
     // The ranked row of that search the analysis was opened for, and the k it set; a k typed or picked here instead
-    // is a choice of the user's own, which leaves the Find k search (review 18, F4).
+    // is a choice of the user's own, which leaves the Find k search.
     property int kRow: -1
     property string openedK: ""
     // The graph search this popup made; it settles on that request's answer only, and Add names the graph shown.
@@ -57,7 +57,7 @@ AppDialog {
 
     title: qsTr("Magnetic structures from %1").arg(structure ? structure.name : "")
     // As tall as its content, up to the height that keeps the navigation bar and the status bar clear, centred as the
-    // app's other dialogs are (owner, 2026-11-27, conductor seq 48).
+    // app's other dialogs are.
     readonly property real maximumHeight: parent ? parent.height - 2 * (EaStyle.Sizes.appBarHeight + EaStyle.Sizes.fontPixelSize) : 800
     width: parent ? Math.round(parent.width * 0.9) : 1000
     height: Math.round(Math.min(maximumHeight, implicitHeight))
@@ -65,7 +65,7 @@ AppDialog {
     onClosed: destroy()
 
     // The chosen k's place in the list (a preset, or presets.length for Other): the one owner of the choice, which the
-    // box shows, the fields follow and every search reads (review 24).
+    // box shows, the fields follow and every search reads.
     property int kIndex: 0
     readonly property string k: kIndex >= 0 && kIndex < presets.length ? presets[kIndex].k : [0, 1, 2].map(i => kFields.itemAt(i) ? (kFields.itemAt(i) as EaElements.TextField).text : "0").join(",")
 
@@ -116,11 +116,10 @@ AppDialog {
             (kFields.itemAt(i) as EaElements.TextField).text = parts[i];
     }
     // The shown graph and selection belong to the k they were found for: switching to Other, or typing a k not yet
-    // committed, takes them away at once and ignores any answer still on its way (review 19, F4). A k other than the
-    // Find k row's leaves that search.
-    // One rule for every input (review 20, F4): the request in flight is retired and the shown graph and selection are
-    // cleared before anything else happens, so no answer can arrive for inputs the controls no longer show; while a
-    // search runs, the inputs themselves are disabled.
+    // committed, takes them away at once and ignores any answer still on its way. A k other than the Find k row's
+    // leaves that search. One rule for every input: the request in flight is retired and the shown graph and selection
+    // are cleared before anything else happens, so no answer can arrive for inputs the controls no longer show; while
+    // a search runs, the inputs themselves are disabled.
     function retireRequest() {
         found = null;
         selected = [];
@@ -268,7 +267,7 @@ AppDialog {
             }
             ToolbarComboBox {
                 // Levels, net moment and start filter or set up what a search shows, so they stay open while it runs:
-                // a click on one ends a k edit, which starts the search, and must still open it (review 29).
+                // a click on one ends a k edit, which starts the search, and must still open it.
                 objectName: "magnetic.levels"
                 toolTip: qsTr("Which levels of groups are shown")
                 model: [qsTr("All"), qsTr("Maximal only")]
@@ -368,8 +367,7 @@ AppDialog {
             }
 
             // The list: one row per group in the app's table (DataTable, as Excluded regions and the parameter table),
-            // a check box column to select, the group's values, then each site's moments in a column of its own
-            // (conductor seq 33, 50).
+            // a check box column to select, the group's values, then each site's moments in a column of its own.
             DataTable {
                 id: listView
                 objectName: "magnetic.list"
@@ -495,7 +493,7 @@ AppDialog {
     }
 
     // Esc unpins a pinned card before it would close the dialog: while a lineage is pinned the dialog itself does not
-    // take Esc, so it reaches the shortcut below (review 28).
+    // take Esc, so it reaches the shortcut below.
     closePolicy: graphView.pinned >= 0 ? Popup.CloseOnPressOutside : Popup.CloseOnEscape | Popup.CloseOnPressOutside
     // Application-wide, as a window shortcut does not reach this modal dialog, and taking no focus from its controls.
     Shortcut {

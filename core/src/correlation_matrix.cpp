@@ -135,7 +135,7 @@ std::set<std::string> correlation_hidden_names(Project& project, std::optional<s
         }
     }
     // Every spelling of each left-out parameter, constrained ones included, by the one view (edi::ActiveView): a pair a
-    // fit saved under either name is dropped (review 33).
+    // fit saved under either name is dropped.
     return ActiveView(project).spellings(std::set<const Parameter*>(left_out.begin(), left_out.end()));
 }
 

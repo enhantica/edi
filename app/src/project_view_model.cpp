@@ -4037,7 +4037,7 @@ bool ProjectViewModel::setParametersFree(const QList<ParameterItem*>& parameters
     for (const ParameterItem* item : parameters) {
         if (item == nullptr || item->isHidden() || (free && !item->isFittable())) {
             // a flag is set only where a fit can vary the value; any is cleared (ADR-0053); a disabled phase's
-            // parameter, hidden by edi::ActiveView, is no edit target (review 34)
+            // parameter, hidden by edi::ActiveView, is no edit target
             continue;
         }
         const auto found = names.find(item->parameter());
@@ -4133,7 +4133,7 @@ int ProjectViewModel::findMagneticGroups(int index, const QString& k, const QStr
     magnetic_graph_id_ = 0;
     magnetic_graph_snapshot_ = 0;
     magnetic_graph_row_ = -1;
-    // A refusal is delivered after the caller holds this request's identity (review 18, F4).
+    // A refusal is delivered after the caller holds this request's identity.
     const auto refuse = [this, search](const QString& message) {
         QMetaObject::invokeMethod(
             this, [this, search, message] { emit magneticGroupsRefused(message, static_cast<int>(search)); },
@@ -4168,7 +4168,7 @@ int ProjectViewModel::findMagneticGroups(int index, const QString& k, const QStr
             emit magneticGroupsRefused(*refusal, static_cast<int>(search));
             return;
         }
-        // A graph searched for Find k's snapshot is published only while that snapshot still stands (review 24, F4).
+        // A graph searched for Find k's snapshot is published only while that snapshot still stands.
         if (snapshot != 0 && !kSnapshotCurrent(snapshot)) {
             emit magneticGroupsRefused(
                 tr("the data, the structures or the marked peaks changed since Find k; search again"),
@@ -4230,12 +4230,12 @@ bool ProjectViewModel::addMagneticCandidates(int graph, const QList<int>& nodes,
     QString error;
     std::shared_ptr<const edi::PreparedMagneticCandidates> prepared;
     try {
-        // The nodes belong to the graph the caller chose them in, still the one held (review 17, F4).
+        // The nodes belong to the graph the caller chose them in, still the one held.
         if (!magnetic_graph_ || graph <= 0 || graph != magnetic_graph_id_ || index < 0 ||
             index >= static_cast<int>(project.structures.size()))
             throw std::invalid_argument("the magnetic groups shown are no longer the ones found; find them again");
-        // The graph is the one result object (review 18, F4): Add takes its own Find k snapshot, never another, and
-        // that snapshot must still be current and this parent's. A graph of the Structure page carries none.
+        // The graph is the one result object: Add takes its own Find k snapshot, never another, and that snapshot
+        // must still be current and this parent's. A graph of the Structure page carries none.
         if (magnetic_graph_snapshot_ != 0) {
             const auto held = k_snapshots_.find(magnetic_graph_snapshot_);
             if (held == k_snapshots_.end() || held->second->parent != index || !kSnapshotCurrent(magnetic_graph_snapshot_))
@@ -4263,7 +4263,7 @@ bool ProjectViewModel::addMagneticCandidates(int graph, const QList<int>& nodes,
         error = QString::fromUtf8(refusal.what());
         setLastError(error);
     }
-    // The whole footprint Add can change, aliases and constraints included, so Undo puts it all back (review 30).
+    // The whole footprint Add can change, aliases and constraints included, so Undo puts it all back.
     edi::StructuresUndo before = edi::capture_structure_edit(project);
     if (error.isEmpty()) {
         try {
@@ -4301,15 +4301,15 @@ void ProjectViewModel::recordFitAdoption() {
 }
 
 int ProjectViewModel::magneticParentOf(int experiment) const {
-    // The experiment's one enabled atom-based Crystal structure (review 12, F19): -1 with none, -2 with several, so
-    // link order never chooses.
+    // The experiment's one enabled atom-based Crystal structure: -1 with none, -2 with several, so link order never
+    // chooses.
     if (experiment < 0 || experiment >= static_cast<int>(project_->experiments.size())) return -1;
     int found = -1;
     for (const auto& link : project_->experiments[static_cast<std::size_t>(experiment)]->linked_structures) {
         if (!link->enabled.get()) continue;
         for (std::size_t s = 0; s < project_->structures.size(); ++s) {
             const auto& structure = project_->structures[s];
-            // A lone link with no id names the lone structure, as crysta resolves it (review 26).
+            // A lone link with no id names the lone structure, as crysta resolves it.
             const bool named = structure->name.value() == link->structure_id.value() ||
                                (link->structure_id.value().empty() && project_->structures.size() == 1);
             if (named && structure->magnetic->operations.empty() &&
@@ -4428,8 +4428,8 @@ void ProjectViewModel::changeKMarks() {
 void ProjectViewModel::setKSearchActive(bool on) {
     // Marking is a mode over the marks, never their owner (owner, 2026-11-27): stopping keeps every mark and row,
     // starting again continues with them, and only Clear empties the table. Suggestions are offered only when
-    // marking starts with no marks.
-    // Stop ends the mode only: the rows, the marks and a ranked result's roles stay (review 28).
+    // marking starts with no marks. Stop ends the mode only: the rows, the marks and a ranked result's roles
+    // stay.
     ++k_session_;
     if (!on) {
         k_marks_.active = false;
@@ -4462,8 +4462,8 @@ void ProjectViewModel::setKSearchActive(bool on) {
         return;
     }
     if (!k_marks_.marks.empty()) {
-        // The same marks under the same parent keep their search and its ranks (review 29); under another parent, or
-        // on changed inputs (kRemeasure), they are a new search.
+        // The same marks under the same parent keep their search and its ranks; under another parent, or on changed
+        // inputs (kRemeasure), they are a new search.
         if (parent != was_parent || k_marks_.parent_name != was_parent_name) changeKMarks();
         kRemeasure();
         setKNote(QString());
@@ -4481,22 +4481,22 @@ void ProjectViewModel::setKSearchActive(bool on) {
         return;
     }
     // Pre-marked: every suggestion, a peak at a reflection the crystal's space group forbids or an excess the current
-    // calculation leaves on an allowed one (owner decision 2026-11-27).
+    // calculation leaves on an allowed one.
     for (std::size_t i = 0; i < k_marks_.candidates.size(); ++i)
         if (k_marks_.candidates[i].suggested) k_marks_.marks.push_back(static_cast<int>(i));
     setKNote(QString());
 }
 
 void ProjectViewModel::toggleKMarkAt(double x, double tolerance) {
-    // Free marking (owner decision 2026-11-27): a click on a mark drops it; anywhere else it marks the nearest observed
-    // maximum within that peak's half width, or the clicked position itself when none is near. It never refuses.
+    // Free marking: a click on a mark drops it; anywhere else it marks the nearest observed maximum within that peak's
+    // half width, or the clicked position itself when none is near. It never refuses.
     if (!k_marks_.active || k_marks_.parent < 0) return;
     if (!kMarkingCurrent()) {  // its parent is no longer the one enabled crystal, as after an Add: start again
         setKSearchActive(false);
         return;
     }
     // A click removes a mark only inside its visible target, the chart's full-height hit window `tolerance` that turns
-    // the line grey under the pointer (review 27); a peak's measured window is for acquiring a mark, not removing one.
+    // the line grey under the pointer; a peak's measured window is for acquiring a mark, not removing one.
     const int on_mark = kMarkAt(x, tolerance);
     if (on_mark >= 0) {
         changeKMarks();
@@ -4505,20 +4505,20 @@ void ProjectViewModel::toggleKMarkAt(double x, double tolerance) {
         emit kSearchChanged();
         return;
     }
-    // A click where the data are not measured or are excluded marks nothing and changes nothing (review 26, F4): no
-    // snap from it, no retired search.
+    // A click where the data are not measured or are excluded marks nothing and changes nothing: no snap from it,
+    // no retired search.
     if (!kMeasurable(k_marks_.experiment, x)) return;
     // The highest measured maximum within the peak's window of the click, from the measured samples themselves, else
-    // the clicked position (review 29): one definition of a measured maximum. A catalog candidate at exactly that
-    // position is that candidate, so a suggestion keeps its identity; the smoothed detector never picks the point.
+    // the clicked position: one definition of a measured maximum. A catalog candidate at exactly that position is
+    // that candidate, so a suggestion keeps its identity; the smoothed detector never picks the point.
     int best = -1;
     try {
         const edi::MagneticPeak measured = edi::magnetic_peak_near(
             *project_, static_cast<std::size_t>(k_marks_.experiment), static_cast<std::size_t>(k_marks_.parent), x);
         for (std::size_t i = 0; i < k_marks_.candidates.size() && best < 0; ++i)
             if (std::abs(k_marks_.candidates[i].x - measured.x) <= 1e-9) best = static_cast<int>(i);
-        // A suggestion taken up again by a click is the user's mark from then on (review 30): a re-measure follows the
-        // measured samples for it, as for every click.
+        // A suggestion taken up again by a click is the user's mark from then on: a re-measure follows the measured
+        // samples for it, as for every click.
         if (best >= 0 && std::find(k_marks_.marks.begin(), k_marks_.marks.end(), best) == k_marks_.marks.end())
             k_marks_.candidates[static_cast<std::size_t>(best)].suggested = false;
         if (best < 0) {
@@ -4528,9 +4528,9 @@ void ProjectViewModel::toggleKMarkAt(double x, double tolerance) {
     } catch (const std::exception&) {
         return;  // outside the calibration's range: nothing to mark there
     }
-    // A mark stands only where the data are measured and not excluded (review 25, F4).
+    // A mark stands only where the data are measured and not excluded.
     if (!kMeasurable(k_marks_.experiment, k_marks_.candidates[static_cast<std::size_t>(best)].x)) return;
-    // A peak already marked is that mark, not a second one (review 28): the click changes nothing.
+    // A peak already marked is that mark, not a second one: the click changes nothing.
     if (std::find(k_marks_.marks.begin(), k_marks_.marks.end(), best) != k_marks_.marks.end() ||
         kMarkAt(k_marks_.candidates[static_cast<std::size_t>(best)].x, 0.0) >= 0)
         return;
@@ -4574,7 +4574,7 @@ void ProjectViewModel::showKRoles(qint64 id, int rank) {
 void ProjectViewModel::removeKMark(int index) {
     const auto at = std::find(k_marks_.marks.begin(), k_marks_.marks.end(), index);
     if (at == k_marks_.marks.end()) return;
-    ++k_session_;  // a tap still waiting on the chart was made on the earlier marks: it is dropped (review 29)
+    ++k_session_;  // a tap still waiting on the chart was made on the earlier marks: it is dropped
     changeKMarks();
     k_marks_.marks.erase(at);
     k_marks_.roles.clear();
@@ -4583,7 +4583,7 @@ void ProjectViewModel::removeKMark(int index) {
 
 void ProjectViewModel::clearKMarks() {
     if (k_marks_.marks.empty()) return;
-    ++k_session_;  // a tap still waiting on the chart was made on the earlier marks: it is dropped (review 29)
+    ++k_session_;  // a tap still waiting on the chart was made on the earlier marks: it is dropped
     changeKMarks();
     k_marks_.marks.clear();
     k_marks_.roles.clear();
@@ -4591,11 +4591,10 @@ void ProjectViewModel::clearKMarks() {
 }
 
 void ProjectViewModel::retireKMarks() {
-    // Any edit ends marking, keeping the marks (review 21 and 22, F4; owner, 2026-11-27): the parent it admitted may
-    // no longer be the one enabled crystal, so the next start, tap, snapshot or search admits it again
-    // (kMarkingCurrent). Every snapshot and role of the earlier state retires.
-    // Add's own edit keeps its marks, roles and snapshot: Add reads that snapshot after the edit, and the parent it
-    // disabled fails kMarkingCurrent at the next action anyway.
+    // Any edit ends marking, keeping the marks (owner, 2026-11-27): the parent it admitted may no longer be the one
+    // enabled crystal, so the next start, tap, snapshot or search admits it again (kMarkingCurrent). Every snapshot
+    // and role of the earlier state retires. Add's own edit keeps its marks, roles and snapshot: Add reads that
+    // snapshot after the edit, and the parent it disabled fails kMarkingCurrent at the next action anyway.
     if (k_marks_.experiment < 0 || adding_k_) return;
     changeKMarks();
     k_marks_.active = false;
@@ -4634,10 +4633,10 @@ void ProjectViewModel::kRemeasure() {
     if (inputs == k_marks_.inputs &&
         k_marks_.bank.lock().get() == project_->experiments[static_cast<std::size_t>(experiment)].get())
         return;
-    // Each kept mark measured again where it stands, on the data and calibration it is now shown with (review 24,
-    // F4): a mark now outside the measured range or inside an excluded region goes; what a mark is (a suggestion, a
-    // measured maximum, on an allowed line) comes from the detection on these data, not from the earlier one, and a
-    // mark no detected peak matches is one placed by hand.
+    // Each kept mark measured again where it stands, on the data and calibration it is now shown with: a mark now
+    // outside the measured range or inside an excluded region goes; what a mark is (a suggestion, a measured
+    // maximum, on an allowed line) comes from the detection on these data, not from the earlier one, and a mark no
+    // detected peak matches is one placed by hand.
     std::vector<edi::MagneticPeak> fresh;
     try {
         fresh = edi::magnetic_mark_candidates(*project_, static_cast<std::size_t>(experiment),
@@ -4658,7 +4657,7 @@ void ProjectViewModel::kRemeasure() {
         const double x = k_marks_.candidates[static_cast<std::size_t>(m)].x;
         if (!kMeasurable(experiment, x)) continue;
         // A mark placed by a click is measured again as a click is, at the measured samples' maximum near it, never
-        // remapped to the smoothed detector's pick (review 29); a suggestion follows the detection on these data.
+        // remapped to the smoothed detector's pick; a suggestion follows the detection on these data.
         if (!k_marks_.candidates[static_cast<std::size_t>(m)].suggested) {
             try {
                 const edi::MagneticPeak again = edi::magnetic_peak_near(
@@ -4698,7 +4697,7 @@ void ProjectViewModel::kRemeasure() {
 }
 
 bool ProjectViewModel::kMarkingCurrent() const {
-    // The same bank object too (review 24, F4): a bank replaced at the same place is other data.
+    // The same bank object too: a bank replaced at the same place is other data.
     const int experiment = k_marks_.experiment;
     if (experiment < 0 || experiment >= static_cast<int>(project_->experiments.size()) ||
         k_marks_.bank.lock().get() != project_->experiments[static_cast<std::size_t>(experiment)].get())
@@ -4718,7 +4717,7 @@ QVariantMap ProjectViewModel::kSnapshot() {
         setLastError(tr("the crystal structure to search k for is no longer the experiment's one enabled crystal"));
         return {};
     }
-    // Marks of other data, calibration or mask are measured again before a search (reviews 23, 25 and 26, F4); with the
+    // Marks of other data, calibration or mask are measured again before a search (reviews 23, 25 and 26); with the
     // inputs unchanged a free mark keeps its exact position. A tap never places one where the data are excluded.
     kRemeasure();
     if (k_marks_.marks.empty()) {
@@ -4747,7 +4746,7 @@ QVariantMap ProjectViewModel::kSnapshot() {
         marks.push_back(peak_map(snapshot->marks.back()));
     }
     snapshot->id = ++k_next_snapshot_;
-    // A newer Find k retires every older snapshot and the rows ranked for it (review 18, F4).
+    // A newer Find k retires every older snapshot and the rows ranked for it.
     k_snapshots_.clear();
     k_rows_.clear();
     k_row_roles_.clear();
@@ -5381,7 +5380,7 @@ void ProjectViewModel::syncPatternBraggRows() {
     int most = 0;
     for (const auto& experiment : project_->experiments) {
         int rows = 0;
-        // A disabled link reserves no tick row (owner decision 2026-11-27).
+        // A disabled link reserves no tick row.
         for (const auto& link : experiment->linked_structures)
             if (link->enabled.get()) rows += magnetic.contains(QString::fromStdString(link->structure_id.value())) ? 2 : 1;
         most = std::max(most, rows);
@@ -7780,8 +7779,8 @@ void ProjectViewModel::syncCategories() {
 }
 
 void ProjectViewModel::showStructureView() {
-    // One set of view settings for every structure, the project's (owner decision 2026-11-27): switching structures
-    // keeps them, and a change is saved in project.edi.
+    // One set of view settings for every structure, the project's: switching structures keeps them, and a change is
+    // saved in project.edi.
     showing_view_ = true;
     structure_view_options_->setFromView(project_->structure_view.get());
     showing_view_ = false;
@@ -7970,7 +7969,7 @@ void ProjectViewModel::setModified(bool modified) {
     modified_ = modified;
     if (modified) {
         ++revision_;
-        retireKMarks();  // the marks describe the project before this edit (review 16, F4)
+        retireKMarks();  // the marks describe the project before this edit
         emit edited();
         if (retired_) return;
     }

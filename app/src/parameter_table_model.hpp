@@ -39,7 +39,7 @@ class ParameterTableModel : public RowTableModel {
     // The one experiment whose parameters are listed; empty lists every experiment's. Takes effect at
     // the next sync.
     void setExperimentScope(const QString& experiment);
-    // The structures the scoped experiment does not enable: their rows are not shown in its view (review 23).
+    // The structures the scoped experiment does not enable: their rows are not shown in its view.
     void setScopeHiddenStructures(const QSet<QString>& structures) { scope_hidden_structures_ = structures; }
     void sync();
     // A parameter's number in the table, from 1; 0 when it is not listed (ProjectViewModel::parameterNumber).

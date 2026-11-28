@@ -205,7 +205,7 @@ void AliasListModel::append() {
     edi::Project& project = project_;
     edi::ParameterAlias alias;
     alias.id = unused_name("alias_", [&project](const std::string& id) { return holds_id(project.aliases, id); });
-    // The first shown parameter no alias names yet (a disabled phase's are not offered; review 32).
+    // The first shown parameter no alias names yet (a disabled phase's are not offered).
     const edi::ActiveView view(project);
     for (const edi::NamedParameter& named : edi::named_parameters(project)) {
         if (!view.shown(named.parameter)) continue;
@@ -276,7 +276,7 @@ bool ConstraintListModel::setText(int row, const QString& role, const QString& v
         return editor_.apply_relation_control(edi::Edit::rename_constraint(*constraint, text), {ProjectEditor::RelationAction::Kind::ConstraintId,constraint,value}).isEmpty();
     }
     if (role == QLatin1String("expression")) {
-        if (!edi::ActiveView(project_).admits(text)) return false;  // no alias of a disabled phase (review 33)
+        if (!edi::ActiveView(project_).admits(text)) return false;  // no alias of a disabled phase
         return editor_.apply_relation_control(edi::Edit::constraint_expression(project_, *constraint, text), {ProjectEditor::RelationAction::Kind::ConstraintExpression,constraint,value}).isEmpty();
     }
     return false;
@@ -313,7 +313,7 @@ void ConstraintListModel::append() {
     }
     std::map<std::string, double> values;
     for (const edi::NamedParameter& named : edi::named_parameters(project)) values[named.unique_name] = named.parameter->value.get();
-    // Only the aliases the table shows: a disabled phase's stay out of a new expression too (review 31).
+    // Only the aliases the table shows: a disabled phase's stay out of a new expression too.
     const std::vector<const edi::ParameterAlias*> shown = edi::ActiveView(project).aliases();
     for (std::size_t dependent = 1; dependent < shown.size() && constraint.expression.value().empty(); ++dependent) {
         const std::string& name = shown[dependent]->id.value();
@@ -334,7 +334,7 @@ void ConstraintListModel::append() {
 
 ProjectEditor::RelationOutcome ConstraintListModel::appendComplete(const QString& id, const QString& expression, bool enabled) {
     edi::ParameterConstraint row; row.id=id.toStdString(); row.expression=expression.toStdString(); row.enabled=enabled;
-    if (!edi::ActiveView(project_).admits(row.expression.value()))  // no alias of a disabled phase (review 33)
+    if (!edi::ActiveView(project_).admits(row.expression.value()))  // no alias of a disabled phase
         return {false, false, QObject::tr("A constraint cannot name an alias of a disabled phase")};
     ProjectEditor::RelationAction action; action.kind=ProjectEditor::RelationAction::Kind::ConstraintAppend;
     action.text=id; action.expression=expression; action.enabled=enabled;
@@ -381,7 +381,7 @@ void FitStartListModel::sync() {
     QList<Row> rows;
     const std::vector<const edi::Parameter*> hidden = const_cast<edi::Project&>(project_).hidden_parameters();
     for (const edi::FitStartRow& start : edi::fit_start_rows(project_)) {
-        // A disabled linked structure's or link's parameter is in no view (owner decision 2026-11-27).
+        // A disabled linked structure's or link's parameter is in no view.
         if (std::find(hidden.begin(), hidden.end(), start.parameter) != hidden.end()) continue;
         const edi::Parameter& parameter = *start.parameter;
         rows.append({start.parameter,

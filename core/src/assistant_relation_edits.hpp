@@ -47,7 +47,7 @@ inline Edit prepare_relation_append(Project& project, const std::vector<NativeAl
     std::map<const Parameter*, std::string> names;
     for (const auto& slot : named_slots(project)) names.emplace(slot.parameter, slot.unique_name);
     std::map<std::string, const Parameter*> paths;
-    // Only parameters the user's views show (edi::ActiveView, review 33): no alias to a disabled phase.
+    // Only parameters the user's views show (edi::ActiveView): no alias to a disabled phase.
     const ActiveView shown(project);
     for (const auto& entry : parameter_entries(project))
         if (names.count(entry.parameter) && shown.shown(entry.parameter)) paths.emplace(entry.path, entry.parameter);

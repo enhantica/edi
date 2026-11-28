@@ -1244,7 +1244,7 @@ Structure structure_from_block(const Block& block, const std::string& where) {
         if (wyckoff >= 0) {
             site.wyckoff_letter = row[static_cast<std::size_t>(wyckoff)];
         }
-        // A type IV site's saved symmetry, restored as written (crysta review 21).
+        // A type IV site's saved symmetry, restored as written.
         if (const int symmetry = loop->column("_atom_site.signed_site_symmetry"); symmetry >= 0) {
             const std::string& stated = row[static_cast<std::size_t>(symmetry)];
             if (stated != "." && stated != "?") site.signed_site_symmetry = stated;
@@ -1349,7 +1349,7 @@ Structure structure_from_block(const Block& block, const std::string& where) {
         try {
             check_magnetic_acceptance(structure);
             // Tied components as crysta's load sets them; a type IV site with a saved letter is restored
-            // from it (owner decision 2026-11-27, addendum 2).
+            // from it.
             complete_atom_site_moments(structure, true);
         } catch (const std::invalid_argument& error) {
             fail_schema(where, "magnetic-refused", error.what());
@@ -4884,7 +4884,7 @@ static Project load_project_folder(const std::string& directory, const WarningSi
                     declared_plot_renderer = lexical_value(item.value, 0, renderer_tag);
                     continue;
                 }
-                // The project's Structure view settings (owner decision 2026-11-27), each checked as a structure's.
+                // The project's Structure view settings, each checked as a structure's.
                 if (item.tag.starts_with("_structure_view.")) {
                     const std::string name = item.tag.substr(std::string_view("_structure_view.").size());
                     const std::string value = lexical_value(item.value, 0, item.tag);
@@ -5338,7 +5338,7 @@ const Parameter* ActiveView::resolve(const std::string& name) const {
     return found != by_name_.end() && found->second.size() == 1 ? found->second.front() : nullptr;
 }
 
-// The aliases a constraint names, read by crysta's own grammar (review 34): its target and its right-hand references.
+// The aliases a constraint names, read by crysta's own grammar: its target and its right-hand references.
 namespace {
 std::vector<std::string> constraint_aliases(const std::string& expression) {
     try {
@@ -5347,8 +5347,8 @@ std::vector<std::string> constraint_aliases(const std::string& expression) {
         out.insert(out.end(), statement.rhs.references().begin(), statement.rhs.references().end());
         return out;
     } catch (const std::invalid_argument&) {
-        // A rule crysta cannot parse, inactive or kept for repair (review 35): every identifier it spells, read with
-        // crysta's number grammar so `1.e-3` stays a number. A disabled phase's alias in it still hides it.
+        // A rule crysta cannot parse, inactive or kept for repair: every identifier it spells, read with crysta's
+        // number grammar so `1.e-3` stays a number. A disabled phase's alias in it still hides it.
         std::vector<std::string> out;
         const auto digit = [&](std::size_t i) { return i < expression.size() && std::isdigit(static_cast<unsigned char>(expression[i])); };
         for (std::size_t i = 0; i < expression.size();) {

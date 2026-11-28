@@ -623,9 +623,9 @@ PatternSource single_crystal_pattern(const Project& project, std::size_t experim
         return values.empty() ? nullptr : std::make_shared<const std::vector<double>>(std::move(values));
     };
     // The linked structure's ticks, in its colour and named by it, as a powder pattern's phase. With a magnetic part,
-    // two rows and two components, as a powder pattern's magnetic structure has (edi ADR-0078): the nuclear
-    // reflections and part, and the magnetic ones in the colour of the next structure, its part stacked on the nuclear.
-    // A disabled link gives no ticks (owner decision 2026-11-27).
+    // two rows and two components, as a powder pattern's magnetic structure has (edi ADR-0078): the nuclear reflections
+    // and part, and the magnetic ones in the colour of the next structure, its part stacked on the nuclear. A disabled
+    // link gives no ticks.
     if (!experiment.linked_structures.empty() && experiment.linked_structures[0]->enabled.get()) {
         PatternSource::Phase phase;
         phase.structure_id = experiment.linked_structures[0]->structure_id;
@@ -749,9 +749,9 @@ PatternSource capture_pattern(const Project& project, std::size_t experiment_ind
                                               data.axis().size(), names, data.component_intensities_magnetic.values(),
                                               data.component_intensities_nuclear.values());
     // Computed rows cached before a link was disabled still name its structure: a disabled link shows no ticks or
-    // component (owner decision 2026-11-27).
+    // component.
     const auto disabled = [&experiment](const std::string& key) {
-        // A magnetic structure's magnetic rows are keyed `<id>/magnetic`: they belong to <id> (review 23).
+        // A magnetic structure's magnetic rows are keyed `<id>/magnetic`: they belong to <id>.
         constexpr std::string_view kMagnetic = "/magnetic";
         const std::string structure = key.ends_with(kMagnetic) ? key.substr(0, key.size() - kMagnetic.size()) : key;
         return std::none_of(experiment.linked_structures.begin(), experiment.linked_structures.end(),

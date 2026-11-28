@@ -480,8 +480,8 @@ namespace {
 // what the user can do.
 QString plain_reason(const QString& raw);
 
-// The plain reason, then where the analysis is run when the core named it (A10; review 29): the rewording below must
-// not drop the routes the core appended to a magnetic structure's refusal.
+// The plain reason, then where the analysis is run when the core named it (A10): the rewording below must not drop
+// the routes the core appended to a magnetic structure's refusal.
 QString plain_refusal(const QString& raw) {
     static const QString marker = QStringLiteral("; run the magnetic symmetry analysis again");
     const qsizetype at = raw.indexOf(marker);

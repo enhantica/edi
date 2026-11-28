@@ -10,9 +10,9 @@ import EasyApplication.Gui.Components as EaComponents
 
 import edi.app
 
-// The propagation vector (k) search, a group of its own, laid out like Excluded regions (owner decision 2026-11-27): the
-// marked peaks' table always shown (2θ, d, and each peak's role after a search), each row removable and all of them
-// by the remove column's header button, then Mark peaks and Find k below it. The marks belong to the chart.
+// The propagation vector (k) search, a group of its own, laid out like Excluded regions: the marked peaks' table always
+// shown (2θ, d, and each peak's role after a search), each row removable and all of them by the remove column's header
+// button, then Mark peaks and Find k below it. The marks belong to the chart.
 SideBarGroup {
     id: group
 
@@ -89,7 +89,7 @@ SideBarGroup {
                     onClicked: group.chart.axisProject.clearKMarks()
                     // The header's own MouseArea, over its row of cells, takes every header click for the list's
                     // focus; this row goes above it so the button gets its click, while the labels, which take no
-                    // clicks, still let theirs through (review 28).
+                    // clicks, still let theirs through.
                     Component.onCompleted: if (parent) parent.z = 1
                 }
             }

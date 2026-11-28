@@ -206,7 +206,7 @@ void FitAgreementModel::setRecord(const edi::Project& project) {
         const std::string& linked = link.structure_id.value();
         return linked.empty() && !project.structures.empty() ? project.structures.front()->name.value() : linked;
     };
-    // A disabled link appears nowhere (owner decision 2026-11-27): only enabled links give columns.
+    // A disabled link appears nowhere: only enabled links give columns.
     std::vector<std::string> structures;
     for (const auto& experiment : project.experiments) {
         for (const auto& link : experiment->linked_structures) {

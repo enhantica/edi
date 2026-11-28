@@ -21,15 +21,15 @@ import edi.app
 Item {
     id: chart
 
-    // Find k on the chart (owner, 2026-11-27; crysta ADR-0137 A11): the peaks the parent's kept fit leaves unexplained,
-    // the strongest marked to start with; a click marks or drops the one nearest it, and Find k ranks the propagation
-    // vectors the marked ones allow.
+    // Find k on the chart (owner, 2026-11-27): the peaks the parent's kept fit leaves unexplained, the strongest marked
+    // to start with; a click marks or drops the one nearest it, and Find k ranks the propagation vectors the marked
+    // ones allow.
     property bool findKPage: false
-    // The current experiment's k search, held by the project (review 16, F4): this chart draws its candidates and
-    // marks and passes clicks on; the Experiment page's k search group shows and edits the same marks.
+    // The current experiment's k search, held by the project: this chart draws its candidates and marks and
+    // passes clicks on; the Experiment page's k search group shows and edits the same marks.
     readonly property var kState: chart.axisProject ? chart.axisProject.kSearch : ({})
     readonly property bool peakMode: chart.findKPage && kState.active === true
-    // A marking session ends with its pending tap and its click state (review 23, F4).
+    // A marking session ends with its pending tap and its click state.
     onPeakModeChanged: {
         markClick.stop();
         pointer.lastClickAt = 0;
@@ -49,7 +49,7 @@ Item {
     // A few pixels on the chart's axis: how near a line a click drops its mark, and the pointer finds it.
     readonly property real markReach: 4 * (controller.xMax - controller.xMin) / Math.max(1, pointer.width)
     // A zoom, pan or resize moves the lines under a still pointer: the hover is found again at the next move, and the
-    // grey line and hand do not stay on a line the pointer no longer covers (review 29).
+    // grey line and hand do not stay on a line the pointer no longer covers.
     onMarkReachChanged: chart.hoveredMark = -1
     readonly property real viewStart: controller.xMin
     onViewStartChanged: chart.hoveredMark = -1
@@ -70,7 +70,7 @@ Item {
 
     function setPeakMode(on) {
         // Marks are placed and drawn on the pattern's own axis: marking shows it, and the axis box waits until
-        // marking stops (review 22, F4).
+        // marking stops.
         if (on && controller.xAxis !== "native") {
             if (chart.axisProject)
                 chart.axisProject.patternXAxis = "native";
@@ -81,8 +81,8 @@ Item {
             chart.axisProject.setKSearchActive(on);
     }
     // Find k: one snapshot of the parent, the experiment, its calculation and the marks, taken now and kept by the
-    // project; the k dialog, the analysis and Add receive its identity and Add refuses it once anything in it changed
-    // (review 16 and 17, F4).
+    // project; the k dialog, the analysis and Add receive its identity and Add refuses it once anything in it
+    // changed.
     function openKVectors() {
         const snapshot = chart.axisProject.kSnapshot();
         if (snapshot.id === undefined)
@@ -1183,8 +1183,8 @@ Item {
         onReleased: mouse => {
             const still = Math.abs(mouse.x - pressX) < chart.em * 0.3 && Math.abs(mouse.y - pressY) < chart.em * 0.3;
             // A second still left click within the double-click interval resets the view, marking or not; counted here
-            // from the releases themselves, so it never depends on a double-click event reaching this area.
-            // Only a second click on the same spot is a double click: one on another peak marks it too (review 22, F4).
+            // from the releases themselves, so it never depends on a double-click event reaching this area. Only a
+            // second click on the same spot is a double click: one on another peak marks it too.
             if (mouse.button === Qt.LeftButton && still) {
                 const now = Date.now();
                 const samePlace = Math.abs(mouse.x - lastClickX) < chart.em * 0.5 && Math.abs(mouse.y - lastClickY) < chart.em * 0.5;

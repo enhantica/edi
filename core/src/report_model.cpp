@@ -781,7 +781,7 @@ ReportExperiment experiment_of(const BraggPdExperiment& experiment, const std::s
             }
         } else if (listed.id == "linked_structure") {
             next.table.columns = {header("linked_structure.structure_id"), header("linked_structure.scale")};
-            // A disabled link is in no report table (owner decision 2026-11-27): the view's links (review 33).
+            // A disabled link is in no report table: the view's links.
             for (const LinkedStructure* link : ActiveView::links_of(experiment)) {
                 next.table.rows.push_back({link->structure_id.value(), value_of(link->scale, rule).text});
             }
@@ -799,7 +799,7 @@ ReportExperiment experiment_of(const BraggPdExperiment& experiment, const std::s
             next.table.columns = {header("preferred_orientation.structure_id"), header("preferred_orientation.march_r"),
                                   header("preferred_orientation.march_random_fract")};
             for (const auto& row : experiment.preferred_orientation) {
-                // A disabled link's texture is in no report table (owner decision 2026-11-27).
+                // A disabled link's texture is in no report table.
                 const bool enabled = std::any_of(
                     experiment.linked_structures.begin(), experiment.linked_structures.end(), [&row](const auto& link) {
                         return link->enabled.get() && link->structure_id.value() == row->structure_id.value();
@@ -1264,8 +1264,8 @@ ReportModel build_report(const Project& input, const ReportOptions& options) {
     const std::string& authors = project.metadata.authors;
     model.authors = authors == "." || authors == "?" ? std::string() : authors;
     model.description = project.metadata.description;
-    // A disabled linked structure appears nowhere in the report (owner decision 2026-11-27).
-    // What a disabled link hides is decided by the one view every consumer reads (edi::ActiveView, review 33).
+    // A disabled linked structure appears nowhere in the report. What a disabled link hides is decided by the
+    // one view every consumer reads (edi::ActiveView).
     const ActiveView view(project);
     for (const Structure* structure : view.structures()) {
         model.structure_ids.push_back(structure->name.value());
@@ -1412,7 +1412,7 @@ std::unordered_map<const Parameter*, SuMarks> su_marks(const Project& project) {
     std::unordered_map<const Parameter*, SuMarks> marks;
     const std::unordered_map<const Parameter*, std::string> variants = parameter_variants(project);
     std::unordered_map<std::string, const Parameter*> by_name;
-    // A hidden parameter is no partner and gets no mark (review 23), by the one view (review 33).
+    // A hidden parameter is no partner and gets no mark, by the one view.
     const ActiveView view(project);
     for (const NamedParameter& named : named_parameters(project)) {
         if (!view.shown(named.parameter)) continue;

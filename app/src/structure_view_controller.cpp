@@ -167,7 +167,7 @@ void StructureViewController::setReportStructure(const QString& id) {
 void StructureViewController::setActive(bool active) {
     if (active != active_) {
         // A view left mid-animation settles where it is and shares that pose, so the page shown next opens on the
-        // project's one camera, not on its own earlier pose (review 29).
+        // project's one camera, not on its own earlier pose.
         if (!active) stopAnimation();
         active_ = active;
         emit activeChanged();
@@ -337,7 +337,7 @@ void StructureViewController::stopAnimation() {
     if (animating()) {
         view_animation_->stop();
         emit animatingChanged();
-        shareView();  // the pose an interrupted Home or axis turn reached is the project's camera too (review 28)
+        shareView();  // the pose an interrupted Home or axis turn reached is the project's camera too
     }
 }
 
@@ -580,7 +580,7 @@ void StructureViewController::draw() {
 }
 
 // One camera for the project (owner record 0958fb450 item 7): every live view of one of its structures, whichever,
-// shares it; a report's figure keeps its own (review 28).
+// shares it; a report's figure keeps its own.
 bool StructureViewController::sharesCamera(const StructureViewController* peer) const {
     return peer != this && !report_ && !peer->report_ && peer->viewed_ && structure_ != nullptr &&
            peer->structure_ != nullptr && peer->structure_->parent() == structure_->parent();

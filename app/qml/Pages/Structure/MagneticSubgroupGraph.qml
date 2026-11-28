@@ -11,10 +11,10 @@ import EasyApplication.Gui.Elements as EaElements
 
 import edi.app
 
-// The magnetic groups a propagation vector allows (crysta ADR-0137 A4), one block per level: a header with the level's
-// count and a check box selecting all of it, then its groups as compact cards wrapped to the width. With Maximal only
-// just the first level shows. The covering edges are drawn only for the group under the pointer or selected, so the
-// levels stay readable (owner, 2026-11-27).
+// The magnetic groups a propagation vector allows, one block per level: a header with the level's count and a check
+// box selecting all of it, then its groups as compact cards wrapped to the width. With Maximal only just the first
+// level shows. The covering edges are drawn only for the group under the pointer or selected, so the levels stay
+// readable (owner, 2026-11-27).
 Flickable {
     id: graph
 
@@ -48,8 +48,8 @@ Flickable {
         return cells;
     }
     onNodesChanged: pinned = -1
-    // The card whose lineage shows: the pinned one while the filters show it, else the one under the pointer (review
-    // 24); a pin the filters hide is dropped.
+    // The card whose lineage shows: the pinned one while the filters show it, else the one under the pointer; a pin
+    // the filters hide is dropped.
     readonly property int shownNode: pinned >= 0 && pinned < nodes.length && shown(pinned) ? pinned
         : hovered >= 0 && hovered < nodes.length && shown(hovered) ? hovered : -1
     function dropHiddenPin() {
@@ -145,9 +145,9 @@ Flickable {
         }
         return Qt.point(0, 0);
     }
-    // An edge's corners from parent i to child j, through the gaps only (conductor seq 51): down into the band above the
-    // child's level, across to the gap left of the child's column, down that gap to the child's middle and onto its
-    // left side (owner, 2026-11-27: shorter lines), so no edge crosses a card.
+    // An edge's corners from parent i to child j, through the gaps only: down into the band above the child's level,
+    // across to the gap left of the child's column, down that gap to the child's middle and onto its left side (owner,
+    // 2026-11-27: shorter lines), so no edge crosses a card.
     function route(i, j) {
         const from = positionOf(i);
         const to = positionOf(j);
