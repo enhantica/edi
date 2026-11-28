@@ -3696,7 +3696,6 @@
      "verdict": "public"
     },
     "shared": {
-     "closes": "C32-T3",
      "need": {
       "by": "deviation",
       "ref": "D101",
@@ -5039,7 +5038,6 @@
      "verdict": "public"
     },
     "fit_parametric": {
-     "closes": "C32-T3",
      "need": {
       "by": "deviation",
       "ref": "D101",
