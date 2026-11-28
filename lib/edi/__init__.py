@@ -660,7 +660,9 @@ class Analysis:
             )
         # The cores for this fit's mode, held for the fit so another thread's fit does not
         # change them; nothing unless --cores or the preference was given.
-        with _cores_for_fit(self._project.fitting_mode):
+        # Joint over a declared scan fits every pattern of the scan as one fit.
+        joint_scan = self._project.fitting_mode == 'joint' and self._project._scan_declared
+        with _cores_for_fit('parametric' if joint_scan else self._project.fitting_mode):
             if self._project.fitting_mode == 'sequential':
                 return self._project.fit_sequential(
                     on_iteration=on_iteration,
@@ -677,7 +679,7 @@ class Analysis:
                     on_file_complete=on_file_complete,
                     should_cancel=should_cancel,
                 )
-            if self._project.fitting_mode == 'parametric':
+            if joint_scan:
                 return self._project.fit_parametric(
                     on_iteration=on_iteration,
                     on_start=on_start,

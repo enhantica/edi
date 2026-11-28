@@ -8543,9 +8543,9 @@ FitResultBase Project::fit_parametric(const IterationCallback& on_iteration,
                                      const ParametricIterateCallback& on_iterate) {
     begin_fit_messages();
     refresh_background_estimates(*this);
-    if (fitting_mode != "parametric") {
+    if (fit_kind(*this) != "parametric") {
         throw std::invalid_argument("edi fit_parametric: _fitting_mode.type is '" + fitting_mode +
-                                    "' - this entry point serves exactly the 'parametric' mode");
+                                    "' - this entry point serves exactly the 'joint' mode over a declared scan");
     }
     crysta::ParametricIterateCallback forward;
     if (on_iterate) {
@@ -8885,7 +8885,7 @@ FitResultBase Project::fit_scan(const IterationCallback& on_iteration,
     // only the two public scan entries call this, each having proved its own exact token. Kept as
     // a refusal rather than an assert because it is the last line of defence if a future caller
     // is added.
-    if (!is_scan_fitting_mode(fitting_mode)) {
+    if (!is_scan_fitting_mode(fit_kind(*this))) {
         throw std::invalid_argument("edi fit_scan: _fitting_mode.type is '" + fitting_mode +
                                     "' - the scan body serves only 'sequential' and 'independent'");
     }
@@ -9006,9 +9006,9 @@ FitResultBase Project::fit_scan(const IterationCallback& on_iteration,
                 scan_preamble.completed_rows = read_scan_rows(resume_csv, csv_path);
                 // A complete scan (every file with a row or a note) is fitted again as a new pass that replaces its
                 // rows: none of them is this run's, so none is carried in. The run's own decision (crysta's scan
-                // drivers): a Parametric fit always publishes a whole new set; a complete scan, or a pending start on
+                // drivers): a Joint fit of the scan always publishes a whole new set; a complete scan, or a pending start on
                 // a fitted point, is a new pass.
-                bool new_pass = fitting_mode == "parametric" ||
+                bool new_pass = fit_kind(*this) == "parametric" ||
                                 scan_preamble_complete(scan_preamble.completed_rows,
                                                        resume_csv.parent_path() / "scan-notes.csv", *total_files, joint);
                 for (const auto& start : sequential_fit.starts) {

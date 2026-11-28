@@ -4243,11 +4243,13 @@ static Project load_project_folder(const std::string& directory, const WarningSi
             // Review-1 F4: the closed set is enforced at LOAD on this side too. Without it a
             // lookalike survived loading and then performed one plausible template fit through
             // the single-bank path, writing no scan CSV — a wrong answer that looked right.
-            if (!is_declared_fitting_mode(*mode)) {
+            // A project saved while the scan's Joint fit was spelled `parametric` reads as Joint; no release wrote it.
+            const std::string read = *mode == "parametric" ? std::string("joint") : *mode;
+            if (!is_declared_fitting_mode(read)) {
                 throw IoError("_fitting_mode.type is '" + *mode + "', expected " +
                               declared_fitting_modes() + ": " + analysis_file.string());
             }
-            project.fitting_mode = *mode;
+            project.fitting_mode = read;
         }
         // ADR-0036 §7: the correlation chart's threshold and the pattern chart's x axis, each checked by crysta's rules.
         try {
@@ -4528,8 +4530,8 @@ static Project load_project_folder(const std::string& directory, const WarningSi
                 project.constraints.push_back(constraint);
             }
         }
-        // edi ADR-0081: independent without a scan fits each experiment alone; sequential and parametric need one.
-        if ((project.fitting_mode == "sequential" || project.fitting_mode == "parametric") &&
+        // edi ADR-0081: independent without a scan fits each experiment alone; sequential needs one.
+        if (project.fitting_mode == "sequential" &&
             !project.sequential_fit.declared()) {
             throw IoError("_fitting_mode.type is '" + project.fitting_mode +
                           "' but no _sequential_fit.data_dir is declared - a scan fit needs the "

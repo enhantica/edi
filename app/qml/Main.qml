@@ -861,7 +861,7 @@ EaComponents.ApplicationWindow {
     Binding {
         target: AppSizes
         property: "sharedColumnShown"
-        value: Session.project !== null && Session.project.fit.measured && Session.project.analysis !== null && (Session.project.analysis.fittingMode === "parametric" || Session.project.analysis.fittingMode === "joint")
+        value: Session.project !== null && Session.project.fit.measured && Session.project.analysis !== null && Session.project.analysis.fittingMode === "joint"
     }
     // Full's fixed width, edi main's rule: from the window's edge to the Experiment button's centre in the top bar.
     Binding {

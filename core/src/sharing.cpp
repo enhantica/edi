@@ -423,7 +423,7 @@ std::optional<std::pair<std::string, std::string>> experiment_part(const Project
 // ADR-0107: the shared names take effect in the parametric fit of a scan and in a joint fit; in every other mode they
 // are kept and do nothing.
 bool active(const Project& project) {
-    return project.sequential_fit.declared() ? project.fitting_mode == "parametric" : project.fitting_mode == "joint";
+    return project.fitting_mode == "joint";
 }
 
 // ADR-0107: in a scan a name is its own group (the points repeat it); in a joint fit the group is the same path in every

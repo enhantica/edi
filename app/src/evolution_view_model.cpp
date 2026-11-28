@@ -17,6 +17,7 @@
 
 #include "background.hpp"
 #include "edi/categories.hpp"
+#include "edi/selectors.hpp"
 #include "edi/scan.hpp"
 #include "edi/sharing.hpp"
 
@@ -316,7 +317,7 @@ bool EvolutionViewModel::syncNames() {
         static const edi::ScanResultIndex kNoResults;
         // ADR-0107: a parameter shared across the series has one value, so it is no curve.
         std::set<std::string> series_shared;
-        if (project_->fitting_mode == "parametric") {
+        if (edi::fit_kind(*project_) == "parametric") {
             for (const auto& row : project_->sequential_fit.shared) series_shared.insert(row->parameter_unique_name.value());
         }
         for (const std::string& name :

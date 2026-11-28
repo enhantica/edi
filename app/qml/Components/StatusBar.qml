@@ -290,10 +290,10 @@ EaElements.StatusBar {
         visible: !bar.opening && bar.fit !== null && (AppState.analysisPageEnabled || running || bar.fit.outcome !== "")
 
         readonly property bool running: bar.fit !== null && bar.fit.running
-        // A parametric fit runs as one fit of every pattern, so it shows iterations and χ² as a joint fit does.
+        // A Joint fit of a scan runs as one fit of every pattern, so it shows iterations and χ² as a joint fit does.
         readonly property bool scanning: bar.fit !== null && bar.fit.scanning && !bar.fit.parametric
         readonly property bool summary: bar.fit !== null && !running
-        // A parametric fit has one outcome, shown once: never files fitted, converged or failed (ADR-0107).
+        // A Joint fit of a scan has one outcome, shown once: never files fitted, converged or failed (ADR-0107).
         readonly property bool scanSummary: summary && bar.fit.scanSummary && !bar.fit.parametric
         // The pattern-update mode, the patterns a scan has drawn and the file drawn last (the browser checks read
         // them).

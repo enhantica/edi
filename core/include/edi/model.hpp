@@ -5265,13 +5265,13 @@ struct FitResultRecord {
 //   joint        several banks, one simultaneous fit
 //   sequential   scan: each file seeded from the previous fit's converged parameters
 //   independent  scan: each file seeded from the SAME initial parameters
-//   parametric   scan: every file in one fit, the shared parameters one value for all (ADR-0107)
+//   joint over a declared scan: every file in one fit, the shared parameters one value for all
+//                (ADR-0107); the fit kind `parametric` (fit_kind) names it inside edi
 // The scan modes execute SERIALLY; the distinction is the starting point, never concurrency.
 inline bool is_declared_fitting_mode(const std::string& mode) {
-    return mode == "single" || mode == "joint" || mode == "sequential" || mode == "independent" ||
-           mode == "parametric";
+    return mode == "single" || mode == "joint" || mode == "sequential" || mode == "independent";
 }
-// True for the three modes driven by crysta's scan driver over a declared `_sequential_fit` block.
+// True for the three fit kinds (fit_kind) driven by crysta's scan driver over a declared `_sequential_fit` block.
 // A site that means "a scan" asks this instead of comparing against `sequential` and forgetting
 // `independent` — which is exactly how the mode contract drifted in the first place.
 inline bool is_scan_fitting_mode(const std::string& mode) {

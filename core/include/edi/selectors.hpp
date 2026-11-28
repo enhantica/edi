@@ -254,10 +254,16 @@ void select_scattering_source(ExperimentBase& experiment, ScatteringSourceItem i
 inline std::string effective_fitting_mode(const Project& project) {
     return project.fitting_mode.empty() ? std::string("single") : project.fitting_mode;
 }
+// The fit the mode runs: the mode, except Joint over a declared scan, which fits every pattern of the scan as one
+// fit (`parametric`, the scan kind beside `sequential` and `independent`).
+inline std::string fit_kind(const Project& project) {
+    const std::string mode = effective_fitting_mode(project);
+    return mode == "joint" && project.sequential_fit.declared() ? std::string("parametric") : mode;
+}
 // Whether the project fits a scan: a scan mode with a declared scan. Independent without one fits each experiment
 // alone (ADR-0081).
 inline bool fits_a_scan(const Project& project) {
-    return is_scan_fitting_mode(effective_fitting_mode(project)) && project.sequential_fit.declared();
+    return is_scan_fitting_mode(fit_kind(project)) && project.sequential_fit.declared();
 }
 // The declared fitting mode, one of supported_fitting_modes() (the Python fitting_mode setter's rule).
 void set_fitting_mode(Project& project, const std::string& mode);

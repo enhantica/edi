@@ -209,7 +209,8 @@ void fit(const std::string& source, const std::string& output, bool dry,
         };
     }
 
-    edi::apply_cores_for_mode(project.fitting_mode);  // only when --cores was given
+    const std::string kind = edi::fit_kind(project);
+    edi::apply_cores_for_mode(kind);  // only when --cores was given
     const auto result = [&] {
         if (project.fitting_mode == "sequential") {
             return project.fit_sequential(on_iteration, {}, on_scan_start, on_file_complete);
@@ -217,13 +218,13 @@ void fit(const std::string& source, const std::string& output, bool dry,
         if (project.fitting_mode == "independent" && !project.sequential_fit.declared()) {
             return project.fit_independent(on_iteration, on_start);  // each experiment alone (ADR-0081)
         }
-        if (project.fitting_mode == "parametric") {
+        if (kind == "parametric") {
             return project.fit_parametric(on_iteration, {}, on_scan_start, on_file_complete);
         }
         if (project.fitting_mode == "independent") {
             return project.fit_independent(on_iteration, {}, on_scan_start, on_file_complete);
         }
-        if (project.fitting_mode == "joint") return project.fit_joint(on_iteration, on_start);
+        if (kind == "joint") return project.fit_joint(on_iteration, on_start);
         return project.fit(on_iteration, on_start);
     }();
     if (!dry) edi::save_project_as(project, project.path);

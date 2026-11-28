@@ -856,7 +856,7 @@ void FitViewModel::sync() {
     syncScanState();
     // A scan mode runs only in a project whose scan resolves to datasets of one template experiment; a declared
     // scan is never fitted jointly, whatever mode the project was saved with.
-    const QString mode = QString::fromStdString(edi::effective_fitting_mode(project_));
+    const QString mode = QString::fromStdString(edi::fit_kind(project_));
     const bool declared = project_.sequential_fit.declared();
     const bool scan = edi::is_scan_fitting_mode(mode.toStdString()) && declared;  // ADR-0081
     if (scan != scan_mode_) {

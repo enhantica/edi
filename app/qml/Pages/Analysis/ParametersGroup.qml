@@ -52,10 +52,10 @@ SideBarGroup {
     readonly property color freeTitleColor: !measured ? EaStyle.Colors.themeForegroundMinor : freeTitleHovered ? EaStyle.Colors.themeAccent : EaStyle.Colors.themeForeground
     // A cell's margin on the left, so "Max" and "Free" are an em apart (T1).
     readonly property real freeColumnWidth: Math.ceil(AppSizes.tableCellMargin + freeTitleText.advanceWidth + freeGap + freeArrowText.advanceWidth + freeInset)
-    // Shared (edi ADR-0107): one value for every dataset of the scan (parametric fit) or for every experiment (joint fit).
+    // Shared (edi ADR-0107): one value for every dataset of the scan or for every experiment, in a Joint fit.
     // Shown in that mode only, beside Free, and independent of it: a shared parameter has one value for every dataset,
     // fixed or free (owner, 2026-11-26).
-    readonly property bool sharedShown: measured && project !== null && project.analysis !== null && (project.analysis.fittingMode === "parametric" || project.analysis.fittingMode === "joint")
+    readonly property bool sharedShown: measured && project !== null && project.analysis !== null && project.analysis.fittingMode === "joint"
     // Sized by Free's rule: a cell margin, the title, the gap, the arrow and the inset.
     readonly property real sharedColumnWidth: sharedShown ? Math.ceil(AppSizes.tableCellMargin + sharedTitleText.advanceWidth + freeGap + freeArrowText.advanceWidth + freeInset) : 0
     property bool sharedTitleHovered: false

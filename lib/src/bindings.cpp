@@ -5667,9 +5667,9 @@ NB_MODULE(_edi, m) {
             "on_iteration"_a = nb::none(), "on_start"_a = nb::none(),
             "on_scan_start"_a = nb::none(), "on_file_complete"_a = nb::none(),
             "should_cancel"_a = nb::none(),
-            "Parametric scan refinement: every file of the scan in one fit, the shared parameters "
+            "The joint fit of a scan: every file of the scan in one fit, the shared parameters "
             "(Parameter.shared) one value for all files. Rows are written as the 'independent' mode "
-            "writes them. Raises ValueError unless the fitting mode is exactly 'parametric'.")
+            "writes them. Raises ValueError unless the fitting mode is 'joint' over a declared scan.")
         // The stop rules are model state too, as crysta reads them; the setter validates the list.
         .def_prop_rw(
             "stop_rules",

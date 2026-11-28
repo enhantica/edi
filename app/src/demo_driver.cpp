@@ -2028,7 +2028,7 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
                               + QStringList{analysis, basic, "statusBar.fit.button", "wait-fit", "choose:OK",
                                             "mainArea.tab.evolution"}});
     }
-    // The parametric fit's Shared column on the 213-file scan: the fitting mode selector open, Parametric chosen, U, V
+    // The parametric fit's Shared column on the 213-file scan: the fitting mode selector open, Joint chosen, U, V
     // and W shared, the whole table, then saved and opened again. Run only when asked (`--demo-only parametric-`).
     if (only.startsWith(QLatin1String("parametric-"))) {
         steps_.push_back({"parametric-1-selector",
@@ -2036,7 +2036,7 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
                               + open_cli_project("pd-neut-cwl_cosio-d20_scan-213f")
                               + QStringList{analysis, extras, "expand:group.fitting_mode", "reveal:fittingMode.type",
                                             "fittingMode.type"}});
-        steps_.push_back({"parametric-2-chosen", {"choose:Parametric: all as one fit", basic}});
+        steps_.push_back({"parametric-2-chosen", {"choose:Joint: all patterns as one fit", basic}});
         steps_.push_back({"parametric-3-uvw-shared", {"parameters.nameFilter", "type:broad_gauss", "parameters.shared.0",
                                                       "parameters.shared.1", "parameters.shared.2"}});
         steps_.push_back({"parametric-4-table", {"parameters.nameFilter", "key:Ctrl+A", "key:Backspace"}});
@@ -2046,7 +2046,7 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
                                                      "parameters.freeHeader"}});
         steps_.push_back({"parametric-7-shared-menu", {"key:Escape", "parameters.sharedHeader"}});
     }
-    // A Parametric fit's views after it ends: the selected pattern with its calculated curve, Meas vs calc, Evolution
+    // A Joint scan fit's views after it ends: the selected pattern with its calculated curve, Meas vs calc, Evolution
     // and the results window with one outcome, on the three-file scan with U, V and W shared. Run only when asked
     // (`--demo-only parametricfit-`).
     if (only.startsWith(QLatin1String("parametricfit-"))) {
@@ -2054,7 +2054,7 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
                           QStringList{"resize:1480x900", "theme:light"} + start
                               + open_cli_project("pd-neut-cwl_cosio-d20_scan-3f")
                               + QStringList{analysis, extras, "expand:group.fitting_mode", "reveal:fittingMode.type",
-                                            "fittingMode.type", "choose:Parametric: all as one fit", basic,
+                                            "fittingMode.type", "choose:Joint: all patterns as one fit", basic,
                                             "parameters.nameFilter", "type:broad_gauss", "parameters.shared.0",
                                             "parameters.shared.1", "parameters.shared.2", "parameters.nameFilter",
                                             "key:Ctrl+A", "key:Backspace"}});
@@ -2065,7 +2065,7 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
         steps_.push_back({"parametricfit-5-results", {"statusBar.fit.outcome"}});
     }
     // A running fit's every Analysis chart tab at two iterations after the first, then its status bar and results
-    // window: the 213-pattern Parametric example with U, V and W shared (`parametriclive-`) and the taurine in Joint
+    // window: the 213-pattern Joint scan example with U, V and W shared (`parametriclive-`) and the taurine in Joint
     // mode with x11, x22 and x33 shared (`jointlive-`, EDI_DEMO_JOINT_PROJECT). Run only when asked.
     if (only.startsWith(QLatin1String("parametriclive-")) || only.startsWith(QLatin1String("jointlive-"))) {
         const QStringList tabs{"structure", "pattern", "measCalc", "correlations", "stacked", "map", "evolution"};
@@ -2741,7 +2741,7 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
         }
     }
     // One fit timed in the app: a prepared copy of the 213-pattern scan in Independent mode
-    // (EDI_DEMO_INDEPENDENT_PROJECT) or of the Parametric example with U, V and W shared (EDI_DEMO_PARAMETRIC_PROJECT),
+    // (EDI_DEMO_INDEPENDENT_PROJECT) or of the Joint scan example with U, V and W shared (EDI_DEMO_PARAMETRIC_PROJECT),
     // under the Cores for fitting preference in effect. Run one at a time (`--demo-only fittime-independent`).
     if (only.startsWith(QLatin1String("fittime-"))) {
         steps_.push_back({"fittime-independent", {"open-project:" + qEnvironmentVariable("EDI_DEMO_INDEPENDENT_PROJECT"),
@@ -5990,7 +5990,7 @@ QString DemoDriver::scan_work(int files) const {
         return QStringLiteral("no scan is open");
     }
     const QString mode = project->analysis() != nullptr ? project->analysis()->fittingMode() : QString();
-    if (mode != QLatin1String("sequential") && mode != QLatin1String("independent") && mode != QLatin1String("parametric")) {
+    if (mode != QLatin1String("sequential") && mode != QLatin1String("independent") && mode != QLatin1String("joint")) {
         return QStringLiteral("the scan does not run in a scan mode");
     }
     if (static_cast<int>(scan->datasets().files.size()) != files ||

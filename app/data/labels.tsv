@@ -418,8 +418,7 @@ fit_result_phase.magnetic_r_factor	R mag
 fitting_mode	Fitting mode		sliders-h
 fitting_mode.type	Mode		
 fitting_mode.type=independent	Independent: each from the same start		
-fitting_mode.type=joint	Joint: all experiments at once		
-fitting_mode.type=parametric	Parametric: all as one fit		
+fitting_mode.type=joint	Joint: all patterns as one fit		
 fitting_mode.type=sequential	Sequential: each from the previous		
 fitting_mode.type=single	Single experiment		
 geom	Bond settings		ruler-combined

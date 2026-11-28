@@ -4736,9 +4736,9 @@ void overlay_starts(std::vector<edi::Edit::ScanValue>& values, const edi::Projec
     const auto& starts = project.sequential_fit.starts;
     if (starts.empty() || dataset < 0 || dataset >= static_cast<int>(files.size())) return;
     const std::string& shown = files[static_cast<std::size_t>(dataset)];
-    // As the fit uses them (crysta apply_point_starts): the point's own, by exact name, and in a Parametric fit, where
+    // As the fit uses them (crysta apply_point_starts): the point's own, by exact name, and in a Joint fit of the scan, where
     // sharing is in effect, a shared name's start at every point.
-    const bool series_shared = project.fitting_mode == "parametric";
+    const bool series_shared = edi::fit_kind(project) == "parametric";
     std::set<std::string> shared;
     for (const auto& row : project.sequential_fit.shared) shared.insert(row->parameter_unique_name.value());
     for (const auto& start : starts) {

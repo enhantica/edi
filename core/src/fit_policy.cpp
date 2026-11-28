@@ -687,7 +687,7 @@ FitResultBase Project::fit_joint(const IterationCallback& on_iteration,
     // Review-1 F4: the third native entry point gets the same refusal as fit(). A scan
     // project reaching fit_joint() would fit the template's banks once and write no
     // results.csv — the same wrong-answer-to-a-different-question, one function along.
-    if (!fitting_mode.empty() && fitting_mode != "joint") {
+    if ((!fitting_mode.empty() && fitting_mode != "joint") || sequential_fit.declared()) {
         throw std::invalid_argument(
             "edi fit_joint: _fitting_mode.type is '" + fitting_mode +
             "' - this entry point serves exactly the 'joint' mode; use analysis.fit(), which "

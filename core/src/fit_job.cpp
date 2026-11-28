@@ -82,7 +82,7 @@ FitResultBase fit_by_mode(Project& project, const IterationCallback& on_iteratio
                           const CancelCallback& should_cancel, const ScanStartCallback& on_scan_start,
                           const FileCompleteCallback& on_file_complete, const FileFittedCallback& on_file_fitted,
                           const ParametricIterateCallback& on_iterate, const CoresBudget& budget) {
-    const std::string mode = effective_fitting_mode(project);
+    const std::string mode = fit_kind(project);
     const ScopedCores cores(budget);
     if (mode == "single") {
         return project.fit(on_iteration, on_start, should_cancel);
@@ -228,7 +228,7 @@ bool FitJob::start(const Project* scan_template) {
     }
     auto inputs = std::make_shared<FitInputs>(inputs_of(state_->live));
     // The cores are the preference's and the mode's when the fit is asked for (edi ADR-0107 decision 11).
-    const CoresBudget budget = cores_budget_for_mode(effective_fitting_mode(snapshot->project));
+    const CoresBudget budget = cores_budget_for_mode(fit_kind(snapshot->project));
     state_->frame_wanted.store(true, std::memory_order_release);
     const std::shared_ptr<State> self = state_;
     state_->ticket = state_->worker.submit(
