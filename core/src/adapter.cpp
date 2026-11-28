@@ -3878,15 +3878,19 @@ std::string column_phase(const Project& project, const std::string& column) {
         parts.push_back(column.substr(start, end - start));
         start = end + 1;
     }
-    if (column_bank(project, column) != nullptr) {
-        parts.erase(parts.begin());  // the bank that owns it; the phase follows
+    // The experiment that owns a qualified bank column, only when that grammar follows it (review 25): a bank named
+    // like a category never takes the category's own first token.
+    const bool qualified = column_bank(project, column) != nullptr && parts.size() > 2 &&
+                           (parts[1] == "linked_structure" || parts[1] == "preferred_orientation");
+    if (qualified) {
+        parts.erase(parts.begin());
     }
     std::string id;
     if (parts.size() > 1 && (parts[0] == "linked_structure" || parts[0] == "preferred_orientation")) {
         id = parts[1];
     } else if (parts.size() > 2 && parts[0] == "fit_result" && (parts[1] == "r_bragg" || parts[1] == "r_mag")) {
         id = parts[2];
-    } else if (!parts.empty() && column_bank(project, column) == nullptr) {
+    } else if (!parts.empty() && !qualified && column_bank(project, column) == nullptr) {
         id = parts[0];
     }
     for (const auto& structure : project.structures) {
@@ -3903,7 +3907,9 @@ bool names_hidden_structure(const Project& project, const std::string& column) {
     if (phase.empty()) return false;
     if (project.structure_hidden(phase)) return true;
     // A qualified bank column of a phase its own bank leaves disabled.
-    const BraggPdExperiment* bank = column_bank(project, column);
+    const std::string after = column.substr(std::min(column.find('.'), column.size()) + 1);
+    const bool qualified = after.starts_with("linked_structure.") || after.starts_with("preferred_orientation.");
+    const BraggPdExperiment* bank = qualified ? column_bank(project, column) : nullptr;
     return bank != nullptr && std::none_of(bank->linked_structures.begin(), bank->linked_structures.end(),
                                            [&](const auto& link) {
                                                return link->enabled.get() &&
