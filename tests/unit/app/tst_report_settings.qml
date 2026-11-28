@@ -50,6 +50,7 @@ Item {
         ReportPage {}
     }
     TestCase {
+        id: test
         name: "ReportSettings"
         when: windowShown
         readonly property url location: Globals.Vars.settingsFile
@@ -320,21 +321,21 @@ Item {
                 analysis: analysisFactory,
                 report: reportFactory
             };
+            verify(Examples.fixture(Session, "pd-neut-cwl_cosio-d20_scan-3f"), "A measured scan enables the real page settings");
             const page = createTemporaryObject(factories[data.page], surface, {
                 width: 1200,
-                height: 800
+                height: 800,
+                current: true
             });
-            verify(page !== null && waitForPolish(page), "The actual workflow page lays out before checking its fourth sidebar tab");
-            const tab = findChild(page, "sideBar.tab.settings");
-            verify(tab !== null, "The actual " + data.page + " page exposes sideBar.tab.settings beside Main, Extras and Text; actual " + tab);
-            const populated = data.page === "analysis";
-            compare(tab.enabled, populated, "ADR-0031: each empty Settings tab is disabled and each populated tab stays actionable; page=" + data.page);
-            const checked = tab.checked;
-            mouseClick(tab, tab.width / 2, tab.height / 2);
-            if (populated)
-                tryCompare(tab, "checked", true, 1000, "A populated Settings tab accepts actual pointer input");
+            verify(page !== null && waitForPolish(page), "The actual workflow page lays out before checking its fifth sidebar tab");
+            Ui.selectSidebarTab(test, page, "settings");
+            const groups = Ui.groupNames(page);
+            if (data.page === "structure")
+                compare(groups, ["appearance", "polyhedra"], "Structure Settings contains both moved view groups in order");
+            else if (["project", "report"].includes(data.page))
+                verify(Ui.find(page, "sideBar.note.invite") !== null, "An empty Settings tab displays its invitation");
             else
-                compare(tab.checked, checked, "Pointer input cannot activate an empty Settings tab");
+                verify(groups.includes("performance"), "The measured workflow offers its own performance setting");
         }
         function choose(control, index) {
             verify(control !== undefined && control.enabled, "The real page setting is enabled before actual pointer input");

@@ -253,10 +253,9 @@ TestCase {
         const atoms = visibleControl("group.atom_site_aniso");
         verify(Ui.find(atoms, "atomSiteAdp.iso.0") !== null,
                "owner 2026-10-06: ADP is visibly inside Atomic displacement");
-        //  D11 adds the view-only Appearance group to Structure Extras.
-        renderedCategories(["space_group", "cell", "atom_site", "atom_site_aniso"], ["scattering_length", "appearance"]);
+        renderedCategories(["space_group", "cell", "atom_site", "atom_site_aniso"], ["scattering_length"]);
         click("appBar.tab.experiment");
         renderedCategories(["background", "instrument", "peak", "excluded_region", "linked_structure"],
-                           ["data", "absorption", "preferred_orientation", "scattering_source", "peak", "background"]);
+                           ["data", "absorption", "preferred_orientation", "scattering_source", "peak"]);
     }
 }

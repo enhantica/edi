@@ -409,11 +409,14 @@ TestCase {
         verify(atomTable && atomTable.headerItem && atomTable.count === 1, "The original Atom sites table supplies the one cobalt row");
         const headerUids = table => Render.descendants(table.headerItem).filter(item => item.uid && item.uid.startsWith("atom_site.")).map(item => item.uid);
         const sourceHeaders = headerUids(atomTable);
-        group("space_group");
-        const action = findChild(page, "spaceGroup.magneticAnalysis");
-        verify(action && action.visible, "The Crystal Space group exposes Magnetic symmetry analysis");
+        Ui.click(test, Probe, app, "sideBar.tab.tools");
+        Ui.expandGroup(test, Probe, app, "group.magnetic_analysis");
+        const tool = Ui.find(page, "group.magnetic_analysis", true);
+        verify(tool !== null, "Structure Tools displays the magnetic analysis group");
+        const action = findChild(tool, "spaceGroup.magneticAnalysis");
+        verify(action && action.visible, "Structure Tools exposes Magnetic symmetry analysis for the Crystal");
         press(action);
-        tryVerify(() => !!popup(), 2000, "The Space group button independently opens magnetic symmetry analysis");
+        tryVerify(() => !!popup(), 2000, "The Structure Tools button independently opens magnetic symmetry analysis");
         compare(Ui.page(app), page, "The Structure analysis opens over the current page");
         const toolbar = pcontrol("magnetic.toolbar");
         const names = ["k", "sites", "levels", "netMoment", "startMoments", "graphView", "listView"];
@@ -486,7 +489,7 @@ TestCase {
         verify(letter.readOnly === true || letter.editable === false || !letter.enabled, "An unverified operator-defined letter cannot be edited as an ordinary table letter");
     }
     function checkA10Refusal(message) {
-        verify(/Crystal structure it came from/i.test(message) && /Structure page.*Space group.*Magnetic symmetry analysis/i.test(message) && /Experiment page.*Extra.*k-vector search.*Mark peaks/i.test(message), "The refusal identifies the original Crystal role and both current analysis routes: " + message);
+        verify(/Crystal structure it came from/i.test(message) && /Structure page.*Tools.*Magnetic symmetry analysis/i.test(message) && /Experiment page.*Tools.*k-vector search.*Mark peaks/i.test(message), "The refusal identifies the original Crystal role and both current analysis routes: " + message);
     }
     function test_k_field_refusal_is_atomic() {
         openInput("type-iv", false);
@@ -596,10 +599,10 @@ TestCase {
         return chart;
     }
     function startMarking(chart) {
-        Ui.click(test, Probe, app, "sideBar.tab.extras");
+        Ui.click(test, Probe, app, "sideBar.tab.tools");
         Ui.expandGroup(test, Probe, app, "group.k_search");
         const sidebar = Ui.find(Ui.page(app), "group.k_search", true);
-        compare(sidebar.title, "k-vector search", "Experiment Extra names the search group");
+        compare(sidebar.title, "k-vector search", "Experiment Tools names the search group");
         const tools = Render.descendants(chart.imageToolbar).filter(item => item.visible && (/findK|kSearch/i.test(item.objectName) || ["Find k", "Clear", "Mark peaks"].includes(item.text)));
         compare(tools.length, 0, "The chart toolbar has no propagation-vector search controls");
         const toggle = sidebarControl("mark");

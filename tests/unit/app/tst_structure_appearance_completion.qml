@@ -66,12 +66,12 @@ Item {
             }
         }
         function expand(name = "appearance") {
-            click(findChild(page, "sideBar.tab.extras"));
+            click(findChild(page, "sideBar.tab.settings"));
             let group;
             tryVerify(() => {
                 group = Ui.find(page, "group." + name, true);
                 return group !== null;
-            }, 1500, "Structure Extra exposes its current Appearance or Polyhedra group");
+            }, 1500, "Structure Settings exposes its current Appearance or Polyhedra group");
             if (group.collapsed)
                 click(group);
             tryVerify(() => !group.collapsed, 1500, "The real Appearance group reaches its expanded geometry");
@@ -140,7 +140,7 @@ Item {
             if (typeof control.checked === "boolean") {
                 if (control.checked !== shown)
                     click(control);
-                compare(control.checked, shown, "The real Extra toggle takes the requested polyhedra visibility");
+                compare(control.checked, shown, "The real Settings toggle takes the requested polyhedra visibility");
             } else
                 choose(control, shown ? /^(?:show|shown|on|yes|true)$/i : /^(?:hide|hidden|off|no|false)$/i);
         }
@@ -215,12 +215,12 @@ Item {
                 const quick = findChild(view, "structure.toolbar." + item.name);
                 verify(quick !== null && quick.visible && quick.enabled, "The real structure toolbar exposes each supported existing appearance switch");
                 const extra = Render.descendants(page).find(control => control.visible && control.enabled && (control.uid === "structure_view." + item.name || /(?:appearance|structure_view)\./i.test(control.objectName) && new RegExp("\\.(?:show_?)?" + item.name + "$", "i").test(control.objectName)) && (typeof control.checked === "boolean" || control.popup !== undefined));
-                verify(extra !== undefined, "The full Extra appearance settings expose each existing toolbar switch before any edit");
+                verify(extra !== undefined, "The full Appearance settings expose each existing toolbar switch before any edit");
                 const before = quick.checked;
                 click(quick);
                 tryCompare(Session.project.structureViewOptions, item.property, !before, 1000, "The real toolbar action changes the project's shared appearance state");
                 if (typeof extra.checked === "boolean") {
-                    tryCompare(extra, "checked", !before, 1000, "The actual full Extra setting follows the toolbar switch");
+                    tryCompare(extra, "checked", !before, 1000, "The full view setting follows the toolbar switch");
                     click(extra);
                 } else
                     choose(extra, before ? /^(?:show|shown|on|yes|true)$/i : /^(?:hide|hidden|off|no|false)$/i);
@@ -234,12 +234,12 @@ Item {
             verify(toolbar !== null && toolbar.visible && toolbar.enabled && toolbar.count > 1, "Atom view is a real toolbar combobox, alongside the existing drawn-Atoms choice");
             expand("appearance");
             const extra = findChild(page, "structure.appearance.atomView");
-            verify(extra !== null && extra.visible && extra.enabled, "Extra exposes the same atom-view setting as the toolbar");
+            verify(extra !== null && extra.visible && extra.enabled, "Settings exposes the same atom-view setting as the toolbar");
             choose(toolbar, /ionic/i);
             tryCompare(Session.project.structureViewOptions, "atomView", "ionic", 1000, "The toolbar's actual choice changes the shared appearance state");
-            verify(/ionic/i.test(extra.currentText), "The actual Extra control follows the toolbar's atom-view choice");
+            verify(/ionic/i.test(extra.currentText), "The Settings control follows the toolbar's atom-view choice");
             choose(extra, /covalent/i);
-            tryCompare(Session.project.structureViewOptions, "atomView", "covalent", 1000, "The Extra atom-view choice changes the shared appearance state");
+            tryCompare(Session.project.structureViewOptions, "atomView", "covalent", 1000, "The Settings atom-view choice changes the shared appearance state");
             verify(/covalent/i.test(toolbar.currentText), "The actual toolbar follows the Extra atom-view choice");
             edit(findChild(page, "structure.appearance.atomScale"), .41);
             verify(Session.save(), "The actual session saves the atom-view and scale choices");
@@ -266,11 +266,11 @@ Item {
             setPoly(false);
             const hidden = picture();
             click(quick);
-            verify(typeof polyToggle().checked !== "boolean" || polyToggle().checked, "The actual Extra toggle follows the polyhedra toolbar quick switch");
+            verify(typeof polyToggle().checked !== "boolean" || polyToggle().checked, "The actual Settings toggle follows the polyhedra toolbar quick switch");
             const shown = picture();
             verify(shown !== hidden, "Showing polyhedra changes the actual central 3D scene, away from toolbar and legend controls");
             setPoly(false);
-            verify(!quick.checked, "The actual polyhedra toolbar follows the Extra visibility control");
+            verify(!quick.checked, "The actual polyhedra toolbar follows the Settings visibility control");
             compare(picture(), hidden, "Hiding polyhedra restores the same actual 3D scene without them");
         }
         function test_polyhedra_colour_and_opacity_affect_the_actual_3d_render() {

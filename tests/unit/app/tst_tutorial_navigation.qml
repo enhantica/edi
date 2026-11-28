@@ -684,7 +684,7 @@ TestCase {
                     names.push(tab.objectName);
             verify(names.length > 0, "Every non-Home workflow page exposes main-view tabs to explain");
         } else {
-            for (const suffix of ["basic", "extras", "text", "settings"]) {
+            for (const suffix of ["basic", "extras", "text", "tools", "settings"]) {
                 const name = "sideBar.tab." + suffix;
                 const tab = one(page, name);
                 if (data.kind === "sidebar") {
@@ -861,7 +861,7 @@ TestCase {
                 tab: ""
             };
         }
-        const suffixes = step.tab ? [step.tab] : ["basic", "extras", "text", "settings"];
+        const suffixes = step.tab ? [step.tab] : ["basic", "extras", "text", "tools", "settings"];
         for (const suffix of suffixes) {
             const tab = one(page, "sideBar.tab." + suffix);
             if (!tab.enabled)

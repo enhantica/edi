@@ -75,7 +75,7 @@ TestCase {
         Ui.click(test, Probe, appWindow, "sideBar.tab." + tier);
         const root = Ui.page(appWindow);
         const pageItem = root.item ?? root;
-        const source = tier === "extras" ? pageItem.extrasItem : pageItem.basicItem;
+        const source = {basic: pageItem.basicItem, extras: pageItem.extrasItem, settings: pageItem.settingsItem}[tier];
         tryVerify(() => {
             const loader = Review.descendants(pageItem).find(item => item.sourceComponent === source);
             return loader !== undefined && loader.SwipeView.isCurrentItem && Math.abs(loader.mapToItem(loader.SwipeView.view, 0, 0).x) < 1;
@@ -219,7 +219,7 @@ TestCase {
     function test_last_sidebar_border_is_actually_absent_on_every_page() {
         open();
         for (const page of ["project", "structure", "experiment", "analysis"])
-            for (const tier of ["basic", "extras"]) {
+            for (const tier of page === "structure" ? ["basic", "extras", "settings"] : ["basic", "extras"]) {
                 pane(page, tier);
                 const groups = Review.descendants(Ui.page(appWindow)).filter(item => item.visible && item.objectName.startsWith("group.") && Ui.inPane(Ui.target(item)) && item.background);
                 verify(groups.length > 0, "Each sidebar consumer has actual group backgrounds");
@@ -227,8 +227,8 @@ TestCase {
                 compare(Render.borderLines(last.background).length, 0, "The last visible sidebar group has no rendered bottom separator");
                 for (const group of groups.slice(0, -1).filter(item => item.collapsible))
                     verify(Render.borderLines(group.background).length > 0, "Preceding sidebar categories retain their actual separating line");
-                if (page === "structure" && tier === "extras")
-                    compare(last.objectName, "group.appearance", "The Structure Extras Appearance group is the borderless last consumer");
+                if (page === "structure" && tier === "settings")
+                    compare(last.objectName, "group.polyhedra", "Polyhedra is the borderless last group in Structure Settings");
             }
     }
     function test_input_gaps_match_the_actual_chart_button_group() {

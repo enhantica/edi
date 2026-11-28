@@ -334,7 +334,7 @@ TestCase {
         }
     }
     function test_adp_view_uses_probability_in_atom_scale_position() {
-        const scale = reveal("structure", "extras", "appearance", "structure.appearance.atomScale");
+        const scale = reveal("structure", "settings", "appearance", "structure.appearance.atomScale");
         const appearance = discover(Ui.page(appWindow), "group.appearance");
         verify(appearance !== null && !appearance.collapsed, "The replacement-slot geometry belongs to the actual unfolded Appearance group");
         const location = scale.mapToItem(appearance, 0, 0);

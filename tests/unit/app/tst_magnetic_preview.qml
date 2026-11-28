@@ -105,12 +105,12 @@ TestCase {
         verify(Session.openProject(scratch), "The published 2.3 K example opens for the Extra sidebar check");
         tryCompare(Session.project, "calculating", false, 15000, "The example's computed Extra groups finish calculating");
         const shown = groups("structure", "extras").filter(item => item.visible &&
-            (item.shownTier === "Extras" && item.listed || /^Appearance/.test(item.title)));
+            (item.shownTier === "Extras" && item.listed));
         shown.sort((a, b) => a.mapToItem(appWindow.contentItem, 0, 0).y -
                              b.mapToItem(appWindow.contentItem, 0, 0).y);
         const titles = shown.map(item => item.title.replace(/\s*\(\d+\)$/, ""));
         compare(titles, ["Scattering lengths", "Magnetic form factors", "Symmetry operators", "Atoms in the cell",
-                         "Bonds", "Magnetic operators", "Moments in the cell", "Appearance"],
+                         "Bonds", "Magnetic operators", "Moments in the cell"],
                 "The rendered 2.3 K Extra groups use the approved names and order");
     }
     function test_magnetic_operators_are_read_only() {
@@ -830,8 +830,8 @@ TestCase {
         const magnetic = group("space_group_magn");
         const selectors = Render.descendants(magnetic).filter(item => typeof item.textAt === "function" && item.editable === true);
         compare(selectors.length, 1, "The magnetic name fields share one searchable selector");
-        const appearances = groups("structure", "extras").filter(item => /^Appearance/.test(item.title));
-        compare(appearances.length, 1, "Magnetic scale is edited in the single Appearance group");
+        const appearances = groups("structure", "settings").filter(item => item.objectName === "group.appearance" && Ui.inPane(Ui.target(item)));
+        compare(appearances.length, 1, "Magnetic scale is edited in the single Appearance group under Structure Settings");
         appearances[0].collapsed = false;
         const fields = Render.descendants(appearances[0]).filter(item => typeof item.label === "string");
         const atom = fields.find(item => item.label === "Atom scale");

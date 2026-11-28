@@ -124,6 +124,16 @@ function groupNames(root) {
     return names;
 }
 
+function selectSidebarTab(testCase, page, suffix) {
+    const name = "sideBar.tab." + suffix;
+    const tab = find(page, name);
+    testCase.verify(tab && tab.visible && tab.enabled, "The real sidebar offers " + name);
+    if (!tab.checked)
+        testCase.mouseClick(tab, tab.width / 2, tab.height / 2);
+    testCase.tryCompare(tab, "checked", true, 2000, "Pointer input selects " + name);
+    testCase.tryVerify(() => !moving(page), 2000, "The selected sidebar pane finishes sliding");
+}
+
 function text(root) {
     if (!root || !root.visible) return "";
     let result = typeof root.text === "string" && rendered(root) ? root.text : "";

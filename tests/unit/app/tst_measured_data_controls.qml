@@ -124,8 +124,6 @@ TestCase {
         let exclusions = groups(basic, "excluded_region").length;
         const extras = page("experiment", "extras");
         verify(extras !== null, "A simulation keeps its Extras tab for calculation settings");
-        const settings = groups(extras, "background").concat(groups(extras, "background_estimate"));
-        compare(settings.length > 0, measured, "Background estimation settings are hidden without measurements and return after loading data");
         exclusions += groups(extras, "excluded_region").length;
         compare(exclusions > 0, measured, "Excluded regions are hidden without measurements and return after loading data");
         const cutoff = active(extras, item => item.titleArea && (item.categoryId === "peak" || item.objectName === "group.peak" || Render.descendants(item).some(child => child.objectName === "peak.cutoff_fwhm")));
@@ -140,6 +138,10 @@ TestCase {
         const correlations = active(analysis, item => item.objectName === "mainArea.analysis.tab.correlations");
         compare(correlations.length, 1, "The real Analysis page retains its Correlations tab");
         compare(correlations[0].enabled, projectMeasured, "Correlations depends on measured data anywhere in the project rather than only the selected experiment");
+        const tools = page("experiment", "tools");
+        verify(tools !== null, "The Experiment Tools tab can be opened");
+        compare(groups(tools, "background_estimate").length > 0, measured,
+                "Experiment Tools offers Background estimation exactly when measurements are loaded");
     }
     function listingControls(root) {
         return active(root, item => /^(?:parameters\.(?:datablock|category|variability|nameFilter|clearFilters|shown|listing)|group\.(?:shownParameters|shown_parameters))$/.test(item.objectName) || String(item).startsWith("ShownParametersGroup"));

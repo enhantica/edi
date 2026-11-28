@@ -140,7 +140,7 @@ TestCase {
         EaStyle.Colors.theme = data.dark ? EaStyle.Colors.DarkTheme : EaStyle.Colors.LightTheme;
         open("docs/user/cli/pd-neut-cwl_lbco-hrpt_start-2/project");
         if (data.appearance) {
-            Ui.click(test, Probe, appWindow, "sideBar.tab.extras");
+            Ui.click(test, Probe, appWindow, "sideBar.tab.settings");
             Ui.expandGroup(test, Probe, appWindow, "group.appearance");
         }
         const combo = data.appearance ? findChild(Ui.page(appWindow), "structure.appearance.atomView") : object("structure.toolbar.colors");
