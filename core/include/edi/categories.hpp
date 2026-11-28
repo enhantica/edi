@@ -400,14 +400,31 @@ struct NamedParameter {
     const Parameter* parameter = nullptr;
 };
 std::vector<NamedParameter> named_parameters(const Project& project);
-// The aliases and constraints of a phase no enabled link reads (review 31), by id: an alias naming one of
-// Project::hidden_parameters, and a constraint whose target (its first identifier, before '=') is such an alias. They
-// stay in the project for save and re-enable; Analysis and the report leave them out, as they leave out the phase.
-struct HiddenRelations {
-    std::set<std::string> aliases;
-    std::set<std::string> constraints;
+// ActiveView: the project as every user-facing view sees it under the disabled-link ruling (owner, 2026-11-27;
+// reviews 31 and 32). It is the one place that decides whether a parameter, an alias or a constraint belongs to a
+// phase no enabled link reads; Analysis, the report and the assistant read relations only through it, so none can
+// show a disabled phase's rows. The declarations stay in the project for save and re-enable.
+//   - A parameter is hidden when it is one of Project::hidden_parameters.
+//   - An alias resolves its parameter by either spelling crysta accepts (the slot id or the unique name), dependent
+//     parameters included; it is hidden when that parameter is. An alias that resolves to nothing stays shown, for
+//     the user to repair.
+//   - A constraint is hidden when any alias it names is hidden.
+class ActiveView {
+   public:
+    explicit ActiveView(const Project& project);
+    const Parameter* resolve(const std::string& name) const;  // nullptr when no parameter or more than one has it
+    bool shown(const Parameter* parameter) const { return !hidden_.contains(parameter); }
+    bool shown(const ParameterAlias& alias) const { return !hidden_aliases_.contains(alias.id.value()); }
+    bool shown(const ParameterConstraint& constraint) const;
+    std::vector<const ParameterAlias*> aliases() const;
+    std::vector<const ParameterConstraint*> constraints() const;
+
+   private:
+    const Project& project_;
+    std::set<const Parameter*> hidden_;
+    std::map<std::string, std::vector<const Parameter*>> by_name_;
+    std::set<std::string> hidden_aliases_;
 };
-HiddenRelations hidden_relations(const Project& project);
 // One exact member, formatted only by the FIRST writer slot walk. Callers own
 // this preparation bound through the lookup and output ownership transfer.
 std::size_t named_parameter_preparation_bytes(std::size_t maximum_name_bytes);

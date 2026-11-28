@@ -169,17 +169,16 @@ AliasListModel::AliasListModel(edi::Project& project, ProjectEditor& editor, QOb
 
 void AliasListModel::sync() {
     QList<Row> rows;
-    const edi::HiddenRelations hidden = edi::hidden_relations(project_);  // a disabled phase's stay out (review 31)
-    for (const auto& alias : project_.aliases) {
-        if (hidden.aliases.contains(alias->id.value())) continue;
-        rows.append({alias.get(),
+    const edi::ActiveView view(project_);  // the one view of what a disabled link hides (reviews 31 and 32)
+    for (const edi::ParameterAlias* alias : view.aliases()) {
+        rows.append({alias,
                      {QString::fromStdString(alias->id.value()),
                       QString::fromStdString(alias->parameter_unique_name.value())}});
     }
     setTableRows(rows);
     QStringList names;
     for (const edi::NamedParameter& named : edi::named_parameters(project_)) {
-        names.append(QString::fromStdString(named.unique_name));
+        if (view.shown(named.parameter)) names.append(QString::fromStdString(named.unique_name));
     }
     if (names != parameter_names_) {
         parameter_names_ = names;
@@ -206,8 +205,10 @@ void AliasListModel::append() {
     edi::Project& project = project_;
     edi::ParameterAlias alias;
     alias.id = unused_name("alias_", [&project](const std::string& id) { return holds_id(project.aliases, id); });
-    // The first parameter no alias names yet, else the first parameter.
+    // The first shown parameter no alias names yet (a disabled phase's are not offered; review 32).
+    const edi::ActiveView view(project);
     for (const edi::NamedParameter& named : edi::named_parameters(project)) {
+        if (!view.shown(named.parameter)) continue;
         bool aliased = false;
         for (const auto& existing : project.aliases) {
             aliased = aliased || existing->parameter_unique_name.value() == named.unique_name;
@@ -253,10 +254,8 @@ ConstraintListModel::ConstraintListModel(edi::Project& project, ProjectEditor& e
 
 void ConstraintListModel::sync() {
     QList<Row> rows;
-    const edi::HiddenRelations hidden = edi::hidden_relations(project_);  // a disabled phase's stay out (review 31)
-    for (const auto& constraint : project_.constraints) {
-        if (hidden.constraints.contains(constraint->id.value())) continue;
-        rows.append({constraint.get(),
+    for (const edi::ParameterConstraint* constraint : edi::ActiveView(project_).constraints()) {
+        rows.append({constraint,
                      {QString::fromStdString(constraint->id.value()),
                       QString::fromStdString(constraint->expression.value()), constraint->enabled.get()}});
     }
@@ -315,10 +314,7 @@ void ConstraintListModel::append() {
     std::map<std::string, double> values;
     for (const edi::NamedParameter& named : edi::named_parameters(project)) values[named.unique_name] = named.parameter->value.get();
     // Only the aliases the table shows: a disabled phase's stay out of a new expression too (review 31).
-    const edi::HiddenRelations hidden = edi::hidden_relations(project);
-    std::vector<const edi::ParameterAlias*> shown;
-    for (const auto& alias : project.aliases)
-        if (!hidden.aliases.contains(alias->id.value())) shown.push_back(alias.get());
+    const std::vector<const edi::ParameterAlias*> shown = edi::ActiveView(project).aliases();
     for (std::size_t dependent = 1; dependent < shown.size() && constraint.expression.value().empty(); ++dependent) {
         const std::string& name = shown[dependent]->id.value();
         if (dependents.contains(name)) continue;

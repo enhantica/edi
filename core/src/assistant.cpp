@@ -244,10 +244,13 @@ std::uint64_t project_metadata_size(const Project* project) {
                 {"anchors", anchors},{"terms",terms},{"estimate",estimate}}) : 4},
             {"reflection_admission", payload_size(reflection_admission_summary(*project, *experiment))}});
     });
-    const auto aliases = encoded_rows(project->aliases, [](const auto& alias) {
+    // The relations the user's views show (ActiveView, reviews 31 and 32): a disabled phase's stay out of the context
+    // and of its size alike.
+    const ActiveView view(*project);
+    const auto aliases = encoded_rows(view.aliases(), [](const auto& alias) {
         return encoded_fields({{"id", encoded_text(alias->id.value(), true)}, {"parameter_unique_name", encoded_text(alias->parameter_unique_name.value(), true)}});
     });
-    const auto constraints = encoded_rows(project->constraints, [](const auto& constraint) {
+    const auto constraints = encoded_rows(view.constraints(), [](const auto& constraint) {
         return encoded_fields({{"id", encoded_text(constraint->id.value(), true)}, {"expression", encoded_text(constraint->expression.value())}, {"enabled", constraint->enabled.get() ? 4 : 5}});
     });
     return encoded_fields({{"structures", structures}, {"datasets", datasets}, {"relations", encoded_fields({{"aliases", aliases}, {"constraints", constraints}})}});
@@ -320,8 +323,9 @@ J project_metadata(const Project* project) {
                                  {"anchors", std::move(anchors)},{"terms",std::move(terms)},{"estimate",std::move(estimate)}}) : J(nullptr)},
                 {"reflection_admission", reflection_admission_summary(*project, *experiment)}});
         }
-        for (const auto& alias : project->aliases) append(aliases, O{{"id", alias->id.value()}, {"parameter_unique_name", alias->parameter_unique_name.value()}});
-        for (const auto& constraint : project->constraints)
+        const ActiveView view(*project);  // as the size accounting above
+        for (const ParameterAlias* alias : view.aliases()) append(aliases, O{{"id", alias->id.value()}, {"parameter_unique_name", alias->parameter_unique_name.value()}});
+        for (const ParameterConstraint* constraint : view.constraints())
             append(constraints, O{{"id", constraint->id.value()}, {"expression", constraint->expression.value()}, {"enabled", constraint->enabled.get()}});
     }
     return O{{"structures", std::move(structures)}, {"datasets", std::move(datasets)},

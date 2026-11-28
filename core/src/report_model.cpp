@@ -1026,22 +1026,22 @@ std::unordered_map<std::string, bool> fittable_of(const Project& project) {
 // (edi ADR-0079).
 std::vector<ReportCategory> relations_of(const Project& project) {
     std::vector<ReportCategory> out;
-    const HiddenRelations hidden = hidden_relations(project);  // a disabled phase's stay out (review 31)
-    if (!project.aliases.empty()) {
+    const ActiveView view(project);  // the one view of what a disabled link hides (reviews 31 and 32)
+    const std::vector<const ParameterAlias*> shown_aliases = view.aliases();
+    const std::vector<const ParameterConstraint*> shown_constraints = view.constraints();
+    if (!shown_aliases.empty()) {
         ReportCategory aliases = category("alias");
         aliases.table.columns = {label("alias.id"), label("alias.parameter_unique_name")};
-        for (const auto& alias : project.aliases) {
-            if (hidden.aliases.contains(alias->id.value())) continue;
+        for (const ParameterAlias* alias : shown_aliases) {
             aliases.table.rows.push_back({alias->id.value(), alias->parameter_unique_name.value()});
         }
         out.push_back(std::move(aliases));
     }
-    if (!project.constraints.empty()) {
+    if (!shown_constraints.empty()) {
         ReportCategory constraints = category("constraint");
         constraints.table.columns = {label("constraint.id"), label("constraint.expression"),
                                      label("constraint.enabled")};
-        for (const auto& constraint : project.constraints) {
-            if (hidden.constraints.contains(constraint->id.value())) continue;
+        for (const ParameterConstraint* constraint : shown_constraints) {
             constraints.table.rows.push_back(
                 {constraint->id.value(), constraint->expression.value(), constraint->enabled.get() ? "Yes" : "No"});
         }
