@@ -288,7 +288,8 @@ TestCase {
         press(card);
         compare(popup().selected.length, 1, "A click selects exactly the clicked card");
         compare(String(card.color), String(Style.Colors.themeAccent), "The selected card uses the app accent fill");
-        verify(labels.every(item => String(item.color) === String(Qt.rgba(1, 1, 1, 1))), "A selected card draws white text");
+        const textColours = () => labels.map(item => [item.color.r, item.color.g, item.color.b, item.color.a]);
+        compare(textColours(), [[1, 1, 1, 1], [1, 1, 1, 1]], "A selected card draws both labels in opaque white");
         verify(footer.text.includes("1"), "The fixed Add button shows the selected count");
         compare(footer.mapToItem(popup().contentItem, 0, 0).y, footerY, "Changing levels and selecting a card keeps the footer fixed");
         press(card);
@@ -722,27 +723,6 @@ TestCase {
         press(remove);
         compare(table.count, peaks.length - 1, "Removing the suggested row drops exactly one sidebar entry");
         verify(!markedPeaks(chart).some(peak => peak.x === x), "Removing the suggested row unmarks that exact peak on the chart");
-
-        const layer = chartControl("chart.peaks");
-        const axis = chartAxis(chart);
-        mouseWheel(layer, layer.px(x), layer.height * .55, 0, 960);
-        tryVerify(() => (axis.max - axis.min) / layer.width < .035, 2000, "Zoom resolves the offset tap from the measured maximum");
-        const offset = clickPeak(chart, x + .07);
-        verify(Math.abs(offset - x) > .04 && Math.abs(offset - x) < .1, "The tap falls beside the maximum within the fixture's known half width");
-        tryCompare(table, "count", peaks.length, 2000, "An offset tap restores the observed peak to the sidebar");
-        verify(markedPeaks(chart).some(peak => Math.abs(peak.x - x) < 1e-8), "The offset tap lands at the measured maximum");
-
-        const blank = 16.2;
-        const clicked = clickPeak(chart, blank);
-        tryCompare(table, "count", peaks.length + 1, 2000, "A click on a flat interval still creates a mark");
-        const free = markedPeaks(chart).findIndex(peak => Math.abs(peak.x - clicked) < .02);
-        verify(free >= 0, "With no maximum nearby the chart keeps the clicked angle");
-        sidebarPeak(table, free, blank, "added by hand");
-        mouseClick(layer, Math.round(layer.px(x)), layer.height * .85);
-        tryCompare(table, "count", peaks.length, 2000, "Clicking down the line drops the snapped sidebar row");
-        verify(!markedPeaks(chart).some(peak => Math.abs(peak.x - x) < 1e-8), "The click drops only the snapped maximum");
-        clickPeak(chart, clicked);
-        tryCompare(table, "count", peaks.length - 1, 2000, "Clicking the new free mark removes it");
         const toggle = sidebarControl("mark");
         const kept = JSON.stringify(markedPeaks(chart));
         const occupiedHeight = table.height;
@@ -764,6 +744,37 @@ TestCase {
         press(toggle);
         press(toggle);
         tryVerify(() => markedPeaks(chart).some(peak => Math.abs(peak.x - x) < .051), 2000, "Restarting on the empty table suggests the independently known satellite again");
+        const resuggested = markedPeaks(chart).map(peak => peak.x).sort((a, b) => a - b);
+        compare(resuggested, peaks.map(peak => peak.x).sort((a, b) => a - b), "A fresh marking run restores the same measured suggestions");
+        const resuggestedRow = resuggested.findIndex(angle => Math.abs(angle - x) < 1e-8);
+        verify(resuggestedRow >= 0, "The fresh table reaches the satellite for the snap check");
+        const removeAgain = findChild(sidebarPeak(table, resuggestedRow, satellite, "forbidden reflection"), "kSearch.remove." + resuggestedRow);
+        verify(removeAgain, "The fresh table exposes the satellite removal control");
+        press(removeAgain);
+
+
+        const layer = chartControl("chart.peaks");
+        const axis = chartAxis(chart);
+        mouseWheel(layer, layer.px(x), layer.height * .55, 0, 960);
+        tryVerify(() => (axis.max - axis.min) / layer.width < .035, 2000, "Zoom resolves the offset tap from the measured maximum");
+        const offset = clickPeak(chart, x + .07);
+        verify(Math.abs(offset - x) > .04 && Math.abs(offset - x) < .1, "The tap falls beside the maximum within the fixture's known half width");
+        tryCompare(table, "count", peaks.length, 2000, "An offset tap restores the observed peak to the sidebar");
+        const rebased = markedPeaks(chart).map(peak => peak.x);
+        verify(rebased.some(angle => Math.abs(angle - x) < 1e-8), "The offset tap at " + offset + " snaps to the measured maximum " + x + ", marks " + rebased);
+
+        const blank = 16.2;
+        const clicked = clickPeak(chart, blank);
+        tryCompare(table, "count", peaks.length + 1, 2000, "A click on a flat interval still creates a mark");
+        const free = markedPeaks(chart).map(peak => peak.x).sort((a, b) => a - b).findIndex(angle => Math.abs(angle - clicked) < .02);
+        verify(free >= 0, "With no maximum nearby the chart keeps the clicked angle");
+        sidebarPeak(table, free, blank, "added by hand");
+        mouseClick(layer, Math.round(layer.px(x)), layer.height * .85);
+        tryCompare(table, "count", peaks.length, 2000, "Clicking down the line drops the snapped sidebar row");
+        verify(!markedPeaks(chart).some(peak => Math.abs(peak.x - x) < 1e-8), "The click drops only the snapped maximum");
+        clickPeak(chart, clicked);
+        tryCompare(table, "count", peaks.length - 1, 2000, "Clicking the new free mark removes it");
+
     }
     function test_find_k_mask_excludes_observed_peak() {
         const chart = openPattern();
@@ -880,11 +891,22 @@ TestCase {
         verify(row && /1\/2,0,0/.test(Ui.text(row)), "The ranked table renders the non-default half-period vector");
         const cells = Render.texts(row).map(label => label.text);
         verify(cells.includes("2 parent cells") && cells.some(text => /^\d+\.\d{2}$/.test(text)), "The same row renders cell size and numeric misfit");
-        verify(results.rows.length > 1, "The ranked fixture supplies an independent row to select before the pointer click");
+        verify(results.rows.length > 1, "The ranked fixture supplies an independent row for real input");
         if (results.current === index) {
             const other = index === 0 ? 1 : index - 1;
-            keyClick(index === 0 ? Qt.Key_Down : Qt.Key_Up);
-            tryCompare(results, "current", other, 2000, "The keyboard selects a different row before the pointer check");
+            list.positionViewAtIndex(other, ListView.Contain);
+            let alternate;
+            tryVerify(() => {
+                list.forceLayout();
+                alternate = list.itemAtIndex(other);
+                return alternate && Ui.exposed(alternate);
+            }, 2000, "The initially unselected alternate row is visible for the pointer check");
+            pressChart(alternate);
+            tryCompare(results, "current", other, 2000, "A pointer click selects the initially unselected alternate row");
+            list.positionViewAtIndex(index, ListView.Contain);
+            list.forceLayout();
+            row = list.itemAtIndex(index);
+            verify(row && Ui.exposed(row), "The target half-period row is visible after the alternate selection");
         }
         verify(results.current !== index, "The intended half-period row starts unselected");
         pressChart(row);
