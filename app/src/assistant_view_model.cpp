@@ -1939,6 +1939,9 @@ struct AssistantViewModel::State {
     QString generic_workspace, generic_thread, generic_turn, generic_login, generic_terminal_turn;
     // The open sign-in as the runtime reported it: authUrl, and userCode, prompt and browserOpened when present.
     Object generic_login_info;
+    // Set by a switch to the same provider's other account while the session's consent was current; the next
+    // reconnect takes it once.
+    bool switch_keeps_consent = false;
     bool generic_login_attempted = false;
     QString genuine_objective_row;
     QPointer<ProjectViewModel> genuine_objective_project;
@@ -21311,6 +21314,10 @@ bool AssistantViewModel::resumeConnection() {
                 known=!active.id.isEmpty() && s->account_store().find(active.provider,active.id).has_value();
             } catch(...) {}
             if(!known)return false;
+            // Only within what the user already approved in this session (or a switch to the same company's other
+            // account): any other fresh connection goes through the connect offer and its consent (ADR-0057), e.g.
+            // after a startup reopen was refused.
+            if(!std::exchange(s->switch_keeps_consent,false) && !s->disclosure_approved())return false;
             signIn();
             return receiver && state_.get()==s;
         }
@@ -21678,6 +21685,9 @@ void AssistantViewModel::switchAccount(const QString& provider, const QString& i
         state_->notify(); return;
     }
     if (!state_->generic_mode) return;
+    // The consent the user gave in this session covers the same company's other account, so its first reconnect
+    // needs no new offer; another provider's does.
+    const bool consented = record->provider == active.provider && state_->disclosure_approved();
     const QPointer<AssistantViewModel> receiver(this);
     retireConnection(false);
     if (!receiver) return;
@@ -21688,6 +21698,7 @@ void AssistantViewModel::switchAccount(const QString& provider, const QString& i
     state_->pending_account.reset();
     state_->active_provider_account = record->ref();
     state_->account_chosen_explicitly = true;
+    state_->switch_keeps_consent = consented;
     if (state_->agent) {
         state_->agent->retire();
         state_->agent.release()->deleteLater();  // queued replies fence on a QPointer to it
