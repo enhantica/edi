@@ -7983,6 +7983,7 @@ void publish_fit_state(Project& project, crysta::Project& converted, const std::
             std::size_t bank;
             decltype(BraggPdExperiment::refln) refln;
             decltype(BraggPdExperiment::computed_source) source;
+            decltype(BraggPdExperiment::carried_calculation) carried;
         };
         std::vector<Borrowed> borrowed;
         const auto give_back = [&] {
@@ -7991,6 +7992,7 @@ void publish_fit_state(Project& project, crysta::Project& converted, const std::
                 bank.data.reset();
                 bank.refln = std::move(held.refln);
                 bank.computed_source = std::move(held.source);
+                bank.carried_calculation = held.carried;
             }
             borrowed.clear();
         };
@@ -7998,7 +8000,7 @@ void publish_fit_state(Project& project, crysta::Project& converted, const std::
             for (std::size_t e = 0; e < project.experiments.size(); ++e) {
                 BraggPdExperiment& bank = *project.experiments[e];
                 if (!bank.data.has_value() && !bank.reflections.has_value()) {
-                    borrowed.push_back({e, bank.refln, bank.computed_source});
+                    borrowed.push_back({e, bank.refln, bank.computed_source, bank.carried_calculation});
                     bank.data = (*supplied)[e];
                 }
             }
