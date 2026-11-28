@@ -7,7 +7,8 @@ the command-line zips, the installers, the installer components and the update f
 layout, written as three copies:
 
 - ``release/``: every file attached to the GitHub release, the component repositories as one
-  archive per channel and platform, and ``SHA256SUMS`` over all of them;
+  archive per channel and platform, each stable component archive on its own, a small index of
+  each stable repository, and ``SHA256SUMS`` over all of them;
 - ``pages/``: the layout as GitHub Pages serves it at the current release;
 - ``offsite/``: the same tree, kept as the publish run's ``offsite`` artifact.
 
@@ -20,7 +21,9 @@ v2026.11.31 read (legacy_feed.py), and ``SHA256SUMS`` over the whole tree.
 
 The apps' feed bases (data/distribution.json) do not serve ``pages/`` or ``offsite/``: the site
 behind both is built by enhantica/edi-download from the GitHub release's assets with these tools,
-its two feeds with ``legacy_feed.write_feeds``.
+its two feeds with ``legacy_feed.write_feeds``. The download site serves each stable repository
+from its index, ``repoindex-stable-<platform>.tar.gz``: everything but the component archives, and
+an ``.htaccess`` that redirects each archive to its release asset (edi ADR-0071).
 
     python tools/release/distribution.py --publication publication --output copies --repo <repo>
     python tools/release/distribution.py --dry-run --output copies   # a fixture, then the checks
@@ -43,6 +46,7 @@ import tarfile
 import tempfile
 import threading
 import urllib.parse
+import xml.etree.ElementTree as ET  # noqa: S405 - promote.py bounded the metadata, no DTDs
 import zipfile
 from pathlib import Path
 
@@ -50,8 +54,9 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'website'))
 sys.path.insert(0, str(ROOT / 'tools/release'))
 from legacy_feed import write_feeds  # noqa: E402
+from promote import ARCHIVE_NAME, COMPONENT_ID, component_asset, withheld  # noqa: E402
 from render_package_index import RELEASES, write_package_index  # noqa: E402
-from versions import version_key  # noqa: E402
+from versions import PATTERN, version_key  # noqa: E402
 
 PROJECT = 'easydiffraction'
 
@@ -135,7 +140,78 @@ def build(publication: Path, output: Path, published: list[list[dict]] | None = 
             where = paths['repository_paths'][channel.name].format(platform=platform.name)
             name = f'repository-{channel.name}-{platform.name}.tar.gz'
             reproducible_archive(tree / where.rstrip('/'), where.rstrip('/'), attached / name)
+    # The stable archives on their own, and what the download site serves itself (edi ADR-0071).
+    with tempfile.TemporaryDirectory() as scratch:
+        for platform in sorted((incoming / 'repository/stable').iterdir()):
+            where = paths['repository_paths']['stable'].format(platform=platform.name).rstrip('/')
+            index = Path(scratch) / platform.name
+            attach_components(tree / where, platform.name, attached, index)
+            name = f'repoindex-stable-{platform.name}.tar.gz'
+            reproducible_archive(index, where, attached / name)
     (attached / 'SHA256SUMS').write_text(manifest(attached), encoding='utf-8')
+
+
+def downloadable_archives(repository: Path) -> list[tuple[str, str, str]]:
+    """Each archive a component repository's Updates.xml lists: component, version, file name."""
+    updates = ET.fromstring((repository / 'Updates.xml').read_bytes())  # noqa: S314 - see import
+    return [
+        (package.findtext('Name'), package.findtext('Version'), name)
+        for package in updates.findall('PackageUpdate')
+        for name in package.findtext('DownloadableArchives', '').split(',')
+        if name
+    ]
+
+
+def attach_components(repository: Path, platform: str, attached: Path, index: Path) -> None:
+    """Attach each archive of a stable repository as a release asset; copy the rest to `index`.
+
+    The index is what the download site serves itself: Updates.xml, every .sha1 and meta.7z, and
+    the .htaccess that sends the archives to their assets.
+    """
+    archives = {}
+    for component, version, name in downloadable_archives(repository):
+        if withheld(component):
+            raise ValueError(f'{component} is withheld from public downloads')
+        archives[f'{component}/{version}{name}'] = component_asset(
+            platform, component, version, name
+        )
+    index.mkdir(parents=True)
+    for path in sorted(p for p in repository.rglob('*') if p.is_file()):
+        relative = path.relative_to(repository).as_posix()
+        target = attached / archives[relative] if relative in archives else index / relative
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(path, target)
+    (index / '.htaccess').write_text(redirect_rules(platform), encoding='utf-8')
+
+
+def redirect_rules(platform: str) -> str:
+    """The download site's .htaccess for one platform's stable repository.
+
+    A component archive the site does not hold is redirected to the asset of the release its
+    version names. Updates.xml, the .sha1 files and meta.7z are never redirected: the installer
+    fetches an archive from wherever its .sha1 finally came from, so a redirected .sha1 fails.
+    """
+    return (
+        'RewriteEngine On\n'
+        f'RewriteRule ^[^/]+/{PATTERN}meta\\.7z$ - [L]\n'
+        'RewriteCond %{REQUEST_FILENAME} !-f\n'
+        f'RewriteRule ^({COMPONENT_ID})/({PATTERN})({ARCHIVE_NAME})$'
+        f' {RELEASES}/v$2/component-{platform}-$1-$2$3 [R=302,L]\n'
+    )
+
+
+def redirected(rules: str, path: str) -> str | None:
+    """Where an .htaccess from redirect_rules sends a request for `path`, or None."""
+    for line in rules.splitlines():
+        if line.startswith('RewriteRule '):
+            _, pattern, target, _ = line.split(' ')
+            if match := re.match(pattern, path):
+                return (
+                    None
+                    if target == '-'
+                    else re.sub(r'\$(\d)', lambda m: match[int(m[1])], target)
+                )
+    return None
 
 
 def reproducible_archive(folder: Path, root: str, archive: Path) -> None:
@@ -187,6 +263,65 @@ def attachment_problems(pages: Path, attached: Path, version: str) -> list[str]:
     return problems
 
 
+def component_problems(pages: Path, attached: Path, version: str) -> list[str]:
+    """Every stable platform's index and archive assets, checked against its repository."""
+    full = sorted(p.name.removeprefix('repository-') for p in attached.glob('repository-stable-*'))
+    indexes = sorted(attached.glob('repoindex-stable-*.tar.gz'))
+    problems = []
+    if full != [p.name.removeprefix('repoindex-') for p in indexes]:
+        problems.append('release: not every stable platform has its repository index')
+    paths = json.loads((ROOT / 'data/distribution.json').read_text(encoding='utf-8'))
+    named: set[str] = set()
+    with tempfile.TemporaryDirectory() as scratch:
+        for archive in indexes:
+            platform = archive.name.removeprefix('repoindex-stable-').removesuffix('.tar.gz')
+            where = paths['repository_paths']['stable'].format(platform=platform).rstrip('/')
+            with tarfile.open(archive) as opened:
+                opened.extractall(Path(scratch) / platform, filter='data')
+            problems += [
+                f'{archive.name}: {problem}'
+                for problem in repository_index_problems(
+                    Path(scratch) / platform / where, pages / where, attached, version, named
+                )
+            ]
+    if named != {p.name for p in attached.glob('component-*')}:
+        problems.append('release: the component assets are not exactly the stable archives')
+    return problems
+
+
+def repository_index_problems(
+    index: Path, repository: Path, attached: Path, version: str, named: set[str]
+) -> list[str]:
+    """What the download site would serve wrongly from one platform's index.
+
+    Each archive must be redirected to its own release asset, every other file served as it is.
+    The asset names go into `named`.
+    """
+    rules = (index / '.htaccess').read_text(encoding='utf-8')
+    archives = {f'{c}/{v}{n}' for c, v, n in downloadable_archives(repository)}
+    served = {p.relative_to(index).as_posix() for p in index.rglob('*') if p.is_file()}
+    problems, expected = [], {'.htaccess'}
+    for path in sorted(p for p in repository.rglob('*') if p.is_file()):
+        relative = path.relative_to(repository).as_posix()
+        target = redirected(rules, relative)
+        if relative not in archives:
+            expected.add(relative)
+            if target or relative not in served or sha256(index / relative) != sha256(path):
+                problems.append(f'{relative} is not served as it is')
+            continue
+        asset = (target or '').removeprefix(f'{RELEASES}/v{version}/')
+        named.add(asset)
+        if (
+            '/' in asset
+            or not (attached / asset).is_file()
+            or sha256(attached / asset) != sha256(path)
+        ):
+            problems.append(f'{relative} is not sent to its release asset')
+    return problems + [
+        f'{extra} does not belong in the index' for extra in sorted(served - expected)
+    ]
+
+
 def link_problems(copy: Path) -> list[str]:
     """An index link that leaves its copy, leads nowhere, or names another file's sha256."""
     problems = []
@@ -227,6 +362,7 @@ def check(output: Path, version: str, published: list[list[dict]] = ()) -> list[
         if (folder / 'SHA256SUMS').read_text(encoding='utf-8') != manifest(folder)
     ]
     problems += attachment_problems(pages, attached, version)
+    problems += component_problems(pages, attached, version)
     return problems + link_problems(pages) + link_problems(offsite)
 
 
@@ -317,14 +453,20 @@ def fixture(folder: Path, version: str = '2026.11.0') -> None:
         (assets / f'EasyDiffraction-{version}-{platform}-stable-components.zip').write_bytes(
             f'components {platform}'.encode()
         )
+        # One component in repogen's layout: its archives, their .sha1 files and its meta.7z.
         components = incoming / 'repository/stable' / platform
-        components.mkdir(parents=True)
+        app = components / 'org.easydiffraction.app'
+        app.mkdir(parents=True)
+        for name in ('bin.7z', 'EasyDiffraction.app.7z', 'meta.7z'):
+            (app / f'{version}{name}').write_bytes(f'{name} {platform}'.encode())
+            if name != 'meta.7z':
+                digest = hashlib.sha1((app / f'{version}{name}').read_bytes()).hexdigest()  # noqa: S324
+                (app / f'{version}{name}.sha1').write_text(digest)
         (components / 'Updates.xml').write_text(
             '<Updates><PackageUpdate><Name>org.easydiffraction.app</Name>'
-            f'<Version>{version}</Version></PackageUpdate></Updates>\n'
-        )
-        (components / f'org.easydiffraction.app-{version}.7z').write_bytes(
-            f'app {platform}'.encode()
+            f'<Version>{version}</Version>'
+            '<DownloadableArchives>bin.7z,EasyDiffraction.app.7z</DownloadableArchives>'
+            '</PackageUpdate></Updates>\n'
         )
     release = {'version': version}
     (folder / 'release.json').write_text(json.dumps(release) + '\n')
