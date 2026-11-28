@@ -114,7 +114,8 @@ can restore a cache of main. CI therefore keeps built crysta only.
 
 ## Shared production and exact artifact transfer
 
-The producer also has a standalone dispatch entry. Its resolving job records the immutable engine pin and
+The producer is only called, with the crysta commit as its input; a person runs it by hand through
+`crysta-diagnostic.yml`, for any crysta commit, and such a run saves no cache. Its resolving job records the immutable engine pin and
 SDK/setup-action recipe hash before platform jobs queue by that identity. Identical requests serialize
 with a non-cancelling multi-entry concurrency queue, then inspect the cache after admission. The archive
 cache is versioned and includes platform, engine pin and recipe; changes to the producer cannot
@@ -127,7 +128,7 @@ rather than asking for whichever matching cache remains. Both cold and warm prod
 SDK and checksum files and verify the archive checksum before an error-on-missing upload. The SDK reader continues its manifest,
 qualification, binary hash and ABI checks; archive transfer does not substitute for them. This extends the
 original producer/action/publish paths together. Consumer workflows call the shared producer before their
-builds. The standalone entry produces SDK artifacts; it does not itself publish or dispatch products.
+builds. The diagnostic entry produces SDK artifacts; it does not itself publish or dispatch products.
 
 The owner chose one native SDK variant per platform for desktop, CLI and Python. The existing standalone
 builder's separate lean engine compilation is retired: native consumers align link/CRT settings and package
