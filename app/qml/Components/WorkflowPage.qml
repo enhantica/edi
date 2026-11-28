@@ -50,6 +50,10 @@ EaComponents.ContentPage {
     property Component textItem: null
     // The page's Settings tab (edi ADR-0031 §2): its view options, kept in the app's settings under the page's name,
     // never in the project.
+    // Tools (owner, 2026-11-28, sidebar tabs by role): groups that act on the project but edit no `.edi` category, such
+    // as the k-vector search or the magnetic symmetry analysis. Main and Extra hold only category groups, Settings only
+    // the page's own settings.
+    property Component toolsItem: null
     property Component settingsItem: null
     property bool extrasEnabled: false
     property bool textEnabled: false
@@ -358,6 +362,10 @@ EaComponents.ContentPage {
                 text: qsTr("Text")
             },
             EaElements.TabButton {
+                objectName: "sideBar.tab.tools"
+                text: qsTr("Tools")
+            },
+            EaElements.TabButton {
                 objectName: "sideBar.tab.settings"
                 text: qsTr("Settings")
             }
@@ -383,6 +391,11 @@ EaComponents.ContentPage {
                 active: SwipeView.isCurrentItem || page.textDirty
                 sourceComponent: page.textItem === null ? inviteNote : page.textEnabled ? page.textItem : waitingNote
                 onItemChanged: ApplicationInfo.workflowTextItemChanged()
+            },
+            Loader {
+                id: toolsLoader
+                opacity: SwipeView.isCurrentItem ? 1 : 0
+                sourceComponent: page.toolsItem ?? inviteNote
             },
             Loader {
                 id: settingsLoader
