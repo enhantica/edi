@@ -70,8 +70,9 @@ For a Le Bail or Pawley structure:
   The experiment file holds the extracted intensities in an `_extracted_intensity` loop, one row per structure and
   reflection, and the next fit starts from them. The report writes the standard `_pd_calc.method` and
   `_refln.F_squared_meas`.
-- **FullProf:** a phase with `Jbt=2` imports as Le Bail, and a Le Bail structure exports as `Jbt=2`. FullProf has no
-  Pawley mode, so a Pawley structure does not export.
+- **FullProf:** a phase with `Jbt=2` imports as Le Bail, with its atoms when it has any, and a Le Bail structure exports
+  as `Jbt=2`. FullProf has no Pawley mode, so a Pawley structure does not export.
+- **cryspy:** the export writes Rietveld phases only, so it refuses a Le Bail or Pawley structure.
 
 Two example projects show the methods: `docs/user/cli/pd-neut-cwl_lbco-hrpt_le-bail` (Le Bail, with the atoms kept for
 the switch back) and `docs/user/cli/pd-xray-cwl_pbso4-lab_pawley` (Pawley, without atoms).
