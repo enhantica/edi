@@ -52,12 +52,26 @@ TestCase {
             const file = "structures/" + phase + ".edi";
             const structure = SettingsProof.text(copy, file);
             verify(structure.includes("data_" + phase), "The authored method is set on the intended structure block");
-            verify(SettingsProof.write(copy, file, structure + "\n_edi_structure.calc_method " + methods[phase] + "\n"), "The disposable input declares each requested method through its structure item");
+            const tag = phase === "beta" ? "_edi_structure.calc_method" : "_structure.calc_method";
+            verify(SettingsProof.write(copy, file, structure + "\n" + tag + " " + methods[phase] + "\n"), "The disposable input declares each requested method through its structure item");
         }
+        if (Object.values(methods).includes("pawley"))
+            seedPawleyRows(copy);
         verify(Session.openProject(copy), "The real app opens the hand-authored powder project: " + Session.lastError);
         tryVerify(() => app.pagesWanted > 0 && app.pagesWanted === app.pagesBuilt, 10000, "The app instantiates the production workflow pages");
         tryCompare(Session.project, "calculating", false, 10000, "The loaded powder fixture finishes calculating before pointer input");
         return copy;
+    }
+
+    function seedPawleyRows(copy) {
+        const fields = ["structure_id", "index_h", "index_k", "index_l", "f_squared"];
+        for (const bank of ["first", "second"]) {
+            const file = "experiments/" + bank + ".edi";
+            const source = SettingsProof.text(copy, file);
+            const category = bank === "first" ? "_extracted_intensity." : "_edi_extracted_intensity.";
+            const loop = fields.map(field => category + field).join("\n");
+            verify(SettingsProof.write(copy, file, source + "\nloop_\n" + loop + "\nalpha 1 0 0 7.5()\nbeta 1 0 0 4.25()\n"), "Each measured bank starts with an authored free hkl for each Pawley structure");
+        }
     }
 
     function press(item) {
@@ -131,7 +145,7 @@ TestCase {
             verify(Session.save(), "The selected profile-matching method saves through the app");
             const token = method.toLowerCase().replace(" ", "_");
             const saved = SettingsProof.text(location, structureFile);
-            verify(new RegExp("^_edi_structure\\.calc_method\\s+" + token + "\\s*$", "m").test(saved), "The chosen method is saved in its structure item");
+            verify(new RegExp("^_structure\\.calc_method\\s+" + token + "\\s*$", "m").test(saved), "The chosen method is saved under the canonical native structure item");
             choose(0, "Rietveld");
             tryVerify(() => JSON.stringify(atomGroups()) === JSON.stringify(groups), 2000, "Switching back returns the three rendered atom groups");
             verify(Session.save(), "The restored Rietveld method saves through the app");
@@ -163,11 +177,19 @@ TestCase {
         const table = linkedTable();
         const scale = findChild(rowAt(table, 0), "linkedStructure.scale.0");
         const control = findChild(rowAt(table, 1), "linkedStructure.scale.1");
-        verify(scale && scale.visible && !scale.enabled && !scale.item.fittable, "The Le Bail phase's scale is visible and disabled for fitting");
-        verify(/Le Bail|profile match|intensit/i.test(String(scale.item.fitReason)), "The disabled scale names the active intensity extraction in its reason");
+        verify(scale && scale.visible && scale.enabled, "The Le Bail phase still displays its held scale value");
+        verify(!scale.item.fittable, "The Le Bail scale is ineligible for fitting");
+        verify(/Le Bail|profile match|intensit/i.test(String(scale.item.fitReason)), "The disabled Free control names intensity extraction in its reason");
+        const popup = Ui.parameterPopup(test, scale, Qt.LeftButton);
+        const toggle = Ui.parameterPopupItem(test, scale, popup, "free");
+        verify(toggle && !toggle.enabled, "The real Le Bail scale Free checkbox is disabled");
+        keyClick(Qt.Key_Escape);
+        tryCompare(popup, "opened", false, 2000, "The linked scale editor closes before comparing rows");
         verify(control && control.visible && control.enabled && control.item.fittable, "The other phase in the same experiment keeps its normal Rietveld scale");
-        const fraction = findChild(rowAt(table, 0), "linkedStructure.weightFraction.0");
-        compare(fraction.shownValue, "—", "The linked Le Bail phase has no displayed weight fraction");
+        for (let index = 0; index < table.count; ++index) {
+            const fraction = findChild(rowAt(table, index), "linkedStructure.weightFraction." + index);
+            compare(fraction.shownValue, "—", "The experiment with a Le Bail link has no displayed weight fractions");
+        }
     }
 
     function test_one_pawley_free_row_per_structure_and_experiment() {
