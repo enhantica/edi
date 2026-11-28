@@ -48,6 +48,11 @@ Item {
     property int hoveredMark: -1
     // A few pixels on the chart's axis: how near a line a click drops its mark, and the pointer finds it.
     readonly property real markReach: 4 * (controller.xMax - controller.xMin) / Math.max(1, pointer.width)
+    // A zoom, pan or resize moves the lines under a still pointer: the hover is found again at the next move, and the
+    // grey line and hand do not stay on a line the pointer no longer covers (review 29).
+    onMarkReachChanged: chart.hoveredMark = -1
+    readonly property real viewStart: controller.xMin
+    onViewStartChanged: chart.hoveredMark = -1
     // The mark under the pointer, decided where a click's removal is (kMarkAt), so hover and click agree.
     function markAt(x) {
         return chart.marksShown && chart.axisProject ? chart.axisProject.kMarkAt(x, chart.markReach) : -1;

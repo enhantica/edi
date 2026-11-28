@@ -4436,6 +4436,8 @@ void ProjectViewModel::setKSearchActive(bool on) {
     }
     const int experiment = currentExperimentIndex();
     const int parent = magneticParentOf(experiment);
+    const int was_parent = k_marks_.parent;
+    const std::string was_parent_name = k_marks_.parent_name;
     // Marks made on another bank, or on a bank since replaced at this place, are not these data's: the table starts
     // afresh here.
     const bool sameBank = k_marks_.experiment == experiment && experiment >= 0 &&
@@ -4457,7 +4459,9 @@ void ProjectViewModel::setKSearchActive(bool on) {
         return;
     }
     if (!k_marks_.marks.empty()) {
-        changeKMarks();  // the same marks, now under this parent
+        // The same marks under the same parent keep their search and its ranks (review 29); under another parent, or
+        // on changed inputs (kRemeasure), they are a new search.
+        if (parent != was_parent || k_marks_.parent_name != was_parent_name) changeKMarks();
         kRemeasure();
         setKNote(QString());
         return;
@@ -4488,9 +4492,6 @@ void ProjectViewModel::toggleKMarkAt(double x, double tolerance) {
         setKSearchActive(false);
         return;
     }
-    const auto near = [&x, tolerance](const edi::MagneticPeak& p) {
-        return std::abs(p.x - x) <= std::max({p.half_width, tolerance, 1e-9});
-    };
     // A click removes a mark only inside its visible target, the chart's full-height hit window `tolerance` that turns
     // the line grey under the pointer (review 27); a peak's measured window is for acquiring a mark, not removing one.
     const int on_mark = kMarkAt(x, tolerance);
@@ -4504,28 +4505,21 @@ void ProjectViewModel::toggleKMarkAt(double x, double tolerance) {
     // A click where the data are not measured or are excluded marks nothing and changes nothing (review 26, F4): no
     // snap from it, no retired search.
     if (!kMeasurable(k_marks_.experiment, x)) return;
-    // The nearest measured maximum to the click, listed by a detector or not (review 23, F4): the nearest listed one
-    // and the nearest one of the measured curve compete by distance; a residual excess or an earlier click is never
-    // a snap target. With none near, the clicked position itself.
+    // The highest measured maximum within the peak's window of the click, from the measured samples themselves, else
+    // the clicked position (review 29): one definition of a measured maximum. A catalog candidate at exactly that
+    // position is that candidate, so a suggestion keeps its identity; the smoothed detector never picks the point.
     int best = -1;
-    for (std::size_t i = 0; i < k_marks_.candidates.size(); ++i) {
-        if (k_marks_.candidates[i].observed && near(k_marks_.candidates[i]) &&
-            (best < 0 || std::abs(k_marks_.candidates[i].x - x) <
-                             std::abs(k_marks_.candidates[static_cast<std::size_t>(best)].x - x)))
-            best = static_cast<int>(i);
-    }
     try {
         const edi::MagneticPeak measured = edi::magnetic_peak_near(
             *project_, static_cast<std::size_t>(k_marks_.experiment), static_cast<std::size_t>(k_marks_.parent), x);
-        const bool closer = best < 0 || (measured.observed &&
-                                         std::abs(measured.x - x) <
-                                             std::abs(k_marks_.candidates[static_cast<std::size_t>(best)].x - x) - 1e-9);
-        if (closer) {
+        for (std::size_t i = 0; i < k_marks_.candidates.size() && best < 0; ++i)
+            if (std::abs(k_marks_.candidates[i].x - measured.x) <= 1e-9) best = static_cast<int>(i);
+        if (best < 0) {
             k_marks_.candidates.push_back(measured);
             best = static_cast<int>(k_marks_.candidates.size()) - 1;
         }
     } catch (const std::exception&) {
-        if (best < 0) return;  // outside the calibration's range: nothing to mark there
+        return;  // outside the calibration's range: nothing to mark there
     }
     // A mark stands only where the data are measured and not excluded (review 25, F4).
     if (!kMeasurable(k_marks_.experiment, k_marks_.candidates[static_cast<std::size_t>(best)].x)) return;
@@ -4573,6 +4567,7 @@ void ProjectViewModel::showKRoles(qint64 id, int rank) {
 void ProjectViewModel::removeKMark(int index) {
     const auto at = std::find(k_marks_.marks.begin(), k_marks_.marks.end(), index);
     if (at == k_marks_.marks.end()) return;
+    ++k_session_;  // a tap still waiting on the chart was made on the earlier marks: it is dropped (review 29)
     changeKMarks();
     k_marks_.marks.erase(at);
     k_marks_.roles.clear();
@@ -4581,6 +4576,7 @@ void ProjectViewModel::removeKMark(int index) {
 
 void ProjectViewModel::clearKMarks() {
     if (k_marks_.marks.empty()) return;
+    ++k_session_;  // a tap still waiting on the chart was made on the earlier marks: it is dropped (review 29)
     changeKMarks();
     k_marks_.marks.clear();
     k_marks_.roles.clear();
@@ -4654,6 +4650,18 @@ void ProjectViewModel::kRemeasure() {
     for (const int m : k_marks_.marks) {
         const double x = k_marks_.candidates[static_cast<std::size_t>(m)].x;
         if (!kMeasurable(experiment, x)) continue;
+        // A mark placed by a click is measured again as a click is, at the measured samples' maximum near it, never
+        // remapped to the smoothed detector's pick (review 29); a suggestion follows the detection on these data.
+        if (!k_marks_.candidates[static_cast<std::size_t>(m)].suggested) {
+            try {
+                const edi::MagneticPeak again = edi::magnetic_peak_near(
+                    *project_, static_cast<std::size_t>(experiment), static_cast<std::size_t>(k_marks_.parent), x);
+                if (!taken(again.x) && kMeasurable(experiment, again.x)) measured.push_back(again);
+            } catch (const std::exception&) {
+                // outside the calibration's range: that mark goes
+            }
+            continue;
+        }
         std::size_t best = fresh.size();
         for (std::size_t f = 0; f < fresh.size(); ++f) {
             if (used[f] || !fresh[f].observed || std::abs(fresh[f].x - x) > std::max(fresh[f].half_width, 1e-9)) continue;
