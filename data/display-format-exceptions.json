@@ -358,6 +358,26 @@
    "reason": "the chart's plotted quantity, the structure-factor amplitude, not the observed threshold's basis option"
   },
   {
+   "file": "app/qml/Components/SingleCrystalChart.qml",
+   "literal": "F²",
+   "reason": "the chart's plotted quantity, the squared structure-factor amplitude, not a Le Bail or Pawley extracted intensity"
+  },
+  {
+   "file": "app/qml/Components/PatternChart.qml",
+   "literal": "F²",
+   "reason": "the single-crystal chart's plotted quantity, the squared structure-factor amplitude, not a Le Bail or Pawley extracted intensity"
+  },
+  {
+   "file": "app/src/demo_driver.cpp",
+   "literal": "F²",
+   "reason": "the demo choosing the single-crystal chart's plotted quantity, not a Le Bail or Pawley extracted intensity"
+  },
+  {
+   "file": "app/qml/Components/AppPreferencesDialog.qml",
+   "literal": "Calculation",
+   "reason": "the Performance tab's group of this computer's calculation threads, not a structure's calculation method"
+  },
+  {
    "file": "app/qml/Components/StructureToolbar.qml",
    "literal": "Bonds",
    "reason": "a view toggle tooltip, an app-only setting (I1)"
