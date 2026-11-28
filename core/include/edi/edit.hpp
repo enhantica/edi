@@ -1338,6 +1338,47 @@ class Edit {
                         throw std::invalid_argument("the added structures' texture alias '" + alias->id.value() +
                                                     "' would name no parameter");
             }
+            // The relations the batch adds, checked on their own whatever the old ones' state (review 35): a copy of the
+            // prospective project keeping only the new constraints and the aliases they and the new rows name must
+            // compile and complete in crysta. A copied self-cycle or two copies setting one target refuses here, while
+            // an unrelated original error, left for the user to repair, does not block Add.
+            {
+                std::set<std::string> old_aliases, old_constraints;
+                for (const auto& alias : project.aliases) old_aliases.insert(alias->id.value());
+                for (const auto& constraint : project.constraints) old_constraints.insert(constraint->id.value());
+                std::set<std::string> named;
+                std::vector<ItemVec<ParameterConstraint>::Ptr> added;
+                for (const auto& constraint : probe.constraints) {
+                    if (old_constraints.contains(constraint->id.value())) continue;
+                    added.push_back(std::make_shared<ParameterConstraint>(*constraint));  // the delta's own rows
+                    try {
+                        const crysta::ConstraintStatement statement = crysta::parse_constraint(constraint->expression.value());
+                        named.insert(statement.lhs);
+                        named.insert(statement.rhs.references().begin(), statement.rhs.references().end());
+                    } catch (const std::invalid_argument& broken) {
+                        throw std::invalid_argument("the added structures' texture constraint '" + constraint->id.value() +
+                                                    "' would not hold: " + broken.what());
+                    }
+                }
+                std::vector<ItemVec<ParameterAlias>::Ptr> kept;
+                bool new_alias = false;
+                for (const auto& alias : probe.aliases) {
+                    const bool fresh = !old_aliases.contains(alias->id.value());
+                    new_alias = new_alias || fresh;
+                    if (fresh || named.contains(alias->id.value())) kept.push_back(std::make_shared<ParameterAlias>(*alias));
+                }
+                if (!added.empty() || new_alias) {
+                    Project delta(probe);
+                    delta.aliases.assign(std::move(kept));
+                    delta.constraints.assign(std::move(added));
+                    try {
+                        complete_relations(delta);
+                    } catch (const std::exception& broken) {
+                        throw std::invalid_argument(std::string("the added structures' texture relations would not hold: ") +
+                                                    broken.what());
+                    }
+                }
+            }
             if (held) {
                 try {
                     refresh_relations(probe);
