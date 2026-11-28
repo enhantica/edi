@@ -332,6 +332,11 @@ bool apply_relations(Project& project);
 // geometry, calls it.
 void complete_relations(Project& project);
 
+// The one check of a project's whole constraint graph (every alias resolves, no parameter has two writers, no
+// cycle, every value holds): empty when it holds, else crysta's message. A user's edit and the magnetic Add are judged
+// by it alike. The project is not changed.
+std::string relation_problem(const Project& project);
+
 // Undo's half: apply_relations, then each dependent's e.s.d. back to the one it held before the
 // fit (kept in memory by the fit's write-back, or seeded by the loader from a legacy file); one in
 // `restored`, which its own start row gave back, keeps that.

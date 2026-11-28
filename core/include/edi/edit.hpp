@@ -1314,106 +1314,15 @@ class Edit {
     static Edit add_magnetic_candidates(Project& project, std::shared_ptr<const PreparedMagneticCandidates> prepared) {
         return Edit([&project, prepared = std::move(prepared)] {
             check_magnetic_candidates(project, *prepared);  // the whole batch, before any of it lands
-            // The whole prospective project first, relations included: a copy takes the batch and must hold
-            // the aliases and constraints that held before, else Add refuses with nothing changed. Relations
-            // already broken are the user's to fix and do not block Add.
-            bool held = true;
-            try {
-                Project before(project);
-                refresh_relations(before);
-            } catch (const std::exception&) {
-                held = false;
-            }
+            // The whole resulting constraint graph, by the validator a user's edit is checked with (relation_problem):
+            // Add refuses, with nothing changed, when the graph it would leave reports a problem the project did not
+            // already have: a parameter with two writers, a cycle, or an alias that resolves to nothing. A problem the
+            // project already had is the user's to repair and does not block Add.
             Project probe(project);
             place_magnetic_candidates(probe, *prepared);
-            // Every alias the batch adds names a parameter of the prospective project, whatever the state of the
-            // relations it already had.
-            {
-                std::set<std::string> before;
-                for (const auto& alias : project.aliases) before.insert(alias->id.value());
-                const ActiveView prospective(probe);
-                for (const auto& alias : probe.aliases)
-                    if (!before.contains(alias->id.value()) &&
-                        prospective.resolve(alias->parameter_unique_name.value()) == nullptr)
-                        throw std::invalid_argument("the added structures' texture alias '" + alias->id.value() +
-                                                    "' would name no parameter");
-            }
-            // The relations the batch adds or changes, checked on their own whatever the old ones' state: a copy of the
-            // prospective project keeping only the affected declarations must compile and complete in crysta. Affected
-            // are the new aliases, the old ones the batch binds (an alias left unresolved by a removed child that this
-            // Add brings back), every alias bound to a parameter one of those names, and every constraint naming any of
-            // them. A copied self-cycle or a parameter with two writers refuses here, with nothing changed; an
-            // unrelated original error names none of them and stays for the user to repair.
-            {
-                const auto named_by = [](const std::string& expression) {
-                    std::vector<std::string> out;
-                    try {
-                        const crysta::ConstraintStatement statement = crysta::parse_constraint(expression);
-                        out.push_back(statement.lhs);
-                        out.insert(out.end(), statement.rhs.references().begin(), statement.rhs.references().end());
-                    } catch (const std::invalid_argument&) {
-                    }
-                    return out;
-                };
-                std::set<std::string> old_aliases, old_constraints;
-                for (const auto& alias : project.aliases) old_aliases.insert(alias->id.value());
-                for (const auto& constraint : project.constraints) old_constraints.insert(constraint->id.value());
-                const ActiveView before_view(project), after_view(probe);
-                std::set<std::string> affected;
-                std::set<const Parameter*> touched;
-                for (const auto& alias : probe.aliases) {
-                    const std::string& id = alias->id.value();
-                    const Parameter* now = after_view.resolve(alias->parameter_unique_name.value());
-                    const bool fresh = !old_aliases.contains(id);
-                    const bool bound = !fresh && now != nullptr &&
-                                       before_view.resolve(alias->parameter_unique_name.value()) == nullptr;
-                    if (fresh || bound) {
-                        affected.insert(id);
-                        if (now != nullptr) touched.insert(now);
-                    }
-                }
-                for (const auto& alias : probe.aliases)
-                    if (touched.contains(after_view.resolve(alias->parameter_unique_name.value())))
-                        affected.insert(alias->id.value());
-                std::vector<ItemVec<ParameterConstraint>::Ptr> checked;
-                std::set<std::string> named;
-                for (const auto& constraint : probe.constraints) {
-                    const bool fresh = !old_constraints.contains(constraint->id.value());
-                    const std::vector<std::string> aliases = named_by(constraint->expression.value());
-                    if (fresh && aliases.empty())
-                        throw std::invalid_argument("the added structures' texture constraint '" + constraint->id.value() +
-                                                    "' does not parse");
-                    const bool relevant = fresh || std::any_of(aliases.begin(), aliases.end(), [&](const std::string& id) {
-                                                       return affected.contains(id);
-                                                   });
-                    if (!relevant) continue;
-                    checked.push_back(std::make_shared<ParameterConstraint>(*constraint));  // the delta's own rows
-                    named.insert(aliases.begin(), aliases.end());
-                }
-                std::vector<ItemVec<ParameterAlias>::Ptr> kept;
-                for (const auto& alias : probe.aliases)
-                    if (affected.contains(alias->id.value()) || named.contains(alias->id.value()))
-                        kept.push_back(std::make_shared<ParameterAlias>(*alias));
-                if (!checked.empty() || !affected.empty()) {
-                    Project delta(probe);
-                    delta.aliases.assign(std::move(kept));
-                    delta.constraints.assign(std::move(checked));
-                    try {
-                        complete_relations(delta);
-                    } catch (const std::exception& broken) {
-                        throw std::invalid_argument(std::string("the added structures' texture relations would not hold: ") +
-                                                    broken.what());
-                    }
-                }
-            }
-            if (held) {
-                try {
-                    refresh_relations(probe);
-                } catch (const std::exception& broken) {
-                    throw std::invalid_argument(std::string("the added structures' texture relations would not hold: ") +
-                                                broken.what());
-                }
-            }
+            const std::string before = relation_problem(project);
+            if (const std::string after = relation_problem(probe); !after.empty() && after != before)
+                throw std::invalid_argument("The aliases and constraints would no longer hold: " + after);
             place_magnetic_candidates(project, *prepared);
         });
     }

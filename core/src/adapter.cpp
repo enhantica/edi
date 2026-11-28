@@ -6629,6 +6629,18 @@ void mark_dependents(Project& model, const crysta::RelationGraph& relations, con
 
 }  // namespace
 
+std::string relation_problem(const Project& project) {
+    if (project.structures.empty()) return {};
+    try {
+        const RelationProject converted = relation_project(project);
+        const std::vector<crysta::RelationProblem> problems = crysta::relation_problems(*converted.project);
+        if (!problems.empty()) throw coded_refusal(problems);
+    } catch (const std::exception& refusal) {
+        return refusal.what();
+    }
+    return {};
+}
+
 void refresh_relations(Project& project, const WarningSink& warn, bool from_file) {
     if (project.structures.empty()) {
         return;

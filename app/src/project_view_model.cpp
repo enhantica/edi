@@ -1511,13 +1511,7 @@ bool ProjectViewModel::loadExperimentWithStructures(const QUrl& file, const QLis
 // Checked on a copy: the calculation marks the live model's dependents itself, inside its own change.
 namespace {
 QString relationProblem(const edi::Project& project) {
-    try {
-        edi::Project probe(project);
-        edi::refresh_relations(probe, [](const std::string&) {});
-    } catch (const std::exception& refusal) {
-        return QString::fromUtf8(refusal.what());
-    }
-    return {};
+    return QString::fromStdString(edi::relation_problem(project));  // the one check of the whole graph
 }
 } // namespace
 
