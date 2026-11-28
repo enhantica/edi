@@ -4863,6 +4863,9 @@ struct FitResultBase {
     // `values`/`uncertainty`/`start` and are what the HUMAN format shows.
     std::map<std::string, double> engine_values;
     std::map<std::string, double> engine_uncertainty;
+    // The Pawley intensity columns the fit varied beside `engine_values`, those not held at 0, as crysta counts them
+    // in the degrees of freedom; 0 for Rietveld and Le Bail.
+    std::size_t intensity_columns = 0;
     // The descent-flow registry id the engine reports for this run (crysta schema 7) — carried
     // verbatim: the machine record must name its descent, and edi never re-derives an engine
     // fact (ADR-0009).

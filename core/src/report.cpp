@@ -994,8 +994,7 @@ std::string parameter_table(const FitResultBase& outcome, const Project* project
         }
     }
     // Pawley intensities are counted with the rest but not listed: they stay in the experiment's extracted rows.
-    const std::size_t intensities =
-        outcome.engine_values.size() > outcome.values.size() ? outcome.engine_values.size() - outcome.values.size() : 0;
+    const std::size_t intensities = outcome.intensity_columns;
     out << "\n  refined parameters (" << outcome.values.size() + intensities << " free";
     if (intensities > 0) {
         out << ", " << intensities << " of them Pawley intensities, not listed";

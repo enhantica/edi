@@ -7953,8 +7953,10 @@ bool recorded_in_fit(const Parameter* parameter) {
 }
 
 // The free columns the fit varied, Pawley intensities included, as crysta counts them for its own record: every
-// value its result reports. `values` leaves the intensities out, so it is not that count.
-std::size_t fitted_columns(const FitResultBase& outcome) { return outcome.engine_values.size(); }
+// value its result reports and the intensity columns not held at 0.
+std::size_t fitted_columns(const FitResultBase& outcome) {
+    return outcome.engine_values.size() + outcome.intensity_columns;
+}
 
 void publish_fit_state(Project& project, crysta::Project& converted, const std::vector<detail::RefinedValue>& refined) {
     // The extracted rows as the fit left them, with their s.u., before anything walks the model.
@@ -8552,6 +8554,7 @@ FitResultBase Project::fit(const std::vector<double>& grid, const std::vector<do
             // Engine-keyed copies for the machine record (see FitResultBase::engine_values).
             outcome.engine_values = result.values;
             outcome.engine_uncertainty = result.uncertainty;
+            outcome.intensity_columns = result.intensity_columns;
             outcome.descent = result.descent;
             outcome.reflections_folded = result.reflections_folded;
             outcome.structure_factor_evaluations = result.structure_factor_evaluations;
@@ -9238,6 +9241,7 @@ FitResultBase Project::fit_scan(const IterationCallback& on_iteration,
         outcome.terminal_unevaluable_trials = result.terminal_unevaluable_trials;
         outcome.engine_values = result.values;
         outcome.engine_uncertainty = result.uncertainty;
+        outcome.intensity_columns = result.intensity_columns;
         outcome.descent = result.descent;
         outcome.reflections_folded = result.reflections_folded;
         outcome.structure_factor_evaluations = result.structure_factor_evaluations;
@@ -9508,6 +9512,7 @@ FitResultBase Project::fit_joint(const std::vector<PdDataBase>& patterns,
             outcome.terminal_unevaluable_trials = result.terminal_unevaluable_trials;
             outcome.engine_values = result.values;
             outcome.engine_uncertainty = result.uncertainty;
+            outcome.intensity_columns = result.intensity_columns;
             outcome.descent = result.descent;
             outcome.reflections_folded = result.reflections_folded;
             outcome.structure_factor_evaluations = result.structure_factor_evaluations;
