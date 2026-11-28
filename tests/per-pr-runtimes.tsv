@@ -10,9 +10,9 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-26T15:07:07Z
+# measured_utc = 2026-11-28T11:34:36Z
 #
-# Recorded from: measured yearly release cases with the existing bank
+# Recorded from: measured release title cases with the existing bank
 # Collected tests: 267537; with a reported duration: 86290
 # Module-scoped fixture costs recorded: 221
 #
@@ -266849,14 +266849,14 @@ UNMEASURED:not-completed-in-this-run	tests/unit/py/test_project_save_owned_alias
 0.000	tests/unit/py/test_publication_transport_mapping.py::test_native_atomic_publication_requires_its_actual_platform_import[missing-linux-syscall-publication_syscall]
 0.000	tests/unit/py/test_release_presentation.py::test_generated_notes_start_at_the_first_change_section_without_an_inner_title
 0.000	tests/unit/py/test_release_presentation.py::test_interface_pills_and_legend_use_short_labels_and_the_public_label_descriptions
-0.000	tests/unit/py/test_release_presentation.py::test_release_title_is_the_tag_and_unpadded_day_without_a_repeated_year[2026.11.14-2026-11-13-v2026.11.14 (13 Nov)-False]
-0.000	tests/unit/py/test_release_presentation.py::test_release_title_is_the_tag_and_unpadded_day_without_a_repeated_year[2026.11.14-2026-11-13-v2026.11.14 (13 Nov)-True]
-0.000	tests/unit/py/test_release_presentation.py::test_release_title_is_the_tag_and_unpadded_day_without_a_repeated_year[2026.12.4-2027-01-03-v2026.12.4 (3 Jan)-False]
-0.000	tests/unit/py/test_release_presentation.py::test_release_title_is_the_tag_and_unpadded_day_without_a_repeated_year[2026.12.4-2027-01-03-v2026.12.4 (3 Jan)-True]
-0.000	tests/unit/py/test_release_presentation.py::test_release_title_is_the_tag_and_unpadded_day_without_a_repeated_year[2027.12.0-2027-12-31-v2027.12.0 (31 Dec)-False]
-0.000	tests/unit/py/test_release_presentation.py::test_release_title_is_the_tag_and_unpadded_day_without_a_repeated_year[2027.12.0-2027-12-31-v2027.12.0 (31 Dec)-True]
-0.000	tests/unit/py/test_release_presentation.py::test_release_title_is_the_tag_and_unpadded_day_without_a_repeated_year[2028.02.9-2028-02-29-v2028.02.9 (29 Feb)-False]
-0.000	tests/unit/py/test_release_presentation.py::test_release_title_is_the_tag_and_unpadded_day_without_a_repeated_year[2028.02.9-2028-02-29-v2028.02.9 (29 Feb)-True]
+0.000	tests/unit/py/test_release_presentation.py::test_release_title_shows_the_tag_and_full_date[2026.11.14-2026-11-13-v2026.11.14 \xb7 13 Nov 2026-False]
+0.000	tests/unit/py/test_release_presentation.py::test_release_title_shows_the_tag_and_full_date[2026.11.14-2026-11-13-v2026.11.14 \xb7 13 Nov 2026-True]
+0.000	tests/unit/py/test_release_presentation.py::test_release_title_shows_the_tag_and_full_date[2026.12.4-2027-01-03-v2026.12.4 \xb7 3 Jan 2027-False]
+0.000	tests/unit/py/test_release_presentation.py::test_release_title_shows_the_tag_and_full_date[2026.12.4-2027-01-03-v2026.12.4 \xb7 3 Jan 2027-True]
+0.000	tests/unit/py/test_release_presentation.py::test_release_title_shows_the_tag_and_full_date[2027.12.0-2027-12-31-v2027.12.0 \xb7 31 Dec 2027-False]
+0.000	tests/unit/py/test_release_presentation.py::test_release_title_shows_the_tag_and_full_date[2027.12.0-2027-12-31-v2027.12.0 \xb7 31 Dec 2027-True]
+0.000	tests/unit/py/test_release_presentation.py::test_release_title_shows_the_tag_and_full_date[2028.02.9-2028-02-29-v2028.02.9 \xb7 29 Feb 2028-False]
+0.000	tests/unit/py/test_release_presentation.py::test_release_title_shows_the_tag_and_full_date[2028.02.9-2028-02-29-v2028.02.9 \xb7 29 Feb 2028-True]
 0.000	tests/unit/py/test_release_presentation.py::test_whats_new_links_the_release_title_directly_to_its_change_sections[False-False]
 0.000	tests/unit/py/test_release_presentation.py::test_whats_new_links_the_release_title_directly_to_its_change_sections[False-True]
 0.000	tests/unit/py/test_release_presentation.py::test_whats_new_links_the_release_title_directly_to_its_change_sections[True-False]
