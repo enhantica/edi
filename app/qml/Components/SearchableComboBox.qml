@@ -14,10 +14,11 @@ import edi.app
 // entries (edi ADR-0017 §7): every combo box that lists project items (blocks, parameters) or a long vocabulary
 // (atom types, space groups) is one of these. The field filters the list by any part of an entry's text, ignoring
 // case and spaces. A typed search lists the entry spelled as typed first, then those starting with the text, then
-// the others; Enter picks the first. While the text matches no entry it is red (the owner, 2026-10-06) and a line
-// under it says so. The list is the base's own popup, with the field as its list's header. A delegate folds itself
-// away while it does not match, through `matches`: the base's own delegate does so here, and a combo box that brings
-// its own delegate binds its height and opacity the same way.
+// the others; Enter picks the entry spelled as typed, else the text itself when the box takes it as typed
+// (`typedEntry`), else the first entry. While the text matches no entry and is not taken as typed it is red (the
+// owner, 2026-10-06) and a line under it says so. The list is the base's own popup, with the field as its list's
+// header. A delegate folds itself away while it does not match, through `matches`: the base's own delegate does so
+// here, and a combo box that brings its own delegate binds its height and opacity the same way.
 EaElements.ComboBox {
     id: control
 
@@ -62,10 +63,15 @@ EaElements.ComboBox {
     // What the list says when the search matches no entry.
     property string noMatchText: qsTr("No entry matches")
     property string searchText: ""
+    // The search text when the box takes it as a value its list does not hold, else empty: set by a box whose
+    // value need not be an entry (a site's type takes any isotope of a listed element). Enter then gives it to
+    // typedAccepted, unless an entry is spelled as typed.
+    property string typedEntry: ""
     property Item searchField: null
     readonly property string filter: searchable ? control.folded(searchText) : ""
-    // Some entry matches the search (true while there is none).
+    // Some entry matches the search, or the box takes it as typed (true while there is none).
     readonly property bool anyMatch: ApplicationInfo.searchAnyMatch()
+    signal typedAccepted(string text)
 
     // The form a search compares: lower case, without spaces ("P 1 21/c 1" and "p121/c1" are one).
     function folded(text) {
@@ -310,7 +316,7 @@ EaElements.ComboBox {
                 anchors.right: parent.right
                 horizontalAlignment: TextInput.AlignLeft
                 placeholderText: qsTr("Search")
-                // Red while the text matches no entry, until it does.
+                // Red while the text matches no entry and is not taken as typed, until it is.
                 warned: !control.anyMatch
                 onTextChanged: control.searchText = text
                 onTextEdited: {

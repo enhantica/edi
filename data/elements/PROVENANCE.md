@@ -47,5 +47,6 @@ git -C <diffraction-lib> show c0654956:src/easydiffraction/display/structure/ass
 **The covalent column equals crysta's** `data/elements/covalent-radii.tsv` (crysta's bond rule, the same commit) for
 every element. A crysta SDK update that changes crysta's table fails edi's gate until this file follows.
 
-**What is not here.** The upstream `atomic` radii: no view uses them. Deuterium (`D`) is in no table and takes the
-fallbacks (pink, 1.0 Angstrom), as in diffraction-lib and in crysta's bond rule.
+**What is not here.** The upstream `atomic` radii: no view uses them. Deuterium has no row, as diffraction-lib and
+its sources have none; the core gives `D` and `2H` hydrogen's row (ADR-0022 §4) rather than a colour from outside this
+source.

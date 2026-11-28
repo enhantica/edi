@@ -53,12 +53,20 @@ finite and the shares sum to 1. The atom's colour and radius are its major part'
 
 `data/elements/element-styles.tsv` (118 elements, H to Og) is the only source of element colours and radii in edi,
 embedded in the core at build time and read through `element_style_table()`. Its values are copied from
-diffraction-lib's `elements.py` at `c0654956`, the commit crysta's covalent radii come from; its covalent column equals
-crysta's `covalent-radii.tsv`. `data/elements/PROVENANCE.md` names the published sources and licences. The element of
-a type symbol is its first capital letter and the lower-case letter after it (`Co2+` is Co, `2H` is H): the rule the
-app already used for element colours, which differs from diffraction-lib's for a symbol that does not start with its
-element. Fallbacks are diffraction-lib's: a missing VESTA colour is the Jmol one, a missing ionic radius the covalent
-one, an unknown element pink and 1.0 Angstrom, and a substituted radius is reported.
+diffraction-lib's `elements.py` at `c0654956`, the commit crysta's covalent radii come from; its covalent column
+equals crysta's `covalent-radii.tsv`. `data/elements/PROVENANCE.md` names the published sources and licences. The
+element of a type symbol is its first capital letter and the lower-case letter after it (`Co2+` is Co, `13C` is C):
+the rule the app already used for element colours, which differs from diffraction-lib's for a symbol that does not
+start with its element. Deuterium is one atom however a file writes it: `D` and `2H` are both element `D`, so they take
+one colour and one radius. The element table has no deuterium row, as diffraction-lib has none, so `D` takes
+hydrogen's colours and radii, and a polyhedron never centres on it, as on H. What the view says in words (the legend,
+an atom's hover text, the note naming atoms with a substituted radius) is the atom as the site writes it: its element
+with any mass number and without the charge (`2H`, `D`, `13C`, but `Co` for `Co2+`). A structure writing both `D` and
+`2H` has two legend entries of one colour. A declared scattering-length map may name deuterium under either spelling,
+or both with one value: two values are refused where the map is read or edited (the `.edi` loop, the Scattering
+lengths table, a FullProf import), with crysta's message.
+Fallbacks are diffraction-lib's: a missing VESTA colour is the Jmol one, a missing ionic radius the covalent one, an
+unknown element pink and 1.0 Angstrom, and a substituted radius is reported.
 
 ### 5. Options
 
@@ -95,10 +103,14 @@ generic `_geom_bond` group is not shown, so the bonds appear once.
 
 A site's type is picked from the types crysta's scattering table holds for each experiment linking the structure:
 the neutron table of its scattering-length source (elements and isotopes with a length), or the X-ray form-factor
-table of its source (elements and ions). With both probes linked the list is their union, sorted; with no experiment
-linked it is the elements a new atom may take. crysta lists no X-ray table, so each element and each charge from 1 to
-9 is asked for once per source. Every entry carries its element's colour (§4). A type outside the list, as a file may
-state it, is kept and shown as it is.
+table of its source (elements, ions, and `D` and `2H`, which take hydrogen's form factor). With both probes linked the
+list is their union, sorted; with no experiment linked it is the elements a new atom may take, and `D` and `2H`. crysta
+lists no X-ray table, so each element and each charge from 1 to 9 is asked for once per source. Every entry carries its
+element's colour (§4). A type the list does not hold is taken when typed in the list's search field and Enter is
+pressed, if every linked experiment computes with it in its selected source (`atom_type_computes`): any isotope of a
+listed element with X-rays (`13C`), a type with a length in the neutron source (found as a calculation finds it, so an
+ion by its element). With no experiment linked both default tables must compute with it. An entry spelled as typed
+still wins over the typed text. A type outside the list, as a file may state it, is kept and shown as it is.
 
 ### 9. Coordination polyhedra
 

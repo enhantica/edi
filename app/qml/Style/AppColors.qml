@@ -54,10 +54,10 @@ QtObject {
     readonly property string elementScheme: Session.project && Session.project.structureViewOptions ? Session.project.structureViewOptions.colorScheme : "jmol"
 
     // An element's colour from a type symbol: the core's element table (edi ADR-0022 §4), the colour of the
-    // symbol's element ("162Dy" is Dy, "Co2+" is Co, "2H" is H) in the structure view's scheme; the minor
-    // foreground colour for an element the table does not have. Drawn flat, so made readable on `backgrounds`, by
-    // default every underlay of a table cell: both alternating rows, the hover tint and the page behind the table
-    // (edi ADR-0047).
+    // symbol's element ("162Dy" is Dy, "Co2+" is Co, "2H" and "D" are deuterium, coloured as H) in the
+    // structure view's scheme; the minor foreground colour for an element the table does not have. Drawn flat,
+    // so made readable on `backgrounds`, by default every underlay of a table cell: both alternating rows, the
+    // hover tint and the page behind the table (edi ADR-0047).
     function element(typeSymbol, backgrounds) {
         return ApplicationInfo.appColour(4, typeSymbol, backgrounds, undefined);
     }
