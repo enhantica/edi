@@ -167,7 +167,7 @@ TestCase {
                     return;
                 tryCompare(fields[i], "enabled", true, 5000, "The typed k field becomes ready after the preceding entry");
                 press(fields[i]);
-                tryCompare(fields[i], "activeFocus", true, 2000, "The real typed component owns keyboard focus");
+                tryVerify(() => fields[i].activeFocus || Render.descendants(fields[i]).some(item => item.activeFocus), 2000, "The real typed component owns keyboard focus");
                 keyClick(Qt.Key_A, Qt.ControlModifier);
                 for (const character of value)
                     keyClick(character.charCodeAt(0));
@@ -292,7 +292,7 @@ TestCase {
         compare(String(card.color), String(Style.Colors.themeAccent), "The selected card uses the app accent fill");
         const textColours = () => labels.map(item => [item.color.r, item.color.g, item.color.b, item.color.a]);
         tryVerify(() => textColours().every(channels => channels.every(channel => channel === 1)), 2000, "A selected card draws both labels in opaque white: " + JSON.stringify(textColours()));
-        verify(footer.text.includes("1"), "The fixed Add button shows the selected count");
+        verify(footer.enabled && footer.text === "Add", "A single selected card enables the unnumbered Add button");
         compare(footer.mapToItem(popup().contentItem, 0, 0).y, footerY, "Changing levels and selecting a card keeps the footer fixed");
         press(card);
         compare(popup().selected.length, 0, "Clicking the selected card again clears it");
@@ -332,6 +332,7 @@ TestCase {
         press(nodes[0]);
         press(nodes[1]);
         choose(pcontrol("magnetic.startMoments"), "Zero");
+        compare(pcontrol("magnetic.add").text, "Add 2 structures", "The Add button shows the number when two cards are selected");
     }
     function test_add_links_and_undo() {
         openPopup();
@@ -897,7 +898,10 @@ TestCase {
         const cells = Render.texts(row).map(label => label.text);
         verify(cells.includes("2 parent cells") && cells.some(text => /^\d+\.\d{2}$/.test(text)), "The same row renders cell size and numeric misfit");
         verify(results.rows.length > 1, "The ranked fixture supplies an independent row for real input");
-        if (results.current === index) {
+        const startedOnTarget = results.current === index;
+        const expectedSatellite = [[peaks[satelliteIndex].x, "satellite", true]];
+        if (startedOnTarget) {
+            indexedTooltip(results, row, index, expectedSatellite);
             const other = index === 0 ? 1 : index - 1;
             list.positionViewAtIndex(other, ListView.Contain);
             let alternate;
@@ -916,8 +920,8 @@ TestCase {
         verify(results.current !== index, "The intended half-period row starts unselected");
         pressChart(row);
         tryCompare(results, "current", index, 2000, "A pointer click chooses the previously unselected half-period row");
-        indexedTooltip(results, row, index, [[peaks[satelliteIndex].x, "satellite", true]]);
-        verify(results.rows.length > 1, "The ranked fixture supplies a second row for keyboard navigation");
+        if (!startedOnTarget)
+            indexedTooltip(results, row, index, expectedSatellite);
         const adjacent = index === 0 ? 1 : index - 1;
         keyClick(index === 0 ? Qt.Key_Down : Qt.Key_Up);
         tryCompare(results, "current", adjacent, 2000, "A keyboard arrow moves the actual ranked table selection");
