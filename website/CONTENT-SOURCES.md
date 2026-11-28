@@ -221,7 +221,7 @@ These source notes are retained for authors; they are not part of the published 
 
 - `user-guide/analysis-workflow/analysis.md`: [earlier library guide](https://github.com/easyscience/diffraction-lib/blob/master/docs/docs/user-guide/analysis-workflow/analysis.md), [current edi guide](https://github.com/enhantica/edi/blob/main/docs/user/guides/complete-project-loading.md).
 
-- `user-guide/analysis-workflow/structure.md`: [earlier library guide](https://github.com/easyscience/diffraction-lib/blob/master/docs/docs/user-guide/analysis-workflow/model.md), [current edi guide](https://github.com/enhantica/edi/blob/main/docs/user/guides/projects-from-scratch-in-the-app.md).
+- `user-guide/analysis-workflow/structure.md`: [earlier library guide](https://github.com/easyscience/diffraction-lib/blob/master/docs/docs/user-guide/analysis-workflow/model.md), [current edi guide](https://github.com/enhantica/edi/blob/main/docs/user/guides/projects-from-scratch-in-the-app.md); the calculation method from the [Rietveld, Le Bail and Pawley guide](https://github.com/enhantica/edi/blob/main/docs/user/guides/rietveld-le-bail-and-pawley.md) and [ADR-0109](https://github.com/enhantica/edi/blob/main/docs/dev/adrs/0109-le-bail-and-pawley.md).
 
 - `user-guide/analysis-workflow/experiment.md`: [earlier library guide](https://github.com/easyscience/diffraction-lib/blob/master/docs/docs/user-guide/analysis-workflow/experiment.md), [current edi guide](https://github.com/enhantica/edi/blob/main/docs/user/guides/projects-from-scratch-in-the-app.md).
 
