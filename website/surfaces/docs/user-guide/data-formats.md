@@ -142,8 +142,10 @@ resolution file beside it, with the file names FullProf expects. The import read
 multi-pattern files for supported X-ray and neutron powder models and neutron single-crystal
 experiments, in the XYDATA, stepped, ILL, GSAS ALT and ISIS RALF/FXYE data formats. An INT file can
 hold several reflection datasets with their own wavelength or scale. Compatible commensurate
-magnetic phases become EasyDiffraction magnetic structures. FullProf codewords become free
-parameters and constraints.
+magnetic phases become EasyDiffraction magnetic structures. A profile-matching phase (`Jbt=2`)
+becomes a Le Bail structure, with its atoms when it has any; an intensity file it reads (`Irf=2`) is
+not read, so its intensities start again. FullProf codewords become free parameters and
+constraints.
 
 ### GSAS-II
 
@@ -167,7 +169,9 @@ parent folder. EasyDiffraction creates a new `<project-name>-fullprof` folder wi
 and its powder `.dat` or single-crystal `.int` files. Powder simulations export their calculation
 grid. The instrument parameters go into `project.pcr` with their fitted values. When the project
 holds a fit, `fit_results.txt` beside it lists the fit's reduced chi-square and R factors and each
-free parameter's value with its standard uncertainty, which a PCR has no place for. The command
+free parameter's value with its standard uncertainty, which a PCR has no place for. A Le Bail
+structure is written as a profile-matching phase (`Jbt=2`) with its atoms, which FullProf starts
+from; FullProf has no Pawley mode, so a Pawley structure stops the export. The command
 line writes the same copy, with every parameter fixed for a forward calculation
 when `--fixed` is given:
 
