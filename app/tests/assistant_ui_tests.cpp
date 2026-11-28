@@ -181,6 +181,13 @@ QQuickItem* namedItem(QQuickItem* item, const QString& name) {
     return nullptr;
 }
 
+// Every item of that name under `item`. A Repeater's items are its parent's visual children, not QObject children.
+void namedItems(QQuickItem* item, const QString& name, QList<QQuickItem*>& found) {
+    if (item->objectName() == name) found.append(item);
+    for (auto* child : item->childItems())
+        namedItems(child, name, found);
+}
+
 QRectF sceneBox(const QQuickItem& item) {
     return item.mapRectToScene(QRectF(0, 0, item.width(), item.height()));
 }
@@ -1722,8 +1729,7 @@ private slots:
         auto* meter = root->findChild<QQuickItem*>("meter");
         QVERIFY(meter);
         QList<QQuickItem*> dots;
-        for (auto* item : meter->findChildren<QQuickItem*>("voiceDot"))
-            dots.append(item);
+        namedItems(meter, "voiceDot", dots);
         std::sort(dots.begin(), dots.end(), [](QQuickItem* a, QQuickItem* b) { return a->x() < b->x(); });
         QCOMPARE(dots.size(), 16);
         const qreal height = meter->height();
