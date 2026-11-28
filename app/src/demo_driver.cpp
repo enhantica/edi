@@ -2046,9 +2046,9 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
                                                      "parameters.freeHeader"}});
         steps_.push_back({"parametric-7-shared-menu", {"key:Escape", "parameters.sharedHeader"}});
     }
-    // A Parametric fit's views after it ends (owner, seq 39): the selected pattern with its calculated curve, Meas vs
-    // calc, Evolution and the results window with one outcome, on the three-file scan with U, V and W shared. Run only
-    // when asked (`--demo-only parametricfit-`).
+    // A Parametric fit's views after it ends: the selected pattern with its calculated curve, Meas vs calc, Evolution
+    // and the results window with one outcome, on the three-file scan with U, V and W shared. Run only when asked
+    // (`--demo-only parametricfit-`).
     if (only.startsWith(QLatin1String("parametricfit-"))) {
         steps_.push_back({"parametricfit-1-ready",
                           QStringList{"resize:1480x900", "theme:light"} + start
@@ -2064,9 +2064,9 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
         steps_.push_back({"parametricfit-4-evolution", {"mainArea.tab.evolution"}});
         steps_.push_back({"parametricfit-5-results", {"statusBar.fit.outcome"}});
     }
-    // A running fit's every Analysis chart tab at two iterations after the first, then its status bar and results window
-    // (owner, seq 43-46): the 213-pattern Parametric example with U, V and W shared (`parametriclive-`) and the taurine
-    // in Joint mode with x11, x22 and x33 shared (`jointlive-`, EDI_DEMO_JOINT_PROJECT). Run only when asked.
+    // A running fit's every Analysis chart tab at two iterations after the first, then its status bar and results
+    // window: the 213-pattern Parametric example with U, V and W shared (`parametriclive-`) and the taurine in Joint
+    // mode with x11, x22 and x33 shared (`jointlive-`, EDI_DEMO_JOINT_PROJECT). Run only when asked.
     if (only.startsWith(QLatin1String("parametriclive-")) || only.startsWith(QLatin1String("jointlive-"))) {
         const QStringList tabs{"structure", "pattern", "measCalc", "correlations", "stacked", "map", "evolution"};
         const auto every_tab = [this, &tabs](const QString& prefix, int iteration, QStringList first) {
@@ -2089,7 +2089,7 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
         steps_.push_back({prefix + "-ended-status", {"wait-fit", "key:Escape", "mainArea.tab.pattern"}});
         steps_.push_back({prefix + "-ended-results", {"statusBar.fit.outcome"}});
     }
-    // The sidebar's Auto and Full widths with the Shared column (owner record 453d6ae49): the joint taurine and the
+    // The sidebar's Auto and Full widths with the Shared column: the joint taurine and the
     // parametric CoSiO example, every column of the Parameters table shown, Change included. Run only when asked
     // (`--demo-only sidebarshared-`).
     if (only.startsWith(QLatin1String("sidebarshared-"))) {
@@ -2140,7 +2140,7 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
                                                      "open-project:jointshared", analysis, basic,
                                                      "parameters.nameFilter", "type:coefficient"}});
     }
-    // The Shared column and the parameter colours (owner record 2026-11-26): the joint taurine's shared extinction on the
+    // The Shared column and the parameter colours: the joint taurine's shared extinction on the
     // Analysis page in both themes and both palettes, and a constrained project's Experiment page. Run only when asked
     // (`--demo-only sharedcolour-`).
     if (only.startsWith(QLatin1String("sharedcolour-"))) {
@@ -2740,7 +2740,7 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
             steps_.push_back({"about-" + theme + "-6-closed", {"key:Escape", "key:Escape"}});
         }
     }
-    // One fit timed in the app (owner, seq 62): a prepared copy of the 213-pattern scan in Independent mode
+    // One fit timed in the app: a prepared copy of the 213-pattern scan in Independent mode
     // (EDI_DEMO_INDEPENDENT_PROJECT) or of the Parametric example with U, V and W shared (EDI_DEMO_PARAMETRIC_PROJECT),
     // under the Cores for fitting preference in effect. Run one at a time (`--demo-only fittime-independent`).
     if (only.startsWith(QLatin1String("fittime-"))) {

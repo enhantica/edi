@@ -40,8 +40,8 @@ struct FitReport {
     std::string refusal;
     // What the fit returned; absent when it was refused.
     std::optional<FitResultBase> result;
-    // A scan: the point starts it used (point, parameter, value), however it ended (crysta ADR-0136 decision 9); the
-    // app removes exactly those, so an edit made while it ran is kept.
+    // A scan: the point starts it used (point, parameter, value), however it ended; the app removes exactly those,
+    // so an edit made while it ran is kept.
     std::vector<std::tuple<std::string, std::string, double>> used_starts;
     FitFailureReason reason = FitFailureReason::None;
     bool adopted() const noexcept {

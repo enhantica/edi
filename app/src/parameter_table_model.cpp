@@ -17,7 +17,7 @@ const QStringList kRoles{"parameter", "path",  "blockKind", "blockName", "catego
                          "maximum", "units", "refinable", "fittable", "fitReason", "fitGroup", "sharedFollower"};
 // The full name the table's tooltip shows (cosio.cell.length_a), which the name filter finds too.
 // Whether a row is a shared group's other copy, read from the item itself, as its Shared box is: the row's own copy
-// of the flag can be older than the item's (owner record 2026-11-26).
+// of the flag can be older than the item's.
 bool shared_copy(const QVariant& parameter) {
     const auto* item = qobject_cast<ParameterItem*>(parameter.value<QObject*>());
     return item != nullptr && item->isSharedFollower();
@@ -443,7 +443,7 @@ bool ParameterFilterModel::filterAcceptsRow(int source_row, const QModelIndex& s
     }
     const bool free = value("free").toBool();
     const bool fittable = value("fittable").toBool();
-    // A shared group shows as its leader's one row, as a user constraint hides its dependents (owner record 2026-11-26).
+    // A shared group shows as its leader's one row, as a user constraint hides its dependents.
     if (!shownByGroup(free, value("fitGroup").toInt()) || shared_copy(value("parameter"))) {
         return false;
     }

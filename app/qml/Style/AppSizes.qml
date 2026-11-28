@@ -147,7 +147,7 @@ QtObject {
     readonly property real autoIndexColumn: Math.ceil(autoBold.advanceWidth("99")) + tableCellMargin * 2
     readonly property real autoFreeColumn: Math.ceil(unit * 1.35 + tableCellMargin + autoPlain.advanceWidth("Free"))
     // The Shared column, as Free's with its own title, and the room it adds while the Parameters table shows it (Joint
-    // and Parametric): Auto and Full grow by it so no other column gives way (owner record 453d6ae49).
+    // and Parametric): Auto and Full grow by it so no other column gives way.
     property bool sharedColumnShown: false
     readonly property real autoSharedColumn: Math.ceil(unit * 1.35 + tableCellMargin + autoPlain.advanceWidth("Shared"))
     readonly property real sharedColumnRoom: sharedColumnShown ? autoSharedColumn + EaStyle.Sizes.tableColumnSpacing : 0

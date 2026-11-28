@@ -1147,7 +1147,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
         int shown_dataset = -1;                 // Reset fits only: the dataset the model showed, and its values
         std::vector<edi::Edit::ScanValue> shown_values;
         // Reset fits and a fresh or new-pass run: the pending edits as they were, which Reset clears and a run may use;
-        // Undo puts them back with the earlier rows (owner records 2026-11-28).
+        // Undo puts them back with the earlier rows.
         std::optional<edi::ItemVec<edi::ParametricFitStart>> starts;
     };
     // Load data: the experiment as it was before (a simulation, or its earlier data, with its file name).

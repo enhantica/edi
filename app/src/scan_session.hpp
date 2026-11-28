@@ -104,7 +104,7 @@ class ScanSession : public QObject {
     // where the files were kept.
     QString takeFiles(const edi::Project& project, Files& taken);
     // A complete scan fitted again: reads the three result files for Undo and leaves them where they are, since the
-    // run starts each dataset from its own row (owner decision 2026-11-27). The refusal, if any.
+    // run starts each dataset from its own row. The refusal, if any.
     QString copyFiles(const edi::Project& project, Files& copied);
     // Prepared provenance and bounded rename ledgers precede file writes. committed
     // latches actual reversal; later cleanup cannot turn it into an unperformed Undo.

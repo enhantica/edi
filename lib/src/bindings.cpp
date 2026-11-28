@@ -831,7 +831,7 @@ static void def_free_parameters(nb::class_<Class>& cls) {
         "The subset of `parameters` whose `free` is set; a Joint shared group counts once, by its listed copy.");
 }
 
-// Pending scan edits live in the running model only (owner record 2026-11-28): a save says how many it will not keep.
+// Pending scan edits live in the running model only: a save says how many it will not keep.
 // A warning raised as an error stops the save before it writes.
 static void warn_unfitted_edits(const edi::Project& project) {
     const std::size_t pending = project.sequential_fit.starts.size();

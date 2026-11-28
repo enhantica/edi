@@ -1014,7 +1014,7 @@ SideBarGroup {
                         color: AppColors.shared
                         enabled: group.measured && row.parameter !== null && (row.parameter.shareReason === "" || row.parameter.shared)
                         checked: row.parameter ? row.parameter.shared : false
-                        // The row Shared is ticked on stays and carries the group (owner record 61961fe49).
+                        // The row Shared is ticked on stays and carries the group.
                         onToggled: {
                             row.parameter.shared = checked;
                             checked = Qt.binding(() => row.parameter ? row.parameter.shared : false);
@@ -1036,7 +1036,7 @@ SideBarGroup {
                         anchors.right: parent.right
                         horizontalAlignment: Text.AlignRight
                         objectName: `parameters.free.${row.index}`
-                        // The free value's green (owner record 2026-11-26).
+                        // The free value's green.
                         color: EaStyle.Colors.green
                         enabled: group.measured && row.parameter !== null && (row.parameter.fittable || row.parameter.free)
                         checked: row.parameter ? row.parameter.free : false

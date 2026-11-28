@@ -4728,7 +4728,7 @@ int ProjectViewModel::startDataset(const edi::Project& from, const edi::ScanResu
 
 namespace {
 
-// A shown point's values with its pending starts over them, as the next Fit starts it (owner record 2026-11-28): its
+// A shown point's values with its pending starts over them, as the next Fit starts it: its
 // own, and a shared name's start, the whole series' one, on every copy of the group. Applied last in every read of a
 // point's values, after the series overlay, so a bank row never covers an edit.
 void overlay_starts(std::vector<edi::Edit::ScanValue>& values, const edi::Project& project,
@@ -4841,8 +4841,8 @@ std::vector<edi::Edit::ScanValue> ProjectViewModel::datasetValues(const std::vec
         const auto found = columns.find(edi::scan_results_column(value.unique_name));
         if (found == columns.end()) {
             // A parameter the results do not record keeps the template's value; its s.u. belonged to an
-            // earlier fit, not to the one this row records. A fixed input the fit used is that fit's value
-            // (crysta ADR-0136 decision 9), without an s.u.
+            // earlier fit, not to the one this row records. A fixed input the fit used is that fit's
+            // value, without an s.u.
             value.uncertainty.reset();
             if (const auto input = inputs.find(edi::scan_results_column(value.unique_name));
                 input != inputs.end() && input->second < row.size() && !row[input->second].empty()) {
@@ -5242,7 +5242,7 @@ void ProjectViewModel::syncOutOfDate() {
 void ProjectViewModel::promoteShownToTemplate() {
     // An edit at a shown dataset reaches the template, over the template's own data file (edi ADR-0017 §19). While the
     // scan has results the shown values are a point's: the template takes the edit's structure, flags, Shared names
-    // and starts, and keeps its own values (owner records 10b08c160 and 2026-11-28); a value edit made a start.
+    // and starts, and keeps its own values; a value edit made a start.
     if (!scan_template_) return;
     edi::Project promoted = *project_;
     if (scanProcessed()) {
@@ -5308,8 +5308,8 @@ QString ProjectViewModel::prepareScan(bool fresh, bool refit) {
             }
         }
     }
-    // A complete scan fitted again replaces every row, from each dataset's own (owner decision 2026-11-27): a new
-    // run, not a Continue of the earlier one, whose files stay in place for the run to read and are copied for Undo.
+    // A complete scan fitted again replaces every row, from each dataset's own: a new run, not a Continue of the
+    // earlier one, whose files stay in place for the run to read and are copied for Undo.
     if (!fresh && !refit) {
         previous_run_ = scan_session_->run();
         return {};
@@ -5361,7 +5361,7 @@ QString ProjectViewModel::resetScan() {
     try {
         project_->fit_result = {};
         if (scan_template_) scan_template_->fit_result = {};
-        // Reset returns to the template: the points' starts go with the results (owner record 2026-11-28).
+        // Reset returns to the template: the points' starts go with the results.
         project_->sequential_fit.starts = {};
         if (scan_template_) scan_template_->sequential_fit.starts = {};
         syncCorrelations();
@@ -6137,7 +6137,7 @@ void ProjectViewModel::finishWidgetInput(const std::shared_ptr<WidgetParameterIn
     if (widget_input_ == input) widget_input_.reset(); // Never detach a replacement input.
 }
 std::optional<ProjectViewModel::ShownPoint> ProjectViewModel::shownPoint() const {
-    // Owner record 2026-11-28: while a scan has results, a value edit is the shown point's start for the next Fit.
+    // While a scan has results, a value edit is the shown point's start for the next Fit.
     if (!scan_ || !scan_template_ || scan_session_ == nullptr || !scanProcessed() || current_dataset_ < 0) {
         return std::nullopt;
     }
@@ -6185,7 +6185,7 @@ edi::Edit ProjectViewModel::valueEdit(edi::Parameter& parameter, double value) {
             return edi::Edit::point_start(*project_, parameter, point->point, each.unique_name, value, shared);
         }
     }
-    // No results: the value is the template's (record 10b08c160, part 3).
+    // No results: the value is the template's.
     return group ? edi::Edit::group_value(*project_, parameter, value) : edi::Edit::value(parameter, value);
 }
 

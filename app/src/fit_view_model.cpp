@@ -879,7 +879,7 @@ void FitViewModel::sync() {
         reason = tr("Select at least one free parameter");
     } else if (scan) {
         reason = owner_.scanRefusal();
-        // A complete scan is fitted again from each dataset's own latest result (owner decision 2026-11-27).
+        // A complete scan is fitted again from each dataset's own latest result.
     } else if (mode == QLatin1String("joint") && declared) {
         reason = tr("This project declares a scan (_sequential_fit): its datasets are fitted in the sequential or "
                     "independent mode, not jointly");

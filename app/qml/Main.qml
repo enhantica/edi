@@ -853,7 +853,7 @@ EaComponents.ApplicationWindow {
         }
     }
     // The Parameters table shows the Shared column in the Joint and Parametric modes (as ParametersGroup.sharedShown),
-    // and the sidebar's Auto and Full widths make room for it (owner record 453d6ae49).
+    // and the sidebar's Auto and Full widths make room for it.
     Binding {
         target: AppSizes
         property: "sharedColumnShown"

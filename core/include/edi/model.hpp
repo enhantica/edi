@@ -5001,7 +5001,7 @@ struct KeyTraits<ParametricSharedParameter> {
 };
 
 // ADR-0107 decision 13: one point's own start for one parameter of a scan fit, made by a value edit while the scan had
-// results (owner records 2026-11-28), in every scan mode: pending in the running model only, never written to the
+// results, in every scan mode: pending in the running model only, never written to the
 // project files, until a fit uses it and writes the point's row (crysta's apply_point_starts, ADR-0136 decision 9). The
 // point is its data file relative to the scan folder, or the text the `*` matches in a series of joint fits; a shared
 // parameter's start is the whole series' one start. Its row schema is the collection's in-memory layout only.

@@ -5,10 +5,9 @@
 - **Implementation:** 🟡 In progress
 - **Priority:** High
 
-Amends [ADR-0087](0087-experiment-sets-and-shared-parameters.md) point 3 (its 2026-11-17 amendment: the Free box does
-not become three-state; Shared is its own column) and [ADR-0089](0089-series-views-shared-and-per-experiment.md) point 1 (the Shared section, now named Common).
-crysta's [ADR-0136](https://github.com/enhantica/crysta/blob/main/docs/dev/adrs/0136-parametric-fit-of-a-series.md)
-holds the solver and the file format.
+Amends [ADR-0087](0087-experiment-sets-and-shared-parameters.md) point 3 (its 2026-11-17 amendment: the Free box does not become three-state; Shared is its own
+column) and [ADR-0089](0089-series-views-shared-and-per-experiment.md) point 1 (the Shared section, now named Common). crysta's [ADR-0136] holds the solver and
+the file format.
 
 ## Context
 
@@ -24,7 +23,7 @@ equality (TOPAS, GSAS-II, FullProf, Jana); general fitting tools put a Share col
    Independent.
 3. **Where it is offered.**
    - The Parameters table shows a Shared column, left of Free, in the Parametric and Joint modes only, so Free keeps its
-     place at the table's right edge (owner record 1b0c100d3).
+     place at the table's right edge.
    - The Shared title is a copy of Free's: its ▾ menu shares or unshares the shown rows (Shared, Not shared, and Mixed
      when they differ), as one undo step.
    - Any parameter a fit can vary can be shared, the scale and the background included.
@@ -32,7 +31,7 @@ equality (TOPAS, GSAS-II, FullProf, Jana); general fitting tools put a Share col
    - In a scan, a parameter is shared across the points (per bank in a series of joint fits).
    - In a joint fit, the same parameter is shared across every experiment, stored under the parameter Shared was
      ticked on. That row stays in the Analysis table and carries the group; the other members' copies leave it, as a
-     user constraint's dependents do (owner records 1b0c100d3, 61961fe49).
+     user constraint's dependents do.
    - A parameter that is not in every experiment cannot be shared: its Shared box is disabled and says so.
    - A shared group has one value and one Free flag: editing either on any member changes all members, as one undo
      step.
@@ -43,11 +42,11 @@ equality (TOPAS, GSAS-II, FullProf, Jana); general fitting tools put a Share col
      (a dependent) cannot be shared: its Shared box is disabled and its tooltip names the constraint, as Free does for
      a parameter it cannot free. To share it, the user removes the constraint first.
 5. **Values.** Checking Shared sets every member to the value of the row it was checked on, and the group starts free
-   if any member was free (owner decision 2026-11-27); a file listing a shared name whose copies differ does the same.
-   Afterwards Shared and Free stay independent. Unchecking leaves each member that value and flag as its own.
+   if any member was free; a file listing a shared name whose copies differ does the same. Afterwards Shared and Free
+   stay independent. Unchecking leaves each member that value and flag as its own.
 6. **File.** `analysis.edi` keeps the shared names in one `_parametric_fit_shared` loop, written in every mode when not
    empty. Nothing is written as alias or constraint rows. Loading drops names the project does not hold or that a
-   relation sets, and gives a group the listed parameter's value and Free flag (owner record 61961fe49).
+   relation sets, and gives a group the listed parameter's value and Free flag.
 7. **Evolution.**
    - A parameter shared across the series has one value, so it is not offered as a curve.
    - In a series of joint fits, a parameter of every experiment tied the same for all is listed once under Common,
@@ -55,32 +54,29 @@ equality (TOPAS, GSAS-II, FullProf, Jana); general fitting tools put a Share col
    - The words follow the app's: Evolution's box reads "Common" / "Per experiment", and the selector above the charts
      names experiments, never banks.
 
-8. **Colours** (owner records 1b0c100d3, 8b4e6f965). Free check boxes take the free value's green; Shared's check boxes
+8. **Colours**. Free check boxes take the free value's green; Shared's check boxes
    and its values on every page and popup are indigo; a value a user constraint computes is magenta on every page that
    shows it (the Analysis page hides those rows). Each has a light and a dark tone and does not depend on the palette.
-9. **Sidebar** (owner record 453d6ae49). While the table shows Shared, the sidebar's Auto and Full widths grow by that
+9. **Sidebar**. While the table shows Shared, the sidebar's Auto and Full widths grow by that
    column, from the same width rule, so no other column gives way.
 10. **A running fit.** A Parametric fit redraws the selected pattern, Meas vs calc and Evolution from each iteration
     (at most four times a second, the last always); the status bar shows its iterations and joint χ², and the results
     window its one outcome, never files converged or failed.
-11. **Cores** (owner decision 2026-11-27). Preferences' one Cores for fitting (Auto: every core) is spent by the fit's
-    mode: a single or Joint fit and a Sequential scan inside each calculation, an Independent scan as that many files
-    at once, a Parametric fit as that many patterns at once, its point loop on that team (crysta ADR-0136 decision 8);
-    the setting's tooltip says so.
-12. **The template and a fit again** (owner decision 2026-11-27, every scan mode). A scan fit never writes the template:
-    the project keeps its values, and each shown dataset reads its own from the results files; saving after a fit
-    writes the template unchanged. Fit on a scan whose every dataset is fitted or skipped fits them all again, each
-    from its own latest result, as a new run; while some are not, it continues them. Reset fits clears the results,
-    and the next fit starts every dataset from the template.
-13. **Edits while a scan has results** (owner decisions 2026-11-28, every scan mode). A value typed or dragged at the
-    shown dataset is that dataset's pending start for the next fit, held in the running model only and never saved
-    (crysta ADR-0136 decision 9); in a Parametric fit a shared value is the whole series' one start, and a newly shared
-    group takes the clicked copy's value as it (one write for a row's Shared box and the header menu); unsharing drops
-    it. The fit removes exactly the starts it used, on a free parameter or a fixed one. A save says
-    how many edits not yet fitted it will not keep, and closing or reopening drops them. Neither a pending start nor the
-    Shared list makes the results out of date. Undo removes a start. Free, the mode and every other edit reach the
-    template with the template's own values kept; the template's values change only where no results exist. Reset fits
-    clears the starts with the results.
+11. **Cores**. Preferences' one Cores for fitting (Auto: every core) is spent by the fit's mode: a single or Joint fit
+    and a Sequential scan inside each calculation, an Independent scan as that many files at once, a Parametric fit as
+    that many patterns at once, its point loop on that team; the setting's tooltip says so.
+12. **The template and a fit again**. A scan fit never writes the template: the project keeps its values, and each shown
+    dataset reads its own from the results files; saving after a fit writes the template unchanged. Fit on a scan whose
+    every dataset is fitted or skipped fits them all again, each from its own latest result, as a new run; while some
+    are not, it continues them. Reset fits clears the results, and the next fit starts every dataset from the template.
+13. **Edits while a scan has results**. A value typed or dragged at the shown dataset is that dataset's pending start
+    for the next fit, held in the running model only and never saved; in a Parametric fit a shared value is the whole
+    series' one start, and a newly shared group takes the clicked copy's value as it (one write for a row's Shared box
+    and the header menu); unsharing drops it. The fit removes exactly the starts it used, on a free parameter or a fixed
+    one. A save says how many edits not yet fitted it will not keep, and closing or reopening drops them. Neither a
+    pending start nor the Shared list makes the results out of date. Undo removes a start. Free, the mode and every
+    other edit reach the template with the template's own values kept; the template's values change only where no
+    results exist. Reset fits clears the starts with the results.
 
 ## Consequences
 

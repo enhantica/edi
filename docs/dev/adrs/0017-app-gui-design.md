@@ -528,14 +528,14 @@ one selected row, and the row's number in the first column, bold in the accent c
   default, or embedded; a project's own is the Report page's Embed box).
 - **Updates and Experimental**: shown disabled (§4).
 - **Performance** (the owner, 2026-11-04): how the app runs on this machine, never saved in a project.
-  - **Cores for fitting** (owner decision 2026-11-27; it replaced Threads per calculation and Parallel fits in a
-    scan): "Auto", every core the platform reports, or a count from 1 to twice the cores (at least 16, at most 64; a
-    browser can report fewer cores than the machine has). Every calculation runs on that many threads, and each fit
-    spends them by its mode: a single or Joint fit and a Sequential scan inside each calculation, an Independent scan
-    as that many files at once, each on one thread, a Parametric fit as that many patterns at once (edi ADR-0107
-    decision 11). Saved under `develop/engineThreads` (0 is Auto), the key the thread count had; on the first start
-    after the change a saved Parallel fits count larger than a saved thread count is taken instead (Auto stays Auto,
-    the larger), and `develop/coresMigrated` records it. Handed to the engine with `edi::set_cores_for_fitting`.
+  - **Cores for fitting** (it replaced Threads per calculation and Parallel fits in a scan): "Auto", every core the
+    platform reports, or a count from 1 to twice the cores (at least 16, at most 64; a browser can report fewer cores
+    than the machine has). Every calculation runs on that many threads, and each fit spends them by its mode: a
+    single or Joint fit and a Sequential scan inside each calculation, an Independent scan as that many files at
+    once, each on one thread, a Parametric fit as that many patterns at once (edi ADR-0107 decision 11). Saved under
+    `develop/engineThreads` (0 is Auto), the key the thread count had; on the first start after the change a saved
+    Parallel fits count larger than a saved thread count is taken instead (Auto stays Auto, the larger), and
+    `develop/coresMigrated` records it. Handed to the engine with `edi::set_cores_for_fitting`.
   - Where the app runs single-threaded (a browser without WebAssembly threads), it shows 1, disabled, with a tooltip
     saying why, and a scan fits one file at a time.
   - The pages' Settings tabs show the count that applies there, read-only, linking here (ADR-0031 §2).

@@ -33,9 +33,9 @@ QtObject {
     readonly property color textLoop: EaStyle.Colors.isDarkPalette ? "#A6A6A6" : "#6E6E6E"
 
     // A value a user constraint computes, on every page that shows it (the Analysis page hides it): magenta, apart from
-    // the orange that marks structures, phases and warnings (owner record 8b4e6f965).
+    // the orange that marks structures, phases and warnings.
     readonly property color constrained: EaStyle.Colors.isDarkPalette ? "#F48FB1" : "#C2185B"
-    // Shared (edi ADR-0107): its check boxes and its values on every page and popup, indigo (owner record 8b4e6f965).
+    // Shared (edi ADR-0107): its check boxes and its values on every page and popup, indigo.
     readonly property color shared: EaStyle.Colors.isDarkPalette ? "#9FA8DA" : "#3949AB"
 
     // A block's colour from the figure palette (edi ADR-0038): the palette's colour at the block's position, which the

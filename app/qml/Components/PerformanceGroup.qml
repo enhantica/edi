@@ -12,7 +12,7 @@ import edi.app
 
 // What a page runs with, read-only, on its Settings tab: the count is this machine's Performance preference, never
 // saved in a project, and the link at its right opens Preferences on that tab (the owner, 2026-11-04, 2026-11-10). Both
-// pages show the one Cores for fitting setting (owner decision 2026-11-27).
+// pages show the one Cores for fitting setting.
 SideBarGroup {
     id: group
 

@@ -3059,8 +3059,8 @@ std::filesystem::path scan_results_path(const Project& project) {
 namespace {
 
 // The publication lock a reader of the scan's results holds while it reads, so a parametric fit's swap of the set is
-// never seen half done (crysta ADR-0136). It is kept outside the project, so a read-only folder takes it too; one that
-// cannot be taken refuses the read.
+// never seen half done. Taking it writes nothing into the project, so a read-only folder takes it too; one that cannot
+// be taken refuses the read.
 void lock_results_for_reading(const Project& project, std::optional<crysta::PublicationReadLock>& reading) {
     const std::filesystem::path folder = scan_results_path(project).parent_path();
     try {
@@ -3189,7 +3189,7 @@ void check_scan_header(const Project& project, ScanResultIndex& index) {
             taken.insert(i);
         }
     }
-    // The fixed inputs a fit used, values without an s.u. column (crysta ADR-0136 decision 9).
+    // The fixed inputs a fit used, values without an s.u. column.
     index.inputs.clear();
     for (std::size_t i = 0; i < header.size(); ++i) {
         if (!taken.contains(i) && header[i].starts_with("input.")) {
@@ -8915,10 +8915,10 @@ FitResultBase Project::fit_scan(const IterationCallback& on_iteration,
                         ? csv_path
                         : data_root / "analysis" / "results.csv";
                 scan_preamble.completed_rows = read_scan_rows(resume_csv, csv_path);
-                // A complete scan (every file with a row or a note) is fitted again as a new pass that replaces
-                // its rows (owner decision 2026-11-27): none of them is this run's, so none is carried in.
-                // The run's own decision (crysta's scan drivers): a Parametric fit always publishes a whole new set; a
-                // complete scan, or a pending start on a fitted point (crysta ADR-0136 decision 9), is a new pass.
+                // A complete scan (every file with a row or a note) is fitted again as a new pass that replaces its
+                // rows: none of them is this run's, so none is carried in. The run's own decision (crysta's scan
+                // drivers): a Parametric fit always publishes a whole new set; a complete scan, or a pending start on
+                // a fitted point, is a new pass.
                 bool new_pass = fitting_mode == "parametric" ||
                                 scan_preamble_complete(scan_preamble.completed_rows,
                                                        resume_csv.parent_path() / "scan-notes.csv", *total_files, joint);
@@ -9024,8 +9024,8 @@ FitResultBase Project::fit_scan(const IterationCallback& on_iteration,
             };
         }
         // The one Fit entry of a scan (app, Python and CLI alike): crysta's drivers use each point's pending starts and
-        // remove them from their copy as the point's row is written (crysta ADR-0136 decision 9). Whatever this run
-        // leaves pending comes back to this project, however the run ends.
+        // remove them from their copy as the point's row is written. Whatever this run leaves pending comes back to
+        // this project, however the run ends.
         struct ReturnStarts {
             Project& model;
             const crysta::Project& engine;
@@ -9127,17 +9127,16 @@ FitResultBase Project::fit_scan(const IterationCallback& on_iteration,
         // they are per-single-fit facts, and the per-file fits that own them ran inside crysta.
         // Reporting the last file's counts as the scan's would be edi inventing a number.
 
-        // A cancelled scan is a partial state, not a result — crysta wrote no row for the
-        // unfinished file and no value into its own caller, and edi mirrors that: the model
-        // keeps its pre-scan values, and results.csv is the resume point.
-        // A scan fit never writes the template (owner decision 2026-11-27): the model keeps its values and
-        // the results are in the results files, which a shown dataset reads.
+        // A cancelled scan is a partial state, not a result — crysta wrote no row for the unfinished file
+        // and no value into its own caller, and edi mirrors that: the model keeps its pre-scan values, and
+        // results.csv is the resume point. A scan fit never writes the template: the model keeps its
+        // values and the results are in the results files, which a shown dataset reads.
         if (!result.cancelled) {
             // crysta gives the R factors of the scan's template file when this call fitted it; otherwise there is
             // nothing to record, and an earlier fit's result would be stale. Each file's results are the scan's.
             if (result.series) {
                 // A parametric series is one fit: its points, free parameters and reduced chi-square are the
-                // series' (crysta ADR-0136); the agreement factors are its template file's when that was fitted.
+                // series'; the agreement factors are its template file's when that was fitted.
                 FitResultBase recorded = outcome;
                 recorded.n_points_fitted = result.series->n_observed;
                 recorded.n_free = result.series->n_free;

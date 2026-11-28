@@ -766,8 +766,8 @@ class Edit {
             (void)settle_parametric_shared(project);
         });
     }
-    // A value entered while a scan has results is the shown point's own start for the next Fit (owner record
-    // 2026-11-28): the shown value and the point's pending `_parametric_fit_start` row for the name; the template keeps
+    // A value entered while a scan has results is the shown point's own start for the next Fit: the shown value and
+    // the point's pending start for the name; the template keeps
     // its value. A shared parameter's start is the whole series' one start: the group takes the value, and a start for
     // the name at any other point goes.
     static Edit point_start(Project& project, Parameter& parameter, std::string point, std::string unique_name,
@@ -796,7 +796,7 @@ class Edit {
     // ADR-0107: share or unshare parameters, by unique name, in one edit: a row's Shared box and the Shared header menu
     // alike; the free flags are left as they are.
     // `at` (the shown point), while the scan has results: a newly shared group takes the shown copy's value as the
-    // whole series' one start (owner record 2026-11-28).
+    // whole series' one start.
     static Edit parameters_shared(Project& project, std::vector<std::string> names, bool shared,
                                   std::optional<std::string> at = std::nullopt) {
         return Edit([&project, names = std::move(names), shared, at = std::move(at)] {

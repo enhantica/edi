@@ -74,9 +74,9 @@ QtObject {
     // Where the workflow pages show their sidebar: "Right" (the default) or "Left" (WorkflowPage).
     property string sideBarSide: "Right"
     readonly property bool sideBarOnLeft: sideBarSide === "Left"
-    // Cores for fitting (Performance; owner decision 2026-11-27): 0 is Auto, every core, else that many. Every
-    // calculation runs on them, and each fit spends them by its mode (edi ADR-0107 decision 11). A machine's setting,
-    // never saved in a project; stored under the key the thread count had.
+    // Cores for fitting (Performance): 0 is Auto, every core, else that many. Every calculation runs on them, and
+    // each fit spends them by its mode (edi ADR-0107 decision 11). A machine's setting, never saved in a project;
+    // stored under the key the thread count had.
     property int engineThreads: 0
     // The retired Parallel fits in a scan, read once to carry a saved count over to Cores for fitting.
     property int scanWorkers: 1

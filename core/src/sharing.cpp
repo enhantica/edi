@@ -436,7 +436,7 @@ std::string group_key(const Project& project, const std::vector<NamedParameter>&
     if (!part) {
         return name;
     }
-    // A group is the parameter Shared was ticked on (owner record 61961fe49): it keeps the name it is listed under
+    // A group is the parameter Shared was ticked on: it keeps the name it is listed under
     // while that copy exists, in every mode.
     for (const auto& row : project.sequential_fit.shared) {
         const std::string& listed = row->parameter_unique_name.value();
@@ -538,7 +538,7 @@ std::string share_refusal(const Project& project, const Parameter& parameter) {
     }
     const auto part = experiment_part(project, *name);
     if (!part || holders_of(project, part->second) < 2) return "already one value for all experiments";
-    // No pair, no Shared (owner record 2026-11-26): every experiment must have the parameter.
+    // No pair, no Shared: every experiment must have the parameter.
     if (holders_of(project, part->second) < project.experiments.size()) return "not in every experiment";
     // Shared never changes a user constraint (owner, 2026-11-26): a copy any of them sets keeps the whole group out.
     for (const NamedParameter& dependent : named_dependents(project)) {
@@ -606,7 +606,7 @@ void set_parametric_shared(Project& project, Parameter& parameter, bool shared) 
         return;
     }
     std::string key = group_key(project, named_parameters(project), *name);
-    // A new group is listed under the row Shared was ticked on, which then carries it (owner record 61961fe49).
+    // A new group is listed under the row Shared was ticked on, which then carries it.
     if (shared && !shared_row(project, key)) key = *name;
     if (!shared) {
         if (const std::optional<std::size_t> row = shared_row(project, key)) {
@@ -637,7 +637,7 @@ void set_parametric_shared(Project& project, Parameter& parameter, bool shared) 
         }
     }
     // One value and one free flag for the group (only where sharing takes effect): the shown row's value, and free if
-    // any copy was free (owner decision 2026-11-27, ADR-0107 decision 5).
+    // any copy was free (ADR-0107).
     if (!active(project)) {
         return;
     }
@@ -682,7 +682,7 @@ std::vector<std::string> settle_parametric_shared(Project& project) {
             continue;
         }
         const std::string key = group_key(project, named, name);
-        // A joint group is admitted whole or not at all (owner record 2026-11-26): a copy missing from an experiment,
+        // A joint group is admitted whole or not at all: a copy missing from an experiment,
         // or one a user constraint or symmetry sets, drops it, and no copy is changed.
         if (!project.sequential_fit.declared()) {
             const Parameter* listed = nullptr;
@@ -709,8 +709,8 @@ std::vector<std::string> settle_parametric_shared(Project& project) {
         ParametricSharedParameter row;
         row.parameter_unique_name = key;
         project.sequential_fit.shared.push_back(std::move(row));
-        // The group takes the listed parameter's value (owner record 61961fe49), and is free if any copy is (owner
-        // decision 2026-11-27), where sharing takes effect.
+        // The group takes the listed parameter's value, and is free if any copy is, where
+        // sharing takes effect.
         const std::vector<Parameter*> members = group_members(project, key);
         // The listed parameter is the member whose name the group is kept under.
         Parameter* listed = nullptr;
@@ -737,7 +737,7 @@ std::vector<std::string> settle_parametric_shared(Project& project) {
         }
     }
     // ADR-0107: a start for a name the project does not hold or a dependent's is dropped. A shared parameter's start is
-    // kept: it is the whole series' one start (owner record 2026-11-28).
+    // kept: it is the whole series' one start.
     for (std::size_t i = project.sequential_fit.starts.size(); i-- > 0;) {
         const std::string name = project.sequential_fit.starts[i]->parameter_unique_name.value();
         bool held = false;

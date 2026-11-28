@@ -568,9 +568,9 @@ QString kept_aside(const fs::path& aside, const std::exception& refusal) {
         .arg(QString::fromUtf8(refusal.what()), QString::fromStdString(aside.string()));
 }
 
-// A parametric fit publishes the result files as one set (crysta ADR-0136): one it interrupted is settled first, and
-// copying the files holds its publication lock shared, so no fit swaps the set meanwhile. Taking them away or putting
-// them back (Reset fits, its Undo) changes the set, so it holds the lock alone: no reader or second Reset meets it.
+// A parametric fit publishes the result files as one set: one it interrupted is settled first, and copying the files
+// holds its publication lock shared, so no fit swaps the set meanwhile. Taking them away or putting them back (Reset
+// fits, its Undo) changes the set, so it holds the lock alone: no reader or second Reset meets it.
 template <typename Lock>
 void hold_results(const edi::Project& project, std::optional<Lock>& held) {
     const fs::path directory = analysis_dir(project);
