@@ -589,6 +589,7 @@ pd_calc.component_intensities_magnetic	Structure magnetic calc
 pd_calc.component_intensities_net	Structure calc		
 pd_calc_overall	Structure curves		chart-area
 pd_calc_overall.component_presentation_order	Structure order		
+pd_calc_overall.method	Method		
 peak	Peak profile		shapes
 peak.asym_beba_a0	A₀		balance-scale-left
 peak.asym_beba_a1	A₁		balance-scale-left
