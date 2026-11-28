@@ -54,6 +54,8 @@ For a Le Bail or Pawley structure:
 - In **Reflections**, the rows show **F² extracted**, and for Pawley its **s.u.**, in place of the calculated F, F²
   and |F_M⊥|². The values are in the units of F² calc, so they compare directly with a Rietveld F².
 - R Bragg, R F and the magnetic R show "—" in the **Least-squares fit results** window.
+- Once a fit has extracted them, the Experiment page's **Extra** tab has an **Extracted intensities** group with
+  the saved values.
 - On the Analysis page, a Pawley structure's intensities are one row per experiment, **Pawley intensities (N)**,
   with one free box for all of them. Le Bail intensities are not listed.
 
