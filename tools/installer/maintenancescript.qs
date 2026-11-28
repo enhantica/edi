@@ -3,15 +3,27 @@
 // macOS and Windows: install the separately signed maintenance tool shipped in this component. Without this the
 // installer writes the tool from its own binary, which breaks a real signature (edi ADR-0091). On macOS the
 // installer moves the bundle to the installation root and removes this folder. On Windows the component unpacks the
-// tool into the user's temporary folder, never the installation folder (createOperationsForArchive below). On Linux
+// tool into a folder of this run's own in the user's temporary folder, never the installation folder
+// (createOperationsForArchive below). On Linux
 // the component carries only the tool's Qt runtime; the installer writes the tool itself. The staging folder's name
 // differs from the tool's even on a case-insensitive disk.
 function stagedTool() {
     if (systemInfo.kernelType === "darwin")
         return "@TargetDir@/maintenance-update/MaintenanceTool.app";
     if (systemInfo.kernelType === "winnt" && windowsStaging() !== "")
-        return windowsStaging() + "\\MaintenanceTool.update.exe";
+        return windowsStaging() + "\\" + handoffFolder() + "\\MaintenanceTool.update.exe";
     return "";
+}
+
+// Windows: this run's folder in the temporary folder, so a tool an earlier run left there can never stand in for this
+// update's: a missing one makes the Framework keep the installed tool (IFW 4.11).
+var handoffName = "";
+
+function handoffFolder() {
+    if (handoffName === "")
+        handoffName = "EasyDiffraction-MaintenanceTool-" + String(Date.now()) + "-"
+            + String(Math.floor(Math.random() * 1e9));
+    return handoffName;
 }
 
 // Windows: the user's temporary folder, where the staged tool is unpacked (edi ADR-0109).
@@ -23,15 +35,14 @@ function windowsStaging() {
 }
 
 // Windows: the Framework writes the installed tool from the staged one only as it quits, after every script, and then
-// deletes it but goes on if it cannot (IFW 4.11). Unpacked straight into the temporary folder, the staged tool is never
-// in the installation folder, so no operation has to move or remove it there; the unpack's undo removes it on a
-// rollback, and finds nothing to do on a later update or removal once the Framework has used it.
+// deletes it but goes on if it cannot (IFW 4.11). Unpacked into this run's folder in the temporary folder, the staged
+// tool is never in the installation folder, so no operation has to move or remove it there.
 Component.prototype.createOperationsForArchive = function (archive) {
     if (systemInfo.kernelType !== "winnt")
         return undefined;
     if (windowsStaging() === "")
         throw new Error("The update found no temporary folder for the Maintenance Tool.");
-    component.addOperation("Extract", archive, windowsStaging());
+    component.addOperation("Extract", archive, windowsStaging() + "\\" + handoffFolder());
     return true;
 };
 
@@ -112,6 +123,15 @@ Component.prototype.createOperations = function () {
                                "UNDOEXECUTE", "/bin/sh", "-c", RESTORE_SCRIPT, RESTORE_SCRIPT, "@TargetDir@", token,
                                swap.item, swap.probe);
         return;
+    }
+    if (systemInfo.kernelType === "winnt" && windowsStaging() !== "") {
+        // The unpack leaves the tool the Framework is to write from out of what its undo removes (IFW 4.11
+        // ExtractArchiveOperation), so this operation's undo removes this run's folder on a rollback. cmd.exe runs in
+        // the temporary folder and names only the folder, so it never reads a path; a later update's or a removal's
+        // undo finds the folder empty or gone, and the exit code stays 0 so it never asks.
+        var folder = "workingdirectory=" + windowsStaging();
+        component.addOperation("Execute", "cmd.exe", "/c", "rem", folder, "UNDOEXECUTE", "cmd.exe", "/c", "rmdir", "/s",
+                               "/q", handoffFolder(), "2>nul", "&", "exit", "0", folder);
     }
     if (installer.isUpdater() && stagedTool() !== "")
         installer.setInstallerBaseBinary(stagedTool());

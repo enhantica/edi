@@ -162,16 +162,19 @@ def failing_operation(evidence: Path, marker: Path) -> str:
     if SYSTEM == 'windows':
         # Separate words: the tool quotes only the ones with spaces, and cmd.exe keeps a command
         # line that starts unquoted as it is. cd accepts the target's forward slashes, and a path
-        # with spaces unquoted. The staged tool was unpacked into the temporary folder: its hash
-        # ties the evidence to this update's tool.
+        # with spaces unquoted. It runs in this run's own folder in the temporary folder, where the
+        # component unpacked the staged tool (maintenancescript.qs): the folder's name and the
+        # tool's hash tie the evidence to this update.
         command = [
-            'cmd.exe', '/c', 'cd', '/d', '@TargetDir@', '&&', 'dir', '/b', '/s',
-            '>', str(evidence), '&', 'cd', '/d', '%TEMP%', '&', 'certutil', '-hashfile',
-            WINDOWS_STAGED_TOOL, 'SHA256', '>>', str(evidence), '&', 'exit', '1',
+            'cmd.exe', '/c', 'echo', 'handoff', '%CD%', '>', str(evidence), '&', 'certutil',
+            '-hashfile', WINDOWS_STAGED_TOOL, 'SHA256', '>>', str(evidence), '&', 'cd', '/d',
+            '@TargetDir@', '&&', 'dir', '/b', '/s', '>>', str(evidence), '&', 'exit', '1',
         ]  # fmt: skip
-    else:
-        command = ['/bin/sh', '-c', FAILURE_EVIDENCE, 'sh', '@TargetDir@', str(evidence)]
-        command.append(marker.as_posix())
+        parts = [json.dumps(part) for part in command]
+        parts.append('"workingdirectory=" + windowsStaging() + "\\\\" + handoffFolder()')
+        return FAILING_OPERATION % ', '.join(parts)
+    command = ['/bin/sh', '-c', FAILURE_EVIDENCE, 'sh', '@TargetDir@', str(evidence)]
+    command.append(marker.as_posix())
     return FAILING_OPERATION % ', '.join(json.dumps(part) for part in command)
 
 
@@ -194,14 +197,15 @@ def failing_app_resource(
 def failure_evidence(path: Path, target: Path) -> dict:
     """Read what the failing operation found: paths below `target`, the marker and the mark.
 
-    POSIX writes tagged lines; Windows writes the full paths dir /s lists, made relative here.
+    POSIX writes tagged lines; Windows writes the folder it ran in (tagged handoff), the staged
+    tool's hash and the full paths dir /s lists, made relative here.
     """
-    found = {'paths': set(), 'marker': None, 'token': None}
+    found = {'paths': set(), 'marker': None, 'token': None, 'handoff': None}
     prefix = str(target).replace('\\', '/').casefold() + '/'
     for line in path.read_text(encoding='utf-8', errors='replace').splitlines():
         tag, _, value = line.partition(' ')
-        if tag in {'marker', 'token'}:
-            found[tag] = value
+        if tag in {'marker', 'token', 'handoff'}:
+            found[tag] = value.strip()
         elif tag in {'name', 'exists'}:
             found['paths'].add(value)
         elif line.strip():
@@ -522,8 +526,6 @@ def failed_update(target: Path, maintenance: Path, output: Path, options: dict) 
     evidence = output / FAILURE_EVIDENCE_NAME
     if evidence.exists():
         raise RuntimeError(f'{evidence.name} exists before the update meant to fail')
-    staged = windows_staged_tool(options['env'])
-    staged_before = sha256(staged) if staged and staged.is_file() else None
     command = [maintenance, '--set-temp-repository', failing['repository_url'], *UPDATE]
     print('+', ' '.join(map(str, command)), '(expected to fail)', flush=True)
     result = subprocess.run(
@@ -551,8 +553,6 @@ def failed_update(target: Path, maintenance: Path, output: Path, options: dict) 
         raise RuntimeError('The update failed before its failing operation ran')
     found = failure_evidence(evidence, target)
     print(f'protocol check: the failing operation found {sorted(found["paths"])}', flush=True)
-    found['staged_before'] = staged_before
-    found['staged'] = staged
     return found
 
 
@@ -569,12 +569,12 @@ def rolled_back(target: Path, found: dict, output: Path) -> None:
             raise RuntimeError('The update failed before the macOS swap kept the installed tool')
     elif SYSTEM == 'windows':
         # The tool component, which fails, comes after the app it depends on, and unpacked this
-        # update's tool into the temporary folder: certutil printed its hash.
+        # update's tool into its own folder: certutil printed its hash there.
         failing = json.loads((output / 'failing-26.18/installer.json').read_text())
         hashes = {path.replace(' ', '').casefold() for path in found['paths']}
         if failing['maintenance_tool_sha256'].casefold() not in hashes:
             raise RuntimeError('The update failed before it unpacked the 26.18 maintenance tool')
-        windows_staging_rolled_back(target, output, found['staged'], found['staged_before'])
+        windows_staging_rolled_back(target, found)
         return
     else:
         if found['marker'] != 'third marker':
@@ -587,41 +587,20 @@ def rolled_back(target: Path, found: dict, output: Path) -> None:
     tool_files_settled(target)
 
 
-def windows_staged_tool(env: dict) -> Path | None:
-    """Where the tool, run with `env`, unpacks the staged tool on Windows: its temporary folder."""
-    if SYSTEM != 'windows':
-        return None
-    temp = env.get('TEMP')
-    folder = Path(temp) if temp else Path(env.get('LOCALAPPDATA', '')) / 'Temp'
-    return folder / WINDOWS_STAGED_TOOL
+def windows_staging_rolled_back(target: Path, found: dict) -> None:
+    """Require the rollback to remove this run's folder with the tool it unpacked, and none here.
 
-
-def windows_staging_rolled_back(
-    target: Path, output: Path, staged: Path, before: str | None
-) -> None:
-    """Require the rollback to leave the staged tool as it was before the update, or none.
-
-    The Framework's undo of an unpack puts back a file it overwrote, so an earlier staged tool may
-    come back; any other file there, 26.18's or a damaged one, fails. None may be in the
-    installation folder.
+    The Framework's undo of the unpack leaves the tool it is to write from (IFW 4.11), so the tool
+    component's own operation removes the folder; the folder's name is this run's alone.
     """
+    handoff = Path(found['handoff']) if found['handoff'] else None
+    print(f'protocol check: after the rollback the update unpacked into {handoff}', flush=True)
+    if handoff is None or not handoff.name.startswith('EasyDiffraction-MaintenanceTool-'):
+        raise RuntimeError("The failing operation did not run in the update's own folder")
+    if handoff.exists():
+        raise RuntimeError(f'The failed update left its folder {handoff} and what it holds')
     if (target / WINDOWS_STAGED_TOOL).exists():
         raise RuntimeError(f'The failed update left {WINDOWS_STAGED_TOOL} in the installation')
-    releases = [('offline', 'the first release'), ('online', '26.17'), ('failing-26.18', '26.18')]
-    owners = {
-        json.loads((output / kind / 'installer.json').read_text())['maintenance_tool_sha256']: name
-        for kind, name in releases
-    }
-    after = sha256(staged) if staged.is_file() else None
-    owner = owners.get(after, 'no release') if after else None
-    print(
-        f'protocol check: after the rollback {WINDOWS_STAGED_TOOL} is '
-        + (f"{owner}'s tool (sha256 {after})" if after else 'absent')
-        + (f', and was sha256 {before} before' if before else ', and was absent before'),
-        flush=True,
-    )
-    if after not in {None, before}:
-        raise RuntimeError(f"The failed update left {owner}'s tool as {WINDOWS_STAGED_TOOL}")
 
 
 def held(folder: Path) -> str:
