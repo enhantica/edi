@@ -17,6 +17,8 @@ Disable a link to keep it in the project without contributing to calculation or 
 
 For several phases, fit their scales deliberately. Weight fractions are calculated from the model and scales rather than entered independently. See [scale and phase fractions](../../physics/diffraction.md#phase-fractions).
 
+For a structure whose **Calculation** is Le Bail or Pawley ([Structures](../structure/structures.md)), the scale cannot be fitted: its free box is disabled with the reason, because the extracted intensities take its place. That experiment shows every weight fraction as "—": weight fractions come from the scales, and such a scale has no meaning. A single crystal cannot link such a structure.
+
 <!-- gui-guide:choose-the-contributing-phases -->
 <div class="gui-viewer" markdown="1">
 

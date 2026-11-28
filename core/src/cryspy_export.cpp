@@ -119,6 +119,10 @@ void admit_structure(const Structure& structure) {
         unsupported(where + "anisotropic displacements are not part of the cryspy export");
     }
     if (structure.atom_sites.empty()) unsupported(where + "it has no atom sites");
+    // cryspy has no Le Bail or Pawley mode (edi ADR-0109).
+    if (extracts_intensities(structure)) {
+        unsupported(where + "cryspy calculates intensities from the atoms only, not by Le Bail or Pawley");
+    }
 }
 
 void admit_experiment(const BraggPdExperiment& experiment, const Project& project) {

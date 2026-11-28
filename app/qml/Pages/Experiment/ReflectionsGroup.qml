@@ -14,6 +14,9 @@ import edi.app
 // with the same numeric-column sizing as the measured-data table (ADR-0029). A magnetic structure's reflections show
 // |M⊥|² and their total F² + |M⊥|², as the calculation gives them, beside F²calc, so a purely magnetic reflection
 // (F²calc 0) shows its intensity (edi ADR-0078); they are the last columns, hidden for a structure without moments.
+// A Le Bail or Pawley structure's rows have no calculated F²: they show the F² extracted from the pattern and, for
+// Pawley, its s.u., in columns after those (edi ADR-0109). A table of such rows alone shows neither F² calc nor the
+// magnetic columns.
 DataTable {
     id: table
 
@@ -33,10 +36,17 @@ DataTable {
     defaultInfoText: qsTr("No reflections yet")
     sourceModel: experiment ? experiment.reflections : null
 
-    readonly property bool magnetic: experiment !== null && experiment.reflections !== null && experiment.reflections.magnetic
+    readonly property ReflectionListModel reflections: experiment ? experiment.reflections : null
+    readonly property bool extracted: reflections !== null && reflections.extracted
+    readonly property bool extractedSu: reflections !== null && reflections.extractedSu
+    // Some row has F² calc: every table without extracted rows, and one mixing them with a Rietveld structure's.
+    readonly property bool calculated: !extracted || (reflections !== null && reflections.calculated)
+    readonly property bool magnetic: calculated && reflections !== null && reflections.magnetic
 
-    // Its columns by kind (the shared column model, DataTable.columnKinds; ADR-0103 decision 4).
-    columnKinds: magnetic ? ["index", "text", "number", "number", "number", "number", "number"] : ["index", "text", "number", "number", "number"]
+    // Its columns by kind (the shared column model, DataTable.columnKinds; ADR-0103 decision 4). With extracted rows
+    // the columns of F² calc and |M⊥|² stay in place, without width where no row has them (a hidden middle column
+    // left the header a cell short of its rows).
+    columnKinds: !extracted ? (magnetic ? ["index", "text", "number", "number", "number", "number", "number"] : ["index", "text", "number", "number", "number"]) : ["index", "text", "number", "number", calculated ? "number" : 0.001, magnetic ? "number" : 0.001, magnetic ? "number" : 0.001, "number"].concat(extractedSu ? ["number"] : [])
     columnTexts: ["", "hkl"]
     // Widths from column types, not rows (ADR-0103 rule 4): the Miller indices a short column (three small integers),
     // then values; a text column made them half the table (the owner, 2026-11-21).
@@ -66,6 +76,7 @@ DataTable {
         }
         HeaderLabel {
             horizontalAlignment: Text.AlignRight
+            visible: table.calculated
             uid: "refln.f_squared_calc"
         }
         HeaderLabel {
@@ -78,6 +89,16 @@ DataTable {
             visible: table.magnetic
             uid: "refln.f_squared_total_calc"
             toolTipText: qsTr("F² + |F_M⊥|²: nuclear plus magnetic, unpolarised neutrons")
+        }
+        HeaderLabel {
+            horizontalAlignment: Text.AlignRight
+            visible: table.extracted
+            uid: "refln.f_squared_meas"
+        }
+        HeaderLabel {
+            horizontalAlignment: Text.AlignRight
+            visible: table.extractedSu
+            uid: "refln.f_squared_meas_su"
         }
     }
 
@@ -109,6 +130,7 @@ DataTable {
         }
         NumberLabel {
             horizontalAlignment: Text.AlignRight
+            visible: table.calculated
             number: table.shown("refln.f_squared_calc", row.model.fSquaredCalc)
             full: NumberText.plainFull(row.model.fSquaredCalc)
         }
@@ -125,6 +147,20 @@ DataTable {
             visible: table.magnetic
             number: table.shown("refln.f_squared_total_calc", row.model.fSquaredTotalCalc)
             full: NumberText.plainFull(row.model.fSquaredTotalCalc)
+        }
+        NumberLabel {
+            objectName: `reflection.fSquaredMeas.${row.index}`
+            horizontalAlignment: Text.AlignRight
+            visible: table.extracted
+            number: table.shown("refln.f_squared_meas", row.model.fSquaredMeas)
+            full: NumberText.plainFull(row.model.fSquaredMeas)
+        }
+        NumberLabel {
+            objectName: `reflection.fSquaredMeasSu.${row.index}`
+            horizontalAlignment: Text.AlignRight
+            visible: table.extractedSu
+            number: table.shown("refln.f_squared_meas_su", row.model.fSquaredMeasSu)
+            full: NumberText.plainFull(row.model.fSquaredMeasSu)
         }
     }
 }

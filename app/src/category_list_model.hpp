@@ -7,6 +7,8 @@
 #include <QString>
 #include <QtQml/qqmlregistration.h>
 #include <functional>
+#include <string>
+#include <utility>
 #include <vector>
 
 #include "edi/categories.hpp"
@@ -50,6 +52,10 @@ class CategoryListModel : public QAbstractListModel {
     // a text made without calculating leaves out.
     void setCategories(const std::vector<edi::Category>& categories, const std::function<std::string()>& text = {},
                        const std::function<std::vector<edi::Category>()>& calculated = {});
+    // Categories the page leaves out though the block's text carries them (a Le Bail or Pawley structure's atom
+    // categories, edi::structure_page_hides): no group is made for them from the text. Read by the next
+    // setCategories.
+    void setHidden(std::vector<std::string> ids) { hidden_ = std::move(ids); }
     // The same list against the block's text and calculation as they are now: after a calculation, which adds
     // computed categories, or an edit no core category shows.
     void refresh();
@@ -60,6 +66,7 @@ class CategoryListModel : public QAbstractListModel {
         categories_ = other.categories_;
         text_ = other.text_;
         calculated_ = other.calculated_;
+        hidden_ = other.hidden_;
         applyRows(other.rows_);
     }
     int count() const {
@@ -96,6 +103,7 @@ class CategoryListModel : public QAbstractListModel {
     std::vector<edi::Category> categories_;
     std::function<std::string()> text_;
     std::function<std::vector<edi::Category>()> calculated_;
+    std::vector<std::string> hidden_;
 };
 
 // One list that follows another block's categories: a page binds its groups to it, so changing the block (the next

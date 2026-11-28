@@ -17,6 +17,7 @@
 #include "category_list_model.hpp"
 #include "edi/model.hpp"
 #include "edi/structure_scene.hpp"
+#include "option_list_model.hpp"
 #include "parameter_item.hpp"
 #include "project_editor.hpp"
 #include "row_table_model.hpp"
@@ -422,6 +423,16 @@ class StructureViewModel : public QObject {
     Q_PROPERTY(double minBondDistance READ minBondDistance WRITE setMinBondDistance NOTIFY minBondDistanceChanged)
     Q_PROPERTY(double bondDistanceIncrement READ bondDistanceIncrement WRITE setBondDistanceIncrement NOTIFY bondDistanceIncrementChanged)
     Q_PROPERTY(QVariantList bonds READ bonds NOTIFY bondsChanged)
+    // How the structure's intensities are calculated (edi ADR-0109): crysta's token, `rietveld`, `le_bail` or
+    // `pawley`; the methods crysta offers it, Rietveld first, and its own method after them when crysta no longer
+    // offers it; crysta's reason when it offers Rietveld alone (a link to a single crystal or a total-scattering
+    // experiment), else empty; why the last switch was refused, else empty; and
+    // whether the method takes the intensities from the pattern (Le Bail or Pawley).
+    Q_PROPERTY(QString calcMethod READ calcMethod NOTIFY calcMethodChanged)
+    Q_PROPERTY(edi_app::OptionListModel* calcMethodOptions READ calcMethodOptions CONSTANT)
+    Q_PROPERTY(QString calcMethodReason READ calcMethodReason NOTIFY calcMethodReasonChanged)
+    Q_PROPERTY(QString calcMethodRefusal READ calcMethodRefusal NOTIFY calcMethodRefusalChanged)
+    Q_PROPERTY(bool extractsIntensities READ extractsIntensities NOTIFY calcMethodChanged)
 
    public:
     StructureViewModel(const SavedFile& saved, edi::Structure& structure, ProjectEditor& editor,
@@ -464,6 +475,15 @@ class StructureViewModel : public QObject {
     double bondDistanceIncrement() const;
     void setBondDistanceIncrement(double increment);
     QVariantList bonds() const;
+    QString calcMethod() const { return calc_method_; }
+    OptionListModel* calcMethodOptions() const { return calc_method_options_; }
+    QString calcMethodReason() const { return calc_method_reason_; }
+    QString calcMethodRefusal() const { return calc_method_refusal_; }
+    bool extractsIntensities() const { return calc_method_ != QLatin1String("rietveld"); }
+    // Switches the method through the core (edi::Edit::calc_method): back on Rietveld the structure's links take
+    // crysta's scale starts in the same undo step, and a link without one is said in Messages. A refusal is kept in
+    // calcMethodRefusal.
+    Q_INVOKABLE bool setCalcMethod(const QString& token);
     const edi::Structure* structure() const { return &structure_; }
     void sync();
     // ADR-0022: the structure's immutable scene source, captured on this (the owner) thread when the
@@ -489,9 +509,13 @@ class StructureViewModel : public QObject {
     void parentGroupChanged();
     void sceneSourceChanged();
     void sceneWentStale();
+    void calcMethodChanged();
+    void calcMethodReasonChanged();
+    void calcMethodRefusalChanged();
 
    private:
     void syncAtomTypes();
+    void syncCalcMethod();
 
     edi::Structure& structure_;
     edi::SceneSource scene_source_;
@@ -509,6 +533,11 @@ class StructureViewModel : public QObject {
     CategoryListModel* categories_;
     BlockText* text_;
     QString magnetic_group_refusal_;
+    OptionListModel* calc_method_options_;
+    QString calc_method_ = QStringLiteral("rietveld");
+    QString calc_method_reason_;
+    QString calc_method_refusal_;
+    QStringList calc_method_tokens_;
 };
 
 }  // namespace edi_app

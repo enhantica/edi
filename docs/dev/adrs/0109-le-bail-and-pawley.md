@@ -22,7 +22,7 @@ Calculation column of the Structures table. One workflow must work end to end: l
 Bail, fit cell, peak profile, background and zero, switch back to Rietveld with every atom, ADP and moment of the CIF
 still there, and continue the fit from the Le Bail cell and profile.
 
-crysta ADR-0138 does the computing: the method token, the extracted intensities and their file loop, the Le Bail and
+crysta does the computing: the method token, the extracted intensities and their file loop, the Le Bail and
 Pawley fits, the fit marks, the outputs and the scale start after a switch back. This ADR decides edi's model, pages,
 Python, command line and importers.
 
@@ -64,7 +64,7 @@ Python, command line and importers.
 6. **Fits.** `fit_policy.cpp` refuses a structure without atom sites only when it is Rietveld; exports that need atoms
    keep refusing it. Single, joint, independent and sequential fits run through crysta as before. A sequential scan's
    per-point intensities are crysta's `analysis/results_intensities.csv`. Parametric fits take a Le Bail structure
-   once crysta's parametric fit has merged (crysta ADR-0138 §9): built in this work if that happens while it is open,
+   once crysta's parametric fit has merged: built in this work if that happens while it is open,
    otherwise with the work that integrates the two. Pawley stays out of parametric fits.
 7. **Python.** `Structure.calc_method` is a string; its setter is `select_calc_method` and raises `ValueError` with
    crysta's reason. `ExperimentBase.extracted_intensities` is a read-only list of rows with `structure_id`, `index_h`,
@@ -80,13 +80,13 @@ Python, command line and importers.
    (ADR-0097).
 10. **Labels** (ADR-0104). `structure.calc_method` "Calculation", short "Calc."; `structure.calc_method=rietveld`
     "Rietveld", `=le_bail` "Le Bail", `=pawley` "Pawley"; `extracted_intensity` "Extracted intensities";
-    `refln.f_squared_meas` "F² extracted"; `refln.f_squared_meas_su` "s.u."; the Analysis row "Pawley intensities
-    (%1)".
+    `refln.f_squared_meas` "F² extracted"; `refln.f_squared_meas_su` "s.u.". The Analysis row's "Pawley intensities
+    (%1)" carries a count, so it is a translated text, as "Structures (%1)" is, not a registry row.
 11. **Tests.** Core: the owner's workflow on an example project (atom categories identical after Le Bail and back,
     the scale start), undo of a switch, save and reopen under Le Bail, the fit write-back of rows, the fit marks, a
     structure without atoms under Le Bail, the single-crystal refusal, a FullProf `Jbt=2` import and export. Python and
     the command line on the same project. QML: the column, its disabled reason, the hidden groups and the Pawley row.
-    The numerical references are crysta's (ADR-0138 §12). Two example projects, runnable with `edi fit`:
+    The numerical references are crysta's. Two example projects, runnable with `edi fit`:
     `pd-neut-cwl_lbco-hrpt_le-bail` (Le Bail on LBCO HRPT, the owner's workflow from a structure with atoms) and
     `pd-xray-cwl_pbso4-lab_pawley` (Pawley on the PbSO4 lab X-ray pattern).
 
@@ -96,7 +96,7 @@ Python, command line and importers.
 - Magnetic form factors and scattering lengths stay visible under Le Bail, unused by it.
 - Fit starts and correlations in the analysis file hold no intensities, so undoing the fit of a reopened project
   restores the parameters but not the intensities.
-- This needs crysta's SDK built with ADR-0138.
+- This needs a crysta SDK with the Le Bail and Pawley fits.
 
 ## Alternatives considered
 

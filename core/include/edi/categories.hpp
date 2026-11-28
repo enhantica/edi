@@ -383,6 +383,20 @@ inline std::vector<Category> structure_categories(Structure& structure) {
     return categories;
 }
 
+// Whether the Structure page leaves a category of the structure out (edi ADR-0109 §3): a Le Bail or Pawley structure's
+// atom sites, their displacements and their moments, which it keeps and saves but its intensities do not use. The
+// Analysis table still lists their parameters, not fittable with crysta's reason.
+inline bool structure_page_hides(const Structure& structure, std::string_view category) {
+    if (category != "atom_site" && category != "atom_site_aniso" && category != "atom_site_moment") {
+        return false;
+    }
+    try {
+        return extracts_intensities(structure);
+    } catch (const std::exception&) {
+        return false;  // a method crysta does not know shows everything; a calculation says why
+    }
+}
+
 // One `_fit_parameter` row: a parameter's persisted pre-fit start state, by the loop's
 // `.edi` id, in the writer's order. Defined beside the writer's own slot walk (io.cpp).
 struct FitStartRow {

@@ -40,12 +40,13 @@ EaElements.Menu {
         return ApplicationInfo.parameterActedRows();
     }
 
-    // The rows acted on, how many of them are free and how many can be fitted. Reading each row's `free` keeps it live.
+    // The rows acted on, how many of them have a free flag, how many are not wholly free and how many can be fitted.
+    // A partly free Pawley row counts in both, so it makes the menu mixed. Reading each row's `free` keeps it live.
     // The counts are used, not only read: the compiled binding drops a read whose value is unused (`void x`), and with
     // it the dependency.
     readonly property var shown: menu.visible && menu.membership >= 0 ? menu.actedRows() : []
     readonly property int freeCount: ApplicationInfo.parameterFreeCount()
-    readonly property int fixedCount: shown.length - freeCount
+    readonly property int fixedCount: ApplicationInfo.parameterFixedCount()
     readonly property int fittableCount: ApplicationInfo.parameterFittableCount()
 
     // Free or Fixed acts on the rows shown when it is chosen.

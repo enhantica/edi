@@ -335,9 +335,25 @@ AppDialog {
 
                             required property var modelData
                             required property int index
+                            // Why the column's cells show "—": a Le Bail or Pawley structure has no R factor (edi
+                            // ADR-0109). The rows take no hover, so the header carries it.
+                            readonly property string reason: modelData.reason ?? ""
 
                             width: dialog.factorWidth
                             height: datasetHeader.height
+
+                            HoverHandler {
+                                id: factorHover
+                                enabled: factorHeader.reason !== ""
+                            }
+                            Loader {
+                                active: factorHover.hovered && factorHeader.reason !== ""
+                                sourceComponent: EaElements.ToolTip {
+                                    parent: factorHeader
+                                    text: factorHeader.reason
+                                    requested: factorHover.hovered
+                                }
+                            }
 
                             EaComponents.ListViewLabel {
                                 elide: Text.ElideRight

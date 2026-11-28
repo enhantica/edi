@@ -223,6 +223,7 @@ nav:
           - user/guides/the-text-tab.md
           - "Fit quality": user/guides/fit-quality.md
           - user/guides/which-values-a-fit-can-free.md
+          - "Rietveld, Le Bail, Pawley": user/guides/rietveld-le-bail-and-pawley.md
           - "Assistant desktop": user/guides/the-assistant.md
       - Tutorials:
           - user/tutorials/index.md

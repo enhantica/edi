@@ -52,6 +52,7 @@
 #include "crysta/adp.hpp"
 #include "crysta/analysis.hpp"
 #include "crysta/background_estimate.hpp"
+#include "crysta/calc_method.hpp"
 #include "crysta/constraints.hpp"
 #include "crysta/cell_metric.hpp"
 #include "crysta/cell_symmetry.hpp"
@@ -273,6 +274,9 @@ crysta::Structure to_crysta_structure(const Structure& s) {
                                  built.geom.bond_distance_inc = s.geom.bond_distance_inc.get();
                                  built.atom_site_aniso = detail::to_crysta_atom_site_aniso(s);
                                  detail::to_crysta_magnetic(s, built);
+                                 // How its intensities are calculated (edi ADR-0109), so crysta's
+                                 // writer saves a method that is not Rietveld and no other.
+                                 built.calc_method = s.calc_method.value();
                              });
 }
 
@@ -1166,6 +1170,7 @@ void set_propagation_vectors(Structure& s, std::vector<std::pair<std::string, st
     crysta::check_magnetic_acceptance(to_crysta_structure(trial));
     s.magnetic.modify([&rows](MagneticDescription& magnetic) { magnetic.propagation_vectors = std::move(rows); });
     complete_atom_site_moments(s);  // the accepted state, as crysta completes it
+    rekey_extracted_intensities(s);
 }
 
 namespace {
@@ -1282,6 +1287,7 @@ void set_magnetic_symmetry(Structure& s, std::vector<std::pair<std::string, std:
     }
     s = trial;  // Structure assigns by copy
     complete_atom_site_moments(s);  // the accepted state, as crysta completes it
+    rekey_extracted_intensities(s);
 }
 
 // The transforms loop's BNS row set to `transform`: the replaced row keeps its id, a new one takes the first free
@@ -1359,6 +1365,7 @@ void set_magnetic_space_group(Structure& s, const std::string& number_bns) {
     trial.magnetic.modify([](MagneticDescription& magnetic) { set_bns_transform(magnetic, "a,b,c;0,0,0"); });
     set_magnetic_symmetry(trial, numbered(entry.operations), numbered(entry.centerings), name);
     s = trial;  // Structure assigns by copy
+    rekey_extracted_intensities(s);
 }
 
 namespace {
@@ -1853,6 +1860,7 @@ void set_structure_magnetic(Structure& s, bool magnetic) {
         });
         set_magnetic_symmetry(trial, std::move(operations), std::move(centerings), name);
         s = trial;  // Structure assigns by copy
+        rekey_extracted_intensities(s);
         return;
     }
     // Back to Crystal: the magnetic group's own space group (time reversal ignored), declared, and no magnetic data.
@@ -1877,6 +1885,7 @@ void set_structure_magnetic(Structure& s, bool magnetic) {
     while (!trial.atom_site_moment.empty()) trial.atom_site_moment.erase_at(trial.atom_site_moment.size() - 1);
     while (!trial.magnetic_form_factors.empty()) trial.magnetic_form_factors.erase_at(trial.magnetic_form_factors.size() - 1);
     s = trial;  // Structure assigns by copy
+    rekey_extracted_intensities(s);
 }
 
 std::string held_magnetic_setting(const Structure& s) {
@@ -1958,6 +1967,7 @@ void set_magnetic_setting(Structure& s, const std::string& transform) {
     set_magnetic_symmetry(trial, magnetic_rows_in_setting(entry.operations, *parsed),
                           magnetic_rows_in_setting(entry.centerings, *parsed), trial.magnetic->group);
     s = trial;  // Structure assigns by copy
+    rekey_extracted_intensities(s);
 }
 
 void change_adp_type(Structure& s, AtomSite& site, const std::string& adp_type) {
@@ -5345,6 +5355,18 @@ void apply_post_build_fields(const ExperimentBase& e, crysta::ExperimentBase& bu
                               std::array<int, 3>{row.index_h, row.index_k, row.index_l});
     }
     built.preferred_orientations.assign(textures);
+    // The intensities a Le Bail or Pawley fit holds (edi ADR-0109), row by row; crysta decides which rows it
+    // reads. A project whose structures are all Rietveld has none.
+    if (!e.extracted_intensities.empty()) {
+        std::vector<crysta::ExtractedIntensity> rows;
+        rows.reserve(e.extracted_intensities.size());
+        for (const auto& item : e.extracted_intensities) {
+            rows.emplace_back(item->structure_id.value(),
+                              std::array<int, 3>{item->index_h.get(), item->index_k.get(), item->index_l.get()},
+                              param(item->f_squared, crysta::INTENSITY, "f_squared"));
+        }
+        built.extracted_intensities.assign(rows);
+    }
 }
 
 // The CW conversion: crysta has no named CW builder at b9aee906, so the adapter uses the public
@@ -5877,6 +5899,26 @@ double default_bond_distance_inc() {
     return crysta::Geom::kDefaultBondDistanceInc;
 }
 
+// crysta reads the method token: it is never compared as text here.
+std::string calc_method_token(const Structure& structure) {
+    return crysta::calc_method_token(crysta::calc_method_of(structure.calc_method.value()));
+}
+
+bool extracts_intensities(const Structure& structure) {
+    return crysta::extracts_intensities(crysta::calc_method_of(structure.calc_method.value()));
+}
+
+std::vector<std::array<int, 3>> extracted_intensity_keys(const Structure& structure,
+                                                         const std::vector<std::array<int, 3>>& hkls) {
+    const crysta::Structure built = to_crysta_structure(structure);
+    std::vector<std::array<int, 3>> keys;
+    keys.reserve(hkls.size());
+    for (const std::array<int, 3>& hkl : hkls) {
+        keys.push_back(crysta::extracted_intensity_key(built, hkl));
+    }
+    return keys;
+}
+
 bool Structure::geometry_current() const {
     const std::shared_ptr<const detail::GeometrySource>& source = geometry_source;
     return source != nullptr && detail::geometry_inputs(*this) == source->inputs &&
@@ -6024,13 +6066,19 @@ namespace {
 // The engine experiments a calculation runs on: one per bank, each with its data node. Shared by
 // calculate() and the parity dump, so the dump is of the very model a
 // calculation reads.
-BuiltExperiments calculation_banks(const ItemVec<BraggPdExperiment>& experiments) {
+// `data_required` false lets a powder bank without a data node cross as calculation only, for work that reads
+// data only where an experiment has some (the scale start after a method switch).
+BuiltExperiments calculation_banks(const ItemVec<BraggPdExperiment>& experiments, bool data_required = true) {
     BuiltExperiments banks;
     banks.reserve(experiments.size());
     for (const auto& bank_item : experiments) {
         const BraggPdExperiment& bank = *bank_item;
         if (bank.reflections.has_value()) {  // a single crystal: its reflections cross with it
             build_on_heap(banks, bank);
+            continue;
+        }
+        if (!bank.data.has_value() && !data_required) {
+            build_on_heap(banks, bank).calculation_only = true;
             continue;
         }
         if (!bank.data.has_value()) {
@@ -6397,12 +6445,21 @@ void refresh_fittability(Project& project) {
             mark(*parameter, crysta::FitBlocker::Descriptor);
         }
     }
+    // The extracted rows are in no walk: each is answered through its own crysta parameter (edi ADR-0109), and
+    // one crysta cannot answer is one no fitted experiment can determine.
+    std::vector<std::pair<Parameter*, const crysta::ExtractedIntensity*>> rows;
+    for (const auto& experiment : project.experiments) {
+        for (const auto& row : experiment->extracted_intensities) {
+            mark(row->f_squared, crysta::FitBlocker::Data);
+        }
+    }
     if (project.structures.empty()) {
         return;
     }
     std::optional<crysta::Fittability> rule;
+    RelationProject converted;
     try {
-        RelationProject converted = relation_project(project);
+        converted = relation_project(project);
         // An experiment that links nothing crosses with a placeholder link to the first structure, which is no use of it.
         std::vector<std::size_t> fitted;
         for (const std::size_t index : fit_context(project)) {
@@ -6411,8 +6468,27 @@ void refresh_fittability(Project& project) {
             }
         }
         rule = crysta::fittability(*converted.project, fitted);
+        // The banks crossed in the model's order, each with its rows in order (apply_post_build_fields).
+        for (std::size_t e = 0; e < project.experiments.size() && e < converted.project->experiments.size(); ++e) {
+            const auto& held = project.experiments[e]->extracted_intensities;
+            std::size_t index = 0;
+            for (const crysta::ExtractedIntensity& row : converted.project->experiments[e].extracted_intensities) {
+                if (index >= held.size()) {
+                    break;
+                }
+                rows.emplace_back(&held[index++]->f_squared, &row);
+            }
+        }
     } catch (const std::exception&) {  // NOLINT(bugprone-empty-catch) — a calculation or fit says why
         return;
+    }
+    // Each row on its own, so a row crysta has no answer for keeps its mark and never costs the others theirs.
+    for (const auto& [parameter, row] : rows) {
+        try {
+            const crysta::FitEligibility& status = rule->status(row->f_squared);
+            mark(*parameter, status.blocker, status.reason(), status.idle);
+        } catch (const std::invalid_argument&) {  // NOLINT(bugprone-empty-catch) — stays not determined
+        }
     }
     std::set<const Parameter*> answered;
     for (const auto& [unique_name, parameter] : named) {
@@ -6880,6 +6956,190 @@ CommonScaleOutcome apply_common_scale(Project& project, std::size_t experiment) 
     return outcome;
 }
 
+namespace {
+void adopt_extracted_intensities(Project& project, const crysta::Project& converted);
+
+// The structure's place in the project, which crysta's project keeps.
+std::optional<std::size_t> structure_place(const Project& project, const Structure& structure) {
+    for (std::size_t at = 0; at < project.structures.size(); ++at) {
+        if (project.structures[at].get() == &structure) {
+            return at;
+        }
+    }
+    return std::nullopt;
+}
+}  // namespace
+
+CalcMethodChoice calc_method_choice(const Project& project, const Structure& structure) {
+    CalcMethodChoice choice;
+    try {
+        choice.current = calc_method_token(structure);
+    } catch (const std::exception& error) {
+        choice.current = structure.calc_method.value();
+        choice.tokens = {choice.current};
+        choice.reason = error.what();
+        return choice;
+    }
+    const std::optional<std::size_t> at = structure_place(project, structure);
+    if (!at) {
+        choice.tokens = {choice.current};
+        choice.reason = "the structure is not in the project";
+        return choice;
+    }
+    try {
+        // Only the links and the experiments' types matter to crysta's offer: no measured data crosses.
+        BuiltExperiments banks;
+        banks.reserve(project.experiments.size());
+        for (const auto& bank : project.experiments) {
+            build_on_heap(banks, *bank, true);
+        }
+        const crysta::Project engine(to_crysta_structures(project, false), experiment_list(banks));
+        const crysta::CalcMethodOptions options = crysta::calc_method_options(engine, engine.structures.at(*at));
+        for (const crysta::CalcMethod method : options.offered) {
+            choice.tokens.emplace_back(crysta::calc_method_token(method));
+        }
+        choice.reason = options.reason;
+    } catch (const std::exception& error) {
+        choice.tokens = {choice.current};
+        choice.reason = error.what();
+    }
+    return choice;
+}
+
+CalcMethodOutcome select_calc_method(Structure& structure, const std::string& token) {
+    if (Project* project = project_holding(structure)) {
+        return select_calc_method(*project, structure, token);
+    }
+    const crysta::CalcMethod method = crysta::calc_method_of(token);
+    structure.calc_method =
+        method == crysta::CalcMethod::Rietveld ? std::string() : std::string(crysta::calc_method_token(method));
+    return {};
+}
+
+std::string calc_method_link_refusal(const Project& project, const ExperimentBase& experiment,
+                                     const Structure& structure) {
+    // Only Le Bail and Pawley are refused, and only on a single crystal or total scattering: nothing to ask otherwise.
+    const bool powder_bragg = !experiment.reflections.has_value() &&
+                              experiment.experiment_type.effective_scattering_type() == ScatteringTypeEnum::BRAGG;
+    const std::optional<std::size_t> at = structure_place(project, structure);
+    if (powder_bragg || !at) {
+        return {};
+    }
+    try {
+        if (!extracts_intensities(structure)) {
+            return {};
+        }
+        // crysta's offer with the structure linked here: the method it holds is refused when crysta offers Rietveld
+        // alone.
+        const std::string key = datablock_key(structure.name, "structure");
+        const bool linked = std::any_of(experiment.linked_structures.begin(), experiment.linked_structures.end(),
+                                        [&key](const auto& link) {
+                                            return datablock_key(link->structure_id, "structure") == key;
+                                        });
+        BuiltExperiments banks;
+        banks.reserve(project.experiments.size());
+        for (const auto& bank : project.experiments) {
+            crysta::BraggPdExperiment& built = build_on_heap(banks, *bank, true);
+            if (bank.get() == &experiment && !linked) {
+                std::vector<crysta::LinkedStructure> links(built.linked_structures.begin(), built.linked_structures.end());
+                links.emplace_back(structure.name.value(), param(Parameter{}, crysta::SCALE, "scale"), true);
+                built.linked_structures.assign(links);
+            }
+        }
+        const crysta::Project engine(to_crysta_structures(project, false), experiment_list(banks));
+        const crysta::CalcMethodOptions options = crysta::calc_method_options(engine, engine.structures.at(*at));
+        const crysta::CalcMethod held = crysta::calc_method_of(structure.calc_method.value());
+        if (std::find(options.offered.begin(), options.offered.end(), held) == options.offered.end()) {
+            return options.reason;
+        }
+    } catch (const std::exception& error) {
+        return error.what();
+    }
+    return {};
+}
+
+CalcMethodOutcome select_calc_method(Project& project, Structure& structure, const std::string& token) {
+    const crysta::CalcMethod method = crysta::calc_method_of(token);
+    const std::optional<std::size_t> at = structure_place(project, structure);
+    if (!at) {
+        throw std::invalid_argument("the structure is not in the project");
+    }
+    // Everything is worked out on crysta's copy first, so a refusal writes nothing here. Only the scale start reads
+    // measured data, and only of the experiments that have some.
+    const BuiltExperiments banks = calculation_banks(project.experiments, false);
+    crysta::Project engine(to_crysta_structures(project, false), experiment_list(banks));
+    fill_crysta_relations(project, engine);
+    engine.refine_ls_threshold_sigma = project.refine_ls_threshold_sigma;
+    crysta::Structure& converted = engine.structures.at(*at);
+    const bool to_rietveld = method == crysta::CalcMethod::Rietveld &&
+                             crysta::extracts_intensities(crysta::calc_method_of(converted));
+    crysta::set_calc_method(engine, converted, method);
+    // ADR-0109 §2: back on Rietveld, each enabled link with measured data starts from crysta's least-squares scale.
+    CalcMethodOutcome outcome;
+    std::vector<std::pair<Parameter*, double>> starts;
+    if (to_rietveld) {
+        const std::string key = datablock_key(structure.name, "structure");
+        for (std::size_t e = 0; e < project.experiments.size(); ++e) {
+            const ExperimentBase& experiment = *project.experiments[e];
+            if (experiment.calculation_only || !experiment.data.has_value()) {
+                continue;
+            }
+            for (const auto& link : experiment.linked_structures) {
+                if (!link->enabled.get() || datablock_key(link->structure_id, "structure") != key) {
+                    continue;
+                }
+                std::optional<double> start;
+                try {
+                    start = crysta::rietveld_scale_start(engine, e, converted.name.value());
+                } catch (const std::exception&) {  // NOLINT(bugprone-empty-catch) — reported as no start
+                }
+                if (start) {
+                    starts.emplace_back(&link->scale, *start);
+                    outcome.scaled.push_back(experiment.name.value());
+                } else {
+                    outcome.unscaled.push_back(experiment.name.value());
+                }
+            }
+        }
+    }
+    // The writes, which cannot refuse: the token, every experiment's rows as crysta left them, the scale starts.
+    structure.calc_method =
+        method == crysta::CalcMethod::Rietveld ? std::string() : std::string(crysta::calc_method_token(method));
+    adopt_extracted_intensities(project, engine);
+    for (const auto& [scale, value] : starts) {
+        scale->value = value;
+    }
+    return outcome;
+}
+
+void rekey_extracted_intensities(Structure& structure) {
+    Project* project = project_holding(structure);
+    const std::optional<std::size_t> at = project != nullptr ? structure_place(*project, structure) : std::nullopt;
+    if (!at) {
+        return;
+    }
+    const std::string key = datablock_key(structure.name, "structure");
+    const bool held = std::any_of(project->experiments.begin(), project->experiments.end(), [&key](const auto& bank) {
+        return std::any_of(bank->extracted_intensities.begin(), bank->extracted_intensities.end(),
+                           [&key](const auto& row) { return datablock_key(row->structure_id, "structure") == key; });
+    });
+    if (!held) {
+        return;  // a Rietveld structure, or one no fit has given rows yet: nothing to convert
+    }
+    try {
+        // Only the symmetry and the rows matter here: no measured data crosses.
+        BuiltExperiments banks;
+        banks.reserve(project->experiments.size());
+        for (const auto& bank : project->experiments) {
+            build_on_heap(banks, *bank, true);
+        }
+        crysta::Project engine(to_crysta_structures(*project, false), experiment_list(banks));
+        crysta::rekey_extracted_intensities(engine, engine.structures.at(*at).name.value());
+        adopt_extracted_intensities(*project, engine);
+    } catch (const std::exception&) {  // NOLINT(bugprone-empty-catch) — the calculation names the row it cannot read
+    }
+}
+
 void set_reflns_threshold_sigma(ExperimentBase& experiment, std::optional<double> sigma) {
     experiment.reflns_threshold_sigma =
         sigma ? std::optional<double>(crysta::check_threshold_sigma(*sigma, "_reflns.threshold_sigma"))
@@ -7102,6 +7362,8 @@ void Project::publish_calculation(DueEstimates due) {
         rows.f_squared_calc = shared_column(refln.f_squared_calc);
         rows.f_m_perp_squared_calc = shared_column(refln.f_m_perp_squared_calc);
         rows.f_squared_total_calc = shared_column(refln.f_squared_total_calc);
+        rows.f_squared_meas = shared_column(refln.f_squared_meas);
+        rows.f_squared_meas_su = shared_column(refln.f_squared_meas_su);
         rows.position = shared_column(refln.position);
         reflections.push_back(std::move(rows));
     }
@@ -7625,7 +7887,78 @@ std::vector<std::string> identity_paths(const IterationCallback& subscriber,
 // series is written, never what the engine computes. It runs LAST, after the value write-back and every
 // completion pass, because the pattern must describe the model a SAVE would serialise. The three paths share
 // one function rather than three agreeing copies: a fourth entry point cannot forget a step it never spells.
+// The extracted rows a fit left in crysta's project, taken into each edi experiment of the same name (edi ADR-0109
+// §1): in place while they are the same rows, else replaced, so a walk of both projects names the same parameters and
+// a Pawley intensity's label names its row. Their values, free flags and s.u. are crysta's.
+void adopt_extracted_intensities(Project& project, const crysta::Project& converted) {
+    for (const auto& item : project.experiments) {
+        ExperimentBase& to = *item;
+        const crysta::ExperimentBase* from = nullptr;
+        for (const crysta::BraggPdExperiment& bank : converted.experiments) {
+            if (bank.name.value() == to.name.value()) {
+                from = &bank;
+            }
+        }
+        if (from == nullptr || (from->extracted_intensities.size() == 0 && to.extracted_intensities.empty())) {
+            continue;
+        }
+        const auto take = [](Parameter& target, const crysta::Parameter& source) {
+            if (target.value.get() != source.value()) {
+                target.value = source.value();
+            }
+            if (target.free.get() != source.free()) {
+                target.free = source.free();
+            }
+            if (target.uncertainty.get() != source.uncertainty()) {
+                target.uncertainty = source.uncertainty();
+            }
+        };
+        bool same = from->extracted_intensities.size() == to.extracted_intensities.size();
+        std::size_t index = 0;
+        for (const crysta::ExtractedIntensity& row : from->extracted_intensities) {
+            if (!same) {
+                break;
+            }
+            const ExtractedIntensity& held = *to.extracted_intensities[index++];
+            const std::array<int, 3>& hkl = row.hkl.get();
+            same = held.structure_id.value() == row.structure_id.get() && held.index_h.get() == hkl[0] &&
+                   held.index_k.get() == hkl[1] && held.index_l.get() == hkl[2];
+        }
+        if (same) {
+            index = 0;
+            for (const crysta::ExtractedIntensity& row : from->extracted_intensities) {
+                take(to.extracted_intensities[index++]->f_squared, row.f_squared);
+            }
+            continue;
+        }
+        std::vector<std::shared_ptr<ExtractedIntensity>> rows;
+        rows.reserve(from->extracted_intensities.size());
+        for (const crysta::ExtractedIntensity& row : from->extracted_intensities) {
+            auto made = std::make_shared<ExtractedIntensity>();
+            made->structure_id = row.structure_id.get();
+            made->index_h = row.hkl.get()[0];
+            made->index_k = row.hkl.get()[1];
+            made->index_l = row.hkl.get()[2];
+            take(made->f_squared, row.f_squared);
+            rows.push_back(std::move(made));
+        }
+        to.extracted_intensities.assign(std::move(rows));
+    }
+}
+
+// A Pawley intensity is fit state of its row, never an entry of the fit's parameter record or its correlations
+// (edi ADR-0109).
+bool recorded_in_fit(const Parameter* parameter) {
+    return parameter == nullptr || parameter->spec != &spec::extracted_intensity_f_squared;
+}
+
+// The free columns the fit varied, Pawley intensities included, as crysta counts them for its own record: every
+// value its result reports. `values` leaves the intensities out, so it is not that count.
+std::size_t fitted_columns(const FitResultBase& outcome) { return outcome.engine_values.size(); }
+
 void publish_fit_state(Project& project, crysta::Project& converted, const std::vector<detail::RefinedValue>& refined) {
+    // The extracted rows as the fit left them, with their s.u., before anything walks the model.
+    adopt_extracted_intensities(project, converted);
     for (const auto& structure : project.structures) {  // every structure (phase)
         rebalance_positional_fit_state(*structure);  // review-9 F1: lossless snapshot hand-off
     }
@@ -7805,7 +8138,7 @@ void record_fit_result(Project& project, FitResultBase& outcome, std::size_t con
     record.last_shift_su = finite_factor(outcome.last_shift_su);
     record.fitting_time = outcome.elapsed_ms / 1000.0;
     record.reduced_chi_square = finite_factor(outcome.reduced_chi_square);
-    const std::size_t n_free = outcome.values.size();
+    const std::size_t n_free = fitted_columns(outcome);
     record.objective_name = "chi_square";
     record.objective_value =
         finite_factor(outcome.reduced_chi_square * detail::reduced_chi_square_dof(outcome.n_points_fitted, n_free));
@@ -8170,6 +8503,8 @@ FitResultBase Project::fit(const std::vector<double>& grid, const std::vector<do
             const double elapsed_ms = std::chrono::duration<double, std::milli>(
                                           std::chrono::steady_clock::now() - fit_start)
                                           .count();
+            // The rows a Le Bail or Pawley fit made, first: a Pawley intensity's label names its row.
+            adopt_extracted_intensities(*this, project);
 
             // Translate EVERY crysta result label to an edi-owned parameter (path + write-back target)
             // FIRST, total and fail-closed: an unmapped/unknown label is a structured error, never a
@@ -8222,6 +8557,9 @@ FitResultBase Project::fit(const std::vector<double>& grid, const std::vector<do
             outcome.structure_factor_evaluations = result.structure_factor_evaluations;
             // Key the result by the edi-owned identity path (no crysta label leaked).
             for (const detail::RefinedValue& item : refined) {
+                if (!recorded_in_fit(item.resolved.target)) {
+                    continue;
+                }
                 outcome.values[item.resolved.path] = item.value;
                 outcome.uncertainty[item.resolved.path] = item.uncertainty;
             }
@@ -8230,7 +8568,7 @@ FitResultBase Project::fit(const std::vector<double>& grid, const std::vector<do
             for (const auto& [label, value] : start_by_label) {
                 std::optional<detail::ResolvedParameter> resolved =
                     detail::resolve_project_label(*this, experiment(), label);
-                if (resolved) {
+                if (resolved && recorded_in_fit(resolved->target)) {
                     outcome.start[resolved->path] = value;
                 }
             }
@@ -8246,7 +8584,7 @@ FitResultBase Project::fit(const std::vector<double>& grid, const std::vector<do
                               fitted_quality(project,
                                              single_crystal ? std::deque<crysta::PdDataBase>{}
                                                             : std::deque<crysta::PdDataBase>{crysta::PdDataBase(grid, observed, sigma)},
-                                             outcome.values.size()));
+                                             fitted_columns(outcome)));
             return outcome;
         };
         if (single_crystal) {
@@ -8839,6 +9177,12 @@ FitResultBase Project::fit_scan(const IterationCallback& on_iteration,
                                       std::chrono::steady_clock::now() - fit_start)
                                       .count();
 
+        // The rows the series' last point holds, first, unless the scan was cancelled: a Pawley intensity's
+        // label names its row.
+        if (!result.cancelled) {
+            adopt_extracted_intensities(*this, cproject);
+        }
+
         // Translate the terminal result exactly as fit does: every crysta label resolves to
         // an edi parameter BEFORE any write-back, fail-closed; a completed-scan resume returns
         // empty maps and mutates nothing.
@@ -8898,6 +9242,9 @@ FitResultBase Project::fit_scan(const IterationCallback& on_iteration,
         outcome.reflections_folded = result.reflections_folded;
         outcome.structure_factor_evaluations = result.structure_factor_evaluations;
         for (const detail::RefinedValue& item : refined) {
+            if (!recorded_in_fit(item.resolved.target)) {
+                continue;
+            }
             outcome.values[item.resolved.path] = item.value;
             outcome.uncertainty[item.resolved.path] = item.uncertainty;
         }
@@ -8919,7 +9266,7 @@ FitResultBase Project::fit_scan(const IterationCallback& on_iteration,
                 FitResultBase recorded = outcome;
                 recorded.n_points_fitted = pooled.n_points;
                 recorded.rwp = pooled.rwp;
-                const std::size_t n_free = recorded.values.size();
+                const std::size_t n_free = fitted_columns(recorded);
                 recorded.reduced_chi_square =
                     pooled.n_points > n_free ? pooled.chi_square / static_cast<double>(pooled.n_points - n_free) : 0.0;
                 record_fit_result(*this, recorded, cproject.collect_parameters().size(), {}, *result.scan_quality);
@@ -9116,6 +9463,9 @@ FitResultBase Project::fit_joint(const std::vector<PdDataBase>& patterns,
                 bank_metrics.push_back({metric.name, metric.n_points, metric.rwp, metric.chi_square});
             }
 
+            // The rows a Le Bail or Pawley fit made, first: a Pawley intensity's label names its row.
+            adopt_extracted_intensities(*this, project);
+
             // Translate EVERY joint label to an edi-owned parameter FIRST — total and fail-closed. Only
             // once the whole result resolves is the outcome built and the model written, so no crysta
             // label crosses the boundary and a partial/garbled result can never mutate the model.
@@ -9162,13 +9512,16 @@ FitResultBase Project::fit_joint(const std::vector<PdDataBase>& patterns,
             outcome.reflections_folded = result.reflections_folded;
             outcome.structure_factor_evaluations = result.structure_factor_evaluations;
             for (const detail::RefinedValue& item : refined) {
+                if (!recorded_in_fit(item.resolved.target)) {
+                    continue;
+                }
                 outcome.values[item.resolved.path] = item.value;
                 outcome.uncertainty[item.resolved.path] = item.uncertainty;
             }
             for (const auto& [label, value] : start_by_label) {
                 std::optional<detail::ResolvedParameter> resolved =
                     detail::resolve_joint_project_label(*this, label);
-                if (resolved) {
+                if (resolved && recorded_in_fit(resolved->target)) {
                     outcome.start[resolved->path] = value;
                 }
             }
@@ -9180,7 +9533,7 @@ FitResultBase Project::fit_joint(const std::vector<PdDataBase>& patterns,
                 fitted_patterns.emplace_back(pattern.axis(), pattern.intensity_meas.get(), pattern.intensity_meas_su.get());
             }
             record_fit_result(*this, outcome, considered, crysta_correlations(project, result),
-                              fitted_quality(project, fitted_patterns, outcome.values.size()));
+                              fitted_quality(project, fitted_patterns, fitted_columns(outcome)));
             // Before shared items this copied bank 0 into the single-bank mirror (the loader set it
             // up that way), so `experiment` never reports stale values after a joint refinement.
             // `experiment()` IS the first bank now, so nothing is copied back: that

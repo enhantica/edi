@@ -17,6 +17,7 @@
 
 #include "crysta/expression.hpp"
 #include "crysta/model.hpp"
+#include "crysta/tokens.hpp"
 #include "edi/background_estimate.hpp"
 #include "edi/model.hpp"
 #include "edi/categories.hpp"
@@ -35,7 +36,8 @@ namespace detail {
 // project the fit builds (crysta::fit_participants), so this check and the provider see the same set.
 void require_populated_participants(const crysta::Project& project, const char* surface) {
     for (const crysta::Structure* structure : crysta::fit_participants(project)) {
-        if (structure->atom_sites.empty()) {
+        // A Le Bail or Pawley structure needs no atoms (edi ADR-0109).
+        if (structure->atom_sites.empty() && !crysta::extracts_intensities(crysta::calc_method_of(*structure))) {
             throw std::invalid_argument(std::string(surface) + ": structure has no atom sites ('" +
                                         detail::printable_id(structure->name.value()) + "')");
         }
@@ -257,6 +259,7 @@ FitResultBase fit_measured_experiments(Project& project, const IterationCallback
         for (const auto& source : measured.experiments) {
             if (source->name.value() == target->name.value()) {
                 copy_fit_share(*target, *source);
+                copy_extracted_intensities(*target, *source);  // the rows a Le Bail or Pawley fit left
                 record_fitted_background(*target);  // the fitted values are its background now (ADR-0040)
             }
         }
@@ -450,11 +453,15 @@ FitResultBase fit_experiments_independently(Project& project, const IterationCal
             }
         }
     }
+    // An experiment takes part when its own fit has something to vary, by crysta's rule: free Pawley intensities,
+    // or rows a Pawley fit will create, count; idle flags do not. One the rule cannot read takes part, so its own
+    // fit says why.
     for (One& one : fits) {
-        const std::vector<ParameterEntry> entries = parameter_entries(one.copy);
-        one.fitted = std::any_of(entries.begin(), entries.end(), [](const ParameterEntry& entry) {
-            return entry.parameter != nullptr && entry.parameter->free.get();
-        });
+        try {
+            one.fitted = one.copy.anything_to_fit();
+        } catch (const std::exception&) {
+            one.fitted = true;
+        }
     }
     if (std::none_of(fits.begin(), fits.end(), [](const One& one) { return one.fitted; })) {
         throw std::invalid_argument("edi fit_independent: no free parameters (mark parameters refinable via their free flags)");
@@ -513,6 +520,7 @@ FitResultBase fit_experiments_independently(Project& project, const IterationCal
         for (const auto& target : project.experiments) {
             if (target->name.value() == fitted.name.value()) {
                 copy_fit_share(*target, fitted);
+                copy_extracted_intensities(*target, fitted);  // the rows a Le Bail or Pawley fit left
                 record_fitted_background(*target);
             }
         }

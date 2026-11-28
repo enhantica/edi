@@ -51,11 +51,20 @@ struct DescriptorEntry {
 // Every descriptor of the project that is no Parameter, in page order: structures, then experiments.
 std::vector<DescriptorEntry> model_descriptors(Project& project);
 
-// What a fit or an undo worked out on a copy, written onto the project it was copied from. Every
-// parameter's value, uncertainty and fit start is written from `from` onto `to` where they differ — a
-// value as an admitted write is. Both walks must name the same parameters in the same order: otherwise
-// nothing is written and the answer is false.
+// What a fit or an undo worked out on a copy, written onto the project it was copied from. The extracted
+// intensities first (edi ADR-0109 §1), each experiment's rows as `from` holds them; then every parameter's value,
+// uncertainty and fit start is written from `from` onto `to` where they differ — a value as an admitted write is.
+// Both projects must hold the same experiments and both walks name the same parameters in the same order:
+// otherwise nothing is written and the answer is false.
 bool copy_parameter_states(Project& to, Project& from);
+
+// An experiment's extracted rows made those of `from`: in place while both hold the same rows (structure and indices,
+// in order), else replaced by copies. A row's value, free flag, s.u. and fit start follow.
+void copy_extracted_intensities(ExperimentBase& to, const ExperimentBase& from);
+
+// The path a fit result and the Analysis table name an extracted row's |F|² by, in the grammar of
+// parameter_entries: `<prefix>extracted_intensities[<structure> <h> <k> <l>].f_squared`.
+std::string extracted_intensity_path(const ExtractedIntensity& row, const std::string& prefix);
 
 // One warning per anisotropic site whose tensor has a negative eigenvalue, by crysta's rule (a zero or
 // semi-definite tensor is allowed): the site's tensor row and the message. A structure that does not

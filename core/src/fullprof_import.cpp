@@ -1921,9 +1921,32 @@ void structure_block(const PCR& pcr, Project& project, std::vector<Pattern>& pat
     const bool magnetic_only = std::any_of(labels.begin(), labels.end(),
                                            [](const auto& label) { return lower(label) == "mag_only"; });
     const bool spherical = options[jbt] < 0.;
-    if (count < 1 || (!magnetic && (options[jbt] != 0. || options[isy] != 0.)) ||
+    // Profile matching with a constant scale (Jbt=2) is a Le Bail fit (ADR-0109). It needs no
+    // atoms; atoms it has give the intensities FullProf starts from.
+    const bool le_bail = options[jbt] == 2.;
+    if (count < (le_bail ? 0 : 1) ||
+        (!magnetic && ((options[jbt] != 0. && !le_bail) || options[isy] != 0.)) ||
         options[isy + 1] != 0. || options[nvk] != 0.) {
         pcr.fail("Unsupported FullProf phase type, symmetry operators or propagation vectors", phase);
+    }
+    if (le_bail) {
+        structure->calc_method = "le_bail";
+    }
+    // Irf=2 reads the intensities a previous Le Bail run left in its .hkl file. They are not read:
+    // the fit starts them again.
+    const auto intensity_file = [&](double irf, std::size_t line) {
+        if (!le_bail || irf == 0.) {
+            return false;
+        }
+        if (irf != 2.) {
+            pcr.fail("Unsupported FullProf reflection file for a profile-matching phase", line);
+        }
+        note("The FullProf intensity file of phase '" + structure->name.value() +
+             "' is not read; its Le Bail intensities start again");
+        return true;
+    };
+    if (!multi) {
+        (void)intensity_file(options[7], phase);
     }
     if (options[1] != 0. || options[2] != 0.) {
         pcr.fail("FullProf restrained phases need manual conversion", phase);
@@ -1945,7 +1968,8 @@ void structure_block(const PCR& pcr, Project& project, std::vector<Pattern>& pat
             if (contributions[i] == 1.) {
                 const auto ref = pcr.require("irf ", options_line + 1, end);
                 const auto pattern_flags = pcr.after(ref, end, 3);
-                if (pattern_flags[0] != 0. || (pattern_flags[1] != 0. && pattern_flags[1] != patterns[i].profile) ||
+                if ((pattern_flags[0] != 0. && !intensity_file(pattern_flags[0], ref)) ||
+                    (pattern_flags[1] != 0. && pattern_flags[1] != patterns[i].profile) ||
                     (pattern_flags.size() > 3 && pattern_flags[3] != 0.) ||
                     (pattern_flags.size() > 4 && pattern_flags[4] != 0.)) {
                     pcr.fail("Unsupported FullProf phase-specific reflections or profile family", ref);
@@ -1963,7 +1987,15 @@ void structure_block(const PCR& pcr, Project& project, std::vector<Pattern>& pat
             pcr.fail("Unsupported FullProf phase-specific profile family", phase);
         }
     }
-    const auto atom_header = pcr.require("atom ", phase, end);
+    auto atom_header = pcr.header("atom ", phase, end);
+    if (atom_header == end && le_bail && count == 0) {
+        // A Le Bail phase without atoms may leave out the atom header; its space group then comes
+        // before its first profile block.
+        atom_header = pcr.require("profile parameters for pattern", phase, end);
+    }
+    if (atom_header == end) {
+        atom_header = pcr.require("atom ", phase, end);
+    }
     if (legacy_magnetic) {
         classic_combined_magnetic_symmetry(pcr, *structure, phase, atom_header);
     } else if (magnetic) {
@@ -2114,8 +2146,12 @@ void structure_block(const PCR& pcr, Project& project, std::vector<Pattern>& pat
         }
     }
     double occupancy_factor = 1.;
-    const auto largest = std::max_element(orbit_occupancies.begin(), orbit_occupancies.end(),
-                              [](const auto& a, const auto& b) { return a.second < b.second; })->second;
+    const auto largest =
+        orbit_occupancies.empty()
+            ? 0.
+            : std::max_element(orbit_occupancies.begin(), orbit_occupancies.end(),
+                               [](const auto& a, const auto& b) { return a.second < b.second; })
+                  ->second;
     if (largest_site > 1.00015) {
         const auto matches = [](double candidate, double observed) {
             return std::abs(candidate - observed) <= 0.005 * std::max(candidate, observed);
@@ -2185,6 +2221,9 @@ void structure_block(const PCR& pcr, Project& project, std::vector<Pattern>& pat
         link->structure_id = structure->name.value();
         pattern.model->linked_structures.push_back(link);
         if (pattern.single_crystal()) {
+            if (le_bail) {
+                pcr.fail("FullProf profile matching (Jbt=2) needs a powder pattern", begin);
+            }
             const auto harmonic = pcr.header("x-lambda/2", begin, limit);
             if (harmonic != limit) {
                 const auto correction = pair_after(pcr, harmonic, limit, 1).at(0);

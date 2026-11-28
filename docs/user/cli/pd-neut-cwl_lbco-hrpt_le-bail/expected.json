@@ -1,0 +1,28 @@
+{
+  "schema": 1,
+  "source": {
+    "engine": "FullProf 8.40 (references)",
+    "artifact": "fullprof/le-bail.out",
+    "provenance": "PROVENANCE.md"
+  },
+  "quantities": {
+    "n_free": {
+      "value": 11.0,
+      "kind": "reference",
+      "tol_abs": 0.0,
+      "tol_rel": null
+    },
+    "rwp": {
+      "value": 0.075,
+      "kind": "reference",
+      "tol_abs": null,
+      "tol_rel": 0.05
+    },
+    "param.cell_length_a.value": {
+      "value": 3.8907781,
+      "kind": "reference",
+      "tol_abs": 3.8437556e-05,
+      "tol_rel": null
+    }
+  }
+}

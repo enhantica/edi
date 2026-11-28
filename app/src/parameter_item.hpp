@@ -8,6 +8,7 @@
 
 #include <memory>
 #include <string>
+#include <vector>
 
 #include "edi/parameter_walk.hpp"
 
@@ -89,6 +90,11 @@ class ParameterItem : public QObject {
     // The item's label for its variant and its `.edi` name, as a field's and a cell's tooltip names it (edi ADR-0051);
     // empty for a parameter the dictionary does not know.
     Q_PROPERTY(QString toolTip READ toolTip NOTIFY toolTipChanged)
+    // A Pawley structure's intensities in one experiment are one row of the Analysis table (edi ADR-0109 §5): such an
+    // item stands for all of them. `groupSize` is their number, 0 on any other item; `free` is true when every one is
+    // free, `partiallyFree` when some are and some are not, and setting `free` sets or clears them all.
+    Q_PROPERTY(int groupSize READ groupSize NOTIFY groupSizeChanged)
+    Q_PROPERTY(bool partiallyFree READ partiallyFree NOTIFY partiallyFreeChanged)
 
    public:
     enum Field { ValueField = 1, UncertaintyField = 2, FreeField = 4 };
@@ -190,6 +196,11 @@ class ParameterItem : public QObject {
     // The project's s.u. rule, and whether its save writes this value exactly (edi::save_spelling).
     void setSpelling(const std::string& rule, bool exact);
 
+    int groupSize() const { return static_cast<int>(group_.size()); }
+    bool partiallyFree() const { return partially_free_; }
+    // The parameters a group item stands for, its own parameter first; set by the registry at each rebuild.
+    void setGroup(std::vector<edi::Parameter*> group);
+    const std::vector<edi::Parameter*>& group() const { return group_; }
     const edi::Parameter* parameter() const { return parameter_; }
     // Emit a signal for each field whose core value differs from the last published one; returns
     // the changed fields (ParameterItem::Field bits). With `formatted` false (a slider drag, edi ADR-0070) the file
@@ -225,6 +236,8 @@ class ParameterItem : public QObject {
     void suReasonChanged();
     void sliderStepChanged();
     void toolTipChanged();
+    void groupSizeChanged();
+    void partiallyFreeChanged();
 
    private:
     void setLastError(const QString& error);
@@ -253,6 +266,8 @@ class ParameterItem : public QObject {
     int block_index_ = -1;
     int phase_index_ = -1;
     int change_direction_ = 0;
+    std::vector<edi::Parameter*> group_;
+    bool partially_free_ = false;
 };
 
 }  // namespace edi_app
