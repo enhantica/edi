@@ -24,6 +24,7 @@ header include/crysta/adp.hpp
 header include/crysta/analysis.hpp
 header include/crysta/anchors.hpp
 header include/crysta/background_estimate.hpp
+header include/crysta/calc_method.hpp
 header include/crysta/cell_metric.hpp
 header include/crysta/cell_symmetry.hpp
 header include/crysta/cif_import.hpp
