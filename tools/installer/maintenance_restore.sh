@@ -47,6 +47,6 @@ if ! mv "$cur.old" "$cur"; then
 fi
 rm -f "$cur.old-token"
 rm -rf "$cur.drop" "$cur.new"
-# A rolled back update leaves no empty staging folder.
-rmdir "$t/maintenancetool" 2> /dev/null
+# A rolled back update leaves no empty staging folder; its claim goes with the tool component's cleanup.
+rmdir "$t/maintenance-update" 2> /dev/null
 exit 0

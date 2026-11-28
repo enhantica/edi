@@ -184,26 +184,36 @@ bool restore_kept_maintenance_tool(const QString& executable) {
 }
 bool remove_maintenance_tool_leftovers(const QString& executable) {
     if (executable.endsWith(QStringLiteral(".exe"), Qt::CaseInsensitive)) {
-        // The staged copy is what the Framework writes the tool from (ADR-0091), so it goes only once it is in place.
-        // An update moves it into place and leaves the folder empty; rmdir removes nothing else.
-        const QString staging = QFileInfo(executable).absolutePath() + QStringLiteral("/maintenancetool");
-        if (QDir().rmdir(staging)) return true;
-        return same_bytes(executable, staging + QStringLiteral("/MaintenanceTool.exe")) &&
-               QDir(staging).removeRecursively();
+        // The staged tool is one file (ADR-0109); releases before staged it in a folder. While the installed tool runs
+        // an update may still be unpacking or using it, so only a copy already written in place goes then. A running
+        // program cannot be opened for writing on Windows, which is the evidence that none runs.
+        const QString folder = QFileInfo(executable).absolutePath();
+        const QString staged = folder + QStringLiteral("/MaintenanceTool.update.exe");
+        const QString legacy = folder + QStringLiteral("/maintenancetool");
+        if (!present(staged) && !QFileInfo(legacy).isDir()) return false;
+        bool removed = same_bytes(executable, staged) && QFile::remove(staged);
+        QFile tool(executable);
+        if (!tool.open(QIODevice::ReadWrite | QIODevice::ExistingOnly)) return removed;
+        tool.close();
+        if (present(staged) && QFile::remove(staged)) removed = true;
+        const QFileInfo old(legacy);
+        if (old.isDir() && !old.isSymLink() && QDir(legacy).removeRecursively()) removed = true;
+        return removed;
     }
     const QString item = swapped_item(executable);
     if (item.isEmpty()) return false;
     const QString target = QFileInfo(item).absolutePath();
-    const QString staging = target + QStringLiteral("/maintenancetool");
+    const QString staging = target + QStringLiteral("/maintenance-update");
     const QString mark = item + QStringLiteral(".old-token");
     QStringList leftovers{item + QStringLiteral(".old"), mark, staging};
     if (!usable_item(item, item, executable) || std::none_of(leftovers.cbegin(), leftovers.cend(), present))
         return false;
     const ToolLock lock(target);
     if (!lock.held() || !usable_item(item, item, executable)) return false;
-    // A usable staged item is a swap still to come in a running update, and the backup is its undo's until the tool
-    // that kept it has exited. Anything else is left over from an update that has ended.
-    if (usable_item(staging + QLatin1Char('/') + QFileInfo(item).fileName(), item, executable)) leftovers.removeLast();
+    // An update claims the staging folder before it unpacks into it, so the folder is in use while the claiming tool
+    // runs, whatever it holds yet; the backup is its undo's until the tool that kept it has exited. Anything else is
+    // left over from an update that has ended.
+    if (marked_tool_running(staging + QStringLiteral("/.claim"))) leftovers.removeLast();
     if (marked_tool_running(mark)) leftovers.remove(0, 2);
     bool removed = false;
     for (const QString& path : leftovers) {

@@ -242,21 +242,27 @@ def test_offline_installer_retains_default_update_repositories(tmp_path, channel
     assert len(creators) == 1, 'Offline packaging builds one installer.'
     assert '--hybrid' in creators[0], 'Offline maintenance permits updates.'
     packages = output / 'source/packages'
-    if PACKAGE.SYSTEM in {'macos', 'windows'}:
-        tool = packages / PACKAGE.MAINTENANCE_COMPONENT / 'data/maintenancetool'
-        assert PACKAGE.maintenance_tool_executable(
-            tool / PACKAGE.maintenance_tool_name()
-        ).is_file(), 'The installer carries the separately built maintenance tool.'
+    data = packages / PACKAGE.MAINTENANCE_COMPONENT / 'data'
+    if PACKAGE.SYSTEM == 'windows':
+        # One staged file, which the Framework deletes once it has written the tool (ADR-0109).
+        assert (data / PACKAGE.WINDOWS_STAGED_TOOL).is_file(), (
+            'The installer carries the separately built maintenance tool.'
+        )
+    elif PACKAGE.SYSTEM == 'macos':
+        tool = data / PACKAGE.MAINTENANCE_STAGING / PACKAGE.maintenance_tool_name()
+        assert PACKAGE.maintenance_tool_executable(tool).is_file(), (
+            'The installer carries the separately built maintenance tool.'
+        )
     else:
         # Linux: the tool component carries only the tool's runtime, staged for the swap, and the
         # app component no longer does (ADR-0109).
-        data = packages / PACKAGE.MAINTENANCE_COMPONENT / 'data'
+        # Staged under a name unlike the tool's even on a case-insensitive disk.
         assert sorted(path.relative_to(data).as_posix() for path in data.rglob('*')) == [
-            'maintenancetool',
-            'maintenancetool/installer-runtime',
-            'maintenancetool/installer-runtime/dependencies.json',
-            'maintenancetool/installer-runtime/lib',
-            'maintenancetool/installer-runtime/lib/library.so',
+            'maintenance-update',
+            'maintenance-update/installer-runtime',
+            'maintenance-update/installer-runtime/dependencies.json',
+            'maintenance-update/installer-runtime/lib',
+            'maintenance-update/installer-runtime/lib/library.so',
         ], 'The Linux tool component carries only the staged runtime.'
         app_data = packages / PACKAGE.APP_COMPONENT / 'data'
         assert not (app_data / 'installer-runtime').exists(), (
@@ -749,7 +755,7 @@ def test_installed_maintenance_tool_must_be_the_shipped_one(tmp_path, monkeypatc
     if damage == 'written':
         PACKAGE.maintenance_tool_executable(bundle).write_bytes(b'written by the installer')
     else:
-        (tmp_path / 'maintenancetool').mkdir()
+        (tmp_path / 'maintenance-update').mkdir()
     with mock.patch.object(PACKAGE, 'run'), pytest.raises(RuntimeError, match='maintenance tool'):
         PACKAGE.verify_installed_maintenance_tool(tmp_path, {'maintenance_tool_sha256': expected})
 
@@ -775,9 +781,7 @@ def test_installed_linux_tool_needs_its_whole_runtime(tmp_path, monkeypatch, dam
     elif damage == 'listing':
         (runtime / 'dependencies.json').unlink()
     elif damage == 'staged':
-        if (tmp_path / 'maintenancetool').exists():
-            pytest.skip('a case-insensitive disk cannot hold the tool and its staging folder')
-        (tmp_path / 'maintenancetool').mkdir()
+        (tmp_path / 'maintenance-update').mkdir()
     elif damage == 'backup':
         (tmp_path / 'installer-runtime.old').mkdir()
     if damage is None:
@@ -787,32 +791,28 @@ def test_installed_linux_tool_needs_its_whole_runtime(tmp_path, monkeypatch, dam
             PACKAGE.verify_installed_maintenance_tool(tmp_path, {})
 
 
-# After an update Windows keeps only the staged copy of the installed tool, which the app's next
-# start removes (edi ADR-0109); anything else in the staging folder is refused.
+# Windows stages the tool as one file. A fresh installation may keep it as the installed tool's
+# bytes, for the app's next start to remove; an update leaves none (edi ADR-0109).
 @pytest.mark.parametrize(
     ('updated', 'staged', 'refused'),
     [
-        (False, 'other', False),
-        (True, 'installed', False),
-        # The update moved the staged tool into place; the app's next start removes the folder.
-        (True, 'empty', False),
+        (False, None, False),
+        (False, 'installed', False),
+        (False, 'other', True),
+        (True, None, False),
+        (True, 'installed', True),
         (True, 'other', True),
-        (True, 'extra', True),
     ],
 )
-def test_windows_staged_tool_after_an_update_is_the_installed_one(
+def test_windows_staged_tool_is_gone_after_an_update(
     tmp_path, monkeypatch, updated, staged, refused
 ):
     monkeypatch.setattr(PACKAGE, 'SYSTEM', 'windows')
     monkeypatch.delenv('EDI_CODESIGN', raising=False)
     bundle = signed_bundle(tmp_path)
-    staging = tmp_path / 'maintenancetool'
-    staging.mkdir()
-    if staged != 'empty':
-        copy = staging / bundle.name
-        copy.write_bytes(bundle.read_bytes() if staged != 'other' else b'older tool')
-    if staged == 'extra':
-        (staging / 'leftover.txt').write_text('debris\n')
+    if staged:
+        copy = tmp_path / PACKAGE.WINDOWS_STAGED_TOOL
+        copy.write_bytes(bundle.read_bytes() if staged == 'installed' else b'older tool')
     metadata = {'maintenance_tool_sha256': PACKAGE.sha256(bundle)}
     if refused:
         with pytest.raises(RuntimeError, match='maintenance tool'):

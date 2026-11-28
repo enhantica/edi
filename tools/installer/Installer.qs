@@ -31,8 +31,12 @@ function removeToolFiles() {
         return;
     }
     var item = systemInfo.kernelType === "darwin" ? "MaintenanceTool.app" : "installer-runtime";
-    var paths = [item + ".old", item + ".old-token", "maintenancetool", lock];
-    if (systemInfo.kernelType !== "darwin")
+    var paths = [item + ".old", item + ".old-token", "maintenance-update", lock];
+    // A folder an update before this release staged into. On a case-insensitive Linux disk that name is the tool
+    // itself, which the Framework removes.
+    if (systemInfo.kernelType === "darwin")
+        paths.push("maintenancetool");
+    else
         paths.unshift(item);
     installer.execute("/bin/rm", ["-rf"].concat(paths.map(function (name) { return target + "/" + name; })));
 }

@@ -39,6 +39,11 @@ VOICE_MODEL = Path('share/edi/voice')
 # macOS and Windows ship their maintenance tool as a signed, app-versioned component (ADR-0091);
 # Linux ships only the tool's runtime in it (ADR-0109).
 MAINTENANCE_COMPONENT = 'org.easydiffraction.app.maintenancetool'
+# Where the tool component unpacks the tool's new files before they go in place (ADR-0109): a
+# folder named unlike the tool even on a case-insensitive disk, or on Windows one file, which the
+# Framework deletes once it has written the installed tool from it.
+MAINTENANCE_STAGING = 'maintenance-update'
+WINDOWS_STAGED_TOOL = 'MaintenanceTool.update.exe'
 # The id each component replaced, so an install made before edi ADR-0091 updates in place.
 REPLACED_COMPONENTS = {
     APP_COMPONENT: 'org.easyscience.edi',
@@ -776,7 +781,10 @@ def add_maintenance_tool(
     meta = packages / MAINTENANCE_COMPONENT / 'meta'
     meta.mkdir(parents=True)
     write_maintenance_tool_metadata(meta, version)
-    target = meta.parent / 'data/maintenancetool' / maintenance_tool_name()
+    if SYSTEM == 'windows':
+        target = meta.parent / 'data' / WINDOWS_STAGED_TOOL
+    else:
+        target = meta.parent / 'data' / MAINTENANCE_STAGING / maintenance_tool_name()
     target.parent.mkdir(parents=True)
     if SYSTEM == 'macos':
         run(['ditto', bundle, target])
@@ -794,7 +802,7 @@ def add_maintenance_runtime(packages: Path, runtime: Path, version: str) -> None
     meta = packages / MAINTENANCE_COMPONENT / 'meta'
     meta.mkdir(parents=True)
     write_maintenance_tool_metadata(meta, version)
-    target = meta.parent / 'data/maintenancetool' / maintenance_item()
+    target = meta.parent / 'data' / MAINTENANCE_STAGING / maintenance_item()
     target.parent.mkdir(parents=True)
     shutil.copytree(runtime, target, symlinks=True)
     if not (target / maintenance_probe()).is_file():
@@ -841,9 +849,9 @@ def verify_installed_maintenance_tool(
     """Before running it, require the installed tool to be the shipped one (edi ADR-0091).
 
     Linux has no signed tool: its runtime must be complete instead. No staging folder and no
-    backup may be left (ADR-0109). Windows keeps the staged tool after a fresh install. An update
-    moves it into place after its last signal and leaves the folder empty, for the app's next start
-    to remove. So once `updated`, the folder must be empty or hold the installed tool.
+    backup may be left (ADR-0109). Windows may keep the staged tool after a fresh install, as the
+    installed tool's bytes, for the app's next start to remove; an update leaves none, as the
+    Framework deletes it once it has written the installed tool from it.
     """
     if SYSTEM == 'linux':
         check_maintenance_runtime(target)
@@ -855,18 +863,12 @@ def verify_installed_maintenance_tool(
             raise RuntimeError(
                 'The installer wrote its own maintenance tool instead of the signed one'
             )
-    staging = target / 'maintenancetool'
-    if SYSTEM == 'windows' and updated and staging.exists():
-        staged = [path.name for path in staging.iterdir()]
+    staged = target / WINDOWS_STAGED_TOOL
+    if SYSTEM == 'windows':
         installed = target / maintenance_tool_name()
-        if staged and (
-            staged != [installed.name] or sha256(staging / installed.name) != sha256(installed)
-        ):
-            raise RuntimeError(
-                f'The update left a staged maintenance tool the app keeps: {staged}'
-            )
-    # is_dir: on a case-insensitive disk the Linux tool itself answers to this name.
-    elif staging.is_dir() and SYSTEM != 'windows':
+        if staged.exists() and (updated or sha256(staged) != sha256(installed)):
+            raise RuntimeError('The installer left a staged maintenance tool behind')
+    elif (target / MAINTENANCE_STAGING).exists():
         raise RuntimeError('The installer left the shipped maintenance tool in place')
     item = maintenance_item()
     if item and any((target / (item + suffix)).exists() for suffix in ('.old', '.old-token')):

@@ -33,6 +33,8 @@ SWAP = FOLDER / 'maintenance_swap.sh'
 RESTORE = FOLDER / 'maintenance_restore.sh'
 CLEANUP = FOLDER / 'maintenance_cleanup.sh'
 OPERATION = 'this-update'  # the swap operation's own mark
+# Where the tool component unpacks the new item; releases before used maintenancetool/.
+STAGING = 'maintenance-update'
 
 
 @dataclass(frozen=True)
@@ -59,7 +61,7 @@ class Site:
 
     @property
     def staged(self) -> Path:
-        return self.target / 'maintenancetool' / self.form.item
+        return self.target / STAGING / self.form.item
 
     def put(self, path: Path, text: str) -> None:
         probe = path / self.form.probe
@@ -180,7 +182,7 @@ def test_a_swap_puts_the_new_tool_in_place_and_keeps_the_installed_one(installed
     assert run(installed, SWAP) == 0
     assert installed.tool(installed.path()) == 'new'
     assert installed.tool(installed.path('.old')) == 'installed', 'kept until the update succeeds'
-    assert not (installed.target / 'maintenancetool').exists()
+    assert not (installed.target / STAGING).exists()
     assert not installed.path('.new').exists()
 
 
@@ -188,10 +190,10 @@ def test_a_swap_removes_whatever_else_is_left_in_the_staging_folder(installed: S
     # Finder writes a .DS_Store into a folder it shows, so the folder is not empty once the
     # staged item has left it.
     installed.put(installed.staged, 'new')
-    (installed.target / 'maintenancetool/.DS_Store').write_text('Finder')
+    (installed.target / STAGING / '.DS_Store').write_text('Finder')
     assert run(installed, SWAP) == 0
     assert installed.tool(installed.path()) == 'new'
-    assert not (installed.target / 'maintenancetool').exists()
+    assert not (installed.target / STAGING).exists()
 
 
 def test_a_first_installation_moves_the_staged_item_in(tmp_path: Path) -> None:
@@ -200,7 +202,7 @@ def test_a_first_installation_moves_the_staged_item_in(tmp_path: Path) -> None:
     assert run(site, SWAP) == 0
     assert site.tool(site.path()) == 'new'
     assert not site.path('.old').exists()
-    assert not (tmp_path / 'maintenancetool').exists()
+    assert not (tmp_path / STAGING).exists()
 
 
 def test_its_undo_puts_the_installed_tool_back(installed: Site) -> None:
@@ -235,7 +237,7 @@ def test_a_failed_last_rename_puts_the_installed_tool_back(installed: Site, shim
     installed.put(installed.staged, 'new')
     assert run(installed, SWAP, env) == 1
     assert installed.tool(installed.path()) == 'installed', 'never left without a tool'
-    assert not (installed.target / 'maintenancetool').exists(), 'no empty staging folder'
+    assert not (installed.target / STAGING).exists(), 'no empty staging folder'
 
 
 def test_a_backup_an_earlier_update_left_is_dropped_not_restored(installed: Site) -> None:
@@ -434,6 +436,121 @@ def test_the_app_leaves_a_tool_in_place_alone(installed: Site) -> None:
     assert installed.tool(installed.path('.old')) == 'two updates ago'
 
 
+def claimed_by_a_running_tool(mark: Path) -> bool:
+    """Whether the tool a claim or a backup's mark names, "<token> <pid> <start>", still runs."""
+    try:
+        fields = mark.read_text(encoding='utf-8').split()
+    except FileNotFoundError:
+        return False
+    env = {'TZ': 'UTC0', 'LC_ALL': 'C', 'PATH': '/usr/bin:/bin'}
+    ps = subprocess.run(
+        ['ps', '-o', 'lstart=', '-p', fields[1]],
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    return ps.returncode == 0 and ' '.join(ps.stdout.split()) == ' '.join(fields[2:])
+
+
+def app_cleans(site: Site) -> bool:
+    """The app's cleanup at start (remove_maintenance_tool_leftovers): whether it removed anything.
+
+    The staging folder stays while the tool its claim names runs, whatever the folder holds yet.
+    """
+    lock = os.open(site.target / '.MaintenanceTool.lock', os.O_RDWR | os.O_CREAT, 0o644)
+    try:
+        try:
+            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            return False
+        if site.tool(site.path()) is None:
+            return False
+        staging = site.target / STAGING
+        leftovers = [site.path('.old'), site.path('.old-token'), staging]
+        if claimed_by_a_running_tool(staging / '.claim'):
+            leftovers.remove(staging)
+        if claimed_by_a_running_tool(site.path('.old-token')):
+            leftovers = leftovers[2:]
+        present = [path for path in leftovers if path.exists()]
+        for path in present:
+            if path.is_dir():
+                shutil.rmtree(path)
+            else:
+                path.unlink()
+        return bool(present)
+    finally:
+        os.close(lock)
+
+
+class Unpacking:
+    """A tool run that has claimed the staging folder and is unpacking into it until released."""
+
+    def __init__(self, site: Site, shims: Path) -> None:
+        self.go = shims / 'go'
+        os.mkfifo(self.go)
+        commands = [
+            [site.command(SWAP, 'claim', 'claim'), None],
+            [['/bin/sh', '-c', f'echo paused; read go < "{self.go}"'], None],
+        ]
+        command = [sys.executable, '-c', SESSION, json.dumps(commands)]
+        self.tool = subprocess.Popen(command, stdout=subprocess.PIPE, text=True)
+        codes = []
+        for line in self.tool.stdout:
+            if line.strip() == 'paused':
+                break
+            codes.append(int(line))
+        assert codes == [0], f'the claim failed: {codes}'
+
+    def release(self) -> list[int]:
+        with self.go.open('w') as go:
+            go.write('\n')
+        codes = [int(line) for line in self.tool.stdout.read().split()]
+        self.tool.wait()
+        return codes
+
+
+def test_the_app_keeps_a_staging_folder_its_update_is_unpacking_into(
+    installed: Site, shims: Path
+) -> None:
+    unpacking = Unpacking(installed, shims)
+    try:
+        # Unpacked so far: the item's folder, without the file that makes it usable.
+        (installed.staged / 'part').mkdir(parents=True)
+        assert not app_cleans(installed)
+        assert (installed.staged / 'part').is_dir(), 'left to the update unpacking into it'
+    finally:
+        assert unpacking.release() == [0]
+    # That tool has exited: whatever it left is left over.
+    assert app_cleans(installed)
+    assert not (installed.target / STAGING).exists()
+
+
+def test_the_app_removes_a_staging_folder_nobody_claims(installed: Site) -> None:
+    installed.put(installed.staged, 'new')
+    assert app_cleans(installed)
+    assert not (installed.target / STAGING).exists()
+
+
+def test_a_claim_names_this_run_and_its_release_drops_it(installed: Site) -> None:
+    claim, release = (SWAP, 'claim', None, 'claim'), (CLEANUP, '', None, 'release')
+    assert session(installed, claim) == [0]
+    text = (installed.target / STAGING / '.claim').read_text().split()
+    assert text[0] == 'claim', text
+    assert session(installed, release) == [0]
+    assert (installed.target / STAGING / '.claim').exists(), 'another run does not release it'
+    assert session(installed, claim, release) == [0, 0]
+    assert not (installed.target / STAGING).exists(), 'the claiming run releases it'
+
+
+def test_a_release_keeps_whatever_else_the_rollback_left(installed: Site) -> None:
+    claim, release = (SWAP, 'claim', None, 'claim'), (CLEANUP, '', None, 'release')
+    installed.put(installed.staged, 'part')
+    assert session(installed, claim, release) == [0, 0]
+    assert not (installed.target / STAGING / '.claim').exists()
+    assert installed.tool(installed.staged) == 'part', 'the app removes it once this run has ended'
+
+
 def single_item(site: Site, text: str) -> None:
     """One item in place, holding `text`, with nothing moved inside it."""
     assert site.tool(site.path()) == text
@@ -517,23 +634,41 @@ def test_nothing_staged_changes_nothing(installed: Site) -> None:
 def test_the_cleanup_removes_the_backup_and_the_staging_folder(installed: Site) -> None:
     installed.put(installed.staged, 'new')
     assert run(installed, SWAP) == 0
-    (installed.target / 'maintenancetool').mkdir()
-    (installed.target / 'maintenancetool/.DS_Store').write_text('Finder')
+    (installed.target / STAGING).mkdir()
+    (installed.target / STAGING / '.DS_Store').write_text('Finder')
     assert run(installed, CLEANUP) == 0
     assert installed.tool(installed.path()) == 'new'
     for leftover in ('.old', '.old-token'):
         assert not installed.path(leftover).exists(), leftover
+    assert not (installed.target / STAGING).exists()
+
+
+def test_the_cleanup_removes_the_folder_older_releases_staged_into(installed: Site) -> None:
+    installed.put(installed.staged, 'new')
+    assert run(installed, SWAP) == 0
+    (installed.target / 'maintenancetool').mkdir()
+    (installed.target / 'maintenancetool/.DS_Store').write_text('Finder')
+    assert run(installed, CLEANUP) == 0
     assert not (installed.target / 'maintenancetool').exists()
+
+
+def test_the_cleanup_keeps_a_file_by_the_older_staging_name(installed: Site) -> None:
+    # On a case-insensitive disk the Linux tool, MaintenanceTool, answers to that name.
+    installed.put(installed.staged, 'new')
+    assert run(installed, SWAP) == 0
+    (installed.target / 'maintenancetool').write_text('the tool')
+    assert run(installed, CLEANUP) == 0
+    assert (installed.target / 'maintenancetool').read_text() == 'the tool'
 
 
 def test_the_cleanup_keeps_the_only_tool(installed: Site, shims: Path) -> None:
     stopped_update(installed, shims)
-    (installed.target / 'maintenancetool').mkdir(exist_ok=True)
-    (installed.target / 'maintenancetool/.DS_Store').write_text('Finder')
+    (installed.target / STAGING).mkdir(exist_ok=True)
+    (installed.target / STAGING / '.DS_Store').write_text('Finder')
     assert run(installed, CLEANUP) == 0
     assert installed.tool(installed.path('.old')) == 'installed'
     assert installed.path('.old-token').exists()
-    assert (installed.target / 'maintenancetool/.DS_Store').exists()
+    assert (installed.target / STAGING / '.DS_Store').exists()
 
 
 # The first Linux update off a release whose app component carried the runtime: the Framework

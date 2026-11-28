@@ -2,13 +2,15 @@
 
 // macOS and Windows: install the separately signed maintenance tool shipped in this component. Without this the
 // installer writes the tool from its own binary, which breaks a real signature (edi ADR-0091). On macOS the
-// installer moves the bundle to the installation root and removes this folder. On Linux the component carries only
-// the tool's Qt runtime; the installer writes the tool itself.
+// installer moves the bundle to the installation root and removes this folder. On Windows the staged tool is one file
+// in the installation folder: the Framework deletes it once it has written the installed tool from it, so nothing is
+// left. On Linux the component carries only the tool's Qt runtime; the installer writes the tool itself. The staging
+// folder's name differs from the tool's even on a case-insensitive disk.
 function stagedTool() {
     if (systemInfo.kernelType === "darwin")
-        return "@TargetDir@/maintenancetool/MaintenanceTool.app";
+        return "@TargetDir@/maintenance-update/MaintenanceTool.app";
     if (systemInfo.kernelType === "winnt")
-        return "@TargetDir@/maintenancetool/MaintenanceTool.exe";
+        return "@TargetDir@/MaintenanceTool.update.exe";
     return "";
 }
 
@@ -34,6 +36,19 @@ function Component() {
     // maintenance tool.
     installer.installationFinished.connect(this, Component.prototype.removeLeftovers);
 }
+
+// IFW 4.11 calls this before it unpacks any component. The claim tells the app that this run's tool owns the staging
+// folder, so a start of the app during the unpacking leaves it alone (edi ADR-0109). Without the claim the update
+// stops here, before anything has changed.
+Component.prototype.beginInstallation = function () {
+    var swap = swapped();
+    if (swap === null || !installer.isUpdater() || installer.value("TargetDir") === "")
+        return;
+    var result = installer.execute("/bin/sh", ["-c", SWAP_SCRIPT, SWAP_SCRIPT, installer.value("TargetDir"), "claim",
+                                               swap.item, swap.probe, "claim"]);
+    if (result.length !== 2 || result[1] !== 0)
+        throw new Error("The update could not prepare the Maintenance Tool's files.");
+};
 
 // The component carries the app version, so every update lists it. An update unpacks the new signed tool as well
 // and asks for it here, where only a component being updated runs, so an update without it keeps the installed
@@ -61,25 +76,27 @@ Component.prototype.createOperations = function () {
     }
     if (systemInfo.kernelType === "winnt") {
         // A failed update's rollback leaves the staged tool it unpacked (measured on CI), so this operation's undo
-        // removes it. A successful update has moved it into place already. cmd.exe needs backslashes here.
-        var staged = installer.value("TargetDir").replace(/\//g, "\\") + "\\maintenancetool\\MaintenanceTool.exe";
-        component.addOperation("Execute", "cmd.exe", "/c", "rem", "UNDOEXECUTE", "cmd.exe", "/c", "if", "exist", staged,
-                               "del", "/f", "/q", staged);
+        // removes it. A successful update has used it up already. The command names it from the installation folder,
+        // its working directory, so cmd.exe never reads the folder's path, which may hold characters it expands.
+        var folder = "workingdirectory=@TargetDir@";
+        component.addOperation("Execute", "cmd.exe", "/c", "rem", folder, "UNDOEXECUTE", "cmd.exe", "/c", "if", "exist",
+                               "MaintenanceTool.update.exe", "del", "/f", "/q", "MaintenanceTool.update.exe", folder);
     }
     if (installer.isUpdater() && stagedTool() !== "")
         installer.setInstallerBaseBinary(stagedTool());
 };
 
 // After a successful update nothing of the swap is left: no backup and no staging folder, whichever tool drove the
-// update (edi ADR-0109). After a rollback the undo has put the kept item back and nothing is removed. Windows keeps
-// its staged tool here: in an update the framework writes the installed tool from it only after this signal, as it
-// quits (IFW 4.11), so the app removes it once the installed tool has the same bytes.
+// update (edi ADR-0109). After a rollback the undo has put the kept item back, and only this run's claim on the
+// staging folder goes. Windows has nothing to remove: the Framework writes the installed tool from the staged file as
+// it quits and then deletes that file (IFW 4.11).
 Component.prototype.removeLeftovers = function () {
-    if (!installer.isUpdater() || installer.status !== QInstaller.Success)
-        return;
     var swap = swapped();
     var target = installer.value("TargetDir");
-    if (swap === null || target === "")
+    if (!installer.isUpdater() || swap === null || target === "")
         return;
-    installer.execute("/bin/sh", ["-c", CLEANUP_SCRIPT, CLEANUP_SCRIPT, target, swap.item, swap.probe]);
+    var command = ["-c", CLEANUP_SCRIPT, CLEANUP_SCRIPT, target, swap.item, swap.probe];
+    if (installer.status !== QInstaller.Success)
+        command.push("release");
+    installer.execute("/bin/sh", command);
 };

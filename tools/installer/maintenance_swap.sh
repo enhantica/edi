@@ -1,6 +1,6 @@
 #!/bin/sh
 # SPDX-License-Identifier: BSD-3-Clause
-# Put the item an update unpacked into maintenancetool/ in place of the installed one (edi ADR-0109): the macOS
+# Put the item an update unpacked into maintenance-update/ in place of the installed one (edi ADR-0109): the macOS
 # Maintenance Tool bundle, or the Linux tool's Qt runtime. Run by the tool component's operation as
 #   maintenance_swap.sh <target> <token> <item> <probe>
 # where <item> is the folder's name in the installation folder <target>, <token> the operation's own mark and <probe>
@@ -11,6 +11,8 @@
 # once it was committed changes nothing. Any other backup is stale and goes, but only while a usable item is in place;
 # otherwise it is the only copy (an update stopped between the renames) and this operation keeps it as its own.
 # maintenance_cleanup.sh removes the backup once the update has succeeded.
+# With a fifth argument, claim, it only marks the staging folder as this run's before the update unpacks into it, so the
+# app leaves the folder alone while this run's tool lives (edi ADR-0109).
 # With a fifth argument, copy, it only keeps a copy of the usable item as the backup with the same mark and puts
 # nothing new in place. The first Linux update off a release whose app component carried the runtime runs it before
 # the Framework undoes that component; maintenance_restore.sh with copy settles it afterwards.
@@ -46,12 +48,14 @@ cur="$t/$item"
 old="$cur.old"
 owner="$cur.old-token"
 new="$cur.new"
-staging="$t/maintenancetool"
+staging="$t/maintenance-update"
+claim="$staging/.claim"
 staged="$staging/$item"
 # The tool's start time in UTC, read the same way as the undo reads it, so the undo of this run matches whatever
 # time zone either runs in.
 tool="${EDI_MAINTENANCE_TOOL_PID:-$PPID}"
-mark="$token $tool $(TZ=UTC0 LC_ALL=C ps -o lstart= -p "$tool" 2>/dev/null)"
+started="$(TZ=UTC0 LC_ALL=C ps -o lstart= -p "$tool" 2>/dev/null)"
+mark="$token $tool $started"
 usable() { [ -f "$1/$probe" ]; }
 ours() { [ -d "$old" ] && [ "$(cat "$owner" 2>/dev/null)" = "$mark" ]; }
 # Whatever is in the item's place leaves it in one rename, so a removal cut short never leaves part of an item there
@@ -63,6 +67,11 @@ restore() {
     rmdir "$staging" 2> /dev/null
     exit 1
 }
+if [ "$5" = claim ]; then
+    # Complete before it gets its name, so the app never reads half a claim.
+    mkdir -p "$staging" && printf 'claim %s\n' "$tool $started" > "$claim.new" && mv "$claim.new" "$claim" || exit 1
+    exit 0
+fi
 if [ -d "$old" ] && ! ours; then
     if usable "$cur"; then
         rm -f "$owner" && rm -rf "$old" || exit 1

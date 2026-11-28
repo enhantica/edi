@@ -17,11 +17,13 @@ from package import (
     APP_COMPONENT,
     ASSISTANT_COMPONENT,
     ASSISTANT_RUNTIME,
+    MAINTENANCE_STAGING,
     ROOT,
     SUFFIX,
     SYSTEM,
     VOICE_COMPONENT,
     VOICE_MODEL,
+    WINDOWS_STAGED_TOOL,
     add_maintenance_resource,
     build_maintenance_tool,
     clean_environment,
@@ -75,9 +77,10 @@ exit 1
 # Where that operation writes, in the protocol output folder.
 FAILURE_EVIDENCE_NAME = 'failed update evidence.txt'
 
-# The folder the tool component unpacks into, the Linux tool's runtime and the lock every writer
-# of the tool's files takes (edi ADR-0109).
-STAGING = 'maintenancetool'
+# The folder the tool component unpacks into on macOS and Linux, the one releases before it used,
+# the Linux tool's runtime and the lock every writer of the tool's files takes (edi ADR-0109).
+STAGING = MAINTENANCE_STAGING
+LEGACY_STAGING = 'maintenancetool'
 RUNTIME = 'installer-runtime'
 LOCK_NAME = '.MaintenanceTool.lock'
 
@@ -413,10 +416,11 @@ def first_update(
             raise RuntimeError('Old and new maintenance tools are the same file')
     run([maintenance, 'check-updates'], **options)
     if SYSTEM == 'macos':
-        # What Finder leaves in a folder it showed; the owner's update kept the folder for it.
-        staging = target / STAGING
-        staging.mkdir(exist_ok=True)
-        (staging / '.DS_Store').write_bytes(b'')
+        # What Finder leaves in a folder it showed; the owner's update kept the folder for it,
+        # under the name releases before this one staged into.
+        for name in (STAGING, LEGACY_STAGING):
+            (target / name).mkdir(exist_ok=True)
+            (target / name / '.DS_Store').write_bytes(b'')
     # --verbose: the log says whether the tool component was updated.
     run([maintenance, *UPDATE], **options)
     if installed.read_text(encoding='utf-8') != 'second marker\n':
@@ -492,6 +496,8 @@ def failed_update(target: Path, maintenance: Path, output: Path, options: dict) 
     evidence = output / FAILURE_EVIDENCE_NAME
     if evidence.exists():
         raise RuntimeError(f'{evidence.name} exists before the update meant to fail')
+    staged = target / WINDOWS_STAGED_TOOL
+    staged_before = sha256(staged) if staged.is_file() else None
     command = [maintenance, '--set-temp-repository', failing['repository_url'], *UPDATE]
     print('+', ' '.join(map(str, command)), '(expected to fail)', flush=True)
     result = subprocess.run(
@@ -519,6 +525,7 @@ def failed_update(target: Path, maintenance: Path, output: Path, options: dict) 
         raise RuntimeError('The update failed before its failing operation ran')
     found = failure_evidence(evidence, target)
     print(f'protocol check: the failing operation found {sorted(found["paths"])}', flush=True)
+    found['staged_before'] = staged_before
     return found
 
 
@@ -535,9 +542,9 @@ def rolled_back(target: Path, found: dict, output: Path) -> None:
             raise RuntimeError('The update failed before the macOS swap kept the installed tool')
     elif SYSTEM == 'windows':
         # The tool component, which fails, comes after the app it depends on.
-        if not found_path(found, STAGING + '/MaintenanceTool.exe'):
+        if not found_path(found, WINDOWS_STAGED_TOOL):
             raise RuntimeError('The update failed before it unpacked the 26.18 maintenance tool')
-        windows_staging_rolled_back(target, output)
+        windows_staging_rolled_back(target, output, found['staged_before'])
         return
     else:
         if found['marker'] != 'third marker':
@@ -550,33 +557,28 @@ def rolled_back(target: Path, found: dict, output: Path) -> None:
     tool_files_settled(target)
 
 
-def windows_staging_rolled_back(target: Path, output: Path) -> None:
-    """Require the rollback to take the 26.18 tool it staged, and say whose tool is left if any.
+def windows_staging_rolled_back(target: Path, output: Path, before: str | None) -> None:
+    """Require the rollback to leave the staged tool as it was before the update, or none.
 
-    The Framework's undo of an unpack puts back a file it overwrote, so an earlier release's staged
-    tool may come back; 26.18's must not stay.
+    The Framework's undo of an unpack puts back a file it overwrote, so an earlier staged tool may
+    come back; any other file there, 26.18's or a damaged one, fails.
     """
     releases = [('offline', 'the first release'), ('online', '26.17'), ('failing-26.18', '26.18')]
     owners = {
         json.loads((output / kind / 'installer.json').read_text())['maintenance_tool_sha256']: name
         for kind, name in releases
     }
-    staging = target / STAGING
-    staged = staging / 'MaintenanceTool.exe'
-    owner = owners.get(sha256(staged), 'no release') if staged.is_file() else None
+    staged = target / WINDOWS_STAGED_TOOL
+    after = sha256(staged) if staged.is_file() else None
+    owner = owners.get(after, 'no release') if after else None
     print(
-        f'protocol check: after the rollback {STAGING}/ holds '
-        + (held(staging) if staging.is_dir() else 'nothing: it is absent')
-        + (f", {owner}'s tool" if owner else ''),
+        f'protocol check: after the rollback {WINDOWS_STAGED_TOOL} is '
+        + (f"{owner}'s tool (sha256 {after})" if after else 'absent')
+        + (f', and was sha256 {before} before' if before else ', and was absent before'),
         flush=True,
     )
-    others = []
-    if staging.is_dir():
-        others = [path.name for path in staging.iterdir() if path != staged]
-    if others:
-        raise RuntimeError(f'The failed update left {others} in {STAGING}/')
-    if owner == '26.18':
-        raise RuntimeError(f'The failed update left the 26.18 maintenance tool in {STAGING}/')
+    if after not in {None, before}:
+        raise RuntimeError(f"The failed update left {owner}'s tool as {WINDOWS_STAGED_TOOL}")
 
 
 def held(folder: Path) -> str:
@@ -686,14 +688,20 @@ def nothing_offered(maintenance: Path, env: dict, repository: str | None = None)
 def tool_files_settled(target: Path) -> None:
     """Require no staging folder and no backup of the tool's swapped files (edi ADR-0109).
 
-    Windows writes the installed tool from the staged one after the update ends, so its staging
-    folder stays until the app's next start; verify_installed_maintenance_tool checks it there.
+    Windows has no staging folder; verify_installed_maintenance_tool checks its staged file. The
+    folder releases before this one staged into goes too: on a case-insensitive disk that name is
+    the Linux tool itself, so only a folder counts.
     """
     staging = target / STAGING
     if SYSTEM != 'windows' and staging.is_dir():
         raise RuntimeError(f'{STAGING}/ is left in the installation, holding {held(staging)}')
     if SYSTEM != 'windows' and staging.exists():
         raise RuntimeError(f'{STAGING} is left in the installation')
+    legacy = target / LEGACY_STAGING
+    if SYSTEM != 'windows' and legacy.is_dir() and not legacy.is_symlink():
+        raise RuntimeError(
+            f'{LEGACY_STAGING}/ is left in the installation, holding {held(legacy)}'
+        )
     item = maintenance_item()
     for suffix in ('.old', '.old-token', '.new') if item else ():
         if (target / (item + suffix)).exists():
