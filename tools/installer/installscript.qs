@@ -3,7 +3,7 @@
 // Shortcuts to the installed program: the Start menu and the desktop on Windows, the applications menu and the
 // desktop (when the home folder has one) on Linux. The installer undoes these operations when the app is removed.
 // On Linux an update also keeps the maintenance tool's runtime (keepsRuntime below); on Windows it removes the tool's
-// old staging folder (removeOldStaging).
+// old staging folder first (removeOldStaging).
 function Component() {
     installer.installationFinished.connect(this, Component.prototype.settleRuntime);
 }
@@ -41,6 +41,7 @@ function runtimeCommand(script) {
 // anything has changed.
 Component.prototype.beginInstallation = function () {
     updateRights = installer.hasAdminRights();
+    removeOldStaging();
     if (!keepsRuntime() || installer.value("TargetDir") === "")
         return;
     var result = installer.execute("/bin/sh", runtimeCommand(SWAP_SCRIPT));
@@ -68,17 +69,23 @@ Component.prototype.settleRuntime = function () {
     }
 };
 
-// Windows: the folder releases before staged the Maintenance Tool into, which nothing uses any more (edi ADR-0109). An
-// operation runs while the update holds the rights it gained for a protected folder such as Program Files, which it
-// drops before it signals the end, and an operation that fails stops the update. This component is in every update,
-// the tool's component only when the tool changed. cmd.exe runs in the installation folder and names only that
-// folder, so it never reads the installation's path; rmdir's own exit code does not show whether the folder went.
+// Windows: the folder releases before staged the Maintenance Tool into, which nothing uses any more (edi ADR-0109). It
+// goes before anything else changes: the update holds the rights it gained for a protected folder such as Program
+// Files here, and a folder that cannot go stops the update, where a failed operation would offer to ignore it. This
+// component is in every update, the tool's only when the tool changed. cmd.exe runs in the installation folder and
+// names only that folder, so it never reads the installation's path; rmdir's own exit code does not show whether the
+// folder went.
 function removeOldStaging() {
-    if (systemInfo.kernelType !== "winnt" || !installer.isUpdater())
+    var target = installer.value("TargetDir");
+    if (systemInfo.kernelType !== "winnt" || !installer.isUpdater() || target === ""
+            || !installer.fileExists(target + "/maintenancetool"))
         return;
-    component.addOperation("Execute", "cmd.exe", "/c", "rmdir", "/s", "/q", "maintenancetool", "2>nul", "&", "if",
-                           "exist", "maintenancetool", "(exit", "1)", "else", "(exit", "0)",
-                           "workingdirectory=@TargetDir@");
+    var removed = installer.performOperation("Execute", ["cmd.exe", "/c", "rmdir", "/s", "/q", "maintenancetool", "2>nul",
+                                                         "&", "if", "exist", "maintenancetool", "(exit", "1)", "else",
+                                                         "(exit", "0)", "workingdirectory=" + target]);
+    if (!removed)
+        throw new Error("The update could not remove the folder maintenancetool. Close any program using it and "
+                        + "try again.");
 }
 
 Component.prototype.createOperations = function () {
@@ -87,7 +94,6 @@ Component.prototype.createOperations = function () {
         var settle = ["/bin/sh"].concat(runtimeCommand(RESTORE_SCRIPT));
         component.addOperation("Execute", settle.concat(["UNDOEXECUTE"], settle));
     }
-    removeOldStaging();
     component.createOperations();
     holdProgress();
     var target = installer.value("TargetDir");

@@ -94,20 +94,40 @@ Component.prototype.createOperations = function () {
     }
     if (systemInfo.kernelType === "winnt") {
         // A failed update's rollback leaves the staged tool it unpacked (measured on CI), so this operation's undo
-        // removes it. A successful update has used it up already. The command names it from the installation folder,
-        // its working directory, so cmd.exe never reads the folder's path, which may hold characters it expands.
+        // removes it. The command names it from the installation folder, its working directory, so cmd.exe never
+        // reads the folder's path, which may hold characters it expands.
         var folder = "workingdirectory=@TargetDir@";
         component.addOperation("Execute", "cmd.exe", "/c", "rem", folder, "UNDOEXECUTE", "cmd.exe", "/c", "if", "exist",
                                "MaintenanceTool.update.exe", "del", "/f", "/q", "MaintenanceTool.update.exe", folder);
+        // The Framework writes the installed tool from the staged one only as it quits, after every script, and
+        // deletes it then but goes on if it cannot (IFW 4.11). Moved out of the installation folder first, a copy it
+        // fails to delete is left in the user's temporary folder, never in the installation (edi ADR-0109). The move's
+        // undo brings it back for the operation above to delete.
+        var handoff = handoffTool();
+        if (handoff !== "") {
+            component.addOperation("Move", "@TargetDir@/MaintenanceTool.update.exe", handoff);
+            installer.setInstallerBaseBinary(handoff);
+            return;
+        }
     }
     if (installer.isUpdater() && stagedTool() !== "")
         installer.setInstallerBaseBinary(stagedTool());
 };
 
+// Windows: where the Framework reads the staged tool from at the end, one name for this run.
+var handoffPath = "";
+
+function handoffTool() {
+    var temp = installer.environmentVariable("TEMP");
+    if (handoffPath === "" && temp !== "")
+        handoffPath = temp + "\\EasyDiffraction-MaintenanceTool-" + String(Date.now()) + "-"
+            + String(Math.floor(Math.random() * 1e9)) + ".exe";
+    return handoffPath;
+}
+
 // After a successful update nothing of the swap is left: no backup and no staging folder, whichever tool drove the
 // update (edi ADR-0109). After a rollback the undo has put the kept item back, and only this run's claim on the
-// staging folder goes. Windows has nothing to remove here: the Framework writes the installed tool from the staged
-// file as it quits and then deletes that file (IFW 4.11).
+// staging folder goes. Windows has nothing to remove here: the staged tool has moved to the temporary folder.
 Component.prototype.removeLeftovers = function () {
     var swap = swapped();
     var target = installer.value("TargetDir");

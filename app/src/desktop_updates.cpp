@@ -174,22 +174,9 @@ bool restore_kept_maintenance_tool(const QString& executable) {
     return true;
 }
 bool remove_maintenance_tool_leftovers(const QString& executable) {
-    if (executable.endsWith(QStringLiteral(".exe"), Qt::CaseInsensitive)) {
-        // An update leaves no staging (ADR-0109) unless the Framework could not delete its staged tool or the update
-        // went on past a failed removal of the old folder. Both are left over only once no tool runs: every running
-        // Maintenance Tool holds its run-once lock, <temp>/<name>1234865.lock, open with read sharing only (IFW 4.11
-        // SDKApp, LockFile), so the file opens for writing only when none runs. An update that starts later writes its
-        // staged tool only after it has downloaded and unpacked it.
-        const QFileInfo tool(executable);
-        QFile lock(QDir::tempPath() + QLatin1Char('/') + tool.completeBaseName() + QStringLiteral("1234865.lock"));
-        if (lock.exists() && !lock.open(QIODevice::ReadWrite | QIODevice::ExistingOnly)) return false;
-        bool removed = false;
-        const QString staged = tool.absolutePath() + QStringLiteral("/MaintenanceTool.update.exe");
-        if (present(staged) && QFile::remove(staged)) removed = true;
-        const QFileInfo legacy(tool.absolutePath() + QStringLiteral("/maintenancetool"));
-        if (legacy.isDir() && !legacy.isSymLink() && QDir(legacy.filePath()).removeRecursively()) removed = true;
-        return removed;
-    }
+    // Windows: the update itself leaves no staging (ADR-0109), and the app cannot tell from here whether an update in
+    // another session needs it, so it touches none.
+    if (executable.endsWith(QStringLiteral(".exe"), Qt::CaseInsensitive)) return false;
     const QString item = swapped_item(executable);
     if (item.isEmpty()) return false;
     const QString target = QFileInfo(item).absolutePath();

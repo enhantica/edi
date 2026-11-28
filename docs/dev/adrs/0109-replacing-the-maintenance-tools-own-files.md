@@ -72,13 +72,13 @@ update replaces while the tool runs. So the runtime takes the bundle's design ra
    disk: releases before used `maintenancetool`, which such a Linux disk cannot hold beside `MaintenanceTool`. Before
    the Framework unpacks anything (`beginInstallation`), the component's script has the swap, with `claim` as its last
    argument, write `claim <pid> <start>` for the running tool into `maintenance-update/.claim` under the lock; without
-   it, or without the tool's start time, the update stops there. The swap likewise marks nothing without the start
-   time, which alone tells the tool from a later process with the same number. Under the lock the swap moves `<item>` to `<item>.old` with the mark beside it, moves the
-   staged item into place, and removes `<target>/maintenance-update` with whatever is left in it, such as a Finder
-   `.DS_Store`. It can run again after any failure, and a failure puts the kept item back before it exits 1.
-   A backup with another mark goes only while a usable item is in place; otherwise it is the only copy, left by an
-   update stopped between the renames, and the swap keeps it as its own. On Linux the operation runs on a first
-   installation too, where there is no item yet and the swap just moves the staged one in.
+   it, or without the tool's start time, the update stops there. The swap likewise marks nothing without the start time,
+   which alone tells the tool from a later process with the same number. Under the lock the swap moves `<item>` to
+   `<item>.old` with the mark beside it, moves the staged item into place, and removes `<target>/maintenance-update`
+   with whatever is left in it, such as a Finder `.DS_Store`. It can run again after any failure, and a failure puts the
+   kept item back before it exits 1. A backup with another mark goes only while a usable item is in place; otherwise it
+   is the only copy, left by an update stopped between the renames, and the swap keeps it as its own. On Linux the
+   operation runs on a first installation too, where there is no item yet and the swap just moves the staged one in.
 
    On Linux the runtime leaves the app component. The tool's component (`org.easydiffraction.app.maintenancetool`)
    now exists there too and carries only `maintenance-update/installer-runtime/`, so every system's release carries the
@@ -87,9 +87,12 @@ update replaces while the tool runs. So the runtime takes the bundle's design ra
 
    Windows has no shell and keeps ADR-0106's path: the component's script calls `installer.setInstallerBaseBinary` on
    the staged tool and the Framework replaces the installed tool once it quits. The staged tool is one file,
-   `<target>\MaintenanceTool.update.exe`, not a folder: the Framework writes `MaintenanceTool.exe.new` from it as the
+   `<target>\MaintenanceTool.update.exe`, not a folder. The Framework writes `MaintenanceTool.exe.new` from it as the
    update's tool quits, deletes it, and renames the new tool into place once the tool has exited
-   (`writeMaintenanceTool` in Qt Installer Framework 4.11), so a successful update leaves nothing to remove.
+   (`writeMaintenanceTool` in Qt Installer Framework 4.11), but goes on when it cannot delete it. So an operation after
+   the unpack moves the staged tool to the user's temporary folder, under a name for this run, and the script points
+   the Framework there: neither an installation nor an update leaves it in the installation folder, and a copy the
+   Framework fails to delete stays in the temporary folder.
 
 4. **The app puts a kept item back.** On start, and before Maintenance or Update opens the tool, the app takes the
    lock; when it finds no usable `<item>` but a usable `<item>.old`, it moves the kept item back and removes its mark,
@@ -122,19 +125,16 @@ update replaces while the tool runs. So the runtime takes the bundle's design ra
    backup without the lock once the update has succeeded. That removal and the new cleanup remove the same files and
    either may come first, so they overlap harmlessly.
 
-   On Windows a successful update leaves no staged tool (decision 3), and the app component removes the
-   `maintenancetool\` folder releases before staged into with an `Execute` operation, which then checks that the folder
-   has gone. An operation runs while the update holds the rights it gained for a protected folder such as Program Files,
-   which the Framework drops before `installer.installationFinished`, and a failed operation stops the update. The app
-   component is in every update, the tool's only when the tool changed. A first installation may keep the
-   staged tool as the installed tool's bytes. What can still be left, a staged tool the Framework failed to delete or
-   the old folder after the user chose Ignore on its failed removal, the app removes at start, but only while no
-   Maintenance Tool runs: every running tool holds its run-once lock, `<temp>\MaintenanceTool1234865.lock`, open with
-   read sharing only, so the file opens for writing only when none runs. An update that starts later writes its staged
-   tool only after it has downloaded and unpacked it, and without it the Framework would write an unsigned tool
+   On Windows the update leaves no staged tool in the installation (decision 3), and the app component's script
+   removes the `maintenancetool\` folder releases before staged into in `beginInstallation`, before anything else
+   changes. The update holds the rights it gained for a protected folder such as Program Files there, and a folder that
+   cannot go stops the update with nothing changed, where a failed operation would let the user ignore it. The app
+   component is in every update, the tool's only when the tool changed. The app touches no Windows staging: it cannot
+   tell whether an update in another session needs it, and without it the Framework would write an unsigned tool
    (ADR-0091). The rollback of a failed update leaves the tool it staged (measured on CI),
-   so the tool component adds an operation after its unpack whose undo deletes `MaintenanceTool.update.exe`; the
-   rollback runs it, and so do the next update's and the purge's undo of the saved operations. Both commands run
+   so the tool component adds an operation after its unpack whose undo deletes `MaintenanceTool.update.exe`, after the
+   move's undo has brought it back; the rollback runs it, and so do the next update's and the purge's undo of the saved
+   operations. Both commands run
    `cmd.exe` in the installation folder and name only the file or folder, so no part of the folder's path, which may
    hold characters `cmd.exe` expands, reaches it.
 
@@ -180,8 +180,8 @@ update replaces while the tool runs. So the runtime takes the bundle's design ra
   - Windows: the staged `MaintenanceTool.update.exe` is present when the update fails; after the rollback it is absent
     or the same file as before the update, and its checksum is printed either way. Before the first update the check
     plants the empty `maintenancetool\` an earlier update left; after each successful update, once the tool has been
-    replaced with the app never started, neither it nor the staged file is there. The app's test shows it keeps both
-    while a tool's run-once lock is held and removes them once it is free.
+    replaced with the app never started, neither it nor the staged file is there. The app's test shows the app leaves
+    both alone.
   - Linux: a failed update leaves `installer-runtime/` intact, its `dependencies.json` matching the libraries, the
     tool still answers an update check, and the purge removes the runtime and the lock file. The old exception that
     let a rolled-back Linux tool fail to start is gone.
