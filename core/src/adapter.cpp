@@ -10997,13 +10997,26 @@ std::vector<MagneticPeak> magnetic_mark_candidates(const Project& project, std::
     {
         double d_lo = std::numeric_limits<double>::infinity();
         double d_hi = 0.0;
-        for (const double value : {x.front(), x.back()}) {  // d is monotonic along the axis
+        // The detectors' own interval (review 30): the included samples with a finite value and a positive
+        // uncertainty, from the first and the last of them whose d the calibration gives, as d is monotonic.
+        const std::vector<double>& sigma = data.intensity_meas_su.get();
+        const auto usable = [&](std::size_t i) {
+            return included[i] && std::isfinite(x[i]) && i < sigma.size() && sigma[i] > 0.0;
+        };
+        const auto widen = [&](std::size_t i) {
+            if (!usable(i)) return false;
             try {
-                const double d = crysta::peak_at(structure, k.engine.experiments.at(experiment), value).d;
+                const double d = crysta::peak_at(structure, k.engine.experiments.at(experiment), x[i]).d;
                 d_lo = std::min(d_lo, d);
                 d_hi = std::max(d_hi, d);
+                return true;
             } catch (const std::invalid_argument&) {
+                return false;
             }
+        };
+        for (std::size_t i = 0; i < x.size() && !widen(i); ++i) {
+        }
+        for (std::size_t i = x.size(); i-- > 0 && !widen(i);) {
         }
         if (d_hi > 0.0)
             for (const crysta::Structure* phase : others) {
