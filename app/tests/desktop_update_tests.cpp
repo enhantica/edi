@@ -185,7 +185,9 @@ private slots:
         QVERIFY(!updates.startMaintenance());
         QCOMPARE(updates.status(), "The Maintenance Tool could not be opened.");
     }
-    void windowsStagedToolGoesOnceNoToolRuns() {
+    void windowsStagingIsLeftToTheUpdate() {
+        // An update may need its staged tool from unpacking until the Framework writes the tool from it, whatever its
+        // bytes, and the update removes the folder older releases staged into itself (ADR-0109): the app touches none.
         QTemporaryDir temp;
         const QString executable = temp.filePath("MaintenanceTool.exe");
         const QString staged = temp.filePath("MaintenanceTool.update.exe");
@@ -195,27 +197,12 @@ private slots:
             return file.open(QIODevice::WriteOnly) && file.write(bytes) == bytes.size();
         };
         QVERIFY(write(executable, "new tool"));
+        QVERIFY(write(staged, "new tool"));
+        QVERIFY(QDir().mkdir(legacy));
         QVERIFY(!edi_app::remove_maintenance_tool_leftovers(executable));
-        // No tool runs: a staged tool part way unpacked by an update that has ended goes, and so does the folder
-        // releases before staged into.
         QVERIFY(write(staged, "partly unpacked"));
-        QVERIFY(QDir().mkdir(legacy));
-        QVERIFY(write(legacy + "/MaintenanceTool.exe", "old tool"));
-        QVERIFY(edi_app::remove_maintenance_tool_leftovers(executable));
-        QVERIFY(!QFileInfo::exists(staged));
-        QVERIFY(!QFileInfo::exists(legacy));
-        // A running tool cannot be opened for writing, as a read-only one cannot (unless the test runs as root).
-        QVERIFY(QFile::setPermissions(executable, QFile::ReadOwner));
-        if (QFile probe(executable); probe.open(QIODevice::ReadWrite)) QSKIP("Read-only files open for writing here");
-        // While it runs an update may be unpacking the staged tool: only a copy already written in place goes.
-        QVERIFY(write(staged, "partly"));
-        QVERIFY(QDir().mkdir(legacy));
         QVERIFY(!edi_app::remove_maintenance_tool_leftovers(executable));
         QVERIFY(QFileInfo::exists(staged));
-        QVERIFY(QFileInfo::exists(legacy));
-        QVERIFY(write(staged, "new tool"));
-        QVERIFY(edi_app::remove_maintenance_tool_leftovers(executable));
-        QVERIFY(!QFileInfo::exists(staged));
         QVERIFY(QFileInfo::exists(legacy));
     }
 #ifndef Q_OS_WIN
@@ -244,6 +231,10 @@ private slots:
         const QString started = QString::fromUtf8(ps.readAllStandardOutput()).simplified();
         QVERIFY(!started.isEmpty());
         QVERIFY(write(staging + "/.claim", ("claim " + pid + " " + started + "\n").toUtf8()));
+        QVERIFY(!edi_app::remove_maintenance_tool_leftovers(executable));
+        QVERIFY(QFileInfo::exists(staging + "/installer-runtime/lib"));
+        // A claim without the start time cannot be told from a later process with the same number: kept.
+        QVERIFY(write(staging + "/.claim", ("claim " + pid + "\n").toUtf8()));
         QVERIFY(!edi_app::remove_maintenance_tool_leftovers(executable));
         QVERIFY(QFileInfo::exists(staging + "/installer-runtime/lib"));
         // The same process number with another start time is another process: that update has ended.

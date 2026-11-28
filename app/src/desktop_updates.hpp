@@ -27,9 +27,8 @@ std::optional<ReleaseKey> release_version_key(const QString& value);
 bool restore_kept_maintenance_tool(const QString& executable);
 /// Remove what a finished update left behind (ADR-0109). macOS and Linux, only while the item is usable and the tool
 /// lock is free: `<item>.old` and its mark unless the tool named in the mark still runs, and the staging folder
-/// `maintenance-update` unless the tool named in its claim still runs. Windows: the staged `MaintenanceTool.update.exe`
-/// once the installed tool has its bytes, and it and the folder releases before staged into once the installed tool is
-/// not running. Returns whether it removed anything.
+/// `maintenance-update` unless the tool named in its claim still runs. Nothing on Windows, where the update itself
+/// leaves no staging. Returns whether it removed anything.
 bool remove_maintenance_tool_leftovers(const QString& executable);
 
 /// Managed desktop release availability and maintenance-tool launch (ADR-0072, versions ADR-0106).

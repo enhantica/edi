@@ -543,6 +543,22 @@ def test_a_claim_names_this_run_and_its_release_drops_it(installed: Site) -> Non
     assert not (installed.target / STAGING).exists(), 'the claiming run releases it'
 
 
+def test_nothing_is_claimed_or_marked_without_the_tools_start_time(
+    installed: Site, shims: Path
+) -> None:
+    # A claim or mark without it reads as a later process with the same number, whose tool has
+    # exited.
+    (shims / 'ps').write_text('#!/bin/sh\nexit 1\n')
+    (shims / 'ps').chmod(0o755)
+    env = {'PATH': f'{shims}:/usr/bin:/bin'}
+    installed.put(installed.staged, 'new')
+    assert session(installed, (SWAP, 'claim', env, 'claim'), (SWAP, OPERATION, env)) == [1, 1]
+    assert not (installed.target / STAGING / '.claim').exists()
+    assert installed.tool(installed.path()) == 'installed'
+    assert not installed.path('.old').exists()
+    assert not installed.path('.old-token').exists()
+
+
 def test_a_release_keeps_whatever_else_the_rollback_left(installed: Site) -> None:
     claim, release = (SWAP, 'claim', None, 'claim'), (CLEANUP, '', None, 'release')
     installed.put(installed.staged, 'part')

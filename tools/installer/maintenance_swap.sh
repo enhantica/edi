@@ -55,6 +55,9 @@ staged="$staging/$item"
 # time zone either runs in.
 tool="${EDI_MAINTENANCE_TOOL_PID:-$PPID}"
 started="$(TZ=UTC0 LC_ALL=C ps -o lstart= -p "$tool" 2>/dev/null)"
+# A mark or claim without the start time cannot be told from a later process with the same number, so the app would
+# take it for one whose tool has exited: nothing is marked or claimed without it.
+[ -n "$(printf '%s' "$started" | tr -d ' ')" ] || exit 1
 mark="$token $tool $started"
 usable() { [ -f "$1/$probe" ]; }
 ours() { [ -d "$old" ] && [ "$(cat "$owner" 2>/dev/null)" = "$mark" ]; }

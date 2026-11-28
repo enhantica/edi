@@ -107,17 +107,6 @@ bool remove_path(const QString& path) {
     const QFileInfo info(path);
     return info.isDir() && !info.isSymLink() ? QDir(path).removeRecursively() : QFile::remove(path);
 }
-// Compared byte by byte: equal files mean the Framework has already written the staged tool in place.
-bool same_bytes(const QString& a, const QString& b) {
-    QFile first(a), second(b);
-    if (!first.open(QIODevice::ReadOnly) || !second.open(QIODevice::ReadOnly) || first.size() != second.size())
-        return false;
-    while (!first.atEnd()) {
-        const QByteArray chunk = first.read(qint64{1} << 16);
-        if (chunk.isEmpty() || chunk != second.read(chunk.size())) return false;
-    }
-    return true;
-}
 // Whether the tool named in a kept item's mark, "<token> <pid> <start>", still runs: the same process number with the
 // same start time, read as the scripts read it (ADR-0109). Only the cleanup asks, so a wrong yes merely leaves the
 // backup to the next start; when it cannot tell, it says yes.
@@ -129,6 +118,8 @@ bool marked_tool_running(const QString& mark_file) {
     bool number = false;
     const qint64 pid = fields.value(1).toLongLong(&number);
     if (!number || pid <= 0) return false;
+    // Without a start time the process cannot be told from a later one with the same number.
+    if (fields.size() < 3) return true;
     QProcess ps;
     QProcessEnvironment environment = QProcessEnvironment::systemEnvironment();
     environment.insert(QStringLiteral("TZ"), QStringLiteral("UTC0"));
@@ -183,23 +174,9 @@ bool restore_kept_maintenance_tool(const QString& executable) {
     return true;
 }
 bool remove_maintenance_tool_leftovers(const QString& executable) {
-    if (executable.endsWith(QStringLiteral(".exe"), Qt::CaseInsensitive)) {
-        // The staged tool is one file (ADR-0109); releases before staged it in a folder. While the installed tool runs
-        // an update may still be unpacking or using it, so only a copy already written in place goes then. A running
-        // program cannot be opened for writing on Windows, which is the evidence that none runs.
-        const QString folder = QFileInfo(executable).absolutePath();
-        const QString staged = folder + QStringLiteral("/MaintenanceTool.update.exe");
-        const QString legacy = folder + QStringLiteral("/maintenancetool");
-        if (!present(staged) && !QFileInfo(legacy).isDir()) return false;
-        bool removed = same_bytes(executable, staged) && QFile::remove(staged);
-        QFile tool(executable);
-        if (!tool.open(QIODevice::ReadWrite | QIODevice::ExistingOnly)) return removed;
-        tool.close();
-        if (present(staged) && QFile::remove(staged)) removed = true;
-        const QFileInfo old(legacy);
-        if (old.isDir() && !old.isSymLink() && QDir(legacy).removeRecursively()) removed = true;
-        return removed;
-    }
+    // Windows: the update itself leaves no staging (ADR-0109), and the app could never tell when an update starts to
+    // need its staged tool, so it touches none.
+    if (executable.endsWith(QStringLiteral(".exe"), Qt::CaseInsensitive)) return false;
     const QString item = swapped_item(executable);
     if (item.isEmpty()) return false;
     const QString target = QFileInfo(item).absolutePath();
