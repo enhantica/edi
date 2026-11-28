@@ -6,6 +6,7 @@
 #include <QQuickItem>
 #include <QQuickWindow>
 #include <QScopeGuard>
+#include <QSemaphore>
 #include <QStandardItemModel>
 #include <QStandardPaths>
 #include <QDir>
@@ -186,6 +187,22 @@ void namedItems(QQuickItem* item, const QString& name, QList<QQuickItem*>& found
     if (item->objectName() == name) found.append(item);
     for (auto* child : item->childItems())
         namedItems(child, name, found);
+}
+
+// The tooltip gui-components' ToolButton shows on hover: its child with `requested` and `text`.
+QObject* hoverToolTip(QObject* control) {
+    for (auto* child : control->findChildren<QObject*>()) {
+        const auto* meta = child->metaObject();
+        if (meta->indexOfProperty("requested") >= 0 && meta->indexOfProperty("text") >= 0) return child;
+    }
+    return nullptr;
+}
+
+// The object behind `control`'s Accessible attached properties.
+QObject* accessibleOf(QObject* control) {
+    for (auto* child : control->findChildren<QObject*>(Qt::FindDirectChildrenOnly))
+        if (QByteArray(child->metaObject()->className()) == "QQuickAccessibleAttached") return child;
+    return nullptr;
 }
 
 QRectF sceneBox(const QQuickItem& item) {
@@ -1705,6 +1722,98 @@ private slots:
             QCOMPARE(voice->state(), edi_app::VoiceInput::State::Idle);
             QVERIFY(!dialog->property("visible").toBool());
         }
+    }
+    // While the speech is recognised the microphone shows no spinner, and neither it nor its tooltip on hover says the
+    // state in words; only the accessible description does (the owner, 2026-11-28; ADR-0107 §8).
+    void voiceButtonShowsNoStateWords() {
+        if (!edi_app::SpeechRecogniser::cpu_supported())
+            QSKIP("This processor cannot run the speech engine");
+        QTemporaryDir dir;
+        QVERIFY(dir.isValid());
+        const QString model = dir.filePath("model.bin");
+        {
+            QFile file(model);
+            QVERIFY(file.open(QIODevice::WriteOnly));
+            file.write("model");
+        }
+        // The app's test microphone plays the fixture, then silence, which stops the recording.
+        const QList<QPair<QByteArray, QByteArray>> values{
+            {"PYTEST_CURRENT_TEST", "assistant_ui_tests"},
+            {"EDI_TEST_ASSISTANT_VOICE_CAPTURE", "available"},
+            {"EDI_TEST_ASSISTANT_VOICE_WAV", EDI_SOURCE_DIR "/tests/fixtures/assistant_voice/inaugural.wav"},
+            {"EDI_TEST_ASSISTANT_VOICE_MODEL", model.toUtf8()},
+        };
+        QList<QPair<QByteArray, QByteArray>> originals;
+        for (const auto& [name, value] : values) {
+            originals.append(qMakePair(name, qgetenv(name.constData())));
+            qputenv(name.constData(), value);
+        }
+        const auto restore = qScopeGuard([originals] {
+            for (const auto& [name, value] : originals) {
+                if (value.isNull()) qunsetenv(name.constData());
+                else qputenv(name.constData(), value);
+            }
+        });
+        QQmlApplicationEngine engine;
+        edi_app::configure_engine(engine);
+        WorkingAssistant assistant;
+        engine.rootContext()->setContextProperty("testAssistant", &assistant);
+        QQmlComponent component(&engine);
+        component.setData(R"(
+            import QtQuick
+            import QtQuick.Controls
+            import edi.app
+            ApplicationWindow {
+                width: 900; height: 500; visible: true
+                Item { id: toggle }
+                AssistantComposer { anchors.left: parent.left; anchors.right: parent.right; anchors.bottom: parent.bottom; assistant: testAssistant; toggleControl: toggle }
+            }
+        )", QUrl());
+        QScopedPointer<QObject> root(component.create());
+        QVERIFY2(root, qPrintable(component.errorString()));
+        auto* window = qobject_cast<QQuickWindow*>(root.data());
+        QVERIFY(window);
+        QVERIFY(QTest::qWaitForWindowExposed(window));
+        window->requestActivate();
+        QVERIFY(QTest::qWaitForWindowActive(window));
+        auto* voice = engine.singletonInstance<edi_app::VoiceInput*>("edi.app", "VoiceInput");
+        auto* button = root->findChild<QQuickItem*>("assistant.voice");
+        auto* spinner = root->findChild<QQuickItem*>("assistant.voiceSpinner");
+        QVERIFY(voice && button && spinner);
+        QVERIFY(voice->available());
+        auto* tip = hoverToolTip(button);
+        auto* accessible = accessibleOf(button);
+        QVERIFY(tip && accessible);
+        // Hold the recognition thread, so the recording stays in Recognising while it is looked at.
+        auto gate = std::make_shared<QSemaphore>();
+        voice->workers().start([gate] { gate->acquire(); });
+        const auto open = qScopeGuard([gate, voice] {
+            gate->release();
+            voice->cancel();
+            voice->workers().waitForDone();
+        });
+        const auto statedInWords = [&] {
+            for (const auto& shown : {button->property("text").toString(), tip->property("text").toString()}) {
+                if (shown.contains("Listening", Qt::CaseInsensitive) || shown.contains("Recognis", Qt::CaseInsensitive))
+                    return shown;
+            }
+            return QString();
+        };
+        QCOMPARE(tip->property("text").toString(), QString("Voice input"));
+        QVERIFY(QMetaObject::invokeMethod(button, "clicked"));
+        QTRY_COMPARE(voice->state(), edi_app::VoiceInput::State::Listening);
+        QCOMPARE(statedInWords(), QString());
+        QCOMPARE(accessible->property("description").toString(), QString("Listening"));
+        QTRY_COMPARE_WITH_TIMEOUT(voice->state(), edi_app::VoiceInput::State::Recognising, 15000);
+        // The pointer rests on the button after the press, as with a mouse.
+        QTest::mouseMove(window, QPoint(5, 5));
+        QTest::mouseMove(window, button->mapToScene(QPointF(button->width() / 2, button->height() / 2)).toPoint());
+        QTRY_VERIFY(tip->property("requested").toBool());
+        QVERIFY(button->isVisible());
+        QVERIFY(!spinner->isVisible());
+        QCOMPARE(statedInWords(), QString());
+        QCOMPARE(tip->property("text").toString(), QString("Voice input"));
+        QCOMPARE(accessible->property("description").toString(), QString("Recognising speech"));
     }
     // The voice dots (ADR-0107 §8): a ripple from right to left even in silence, bars with the voice, a smaller ripple
     // while recognising; with animations off they stay still and light from the left with the level.

@@ -858,9 +858,10 @@ Rectangle {
                     level: composer.voiceListening ? VoiceInput.level : 0
                 }
             }
-            // One button starts and stops: listening takes the accent colour; while the microphone starts or the speech is
-            // recognised it shows the assistant's spinner. A press while it starts cancels; a press while it recognises
-            // does nothing, and Escape cancels.
+            // One button starts and stops: listening takes the accent colour; while the microphone starts it shows
+            // the assistant's spinner, and while the speech is recognised its microphone is dimmed and the dots show
+            // the work (ADR-0107 §8). A press while it starts cancels; a press while it recognises does nothing, and
+            // Escape cancels.
             EaElements.ToolButton {
                 id: voiceButton
                 Layout.minimumWidth: composer.actionSize
@@ -871,6 +872,8 @@ Rectangle {
                 implicitHeight: composer.actionSize
                 font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.75
                 readonly property bool listening: VoiceInput.state === VoiceInput.Listening
+                readonly property bool starting: VoiceInput.state === VoiceInput.Starting
+                readonly property bool recognising: VoiceInput.state === VoiceInput.Recognising
                 background: Rectangle {
                     border.width: 0
                     implicitWidth: composer.actionSize
@@ -881,7 +884,8 @@ Rectangle {
                 contentItem: Item {
                     EaElements.Label {
                         anchors.fill: parent
-                        visible: !composer.voiceBusy
+                        visible: !voiceButton.starting
+                        opacity: voiceButton.recognising ? 0.4 : 1
                         text: voiceButton.fontIcon
                         font.family: EaStyle.Fonts.iconsFamily
                         font.pixelSize: voiceButton.font.pixelSize * 1.25
@@ -892,10 +896,11 @@ Rectangle {
                     }
                     ControlsImpl.IconImage {
                         id: voiceSpinner
+                        objectName: "assistant.voiceSpinner"
                         anchors.centerIn: parent
                         width: voiceButton.font.pixelSize * 1.25
                         height: width
-                        visible: composer.voiceBusy
+                        visible: voiceButton.starting
                         source: "../../resources/logo/AssistantSpinner.svg"
                         sourceSize: Qt.size(width, height)
                         color: EaStyle.Colors.themeAccent
@@ -916,7 +921,8 @@ Rectangle {
                 KeyNavigation.backtab: nextUserButton
                 objectName: "assistant.voice"
                 fontIcon: "microphone"
-                text: VoiceInput.state === VoiceInput.Listening ? qsTr("Stop and insert the text") : VoiceInput.state === VoiceInput.Starting ? qsTr("Starting the microphone. Press to cancel") : VoiceInput.state === VoiceInput.Recognising ? qsTr("Recognising speech") : qsTr("Voice input")
+                // The state is never shown in words (the owner, 2026-11-28): only the accessible description names it.
+                text: voiceButton.listening ? qsTr("Stop and insert the text") : voiceButton.starting ? qsTr("Starting the microphone. Press to cancel") : qsTr("Voice input")
                 // Always shown: without the voice input component it opens the note on adding it, as the assistant's
                 // button does (ADR-0107 §8).
                 ToolTip.text: VoiceInput.available ? text : VoiceInput.unavailableReason
