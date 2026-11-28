@@ -55,7 +55,20 @@ public:
         if (fixed) {
             return;
         }
+        // A Le Bail structure's atoms, scale and texture keep their free flags but are not fitted,
+        // so FullProf gets the fit's own free set. A Rietveld project is written as before.
+        const bool extracting =
+            std::any_of(project.structures.begin(), project.structures.end(),
+                        [](const auto& structure) { return extracts_intensities(*structure); });
+        std::set<const Parameter*> fitted;
+        if (extracting) {
+            const auto free = project.free_parameters();
+            fitted.insert(free.begin(), free.end());
+        }
         for (const auto& entry : parameter_entries(project)) {
+            if (extracting && !fitted.contains(entry.parameter)) {
+                continue;
+            }
             if (entry.refinable && entry.parameter->free.get() && !directions_.contains(entry.parameter)) {
                 directions_.emplace(entry.parameter, Direction{++count_, entry.path, 1.});
             }
@@ -526,13 +539,9 @@ void write_profile(std::ostream& out, Structure& structure, const Bank& bank, st
     }
 }
 
-void require_structure(const Structure& structure) {
-    if (!token_field(structure.name.value()) || structure.atom_sites.empty()) {
+void require_structure(const Structure& structure, bool atoms_needed = true) {
+    if (!token_field(structure.name.value()) || (atoms_needed && structure.atom_sites.empty())) {
         unsupported(structure.name.value() + ": requires a named structure");
-    }
-    // A Le Bail or Pawley structure is not written as a Rietveld phase (edi ADR-0109).
-    if (extracts_intensities(structure)) {
-        unsupported(structure.name.value() + ": the export writes Rietveld phases only, not Le Bail or Pawley");
     }
 }
 
@@ -722,8 +731,18 @@ void write_atoms(std::ostream& out, Structure& structure, Codes& codes, bool mag
 
 void write_phase(std::ostream& out, Structure& structure, const std::vector<Bank>& banks, std::size_t number,
                  Codes& codes) {
-    require_structure(structure);
+    // FullProf's profile matching with a constant scale (Jbt=2) is Le Bail; it needs no atoms, and
+    // the atoms a structure has give its first cycle's intensities. FullProf has no Pawley mode.
+    const std::string method = calc_method_token(structure);
+    if (method == "pawley") {
+        unsupported(structure.name.value() + ": FullProf has no Pawley mode");
+    }
+    const bool le_bail = method == "le_bail";
+    require_structure(structure, !le_bail);
     const bool magnetic = structure_magnetic(structure);
+    if (le_bail && magnetic) {
+        unsupported(structure.name.value() + ": a magnetic Le Bail structure");
+    }
     std::vector<const LinkedStructure*> links;
     for (const auto& bank : banks) {
         const auto* link = link_for(bank, structure);
@@ -740,7 +759,10 @@ void write_phase(std::ostream& out, Structure& structure, const std::vector<Bank
         << "!-------------------------------------------------------------------------------\n"
         << structure.name.value() << (magnetic_only(structure) ? " mag_only\n" : "\n")
         << "!Nat Dis Ang Jbt Isy Str Furth ATZ Nvk More\n"
-        << structure.atom_sites.size() << (magnetic ? " 0 0 10 2 0 0 0 0 0\n" : " 0 0 0 0 0 0 0 0 0\n")
+        << structure.atom_sites.size()
+        << (magnetic  ? " 0 0 10 2 0 0 0 0 0\n"
+            : le_bail ? " 0 0 2 0 0 0 0 0 0\n"
+                      : " 0 0 0 0 0 0 0 0 0\n")
         << "!Contributions (0/1) of this phase to the patterns\n";
     for (const auto* link : links) {
         out << (link ? " 1" : " 0");
@@ -811,6 +833,9 @@ void write_single_crystal(Project& project, const fs::path& folder, Codes& codes
     }
     auto& structure = *project.structures[0];
     const auto& first = *project.experiments[0];
+    if (extracts_intensities(structure)) {
+        unsupported(structure.name.value() + ": Le Bail and Pawley need a powder pattern");
+    }
     require_structure(structure);
     const bool magnetic = structure_magnetic(structure);
     const bool tof = first.effective_beam_mode() == BeamModeEnum::TIME_OF_FLIGHT;
