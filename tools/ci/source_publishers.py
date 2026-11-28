@@ -133,6 +133,7 @@ CACHES = {
                 'full-macos',
                 'asan',
                 'performance',
+                'coverage',
             )
         ],
         CRYSTA,
