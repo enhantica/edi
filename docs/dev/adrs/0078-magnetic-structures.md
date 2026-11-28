@@ -37,8 +37,10 @@ without computing any of them itself.
 - **One view for the project** (owner decision 2026-11-27, "global structure-view settings"; it replaces the
   per-structure settings above). The `_structure_view` items (which atoms, bonds, polyhedra, moments shown, the moment
   scale, the arrow position and the appearance) are one set for the whole project, saved in `project.edi` and in no
-  structure file, so switching structures keeps the view. Camera and zoom stay per structure and are not saved. A
-  project saved before reads its first structure's items once as the project's; a scale a project saved keeps. The shaft has one thickness at every length; the head is
+  structure file, so switching structures keeps the view. The camera too is one for the project (owner record
+  0958fb450 item 7): rotation, zoom and pan stay when switching structures, so only the moments change; a different
+  cell keeps the orientation and zoom and is centred the same way. The camera is not saved. A project saved before
+  reads its first structure's items once as the project's; a scale a project saved keeps. The shaft has one thickness at every length; the head is
   the standard one (0.6 Å long, 0.3 Å wide) shortened to at most 35 % of the arrow and narrowed with it, never below
   1.6 times the shaft, so a 1 μB arrow at the default scale keeps a visible shaft and a long arrow the standard head.
   The toolbar's Atoms choice draws every atom, the crystal's asymmetric unit (for a magnetic structure, its parent
