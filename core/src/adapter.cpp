@@ -2916,6 +2916,58 @@ PlainDataLoad experiment_with_plain_data(const BraggPdExperiment& experiment,con
 
 PlainDataLoad experiment_with_plain_data(const BraggPdExperiment& experiment, const std::string& reader_path,
                                          const std::string& source_path, bool take_file_name) {
+    return experiment_with_read(experiment, read_data_file(data_kind(experiment), reader_path, source_path),
+                                take_file_name);
+}
+
+DataKind data_kind(const BraggPdExperiment& experiment) {
+    return DataKind{experiment.reflections.has_value(), experiment.effective_beam_mode()};
+}
+
+struct ReflectionRead {
+    crysta::ReflectionFile file;
+};
+
+DataFileRead read_data_file(const DataKind& kind, const std::string& reader_path, const std::string& source_path) {
+    DataFileRead read;
+    read.source_path = source_path;
+    read.kind = kind;
+    if (!kind.reflections) {
+        read.pattern = read_plain_data(reader_path);
+        return read;
+    }
+    const auto fullprof = [](const std::string& path) {
+        auto extension = std::filesystem::path(path).extension().string();
+        std::transform(extension.begin(), extension.end(), extension.begin(),
+                       [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+        return extension == ".int";
+    };
+    if (fullprof(reader_path) != fullprof(source_path))
+        throw IoError("The approved reflection capture must preserve the original FullProf/plain format selector");
+    // A single crystal reads reflections: FullProf's .int or a plain h k l F² su [wavelength] file (crysta's
+    // reader), taking a FullProf file's wavelength at constant wavelength.
+    const bool cw = kind.beam_mode == BeamModeEnum::CONSTANT_WAVELENGTH;
+    try {
+        read.reflection = std::make_shared<const ReflectionRead>(ReflectionRead{crysta::read_reflection_file(
+            reader_path, cw ? crysta::BeamModeEnum::ConstantWavelength : crysta::BeamModeEnum::TimeOfFlight)});
+    } catch (const std::invalid_argument& error) {
+        // The FIRST reader owns parsing/diagnostics; Edi owns its public
+        // file-load exception type, shared by ordinary and captured loads.
+        throw IoError(error.what());
+    }
+    return read;
+}
+
+bool read_fits(const DataFileRead& read, const BraggPdExperiment& experiment) {
+    const DataKind now = data_kind(experiment);
+    if (read.kind.reflections != now.reflections) return false;
+    return !now.reflections || read.kind.beam_mode == now.beam_mode;
+}
+
+PlainDataLoad experiment_with_read(const BraggPdExperiment& experiment, DataFileRead read, bool take_file_name) {
+    if (!read_fits(read, experiment) || (read.kind.reflections && read.reflection == nullptr))
+        throw IoError("the data file was read for another kind of experiment");
+    const std::string& source_path = read.source_path;
     PlainDataLoad load{BraggPdExperiment(experiment), std::filesystem::path(source_path).filename().string()};
     // New data from this file, reflections or a pattern: an earlier link of the experiment's data no longer holds. A
     // caller that links the new file says so itself.
@@ -2927,27 +2979,9 @@ PlainDataLoad experiment_with_plain_data(const BraggPdExperiment& experiment, co
     load.experiment.description_chosen = true;
     load.experiment.instrument.name.clear();
     load.experiment.instrument.facility.clear();
-    if (experiment.reflections.has_value()) {
-        const auto fullprof=[](const std::string& path){
-            auto extension=std::filesystem::path(path).extension().string();
-            std::transform(extension.begin(),extension.end(),extension.begin(),[](unsigned char c){return static_cast<char>(std::tolower(c));});
-            return extension==".int";
-        };
-        if(fullprof(reader_path)!=fullprof(source_path))
-            throw IoError("The approved reflection capture must preserve the original FullProf/plain format selector");
-        // A single crystal reads reflections: FullProf's .int or a plain h k l F² su [wavelength] file (crysta's
-        // reader), taking a FullProf file's wavelength at constant wavelength.
-        const bool cw = experiment.effective_beam_mode() == BeamModeEnum::CONSTANT_WAVELENGTH;
-        const crysta::ReflectionFile file = [&] {
-            try {
-                return crysta::read_reflection_file(reader_path,
-                    cw ? crysta::BeamModeEnum::ConstantWavelength : crysta::BeamModeEnum::TimeOfFlight);
-            } catch (const std::invalid_argument& error) {
-                // The FIRST reader owns parsing/diagnostics; Edi owns its public
-                // file-load exception type, shared by ordinary and captured loads.
-                throw IoError(error.what());
-            }
-        }();
+    if (read.kind.reflections) {
+        const bool cw = read.kind.beam_mode == BeamModeEnum::CONSTANT_WAVELENGTH;
+        const crysta::ReflectionFile& file = read.reflection->file;
         load.unweighted = file.skipped_unweighted;
         load.skipped_lines = file.skipped_lines;
         load.skipped = file.skipped_lines.size();
@@ -3013,18 +3047,19 @@ PlainDataLoad experiment_with_plain_data(const BraggPdExperiment& experiment, co
         }
         return load;
     }
-    PlainDataRows read = read_plain_data(reader_path);
-    load.points = read.x.size();
-    load.skipped = read.skipped;
-    load.nonpositive = read.nonpositive;
-    load.duplicates = read.duplicates;
-    load.reordered = read.reordered;
-    load.derived = read.derived;
+    PlainDataRows& rows = read.pattern;
+    load.points = rows.x.size();
+    load.skipped = rows.skipped;
+    load.nonpositive = rows.nonpositive;
+    load.duplicates = rows.duplicates;
+    load.reordered = rows.reordered;
+    load.derived = rows.derived;
     PdDataBase data;
+    // The beam mode the experiment has now: a pattern's parse does not depend on it.
     (experiment.effective_beam_mode() == BeamModeEnum::CONSTANT_WAVELENGTH ? data.two_theta : data.time_of_flight) =
-        std::move(read.x);
-    data.intensity_meas = std::move(read.y);
-    data.intensity_meas_su = std::move(read.sigma);
+        std::move(rows.x);
+    data.intensity_meas = std::move(rows.y);
+    data.intensity_meas_su = std::move(rows.sigma);
     load.experiment.data = std::move(data);
     load.experiment.calculation_only = false;
     load.experiment.data_file = load.file_name;

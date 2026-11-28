@@ -24,6 +24,9 @@
 #include <atomic>
 #include <cmath>
 #include <filesystem>
+#include <string>
+#include <string_view>
+#include <system_error>
 #include <deque>
 #include <limits>
 #include <numeric>
@@ -68,6 +71,87 @@
 
 namespace nb = nanobind;
 using namespace nb::literals;
+
+// Core reads a narrow path in the process code page: UTF-8 on Linux and macOS, on Windows the system's
+// unless its UTF-8 setting is on (ADR-0109). Every path argument passes through core_path, so a str and a
+// Path reach core alike, and a name the code page cannot hold is refused before core sees it.
+#if defined(_WIN32)
+static std::filesystem::path path_from_utf8(const std::string& text) {
+#if defined(__cpp_char8_t)
+    return std::filesystem::path(
+        std::u8string_view(reinterpret_cast<const char8_t*>(text.data()), text.size()));
+#else
+    return std::filesystem::u8path(text);
+#endif
+}
+#endif
+
+static std::string utf8_text(const std::filesystem::path& path) {
+#if defined(__cpp_char8_t)
+    const std::u8string text = path.u8string();
+    return std::string(reinterpret_cast<const char*>(text.data()), text.size());
+#else
+    return path.u8string();
+#endif
+}
+
+static std::string core_path(const std::filesystem::path& path) {
+#if defined(_WIN32)
+    try {
+        return path.string();
+    } catch (const std::system_error&) {
+        throw nb::value_error(("this path has letters that the Windows code page here cannot hold; turn on "
+                               "'Use Unicode UTF-8 for worldwide language support' in the system's language "
+                               "settings: " + utf8_text(path)).c_str());
+    }
+#else
+    return path.string();
+#endif
+}
+
+// A path given as a str (UTF-8).
+static std::string core_path_text(const std::string& text) {
+#if defined(_WIN32)
+    return core_path(path_from_utf8(text));
+#else
+    return text;
+#endif
+}
+
+// A path core hands back, as the UTF-8 a Python str holds.
+static std::string python_path_text(const std::string& core) {
+#if defined(_WIN32)
+    return utf8_text(std::filesystem::path(core));
+#else
+    return core;
+#endif
+}
+
+// Core's message text as a Python str. On Windows a message can name a path in the process code page,
+// which python.exe keeps as the system's, so text that is not UTF-8 is read in that code page.
+static nb::str python_text(const std::string& core) {
+#if defined(_WIN32)
+    const auto size = static_cast<Py_ssize_t>(core.size());
+    PyObject* text = PyUnicode_DecodeUTF8(core.data(), size, nullptr);
+    if (text == nullptr) {
+        PyErr_Clear();
+        text = PyUnicode_DecodeMBCS(core.data(), size, "replace");
+    }
+    if (text == nullptr) {
+        throw nb::python_error();
+    }
+    return nb::steal<nb::str>(text);
+#else
+    return nb::str(core.c_str(), core.size());
+#endif
+}
+
+// Core's message as a Python UserWarning (python_text).
+static void warn_text(const std::string& message) {
+    if (PyErr_WarnEx(PyExc_UserWarning, python_text(message).c_str(), 1) < 0) {
+        throw nb::python_error();
+    }
+}
 
 // Metadata access on a bound Parameter. Fail-closed — a Parameter no model constructor attached
 // a spec to has no metadata to report, and answering with a placeholder would hide exactly the
@@ -1020,9 +1104,7 @@ static void warn_python(const std::string& message) {
     if (!edi::log_shows("warning")) {
         return;
     }
-    if (PyErr_WarnEx(PyExc_UserWarning, message.c_str(), 1) < 0) {
-        throw nb::python_error();
-    }
+    warn_text(message);
 }
 
 // The project a relation row belongs to, once that project handed its collection out; else null.
@@ -2061,9 +2143,7 @@ static void def_collection_views(nb::module_& m) {
                 edi::ExperimentBase& experiment = *self.experiment;
                 const edi::BackgroundEstimate estimate = edi::estimate_background(experiment, options);
                 for (const std::string& warning : estimate.warnings) {
-                    if (PyErr_WarnEx(PyExc_UserWarning, warning.c_str(), 1) != 0) {
-                        throw nb::python_error();
-                    }
+                    warn_text(warning);
                 }
                 if (estimate.points.empty() && estimate.terms.empty()) {
                     return;  // nothing measured to estimate from: the background stays
@@ -2239,7 +2319,11 @@ NB_MODULE(_edi, m) {
     m.def(
         "_single_crystal_with_reflections",
         [](const edi::BraggPdExperiment& experiment, const std::string& path) {
-            edi::PlainDataLoad load = edi::experiment_with_plain_data(experiment, path, false);
+            edi::PlainDataLoad load = edi::experiment_with_plain_data(experiment, core_path_text(path), false);
+#if defined(_WIN32)
+            // The name the project records is UTF-8, as every name in its files, not the code-page text core read.
+            load.experiment.data_file = utf8_text(path_from_utf8(path).filename());
+#endif
             return edi::BraggPdExperiment(load.experiment);
         },
         "experiment"_a, "path"_a);
@@ -2248,7 +2332,7 @@ NB_MODULE(_edi, m) {
     m.def(
         "_read_plain_data",
         [](const std::string& path) {
-            edi::PlainDataRows read = edi::read_plain_data(path);
+            edi::PlainDataRows read = edi::read_plain_data(core_path_text(path));
             nb::dict rows;
             rows["x"] = read.x;
             rows["y"] = read.y;
@@ -2326,14 +2410,16 @@ NB_MODULE(_edi, m) {
     m.def("_collection_fetch", [python_transport](const std::vector<std::string>& sources, const std::string& text,
                                                   const std::string& id, const std::string& into,
                                                   const nb::callable& transport) {
-        return edi::online::fetch(sources, text, id, into, python_transport(transport));
+        return python_path_text(
+            edi::online::fetch(sources, text, id, core_path_text(into), python_transport(transport)));
     }, "sources"_a, "text"_a, "id"_a, "into"_a, "transport"_a);
     m.def("_collection_download", [python_transport](const std::vector<std::string>& sources, const std::string& text,
                                                      const std::string& name, const std::string& kind,
                                                      const std::string& format, const std::string& destination,
                                                      bool overwrite, const nb::callable& transport) {
-        return edi::online::download(sources, text, name, kind, format, destination, overwrite,
-                                     python_transport(transport));
+        return python_path_text(edi::online::download(sources, text, name, kind, format,
+                                                      core_path_text(destination), overwrite,
+                                                      python_transport(transport)));
     }, "sources"_a, "text"_a, "name"_a, "kind"_a, "format"_a, "destination"_a, "overwrite"_a, "transport"_a);
     m.def("_sha256_hex", [](const nb::bytes& bytes) { return edi::online::sha256_hex(std::string_view(bytes.c_str(), bytes.size())); },
           "bytes"_a);
@@ -2355,10 +2441,10 @@ NB_MODULE(_edi, m) {
             try {
                 std::rethrow_exception(pointer);
             } catch (const edi::IoError& error) {
-                nb::object exception = (*g_io_error_type)(nb::str(error.what()));
+                nb::object exception = (*g_io_error_type)(python_text(error.what()));
                 nb::dict entry;
                 entry["code"] = "io-error";
-                entry["message"] = nb::str(error.what());
+                entry["message"] = python_text(error.what());
                 nb::list diagnostics;
                 diagnostics.append(entry);
                 exception.attr("diagnostics") = diagnostics;
@@ -2375,9 +2461,16 @@ NB_MODULE(_edi, m) {
     nb::class_<edi::Diagnostic>(m, "Diagnostic")
         .def_ro("code", &edi::Diagnostic::code)
         .def_ro("severity", &edi::Diagnostic::severity)
-        .def_ro("path", &edi::Diagnostic::path)
-        .def_ro("message", &edi::Diagnostic::message)
-        .def_ro("params", &edi::Diagnostic::params)
+        .def_prop_ro("path", [](const edi::Diagnostic& diagnostic) { return python_text(diagnostic.path); })
+        .def_prop_ro("message", [](const edi::Diagnostic& diagnostic) { return python_text(diagnostic.message); })
+        .def_prop_ro("params",
+                     [](const edi::Diagnostic& diagnostic) {
+                         nb::dict params;
+                         for (const auto& [key, value] : diagnostic.params) {
+                             params[python_text(key)] = python_text(value);
+                         }
+                         return params;
+                     })
         .def_ro("source", &edi::Diagnostic::source)
         .def("__repr__", [](const edi::Diagnostic& diagnostic) {
             std::string repr = "<Diagnostic " + diagnostic.code + " " +
@@ -2385,7 +2478,7 @@ NB_MODULE(_edi, m) {
             if (!diagnostic.path.empty()) {
                 repr += " @" + diagnostic.path;
             }
-            return repr + ": " + diagnostic.message + ">";
+            return python_text(repr + ": " + diagnostic.message + ">");
         });
     auto make_error_type = [&m](const char* name, const nb::object& base) {
         const std::string qualified = "edi._edi." + std::string(name);
@@ -2408,7 +2501,7 @@ NB_MODULE(_edi, m) {
                                          : error.tier() == 2 ? types.schema
                                          : error.tier() == 3 ? types.domain
                                                              : types.base;
-                nb::object exception = type(nb::str(error.what()));
+                nb::object exception = type(python_text(error.what()));
                 exception.attr("diagnostics") = nb::cast(error.diagnostics());
                 PyErr_SetObject(type.ptr(), exception.ptr());
             }
@@ -2490,9 +2583,7 @@ NB_MODULE(_edi, m) {
                                                                           : "constrained by symmetry") +
                         "; free = True is ignored and it stays dependent" +
                         (p.fit_reason.empty() ? std::string() : " (cannot be fitted: " + p.fit_reason + ")");
-                    if (PyErr_WarnEx(PyExc_UserWarning, message.c_str(), 1) < 0) {
-                        throw nb::python_error();
-                    }
+                    warn_text(message);
                 }
             })
         // Whether a declared constraint or the space group sets this parameter (diffraction-lib
@@ -4688,7 +4779,7 @@ NB_MODULE(_edi, m) {
                 return nb::cast(std::filesystem::path(self.path));
             },
             [](edi::ProjectMetadata& self, const std::filesystem::path& value) {
-                self.path = value.string();
+                self.path = core_path(value);
             },
             "The project directory as a Path (None until loaded or saved).")
         .def_prop_ro(
@@ -4794,7 +4885,7 @@ NB_MODULE(_edi, m) {
             edi::register_project_importer(
                 {program, suffixes, [function](const std::string& path, const edi::WarningSink&) {
                      nb::gil_scoped_acquire gil;
-                     return nb::cast<edi::Project>(nb::handle(function)(path));
+                     return nb::cast<edi::Project>(nb::handle(function)(python_path_text(path)));
                  }});
         },
         "program"_a, "suffixes"_a, "convert"_a,
@@ -4803,7 +4894,7 @@ NB_MODULE(_edi, m) {
     m.def(
         "check_import_roundtrip",
         [](edi::Project& project, const std::filesystem::path& directory) {
-            edi::check_import_roundtrip(project, directory.string());
+            edi::check_import_roundtrip(project, core_path(directory));
         },
         "project"_a, "directory"_a,
         "Save an imported project into directory, open it again and compare every parameter; raises edi.IoError at "
@@ -5053,13 +5144,18 @@ NB_MODULE(_edi, m) {
         // Whether the project declares a scan: independent without one fits each experiment alone (edi ADR-0081).
         .def_prop_ro("_scan_declared", [](const edi::Project& self) { return self.sequential_fit.declared(); })
         .def_prop_rw(
-            "_template_file", [](const edi::Project& self) { return self.sequential_fit.template_file; },
-            [](edi::Project& self, const std::string& file) { edi::set_scan_template_file(self, file); })
+            "_template_file",
+            [](const edi::Project& self) { return python_path_text(self.sequential_fit.template_file); },
+            [](edi::Project& self, const std::string& file) {
+                edi::set_scan_template_file(self, core_path_text(file));
+            })
         // The scan block (`_sequential_fit`), as the loader takes it, for the analysis facade's
         // sequential_fit and sequential_fit_extract.
         .def_prop_rw(
-            "_sequential_data_dir", [](const edi::Project& self) { return self.sequential_fit.data_dir; },
-            [](edi::Project& self, const std::string& data_dir) {
+            "_sequential_data_dir",
+            [](const edi::Project& self) { return python_path_text(self.sequential_fit.data_dir); },
+            [](edi::Project& self, const std::string& text) {
+                const std::string data_dir = core_path_text(text);
                 edi::validate_sequential_data_dir(data_dir, " (sequential_fit.data_dir)");
                 self.sequential_fit.data_dir = data_dir;
             })
@@ -5176,23 +5272,22 @@ NB_MODULE(_edi, m) {
         .def_static(
             "load",
             [](const std::filesystem::path& directory) {
+                const std::string where = core_path(directory);
                 // crysta's coded warnings reach Python as warnings led by the code; the loader's
                 // own notes keep their stderr line.
-                edi::Project project = edi::load_project(directory.string(), [](const std::string& message) {
+                edi::Project project = edi::load_project(where, [](const std::string& message) {
                     if (message.rfind("crysta.", 0) == 0) {
-                        if (PyErr_WarnEx(PyExc_UserWarning, message.c_str(), 1) < 0) {
-                            throw nb::python_error();
-                        }
+                        warn_text(message);
                         return;
                     }
                     std::cerr << "Warning: " << message << "\n";
                 });
                 // A project opened from a .zip works in the folder it was unpacked into, and save() rewrites the
                 // archive from it (edi ADR-0052): the archive is its location.
-                if (edi::is_project_archive(directory.string())) {
+                if (edi::is_project_archive(where)) {
                     project.path = project.scan_data_root;
                     project.scan_data_root.clear();
-                    project.archive = std::filesystem::absolute(directory).string();
+                    project.archive = core_path(std::filesystem::absolute(directory));
                 }
                 return project;
             },
@@ -5279,7 +5374,10 @@ NB_MODULE(_edi, m) {
                                      std::move(colour_scheme), std::move(correlation_experiment));
                 const edi::ReportSaveResult result =
                     edi::save_report(self, overrides, report_libraries(self, overrides, data_dir));
-                return std::make_pair(result.written, result.pdf_left);
+                std::vector<std::string> written;
+                written.reserve(result.written.size());
+                for (const std::string& file : result.written) written.push_back(python_path_text(file));
+                return std::make_pair(written, result.pdf_left);
             },
             "data_dir"_a, "offline"_a = nb::none(), "x_axis"_a = nb::none(), "correlation_threshold"_a = nb::none(),
             "excluded"_a = nb::none(), "colour_scheme"_a = nb::none(), "correlation_experiment"_a = nb::none())
@@ -5301,13 +5399,14 @@ NB_MODULE(_edi, m) {
                 // edi NARRATES its saves (the display facade is edi's, R6); the write itself
                 // is delegated to crysta's silent writer (:save_project validates and hands
                 // over).
+                const std::string where = core_path(directory);
                 nb::module_::import_("builtins").attr("print")(
-                    "Saving project to '" + directory.string() + "'");
+                    "Saving project to '" + utf8_text(directory) + "'");
                 // review-32 F2: upstream advances on save;: BEFORE the write, rolled back
                 // on failure, so the record holds the advanced value.
-                save_project_advancing_last_modified(self, directory.string());
-                self.path = directory.string();
-                self.metadata.path = directory.string();
+                save_project_advancing_last_modified(self, where);
+                self.path = where;
+                self.metadata.path = where;
                 self.archive.clear();
             },
             "directory"_a,
@@ -5350,6 +5449,7 @@ NB_MODULE(_edi, m) {
                 // `directory` (the project's path from here on; a scan's analysis/results*.csv),
                 // while a scan's data are read in place from the directory this project was
                 // loaded from — never copied.
+                const std::string where = core_path(directory);
                 if (self.path.empty() && self.scan_data_root.empty()) {
                     throw std::invalid_argument(
                         "this project has no directory (never loaded or saved): nothing to run "
@@ -5359,7 +5459,7 @@ NB_MODULE(_edi, m) {
                 if (!self.path.empty()) {
                     self.scan_data_root = self.path;
                 }
-                self.path = directory.string();
+                self.path = where;
                 self.metadata.path = self.path;
                 // A dry run writes nothing back: an archive the project came from is not its output.
                 self.archive.clear();
@@ -5372,9 +5472,10 @@ NB_MODULE(_edi, m) {
             [](edi::Project& self, const std::filesystem::path& directory) {
                 // The CLI's --output: save_as without the narration line, so the machine channel's
                 // stdout stays the record.
-                save_project_advancing_last_modified(self, directory.string());
-                self.path = directory.string();
-                self.metadata.path = directory.string();
+                const std::string where = core_path(directory);
+                save_project_advancing_last_modified(self, where);
+                self.path = where;
+                self.metadata.path = where;
                 self.scan_data_root.clear();
                 self.archive.clear();
             },
@@ -5390,7 +5491,7 @@ NB_MODULE(_edi, m) {
                     folder = edi::fresh_archive_directory("export");
                     edi::save_project(self, folder);
                 }
-                edi::write_project_archive(folder, archive.string());
+                edi::write_project_archive(folder, core_path(archive));
             },
             "archive"_a,
             "Write the project's folder, as last saved and with its reports, as one .zip archive at `archive` "
@@ -5421,7 +5522,7 @@ NB_MODULE(_edi, m) {
                         "save_as(directory) first");
                 }
                 nb::module_::import_("builtins").attr("print")(
-                    "Saving project to '" + (self.archive.empty() ? self.path : self.archive) + "'");
+                    "Saving project to '" + python_path_text(self.archive.empty() ? self.path : self.archive) + "'");
                 // review-32 F2 +: advance before the write, roll back on failure.
                 save_project_advancing_last_modified(self, self.path);
                 // A project opened from a .zip: the archive is rewritten from the folder it works in (edi ADR-0052).

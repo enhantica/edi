@@ -1,0 +1,86 @@
+# crysta's checks at any crysta commit, by hand (edi ADR-0083): the commit given is the one fetched, built and tested in
+# every job, in place of edi's pin. Each manual run crysta's own CI had keeps its equivalent here: the full numerical
+# checks, the GCC Release suite and the performance comparison (`final`), the seeded series (`night`), coverage and the
+# wheel build. edi's part links the SDK through CRYSTA_SDK_DIR, since edi's pinned route refuses another commit.
+#
+# It is never evidence: its workflow and event are not ci.yml's pull request, it saves no SDK or compiler cache, so no
+# other run restores what it made, and its artifacts are named `-diagnostic`.
+name: crysta diagnostic
+
+on:
+  workflow_dispatch:
+    inputs:
+      crysta-sha:
+        description: The full crysta commit to fetch, build and test
+        required: true
+        type: string
+      set:
+        description: Which of crysta's checks run
+        type: choice
+        options: [round, final, night, coverage, wheels]
+        default: round
+
+permissions:
+  contents: read
+
+jobs:
+  # Refuses a run from another branch, and a commit that is not a full id or not in enhantica/crysta, before any
+  # build. Nothing of crysta's comes onto this runner: the check asks GitHub for the commit's record alone.
+  subject:
+    name: the crysta commit asked for
+    if: github.repository == 'enhantica/edi' && github.event.pull_request.head.repo.fork == false
+    environment: crysta-sdk
+    runs-on: ubuntu-24.04
+    outputs:
+      sha: ${{ steps.subject.outputs.sha }}
+    steps:
+      - name: Refuse a run from another branch than main
+        if: github.ref != 'refs/heads/main'
+        run: |
+          echo "crysta diagnostic runs from main, not $GITHUB_REF" >&2
+          exit 1
+      - name: Refuse a commit that is not a full id
+        env:
+          SHA: ${{ inputs.crysta-sha }}
+        run: |
+          if [[ ! "$SHA" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "crysta-sha is not a full commit id (40 lowercase hex)" >&2
+            exit 1
+          fi
+      - name: Mint a crysta read token
+        id: token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ vars.ENHANTICA_APP_ID }}
+          private-key: ${{ secrets.CRYSTA_READ_KEY }}
+          owner: enhantica
+          repositories: crysta
+          permission-contents: read
+      - name: Refuse a commit enhantica/crysta does not have
+        id: subject
+        env:
+          GH_TOKEN: ${{ steps.token.outputs.token }}
+          SHA: ${{ inputs.crysta-sha }}
+        run: |
+          if ! gh api "repos/enhantica/crysta/git/commits/$SHA" --silent; then
+            echo "enhantica/crysta has no commit $SHA" >&2
+            exit 1
+          fi
+          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
+
+  crysta-sdk:
+    needs: subject
+    uses: ./.github/workflows/crysta-sdk.yml
+    secrets: inherit
+    with:
+      crysta-sha: ${{ needs.subject.outputs.sha }}
+      diagnostic: true
+
+  crysta:
+    needs: [subject, crysta-sdk]
+    uses: ./.github/workflows/crysta.yml
+    secrets: inherit
+    with:
+      crysta-sha: ${{ needs.subject.outputs.sha }}
+      set: ${{ inputs.set }}
+      diagnostic: true

@@ -6,6 +6,15 @@
   playing the steps in the app comes later
 - **Priority:** Medium
 
+**Amended 2026-11-27:** every tutorial opens with the same introduction, one text in `app/tutorials/introduction.json`
+(`"kind": "introduction"`) that the loader puts in front of each tutorial's steps, so no tutorial file repeats it and a
+new tutorial has it. It names no control: it shows in the middle of the window over the page, dimmed as behind a dialog,
+headed by the tutorial's name, with Introduction where Step n of N stands and Close and Start in place of Stop, Back and
+Next; Escape closes it and the right arrow starts. It shows at every start, and nothing of the user's project changes
+before Start, which then sets the project aside or opens the example and shows the first step; Back never returns to it.
+It is not counted, so the steps keep their numbers. Its last sentence, about the AI assistant, is left out of a build
+without the assistant, the web app included. The replay passes it with its Start, telling it by its kind.
+
 ## Context
 
 Home's tutorial buttons were disabled placeholders. New users need a guided start: where everything is, how to simulate

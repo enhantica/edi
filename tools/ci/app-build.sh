@@ -111,6 +111,8 @@ printf '%s\n' "$BUILD_KEY" > "$PENDING"
 cmake "${args[@]}"
 printf '%s\n' "$BUILD_KEY" > "$MARKER"
 rm -f "$PENDING"
+# A static-check part needs only the configured tree; app-moc then makes the files clang-tidy reads.
+[ "${EDI_APP_CONFIGURE_ONLY:-}" != 1 ] || exit 0
 # The host, the test runner and the image comparator by default; `app` builds the host alone.
 read -r -a targets <<< "${EDI_APP_TARGETS:-edi_app edi_app_tests edi_app_ui_compare}"
 cmake --build build/app --target "${targets[@]}"

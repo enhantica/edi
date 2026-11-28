@@ -198,10 +198,11 @@
         if (missing.length) detail = (missing.length === 1 ? app.files.notAttached : app.files.notAttachedMany).replace('%1', missing.join(', '));
         // The answer is the one to this request: the fields stayed as sent while it was pending.
         // The answer shows only in the notice, so the line under Send is cleared rather than repeating it.
-        const words = answer(code, detail);
+        let words = answer(code, detail);
         status.textContent = '';
         if (code === 201) {
           // Only the message is cleared: the contact details stay for the next one.
+          words += ' You can send another message.';
           if (form.elements.message) form.elements.message.value = '';
           files.splice(0, files.length);
           if (files.render) files.render([]);

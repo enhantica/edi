@@ -313,6 +313,7 @@ experiment_type.sample_form=single crystal	Single crystal
 experiment_type.scattering_type	Scattering type		
 experiment_type.scattering_type=bragg	Bragg		
 experiment_type.scattering_type=total	Total		
+experiments.cancelReading	Cancel		
 experiments.create	Create experiment	Create	plus-circle
 experiments.downloadData	Download		
 experiments.duplicate	Duplicate experiment	Duplicate	clone

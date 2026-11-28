@@ -3,11 +3,11 @@
 
 Reads the workflows and local actions, following a local action into its steps with its inputs. A
 job that fetches the source (the crysta-source action) runs in two phases: before the fetch each
-script names `shell: bash`, after it every script runs under the output filter, everything stored
-goes through the store action, and a script that publishes a folder comes right after a check of
-that folder that always runs. The two actions all of this rests on are held to their committed
-form. What a job without the source publishes, and the keys of each cache, are in the tables
-below; a new one is a change of its table.
+script names `shell: bash`, after it every script runs under the output filter (but setup-pixi's
+silent pin read), everything stored goes through the store action, and a script that publishes a
+folder comes right after a check of that folder that always runs. The actions all of this rests on
+are held to their committed form. What a job without the source publishes, and the keys of each
+cache, are in the tables below; a new one is a change of its table.
 """
 
 from __future__ import annotations
@@ -28,11 +28,13 @@ STORE = './.github/actions/store'
 SETUP_PIXI = './.github/actions/setup-pixi'
 # The steps of the actions everything here relies on, as reviewed: `--digests` prints them.
 REVIEWED = {
-    SOURCE: '09e714c5b055ef90c0ad3a9b059a82284a568ef7938733931d70b4424d3fe364',
+    SOURCE: '080fe142cc468648981e6ad58148d72b9eb8af40cd7549da4de0b637c75a10b0',
     STORE: '05b4c58e0eac79e613bc94a9fbab5a7863d29549d196ff9c6b7206d340eaa11f',
-    # Trusted to install nothing, beside the source, when a step gives it install: false.
-    SETUP_PIXI: '525548a3f32db9bb1174397f8e40f0b299564b10234f96be027937eff0721e48',
+    SETUP_PIXI: '3bdf6a55edec85f8bfb25d5d8216f92ad04760d075561885ba67c1135274eaad',
 }
+# Scripts that may run beside the source without the output filter: setup-pixi reads the pin of
+# the manifest it is given, crysta's in the SDK job, and prints nothing it read. REVIEWED holds it.
+QUIET = {(SETUP_PIXI, 'pin')}
 # What jobs without the source publish: how, the artifact or cache key itself, and its path.
 PUBLISHERS = {
     'ci.yml/system-time': {('artifact', 'system-time', '${{ runner.temp }}/system-time/')},
@@ -85,8 +87,14 @@ APP = {
     ),
     'build/tutorial-transactions': 'edi-observer-',
 }
+# The static-check parts only read the app's compiler cache.
+STATIC = {'~/.cache/edi-ccache': 'ccache2-app-'}
+# The nightly watchdog's scan archive: downloaded from edi-data, never built on the runner.
+SCAN_ARCHIVE = {'${{ runner.temp }}/scan-archive/44k.zip': 'edi-scan-archive-'}
 WASM = {'~/.cache/edi-ccache': 'ccache2-wasm-', '~/.cache/edi-wasm': 'edi-wasm2-'}
 DURATIONS = {'build/test-durations.json': 'test-durations-'}
+CRYSTA = {'${{ runner.temp }}/crysta-ccache': 'ccache2-crysta-checks-'}
+CRYSTA_PYTHON_FULL = {'${{ runner.temp }}/crysta-ccache': 'ccache2-crysta-python-full-'}
 CACHES = {
     **dict.fromkeys(
         [
@@ -101,7 +109,10 @@ CACHES = {
         **{path: key for path, key in APP.items() if not key.startswith('ccache2-')},
     },
     'ci.yml/system-durations': DURATIONS,
-    **dict.fromkeys([f'ci.yml/{job}' for job in ('app', 'app-macos', 'app-windows')], APP),
+    **dict.fromkeys(
+        [f'ci.yml/{job}' for job in ('app', 'app-macos', 'app-windows')], APP | SCAN_ARCHIVE
+    ),
+    **dict.fromkeys(['ci.yml/static-linux', 'ci.yml/static-macos'], STATIC),
     'ci.yml/app-wasm': WASM,
     'pages.yml/wasm': WASM,
     'crysta-sdk.yml/build': {
@@ -109,6 +120,25 @@ CACHES = {
         '${{ runner.temp }}/crysta-ccache': 'ccache2-crysta-sdk-',
     },
     'installers.yml/installers': {'${{ runner.temp }}/edi-ccache': 'ccache2-installer-'},
+    **dict.fromkeys(
+        [
+            f'crysta.yml/{job}'
+            for job in (
+                'checks',
+                'tidy',
+                'python',
+                'audit',
+                'edi-verification',
+                'cpp-full',
+                'full-macos',
+                'asan',
+                'performance',
+                'coverage',
+            )
+        ],
+        CRYSTA,
+    ),
+    'crysta.yml/python-full': CRYSTA_PYTHON_FULL,
 }
 USES = {
     'actions/upload-artifact': 'artifact',
@@ -245,7 +275,8 @@ def after(where: str, step: dict, checked: set[str]) -> Iterator[str]:
         yield f'{where}: {named(step)!r} installs an environment outside the output filter'
     if action(step) != STORE:
         for name, nested in inner(step):
-            if 'run' in nested and nested.get('shell') != FILTER:
+            quiet = (name, nested.get('id')) in QUIET
+            if 'run' in nested and nested.get('shell') != FILTER and not quiet:
                 yield f'{where}: {named(step)!r} runs {name} without the output filter'
             for kind, _ in published(nested):
                 yield f'{where}: {named(step)!r} publishes ({kind}) outside the store action'

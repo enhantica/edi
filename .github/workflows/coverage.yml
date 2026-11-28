@@ -9,10 +9,23 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # The crysta commit this run builds and tests: pixi.toml's pin, read once and passed on (edi ADR-0083).
+  pin:
+    runs-on: ubuntu-24.04
+    outputs:
+      sha: ${{ steps.pin.outputs.sha }}
+    steps:
+      - uses: actions/checkout@v5
+      - id: pin
+        run: bash tools/ci/crysta-source.sh
+
   # The crysta SDK, built once per crysta commit (edi ADR-0083).
   crysta-sdk:
+    needs: pin
     uses: ./.github/workflows/crysta-sdk.yml
     secrets: inherit
+    with:
+      crysta-sha: ${{ needs.pin.outputs.sha }}
 
   coverage:
     needs: crysta-sdk

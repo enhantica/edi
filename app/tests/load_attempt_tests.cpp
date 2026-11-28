@@ -16,6 +16,7 @@
 #include "example_list_model.hpp"
 #include "experiment_view_model.hpp"
 #include "project_view_model.hpp"
+#include "load_wait.hpp"
 #include "session.hpp"
 #include "structure_view_model.hpp"
 
@@ -159,15 +160,15 @@ private slots:
         // A linked data file the experiment names: the innermost read is the one to blame.
         REFUSES(project->loadExperiments({fixture(QStringLiteral("linked/experiments/linked.edi"))}), "bad.xye");
         REFUSES(project->loadExperimentWithStructures(fixture(QStringLiteral("bad_experiment/experiments/bank.edi")), {}, {}), "bank.edi");
-        REFUSES(project->loadDataIntoNewExperiment(fixture(QStringLiteral("bad.xye"))), "bad.xye");
+        REFUSES(wait_for_load(*project, project->loadDataIntoNewExperiment(fixture(QStringLiteral("bad.xye")))), "bad.xye");
 
         QVERIFY(project->createExperiment());
         ExperimentViewModel* experiment = project->experimentModels().constLast();
         QVERIFY(experiment);
         const int index = static_cast<int>(project->experimentModels().size()) - 1;
-        REFUSES(project->loadData(index, fixture(QStringLiteral("bad.xye"))), "bad.xye");
-        REFUSES(project->loadData(index, QUrl(QStringLiteral("https://example.org/data.xye"))), "");
-        REFUSES(project->loadDatasets(experiment, {fixture(QStringLiteral("bad.xye"))}, false, false), "bad.xye");
+        REFUSES(wait_for_load(*project, project->loadData(index, fixture(QStringLiteral("bad.xye")))), "bad.xye");
+        REFUSES(wait_for_load(*project, project->loadData(index, QUrl(QStringLiteral("https://example.org/data.xye")))), "");
+        REFUSES(wait_for_load(*project, project->loadDatasets(experiment, {fixture(QStringLiteral("bad.xye"))}, false, false)), "bad.xye");
         REFUSES(project->locateDataFile(experiment, fixture(QStringLiteral("bad.xye"))), "bad.xye");
         // A refusal no load makes: the selector refuses a single crystal with X-rays.
         QVERIFY(project->setNewExperimentType(QStringLiteral("sampleForm"), QStringLiteral("single crystal")));

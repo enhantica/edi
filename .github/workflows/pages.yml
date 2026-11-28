@@ -28,12 +28,26 @@ env:
   CMAKE_BUILD_PARALLEL_LEVEL: 4
 
 jobs:
+  # The crysta commit this run builds and tests: pixi.toml's pin, read once and passed on (edi ADR-0083).
+  pin:
+    if: github.event_name != 'release' || !github.event.release.prerelease
+    runs-on: ubuntu-24.04
+    outputs:
+      sha: ${{ steps.pin.outputs.sha }}
+    steps:
+      - uses: actions/checkout@v5
+      - id: pin
+        run: bash tools/ci/crysta-source.sh
+
   # The crysta SDK, built once per crysta commit (edi ADR-0083).
   # A stable release builds the web app again at its tag, so it shows the release's version (edi ADR-0017 §1).
   crysta-sdk:
     if: github.event_name != 'release' || !github.event.release.prerelease
+    needs: pin
     uses: ./.github/workflows/crysta-sdk.yml
     secrets: inherit
+    with:
+      crysta-sha: ${{ needs.pin.outputs.sha }}
 
   # The publishers below run only from main or, for a stable release, its v* tag: the refs the public-site
   # environment admits. A dispatch from any other branch builds and checks but publishes nothing.

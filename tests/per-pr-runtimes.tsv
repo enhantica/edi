@@ -29,12 +29,12 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 267611
+# inventory_python = 267629
 # inventory_cpp = 0
 # inventory_measured = 187677
-# inventory_unmeasured = 79934
+# inventory_unmeasured = 79952
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
-# inventory_pr_python = 92700
+# inventory_pr_python = 92718
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -189,6 +189,8 @@ UNMEASURED:failed-in-this-run	tests/integration/app/test_assistant_trial_retirem
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_separate_adp_table_and_isotropic_controls]
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_space_group_name_and_number_choose_new_default]
 0.000	tests/integration/app/test_c13_t2_gui.py::test_gui_owner_decisions_pass_in_the_production_host
+UNMEASURED:failed-in-this-run	tests/integration/app/test_capture_data_import.py::test_capture_import_outcome_follows_its_own_read[import-data]
+UNMEASURED:failed-in-this-run	tests/integration/app/test_capture_data_import.py::test_capture_import_outcome_follows_its_own_read[import-scan]
 0.000	tests/integration/app/test_collection_downloads.py::test_a_cached_project_folder_is_reused_only_when_it_holds_a_plain_project[child-link]
 0.000	tests/integration/app/test_collection_downloads.py::test_a_cached_project_folder_is_reused_only_when_it_holds_a_plain_project[empty-folder]
 0.000	tests/integration/app/test_collection_downloads.py::test_a_cached_project_folder_is_reused_only_when_it_holds_a_plain_project[loose-file]
@@ -181937,6 +181939,13 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_ionic_xray_factors.py::t
 UNMEASURED:failed-in-this-run	tests/integration/py/test_ionic_xray_factors.py::test_ionic_site_intensity_ratio_matches_published_factors[it1992-O2-]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_ionic_xray_factors.py::test_ionic_site_intensity_ratio_matches_published_factors[wk1995-Fe3+]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_ionic_xray_factors.py::test_ionic_site_intensity_ratio_matches_published_factors[wk1995-O2-]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_issue_forms.py::test_forms_start_with_the_approved_public_labels
+UNMEASURED:failed-in-this-run	tests/integration/py/test_issue_forms.py::test_issue_form_validator_refuses_one_damaged_field[bad-id]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_issue_forms.py::test_issue_form_validator_refuses_one_damaged_field[bad-type]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_issue_forms.py::test_issue_form_validator_refuses_one_damaged_field[bad-yaml]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_issue_forms.py::test_issue_form_validator_refuses_one_damaged_field[feedback-only-label]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_issue_forms.py::test_issue_form_validator_refuses_one_damaged_field[legacy-label]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_issue_forms.py::test_issue_ownership_policy_uses_the_project_column
 0.000	tests/integration/py/test_latp_reference.py::test_latp_reference_quantities_are_fullprof_values_not_scan_regression_pins
 0.000	tests/integration/py/test_legacy_project_load.py::test_old_engine_start_state_is_refused_with_its_name[chebyshev]
 0.000	tests/integration/py/test_legacy_project_load.py::test_old_engine_start_state_is_refused_with_its_name[line-segment]
@@ -183885,6 +183894,8 @@ UNMEASURED:not-completed-in-this-run	tests/integration/py/test_project_save_fina
 0.000	tests/integration/py/test_published_prompt_evidence.py::test_published_trial_refuses_changes_to_the_annotated_original_reference[pin-provenance]
 0.000	tests/integration/py/test_published_prompt_evidence.py::test_published_trial_refuses_changes_to_the_annotated_original_reference[scientific-value]
 0.000	tests/integration/py/test_published_prompt_evidence.py::test_published_trial_refuses_changes_to_the_annotated_original_reference[tolerance]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_python_path_roundtrip.py::test_python_paths_round_trip_through_save_import_and_scan
+UNMEASURED:not-completed-in-this-run	tests/integration/py/test_python_path_roundtrip.py::test_python_refuses_a_path_cp1252_cannot_represent_before_creating_it
 0.050	tests/integration/py/test_reflection_admission.py::test_absence_diagnostic_reports_independent_count_and_mean[above-exclude]
 0.070	tests/integration/py/test_reflection_admission.py::test_absence_diagnostic_reports_independent_count_and_mean[above-include]
 0.070	tests/integration/py/test_reflection_admission.py::test_absence_diagnostic_reports_independent_count_and_mean[below-exclude]
@@ -250057,6 +250068,10 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_cosio_heidi_case.py::test_act
 UNMEASURED:failed-in-this-run	tests/system/py/test_cosio_heidi_case.py::test_python_tutorial_explicitly_loads_and_links_three_datasets_in_stages[ipynb]
 UNMEASURED:failed-in-this-run	tests/system/py/test_cosio_heidi_case.py::test_python_tutorial_explicitly_loads_and_links_three_datasets_in_stages[py]
 UNMEASURED:failed-in-this-run	tests/system/py/test_cosio_heidi_case.py::test_three_temperature_case_links_three_distinct_structures_and_datasets
+UNMEASURED:failed-in-this-run	tests/system/py/test_crysta_workflow_boundary.py::test_crysta_job_group_receives_subject_and_reports_it_in_each_job
+UNMEASURED:failed-in-this-run	tests/system/py/test_crysta_workflow_boundary.py::test_diagnostic_dispatch_is_a_distinct_non_pin_workflow
+UNMEASURED:failed-in-this-run	tests/system/py/test_crysta_workflow_boundary.py::test_sdk_producer_is_called_with_one_explicit_crysta_subject
+UNMEASURED:failed-in-this-run	tests/system/py/test_crysta_workflow_boundary.py::test_skip_input_covers_files_the_edi_verification_reads
 0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[about.components-passive-dark]
 0.000	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[about.components-passive-light]
 UNMEASURED:failed-in-this-run	tests/system/py/test_current_row_input.py::test_each_table_uses_one_current_row_for_real_input[aliases.list-background-dark]
@@ -251551,6 +251566,8 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_e04_t12_public_release.py::te
 0.280	tests/system/py/test_e09_t74_ci_source_consumption.py::test_actual_workflow_consumes_its_common_output_at_fetch_or_build[docs]
 0.520	tests/system/py/test_e09_t74_ci_source_consumption.py::test_actual_workflow_consumes_its_common_output_at_fetch_or_build[native]
 0.290	tests/system/py/test_e09_t74_ci_source_consumption.py::test_actual_workflow_consumes_its_common_output_at_fetch_or_build[notebooks]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e09_t74_ci_source_consumption.py::test_actual_workflow_consumes_its_common_output_at_fetch_or_build[static-linux]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e09_t74_ci_source_consumption.py::test_actual_workflow_consumes_its_common_output_at_fetch_or_build[static-macos]
 1.640	tests/system/py/test_e09_t74_ci_source_consumption.py::test_actual_workflow_consumes_its_common_output_at_fetch_or_build[system]
 0.100	tests/system/py/test_e09_t74_ci_source_consumption.py::test_new_consumers_really_consuming_the_shared_sha_are_admitted[checkout]
 0.220	tests/system/py/test_e09_t74_ci_source_consumption.py::test_new_consumers_really_consuming_the_shared_sha_are_admitted[composite]
@@ -255575,6 +255592,7 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_phase_r_factors.py::test_phas
 0.820	tests/system/py/test_phase_scan_parity.py::test_negative_points_and_zero_files_preserve_successful_scan[sequential]
 1.480	tests/system/py/test_phase_scan_parity.py::test_phase_scan_equals_single_fits_and_recovers_linear_coefficients[independent]
 1.130	tests/system/py/test_phase_scan_parity.py::test_phase_scan_equals_single_fits_and_recovers_linear_coefficients[sequential]
+UNMEASURED:failed-in-this-run	tests/system/py/test_pixi_launcher_selection.py::test_launcher_uses_three_exact_versions_and_refuses_a_range
 0.090	tests/system/py/test_plain_data_app.py::test_app_rename_follows_all_saved_references_and_undo[experiment]
 0.110	tests/system/py/test_plain_data_app.py::test_app_rename_follows_all_saved_references_and_undo[point]
 0.100	tests/system/py/test_plain_data_app.py::test_app_rename_follows_all_saved_references_and_undo[site]

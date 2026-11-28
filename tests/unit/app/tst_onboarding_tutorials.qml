@@ -86,10 +86,23 @@ TestCase {
     function clickControl(name) {
         activate(control(name), name);
     }
-    function startTutorial(id) {
+    function introButton(label) {
+        return Probe.objectsWithProperty(panel, "text").find(item =>
+            item.text === label && typeof item.clicked === "function" && Ui.exposed(item));
+    }
+
+    function openIntroduction(id) {
+
         clickControl("tutorials.row." + id);
         tryCompare(control("tutorials"), "visible", false, 2000, "The Tutorials chooser closes before the written-step controls receive input");
         tryCompare(control("tutorial"), "opened", true, 2000, "The written tutorial panel finishes opening before its steps are used");
+        tryVerify(() => introButton("Start") !== undefined && introButton("Close") !== undefined,
+                  2000, "Every tutorial starts with its Start and Close introduction controls");
+    }
+
+    function startTutorial(id) {
+        openIntroduction(id);
+        activate(introButton("Start"), "Start the tutorial from its introduction");
         if (id !== "interface") {
             compare(Session.project, null, "Scientific tutorials wait for the learner to create a project");
             const steps = JSON.parse(OnboardingProbe.sourceText("app/tutorials/manifest.json")).tutorials.find(entry => entry.id === id).steps;
@@ -97,7 +110,7 @@ TestCase {
             verify(createStep >= 0, "A scientific tutorial begins with the user's Create project action");
             compare(app.appBarCentralTabs.currentIndex, AppState.Page.Home, "The scientific lesson begins at Home Start");
             Ui.click(test, Probe, app, "home.start");
-            tryCompare(panel, "step", createStep, 2000, "The learner's Start action advances to Project creation");
+            tryCompare(panel, "step", createStep + 1, 2000, "The learner's Start action advances to Project creation");
             Ui.expandGroup(test, Probe, app, "group.getStarted");
             Ui.click(test, Probe, app, "project.create");
             const dialog = SettingsProof.creationDialog(app);
@@ -131,6 +144,42 @@ TestCase {
         compare(Probe.rows(chooser.catalogue).map(row => row.exampleId).sort().join(","), expected.slice().sort().join(","), "The real dialog has no missing, duplicate or extra case guides");
         return entries;
     }
+    function test_each_tutorial_begins_with_the_shared_introduction() {
+        const entries = tutorials();
+        for (const entry of entries) {
+            const original = Session.project;
+            openIntroduction(entry.id);
+            verify(panel.shown && !panel.shown.target && !panel.shown.check,
+                   "The introduction has neither a page target nor an action check");
+            compare(Session.project, original, "Showing the introduction leaves the user's project untouched");
+            const copy = control("tutorial.text").text;
+            verify(/example project/i.test(copy) && /your own project/i.test(copy),
+                   "The introduction distinguishes the tutorial's example from the learner's own project");
+            activate(introButton("Start"), "Start the selected tutorial");
+            tryVerify(() => panel.shown && panel.shown.target === entry.steps[0].target,
+                      3000, "Start reaches that tutorial's original first step");
+            panel.stop();
+            tryCompare(panel, "visible", false, 3000, "Stopping returns to the tutorial chooser");
+            tutorials();
+        }
+    }
+
+    function test_close_and_escape_leave_the_intro_available_on_reentry() {
+        const id = "interface";
+        tutorials();
+        openIntroduction(id);
+        activate(introButton("Close"), "Close the introduction before any tutorial work starts");
+        tryCompare(panel, "visible", false, 2000, "Close dismisses the introduction");
+        tutorials();
+        openIntroduction(id);
+        keyClick(Qt.Key_Escape);
+        tryCompare(panel, "visible", false, 2000, "Escape dismisses the introduction");
+        compare(Session.project, null, "Closing the introduction does not create a project");
+        tutorials();
+        openIntroduction(id);
+        verify(introButton("Start"), "Starting again offers the introduction each time");
+    }
+
     function test_popup_lists_the_shared_scripts() {
         for (const entry of tutorials()) {
             const row = control("tutorials.row." + entry.id);
@@ -185,7 +234,7 @@ TestCase {
         verify(temporary !== null && temporary !== original, "Completion choices refer to the tutorial's temporary project");
         // Scientific progression has its own actor; this case exercises the real
         // completion actions after the learner has created the owned project.
-        panel.step = entry.steps.length - 1;
+        panel.step = entry.steps.length;
         panel.show();
         tryCompare(control("tutorial"), "atEnd", true, 2000, "The completion choices replace Next only at the final written step");
         const keep = control("tutorial.keep"), discard = control("tutorial.discard");

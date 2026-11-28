@@ -9,6 +9,9 @@
 - **Forward constraint (binding on new features):** new C++ in edi builds without a warning under `EDI_WERROR`, and passes
   clang-tidy and cppcheck; a finding is fixed, or the line names the check it silences and why.
 
+**Amended 2026-11-27:** the two checks left the app jobs for jobs of their own, run in parts (decision 8 as it now reads),
+because clang-tidy alone took 39 minutes of the Linux app job and 52 of the macOS one.
+
 ## Context
 
 edi's C++ (the core, the CLI, the Python bindings, the app host and the native assistant adapter) built with the
@@ -69,10 +72,17 @@ formatting & static analysis (Python + C++)". The owner asked for the same check
 7. **Files rewritten by a change in flight wait for it.** `tools/ci/static-checks-deferred.txt` lists them; clang-tidy
    and cppcheck skip them, as sources and as headers, until that change lands, when they are swept and the list is
    emptied. Every other file is checked.
-8. **Both checks are CI steps of the app job on Linux and macOS** ("clang-tidy with the Clang Static Analyzer (zero
-   findings)", "cppcheck (zero findings)"), after the build whose compile commands they read, and after `app-moc` runs moc for every app target: a test runner
-   the job does not build still has its sources in those commands, and each includes its own `.moc`. They run after a failed
-   step too, so one round lists every finding. They run on Linux and macOS only: their Windows run (the MSVC compile
+8. **Both checks run in parts, in CI jobs of their own on Linux and macOS** (`static · Linux · k/3`,
+   `static · macOS · k/2`). Each part restores the run's native build, configures `build/app` and runs `app-moc`, which
+   makes moc's output for every app target: a test runner the app job does not build still has its sources in the
+   compile commands, and each includes its own `.moc`. clang-tidy takes every n-th file of the selection; cppcheck's
+   three calls run whole in part 1. The selection is the scripts' own, unchanged by the split. Each part keeps the
+   files its analyzers report they processed, with a hash of each compile command (`tools/ci/static_checks.py`), and
+   the required job `static · <platform>` (`tools/ci/static_join.py`) passes only if every part passed, the parts
+   together processed exactly what the app job's full build lists (`cpp-tidy.sh list`, `cpp-cppcheck.sh list`), and
+   that list still holds every file of the committed record of the run before the split,
+   `tests/fixtures/static_checks/<platform>.txt`, except files since deleted. A changed compile command counts only
+   if the file or a build file changed. They run on Linux and macOS only: their Windows run (the MSVC compile
    commands) and their WebAssembly run follow later, as the owner decided on 2026-11-17, while warnings as errors (2)
    cover every platform.
 
@@ -89,5 +99,6 @@ formatting & static analysis (Python + C++)". The owner asked for the same check
 |---|---|
 | The warning set on each whole target | Rejected: Qt's generated sources (moc, qmlcachegen, resources) would carry warnings edi cannot fix. |
 | crysta's whole curated set at once | Deferred: its style groups would rewrite nearly every C++ file of edi while other changes are open on them; the groups that find faults go first, the style groups in a sweep of their own. |
-| A separate CI job for the checks | Rejected: it would build the app a second time for the compile commands the app job already has. |
+| A separate CI job for the checks | Rejected at first: it would build the app a second time for the compile commands the app job already has. Taken on 2026-11-27 (decision 8): the parts build only what moc needs, from the app job's compiler cache, and the app job no longer waits on the checks. |
+| Each part trusts the file list it was given | Rejected: a part that skipped files, or a configure that dropped a target, would still pass. The join reads what the analyzers report they processed. |
 | clang-tidy without the analyzer | Rejected: the analyzer's path-sensitive checks (null dereference, use after move, leaks) are the reason to run it. |

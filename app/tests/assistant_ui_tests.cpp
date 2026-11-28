@@ -37,6 +37,7 @@
 #include "assistant_test_settings.hpp"
 #include "assistant_widget_input.hpp"
 #include "project_view_model.hpp"
+#include "load_wait.hpp"
 #include "run_log.hpp"
 #include "online_search.hpp"
 #include "parameter_item.hpp"
@@ -984,7 +985,7 @@ private slots:
         QVERIFY(project->loadStructure(QUrl::fromLocalFile(QString::fromUtf8(EDI_SOURCE_DIR) + "/tests/fixtures/assistant_save_replay/lbco.cif")));
         project->createExperiment();
         QTRY_VERIFY(project->currentExperiment());
-        QVERIFY(project->loadDataInto(project->currentExperiment(), QUrl::fromLocalFile(QString::fromUtf8(EDI_SOURCE_DIR) + "/tests/fixtures/plain_data/cwl/three_columns/pattern.xye")));
+        QVERIFY(wait_for_load(*project, project->loadDataInto(project->currentExperiment(), QUrl::fromLocalFile(QString::fromUtf8(EDI_SOURCE_DIR) + "/tests/fixtures/plain_data/cwl/three_columns/pattern.xye"))));
         auto* background = project->currentExperiment()->background();
         background->append();
         QVERIFY(background->count() > 0);
@@ -1188,7 +1189,7 @@ private slots:
         auto* actual = project->currentExperiment()->pattern();
         project->createExperiment();
         QTRY_VERIFY_WITH_TIMEOUT(!project->calculating() && project->viewSettled(), 10000);
-        QVERIFY(project->loadDataInto(project->currentExperiment(), QUrl::fromLocalFile(path)));
+        QVERIFY(wait_for_load(*project, project->loadDataInto(project->currentExperiment(), QUrl::fromLocalFile(path))));
         auto* manual = project->currentExperiment()->pattern();
         QTRY_VERIFY_WITH_TIMEOUT(!project->calculating() && project->viewSettled(), 10000);
         QTRY_COMPARE(actual->rowCount(), manual->rowCount());

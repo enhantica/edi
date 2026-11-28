@@ -30,6 +30,7 @@
 #include "edi/version.hpp"
 #include "fit_view_model.hpp"
 #include "project_view_model.hpp"
+#include "load_wait.hpp"
 #include "option_list_model.hpp"
 #include "session.hpp"
 
@@ -56,6 +57,7 @@ Session* session_for(QQuickWindow& window) {
     auto* engine = qmlEngine(window.contentItem());
     return engine ? engine->singletonInstance<Session*>("edi.app", "Session") : nullptr;
 }
+
 }  // namespace
 
 bool DemoDriver::loadDocumentationScript(const QString& path, QString* error) {
@@ -332,9 +334,11 @@ std::optional<bool> DemoDriver::documentationAction(const QString& action) {
     if (action.startsWith("import-data:")) {
         auto* session = session_for(window_);
         const auto file = action.mid(12);
+        // The load reads off the GUI thread (edi ADR-0110): the step goes on once it has ended, as the user would.
         if (!session || !session->project() || !QFileInfo(file).isFile() ||
-            !session->project()->loadData(0, QUrl::fromLocalFile(file))) {
-            fail("cannot load the tutorial measured data: " + file);
+            !wait_for_load(*session->project(), session->project()->loadData(0, QUrl::fromLocalFile(file)))) {
+            fail("cannot load the tutorial measured data: " + file +
+                 (session && session->project() ? ": " + session->project()->lastError() : QString()));
             return false;
         }
         return true;
@@ -347,8 +351,10 @@ std::optional<bool> DemoDriver::documentationAction(const QString& action) {
         QList<QUrl> files;
         for (const QString& name : folder.entryList(QDir::Files, QDir::Name)) files.append(QUrl::fromLocalFile(folder.filePath(name)));
         if (!session || !session->project() || session->project()->experimentModels().isEmpty() || files.size() < 2 ||
-            !session->project()->loadDatasets(session->project()->experimentModels().front(), files, true, true)) {
-            fail("cannot load the scan's files from " + folder.path());
+            !wait_for_load(*session->project(), session->project()->loadDatasets(
+                                                    session->project()->experimentModels().front(), files, true, true))) {
+            fail("cannot load the scan's files from " + folder.path() +
+                 (session && session->project() ? ": " + session->project()->lastError() : QString()));
             return false;
         }
         return true;

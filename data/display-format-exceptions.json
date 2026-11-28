@@ -334,6 +334,21 @@
    "file": "app/src/scan_view_model.cpp",
    "match": "QString::number(values_[i], 'f', decimals)",
    "reason": "a scan value at the decimals its spacing needs, which no item holds"
+  },
+  {
+   "file": "app/src/project_view_model.cpp",
+   "match": "QString::number(static_cast<double>(bytes) / 1e6, 'f', bytes < 10'000'000 ? 1 : 0)",
+   "reason": "the size of the data files being read, in MB, while the Experiments group waits for them (ADR-0110), not a value of an item"
+  },
+  {
+   "file": "app/src/web_files.cpp",
+   "match": "QString::number(static_cast<double>(bytes) / 1e6, 'f', 0)",
+   "reason": "a chosen file's size and the web app's bound in MB in the refusal of a file too large to read (ADR-0110), not a value of an item"
+  },
+  {
+   "file": "app/src/web_files.cpp",
+   "match": "QString::number(static_cast<double>(web_data_file_bytes) / 1e6, 'f', 0)",
+   "reason": "a chosen file's size and the web app's bound in MB in the refusal of a file too large to read (ADR-0110), not a value of an item"
   }
  ],
  "names": [

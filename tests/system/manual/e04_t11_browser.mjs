@@ -3,7 +3,7 @@
 // No delay is a readiness predicate: CDP events, animation frames, AX state and completed downloads are.
 import { spawn, spawnSync } from 'node:child_process';
 import { createServer } from 'node:http';
-import { readFile, writeFile, mkdir, mkdtemp, rm } from 'node:fs/promises';
+import { readFile, writeFile, mkdir, mkdtemp, rm, truncate } from 'node:fs/promises';
 import { resolve, extname, join, sep } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
@@ -37,7 +37,7 @@ assert(['lbco', 'ncaf'].includes(fitCase), 'browser fit case must name a committ
 const engineWorkers=process.argv.find(arg=>arg.startsWith('--engine-workers='))?.split('=')[1] || 'auto';
 assert(['auto','1'].includes(engineWorkers),'The shared-kit speed comparison selects actual Auto or one-worker preferences');
 const fileRequestCase = process.argv.find(arg => arg.startsWith('--file-request-case='))?.split('=')[1] || 'all';
-assert(['all','none','overlap','replacement','cancel-structure','cancel-experiment','load-data','native-picker','dataset-folder-cancel'].includes(fileRequestCase),
+assert(['all','none','overlap','replacement','cancel-structure','cancel-experiment','load-data','native-picker','dataset-folder-cancel','data-size-bound'].includes(fileRequestCase),
   'each scoped request case must be declared explicitly');
 const reopenControl = process.argv.find(arg => arg.startsWith('--reopen-control='))?.split('=')[1];
 assert(!fileRequestsOnly || !reopenControl, 'request-only checks cannot impersonate a reopen control');
@@ -76,6 +76,17 @@ if (!projectOpenClickOnly) {
 const scratch = await mkdtemp(join(tmpdir(), 'e04-browser-'));
 const chrome = chromeArg || process.env.CHROME_HEADLESS_SHELL;
 assert(chrome, 'CHROME_HEADLESS_SHELL must identify the pinned headless Chrome executable');
+if (writtenRequired && mode === 'multithread') {
+  const toolchain = process.env.EDI_WASM_TOOLCHAIN || join(process.env.HOME, '.cache/edi-wasm');
+  const driver = join(toolchain, 'playwright/node_modules/playwright-core/index.mjs');
+  const ownerCheck = fileURLToPath(new URL('./web_owner_tab.mjs', import.meta.url));
+  const owner = spawnSync(process.execPath, [ownerCheck, chrome, driver, join(site, 'index.html')], {
+    encoding: 'utf8', timeout: 30000,
+  });
+  assert.equal(owner.status, 0, 'The shipped page must grant a single tab ownership: ' +
+    (owner.error?.message || owner.stderr));
+}
+
 const headers = mode === 'multithread' ? {
   'Cross-Origin-Opener-Policy': 'same-origin', 'Cross-Origin-Embedder-Policy': 'require-corp',
 } : {};
@@ -1239,6 +1250,56 @@ print(markers[0].parent)`, saved, reopened, reopenControl || 'normal'], { encodi
       'Measured data File must open a real multiple-file browser chooser for the selected experiment');
     await evaluate("window.__e04FileInput.dispatchEvent(new Event('cancel')); true"); await frame();
     await waitAX(/Experiments \(1\)/);
+    }
+    if (['all', 'data-size-bound'].includes(fileRequestCase)) {
+      await createWithStructure('routing_oversize_data');
+      await click(/^Experiment$/);
+      await waitAX(/Experiments \(0\)/);
+      await click(/^Create experiment$/, 'button', 'experiments.create');
+      await waitAX(/Experiments \(1\)/);
+      const bound = 50_000_000;
+      const bytes = bound + 1;
+      const over = join(inputs, 'data-bound');
+      await mkdir(over);
+      const selected = join(over, 'over-limit.xye');
+      await writeFile(selected, '21.5 17.25 0.75\n');
+      await truncate(selected, bytes);
+      await evaluate(`(() => {
+        window.__ediBoundReads = 0;
+        const read = FileReader.prototype.readAsArrayBuffer;
+        const arrayBuffer = Blob.prototype.arrayBuffer;
+        FileReader.prototype.readAsArrayBuffer = function(blob) {
+          if (blob.size === ${bytes}) window.__ediBoundReads++;
+          return read.call(this, blob);
+        };
+        Blob.prototype.arrayBuffer = function() {
+          if (this.size === ${bytes}) window.__ediBoundReads++;
+          return arrayBuffer.call(this);
+        };
+        return true;
+      })()`);
+      for (const {label, action, path, message} of [
+        {label: /^File…$/, action: 'experiments.load.dataFile', path: selected, message: 'This file is'},
+        {label: /^Folder as a series(?:…|\.\.\.)?$/, action: 'experiments.load.dataFolder', path: over,
+         message: 'over-limit.xye in the chosen folder is'},
+      ]) {
+        const picker = await beginExperimentDataPicker(label, action);
+        await send('DOM.setFileInputFiles', {...picker, files: [path]});
+        const explain = `${message} 50 MB. The web app opens data files up to 50 MB; open it in the desktop app.`;
+        const deadline = Date.now() + 10000;
+        let shown = false;
+        do {
+          assert.equal(await evaluate('window.__ediBoundReads'), 0,
+            `${action} must check the selected size before the browser reads any bytes`);
+          const tree = await send('Accessibility.getFullAXTree');
+          shown = tree.nodes.some(node => !node.ignored && node.name?.value?.includes(explain));
+          if (!shown) await frame();
+        } while (!shown && Date.now() < deadline);
+        assert(shown, `${action} must show the desktop alternative for this selected file`);
+        await send('Input.dispatchKeyEvent', {type:'keyDown', key:'Escape', code:'Escape', windowsVirtualKeyCode:27});
+        await send('Input.dispatchKeyEvent', {type:'keyUp', key:'Escape', code:'Escape', windowsVirtualKeyCode:27});
+        await waitAX(/Experiments \(1\)/);
+      }
     }
     await writeFile(join(output,`${mode}-file-requests.json`),JSON.stringify({case:fileRequestCase,completed:true},null,2));
   }

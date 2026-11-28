@@ -494,6 +494,11 @@ def build(
     # The runtime's upstream bytes are checked before the release signature changes them.
     verify_assistant_payload(stage, app / 'app/assistant-runtime-installed.json')
     sign_release_executables(stage)
+    if SYSTEM == 'windows':
+        # edi's own programs run with UTF-8 as their code page (ADR-0109); the assistant
+        # runtime's programs are not edi's.
+        own = [stage / 'bin/EasyDiffraction.exe', *sorted(stage.rglob('edi_*.exe'))]
+        run([sys.executable, ROOT / 'tools/ci/windows_manifest.py', *own])
     (stage / 'bundle-audit.json').write_text(
         json.dumps(audit_bundle(stage), indent=2) + '\n', encoding='utf-8'
     )

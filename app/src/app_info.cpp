@@ -349,8 +349,15 @@ QList<Tutorial> ApplicationInfo::tutorials() const {
             made.expectSites.append(site.toString());
         made.expectChi2 = object.value(QStringLiteral("expectChi2")).toDouble(-1);
         made.expectChi2Tolerance = object.value(QStringLiteral("expectChi2Tolerance")).toDouble(0.01);
+        made.kind = text(object, "kind");
         return made;
     };
+    // One introduction for every tutorial, in one file, so no tutorial repeats it and a new one has it. Its last
+    // sentence offers the AI assistant, so only a build that has the assistant shows it.
+    const QJsonObject intro = read(QStringLiteral("introduction.json")).object();
+    TutorialStep introduction = step(intro, {});
+    if (assistantBuilt() && !text(intro, "assistant").isEmpty())
+        introduction.text += QLatin1Char(' ') + text(intro, "assistant");
     // A step without its own tab is on the tab the last sidebar-tab step on its page opened, so it sets up the same
     // context on Next, Back or a jump.
     const auto placeOnTabs = [](QList<TutorialStep>& steps) {
@@ -405,6 +412,7 @@ QList<Tutorial> ApplicationInfo::tutorials() const {
             }
         }
         placeOnTabs(tutorial.steps);
+        if (introduction.kind == QLatin1String("introduction")) tutorial.steps.prepend(introduction);
         tutorials.append(tutorial);
     }
     return tutorials;

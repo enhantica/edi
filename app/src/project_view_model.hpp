@@ -256,6 +256,10 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     Q_PROPERTY(int seriesRevision READ seriesRevision NOTIFY seriesChanged)
     Q_PROPERTY(QString missingDataFolder READ missingDataFolder NOTIFY missingDataFolderChanged)
     Q_PROPERTY(QString missingDataFile READ missingDataFile NOTIFY missingDataFileChanged)
+    // A Load data whose files are being read off the GUI thread, and what the Experiments group shows for it: "Reading
+    // <file>, <size> MB, <n> s", empty while none runs.
+    Q_PROPERTY(bool loadingData READ loadingData NOTIFY loadingDataChanged)
+    Q_PROPERTY(QString readingData READ readingData NOTIFY readingDataChanged)
     Q_PROPERTY(QString pendingCollectionData READ pendingCollectionData NOTIFY pendingCollectionDataChanged)
     Q_PROPERTY(QStringList scanColumns READ scanColumns NOTIFY scanColumnsChanged)
     // The template dataset's place among the datasets (`_sequential_fit.template_file`), or -1.
@@ -592,7 +596,17 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // made with Create experiment; its type then locks and its range shows the data's. An experiment still named
     // experiment1, experiment2, … takes the file's name. A second load replaces the data. One undoable step, and
     // one message saying what the reader skipped or changed.
+    //
+    // Every Load data route reads its files off the GUI thread (edi ADR-0110): it returns false when it refused in the
+    // call, and true when the data is in or a load started. startedDataLoad, read right after the call, names the load
+    // it started (0 when it started none), and dataLoadSettled carries that number when the load ends. The assistant's
+    // pre-armed input is loaded in the call that consumes it.
     Q_INVOKABLE bool loadData(int index, const QUrl& file);
+    Q_INVOKABLE int startedDataLoad() const { return started_load_; }
+    // Stops the running load: its result is dropped, nothing changes, and it settles as not loaded.
+    Q_INVOKABLE void cancelDataLoad();
+    bool loadingData() const { return pending_load_.has_value(); }
+    QString readingData() const;
     // Load data for the experiment a chooser was opened for, wherever its row is now: refused when that experiment
     // is no longer in the project (removed, or replaced by an Undo or a type change since).
     Q_INVOKABLE bool loadDataInto(edi_app::ExperimentViewModel* experiment, const QUrl& file);
@@ -906,6 +920,12 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     void missingDataFolderChanged();
     void scanColumnsChanged();
     void missingDataFileChanged();
+    void loadingDataChanged();
+    void readingDataChanged();
+    // Exactly once for every load a route started, with its number: applied (true), or refused, cancelled, replaced
+    // by a newer load or its experiment removed (false). A view-model destroyed first settles nothing: a waiter watches
+    // its `destroyed` too.
+    void dataLoadSettled(int load, bool loaded);
     void pendingCollectionDataChanged();
     void colourSchemeChanged();
     void experimentColourPositionsChanged();
@@ -1412,6 +1432,65 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // when the project closes, then the worker, which waits for a calculation in flight.
     std::unique_ptr<edi::work::Worker> worker_;
     std::unique_ptr<edi::LivePreview> preview_;
+    // Load data in two phases (edi ADR-0089 point 7): the route's checks, then one background job reads every file it
+    // needs (a copied scan's files copied first), then the route's own code runs again here with those reads.
+    struct DataReadOrder {
+        DataReadOrder(std::string reader_path, std::string source_path, edi::DataKind read_kind)
+            : reader(std::move(reader_path)), source(std::move(source_path)), kind(read_kind) {}
+        std::string reader;  // the file read, the key the second phase asks for
+        std::string source;  // the user's file, for its name
+        edi::DataKind kind;
+        // An experiment whose background is estimated automatically: the project as the load started and the
+        // experiment's row in it, so the job also runs the estimate the edit would otherwise run on the GUI thread.
+        std::shared_ptr<const edi::Project> context;
+        std::size_t target = 0;
+        bool take_file_name = false;
+    };
+    struct PreparedScan {  // a copied scan's folder, made by the first phase and filled by the job
+        QString directory;
+        QString fresh_root;  // a working folder made for a project not yet saved
+        QString folder;      // relative to `directory`
+    };
+    struct DataLoadOrder {
+        QPointer<ExperimentViewModel> target;  // null for a new experiment
+        QStringList files;
+        std::vector<DataReadOrder> reads;
+        std::optional<PreparedScan> scan;
+        std::function<bool()> second;
+    };
+    struct PendingLoad {
+        int id = 0;
+        QString text;
+        qint64 started_ms = 0;
+        std::optional<PreparedScan> scan;
+        std::function<bool()> second;
+        std::shared_ptr<std::atomic<bool>> cancelled;
+        QMetaObject::Connection watch;  // the target experiment's removal
+    };
+    struct ReadOutcome {
+        std::optional<edi::DataFileRead> read;
+        QString error;
+        std::optional<edi::BackgroundState> background;  // the estimate the job ran, if it ran one
+    };
+    bool startDataLoad(DataLoadOrder order);
+    void finishDataLoad(int id, std::map<std::string, ReadOutcome> outcomes, const QString& copy_error);
+    // Drops the running load and settles it as not loaded.
+    void dropDataLoad();
+    // The file's rows as the route's second phase takes them from the job, or read now for a synchronous caller.
+    edi::PlainDataLoad readDataFile(const edi::BraggPdExperiment& experiment, const std::string& reader,
+                                    const std::string& source, bool take_file_name);
+    bool loadDataNow(int index, const QUrl& file);
+    bool loadDataIntoNewExperimentNow(const QUrl& file, const QString& sampleForm, const QString& beamMode,
+                                      const QString& radiationProbe);
+    bool loadDatasetsNow(ExperimentViewModel* experiment, const QList<QUrl>& files, bool asScan, bool copy,
+                         const QList<CollectionOrigin>& origins);
+    std::optional<PendingLoad> pending_load_;
+    int load_serial_ = 0;
+    int started_load_ = 0;  // the load the latest route call started, 0 when it started none
+    QTimer load_clock_;  // the reading text's seconds
+    std::map<std::string, ReadOutcome> preread_;
+    bool second_phase_ = false;
+    std::optional<PreparedScan> prepared_scan_;
     bool pending_structural_ = false;
     bool editing_ = false;
     bool edit_publication_failed_ = false;

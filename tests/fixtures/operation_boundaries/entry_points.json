@@ -351,6 +351,11 @@
           "proof": null,
           "overloads": 1
         },
+        "startedDataLoad": {
+          "domain": "read-only query",
+          "proof": null,
+          "overloads": 1
+        },
         "saveDataPlan": {
           "domain": "read-only query",
           "proof": null,
@@ -392,6 +397,11 @@
           "overloads": 1
         },
         "loadDatasetFolder": {
+          "domain": "dataset-load",
+          "proof": "tests/system/py/test_browser_dataset_copy.py",
+          "overloads": 1
+        },
+        "cancelDataLoad": {
           "domain": "dataset-load",
           "proof": "tests/system/py/test_browser_dataset_copy.py",
           "overloads": 1

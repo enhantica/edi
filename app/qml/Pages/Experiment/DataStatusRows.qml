@@ -10,15 +10,37 @@ import EasyApplication.Gui.Elements as EaElements
 
 import edi.app
 
-// What the Experiments group says under its table about data it cannot use yet (ADR-0069): a scan folder or a data
-// file that is not where the project says, with Locate…, and a collection's data not downloaded yet.
+// What the Experiments group says under its table about data it cannot use yet (ADR-0069): a data file being read, a
+// scan folder or a data file that is not where the project says, with Locate…, and a collection's data not downloaded
+// yet.
 Column {
     id: group
 
     property ProjectViewModel project: null
 
     spacing: AppSizes.groupContentSpacing
-    visible: project !== null && (project.missingDataFolder !== "" || project.missingDataFile !== "" || project.pendingCollectionData !== "")
+    visible: project !== null && (project.readingData !== "" || project.missingDataFolder !== "" || project.missingDataFile !== "" || project.pendingCollectionData !== "")
+
+    // A Load data reading its files off the GUI thread (edi ADR-0089 point 7): the file, its size and the time so
+    // far in the fit's striped bar, and Cancel, which drops the load.
+    Row {
+        objectName: "experiments.readingData"
+        visible: group.project !== null && group.project.readingData !== ""
+        spacing: EaStyle.Sizes.fontPixelSize
+        FitProgressBar {
+            objectName: "experiments.readingData.progress"
+            anchors.verticalCenter: parent.verticalCenter
+            width: EaStyle.Sizes.sideBarContentWidth - cancelReadingButton.width - parent.spacing
+            indeterminate: true
+            text: group.project !== null ? group.project.readingData : ""
+        }
+        EaElements.Button {
+            id: cancelReadingButton
+            objectName: "experiments.cancelReading"
+            text: qsTr("Cancel")
+            onClicked: group.project.cancelDataLoad()
+        }
+    }
 
     // A scan whose data folder cannot be found (ADR-0069): the project still opens; this line says which folder
     // and Locate folder… points the scan at its new place.

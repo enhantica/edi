@@ -5,6 +5,7 @@
 #include <array>
 #include <cstdint>
 #include <functional>
+#include <memory>
 #include <optional>
 #include <set>
 #include <stdexcept>
@@ -508,6 +509,25 @@ PlainDataLoad experiment_with_plain_data(const BraggPdExperiment& experiment, co
 /// .int/plain suffix class; mismatch refuses before reading. No second parser or input authority is introduced.
 PlainDataLoad experiment_with_plain_data(const BraggPdExperiment& experiment, const std::string& reader_path,
                                          const std::string& source_path, bool take_file_name);
+/// The same in two steps, so Load data can parse off the GUI thread and assemble on it (edi ADR-0089 point 7):
+/// read_data_file parses the file for a kind of experiment, a powder pattern's rows or a single crystal's
+/// reflections read for its beam mode; experiment_with_read assembles the rows on the experiment given then.
+/// read_fits says whether that experiment still takes what was read.
+struct DataKind {
+    bool reflections = false;  // a single crystal's reflections, not a powder pattern
+    BeamModeEnum beam_mode = BeamModeEnum::CONSTANT_WAVELENGTH;  // what the reflection reader takes
+};
+DataKind data_kind(const BraggPdExperiment& experiment);
+struct ReflectionRead;
+struct DataFileRead {
+    std::string source_path;  // the user's file, for its name
+    DataKind kind;            // what it was read for
+    PlainDataRows pattern;
+    std::shared_ptr<const ReflectionRead> reflection;
+};
+DataFileRead read_data_file(const DataKind& kind, const std::string& reader_path, const std::string& source_path);
+bool read_fits(const DataFileRead& read, const BraggPdExperiment& experiment);
+PlainDataLoad experiment_with_read(const BraggPdExperiment& experiment, DataFileRead read, bool take_file_name);
 
 // Registration-live loader vocabulary (seam 20 / I15): the Python registration seam adds a new
 // `_peak.type` token here so the loader and selector accept it without a rebuild — crysta's

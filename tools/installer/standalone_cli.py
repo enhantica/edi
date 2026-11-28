@@ -5,6 +5,7 @@ import json
 import math
 import os
 import subprocess
+import sys
 import tempfile
 import zipfile
 from pathlib import Path
@@ -87,6 +88,9 @@ def build_cli(
     suffix = '.exe' if SYSTEM == 'windows' else ''
     executable = 'edi' + suffix
     binary = source / ('easydiffraction' + suffix)
+    if SYSTEM == 'windows':
+        # UTF-8 as its code page, so paths on its command line keep every letter (ADR-0109).
+        run([sys.executable, ROOT / 'tools/ci/windows_manifest.py', binary])
     if SYSTEM == 'linux':
         run(['strip', '--strip-unneeded', binary])
     libraries = bundle_runtime(binary, prefix)

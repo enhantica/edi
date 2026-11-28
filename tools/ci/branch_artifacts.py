@@ -45,8 +45,8 @@ API = (os.environ.get('GITHUB_API_URL') or 'https://api.github.com').rstrip('/')
 KEEP = re.compile(
     r'^(release-plan-|qualified-release-plan-|offsite-|smartscreen-submission$|installer-)'
 )
-# edi's crysta SDK artifact is the build its pin needs.
-SDK = re.compile(r'^crysta-sdk-')
+# edi's crysta SDK artifact is the build its pin needs (named crysta-sdk- in older runs).
+SDK = re.compile(r'^(?:edi-)?crysta-sdk-')
 # GitHub lists at most this many of a pull request's commits, and this many filtered runs.
 PR_COMMITS_CAP = 250
 RUNS_CAP = 1000

@@ -63,6 +63,7 @@
 #include "parameter_table_model.hpp"
 #include "pattern_chart_controller.hpp"
 #include "project_view_model.hpp"
+#include "load_wait.hpp"
 #include "scan_session.hpp"
 #include "scan_view_model.hpp"
 #include "session.hpp"
@@ -4344,6 +4345,10 @@ void DemoDriver::next_action() {
 
 bool DemoDriver::tutorial_fit_check(QObject* panel, int step) {
     const TutorialStep current = panel->property("current").value<TutorialStep>();
+    // The introduction is the same text in every tutorial and points at nothing: none of a step's checks apply.
+    if (current.kind == QLatin1String("introduction")) return true;
+    // Steps are numbered as the documentation numbers them, the introduction not counted.
+    const int number = step + 1 - panel->property("firstStep").toInt();
     QQmlEngine* engine = qmlEngine(window_.contentItem());
     auto* session = engine != nullptr ? engine->singletonInstance<Session*>("edi.app", "Session") : nullptr;
     ProjectViewModel* project = session != nullptr ? session->project() : nullptr;
@@ -4383,7 +4388,7 @@ bool DemoDriver::tutorial_fit_check(QObject* panel, int step) {
             }
         }
         for (const QString& problem : problems) {
-            const QString text = QStringLiteral("step %1 (%2): %3").arg(step + 1).arg(current.title, problem);
+            const QString text = QStringLiteral("step %1 (%2): %3").arg(number).arg(current.title, problem);
             if (!qEnvironmentVariableIsSet("EDI_DEMO_REPORT_ONLY")) {
                 fail(text);
                 return false;
@@ -4431,7 +4436,7 @@ bool DemoDriver::tutorial_fit_check(QObject* panel, int step) {
         fit_seen_running_ = false;
         if (const QString keep = qEnvironmentVariable("EDI_DEMO_KEEP_FIT_PROJECTS"); !keep.isEmpty()) {
             const QString id = panel->property("tutorial").value<Tutorial>().id;
-            try { edi::save_project(project->project(), (keep + QStringLiteral("/%1-step-%2").arg(id).arg(step + 1)).toStdString()); }
+            try { edi::save_project(project->project(), (keep + QStringLiteral("/%1-step-%2").arg(id).arg(number)).toStdString()); }
             catch (const std::exception& error) { std::fprintf(stderr, "keep project: %s\n", error.what()); }
         }
         if (!current.expectFree.isEmpty()) {
@@ -4524,20 +4529,26 @@ void DemoDriver::tutorial_next_then(const std::function<void()>& next, int step,
         return;
     }
     const int now = panel->property("step").toInt();
-    const auto count = static_cast<int>(panel->property("steps").toList().size());
+    // The introduction, step 0 of every tutorial, is not counted: the steps keep the numbers the documentation gives.
+    const int first = panel->property("firstStep").toInt();
+    const bool introduction = panel->property("current").value<TutorialStep>().kind == QLatin1String("introduction");
+    const auto count = static_cast<int>(panel->property("steps").toList().size()) - first;
     const QVariant chosen = panel->property("tutorial");
     QString id = chosen.value<Tutorial>().id;
     if (id.isEmpty()) id = chosen.toMap().value(QStringLiteral("id")).toString();
     if (step >= 0 && now < step) {
         // Next alone must only go forward; a tutorial that steps back loops.
-        fail(QStringLiteral("tutorial %1 went back from step %2 to %3 with only Next").arg(id).arg(step + 1).arg(now + 1));
+        fail(QStringLiteral("tutorial %1 went back from step %2 to %3 with only Next").arg(id).arg(step + 1 - first).arg(now + 1 - first));
         return;
     }
     if (now != step) {
         step = now;
         waited_ms = 0;
         clicked_ms = -1;
-        std::fprintf(stderr, "edi_app --demo: tutorial %s at step %d of %d\n", qPrintable(id), now + 1, count);
+        if (introduction)
+            std::fprintf(stderr, "edi_app --demo: tutorial %s at its introduction\n", qPrintable(id));
+        else
+            std::fprintf(stderr, "edi_app --demo: tutorial %s at step %d of %d\n", qPrintable(id), now + 1 - first, count);
         if (qEnvironmentVariableIsSet("EDI_DEMO_TRACE_LABELS")) {
             std::function<void(QQuickItem*)> walk = [&](QQuickItem* parent) {
                 for (QQuickItem* child : parent->childItems()) {
@@ -4568,9 +4579,10 @@ void DemoDriver::tutorial_next_then(const std::function<void()>& next, int step,
         QDir folder(shots);
         folder.mkpath(id);
         folder.cd(id);
-        grab().save(folder.filePath(QStringLiteral("%1.png").arg(now + 1, 3, 10, QLatin1Char('0'))));
+        // The introduction is 000, so every step keeps its documented number.
+        grab().save(folder.filePath(QStringLiteral("%1.png").arg(now + 1 - first, 3, 10, QLatin1Char('0'))));
         if (QFile list(folder.filePath(QStringLiteral("steps.txt"))); list.open(QIODevice::Append | QIODevice::Text))
-            list.write(QStringLiteral("%1\t%2\t%3\n").arg(now + 1, 3, 10, QLatin1Char('0')).arg(shown.title, shown.text).toUtf8());
+            list.write(QStringLiteral("%1\t%2\t%3\n").arg(now + 1 - first, 3, 10, QLatin1Char('0')).arg(shown.title, shown.text).toUtf8());
         shot_step_ = now;
     }
     if (panel->property("atEnd").toBool()) {
@@ -4589,14 +4601,16 @@ void DemoDriver::tutorial_next_then(const std::function<void()>& next, int step,
             std::fprintf(stderr, "edi_app --demo: MISMATCH %s\n", qPrintable(text));
         }
         qInfo().noquote() << QStringLiteral("edi_app --demo: tutorial %1: reached step %2 of %3 by Next alone")
-                                 .arg(id).arg(now + 1).arg(count);
+                                 .arg(id).arg(now + 1 - first).arg(count);
         next();
         return;
     }
     if (!tutorial_fit_check(panel, now)) return;
-    QQuickItem* button = find(QStringLiteral("statusBar.tutorial.next"), false);
+    // The introduction is passed by its own Start, as a user passes it (told by its kind, never its text); the status
+    // bar's strip shows only from the first step.
+    QQuickItem* button = find(introduction ? QStringLiteral("tutorial.start") : QStringLiteral("statusBar.tutorial.next"), false);
     const bool clickable = button != nullptr && button->isVisible() && button->isEnabled() &&
-                           button->property("clickable").toBool() && on_screen(button);
+                           (introduction || button->property("clickable").toBool()) && on_screen(button);
     // One press per step, again only if the step has not moved a while after it.
     if (clickable && (clicked_ms < 0 || waited_ms - clicked_ms > 3000)) {
         click_item(button);
@@ -4605,9 +4619,10 @@ void DemoDriver::tutorial_next_then(const std::function<void()>& next, int step,
     if (waited_ms > kStuckMs) {
         // The window as it stands, beside the run's captures, to show where the tutorial stopped.
         grab().save(output_dir_.filePath(steps_[current_].image + QStringLiteral("-stuck.png")));
-        fail(QStringLiteral("step %1: tutorial %2 stays at step %3 of %4: Next %5")
-                 .arg(steps_[current_].image, id).arg(now + 1).arg(count)
-                 .arg(clickable ? QStringLiteral("does not advance it") : QStringLiteral("is off")));
+        fail(QStringLiteral("step %1: tutorial %2 stays at step %3 of %4: %5 %6")
+                 .arg(steps_[current_].image, id).arg(now + 1 - first).arg(count)
+                 .arg(introduction ? QStringLiteral("Start") : QStringLiteral("Next"),
+                      clickable ? QStringLiteral("does not advance it") : QStringLiteral("is off")));
         return;
     }
     QTimer::singleShot(kPollMs, this, [this, next, step, waited_ms, clicked_ms] {
@@ -5466,7 +5481,9 @@ bool DemoDriver::perform(const QString& action) {
         QQmlEngine* engine = qmlEngine(window_.contentItem());
         auto* session = engine ? engine->singletonInstance<Session*>("edi.app", "Session") : nullptr;
         if (!path.isEmpty() && session != nullptr && session->project() != nullptr) {
-            session->project()->loadDataInto(session->project()->currentExperiment(), QUrl::fromLocalFile(path));
+            // Read off the GUI thread (edi ADR-0110): the capture after this step shows the loaded data.
+            wait_for_load(*session->project(),
+                          session->project()->loadDataInto(session->project()->currentExperiment(), QUrl::fromLocalFile(path)));
         }
         return true;
     }

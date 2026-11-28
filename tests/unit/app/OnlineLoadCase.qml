@@ -203,6 +203,48 @@ TestCase {
         return onlineControl("source");
     }
 
+    function check_local_load_replaces_online_load() {
+        resetProject();
+        const project = Session.project;
+        const onlineCredits = [];
+        const settled = [];
+        const credit = (kind, id) => onlineCredits.push([kind, id]);
+        const settleLoad = (id, loaded) => settled.push([id, loaded]);
+        AppState.onlineEntryLoaded.connect(credit);
+        project.dataLoadSettled.connect(settleLoad);
+        try {
+            const entry = "lbco-hrpt-xye";
+            openOnline({ page: AppState.Page.Experiment, group: "experiments", action: "dataWeb" });
+            searchFor(entry);
+            result(entry, "Data");
+            const dialog = onlineDialog;
+            let remoteId = 0;
+            let localId = 0;
+            const replace = () => {
+                remoteId = project.startedDataLoad();
+                if (project.loadDataInto(project.currentExperiment, Probe.repoUrl("tests/fixtures/online_sources/three_points.xye")))
+                    localId = project.startedDataLoad();
+            };
+            dialog.aboutToHide.connect(replace);
+            try {
+                loadResult(0);
+                tryVerify(() => localId > 0, 10000, "Closing the admitted online load starts the local replacement");
+                verify(remoteId > 0 && remoteId !== localId, "The two routes start distinct loads");
+                tryVerify(() => settled.length === 2, 15000, "Both started load numbers settle");
+                compare(settled, [[remoteId, false], [localId, true]],
+                        "Only the local request receives a successful settlement");
+                compare(onlineCredits, [], "An unrelated local settlement never credits a discarded online entry");
+                compare(project.currentExperiment.dataFile, "three_points.xye",
+                        "The current experiment contains the local file instead of the online one");
+            } finally {
+                dialog.aboutToHide.disconnect(replace);
+            }
+        } finally {
+            AppState.onlineEntryLoaded.disconnect(credit);
+            project.dataLoadSettled.disconnect(settleLoad);
+        }
+    }
+
     function check_new_experiment_wavelength() {
         const experiment = Session.project.currentExperiment;
         const wavelength = Probe.rows(experiment.instrument).find(

@@ -29,6 +29,10 @@ on:
         description: Run only the native builds and the core test jobs (not evidence)
         type: boolean
         default: false
+      static_capture:
+        description: Also run the static checks unsplit in the app jobs and keep their output and compile databases
+        type: boolean
+        default: false
 
 # The schedule is part of the key, so a nightly run and a main push never cancel each other.
 # A main push shares one group with the installers' release builds, so the two queue rather than compete for
@@ -66,11 +70,23 @@ jobs:
             # Qualify app, browser transport and publication infrastructure changes.
             wasm_build: ['app/**', 'tools/ci/wasm*', '.github/workflows/ci.yml', '.github/workflows/pages.yml', '.github/actions/wasm-cache/**', 'tests/system/manual/*.mjs', 'tests/fixtures/e04_t11_wasm/**', 'tests/fixtures/survey/**', 'tests/system/py/test_survey_events.py', 'tests/integration/py/test_preferences_and_survey.py', 'website/surfaces/docs/assets/survey/**', 'website/surfaces/docs/about/survey.md', 'website/surfaces/mkdocs.yml', 'website/build.py', 'pixi.toml', 'pixi.lock', 'tools/ci/crysta*', 'tools/ci/compiler_cache.py']
 
-  # The crysta SDK this run builds against, once per crysta commit (edi ADR-0083).
+  # The crysta SDK this run builds against, once per crysta commit (edi ADR-0083), of the pin `changes` read.
   crysta-sdk:
     if: github.event.pull_request.head.repo.fork == false
+    needs: changes
     uses: ./.github/workflows/crysta-sdk.yml
     secrets: inherit
+    with:
+      crysta-sha: ${{ needs.changes.outputs.crysta_sha }}
+
+  # crysta's own checks and tests, on the crysta commit this run pins (crysta.yml).
+  crysta:
+    if: github.event.pull_request.head.repo.fork == false && inputs.core_only != true
+    needs: [changes, crysta-sdk]
+    uses: ./.github/workflows/crysta.yml
+    secrets: inherit
+    with:
+      crysta-sha: ${{ needs.changes.outputs.crysta_sha }}
 
   lint:
     name: lint
@@ -760,7 +776,8 @@ jobs:
       - uses: ./.github/actions/setup-pixi
         if: runner.os != 'Windows'
       # Windows compiles the sources the Windows installer compiles, through the installer's own Qt, SDK and
-      # compiler settings (tools/ci/app-windows-build.py). It builds only; the app's tests run on Linux and macOS.
+      # compiler settings (tools/ci/app-windows-build.py). Of the app's tests it runs only the cases
+      # tests/windows-app-cases.txt lists; the rest run on Linux and macOS.
       - name: Set up the locked packaging environment
         if: runner.os == 'Windows'
         uses: ./.github/actions/setup-pixi
@@ -807,6 +824,7 @@ jobs:
           pixi run --manifest-path tools/installer/pixi.toml python tools/ci/crysta_source_export.py "$CRYSTA_SRC" "$CRYSTA_SOURCE_SHA" .crysta
           printf '%s\n' "$CRYSTA_SOURCE_SHA" >.crysta/CRYSTA_SOURCE_SHA
       - name: Build the app with MSVC, warnings as errors
+        id: windows-build
         if: runner.os == 'Windows'
         run: pixi run --manifest-path tools/installer/pixi.toml python tools/ci/app-windows-build.py --crysta-source .crysta --work build/app-windows
       - name: Save the compiler cache (Windows)
@@ -816,6 +834,25 @@ jobs:
           ccache: pixi run --manifest-path tools/installer/pixi.toml python
           path: ${{ runner.temp }}/edi-ccache
           key: ccache2-app-windows-${{ hashFiles('tools/installer/pixi.lock') }}-${{ github.run_id }}-${{ github.run_attempt }}
+      # Under the packaging environment, whose Qt the runner loads. A crash leaves a minidump, and each call's log
+      # names every click and step (tools/ci/windows_app_cases.py).
+      - name: App cases on Windows
+        id: windows-cases
+        if: ${{ runner.os == 'Windows' && !cancelled() && steps.windows-build.outcome == 'success' }}
+        timeout-minutes: 60
+        run: >-
+          pixi run --manifest-path tools/installer/pixi.toml python tools/ci/windows_app_cases.py
+          --runner build/app-windows/app/edi_app_tests.exe --cases tests/windows-app-cases.txt
+          --dumps build/app-windows/cases/dumps --logs build/app-windows/cases/logs
+      - name: Upload the Windows app cases' logs and crash dumps
+        if: ${{ runner.os == 'Windows' && !cancelled() && steps.windows-cases.outcome != 'skipped' }}
+        uses: ./.github/actions/store
+        with:
+          artifact: app-windows-cases
+          withhold: 'true'
+          path: build/app-windows/cases
+          if-no-files-found: ignore
+          retention-days: 7
       # A pull request builds and tests the app only when it changes an app input (tools/ci/app_inputs.py) or runs
       # paired with a crysta branch; main pushes, the nightly and manual runs always do (owner record 2026-11-09).
       - name: Decide whether this run builds and tests the app
@@ -915,17 +952,45 @@ jobs:
       - name: qmlformat changes nothing
         if: ${{ runner.os != 'Windows' && (!cancelled() && steps.inputs.outputs.run == 'true') }}
         run: pixi run -e app --skip-deps app-format-check
-      # The C++ static checks over edi's own code (ADR-0093), on the compile commands of the two trees built above.
-      # They run after a failed step too, so one round lists every finding.
-      - name: moc for every app target, which clang-tidy reads
+      # The C++ static checks over edi's own code (ADR-0093) run in the `static` jobs. What they take from the compile
+      # commands of this full build is listed here, and `static · <platform>` requires their parts to cover it.
+      - name: List the files the static checks take from this build
+        id: static-list
         if: ${{ runner.os != 'Windows' && (!cancelled() && steps.inputs.outputs.run == 'true') }}
+        run: |
+          status=0
+          pixi run -e cpp-lint cpp-tidy list || status=1
+          pixi run -e cpp-lint cpp-cppcheck list || status=1
+          exit $status
+      - name: Keep that list for the static join
+        if: ${{ runner.os != 'Windows' && (!cancelled() && steps.static-list.outcome == 'success') }}
+        uses: ./.github/actions/store
+        with:
+          artifact: static-full-${{ env.APP_PLATFORM }}
+          path: build/static/list
+          retention-days: 7
+          if-no-files-found: error
+      # Until this platform's record of what the checks took before the split is committed (or on a manual run with
+      # static_capture), both checks also run unsplit on this build, keeping their own output and the compile databases.
+      - name: moc for every app target, for the unsplit static checks
+        id: capture-moc
+        if: ${{ runner.os != 'Windows' && (!cancelled() && steps.inputs.outputs.run == 'true' && (inputs.static_capture == true || hashFiles(format('tests/fixtures/static_checks/{0}.txt', env.APP_PLATFORM == 'macOS' && 'macos' || 'linux')) == '')) }}
         run: pixi run -e app --skip-deps app-moc
-      - name: clang-tidy with the Clang Static Analyzer (zero findings)
-        if: ${{ runner.os != 'Windows' && (!cancelled() && steps.inputs.outputs.run == 'true') }}
-        run: pixi run -e cpp-lint cpp-tidy
-      - name: cppcheck (zero findings)
-        if: ${{ runner.os != 'Windows' && (!cancelled() && steps.inputs.outputs.run == 'true') }}
-        run: pixi run -e cpp-lint cpp-cppcheck
+      - name: The unsplit clang-tidy run, kept
+        if: ${{ runner.os != 'Windows' && (!cancelled() && steps.capture-moc.outcome == 'success') }}
+        run: pixi run -e cpp-lint cpp-tidy capture
+      - name: The unsplit cppcheck run, kept
+        if: ${{ runner.os != 'Windows' && (!cancelled() && steps.capture-moc.outcome == 'success') }}
+        run: pixi run -e cpp-lint cpp-cppcheck capture
+      - name: Keep the unsplit runs' output and compile databases
+        if: ${{ runner.os != 'Windows' && (!cancelled() && steps.capture-moc.outcome == 'success') }}
+        uses: ./.github/actions/store
+        with:
+          artifact: static-capture-${{ env.APP_PLATFORM }}
+          withhold: 'true'
+          path: build/static-capture
+          retention-days: 7
+          if-no-files-found: error
       # The Qt test prerequisites, made before the tests that use them and outside their timing: standalone
       # log, feedback and browser-geometry probes, plus a documentation capture from the app just built.
       - name: Prepare the onboarding test prerequisites
@@ -936,10 +1001,51 @@ jobs:
       - name: Prepare the Linux app contract traces
         if: ${{ runner.os != 'Windows' && !cancelled() && env.APP_PLATFORM == 'Linux' && github.event_name != 'pull_request' && github.event_name != 'schedule' && steps.onboarding.outcome == 'success' }}
         run: pixi run -e app --skip-deps app-watchdog --prepare-only
-      # R1 reports GUI pauses on the nightly schedule and still verifies the injected controls.
+      # ADR-0102 R4: the nightly scenarios run on the owner's full scan archive, the asset 44k.zip of the release
+      # large-datasets of enhantica/edi-data (large data stays out of git), checked and cached by the SHA-256 that
+      # scan-source.json names.
+      - name: Name the nightly scan archive
+        id: scan-archive
+        if: ${{ runner.os != 'Windows' && !cancelled() && env.APP_PLATFORM == 'Linux' && github.event_name == 'schedule' && steps.apphost.outcome == 'success' }}
+        run: |
+          sha256="$(python3 -c "import json; print(json.load(open('tests/fixtures/ui_responsiveness/scan-source.json'))['archive_sha256'])")"
+          echo "sha256=$sha256" >>"$GITHUB_OUTPUT"
+      - name: Restore the nightly scan archive
+        id: scan-archive-cache
+        if: ${{ !cancelled() && steps.scan-archive.outcome == 'success' }}
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ runner.temp }}/scan-archive/44k.zip
+          key: edi-scan-archive-${{ steps.scan-archive.outputs.sha256 }}
+      - name: Fetch the nightly scan archive from edi-data
+        id: scan-archive-fetch
+        if: ${{ !cancelled() && steps.scan-archive.outcome == 'success' && steps.scan-archive-cache.outputs.cache-hit != 'true' }}
+        env:
+          ARCHIVE: ${{ runner.temp }}/scan-archive/44k.zip
+          SHA256: ${{ steps.scan-archive.outputs.sha256 }}
+          URL: https://github.com/enhantica/edi-data/releases/download/large-datasets/44k.zip
+        run: |
+          mkdir -p "$(dirname "$ARCHIVE")"
+          curl -fsSL --retry 3 -o "$ARCHIVE.part" "$URL"
+          if ! echo "$SHA256  $ARCHIVE.part" | sha256sum --check --status; then
+            rm -f "$ARCHIVE.part"
+            echo "::error::$URL is not the nightly scan archive with SHA-256 $SHA256"
+            exit 1
+          fi
+          mv "$ARCHIVE.part" "$ARCHIVE"
+      - name: Keep the nightly scan archive
+        if: ${{ !cancelled() && steps.scan-archive-fetch.outcome == 'success' }}
+        uses: ./.github/actions/store
+        with:
+          path: ${{ runner.temp }}/scan-archive/44k.zip
+          key: edi-scan-archive-${{ steps.scan-archive.outputs.sha256 }}
+      # R1 reports GUI pauses on the nightly schedule and still verifies the injected controls. Without the archive, or
+      # with another one, the step ends red before any scenario starts.
       - name: Report the nightly GUI watchdog scenarios
         if: ${{ runner.os != 'Windows' && !cancelled() && env.APP_PLATFORM == 'Linux' && github.event_name == 'schedule' && steps.apphost.outcome == 'success' }}
-        run: pixi run -e app --skip-deps app-watchdog
+        env:
+          EDI_WATCHDOG_ARCHIVE: ${{ runner.temp }}/scan-archive/44k.zip
+        run: pixi run -e app --skip-deps app-watchdog --nightly
       - name: Upload the GUI watchdog's records
         if: ${{ runner.os != 'Windows' && !cancelled() && env.APP_PLATFORM == 'Linux' && github.event_name != 'pull_request' && steps.apphost.outcome == 'success' }}
         uses: ./.github/actions/store
@@ -1029,6 +1135,167 @@ jobs:
       run:
         shell: python3 tools/ci/public_log.py {0}
     steps: *app-steps
+
+  # edi's C++ static checks (ADR-0093) in parts beside the app job. Each part restores this run's native build,
+  # configures build/app and runs moc for every app target, then gives clang-tidy every n-th file; part 1 also makes
+  # cppcheck's three calls. Each keeps the files its analyzers report they processed, for `static · <platform>`.
+  static-linux:
+    name: static · Linux · ${{ matrix.part }}/3
+    if: *app-if
+    environment: crysta-sdk
+    needs: *app-needs
+    env:
+      APP_PLATFORM: Linux
+      CRYSTA_SOURCE_SHA: ${{ needs.changes.outputs.crysta_sha }}
+      # Configured as the app job configures, so its list and the parts name the same compile commands.
+      EDI_WERROR: 'ON'
+      STATIC_PART: ${{ matrix.part }}/3
+    strategy:
+      fail-fast: false
+      matrix:
+        part: [1, 2, 3]
+    defaults:
+      run:
+        shell: python3 tools/ci/public_log.py {0}
+    runs-on: *linux
+    steps: &static-steps
+      - *native-checkout
+      - uses: ./.github/actions/setup-pixi
+      - id: ccache
+        uses: ./.github/actions/ccache
+        with:
+          max-size: 1G
+      - uses: ./.github/actions/crysta-sdk
+        with:
+          platform: ${{ runner.os == 'macOS' && 'osx-arm64' || 'linux-64' }}
+      - uses: ./.github/actions/edi-native
+        with:
+          platform: ${{ runner.os == 'macOS' && 'osx-arm64' || 'linux-64' }}
+      - *crysta-source
+      - name: Decide whether this run builds and tests the app
+        id: inputs
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          if [ "$GITHUB_EVENT_NAME" != pull_request ]; then
+            echo run=true >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          pixi run python tools/ci/app_inputs.py "$BASE" HEAD >> "$GITHUB_OUTPUT"
+      # Read only: building moc's targets compiles the libraries they depend on, which the app job's cache holds.
+      - name: Restore the app's compiler cache
+        if: steps.inputs.outputs.run == 'true'
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.cache/edi-ccache
+          key: ccache2-app-${{ steps.ccache.outputs.key-prefix }}${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            ccache2-app-${{ steps.ccache.outputs.key-prefix }}
+            ccache2-app-${{ runner.os }}-${{ runner.arch }}-
+      - name: Restore this run's native build
+        if: steps.inputs.outputs.run == 'true'
+        run: pixi run core-build
+      - name: Configure the app's build tree
+        if: steps.inputs.outputs.run == 'true'
+        run: pixi run -e app app-build
+        env:
+          EDI_APP_CONFIGURE_ONLY: '1'
+      - name: moc for every app target, which clang-tidy reads
+        id: moc
+        if: steps.inputs.outputs.run == 'true'
+        run: pixi run -e app --skip-deps app-moc
+      # Each check runs after the other failed too, so one round lists every finding.
+      - name: clang-tidy with the Clang Static Analyzer (zero findings)
+        if: ${{ !cancelled() && steps.moc.outcome == 'success' }}
+        run: pixi run -e cpp-lint cpp-tidy "$STATIC_PART"
+      - name: cppcheck (zero findings)
+        if: ${{ !cancelled() && steps.moc.outcome == 'success' }}
+        run: pixi run -e cpp-lint cpp-cppcheck "$STATIC_PART"
+      - name: Keep the files the analyzers processed, for the static join
+        if: ${{ !cancelled() && steps.moc.outcome == 'success' }}
+        uses: ./.github/actions/store
+        with:
+          artifact: static-part-${{ env.APP_PLATFORM }}-${{ matrix.part }}
+          path: build/static/processed/*.txt
+          retention-days: 7
+          if-no-files-found: error
+
+  static-macos:
+    name: static · macOS · ${{ matrix.part }}/2
+    if: *app-if
+    environment: crysta-sdk
+    needs: *app-needs
+    env:
+      APP_PLATFORM: macOS
+      CRYSTA_SOURCE_SHA: ${{ needs.changes.outputs.crysta_sha }}
+      EDI_WERROR: 'ON'
+      STATIC_PART: ${{ matrix.part }}/2
+    strategy:
+      fail-fast: false
+      matrix:
+        part: [1, 2]
+    defaults:
+      run:
+        shell: python3 tools/ci/public_log.py {0}
+    runs-on: *macos
+    steps: *static-steps
+
+  # The required static job of each platform (tools/ci/static_join.py): the parts succeeded, together they processed
+  # every unit the app job's full build lists, and that list keeps every unit of the committed run before the split.
+  static-linux-join:
+    name: static · Linux
+    if: &static-join-if ${{ !cancelled() && needs.changes.result == 'success' && github.event.pull_request.head.repo.fork == false && inputs.core_only != true }}
+    needs: [changes, app, static-linux]
+    runs-on: *linux
+    env:
+      APP_PLATFORM: Linux
+      PARTS: 3
+      PARTS_RESULT: ${{ needs.static-linux.result }}
+    steps: &static-join-steps
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0  # the join reads what changed since the committed list
+      - name: Decide whether this run builds and tests the app
+        id: inputs
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          if [ "$GITHUB_EVENT_NAME" != pull_request ]; then
+            echo run=true >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          python3 tools/ci/app_inputs.py "$BASE" HEAD >> "$GITHUB_OUTPUT"
+      # The CI evidence accepts this job's skipped join only after this step succeeded.
+      - name: App inputs unchanged, so the static checks do not run
+        if: steps.inputs.outputs.run == 'false'
+        run: echo "No app input changed since ${{ github.event.pull_request.base.sha }}; main's last run checked this code."
+      - name: Fetch the app job's list and the parts' reports
+        if: steps.inputs.outputs.run == 'true'
+        uses: actions/download-artifact@v4
+        with:
+          pattern: 'static-{full,part}-${{ env.APP_PLATFORM }}*'
+          path: build/static
+      - name: The parts processed every unit of the full build with zero findings
+        if: ${{ !cancelled() && steps.inputs.outputs.run == 'true' }}
+        run: |
+          status=0
+          if [ "$PARTS_RESULT" != success ]; then
+            echo "static · $APP_PLATFORM: the parts ended $PARTS_RESULT: a finding, or a part that did not finish"
+            status=1
+          fi
+          python3 tools/ci/static_join.py "$APP_PLATFORM" "$PARTS" build/static || status=1
+          exit $status
+
+  static-macos-join:
+    name: static · macOS
+    if: *static-join-if
+    needs: [changes, app-macos, static-macos]
+    runs-on: *linux
+    env:
+      APP_PLATFORM: macOS
+      PARTS: 2
+      PARTS_RESULT: ${{ needs.static-macos.result }}
+    steps: *static-join-steps
 
   # The app as a WebAssembly site (ADR-0023): the multithread kit, start page and isolation shim,
   # packed as one site folder and uploaded as the `edi-webapp` artifact. The toolchain (Emscripten, Qt's wasm

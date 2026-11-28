@@ -108,6 +108,15 @@ QString folderNameFor(const QString& name) {
 
 QString newWebKey() { return QUuid::createUuid().toString(QUuid::WithoutBraces); }
 
+// For scope guards: they run while the stack unwinds, where a throw would end the app. A folder left behind stays
+// recorded and is removed when the app quits.
+void remove_archive_directory_quietly(const QString& root) noexcept {
+    try {
+        edi::remove_archive_directory(root.toStdString());
+    } catch (...) {
+    }
+}
+
 }  // namespace
 
 // ---- WarningListModel ---------------------------------------------------------------------------
@@ -1005,7 +1014,7 @@ QString Session::writeBackReports() {
     const QString receipt = project_->linkedInputsKey(true);
     QString root;
     const auto release = qScopeGuard([&root] {
-        if (!root.isEmpty()) edi::remove_archive_directory(root.toStdString());
+        if (!root.isEmpty()) remove_archive_directory_quietly(root);
     });
     try {
         root = QString::fromStdString(edi::fresh_archive_directory("reports"));
@@ -1129,7 +1138,7 @@ bool Session::saveAsWith(const SaveOperation& operation, const QUrl& directory) 
     if (!planned(operation)) return queueReplan(operation), false;
     Staged staged;
     if (!stageCopy(operation, "saved", {}, staged, QFileInfo(folder).absolutePath())) return false;
-    const auto release = qScopeGuard([root = staged.root] { edi::remove_archive_directory(root.toStdString()); });
+    const auto release = qScopeGuard([root = staged.root] { remove_archive_directory_quietly(root); });
     if (!readyToWrite(operation, staged) || !publishStaged(staged.folder, folder, true)) return false;
     edi::Project published = *staged.project;
     edi::adopt_save_location(published, folder.toStdString());
@@ -1498,6 +1507,17 @@ bool Session::readyToWrite(const SaveOperation& operation, const Staged& staged)
 
 bool Session::publishStaged(const QString& stage, const QString& destination, bool replace,
                             const UntitledOperation::Destination* approved) {
+    // Two of the callers have no try of their own, so a filesystem error is reported here as the save's refusal.
+    try {
+        return publishStagedOrThrow(stage, destination, replace, approved);
+    } catch (const std::exception& refusal) {
+        setLastError(tr("%1 could not be written: %2").arg(destination, QString::fromUtf8(refusal.what())));
+        return false;
+    }
+}
+
+bool Session::publishStagedOrThrow(const QString& stage, const QString& destination, bool replace,
+                                   const UntitledOperation::Destination* approved) {
     namespace fs = std::filesystem;
     std::error_code error;
     const fs::path to(destination.toStdString());
@@ -1613,7 +1633,7 @@ bool Session::saveCopy(const SaveOperation& operation, const QString& target, bo
     Staged staged;
     if (zip) {
         if (!stageCopy(operation, "copy", QStringLiteral("project"), staged)) return false;
-        const auto release = qScopeGuard([root = staged.root] { edi::remove_archive_directory(root.toStdString()); });
+        const auto release = qScopeGuard([root = staged.root] { remove_archive_directory_quietly(root); });
         if (!readyToWrite(operation, staged)) return false;
         try {
             edi::write_project_archive(staged.folder.toStdString(), target.toStdString());
@@ -1628,7 +1648,7 @@ bool Session::saveCopy(const SaveOperation& operation, const QString& target, bo
     QString folder = QFileInfo(target).absoluteFilePath();
     if (const QString canonical = QFileInfo(folder).canonicalFilePath(); !canonical.isEmpty()) folder = canonical;
     if (!stageCopy(operation, "copy", {}, staged, QFileInfo(folder).absolutePath())) return false;
-    const auto release = qScopeGuard([root = staged.root] { edi::remove_archive_directory(root.toStdString()); });
+    const auto release = qScopeGuard([root = staged.root] { remove_archive_directory_quietly(root); });
     if (!readyToWrite(operation, staged) || !publishStaged(staged.folder, folder, true)) return false;
     setLastError({});
     return true;
@@ -2600,11 +2620,16 @@ void Session::syncCalculationMessages() {
 }
 
 bool Session::projectDirectoryExists(const QString& path) const {
-    // A recent project is a folder or a .zip it was saved as (edi ADR-0052).
-    const QFileInfo location(path);
-    const auto source = path.toStdString();
-    return !path.isEmpty() && (location.isDir() || edi::is_project_archive(source) ||
-                               (location.isFile() && edi::is_imported_project_path(source)));
+    // A recent project is a folder or a .zip it was saved as (edi ADR-0052). A path the system cannot check is listed
+    // as missing: this runs while the recent list is built at start, where a throw would end the app.
+    try {
+        const QFileInfo location(path);
+        const auto source = path.toStdString();
+        return !path.isEmpty() && (location.isDir() || edi::is_project_archive(source) ||
+                                   (location.isFile() && edi::is_imported_project_path(source)));
+    } catch (...) {
+        return false;
+    }
 }
 
 QUrl Session::projectDirectoryUrl(const QString& path) const {

@@ -59,9 +59,11 @@ jobs:
         id: crysta
         shell: bash
         run: bash tools/ci/crysta-source.sh
+      # The SDK artifacts are edi-crysta-sdk-<platform>, crysta-sdk-<platform> in runs made before that
+      # name; neither form takes the red summaries (crysta-sdk-red-...).
       - uses: actions/download-artifact@v4
         with:
-          pattern: crysta-sdk-*
+          pattern: '*crysta-sdk-[low]*'
           path: crysta-sdk-archives
           merge-multiple: true
           run-id: ${{ inputs.installer_run }}

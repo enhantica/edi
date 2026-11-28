@@ -2,6 +2,7 @@
 OnlineLoadCase {
     name: "OnlineLoad"
 
+    function test_local_load_replaces_online_load() { check_local_load_replaces_online_load(); }
     function test_new_experiment_wavelength() { check_new_experiment_wavelength(); }
     function test_actions_and_formats_data() { return check_actions_and_formats_data(); }
     function test_actions_and_formats(data) { check_actions_and_formats(data); }

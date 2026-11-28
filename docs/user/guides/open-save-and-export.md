@@ -33,6 +33,8 @@ opens the same folder, and every part can hand it on as one `.zip` file that the
   where you left off** with the changes you had not saved.
 - A browser can clear what it keeps: when you clear its site data, and Safari after about a week without a visit. Use
   **Save project as…** to keep a project on your computer.
+- The web app runs in one browser tab at a time, so two tabs never change the same projects. Another tab says
+  *EasyDiffraction is open in another tab*: close the first one, then press **Try again**.
 
 ## On the command line
 

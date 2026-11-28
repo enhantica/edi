@@ -1,13 +1,23 @@
 name: Build crysta
 
-# The crysta SDK edi builds against (edi ADR-0083): pixi.toml's CRYSTA_COMMIT, built here once per commit and
-# platform and kept in the cache under that commit. Every edi job and product takes it from there
-# (.github/actions/crysta-sdk). A job that needs crysta's source fetches it itself with the app's read-only token
-# (.github/actions/crysta-source); none stores or prints it.
+# The crysta SDK edi builds against (edi ADR-0083), built here once per commit and platform and kept in the cache
+# under that commit. Every edi job and product takes it from there (.github/actions/crysta-sdk). A job that needs
+# crysta's source fetches it itself with the app's read-only token (.github/actions/crysta-source); none stores or
+# prints it. The caller names the commit, pixi.toml's CRYSTA_COMMIT as its first job read it, so one commit reaches
+# the source, the SDK, its cache key and every consumer of a run; this workflow reads no pin of its own.
+# Each SDK job prints the record of the build it hands on (tools/ci/crysta_sdk_record.py).
 
 on:
-  workflow_dispatch:
   workflow_call:
+    inputs:
+      crysta-sha:
+        description: The full crysta commit to build
+        required: true
+        type: string
+      diagnostic:
+        description: A manual run of another commit (crysta-diagnostic.yml), which saves no cache
+        type: boolean
+        default: false
     outputs:
       sha:
         description: The crysta commit built
@@ -25,14 +35,22 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - id: pin
-        run: bash tools/ci/crysta-source.sh
+        name: The crysta commit asked for
+        env:
+          SHA: ${{ inputs.crysta-sha }}
+        run: |
+          if [[ ! "$SHA" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "crysta-sha is not a full commit id" >&2
+            exit 1
+          fi
+          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
       - id: recipe
         run: |
           python3 - <<'PYTHON'
           import hashlib, os
           from pathlib import Path
           digest = hashlib.sha256()
-          for name in ['.github/workflows/crysta-sdk.yml', 'tools/ci/crysta_sdk.py', '.github/actions/setup-pixi/action.yml']:
+          for name in ['.github/workflows/crysta-sdk.yml', 'tools/ci/crysta_sdk.py', 'tools/ci/crysta_sdk_record.py', 'tools/ci/crysta_subject.py', '.github/actions/setup-pixi/action.yml']:
               digest.update(name.encode() + b'\0' + Path(name).read_bytes() + b'\0')
           with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
               output.write(f'sha={digest.hexdigest()}\n')
@@ -79,15 +97,6 @@ jobs:
         uses: ilammy/msvc-dev-cmd@v1
         with:
           toolset: '14.44'
-      - id: pin
-        shell: bash
-        run: bash tools/ci/crysta-source.sh
-      - name: Confirm the resolved engine identity
-        shell: bash
-        env:
-          RESOLVED_SHA: ${{ needs.resolve.outputs.sha }}
-          CHECKED_OUT_SHA: ${{ steps.pin.outputs.sha }}
-        run: test "$RESOLVED_SHA" = "$CHECKED_OUT_SHA"
       - id: cache
         uses: actions/cache/restore@v4
         with:
@@ -105,6 +114,10 @@ jobs:
           sha: ${{ needs.resolve.outputs.sha }}
           app-id: ${{ vars.ENHANTICA_APP_ID }}
           private-key: ${{ secrets.CRYSTA_READ_KEY }}
+      - name: The crysta commit under test
+        env:
+          SHA: ${{ needs.resolve.outputs.sha }}
+        run: python3 tools/ci/crysta_subject.py --sha "$SHA"
       - name: Check SDK and consumer ABI package locks before compilation
         if: steps.cache.outputs.cache-hit != 'true'
         run: |
@@ -165,7 +178,7 @@ jobs:
       - name: Build, test and pack the SDK
         if: steps.cache.outputs.cache-hit != 'true'
         env:
-          SHA: ${{ steps.pin.outputs.sha }}
+          SHA: ${{ needs.resolve.outputs.sha }}
           # A failed test's message and traceback can quote crysta's tests or corpus.
           PYTEST_ADDOPTS: --tb=no -rN --disable-warnings
         run: |
@@ -183,8 +196,15 @@ jobs:
         env:
           SHA: ${{ needs.resolve.outputs.sha }}
         run: python3 tools/ci/crysta_sdk.py surface --source "$CRYSTA_SRC" --commit "$SHA" "crysta-sdk-archives/crysta-sdk-$SHA-${{ matrix.platform }}.tar.gz"
+      # The archive surface left is the one the cache, the artifact, every consumer and a release take.
+      - name: Write the SDK's producer record
+        if: steps.cache.outputs.cache-hit != 'true'
+        env:
+          SHA: ${{ needs.resolve.outputs.sha }}
+          RECIPE: ${{ needs.resolve.outputs.recipe }}
+        run: python3 tools/ci/crysta_sdk_record.py write --archives crysta-sdk-archives --sha "$SHA" --platform '${{ matrix.platform }}' --recipe "$RECIPE"
       - name: Save the SDK compiler cache
-        if: ${{ !cancelled() && steps.compiler-inputs.outcome == 'success' && steps.compiler-cache.outcome == 'success' && steps.cache.outputs.cache-hit != 'true' }}
+        if: ${{ !cancelled() && !inputs.diagnostic && steps.compiler-inputs.outcome == 'success' && steps.compiler-cache.outcome == 'success' && steps.cache.outputs.cache-hit != 'true' }}
         uses: ./.github/actions/store
         with:
           ccache: pixi run --manifest-path "$RUNNER_TEMP/crysta/pixi.toml" -e cpp-ci --skip-deps python
@@ -211,15 +231,21 @@ jobs:
           if checksum != f'{digest.hexdigest()}  {archive.name}\n':
               raise RuntimeError(f'SDK checksum does not bind the requested archive: {archive}')
           PYTHON
+      # Built here or restored, the job prints the record of what it hands on, checked against the archive.
+      - name: The SDK's producer record
+        env:
+          SHA: ${{ needs.resolve.outputs.sha }}
+          RECIPE: ${{ needs.resolve.outputs.recipe }}
+        run: python3 tools/ci/crysta_sdk_record.py show --archives crysta-sdk-archives --sha "$SHA" --platform '${{ matrix.platform }}' --recipe "$RECIPE"
       - name: Keep the SDK for the next run
-        if: steps.cache.outputs.cache-hit != 'true'
+        if: steps.cache.outputs.cache-hit != 'true' && !inputs.diagnostic
         uses: ./.github/actions/store
         with:
           key: ${{ steps.cache.outputs.cache-primary-key }}
           path: crysta-sdk-archives
       - uses: ./.github/actions/store
         with:
-          artifact: crysta-sdk-${{ matrix.platform }}
+          artifact: edi-crysta-sdk-${{ matrix.platform }}${{ inputs.diagnostic && '-diagnostic' || '' }}
           path: crysta-sdk-archives
           retention-days: 30
           if-no-files-found: error
@@ -233,7 +259,7 @@ jobs:
         if: ${{ failure() && !cancelled() }}
         uses: ./.github/actions/store
         with:
-          artifact: crysta-sdk-red-${{ matrix.platform }}-${{ needs.resolve.outputs.sha }}
+          artifact: crysta-sdk-red-${{ matrix.platform }}-${{ needs.resolve.outputs.sha }}${{ inputs.diagnostic && '-diagnostic' || '' }}
           path: ${{ runner.temp }}/sdk-red/summary.json
           retention-days: 7
           if-no-files-found: ignore

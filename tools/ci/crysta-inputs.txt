@@ -1,0 +1,25 @@
+# What crysta's jobs in edi's CI read of edi (edi ADR-0083), each path a line, sorted, a folder whole.
+# The jobs run only their marker step when every path has the same Git object id at the head and at
+# the event's comparison commit (tools/ci/crysta_inputs.py). The entries from conftest.py on are what
+# crysta's edi verification reads; its job fails when it reads a tracked file outside this list
+# (tools/ci/crysta_read_audit.py).
+.github
+CMakeLists.txt
+cmake
+conftest.py
+data
+lib/edi
+pixi.lock
+pixi.toml
+pyproject.toml
+tests/conftest.py
+tests/fit-sites.yml
+tests/fixtures
+tests/model_calculation.py
+tests/system/py/test_c06_t6_fitting_corpus.py
+tests/system/py/test_e02_fullprof_parity.py
+tools/checks/python_surface_superset.py
+tools/ci
+tools/installer/pixi.lock
+tools/installer/pixi.toml
+tools/testing

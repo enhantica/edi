@@ -40,6 +40,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 include(cmake/edi_build_options.cmake)
 include(cmake/edi_warnings.cmake)
+include(cmake/edi_windows_manifest.cmake)
 
 add_subdirectory(core)
 add_subdirectory(cli)
@@ -104,3 +105,8 @@ foreach(directory IN LISTS EDI_OWN_DIRECTORIES)
         edi_apply_warnings(TARGETS ${targets})
     endif()
 endforeach()
+
+# Every Windows executable reads and writes UTF-8 paths (ADR-0109); after everything above, so no directory is missed.
+if(WIN32 AND MSVC)
+    cmake_language(DEFER DIRECTORY "${PROJECT_SOURCE_DIR}" CALL edi_apply_utf8_manifest)
+endif()

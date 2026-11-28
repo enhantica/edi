@@ -66,13 +66,17 @@ can restore a cache of main. CI therefore keeps built crysta only.
    person wrote in it with its mark and length, the blob ids of what edi publishes itself, and what the SDK carries. The
    recorded data among crysta's tests, its lock and its licences are listed as whole files only: single lines of them
    recur in any tool's output. What edi publishes is its commit, not the working folder, and the public sample
-   collection `edi-data`; their files and lines are not source.
+   collection `edi-data`; their files and lines are not source. crysta's own checks read its history, so their jobs
+   fetch every branch and tag beside the commit, as crysta's CI does; the lists hold the lines of the commit and of
+   those edi pins, and such a job prints what each check found, and the end of a check's output only when it failed
+   with no finding.
 2. **Two phases.** Before the fetch each script of the job names `shell: bash`; no crysta file exists yet. After it every
    script runs under `tools/ci/public_log.py`, a local action's scripts too. It withholds a source line from standard
    output, standard error and the step summary and runs nothing when the lists cannot be read. A line is found alone,
    after a compiler's gutter, pytest's markers, a diff's sign or a timestamp, inside a quoted or escaped value (JSON,
    XML, HTML), and as a part of 24 characters or more within a longer one, unless the part is a single name, a web address or
-   command-line options alone. One plain
+   command-line options alone. A setting's value is listed as a line too, whole, unquoted and item by item, each where it
+   has more than one word, since a tool that reads a settings file prints it without its key. One plain
    word alone is not listed. The fetch proves the filter before any later step.
 3. **One way out.** A job with the source stores only through `.github/actions/store`, which checks the path it stores and
    nothing else. `tools/ci/stored_source.py` compares every file and every entry of a container as the container has
@@ -110,7 +114,8 @@ can restore a cache of main. CI therefore keeps built crysta only.
 
 ## Shared production and exact artifact transfer
 
-The producer also has a standalone dispatch entry. Its resolving job records the immutable engine pin and
+The producer is only called, with the crysta commit as its input; a person runs it by hand through
+`crysta-diagnostic.yml`, for any crysta commit, and such a run saves no cache. Its resolving job records the immutable engine pin and
 SDK/setup-action recipe hash before platform jobs queue by that identity. Identical requests serialize
 with a non-cancelling multi-entry concurrency queue, then inspect the cache after admission. The archive
 cache is versioned and includes platform, engine pin and recipe; changes to the producer cannot
@@ -123,7 +128,7 @@ rather than asking for whichever matching cache remains. Both cold and warm prod
 SDK and checksum files and verify the archive checksum before an error-on-missing upload. The SDK reader continues its manifest,
 qualification, binary hash and ABI checks; archive transfer does not substitute for them. This extends the
 original producer/action/publish paths together. Consumer workflows call the shared producer before their
-builds. The standalone entry produces SDK artifacts; it does not itself publish or dispatch products.
+builds. The diagnostic entry produces SDK artifacts; it does not itself publish or dispatch products.
 
 The owner chose one native SDK variant per platform for desktop, CLI and Python. The existing standalone
 builder's separate lean engine compilation is retired: native consumers align link/CRT settings and package
