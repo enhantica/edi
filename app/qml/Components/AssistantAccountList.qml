@@ -22,8 +22,8 @@ Column {
     readonly property var activeAccount: assistant.accounts.find(account => account.active) ?? null
     readonly property var otherAccounts: assistant.accounts.filter(account => !account.active)
     readonly property var installedProviders: assistant.providers.filter(entry => entry.installed)
-    // The leading icon's slot, shared by the Switch to rows and Add account.
-    readonly property real iconWidth: EaStyle.Sizes.fontPixelSize * 1.5
+    // The leading icon's column, shared by the Switch to rows and Add account; each icon is centred in it.
+    readonly property real iconWidth: EaStyle.Sizes.fontPixelSize * 1.25
     // "<Provider> <Plan>", as the provider names its plans ("ChatGPT Plus", "Claude Max").
     function planLabel(provider, plan) {
         if (!plan)
@@ -43,7 +43,9 @@ Column {
         visible: list.activeAccount !== null
         height: activeRow.implicitHeight + AppSizes.unit * 1.5
         radius: EaStyle.Sizes.fontPixelSize * 0.25
-        color: EaStyle.Colors.themeRowHovered
+        // edi's accent, as the selected tab and progress use, with white text (the owner, 2026-11-28). The dark theme's
+        // accent is lighter, so the panel keeps the light theme's (#00a3e3) there and the white text stays readable.
+        color: EaStyle.Colors.isDarkPalette ? "#00a3e3" : EaStyle.Colors.themeAccent
         RowLayout {
             id: activeRow
             x: AppSizes.unit
@@ -58,6 +60,7 @@ Column {
                     EaElements.Label {
                         id: activeProviderName
                         text: list.activeAccount ? list.activeAccount.providerName + " · " : ""
+                        color: "white"
                         font.bold: true
                         textFormat: Text.PlainText
                     }
@@ -65,6 +68,7 @@ Column {
                         objectName: "assistant.accountIdentity"
                         width: Math.max(0, parent.width - activeProviderName.width)
                         text: list.activeAccount ? list.activeEmail || list.emailLabel(list.activeAccount) : ""
+                        color: "white"
                         textFormat: Text.PlainText
                         elide: Text.ElideRight
                     }
@@ -74,7 +78,8 @@ Column {
                     width: parent.width
                     visible: text.length > 0
                     text: list.activeAccount ? [list.planLabel(list.activeAccount.provider, list.activePlan || list.activeAccount.plan) || list.activeAccount.host, list.activeUsage].filter(part => part).join(" · ") : ""
-                    color: EaStyle.Colors.themeForegroundMinor
+                    color: "white"
+                    opacity: 0.75
                     textFormat: Text.PlainText
                     wrapMode: Text.WordWrap
                 }
@@ -83,20 +88,44 @@ Column {
                     width: parent.width
                     visible: text.length > 0
                     text: list.activeCredential
-                    color: EaStyle.Colors.themeForegroundMinor
+                    color: "white"
+                    opacity: 0.75
                     textFormat: Text.PlainText
                     wrapMode: Text.WordWrap
                 }
             }
-            EaElements.Button {
+            // Drawn white on the accent; dimmed while the account is not connected.
+            AbstractButton {
+                id: signOut
                 objectName: "assistant.signOut"
                 Layout.alignment: Qt.AlignVCenter
                 padding: EaStyle.Sizes.fontPixelSize * 0.5
                 enabled: list.assistant.connected
-                fontIcon: "sign-out-alt"
+                hoverEnabled: true
                 // Copilot's sign-out is not yet qualified, so the account is removed from edi instead.
                 text: list.activeAccount && list.activeAccount.provider === "copilot" ? qsTr("Remove from edi") : qsTr("Sign out")
+                Accessible.role: Accessible.Button
                 Accessible.name: text
+                opacity: enabled ? 1 : 0.5
+                background: Rectangle {
+                    radius: EaStyle.Sizes.fontPixelSize * 0.25
+                    color: "white"
+                    opacity: signOut.hovered || signOut.down || signOut.visualFocus ? 0.2 : 0
+                }
+                contentItem: RowLayout {
+                    spacing: EaStyle.Sizes.fontPixelSize * 0.5
+                    EaElements.Label {
+                        text: "sign-out-alt"
+                        font.family: EaStyle.Fonts.iconsFamily
+                        color: "white"
+                        Accessible.ignored: true
+                    }
+                    EaElements.Label {
+                        text: signOut.text
+                        color: "white"
+                        textFormat: Text.PlainText
+                    }
+                }
                 onClicked: list.signOutRequested()
             }
         }
@@ -127,11 +156,12 @@ Column {
                 color: switchRow.hovered || switchRow.visualFocus ? EaStyle.Colors.themeRowHovered : "transparent"
             }
             contentItem: RowLayout {
-                spacing: 0
+                spacing: EaStyle.Sizes.fontPixelSize * 0.5
                 EaElements.Label {
                     Layout.preferredWidth: list.iconWidth
                     Layout.alignment: Qt.AlignVCenter
                     text: "exchange-alt"
+                    horizontalAlignment: Text.AlignHCenter
                     font.family: EaStyle.Fonts.iconsFamily
                     color: switchRow.enabled ? EaStyle.Colors.themeForeground : EaStyle.Colors.themeForegroundDisabled
                     Accessible.ignored: true
@@ -178,11 +208,12 @@ Column {
             color: addRow.hovered || addRow.visualFocus ? EaStyle.Colors.themeRowHovered : "transparent"
         }
         contentItem: RowLayout {
-            spacing: 0
+            spacing: EaStyle.Sizes.fontPixelSize * 0.5
             EaElements.Label {
                 Layout.preferredWidth: list.iconWidth
                 Layout.alignment: Qt.AlignVCenter
                 text: "plus-circle"
+                horizontalAlignment: Text.AlignHCenter
                 font.family: EaStyle.Fonts.iconsFamily
                 Accessible.ignored: true
             }
