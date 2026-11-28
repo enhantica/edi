@@ -166,14 +166,15 @@ Column {
                 }
             }
             // Numbers right-aligned under their right-aligned headers (ADR-0029; the owner, 2026-11-21). A Le Bail or
-            // Pawley structure's scale is kept but not fitted: its popup has no Free box, and the cell says why with
-            // crysta's reason (edi ADR-0053, ADR-0109).
+            // Pawley structure's scale is kept but not fitted: crysta marks it not fittable, the cell draws it fixed with
+            // its Free box disabled, free flag or not, and says why with crysta's reason (edi ADR-0053, ADR-0109).
             ParameterCell {
                 columnAlignment: Text.AlignRight
                 objectName: `linkedStructure.scale.${row.index}`
                 enabled: row.model.enabled && refinable
                 item: row.model.scale
-                helpToolTip: row.extracted && item !== null && !item.fittable && !item.free
+                fitBlocked: row.extracted && item !== null && !item.fittable
+                helpToolTip: fitBlocked
                 ToolTip.text: helpToolTip ? qsTr("Cannot be fitted: %1").arg(item.fitReason) : ""
             }
             // Derived from the scales: the dictionary's weight fraction, rounded by its s.u. under the project's rule, else
