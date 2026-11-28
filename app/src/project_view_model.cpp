@@ -4035,8 +4035,10 @@ bool ProjectViewModel::setParametersFree(const QList<ParameterItem*>& parameters
     }
     std::vector<std::pair<std::string, bool>> flags;
     for (const ParameterItem* item : parameters) {
-        if (item == nullptr || (free && !item->isFittable())) {
-            continue;  // a flag is set only where a fit can vary the value; any is cleared (ADR-0053)
+        if (item == nullptr || item->isHidden() || (free && !item->isFittable())) {
+            // a flag is set only where a fit can vary the value; any is cleared (ADR-0053); a disabled phase's
+            // parameter, hidden by edi::ActiveView, is no edit target (review 34)
+            continue;
         }
         const auto found = names.find(item->parameter());
         if (found == names.end() || item->isFree() == free) {
