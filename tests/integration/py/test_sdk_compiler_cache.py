@@ -151,7 +151,8 @@ def test_compiler_cache_survives_failed_qualification_and_refuses_missing_or_wro
 
 
 def test_selected_windows_bootstrap_uses_ninja_and_wrapper_keeps_other_callers_default(tmp_path):
-    steps = producer()['steps']
+    job = producer()
+    steps = job['steps']
     inputs = next(step for step in steps if step.get('id') == 'compiler-inputs')
     (tmp_path / 'crysta').mkdir()
     (tmp_path / 'crysta/pixi.lock').write_bytes(b'independent real lock bytes')
@@ -202,23 +203,73 @@ def test_selected_windows_bootstrap_uses_ninja_and_wrapper_keeps_other_callers_d
     assert missing.returncode != 0, (
         'Bootstrap refuses an unavailable engine resource cap instead of continuing unbounded'
     )
+    sdk_pixi_install_boundary(job)
+
+
+def sdk_pixi_install_boundary(job):
+    setup_action = './.github/actions/setup-pixi'
     wrapper = yaml.safe_load((ROOT / '.github/actions/setup-pixi/action.yml').read_text())
-    assert wrapper['inputs']['environments']['default'] == 'default', (
-        'Existing wrapper callers keep their original default environment'
+    defaults = {name: entry['default'] for name, entry in wrapper['inputs'].items()}
+    assert defaults == {
+        'manifest-path': 'pixi.toml',
+        'environments': 'default',
+        'cache': 'true',
+        'install': 'true',
+    }, 'Installing callers keep the main manifest, default environment and cached installation'
+
+    upstream = [
+        step
+        for step in wrapper['runs']['steps']
+        if step.get('uses', '').startswith('prefix-dev/setup-pixi@')
+    ]
+    assert len(upstream) == 1, 'One upstream Pixi action owns the wrapper installation'
+    forwarded = upstream[0]['with']
+    assert forwarded['manifest-path'] == (
+        "${{ inputs.install == 'true' && inputs.manifest-path "
+        "|| format('{0}/pixi.toml', github.workspace) }}"
+    ), 'Installing callers keep their manifest and launcher-only setup reads the edi workspace'
+    assert (
+        forwarded['environments'] == "${{ inputs.install == 'true' && inputs.environments || '' }}"
+    ), 'Installing callers keep their environment; launcher-only setup selects none'
+    assert forwarded['cache'] == "${{ inputs.install == 'true' && inputs.cache || 'false' }}", (
+        'Only installing callers can use the selected environment cache'
     )
-    assert wrapper['inputs']['cache']['default'] == 'true', (
-        'Existing consumer environments keep their cached default'
+    assert forwarded['run-install'] == forwarded['frozen'] == '${{ inputs.install }}', (
+        'Only installing callers enable the upstream install and its frozen lock'
     )
-    upstream = wrapper['runs']['steps'][0]
-    assert upstream['with']['cache'] == '${{ inputs.cache }}', (
-        'The single wrapper forwards the selected environment-cache policy'
+
+    steps = job['steps']
+    setup = [step for step in steps if step.get('uses') == setup_action]
+    install = [step for step in steps if 'pixi install' in step.get('run', '')]
+    assert len(setup) == len(install) == 1, (
+        'The SDK has one launcher setup and one explicit install'
     )
-    assert upstream['with']['environments'] == '${{ inputs.environments }}', (
-        'The selected environment reaches the pinned upstream Pixi action'
+    setup, install = setup[0], install[0]
+    assert setup['with'] == {
+        'manifest-path': '${{ runner.temp }}/crysta/pixi.toml',
+        'environments': 'cpp-ci',
+        'cache': False,
+        'install': False,
+    }, 'The SDK pins Pixi from the engine manifest without a cached upstream install'
+    assert install['run'].strip() == (
+        'pixi install --manifest-path "$RUNNER_TEMP/crysta/pixi.toml" -e cpp-ci --frozen'
+    ), 'The SDK installs its locked cpp-ci environment explicitly'
+    run_defaults = job['defaults']['run']
+    assert install.get('shell', run_defaults['shell']) == 'python3 tools/ci/public_log.py {0}', (
+        'The SDK environment install runs inside the CI output filter'
     )
-    assert upstream['with']['frozen'] is True, (
-        'Choosing one environment never changes frozen lock admission'
+    build = next(step for step in steps if 'cpp-ci sdk-pack' in step.get('run', ''))
+    assert steps.index(setup) < steps.index(install) < steps.index(build), (
+        'The filtered install uses the pinned Pixi launcher and precedes SDK compilation'
     )
+    assert not install.get('continue-on-error'), 'A failed frozen install prevents SDK compilation'
+    for hit in ('true', 'false'):
+        outputs = {('cache', 'cache-hit'): hit}
+        assert (
+            active(setup, 'workflow_dispatch', outputs=outputs)
+            == active(install, 'workflow_dispatch', outputs=outputs)
+            == (hit == 'false')
+        ), 'Only a cold SDK archive lookup sets up Pixi and installs cpp-ci'
 
 
 def test_failed_native_observations_are_retained_without_promoting_an_sdk():

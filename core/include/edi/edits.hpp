@@ -8,6 +8,7 @@
 // the two equal. A field the library assigns without a rule (a name, a string, a plain number) needs
 // no function here; a parameter value goes through assign_value (model.hpp, beside Parameter).
 
+#include <map>
 #include <sstream>
 #include <stdexcept>
 #include <string>
@@ -30,13 +31,19 @@ inline std::string validated_project_name(const std::string& name) {
     return name;
 }
 
+// Refuses, with crysta's message naming `where`, a per-type scattering-length map that gives deuterium two lengths
+// ("D" and "2H", "D1+" and "2H1+" with different values): either value would be used depending on how a site
+// writes the atom. Called wherever such a map is read or edited, so the refusal comes at that step.
+void check_deuterium_lengths(const std::map<std::string, double>& lengths, const std::string& where);
+
 // Renaming an entry of a keyed collection: a rename onto a key the collection already holds is
 // refused, so it never merges two entries or silently replaces one. Nothing changes on a
 // refusal. An experiment's rename is io.hpp's rename_experiment, beside the adder whose rule it
 // shares.
 //
 // A scattering length is declared once per type symbol — the loader's rule (io.cpp, a duplicate
-// `_scattering_length.type_symbol` fails closed rather than letting the last row win).
+// `_scattering_length.type_symbol` fails closed rather than letting the last row win), and deuterium once whichever
+// spelling names it.
 inline void rename_scattering_length(Structure& structure, const std::string& from, const std::string& to) {
     const std::map<std::string, double>& lengths = structure.scattering_lengths_fm;
     const auto found = lengths.find(from);
@@ -54,6 +61,10 @@ inline void rename_scattering_length(Structure& structure, const std::string& fr
                                     "' is already declared");
     }
     const double length = found->second;
+    std::map<std::string, double> renamed = lengths;
+    renamed.erase(from);
+    renamed.emplace(to, length);
+    check_deuterium_lengths(renamed, "the scattering-length table");
     structure.scattering_lengths_fm.modify([&from, &to, length](std::map<std::string, double>& rows) {
         rows.erase(from);
         rows.emplace(to, length);

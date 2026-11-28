@@ -459,6 +459,10 @@ class StructureViewModel : public QObject {
     QString derivedPropagationVector() const;
     QString propagationNotDerived() const;
     QStringList atomTypes() const { return atom_types_; }
+    // The text typed in a site's Type list, trimmed, when `offered` (the list) does not hold it and the structure
+    // computes with it (edi::atom_type_computes): an isotope such as 13C with X-rays, which Enter then takes, as
+    // the Text tab takes it (the owner, 2026-11-25). Empty for any other text.
+    Q_INVOKABLE QString typedAtomType(const QString& text, const QStringList& offered) const;
     double minBondDistance() const;
     void setMinBondDistance(double distance);
     double bondDistanceIncrement() const;

@@ -1,0 +1,478 @@
+{
+  "schema": "edi.releases/1",
+  "baseline_commit": "2327853b85b27428dfaddab885b3a9a7c6ee5c69",
+  "releases": [
+    {
+      "version": "2026.11.0",
+      "date": "2026-11-10",
+      "commit": "e9334c7713570499c3a02e4010c0832ce46d44fd",
+      "notes": {
+        "Added": [
+          {
+            "title": "This is the first release of the new EasyDiffraction, based on crysta",
+            "pull_request": 3,
+            "interfaces": [
+              "desktop",
+              "web",
+              "python",
+              "cli-python",
+              "cli-standalone"
+            ]
+          }
+        ],
+        "Fixed": [],
+        "Changed": []
+      }
+    },
+    {
+      "version": "2026.11.8",
+      "date": "2026-11-11",
+      "commit": "19a185cad542a0e6d980b8eb513e0ba16cf092eb",
+      "notes": {
+        "Added": [
+          {
+            "title": "Survey, GUI and docs updates for the next release",
+            "pull_request": 34,
+            "interfaces": [
+              "desktop",
+              "web",
+              "python"
+            ]
+          }
+        ],
+        "Fixed": [],
+        "Changed": []
+      }
+    },
+    {
+      "version": "2026.11.9",
+      "date": "2026-11-11",
+      "commit": "b665bb8f7f66aa43269a426fec07e2a3d78bb0bd",
+      "notes": {
+        "Added": [
+          {
+            "title": "Docs screenshots, tutorial fixes and edi's DOI",
+            "pull_request": 45,
+            "interfaces": [
+              "desktop",
+              "web",
+              "python"
+            ]
+          }
+        ],
+        "Fixed": [],
+        "Changed": []
+      }
+    },
+    {
+      "version": "2026.11.10",
+      "date": "2026-11-11",
+      "commit": "e440f08e0be1ef4383d3663070a2342838f5dbe8",
+      "notes": {
+        "Added": [
+          {
+            "title": "Survey notice, download buttons, assistant start errors and tags",
+            "pull_request": 48,
+            "interfaces": [
+              "desktop",
+              "web"
+            ]
+          }
+        ],
+        "Fixed": [],
+        "Changed": []
+      }
+    },
+    {
+      "version": "2026.11.11",
+      "date": "2026-11-11",
+      "commit": "c453212441057d172e4ce97bd9f1928103440b7f",
+      "notes": {
+        "Added": [],
+        "Fixed": [
+          {
+            "title": "Find Qt from the macOS assistant guard",
+            "pull_request": 49,
+            "interfaces": [
+              "desktop"
+            ]
+          }
+        ],
+        "Changed": []
+      }
+    },
+    {
+      "version": "2026.11.12",
+      "date": "2026-11-12",
+      "commit": "fd84ffc00c1672f8f3c4f206b2f198f520e4e858",
+      "notes": {
+        "Added": [
+          {
+            "title": "Tutorials in fewer clear steps, consistent numbers and GUI fixes",
+            "pull_request": 55,
+            "interfaces": [
+              "desktop",
+              "web"
+            ]
+          }
+        ],
+        "Fixed": [
+          {
+            "title": "Export ENV so the web app can show its release version",
+            "pull_request": 53,
+            "interfaces": [
+              "web"
+            ]
+          }
+        ],
+        "Changed": []
+      }
+    },
+    {
+      "version": "2026.11.13",
+      "date": "2026-11-12",
+      "commit": "313f69052872095c2ba9162a7d827abdf4e06dbf",
+      "notes": {
+        "Added": [],
+        "Fixed": [
+          {
+            "title": "Fix the assistant on Windows; install EasyDiffraction with shortcuts",
+            "pull_request": 60,
+            "interfaces": [
+              "desktop"
+            ]
+          }
+        ],
+        "Changed": [
+          {
+            "title": "New tutorial screenshots in the docs",
+            "pull_request": 57,
+            "interfaces": [
+              "desktop"
+            ]
+          },
+          {
+            "title": "Start the Windows installer from Command Prompt when Run anyway is missing",
+            "pull_request": 58,
+            "interfaces": [
+              "desktop"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "version": "2026.11.14",
+      "date": "2026-11-13",
+      "commit": "b16f9867ef1de464dfed731796848eb5ba60e739",
+      "notes": {
+        "Added": [],
+        "Fixed": [
+          {
+            "title": "Improve scan responsiveness and fit progress reporting",
+            "pull_request": 64,
+            "interfaces": [
+              "desktop"
+            ]
+          }
+        ],
+        "Changed": []
+      }
+    },
+    {
+      "version": "2026.11.20",
+      "date": "2026-11-16",
+      "commit": "0e2d7caba1f83e05efbcee163acd60e8676fe96b",
+      "notes": {
+        "Added": [
+          {
+            "title": "Faster fits, selectable stop rules, ABSCOR2 removed",
+            "pull_request": 24,
+            "interfaces": [
+              "desktop",
+              "web",
+              "python",
+              "cli-python",
+              "cli-standalone"
+            ]
+          },
+          {
+            "title": "Survey, intro animation, merged title bar and Auto fits",
+            "pull_request": 73,
+            "interfaces": [
+              "desktop",
+              "web",
+              "python",
+              "cli-python",
+              "cli-standalone"
+            ]
+          }
+        ],
+        "Fixed": [
+          {
+            "title": "Install the smoke-test wheel with its declared dependencies",
+            "pull_request": 75,
+            "interfaces": [
+              "python"
+            ]
+          },
+          {
+            "title": "Keep the environment lib directory on the macOS CLI link path",
+            "pull_request": 76,
+            "interfaces": [
+              "cli-standalone"
+            ]
+          },
+          {
+            "title": "Link only the SDK's sleef into the macOS CLI",
+            "pull_request": 77,
+            "interfaces": [
+              "cli-standalone"
+            ]
+          },
+          {
+            "title": "Admit the system libc++abi in the macOS CLI runtime check",
+            "pull_request": 78,
+            "interfaces": [
+              "cli-standalone"
+            ]
+          },
+          {
+            "title": "Skip a macOS library's own install name in the dependency checks",
+            "pull_request": 79,
+            "interfaces": [
+              "cli-standalone"
+            ]
+          }
+        ],
+        "Changed": []
+      }
+    },
+    {
+      "version": "2026.11.22",
+      "date": "2026-11-17",
+      "commit": "cdf4adf4c19891bfd467c72b48be3a1df597f355",
+      "notes": {
+        "Added": [
+          {
+            "title": "Sign the installers and command-line tools on macOS and Windows",
+            "pull_request": 82,
+            "interfaces": [
+              "desktop",
+              "web",
+              "cli-standalone"
+            ]
+          }
+        ],
+        "Fixed": [
+          {
+            "title": "Point the Pages check's fake web app at its multithread kit",
+            "pull_request": 80,
+            "interfaces": [
+              "web"
+            ]
+          },
+          {
+            "title": "Ship a separately signed maintenance tool on macOS",
+            "pull_request": 83,
+            "interfaces": [
+              "desktop"
+            ]
+          }
+        ],
+        "Changed": []
+      }
+    },
+    {
+      "version": "2026.11.24",
+      "date": "2026-11-18",
+      "commit": "7fdd08055df9e6f9d759fd68e622fc1e55622f44",
+      "notes": {
+        "Added": [
+          {
+            "title": "Signed installers, series fits, complete pages and fitting fixes",
+            "pull_request": 91,
+            "interfaces": [
+              "desktop",
+              "web",
+              "python",
+              "cli-standalone"
+            ]
+          }
+        ],
+        "Fixed": [
+          {
+            "title": "Allow the Windows API set the crysta runtime imports",
+            "pull_request": 93,
+            "interfaces": [
+              "desktop"
+            ]
+          }
+        ],
+        "Changed": [
+          {
+            "title": "Show the contributors on the About page",
+            "pull_request": 84,
+            "interfaces": [
+              "web"
+            ]
+          },
+          {
+            "title": "Publish main only to the public hosts",
+            "pull_request": 86,
+            "interfaces": [
+              "web"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "version": "2026.11.27",
+      "date": "2026-11-19",
+      "commit": "255d9fc638220a96d423e1436e3f348a7c0213ea",
+      "notes": {
+        "Added": [
+          {
+            "title": "Signed installers, magnetic structures, untitled projects and fixes",
+            "pull_request": 89,
+            "interfaces": [
+              "desktop",
+              "web"
+            ]
+          }
+        ],
+        "Fixed": [
+          {
+            "title": "Let the assistant load data through the Experiments group",
+            "pull_request": 96,
+            "interfaces": [
+              "desktop"
+            ]
+          },
+          {
+            "title": "Let the assistant search aliases by full name",
+            "pull_request": 97,
+            "interfaces": [
+              "desktop"
+            ]
+          },
+          {
+            "title": "Accept native line endings in the runtime checker on Windows",
+            "pull_request": 98,
+            "interfaces": [
+              "desktop"
+            ]
+          },
+          {
+            "title": "Open older magnetic projects again",
+            "pull_request": 99,
+            "interfaces": [
+              "desktop"
+            ]
+          }
+        ],
+        "Changed": []
+      }
+    },
+    {
+      "version": "2026.11.28",
+      "date": "2026-11-19",
+      "commit": "4f89fea8cec238b5696f3507cb786b950bd31a62",
+      "notes": {
+        "Added": [],
+        "Fixed": [
+          {
+            "title": "Fix a chart hover crash and fit results sizing loops",
+            "pull_request": 100,
+            "interfaces": [
+              "desktop"
+            ]
+          }
+        ],
+        "Changed": []
+      }
+    },
+    {
+      "version": "2026.11.29",
+      "date": "2026-11-19",
+      "commit": "b1d25154ced32e859544507942be9ad8399e24fc",
+      "notes": {
+        "Added": [],
+        "Fixed": [
+          {
+            "title": "Calculate linked structure edits once and refresh the docs",
+            "pull_request": 102,
+            "interfaces": [
+              "desktop"
+            ]
+          }
+        ],
+        "Changed": []
+      }
+    },
+    {
+      "version": "2026.11.30",
+      "date": "2026-11-25",
+      "commit": "a77bd907583ecf873da0e169534a5c16acbe5009",
+      "notes": {
+        "Added": [
+          {
+            "title": "Faster app, layout that fits the window and working tutorials",
+            "pull_request": 94,
+            "interfaces": [
+              "desktop",
+              "web"
+            ]
+          },
+          {
+            "title": "Load and save projects from other programs",
+            "pull_request": 154,
+            "interfaces": [
+              "desktop",
+              "web"
+            ]
+          }
+        ],
+        "Fixed": [
+          {
+            "title": "Fix reading of magnetic structures, form factors and CIF files",
+            "pull_request": 104,
+            "interfaces": [
+              "desktop",
+              "web"
+            ]
+          },
+          {
+            "title": "Shorter installers, larger cells and R-factors for each fitted point",
+            "pull_request": 156,
+            "interfaces": [
+              "desktop",
+              "web"
+            ]
+          }
+        ],
+        "Changed": []
+      }
+    },
+    {
+      "version": "2026.11.31",
+      "date": "2026-11-25",
+      "commit": "874eb8fe09b7b211c09fa5dbbc637954760b78c3",
+      "notes": {
+        "Added": [],
+        "Fixed": [
+          {
+            "title": "Typing a value replaces the old one",
+            "pull_request": 178,
+            "interfaces": [
+              "desktop",
+              "web"
+            ]
+          }
+        ],
+        "Changed": []
+      }
+    }
+  ]
+}

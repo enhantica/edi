@@ -397,8 +397,8 @@ report always takes the light colours:
 
 An element's colour is the Jmol colour of the core's element table (`data/elements/element-styles.tsv`, ADR-0022
 §4, the same values as easydiffractionbeta's `Logic/Tables.py`), of the type symbol's element: its first capital
-letter and the lower-case letter after it (`Co2+` is Co, `162Dy` is Dy, `2H` is H). An element the table does not
-have takes the minor foreground colour. The app holds no element colour of its own (`AppColors.element()` asks the
+letter and the lower-case letter after it (`Co2+` is Co, `162Dy` is Dy; `2H` and `D` are deuterium, coloured as
+H). An element the table does not have takes the minor foreground colour. The app holds no element colour of its own (`AppColors.element()` asks the
 core through `ApplicationInfo.elementColor`). The colour follows
 the site's type symbol as it is edited: the parameter registry reads each atom parameter's element again at
 every publish (`ParameterRegistry::refreshElements`), not only when the set of parameters is rebuilt. An experiment's colour is

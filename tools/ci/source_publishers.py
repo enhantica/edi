@@ -25,10 +25,13 @@ ROOT = Path(__file__).resolve().parents[2]
 FILTER = 'python3 tools/ci/public_log.py {0}'
 SOURCE = './.github/actions/crysta-source'
 STORE = './.github/actions/store'
+SETUP_PIXI = './.github/actions/setup-pixi'
 # The steps of the actions everything here relies on, as reviewed: `--digests` prints them.
 REVIEWED = {
     SOURCE: '09e714c5b055ef90c0ad3a9b059a82284a568ef7938733931d70b4424d3fe364',
     STORE: '05b4c58e0eac79e613bc94a9fbab5a7863d29549d196ff9c6b7206d340eaa11f',
+    # Trusted to install nothing, beside the source, when a step gives it install: false.
+    SETUP_PIXI: '525548a3f32db9bb1174397f8e40f0b299564b10234f96be027937eff0721e48',
 }
 # What jobs without the source publish: how, the artifact or cache key itself, and its path.
 PUBLISHERS = {
@@ -233,6 +236,13 @@ def after(where: str, step: dict, checked: set[str]) -> Iterator[str]:
         yield f'{where}: {named(step)!r} uses {action(step)} beside the source'
     if action(step) == './.github/actions/setup-pixi' and given(step, 'cache').lower() != 'false':
         yield f'{where}: {named(step)!r} caches an environment beside the source'
+    # Installing an environment can build a package from crysta's source; the action's own output
+    # never passes the filter, so the install is a run step of its own.
+    if (
+        action(step) == './.github/actions/setup-pixi'
+        and given(step, 'install').lower() != 'false'
+    ):
+        yield f'{where}: {named(step)!r} installs an environment outside the output filter'
     if action(step) != STORE:
         for name, nested in inner(step):
             if 'run' in nested and nested.get('shell') != FILTER:

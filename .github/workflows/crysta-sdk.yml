@@ -104,7 +104,7 @@ jobs:
         with:
           sha: ${{ needs.resolve.outputs.sha }}
           app-id: ${{ vars.ENHANTICA_APP_ID }}
-          private-key: ${{ secrets.ENHANTICA_APP_KEY }}
+          private-key: ${{ secrets.CRYSTA_READ_KEY }}
       - name: Check SDK and consumer ABI package locks before compilation
         if: steps.cache.outputs.cache-hit != 'true'
         run: |
@@ -156,10 +156,18 @@ jobs:
           # SDK archives and compiler objects provide the useful warm paths.
           # Whole builder environments crowd out consumer/WASM caches.
           cache: false
+          install: false
+      # The install builds crysta's own package, whose compiler output can quote the source: it runs
+      # here, under the output filter, not inside the action.
+      - name: Install crysta's build environment
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: pixi install --manifest-path "$RUNNER_TEMP/crysta/pixi.toml" -e cpp-ci --frozen
       - name: Build, test and pack the SDK
         if: steps.cache.outputs.cache-hit != 'true'
         env:
           SHA: ${{ steps.pin.outputs.sha }}
+          # A failed test's message and traceback can quote crysta's tests or corpus.
+          PYTEST_ADDOPTS: --tb=no -rN --disable-warnings
         run: |
           out="$GITHUB_WORKSPACE/crysta-sdk-archives"
           mkdir -p "$out"
