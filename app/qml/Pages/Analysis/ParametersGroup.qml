@@ -801,6 +801,9 @@ SideBarGroup {
                 required property string units
                 required property real minimum
                 required property real maximum
+                // A Pawley structure's intensities in one experiment, one row for all of them (edi ADR-0109): no value
+                // of its own, only the name with their count and one Free box for every intensity.
+                readonly property bool grouped: parameter !== null && parameter.groupSize > 0
 
                 objectName: `parameters.row.${index}`
                 EaComponents.ListViewLabel {
@@ -835,6 +838,7 @@ SideBarGroup {
                     }
                     TapHandler {
                         acceptedButtons: Qt.RightButton
+                        enabled: !row.grouped
                         onTapped: valueCell.openContextMenu(valueCell)
                     }
                     HoverHandler {
@@ -850,7 +854,7 @@ SideBarGroup {
                     visible: table.shows(2)
                     horizontalAlignment: Text.AlignRight
                     color: EaStyle.Colors.themeForegroundMinor
-                    number: row.parameter ? row.parameter.startText : ""
+                    number: row.parameter && !row.grouped ? row.parameter.startText : ""
                 }
                 ParameterCell {
                     id: valueCell
@@ -858,7 +862,8 @@ SideBarGroup {
                     objectName: `parameters.value.${row.index}`
                     onRightPaddingChanged: table.valuePadding = rightPadding
                     Component.onCompleted: table.valuePadding = rightPadding
-                    item: row.parameter
+                    item: row.grouped ? null : row.parameter
+                    enabled: !row.grouped && refinable
                     // An auto-mode background's values are the estimate's, as in the Experiment page's table.
                     locked: row.parameter ? row.parameter.estimated : false
                     onActiveFocusChanged: ApplicationInfo.finishUiEvent(11, undefined)
@@ -884,13 +889,13 @@ SideBarGroup {
                     transform: Translate {
                         x: -table.unitPull
                     }
-                    text: row.units
+                    text: row.grouped ? "" : row.units
                 }
                 NumberLabel {
                     objectName: `parameters.su.${row.index}`
                     visible: table.shows(5)
                     horizontalAlignment: Text.AlignRight
-                    number: row.parameter ? (row.parameter.fileValue !== "" ? row.parameter.fileSu : row.parameter.hasUncertainty ? NumberText.error(row.parameter.uncertainty, 0, row.parameter.value) : "") : ""
+                    number: row.parameter && !row.grouped ? (row.parameter.fileValue !== "" ? row.parameter.fileSu : row.parameter.hasUncertainty ? NumberText.error(row.parameter.uncertainty, 0, row.parameter.value) : "") : ""
                     narrow: row.parameter && row.parameter.hasUncertainty ? NumberText.ownUncertainty(row.parameter.uncertainty, row.parameter.value) : ""
                     full: row.parameter && row.parameter.hasUncertainty ? NumberText.plainFull(row.parameter.uncertainty) : ""
                     // Red after a fit for a poorly determined or strongly correlated parameter, its reasons on hover
@@ -936,7 +941,7 @@ SideBarGroup {
                         anchors.verticalCenter: parent.verticalCenter
                         width: Math.max(0, parent.width - AppSizes.tableCellMargin - parent.gap - changeArrow.width)
                         horizontalAlignment: Text.AlignRight
-                        number: row.parameter ? row.parameter.changeText : ""
+                        number: row.parameter && !row.grouped ? row.parameter.changeText : ""
                     }
                 }
                 // Right-aligned like its header, an infinite bound included.
@@ -944,7 +949,7 @@ SideBarGroup {
                     visible: table.shows(7)
                     horizontalAlignment: Text.AlignRight
                     color: EaStyle.Colors.themeForegroundMinor
-                    number: group.bound(row.minimum)
+                    number: row.grouped ? "" : group.bound(row.minimum)
                     full: NumberText.plainFull(row.minimum)
                 }
                 // Right-aligned like its header, an infinite bound included.
@@ -952,7 +957,7 @@ SideBarGroup {
                     visible: table.shows(8)
                     horizontalAlignment: Text.AlignRight
                     color: EaStyle.Colors.themeForegroundMinor
-                    number: group.bound(row.maximum)
+                    number: row.grouped ? "" : group.bound(row.maximum)
                     full: NumberText.plainFull(row.maximum)
                 }
                 Item {
@@ -961,7 +966,8 @@ SideBarGroup {
                 }
                 // Enabled where a fit can vary the value, or while it is free so a flag set before a change can be
                 // cleared; otherwise disabled, its tooltip naming why (edi ADR-0053). Without measured data every box
-                // is disabled.
+                // is disabled. A Pawley row's box is partly checked while only some of its intensities are free; a
+                // click frees or fixes them all.
                 Item {
                     // At the table's right edge, under the title's arrow (the owner, 2026-11-17).
                     property int horizontalAlignment: Text.AlignRight
@@ -973,8 +979,11 @@ SideBarGroup {
                         anchors.right: parent.right
                         horizontalAlignment: Text.AlignRight
                         objectName: `parameters.free.${row.index}`
-                        enabled: group.measured && row.parameter !== null && (row.parameter.fittable || row.parameter.free)
-                        checked: row.parameter ? row.parameter.free : false
+                        enabled: group.measured && row.parameter !== null && (row.parameter.fittable || row.parameter.free || row.parameter.partiallyFree)
+                        tristate: row.grouped
+                        checkState: !row.parameter ? Qt.Unchecked : row.parameter.partiallyFree ? Qt.PartiallyChecked : row.parameter.free ? Qt.Checked : Qt.Unchecked
+                        // Never partly checked by a click: that state only reports a mix.
+                        nextCheckState: () => freeBox.checkState === Qt.Checked ? Qt.Unchecked : Qt.Checked
                         onToggled: row.parameter.free = checked
                         ToolTip.text: row.parameter && !row.parameter.fittable ? qsTr("Cannot be fitted: %1").arg(row.parameter.fitReason) : ""
                     }
@@ -1013,7 +1022,9 @@ SideBarGroup {
             // The current row's parameter, and none while the table shows no row (the owner, 2026-10-21): the slider
             // and its limits are then disabled and empty, and come back for the parameter that becomes current. The row
             // comes from the filter model, which changes at once; the table's own count follows a frame later.
-            readonly property ParameterItem selected: group.selectedRow >= 0 ? group.selected : null
+            // A Pawley row has no single value, so it moves nothing here.
+            readonly property bool groupSelected: group.selectedRow >= 0 && group.selected !== null && group.selected.groupSize > 0
+            readonly property ParameterItem selected: group.selectedRow >= 0 && !groupSelected ? group.selected : null
             property real lower: 0
             property real upper: 1
 
@@ -1046,7 +1057,7 @@ SideBarGroup {
                 anchors.verticalCenter: parent.verticalCenter
                 // A value symmetry holds and a descriptor row's value are not moved here (edi ADR-0019, ADR-0053).
                 enabled: sliderRow.selected !== null && !sliderRow.selected.estimated && sliderRow.selected.refinable
-                ToolTip.text: enabled ? "" : sliderRow.selected === null ? qsTr("Select a parameter in the table first") : sliderRow.selected.estimated ? qsTr("Set by the automatic background: choose Manual to change it") : qsTr("Fixed by the structure's symmetry or a constraint")
+                ToolTip.text: enabled ? "" : sliderRow.groupSelected ? qsTr("Pawley intensities have no single value to move") : sliderRow.selected === null ? qsTr("Select a parameter in the table first") : sliderRow.selected.estimated ? qsTr("Set by the automatic background: choose Manual to change it") : qsTr("Fixed by the structure's symmetry or a constraint")
                 from: sliderRow.lower
                 to: sliderRow.upper
                 // Clamped here to the limits, so the value is read again when they move: the slider clamps to the
