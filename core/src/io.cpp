@@ -2876,7 +2876,7 @@ BraggPdExperiment parse_experiment_block(const Block& block, const std::string& 
         }
         if (extracted != nullptr) {
             const auto miller = [&](const std::vector<std::string>& row, const char* tag) {
-                const std::string& text = loop_cell(*extracted, row, tag, where);
+                const std::string text = loop_cell(*extracted, row, tag, where);
                 const double value = to_double(text, where);
                 if (value != std::floor(value) || std::abs(value) > 1.0e6) {
                     fail_schema(where, "invalid-miller-index", std::string(tag) + " '" + text + "' is not a Miller index");

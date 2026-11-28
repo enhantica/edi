@@ -66,6 +66,7 @@ class ProjectEditor {
     // Every flag of a group of parameters set or cleared at once (a Pawley structure's intensities, edi ADR-0109 §5).
     virtual QString assign_group_free(const std::vector<edi::Parameter*>& parameters, bool free) {
         std::vector<std::pair<edi::Parameter*, bool>> flags;
+        flags.reserve(parameters.size());
         for (edi::Parameter* parameter : parameters) flags.emplace_back(parameter, free);
         return apply(edi::Edit::free_flags(std::move(flags)), false);
     }

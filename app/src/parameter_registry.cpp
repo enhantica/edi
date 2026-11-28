@@ -82,7 +82,9 @@ void ParameterRegistry::rebuild(edi::Project& project) {
         }
         for (auto& [structure_id, members] : groups) {
             const std::string prefix = several ? "experiments[" + experiment->name.value() + "]." : std::string("experiment.");
-            edi::ParameterEntry entry{members.front(), prefix + "extracted_intensities[" + structure_id + "].f_squared",
+            std::string path = prefix;
+            path.append("extracted_intensities[").append(structure_id).append("].f_squared");
+            edi::ParameterEntry entry{members.front(), path,
                                       "experiment", experiment->name.value(), "extracted_intensity", structure_id,
                                       "f_squared", true};
             const auto key = std::make_pair(static_cast<const edi::Parameter*>(entry.parameter),

@@ -666,6 +666,8 @@ std::string link_refusal(const edi::Project& project, const edi::ExperimentBase&
         return error.what();
     }
     // crysta reads enabled links only, so a disabled one is asked of a copy where it is enabled.
+    // The copy is changed through its cloned items, which clang-tidy cannot see.
+    // NOLINTNEXTLINE(performance-unnecessary-copy-initialization)
     edi::Project copy(project);
     auto& held = *copy.experiments[static_cast<std::size_t>(std::distance(project.experiments.begin(), at))];
     for (const auto& link : held.linked_structures) {
