@@ -44,7 +44,9 @@ runs:
         # always succeeds, is prepended to PATH for the job, and never clobbers the machine's
         # shared ~/.pixi/bin (which the hub VM also uses).
         pixi-bin-path: ${{ runner.temp }}/pinned-pixi/pixi${{ runner.os == 'Windows' && '.exe' || '' }}
-        manifest-path: ${{ inputs.manifest-path }}
+        # setup-pixi always runs `pixi info` on its manifest, outside the output filter, so when it
+        # installs nothing it reads edi's own; the version still comes from the manifest given.
+        manifest-path: ${{ inputs.install == 'true' && inputs.manifest-path || format('{0}/pixi.toml', github.workspace) }}
         # setup-pixi refuses environments, a cache or a frozen lock when it installs nothing.
         environments: ${{ inputs.install == 'true' && inputs.environments || '' }}
         cache: ${{ inputs.install == 'true' && inputs.cache || 'false' }}
