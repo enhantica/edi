@@ -5285,6 +5285,17 @@ QString ProjectViewModel::prepareScan(bool fresh, bool refit) {
     if (scan_ && !scan_template_) copyModelToTemplate();
     run_identity_ = templateIdentityOf(scanTemplateOrModel());
     previous_run_.reset();
+    // The engine's own decision (crysta's scan drivers, ADR-0136 decision 9): a pending edit on a dataset that has a row
+    // makes the run a new pass, so it is one here too, with its Undo record.
+    if (!fresh && !refit && scan_session_ != nullptr && !project_->sequential_fit.starts.empty()) {
+        const std::vector<std::string>& files = scan_session_->datasets().files;
+        const auto& rows = scan_session_->index().rows;
+        for (const auto& start : project_->sequential_fit.starts) {
+            for (std::size_t at = 0; at < files.size() && at < rows.size(); ++at) {
+                refit = refit || (rows[at].offset >= 0 && files[at] == start->point.value());
+            }
+        }
+    }
     // A complete scan fitted again replaces every row, from each dataset's own (owner decision 2026-11-27): a new
     // run, not a Continue of the earlier one, whose files stay in place for the run to read and are copied for Undo.
     if (!fresh && !refit) {
@@ -5294,6 +5305,8 @@ QString ProjectViewModel::prepareScan(bool fresh, bool refit) {
     undo_history_.reserve(undo_history_.size() + 1);
     undo_history_.emplace_back(ScanRun{});
     auto& record = std::get<ScanRun>(undo_history_.back());
+    // The edits pending before this run, which it may use: its Undo puts them back with the earlier rows.
+    record.starts = project_->sequential_fit.starts;
     QString refusal;
     try {
         refusal = refit && !fresh ? scan_session_->copyFiles(*project_, record.files)
