@@ -418,6 +418,30 @@ private slots:
         QCOMPARE(voice.input->message(), kNoModelMessage);
     }
 
+    // A microphone with a noise gate sends digital silence instead of the room, so its speech can be the only sound and
+    // at an even level: a phrase at -45 to -46 dBFS. It is heard whether the gate closes between words or only after
+    // the phrase, just before the press. Zeros at the start alone are a microphone starting (nothingHeardWithoutSpeech).
+    void gatedEvenSpeechIsHeard_data() {
+        QTest::addColumn<QList<float>>("recording");
+        const QList<float> start(kRate / 2, 0.0F);
+        const QList<float> gap(kRate * 3 / 20, 0.0F);
+        QTest::newRow("gaps between words")
+            << joined({start, tone(0.5, -45.0), gap, tone(0.5, -46.0), gap, tone(0.5, -45.0), gap});
+        QTest::newRow("gate closes after the phrase") << joined({start, tone(1.5, -45.0), QList<float>(kRate * 3 / 10, 0.0F)});
+    }
+    void gatedEvenSpeechIsHeard() {
+        QFETCH(QList<float>, recording);
+        auto voice = voiceOn(kAbsentModel);
+        voice.input->toggle();
+        QTRY_COMPARE(voice.input->state(), VoiceInput::State::Listening);
+        voice.capture->play(recording);
+        QCOMPARE(voice.input->state(), VoiceInput::State::Listening);
+        voice.input->toggle();
+        QCOMPARE(voice.input->state(), VoiceInput::State::Recognising);
+        QVERIFY(settle(*voice.input));
+        QCOMPARE(voice.input->message(), kNoModelMessage);
+    }
+
     // A press takes the end of the recording the microphone still holds, here its only speech; a cancel drops it.
     void stopTakesTheHeldEndAndCancelDropsIt() {
         auto voice = voiceOn(kAbsentModel);

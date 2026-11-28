@@ -94,9 +94,12 @@ assistant runtime, and shows its choices as rows on the folder page instead of a
    description does. With animations off the dots stay still and light from the left with the level. A recording in
    which no speech was heard is not recognised, since Whisper makes up text from silence; the box says "Nothing was
    heard." Speech is judged against the recording's own noise floor, the level a tenth of its 30 ms blocks are quieter
-   than, digital silence below -80 dBFS left out: a block 15 dB above the floor is speech, and a recording needs four
-   such blocks, so a microphone set low still counts and a click does not. The two-second silence stop uses the same
-   test, so a quiet continuation after a loud syllable keeps the recording going. The button is always shown (the owner,
+   than: a block 15 dB above the floor is speech, and a recording needs four such blocks, so a microphone set low still
+   counts and a click does not. Digital silence (below -80 dBFS) counts towards the floor only once it has followed
+   sound, which is a microphone's noise gate removing the room; zeros only at the start are a microphone starting and
+   are left out. A press judges the whole recording again against its final floor, so a gate that closes only after an
+   even phrase still lets it through. The two-second silence stop uses the same test, so a quiet continuation after a
+   loud syllable keeps the recording going. The button is always shown (the owner,
    2026-11-27). Without the component, or on a processor without AVX2, a press opens the same note as the assistant's
    button without the assistant (ADR-0071): what is missing and, in an installation Maintenance Tool manages, a link to
    Updates in Preferences to add voice input.

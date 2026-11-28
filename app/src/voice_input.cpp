@@ -42,8 +42,9 @@ Q_LOGGING_CATEGORY(lcVoice, "edi.voice")
 constexpr int rate = SpeechRecogniser::sample_rate;
 constexpr auto block = static_cast<std::size_t>(rate * 30 / 1000);  // the speech check reads 30 ms at a time
 // Speech is judged against the recording's own noise floor, so a microphone set low still counts (ADR-0107 §8): the
-// floor is the level a tenth of the blocks so far are quieter than, leaving out digital silence; speech is 15 dB above
-// it, for at least four blocks in all, so a click is not speech.
+// floor is the level a tenth of the blocks so far are quieter than; speech is 15 dB above it, for at least four blocks
+// in all, so a click is not speech. Digital silence counts towards the floor only once it follows sound, which is a
+// microphone's noise gate removing the background: zeros only at the start are a microphone starting.
 constexpr int digital_silence_db = -80;
 constexpr double speech_margin_db = 15.0;
 constexpr int speech_blocks = 4;
@@ -181,6 +182,11 @@ void VoiceInput::stop() {
         return;
     // The end of the recording that the microphone and its resampler still hold.
     analyse(capture_->finish());
+    // Judged again against the whole recording's floor: a noise gate may have shown itself only after the speech.
+    const double threshold = floorDb() + speech_margin_db;
+    heard_ = heard_ || std::count_if(blockDb_.cbegin(), blockDb_.cend(), [threshold](double db) {
+                           return db >= threshold;
+                       }) >= speech_blocks;
     // Whisper makes up text for a recording without speech, so such a recording is never recognised.
     if (!heard_) {
         qCInfo(lcVoice) << "Nothing was heard; the recording is dropped";
@@ -312,16 +318,26 @@ void VoiceInput::analyse(std::span<const float> chunk) {
 
 bool VoiceInput::speech(double rms) {
     const double db = 20.0 * std::log10(std::max(rms, 1e-9));
-    if (db < digital_silence_db)
+    blockDb_.push_back(db);
+    if (db < digital_silence_db) {
+        ++silentBlocks_;
+        gated_ = gated_ || counted_ > 0;
         return false;
+    }
     static_assert(std::tuple_size_v<decltype(levels_)> == static_cast<std::size_t>(1 - digital_silence_db));
     ++levels_[static_cast<std::size_t>(std::min(db, 0.0) - digital_silence_db)];
     ++counted_;
-    // The lowest level with a tenth of the blocks at or below it.
+    return db >= floorDb() + speech_margin_db;
+}
+
+double VoiceInput::floorDb() const {
+    // The lowest level with a tenth of the blocks at or below it; behind a noise gate its silence is the lowest.
+    int below = (gated_ ? silentBlocks_ : 0) + levels_[0];
+    const int total = (gated_ ? silentBlocks_ : 0) + counted_;
     std::size_t floor = 0;
-    for (int below = levels_[0]; below * 10 < counted_; below += levels_[floor])
-        ++floor;
-    return db >= static_cast<double>(floor) + digital_silence_db + speech_margin_db;
+    while (below * 10 < total && floor + 1 < levels_.size())
+        below += levels_[++floor];
+    return static_cast<double>(floor) + digital_silence_db;
 }
 
 void VoiceInput::captureFailed(AudioCapture::Failure failure) {
@@ -407,6 +423,9 @@ void VoiceInput::dropRecording() {
     levels_.fill(0);
     counted_ = 0;
     spoken_ = 0;
+    blockDb_.clear();
+    silentBlocks_ = 0;
+    gated_ = false;
     loudest_ = 0.0;
     levelShown_.invalidate();
     setLevel(0.0);
