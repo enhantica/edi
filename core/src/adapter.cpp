@@ -10461,6 +10461,13 @@ std::optional<std::uint64_t> bank_inputs(const Project& project, std::size_t exp
 }
 }  // namespace
 
+// Whether a link's or a texture row's structure id names `parent`: the same id, or none while the parent is the
+// project's one structure, as crysta resolves a lone link (review 27).
+bool names_structure(const Project& project, const std::string& id, const std::string& parent) {
+    return id == parent ||
+           (id.empty() && project.structures.size() == 1 && project.structures.front()->name.value() == parent);
+}
+
 // The parent's free flags on a candidate child (defined below, with its helpers).
 void carry_free_flags(const Structure& parent, Structure& child);
 
@@ -10488,7 +10495,7 @@ std::shared_ptr<const PreparedMagneticCandidates> prepare_magnetic_candidates(
     prepared->parent_key = candidates.parent_key;
     for (std::size_t e = 0; e < project.experiments.size(); ++e) {
         for (const auto& link : project.experiments[e]->linked_structures) {
-            if (link->structure_id.value() == parent_name) {
+            if (names_structure(project, link->structure_id.value(), parent_name)) {
                 prepared->banks.push_back({e, project.experiments[e]->name, bank_inputs(project, e)});
                 break;
             }
@@ -10498,7 +10505,7 @@ std::shared_ptr<const PreparedMagneticCandidates> prepare_magnetic_candidates(
     // experiments only"): a single-crystal link, enabled or not, refuses the whole Add.
     for (const auto& experiment : project.experiments) {
         for (const auto& link : experiment->linked_structures) {
-            if (link->structure_id.value() == parent_name &&
+            if (names_structure(project, link->structure_id.value(), parent_name) &&
                 experiment->experiment_type.effective_sample_form() != SampleFormEnum::POWDER) {
                 throw std::invalid_argument(
                     "the parent is linked to a single-crystal experiment, whose reflections are indexed "
@@ -10544,14 +10551,14 @@ std::shared_ptr<const PreparedMagneticCandidates> prepare_magnetic_candidates(
         for (std::size_t e = 0; e < project.experiments.size(); ++e) {
             const auto& experiment = project.experiments[e];
             for (const auto& link : experiment->linked_structures) {
-                if (link->structure_id.value() != parent_name) {
+                if (!names_structure(project, link->structure_id.value(), parent_name)) {
                     continue;
                 }
                 prepared->links.push_back({e, name, link->scale.value.get() / (n * n), i == 0,
                                            i == 0 && link->scale.free.get()});
             }
             for (const auto& row : experiment->preferred_orientation) {
-                if (row->structure_id.value() != parent_name) {
+                if (!names_structure(project, row->structure_id.value(), parent_name)) {
                     continue;
                 }
                 // The same reciprocal direction in the child's basis: h_child = Dᵀ h_parent, reduced.
@@ -10594,7 +10601,7 @@ void check_magnetic_candidates(const Project& project, const PreparedMagneticCan
     }
     for (std::size_t e = 0; e < project.experiments.size(); ++e) {
         for (const auto& link : project.experiments[e]->linked_structures) {
-            if (link->structure_id.value() == prepared.parent && !powder(e)) {
+            if (names_structure(project, link->structure_id.value(), prepared.parent) && !powder(e)) {
                 throw std::invalid_argument(
                     "the parent is linked to a single-crystal experiment, whose reflections are indexed "
                     "in the parent cell; adding magnetic candidates to it is not supported yet");
@@ -10635,7 +10642,7 @@ void check_magnetic_candidates(const Project& project, const PreparedMagneticCan
     std::vector<PreparedMagneticCandidates::Bank> banks;
     for (std::size_t e = 0; e < project.experiments.size(); ++e) {
         for (const auto& link : project.experiments[e]->linked_structures) {
-            if (link->structure_id.value() == prepared.parent) {
+            if (names_structure(project, link->structure_id.value(), prepared.parent)) {
                 banks.push_back({e, project.experiments[e]->name, bank_inputs(project, e)});
                 break;
             }
@@ -10691,7 +10698,7 @@ void check_magnetic_candidates(const Project& project, const PreparedMagneticCan
     for (std::size_t e = 0; e < project.experiments.size(); ++e) {
         const auto& experiment = project.experiments[e];
         for (const auto& link : experiment->linked_structures) {
-            if (link->structure_id.value() != prepared.parent) continue;
+            if (!names_structure(project, link->structure_id.value(), prepared.parent)) continue;
             for (std::size_t i = 0; i < children.size(); ++i) {
                 const LinkKey key{e, children[i]->name.value(), i == 0};
                 expected_links.insert(key);
@@ -10699,7 +10706,7 @@ void check_magnetic_candidates(const Project& project, const PreparedMagneticCan
             }
         }
         for (const auto& row : experiment->preferred_orientation) {
-            if (row->structure_id.value() != prepared.parent) continue;
+            if (!names_structure(project, row->structure_id.value(), prepared.parent)) continue;
             std::array<long long, 3> h{m[0] * row->index_h.get(), m[1] * row->index_k.get(),
                                        m[2] * row->index_l.get()};
             const long long g = std::gcd(std::gcd(std::llabs(h[0]), std::llabs(h[1])), std::llabs(h[2]));
@@ -10814,7 +10821,7 @@ std::vector<std::string> magnetic_candidates_without_intensity(const Project& pr
         if (experiment->experiment_type.effective_sample_form() != SampleFormEnum::POWDER) continue;
         if (!experiment->data.has_value() || experiment->data->axis().empty()) continue;
         for (const auto& link : experiment->linked_structures) {
-            if (link->structure_id.value() == prepared.parent) {
+            if (names_structure(project, link->structure_id.value(), prepared.parent)) {
                 experiments.push_back(e);
                 break;
             }

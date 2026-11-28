@@ -1316,12 +1316,17 @@ class Edit {
             for (const auto& structure : prepared->children()) structures.push_back(std::make_shared<Structure>(*structure));
             std::vector<std::vector<ItemVec<LinkedStructure>::Ptr>> links;
             std::vector<std::vector<ItemVec<PrefOrient>::Ptr>> texture;
+            // A link or texture row with no id is the parent's while the parent is the project's one structure (review
+            // 27); it is written with the parent's id before the children make that ambiguous.
+            const bool lone = project.structures.size() == 1 && project.structures.front()->name.value() == prepared->parent;
+            const auto parents = [&](const std::string& id) { return id == prepared->parent || (id.empty() && lone); };
             for (std::size_t e = 0; e < project.experiments.size(); ++e) {
                 const auto& experiment = project.experiments[e];
                 auto& kept_links = links.emplace_back();
                 for (const auto& link : experiment->linked_structures) {
                     auto row = std::make_shared<LinkedStructure>(*link);
-                    if (row->structure_id.value() == prepared->parent) {
+                    if (parents(row->structure_id.value())) {
+                        row->structure_id = prepared->parent;
                         row->enabled = false;
                         row->scale.free = false;
                     }
@@ -1339,7 +1344,8 @@ class Edit {
                 auto& kept_texture = texture.emplace_back();
                 for (const auto& held : experiment->preferred_orientation) {
                     auto row = std::make_shared<PrefOrient>(*held);
-                    if (row->structure_id.value() == prepared->parent) {
+                    if (parents(row->structure_id.value())) {
+                        row->structure_id = prepared->parent;
                         row->march_r.free = false;
                         row->march_random_fract.free = false;
                     }
