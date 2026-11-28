@@ -1167,6 +1167,9 @@ QString ProjectViewModel::apply_creation_control(const edi::Edit& change, bool s
         if(const auto pending=editReadinessRefusal(false);!pending.isEmpty()){if(input)input->outcome.message=pending;return pending;}
         if(phase_control) {
             QString refusal;
+            // crysta's reason a link would be refused (a Le Bail or Pawley structure on a single crystal), which the
+            // user sees; the other refusals here are of a stale offer.
+            std::string link_refused;
             if(actual.kind==Kind::PhaseRetarget) {
                 const auto id=actual.text.toStdString();bool offered=false;
                 for(const auto& structure:project_->structures) {
@@ -1174,22 +1177,28 @@ QString ProjectViewModel::apply_creation_control(const edi::Edit& change, bool s
                     if((raw.empty()?std::string_view("structure"):std::string_view(raw))==id)offered=true;
                 }
                 if(!link || !link->enabled.get() || !offered)refusal=tr("The linked structure target is unavailable or disabled");
+                else if(edi::KeyTraits<edi::LinkedStructure>::canonical(link->structure_id.value())!=id)
+                    link_refused=link_refusal(*project_,*experiment,id);
             } else if(actual.kind==Kind::PhaseRemove && experiment->linked_structures.size()<=1)
                 refusal=tr("The final linked structure cannot be removed");
             else if(actual.kind==Kind::PhaseEnabled && actual.number!=0 && actual.number!=1)
                 refusal=tr("The linked structure flag must be boolean");
+            else if(actual.kind==Kind::PhaseEnabled && actual.number==1 && link && !link->enabled.get())
+                link_refused=link_refusal(*project_,*experiment,link->structure_id.value());
             else if(actual.kind==Kind::PhaseAppend) {
-                std::string next;
-                for(const auto& structure:project_->structures) {
-                    const auto& raw=structure->name.value();
-                    const std::string_view id=raw.empty()?std::string_view("structure"):std::string_view(raw);
-                    if(std::none_of(experiment->linked_structures.begin(),experiment->linked_structures.end(),[&](const auto& row){return (row->structure_id.value().empty()?std::string_view("structure"):std::string_view(row->structure_id.value()))==id;})){next=std::string(id);break;}
+                const std::string next=next_link_target(*project_,*experiment,link_refused);
+                if(!next.empty() || link_refused.empty()) {
+                    link_refused.clear();
+                    if(next.empty() || next!=actual.text.toStdString())refusal=tr("The original linked structure append offer changed");
+                    if(input && input->bounded_result && !assistant_result_name(next)) {
+                        input->result_identity_refused=true;
+                        refusal=tr("The linked structure identity exceeds the assistant result limit; no edit was made");
+                    }
                 }
-                if(next.empty() || next!=actual.text.toStdString())refusal=tr("The original linked structure append offer changed");
-                if(input && input->bounded_result && !assistant_result_name(next)) {
-                    input->result_identity_refused=true;
-                    refusal=tr("The linked structure identity exceeds the assistant result limit; no edit was made");
-                }
+            }
+            if(refusal.isEmpty() && !link_refused.empty()) {
+                refusal=QString::fromStdString(link_refused);
+                if(!input)announceRefused(refusal);
             }
             if(!refusal.isEmpty()){if(input)input->outcome.message=refusal;return refusal;}
         }

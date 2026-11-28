@@ -328,6 +328,16 @@ class ExcludedRegionListModel : public RowTableModel {
     ProjectEditor& editor_;
 };
 
+// Why a link of the experiment to the structure named `structure_id`, enabled, is refused: crysta's reason for a Le
+// Bail or Pawley structure on a single crystal or a total-scattering experiment (edi::calc_method_link_refusal), empty
+// when it is not or the project holds no such structure. The structure box, Add linked structure and enabling a link
+// all ask this.
+std::string link_refusal(const edi::Project& project, const edi::ExperimentBase& experiment,
+                         const std::string& structure_id);
+// The structure Add linked structure links next: the first of the project not linked to the experiment yet whose link
+// is not refused. Empty when there is none, with crysta's reason for the first refused one in `refusal`.
+std::string next_link_target(const edi::Project& project, const edi::ExperimentBase& experiment, std::string& refusal);
+
 // The experiment's linked structures (phases): roles `structureId`, `scale` (ParameterItem), `enabled`,
 // `colorIndex` (the structure's place in the project, its colour) and `weightFraction`, the read-only
 // Hill-Howard weight fraction as a map of `value` and `uncertainty` (exactly 1 for a single enabled structure, empty
