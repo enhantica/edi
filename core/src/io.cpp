@@ -7,6 +7,7 @@
 // entity-path rule are crysta's, reached through the adapter — one decision for both products rather
 // than a parity to prove.
 
+#include "crysta/expression.hpp"
 #include "edi/io.hpp"
 
 #include "edi/project_import.hpp"
@@ -5337,19 +5338,25 @@ const Parameter* ActiveView::resolve(const std::string& name) const {
     return found != by_name_.end() && found->second.size() == 1 ? found->second.front() : nullptr;
 }
 
+// The aliases a constraint names, read by crysta's own grammar (review 34): its target and its right-hand references.
+// Empty when crysta cannot parse it, a relation the user still has to repair.
+namespace {
+std::vector<std::string> constraint_aliases(const std::string& expression) {
+    try {
+        const crysta::ConstraintStatement statement = crysta::parse_constraint(expression);
+        std::vector<std::string> out{statement.lhs};
+        out.insert(out.end(), statement.rhs.references().begin(), statement.rhs.references().end());
+        return out;
+    } catch (const std::invalid_argument&) {
+        return {};
+    }
+}
+}  // namespace
+
 bool ActiveView::shown(const ParameterConstraint& constraint) const {
     if (hidden_aliases_.empty()) return true;
-    const std::string& text = constraint.expression.value();
-    for (std::size_t i = 0; i < text.size();) {
-        if (!(std::isalnum(static_cast<unsigned char>(text[i])) || text[i] == '_')) {
-            ++i;
-            continue;
-        }
-        std::size_t end = i;
-        while (end < text.size() && (std::isalnum(static_cast<unsigned char>(text[end])) || text[end] == '_')) ++end;
-        if (hidden_aliases_.contains(text.substr(i, end - i))) return false;
-        i = end;
-    }
+    for (const std::string& alias : constraint_aliases(constraint.expression.value()))
+        if (hidden_aliases_.contains(alias)) return false;
     return true;
 }
 

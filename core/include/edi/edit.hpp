@@ -42,6 +42,7 @@
 #include <utility>
 #include <vector>
 
+#include "crysta/expression.hpp"
 #include "edi/magnetic_cell.hpp"
 #include "edi/background_estimate.hpp"
 #include "edi/edits.hpp"
@@ -1473,14 +1474,17 @@ class Edit {
         std::map<std::string, const ParameterAlias*> declared;
         for (const auto& alias : project.aliases) declared[alias->id.value()] = alias.get();
         const auto sound = [&](const std::string& expression) {
-            const auto parts = tokens(expression);
-            for (std::size_t i = 0; i < parts.size(); ++i) {
-                const auto& [token, identifier] = parts[i];
-                if (!identifier || std::isdigit(static_cast<unsigned char>(token.front())) || token == "pi") continue;
-                std::size_t next = i + 1;
-                while (next < parts.size() && parts[next].first == " ") ++next;
-                if (next < parts.size() && parts[next].first == "(") continue;  // a function
-                const auto found = declared.find(token);
+            // crysta's own grammar (review 34): an unknown function or a malformed rule does not parse.
+            std::vector<std::string> named;
+            try {
+                const crysta::ConstraintStatement statement = crysta::parse_constraint(expression);
+                named.push_back(statement.lhs);
+                named.insert(named.end(), statement.rhs.references().begin(), statement.rhs.references().end());
+            } catch (const std::invalid_argument&) {
+                return false;
+            }
+            for (const std::string& alias : named) {
+                const auto found = declared.find(alias);
                 if (found == declared.end() || view.resolve(found->second->parameter_unique_name.value()) == nullptr)
                     return false;
             }
