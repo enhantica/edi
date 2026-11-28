@@ -233,18 +233,28 @@ def test_offline_installer_retains_default_update_repositories(
     assert len(creators) == 1, 'Offline packaging builds one installer.'
     assert '--hybrid' in creators[0], 'Offline maintenance permits updates.'
     policy = json.loads((PACKAGE.ROOT / 'data/distribution.json').read_text(encoding='utf-8'))
-    claude = 'org.easydiffraction.app.claude'
-    expected = {'org.easydiffraction.app.assistant', 'org.easydiffraction.app.copilot'}
-    if internal or policy['claude_distribution'] == 'public':
-        expected.add(claude)
+    held = [
+        component
+        for component, setting in (
+            ('org.easydiffraction.app.claude', 'claude_distribution'),
+            ('org.easydiffraction.app.copilot', 'copilot_distribution'),
+        )
+        if not internal and policy[setting] != 'public'
+    ]
+    expected = {
+        'org.easydiffraction.app.assistant',
+        'org.easydiffraction.app.claude',
+        'org.easydiffraction.app.copilot',
+    } - set(held)
+    if not held:
         assert '--exclude' not in creators[0], (
             'The authorised installer carries all three providers.'
         )
     else:
-        assert (
-            '--exclude' in creators[0]
-            and creators[0][creators[0].index('--exclude') + 1] == claude
-        ), 'A public installer excludes only Claude while its distribution is internal.'
+        excluded = creators[0][creators[0].index('--exclude') + 1]
+        assert excluded == ','.join(held), (
+            'A public installer excludes each provider whose distribution is internal.'
+        )
     metadata = json.loads((output / 'installer.json').read_text(encoding='utf-8'))
     assert set(metadata['assistants']) == expected, (
         'The installer identifies every carried provider.'

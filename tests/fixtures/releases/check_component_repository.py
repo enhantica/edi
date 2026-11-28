@@ -27,8 +27,8 @@ ASSISTANT = 'org.easydiffraction.app.assistant'
 CLAUDE = 'org.easydiffraction.app.claude'
 COPILOT = 'org.easydiffraction.app.copilot'
 MAINTENANCE = 'org.easydiffraction.app.maintenancetool'
-# The assistant components a public repository holds while Claude's distribution is internal.
-ASSISTANTS = (ASSISTANT, COPILOT)
+# The assistant components a public repository holds while Claude and Copilot stay internal.
+ASSISTANTS = (ASSISTANT,)
 
 
 def sha1(path):
@@ -91,7 +91,6 @@ def test_release_refuses_a_maintenance_component_of_another_version(tmp_path):
     versions = {
         APP: '2026.11.3',
         ASSISTANT: '2026.11.3',
-        COPILOT: '2026.11.3',
         MAINTENANCE: '4.11.0',
     }
     folder = repository(tmp_path / 'r', versions)
@@ -180,15 +179,20 @@ def test_pages_trims_old_maintenance_archives_with_the_app(tmp_path):
         assert [path.name for path in (folder / name).iterdir()] == ['2026.11.3content.7z']
 
 
-def test_the_committed_setting_keeps_claude_internal():
+def test_the_committed_setting_keeps_claude_and_copilot_internal():
     policy = json.loads((ROOT / 'data/distribution.json').read_text())
     assert policy['claude_distribution'] == 'internal'
+    assert policy['copilot_distribution'] == 'internal'
     assert CLAUDE not in PROMOTE.component_names('linux-x86_64')
+    assert COPILOT not in PROMOTE.component_names('linux-x86_64')
 
 
+@pytest.mark.parametrize('provider', [CLAUDE, COPILOT])
 @pytest.mark.parametrize('platform', ['macos-arm64', 'linux-x86_64', 'windows-x86_64'])
-def test_release_refuses_claude_while_its_distribution_is_internal(tmp_path, platform):
-    names = set(PROMOTE.component_names(platform)) | {CLAUDE}
+def test_release_refuses_a_provider_while_its_distribution_is_internal(
+    tmp_path, platform, provider
+):
+    names = set(PROMOTE.component_names(platform)) | {provider}
     folder = repository(tmp_path / 'r', dict.fromkeys(names, '2026.11.3'))
     with pytest.raises(ValueError, match='does not match'):
         PROMOTE.validate_repository(
@@ -196,12 +200,13 @@ def test_release_refuses_claude_while_its_distribution_is_internal(tmp_path, pla
         )
 
 
-def test_pages_refuses_claude_while_its_distribution_is_internal(tmp_path):
+@pytest.mark.parametrize(('provider', 'label'), [(CLAUDE, 'Claude'), (COPILOT, 'GitHub Copilot')])
+def test_pages_refuses_a_provider_while_its_distribution_is_internal(tmp_path, provider, label):
     incoming = tmp_path / 'incoming'
     repository(
-        incoming / 'testing/linux-x86_64', dict.fromkeys([APP, *ASSISTANTS, CLAUDE], '26.17')
+        incoming / 'testing/linux-x86_64', dict.fromkeys([APP, *ASSISTANTS, provider], '26.17')
     )
-    with pytest.raises(RuntimeError, match='Claude is not distributed'):
+    with pytest.raises(RuntimeError, match=f'{label} is not distributed'):
         PAGES.overlay_installers(tmp_path / 'site', incoming)
 
 
