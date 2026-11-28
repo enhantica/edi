@@ -40,6 +40,7 @@ function runtimeCommand(script) {
 // operations. Without the copy that undo could delete the only runtime, so the update stops here instead, before
 // anything has changed.
 Component.prototype.beginInstallation = function () {
+    updateRights = installer.hasAdminRights();
     if (!keepsRuntime() || installer.value("TargetDir") === "")
         return;
     var result = installer.execute("/bin/sh", runtimeCommand(SWAP_SCRIPT));
@@ -47,10 +48,24 @@ Component.prototype.beginInstallation = function () {
         throw new Error("The update could not keep a copy of the Maintenance Tool's files.");
 };
 
+// Whether this update holds rights it gained for a protected installation folder, as IFW 4.11 does before it calls
+// beginInstallation. It drops them before installationFinished but keeps its helper running, so taking them again
+// there asks nothing (RemoteClient::setActive); settling the copy needs them.
+var updateRights = false;
+
 // After a success or a rollback.
 Component.prototype.settleRuntime = function () {
-    if (keepsRuntime() && installer.value("TargetDir") !== "")
+    if (!keepsRuntime() || installer.value("TargetDir") === "")
+        return;
+    var again = updateRights && !installer.hasAdminRights();
+    if (again)
+        installer.gainAdminRights();
+    try {
         installer.execute("/bin/sh", runtimeCommand(RESTORE_SCRIPT));
+    } finally {
+        if (again)
+            installer.dropAdminRights();
+    }
 };
 
 // Windows: the folder releases before staged the Maintenance Tool into, which nothing uses any more (edi ADR-0109). An

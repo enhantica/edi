@@ -37,10 +37,28 @@ function Component() {
     installer.installationFinished.connect(this, Component.prototype.removeLeftovers);
 }
 
+// Whether this update holds rights it gained for a protected installation folder, as IFW 4.11 does before it calls
+// beginInstallation. It drops them before installationFinished but keeps its helper running, so taking them again
+// there asks nothing (RemoteClient::setActive); the cleanup needs them to remove what the swap kept.
+var updateRights = false;
+
+function withUpdateRights(run) {
+    var again = updateRights && !installer.hasAdminRights();
+    if (again)
+        installer.gainAdminRights();
+    try {
+        run();
+    } finally {
+        if (again)
+            installer.dropAdminRights();
+    }
+}
+
 // IFW 4.11 calls this before it unpacks any component. The claim tells the app that this run's tool owns the staging
 // folder, so a start of the app during the unpacking leaves it alone (edi ADR-0109). Without the claim the update
 // stops here, before anything has changed.
 Component.prototype.beginInstallation = function () {
+    updateRights = installer.hasAdminRights();
     var swap = swapped();
     if (swap === null || !installer.isUpdater() || installer.value("TargetDir") === "")
         return;
@@ -98,5 +116,5 @@ Component.prototype.removeLeftovers = function () {
     var command = ["-c", CLEANUP_SCRIPT, CLEANUP_SCRIPT, target, swap.item, swap.probe];
     if (installer.status !== QInstaller.Success)
         command.push("release");
-    installer.execute("/bin/sh", command);
+    withUpdateRights(function () { installer.execute("/bin/sh", command); });
 };
