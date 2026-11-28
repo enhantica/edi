@@ -424,8 +424,9 @@ class StructureViewModel : public QObject {
     Q_PROPERTY(double bondDistanceIncrement READ bondDistanceIncrement WRITE setBondDistanceIncrement NOTIFY bondDistanceIncrementChanged)
     Q_PROPERTY(QVariantList bonds READ bonds NOTIFY bondsChanged)
     // How the structure's intensities are calculated (edi ADR-0109): crysta's token, `rietveld`, `le_bail` or
-    // `pawley`; the methods crysta offers it, Rietveld first; crysta's reason when it offers Rietveld alone (a link to
-    // a single crystal or a total-scattering experiment), else empty; why the last switch was refused, else empty; and
+    // `pawley`; the methods crysta offers it, Rietveld first, and its own method after them when crysta no longer
+    // offers it; crysta's reason when it offers Rietveld alone (a link to a single crystal or a total-scattering
+    // experiment), else empty; why the last switch was refused, else empty; and
     // whether the method takes the intensities from the pattern (Le Bail or Pawley).
     Q_PROPERTY(QString calcMethod READ calcMethod NOTIFY calcMethodChanged)
     Q_PROPERTY(edi_app::OptionListModel* calcMethodOptions READ calcMethodOptions CONSTANT)

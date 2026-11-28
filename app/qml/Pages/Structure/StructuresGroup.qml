@@ -152,8 +152,9 @@ SideBarGroup {
                     }
                 }
                 // How the reflection intensities are calculated (edi ADR-0109): crysta's options for the structure.
-                // Where only Rietveld applies (a link to a single crystal or to total scattering) the box is disabled,
-                // with crysta's reason as its tooltip. Switching keeps the atoms; Undo switches back.
+                // Where only Rietveld applies (a link to a single crystal or to total scattering) crysta's reason is the
+                // tooltip, and the box is disabled unless the structure is still Le Bail or Pawley: it then shows that
+                // method and offers Rietveld. Switching keeps the atoms; Undo switches back.
                 ComboCell {
                     SearchableComboBox {
                         id: calcMethodBox
@@ -168,7 +169,7 @@ SideBarGroup {
                         anchors.verticalCenter: parent.verticalCenter
                         model: methods
                         textRole: "label"
-                        enabled: methods !== null && reason === ""
+                        enabled: methods !== null && (reason === "" || token !== "rietveld")
                         currentIndex: methods && methods.revision >= 0 ? methods.indexOf(token) : -1
                         ToolTip.text: reason !== "" ? reason : token !== "" ? Session.optionTooltip("structure.calc_method", token) : ""
                         onActivated: index => {

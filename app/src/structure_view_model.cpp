@@ -1269,6 +1269,10 @@ void StructureViewModel::syncCalcMethod() {
         }
         choice.tokens = {choice.current};
     }
+    // A Le Bail structure linked to a single crystal still shows its method, and the box offers Rietveld to leave it.
+    if (std::find(choice.tokens.begin(), choice.tokens.end(), choice.current) == choice.tokens.end()) {
+        choice.tokens.push_back(choice.current);
+    }
     QStringList tokens;
     for (const std::string& token : choice.tokens) tokens.append(QString::fromStdString(token));
     if (tokens != calc_method_tokens_) {
