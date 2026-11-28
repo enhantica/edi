@@ -4165,6 +4165,13 @@ int ProjectViewModel::findMagneticGroups(int index, const QString& k, const QStr
             emit magneticGroupsRefused(*refusal, static_cast<int>(search));
             return;
         }
+        // A graph searched for Find k's snapshot is published only while that snapshot still stands (review 24, F4).
+        if (snapshot != 0 && !kSnapshotCurrent(snapshot)) {
+            emit magneticGroupsRefused(
+                tr("the data, the structures or the marked peaks changed since Find k; search again"),
+                static_cast<int>(search));
+            return;
+        }
         magnetic_graph_ = std::get<edi::MagneticCandidateGraph>(result);
         magnetic_graph_structure_ = index;
         magnetic_graph_id_ = static_cast<int>(search);
