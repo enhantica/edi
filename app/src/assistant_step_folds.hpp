@@ -35,11 +35,15 @@ inline QJsonArray foldSteps(const QJsonArray& rows, const QList<bool>& finished,
         const auto first = rows.at(i).toObject();
         const auto group = first.value("id").toString();
         const bool unfolded = open.contains(group);
+        // Each kind of step's icon once, in the order the kinds first appear (owner, 2026-11-28); every folded step
+        // went well, so today that is one check. The count names how many steps there are.
         QJsonArray icons;
-        for (auto step = i; step < end; ++step) icons.append(QStringLiteral("success"));
+        for (auto step = i; step < end; ++step)
+            if (const QJsonValue key = QStringLiteral("success"); !icons.contains(key)) icons.append(key);
         shown.append(QJsonObject{{"id", unfolded ? QString(QStringLiteral("steps/") + group) : rows.at(end - 1).toObject().value("id").toString()},
             {"kind", "steps"}, {"status", "completed"}, {"text", ""}, {"number", first.value("number")},
-            {"payload", QJsonObject{{"type", "ediSteps"}, {"group", group}, {"open", unfolded}, {"icons", icons}}}});
+            {"payload", QJsonObject{{"type", "ediSteps"}, {"group", group}, {"open", unfolded}, {"icons", icons},
+                                    {"count", static_cast<int>(end - i)}}}});
         if (unfolded) for (auto step = i; step < end; ++step) shown.append(rows.at(step));
         i = end;
     }
