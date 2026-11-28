@@ -29,12 +29,12 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 268891
+# inventory_python = 268965
 # inventory_cpp = 0
-# inventory_measured = 187626
-# inventory_unmeasured = 81265
+# inventory_measured = 187701
+# inventory_unmeasured = 81264
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
-# inventory_pr_python = 93020
+# inventory_pr_python = 93094
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
