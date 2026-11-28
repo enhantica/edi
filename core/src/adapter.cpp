@@ -664,11 +664,10 @@ auto publish_fit_transaction(Project& host, std::vector<detail::RefinedValue>& r
                              const Restage& restage, const Measure& measure) {
     // The trial publication surfaces a refused Calculate; the quality is measured on a copy of the engine project, so
     // the live publication runs on exactly the engine state the trial proved (review 19, F2).
-    // A strict check first (review 24, F2): the quality's calculation, on a copy of the fitted engine with every
-    // pattern the fit read attached, supplied or embedded, refuses as a calculation does, so a fit on supplied
-    // patterns is proven before anything is written. Its numbers are not kept: the quality reported is measured after
-    // the trial, on the engine as the trial leaves it.
-    (void)measure();
+    // The trial applies the solved state and proves the host's publication; the quality is then measured on a copy of
+    // that fitted engine with every pattern the fit read attached, supplied or embedded, and refuses as a calculation
+    // does. Both precede the live write, so a fit on supplied patterns is proven strictly on its solved state
+    // (reviews 24 and 25, F2).
     {
         Project trial(host);
         std::vector<detail::RefinedValue> staged = restage(trial);
@@ -7961,9 +7960,9 @@ void publish_fit_state(Project& project, crysta::Project& converted, const std::
         project.calculate();
         return;
     }
-    // Banks without their own pattern (all or some): the quality measured before this trial calculated the fitted
-    // engine with every pattern the fit read and refused there (publish_fit_transaction, review 24, F2); the host
-    // keeps no pattern of its own to calculate here.
+    // Banks without their own pattern (all or some): the quality measured after this trial, and before the live
+    // write, calculates the fitted engine with every pattern the fit read and refuses there (publish_fit_transaction,
+    // reviews 24 and 25, F2); the host keeps no pattern of its own to calculate here.
     project.refresh_calculated_pattern();
 }
 
