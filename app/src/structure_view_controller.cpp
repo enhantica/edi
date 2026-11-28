@@ -110,9 +110,11 @@ void StructureViewController::setStructure(StructureViewModel* structure) {
     disconnect(stale_connection_);
     structure_ = structure;
     source_ = {};  // another structure's frame is never kept
-    // The camera and zoom are each structure's own and unsaved (owner record 516c0dcc7): another structure is framed
-    // anew.
-    viewed_ = false;
+    // One camera for the project (owner record 0958fb450 item 7, amending 516c0dcc7): a live view keeps its rotation,
+    // zoom and pan across structures, so switching changes only what they hold. Zoom and pan are relative to the
+    // fitted cell, so another cell keeps the orientation and zoom and is centred as this one was. Home and the
+    // orientation buttons set this one camera. It is not saved. A report's view opens as the report saved it.
+    if (report_) viewed_ = false;
     if (structure_ != nullptr) {
         source_connection_ = connect(structure_, &StructureViewModel::sceneSourceChanged, this,
                                      &StructureViewController::sourceChanged);
