@@ -7926,22 +7926,12 @@ void publish_fit_state(Project& project, crysta::Project& converted, const std::
         project.calculate();
         return;
     }
-    // Some banks with their pattern and some without (review 22, F2): the trial still proves the banks that carry
-    // one, on a copy holding only them, so a genuine refusal stops the fit before the live write.
+    // Banks without their own pattern (all or some, reviews 22 and 23, F2): the trial calculates a copy of the
+    // fitted engine, which holds every bank, its relations and the patterns the fit read, so a genuine refusal
+    // stops the fit before the live write.
     if (surface_refusal) {
-        std::vector<ItemVec<BraggPdExperiment>::Ptr> carried;
-        for (const auto& experiment : project.experiments) {
-            if (experiment->data.has_value()) carried.push_back(experiment);
-        }
-        if (!carried.empty()) {
-            Project check = project;
-            std::vector<ItemVec<BraggPdExperiment>::Ptr> kept;
-            for (const auto& experiment : check.experiments) {
-                if (experiment->data.has_value()) kept.push_back(experiment);
-            }
-            check.experiments.assign(std::move(kept));
-            check.calculate();
-        }
+        crysta::Project check = converted;
+        crysta::calculate_project(check);
     }
     project.refresh_calculated_pattern();
 }
