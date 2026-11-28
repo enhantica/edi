@@ -384,4 +384,406 @@ void share_phase_ratios(Project& project, const std::string& experiment, bool on
     settle(project, added);
 }
 
+namespace {
+
+std::optional<std::string> unique_name_of(const Project& project, const Parameter& parameter) {
+    for (const NamedParameter& named : named_parameters(project)) {
+        if (named.parameter == &parameter) {
+            return named.unique_name;
+        }
+    }
+    return std::nullopt;
+}
+
+}  // namespace
+
+namespace {
+
+std::optional<std::size_t> shared_row(const Project& project, const std::string& name) {
+    for (std::size_t i = 0; i < project.sequential_fit.shared.size(); ++i) {
+        if (project.sequential_fit.shared[i]->parameter_unique_name.value() == name) {
+            return i;
+        }
+    }
+    return std::nullopt;
+}
+
+// The experiment a unique name belongs to, and the rest of the name after its datablock; none for a name outside every
+// experiment (a structure's).
+std::optional<std::pair<std::string, std::string>> experiment_part(const Project& project, const std::string& name) {
+    for (const auto& experiment : project.experiments) {
+        const std::string prefix = experiment->name + ".";
+        if (name.rfind(prefix, 0) == 0) {
+            return std::make_pair(experiment->name, name.substr(prefix.size()));
+        }
+    }
+    return std::nullopt;
+}
+
+// ADR-0107: the shared names take effect in the parametric fit of a scan and in a joint fit; in every other mode they
+// are kept and do nothing.
+bool active(const Project& project) {
+    return project.fitting_mode == "joint";
+}
+
+// ADR-0107: in a scan a name is its own group (the points repeat it); in a joint fit the group is the same path in every
+// experiment, kept under the first experiment in project order holding it as an independent parameter.
+std::string group_key(const Project& project, const std::vector<NamedParameter>& named, const std::string& name) {
+    if (project.sequential_fit.declared()) {
+        return name;
+    }
+    const auto part = experiment_part(project, name);
+    if (!part) {
+        return name;
+    }
+    // A group is the parameter Shared was ticked on: it keeps the name it is listed under
+    // while that copy exists, in every mode.
+    for (const auto& row : project.sequential_fit.shared) {
+        const std::string& listed = row->parameter_unique_name.value();
+        const auto other = experiment_part(project, listed);
+        if (!other || other->second != part->second) continue;
+        for (const NamedParameter& each : named) {
+            if (each.unique_name == listed) return listed;
+        }
+    }
+    for (const auto& experiment : project.experiments) {
+        const std::string candidate = experiment->name + "." + part->second;
+        for (const NamedParameter& each : named) {
+            if (each.unique_name == candidate) {
+                return candidate;
+            }
+        }
+    }
+    return name;
+}
+
+std::vector<Parameter*> group_members(Project& project, const std::string& key) {
+    std::vector<Parameter*> members;
+    const auto part = project.sequential_fit.declared() ? std::nullopt : experiment_part(project, key);
+    for (const NamedSlot& slot : named_slots(project)) {
+        if (slot.parameter->dependence != Dependence::Independent) {
+            continue;
+        }
+        if (part ? experiment_part(project, slot.unique_name) &&
+                       experiment_part(project, slot.unique_name)->second == part->second
+                 : slot.unique_name == key) {
+            members.push_back(slot.parameter);
+        }
+    }
+    return members;
+}
+
+}  // namespace
+
+namespace {
+
+// A parameter's unique name, a dependent's included.
+std::optional<std::string> any_name_of(const Project& project, const Parameter& parameter) {
+    for (const NamedParameter& named : named_parameters(project)) {
+        if (named.parameter == &parameter) return named.unique_name;
+    }
+    for (const NamedParameter& named : named_dependents(project)) {
+        if (named.parameter == &parameter) return named.unique_name;
+    }
+    return std::nullopt;
+}
+
+// How many experiments hold `path` (a unique name without its datablock), as a parameter or a dependent.
+std::size_t holders_of(const Project& project, const std::string& path) {
+    std::set<std::string> experiments;
+    const auto count = [&](const std::vector<NamedParameter>& list) {
+        for (const NamedParameter& named : list) {
+            const auto part = experiment_part(project, named.unique_name);
+            if (part && part->second == path) experiments.insert(part->first);
+        }
+    };
+    count(named_parameters(project));
+    count(named_dependents(project));
+    return experiments.size();
+}
+
+// The id of the user constraint that sets `name` (its left-hand alias names it), or empty.
+std::string constraint_setting(const Project& project, const std::string& name) {
+    const auto trimmed = [](std::string text) {
+        const auto first = text.find_first_not_of(" \t");
+        const auto last = text.find_last_not_of(" \t");
+        return first == std::string::npos ? std::string() : text.substr(first, last - first + 1);
+    };
+    for (const auto& constraint : project.constraints) {
+        if (!constraint->enabled.get()) continue;
+        const std::string& text = constraint->expression.value();
+        const auto equals = text.find('=');
+        if (equals == std::string::npos) continue;
+        const std::string lhs = trimmed(text.substr(0, equals));
+        for (const auto& alias : project.aliases) {
+            if (alias->id.value() == lhs && alias->parameter_unique_name.value() == name) return constraint->id.value();
+        }
+    }
+    return {};
+}
+
+// Why a dependent cannot be shared: the constraint that sets it, or symmetry.
+std::string dependent_reason(const Project& project, const std::string& name) {
+    const std::string id = constraint_setting(project, name);
+    return id.empty() ? "set by symmetry" : "set by the constraint '" + id + "'";
+}
+
+}  // namespace
+
+std::string share_refusal(const Project& project, const Parameter& parameter) {
+    const std::optional<std::string> name = any_name_of(project, parameter);
+    if (!name) return "only a parameter a fit can vary can be shared";
+    if (project.sequential_fit.declared()) {
+        return parameter.dependence == Dependence::Independent ? std::string() : dependent_reason(project, *name);
+    }
+    const auto part = experiment_part(project, *name);
+    if (!part || holders_of(project, part->second) < 2) return "already one value for all experiments";
+    // No pair, no Shared: every experiment must have the parameter.
+    if (holders_of(project, part->second) < project.experiments.size()) return "not in every experiment";
+    // Shared never changes a user constraint (owner, 2026-11-26): a copy any of them sets keeps the whole group out.
+    for (const NamedParameter& dependent : named_dependents(project)) {
+        const auto other = experiment_part(project, dependent.unique_name);
+        if (other && other->second == part->second) return dependent_reason(project, dependent.unique_name);
+    }
+    return {};
+}
+
+bool parametric_shared(const Project& project, const Parameter& parameter) {
+    if (project.sequential_fit.shared.empty()) {
+        return false;
+    }
+    const std::vector<NamedParameter> named = named_parameters(project);
+    for (const NamedParameter& each : named) {
+        if (each.parameter == &parameter) {
+            return shared_row(project, group_key(project, named, each.unique_name)).has_value();
+        }
+    }
+    return false;
+}
+
+std::vector<Parameter*> shared_group(Project& project, Parameter& parameter) {
+    const std::vector<NamedParameter> named = named_parameters(project);
+    for (const NamedParameter& each : named) {
+        if (each.parameter == &parameter) {
+            const std::string key = group_key(project, named, each.unique_name);
+            if (active(project) && shared_row(project, key)) {
+                return group_members(project, key);
+            }
+        }
+    }
+    return {&parameter};
+}
+
+const Parameter* shared_leader(const Project& project, const Parameter& parameter) {
+    if (project.sequential_fit.shared.empty() || !active(project)) {
+        return nullptr;
+    }
+    const std::vector<NamedParameter> named = named_parameters(project);
+    for (const NamedParameter& each : named) {
+        if (each.parameter != &parameter) continue;
+        const std::string key = group_key(project, named, each.unique_name);
+        if (!shared_row(project, key)) return nullptr;
+        for (const NamedParameter& other : named) {
+            if (other.unique_name == key) return other.parameter;
+        }
+        return nullptr;
+    }
+    return nullptr;
+}
+
+void set_parametric_shared(Project& project, Parameter& parameter, bool shared) {
+    if (shared) {
+        if (const std::string refusal = share_refusal(project, parameter); !refusal.empty()) {
+            const std::optional<std::string> any = any_name_of(project, parameter);
+            throw std::invalid_argument((any ? *any : std::string("parameter")) + " cannot be shared: " + refusal);
+        }
+    }
+    const std::optional<std::string> name = unique_name_of(project, parameter);
+    if (!name) {
+        if (shared) {
+            throw std::invalid_argument("only a parameter of the project that a fit can vary can be shared");
+        }
+        return;
+    }
+    std::string key = group_key(project, named_parameters(project), *name);
+    // A new group is listed under the row Shared was ticked on, which then carries it.
+    if (shared && !shared_row(project, key)) key = *name;
+    if (!shared) {
+        if (const std::optional<std::size_t> row = shared_row(project, key)) {
+            project.sequential_fit.shared.erase_at(*row);
+            // The group's start was the whole series' one; unshared it would become one point's, so it goes.
+            for (std::size_t i = project.sequential_fit.starts.size(); i-- > 0;) {
+                if (project.sequential_fit.starts[i]->parameter_unique_name.value() == key) {
+                    project.sequential_fit.starts.erase_at(i);
+                }
+            }
+        }
+        return;
+    }
+    // A group already shared stays as it is: ticking Shared again, or on another of its copies, takes no value from
+    // the copy (a bulk edit reaches every copy of a group it has just shared).
+    if (shared_row(project, key)) {
+        return;
+    }
+    {
+        ParametricSharedParameter row;
+        row.parameter_unique_name = key;
+        project.sequential_fit.shared.push_back(std::move(row));
+    }
+    // A shared parameter has one value, the template's: the points' own starts for it go (Undo keeps them).
+    for (std::size_t i = project.sequential_fit.starts.size(); i-- > 0;) {
+        if (project.sequential_fit.starts[i]->parameter_unique_name.value() == key) {
+            project.sequential_fit.starts.erase_at(i);
+        }
+    }
+    // One value and one free flag for the group (only where sharing takes effect): the shown row's value, and free if
+    // any copy was free (ADR-0107).
+    if (!active(project)) {
+        return;
+    }
+    const std::vector<Parameter*> members = group_members(project, key);
+    const Parameter& source = parameter;
+    const double value = source.value.get();
+    bool free = source.free.get();
+    for (const Parameter* member : members) free = free || member->free.get();
+    for (Parameter* member : members) {
+        if (member != &source) assign_value(*member, value);
+        if (member->free.get() != free) member->free = free;
+    }
+    if (parameter.free.get() != free) parameter.free = free;
+}
+
+bool set_group_free(Project& project, Parameter& parameter, bool free) {
+    bool done = true;
+    for (Parameter* member : shared_group(project, parameter)) {
+        done = set_free(*member, free) && done;
+    }
+    return done;
+}
+
+void set_group_value(Project& project, Parameter& parameter, double value) {
+    for (Parameter* member : shared_group(project, parameter)) {
+        assign_value(*member, value);
+    }
+}
+
+std::vector<std::string> settle_parametric_shared(Project& project) {
+    std::vector<std::string> notes;
+    const std::vector<NamedParameter> named = named_parameters(project);
+    std::vector<std::string> keys;
+    for (std::size_t i = 0; i < project.sequential_fit.shared.size(); ++i) {
+        const std::string name = project.sequential_fit.shared[i]->parameter_unique_name.value();
+        bool held = false;
+        for (const NamedParameter& each : named) {
+            held = held || each.unique_name == name;
+        }
+        if (!held) {
+            notes.push_back("shared parameter '" + name + "' is not in the project or is set by a relation; dropped");
+            continue;
+        }
+        const std::string key = group_key(project, named, name);
+        // A joint group is admitted whole or not at all: a copy missing from an experiment,
+        // or one a user constraint or symmetry sets, drops it, and no copy is changed.
+        if (!project.sequential_fit.declared()) {
+            const Parameter* listed = nullptr;
+            for (const NamedParameter& each : named) {
+                if (each.unique_name == key) listed = each.parameter;
+            }
+            const std::string refusal = listed != nullptr ? share_refusal(project, *listed) : "it is not in the project";
+            if (!refusal.empty()) {
+                notes.push_back("shared parameter '" + name + "' dropped: " + refusal);
+                continue;
+            }
+        }
+        if (key != name) {
+            notes.push_back("shared parameter '" + name + "' is kept under its group's first experiment, '" + key + "'");
+        }
+        if (std::find(keys.begin(), keys.end(), key) == keys.end()) {
+            keys.push_back(key);
+        }
+    }
+    while (!project.sequential_fit.shared.empty()) {
+        project.sequential_fit.shared.erase_at(project.sequential_fit.shared.size() - 1);
+    }
+    for (const std::string& key : keys) {
+        ParametricSharedParameter row;
+        row.parameter_unique_name = key;
+        project.sequential_fit.shared.push_back(std::move(row));
+        // The group takes the listed parameter's value, and is free if any copy is, where
+        // sharing takes effect.
+        const std::vector<Parameter*> members = group_members(project, key);
+        // The listed parameter is the member whose name the group is kept under.
+        Parameter* listed = nullptr;
+        for (const NamedParameter& each : named) {
+            if (each.unique_name != key) continue;
+            for (Parameter* member : members) {
+                if (member == each.parameter) listed = member;
+            }
+        }
+        if (active(project) && members.size() > 1 && listed != nullptr) {
+            bool free = false;
+            for (const Parameter* member : members) free = free || member->free.get();
+            const double value = listed->value.get();
+            for (Parameter* member : members) {
+                if (member->free.get() != free || member->value.get() != value) {
+                    notes.push_back("shared parameter '" + key + "': every experiment takes its value and free flag");
+                    break;
+                }
+            }
+            for (Parameter* member : members) {
+                if (member != listed) assign_value(*member, value);
+                member->free = free;
+            }
+        }
+    }
+    // ADR-0107: a start for a name the project does not hold or a dependent's is dropped. A shared parameter's start is
+    // kept: it is the whole series' one start.
+    for (std::size_t i = project.sequential_fit.starts.size(); i-- > 0;) {
+        const std::string name = project.sequential_fit.starts[i]->parameter_unique_name.value();
+        bool held = false;
+        for (const NamedParameter& each : named) held = held || each.unique_name == name;
+        const char* why = !held ? "is not in the project or is set by a relation" : nullptr;
+        if (why != nullptr) {
+            notes.push_back("start for '" + name + "' at point '" + project.sequential_fit.starts[i]->point.value() +
+                            "' dropped: it " + why);
+            project.sequential_fit.starts.erase_at(i);
+        }
+    }
+    return notes;
+}
+
+std::vector<std::pair<std::string, std::size_t>> experiment_shared_paths(const Project& project) {
+    std::vector<std::pair<std::string, std::size_t>> found;
+    const auto trimmed = [](std::string text) {
+        const auto first = text.find_first_not_of(" \t");
+        const auto last = text.find_last_not_of(" \t");
+        return first == std::string::npos ? std::string() : text.substr(first, last - first + 1);
+    };
+    const auto aliased = [&project](const std::string& id) -> std::optional<std::string> {
+        for (const auto& alias : project.aliases) {
+            if (alias->id.value() == id) return alias->parameter_unique_name.value();
+        }
+        return std::nullopt;
+    };
+    for (const auto& constraint : project.constraints) {
+        if (!constraint->enabled.get()) continue;
+        const std::string& text = constraint->expression.value();
+        const auto equals = text.find('=');
+        if (equals == std::string::npos) continue;
+        const auto lhs = aliased(trimmed(text.substr(0, equals)));
+        const auto rhs = aliased(trimmed(text.substr(equals + 1)));
+        if (!lhs || !rhs) continue;
+        const auto member = experiment_part(project, *lhs);
+        const auto leader = experiment_part(project, *rhs);
+        if (!member || !leader || member->first == leader->first || member->second != leader->second) continue;
+        bool listed = false;
+        for (const auto& [path, place] : found) listed = listed || path == leader->second;
+        if (listed) continue;
+        for (std::size_t i = 0; i < project.experiments.size(); ++i) {
+            if (project.experiments[i]->name == leader->first) found.emplace_back(leader->second, i);
+        }
+    }
+    return found;
+}
+
 }  // namespace edi

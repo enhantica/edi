@@ -432,7 +432,7 @@ inline std::vector<Category> analysis_categories(const Project& project) {
     if (project.fitting_mode == "joint") {
         categories.push_back({"joint_fit", true, project.experiments.size()});
     }
-    if (is_scan_fitting_mode(project.fitting_mode)) {
+    if (is_scan_fitting_mode(project.fitting_mode) || (project.fitting_mode == "joint" && project.sequential_fit.declared())) {
         categories.push_back({"sequential_fit"});
     }
     if (project.sequential_fit.declared() || !project.sequential_fit.extract.empty()) {

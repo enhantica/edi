@@ -242,10 +242,7 @@ def test_results_state_readers_prove_the_supported_kind(
             'Combined CSV conditions remain authoritative over an obsolete sidecar: '
             + modern_result.stderr
         )
-        assert phase_scan.scan_state_fingerprint(modern) == modern_before, (
-            'Ignoring an obsolete sidecar preserves the original combined scan state'
-        )
-        assert modern_state.exists(), 'Ignoring an obsolete sidecar does not remove it'
+        check_obsolete_sidecar(modern, modern_state, modern_before, surface, modern_result)
         if surface == 'dry-events':
             fresh = phase_scan.materialize(tmp_path / 'fresh-source', mode)
             destination = tmp_path / 'bad-dry'
@@ -266,6 +263,20 @@ def test_results_state_readers_prove_the_supported_kind(
             assert bad_state.lstat().st_ino == bad_before.st_ino, (
                 'Refusing a dry destination preserves its unsupported entry'
             )
+
+
+def check_obsolete_sidecar(modern, modern_state, modern_before, surface, modern_result):
+    current = phase_scan.scan_state_fingerprint(modern)
+    key = str(modern_state.relative_to(modern))
+    assert current.get(key) == modern_before[key], (
+        'Ignoring an obsolete sidecar preserves its identity, file type and bytes'
+    )
+    if surface in {'core', 'report'}:
+        assert current == modern_before, 'Reading the modern scan state leaves it unchanged'
+    else:
+        assert 'PREAMBLE' in modern_result.stdout, (
+            'A completed scan with authoritative combined rows starts a fresh fit'
+        )
 
 
 @pytest.mark.parametrize('mode', ['sequential', 'independent'])

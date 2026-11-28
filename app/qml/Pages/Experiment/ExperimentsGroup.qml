@@ -646,7 +646,7 @@ SideBarGroup {
             fontIcon: "clone"
             text: qsTr("Several files as a series…")
             hint: qsTr("Series of joint fits")
-            toolTip: qsTr("Choose the files of every point: they are grouped by name into one experiment per bank")
+            toolTip: qsTr("Choose the files of every point: they are grouped by name, one experiment for each name pattern")
             onTriggered: {
                 const target = dataMenu.target;
                 group.seriesWanted = true;

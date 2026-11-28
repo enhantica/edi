@@ -69,13 +69,17 @@ def test_auto_scan_preserves_rows_and_resumes_with_different_measured_files(
         assert result['first_failed'], (
             'The authored failed predecessor must remain a failed persisted row'
         )
-    assert result['resume_unchanged'], (
-        'A completed auto scan must resume without changing result bytes'
+    assert result['refit_files'] == result['files'], (
+        'A completed scan fits again in file order and replaces its result generation'
     )
-    assert result['completed_before_restart'] == 3, 'A completed resume must not repeat callbacks'
-    assert result['completed_after_restart'] == 4, (
-        'Restart must fit only the missing terminal file'
+    assert result['refit_template'] == result['original'], (
+        'Both scan passes preserve the Auto background template'
     )
+    assert result['completed_before_restart'] == 6, (
+        'Both complete passes emit one callback per file'
+    )
+    assert result['completed_after_restart'] == 7, 'Restart fits only the missing file'
+    assert result['retained_prefix'], 'Restart keeps the fitted prefix byte-identical'
 
 
 @pytest.mark.parametrize('mode', ['independent', 'sequential'])
@@ -94,7 +98,6 @@ def test_cli_scan_uses_one_template_and_resumes_without_rewriting_finished_rows(
         + result.stderr
     )
     csv_path = source / 'analysis/results.csv'
-    initial = csv_path.read_bytes()
     with csv_path.open() as stream:
         rows = list(csv.DictReader(stream))
     assert len(rows) == 3, 'The CLI must retain one result per distinct measured file'
@@ -102,7 +105,12 @@ def test_cli_scan_uses_one_template_and_resumes_without_rewriting_finished_rows(
         'A CLI scan must retain the one frozen template estimate instead of last-file points'
     )
     result = subprocess.run(command, capture_output=True, text=True, timeout=1, check=False)
-    assert result.returncode == 0, 'A completed CLI auto scan must resume successfully'
-    assert csv_path.read_bytes() == initial, (
-        'Completed auto-scan resume must preserve every persisted result byte'
+    assert result.returncode == 0, 'A completed CLI Auto scan can fit again'
+    with csv_path.open() as stream:
+        repeated = list(csv.DictReader(stream))
+    assert [row['file_path'] for row in repeated] == [row['file_path'] for row in rows], (
+        'The second CLI Fit replaces the generation while retaining each dataset identity'
+    )
+    assert persisted_points(source, experiment='hrpt') == original, (
+        'Both CLI passes leave the persisted template unchanged'
     )

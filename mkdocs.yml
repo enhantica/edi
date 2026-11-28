@@ -141,6 +141,7 @@ nav:
           - "ADR-0104 The label registry": dev/adrs/0104-label-registry.md
           - "ADR-0105 Declared columns": dev/adrs/0105-declared-columns.md
           - "ADR-0106 Versions and checksum updates": dev/adrs/0106-versions-and-checksum-updates.md
+          - "ADR-0107 Shared parameters and the joint fit of a scan": dev/adrs/0107-shared-parameters-and-the-parametric-mode.md
           - dev/adrs/template.md
       - Design:
           - dev/design/api-types.md
@@ -215,6 +216,7 @@ nav:
           - user/guides/reading-cif-files.md
           - user/guides/sequential-fitting-in-the-app.md
           - user/guides/series-of-joint-fits.md
+          - "Shared parameters": user/guides/shared-parameters-and-the-parametric-fit.md
           - "Project from scratch": user/guides/projects-from-scratch-in-the-app.md
           - user/guides/the-report.md
           - user/guides/background-estimate.md

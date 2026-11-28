@@ -7,7 +7,9 @@
 #include <exception>
 #include <map>
 #include <mutex>
+#include <set>
 #include <stdexcept>
+#include <tuple>
 #include <iomanip>
 #include <locale>
 #include <sstream>
@@ -19,6 +21,7 @@
 #include "edi/parameter_walk.hpp"
 #include "edi/scan.hpp"
 #include "edi/selectors.hpp"
+#include "edi/threading.hpp"
 
 namespace edi {
 namespace {
@@ -71,13 +74,16 @@ struct Outcome {
     std::optional<FitResultBase> result;
     std::string refusal;
     bool scan = false;
+    std::vector<std::tuple<std::string, std::string, double>> used_starts;  // a scan's, however it ended
 };
 
 // Worker thread: the project's own fit entry for its mode, as the CLI's fit takes it (edi.Analysis.fit).
 FitResultBase fit_by_mode(Project& project, const IterationCallback& on_iteration, const PreambleCallback& on_start,
                           const CancelCallback& should_cancel, const ScanStartCallback& on_scan_start,
-                          const FileCompleteCallback& on_file_complete, const FileFittedCallback& on_file_fitted) {
-    const std::string mode = effective_fitting_mode(project);
+                          const FileCompleteCallback& on_file_complete, const FileFittedCallback& on_file_fitted,
+                          const ParametricIterateCallback& on_iterate, const CoresBudget& budget) {
+    const std::string mode = fit_kind(project);
+    const ScopedCores cores(budget);
     if (mode == "single") {
         return project.fit(on_iteration, on_start, should_cancel);
     }
@@ -92,6 +98,10 @@ FitResultBase fit_by_mode(Project& project, const IterationCallback& on_iteratio
     }
     if (mode == "independent") {
         return project.fit_independent({}, {}, on_scan_start, on_file_complete, should_cancel, on_file_fitted);
+    }
+    if (mode == "parametric") {
+        return project.fit_parametric(on_iteration, {}, on_scan_start, on_file_complete, should_cancel, on_file_fitted,
+                                      on_iterate);
     }
     throw std::invalid_argument("Start fitting runs the single, joint, sequential and independent fitting modes; this "
                                 "project's is '" + mode + "'");
@@ -165,6 +175,7 @@ struct FitJob::State {
         FitReport report;
         report.result = std::move(outcome.result);
         report.refusal = std::move(outcome.refusal);
+        report.used_starts = std::move(outcome.used_starts);
         if (!report.result.has_value()) {
             report.status = FitStatus::ERROR;
             if (report.refusal.empty()) {
@@ -210,11 +221,19 @@ bool FitJob::start(const Project* scan_template) {
     }
     auto snapshot =
         std::make_shared<WorkSnapshot>(snapshot_for_work(scan_template != nullptr ? *scan_template : state_->live));
+    // The point starts the fit takes with its copy, to tell afterwards which it used.
+    std::vector<std::tuple<std::string, std::string, double>> starts_before;
+    for (const auto& row : snapshot->project.sequential_fit.starts) {
+        starts_before.emplace_back(row->point.value(), row->parameter_unique_name.value(), row->value.get());
+    }
     auto inputs = std::make_shared<FitInputs>(inputs_of(state_->live));
+    // The cores are the preference's and the mode's when the fit is asked for (edi ADR-0107 decision 11).
+    const CoresBudget budget = cores_budget_for_mode(fit_kind(snapshot->project));
     state_->frame_wanted.store(true, std::memory_order_release);
     const std::shared_ptr<State> self = state_;
     state_->ticket = state_->worker.submit(
-        kChannel, [self, snapshot, inputs](const work::CancelToken& token, const work::Emit& emit) -> work::Delivery {
+        kChannel, [self, snapshot, inputs, budget, starts_before = std::move(starts_before)](
+                      const work::CancelToken& token, const work::Emit& emit) -> work::Delivery {
             auto outcome = std::make_shared<Outcome>();
             outcome->stamps = snapshot->stamps;
             outcome->inputs = *inputs;
@@ -327,14 +346,51 @@ bool FitJob::start(const Project* scan_template) {
                 }
                 return token.cancelled() || (self->checkpoint && self->checkpoint());
             };
+            // A parametric fit's iterates reach the owner at most every 250 ms; the one held back is sent at the end, so
+            // the last is always shown (ADR-0107).
+            std::optional<ParametricIterate> held_iterate;
+            auto sent_at = std::chrono::steady_clock::time_point{};
+            const auto send_iterate = [&self, &emit](ParametricIterate iterate) {
+                // NOLINTNEXTLINE(bugprone-exception-escape): only libc++'s container growth past max_size() raises length_error here
+                emit([self, iterate = std::move(iterate)] {
+                    if (self->open && self->hooks.parametric_iterate) {
+                        self->hooks.parametric_iterate(iterate);
+                    }
+                });
+            };
+            ParametricIterateCallback on_iterate;
+            if (self->hooks.parametric_iterate) {
+                on_iterate = [&held_iterate, &sent_at, &send_iterate](const ParametricIterate& iterate) {
+                    const auto now = std::chrono::steady_clock::now();
+                    if (now - sent_at >= std::chrono::milliseconds(250)) {
+                        sent_at = now;
+                        held_iterate.reset();
+                        send_iterate(iterate);
+                    } else {
+                        held_iterate = iterate;
+                    }
+                };
+            }
             try {
                 outcome->result = fit_by_mode(snapshot->project, on_iteration, on_start, should_cancel, on_scan_start,
-                                              on_file_complete, on_file_fitted);
+                                              on_file_complete, on_file_fitted, on_iterate, budget);
+                if (held_iterate && !token.cancelled()) {  // a cancelled fit's views return to the published results
+                    send_iterate(std::move(*held_iterate));
+                }
                 outcome->fitted = std::shared_ptr<Project>(snapshot, &snapshot->project);
             } catch (const std::exception& refusal) {
                 outcome->refusal = refusal.what();
             } catch (...) {
                 outcome->refusal = "the fit failed";
+            }
+            if (outcome->scan) {
+                std::set<std::tuple<std::string, std::string, double>> left;
+                for (const auto& row : snapshot->project.sequential_fit.starts) {
+                    left.emplace(row->point.value(), row->parameter_unique_name.value(), row->value.get());
+                }
+                for (const auto& start : starts_before) {
+                    if (!left.contains(start)) outcome->used_starts.push_back(start);
+                }
             }
             return [self, outcome] { State::finish(self, *outcome); };
         });

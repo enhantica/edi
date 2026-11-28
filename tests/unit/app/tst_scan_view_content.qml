@@ -1498,6 +1498,382 @@ Rectangle {
             verify(data.kind !== "scan" || follow !== null, "The scan status bar supplies its Follow control");
             verify(data.kind === "scan" ? follow.visible : follow === null || !follow.visible && !follow.clickable && !follow.checked, "Follow is usable only for scans and cannot be activated for single or joint fits");
         }
+        function test_parametric_charts_publish_during_the_fit_data() {
+            return [{tag: "pattern"}, {tag: "meascalc"}, {tag: "evolution"}];
+        }
+        function test_parametric_charts_publish_during_the_fit(data) {
+            const root = SettingsProof.copyProject(Probe.repoUrl("tests/fixtures/scan_template/project"));
+            const input = SettingsProof.text(root, "experiments/d20_scan/all594687.dat");
+            verify(input.length > 0, "The live-chart scan uses the measured CoSiO fixture");
+            for (let i = 0; i < 9; ++i)
+                verify(SettingsProof.write(root, "experiments/d20_scan/live-" + i + ".dat", input),
+                    "The private scan has enough measured points to open the tabs during a fit");
+            verify(Session.openProject(root), "The app opens an unfitted multi-point scan");
+            const project = Session.project;
+            project.analysis.fittingMode = "joint";
+            project.analysis.maxIterations = 8;
+            const fit = project.fit;
+            chart = analysisFactory.createObject(surface);
+            tryVerify(() => chart && chart.pageViewItem, 3000, "The native Analysis page loads its views");
+            const page = chart.pageViewItem;
+            function openTab(key) {
+                const tab = page.bar.itemAt(page.tabOf(key));
+                verify(tab && tab.visible && tab.enabled, "The actual Analysis tab is available: " + key);
+                mouseClick(tab, tab.width / 2, tab.height / 2);
+                tryCompare(page, "currentKey", key, 1000, "One click opens the requested chart: " + key);
+            }
+            openTab("pattern");
+            fit.start();
+            tryVerify(() => fit.running && fit.iterations !== "", 8000,
+                "The real Joint scan publishes an iteration before completion");
+            if (data.tag !== "pattern")
+                openTab(data.tag);
+            function hasFitData() {
+                if (data.tag === "evolution") {
+                    const points = findChild(page, "evolution.points");
+                    return points !== null && points.count > 1;
+                }
+                if (data.tag === "meascalc") {
+                    const comparison = findChild(page, "measCalc.chart");
+                    return comparison !== null && comparison.shown && comparison.hasData;
+                }
+                const pattern = findChild(page, "chart");
+                const series = pattern ? Render.series(pattern) : [];
+                return ["chart.series.calc", "chart.series.resid", "chart.series.bragg.0"].every(
+                    name => series.some(line => line.objectName === name && line.count > 0));
+            }
+            let drawnWhileFitting = false;
+            tryVerify(() => {
+                if (fit.running && hasFitData())
+                    drawnWhileFitting = true;
+                return !fit.running && fit.scanFitted > 1;
+            }, 20000, "The scan finishes and publishes multiple patterns");
+            tryVerify(hasFitData, 4000, "The chart shows the completed fit without reselection: " + data.tag);
+            verify(drawnWhileFitting, "The first chart opening displays live fitted data: " + data.tag);
+        }
+        function scanCell() {
+            const row = Probe.rows(Session.project.parameters).find(each =>
+                each.parameter.blockName === "phase" && each.parameter.uid === "cell.length_a");
+            verify(row !== undefined, "The real project exposes the scan cell parameter");
+            return row.parameter;
+        }
+        function scanSelect(index) {
+            Session.project.currentExperimentIndex = index;
+            tryVerify(() => Session.project.currentExperimentIndex === index &&
+                Probe.datasetReady(Session.project) && Session.project.readyForEdit(), 5000,
+                "The selected scan point becomes available for edits");
+        }
+        function scanTemplateCell(root) {
+            return SettingsProof.text(root, "structures/phase.edi").match(/^_cell\.length_a\s+(\S+)/m)[1];
+        }
+        function scanRows(root) {
+            const path = "analysis/results.csv";
+            const receipt = SettingsProof.fileObservation(root, path);
+            verify(!receipt.error, "The fitted scan rows remain readable");
+            return receipt.exists ? SettingsProof.text(root, path).split(/\r?\n/)
+                .filter(line => line && !line.startsWith("#")) : [];
+        }
+        function fitCompleteScan(root) {
+            const fit = Session.project.fit;
+            fit.start();
+            verify(fit.running, "Start must launch a real scan even when all points have results");
+            tryVerify(() => !fit.running && fit.canReset && scanRows(root).length === 6, 15000,
+                "The real Start action publishes all five points");
+            verify(!SettingsProof.fileObservation(root, "analysis/scan-starts-used.csv").exists,
+                "A successful Fit writes no used-starts receipt");
+        }
+        function verifyNoPendingFileState(root) {
+            verify(!SettingsProof.text(root, "analysis/analysis.edi").includes("_parametric_fit_start."),
+                "Saved analysis contains no pending scan start loop");
+            verify(!SettingsProof.fileObservation(root, "analysis/scan-starts-used.csv").exists,
+                "The project has no used-starts record");
+        }
+        function scanSaveWithPendingCount(root, pending) {
+            const warning = pending > 0
+                ? new RegExp("\\b" + pending + " edits? not yet fitted will not be kept\\b")
+                : /\b\d+ edits? not yet fitted will not be kept\b/;
+            function count() {
+                return Probe.rows(Session.loadWarnings).filter(row => warning.test(String(row.message))).length;
+            }
+            const before = count();
+            verify(Session.save(), "The real Save action writes the current project");
+            verifyNoPendingFileState(root);
+            if (pending > 0)
+                tryVerify(() => count() > before, 2000,
+                    "Save warns with the number of edits that will be dropped on close");
+            else
+                compare(count(), before, "Save after Undo, Reset or consumption emits no pending-edit warning");
+        }
+        function test_scan_value_edit_lifecycle_data() {
+            return ["sequential", "independent", "joint"].map(mode => ({tag: mode}));
+        }
+        function test_scan_value_edit_lifecycle(data) {
+            const root = SettingsProof.copyProject(Probe.repoUrl("tests/fixtures/parametric_series/cubic"));
+            verify(Session.openProject(root), "The app opens the frozen scan project");
+            Session.project.analysis.fittingMode = data.tag;
+            scanCell().value = 4.11;
+            scanSaveWithPendingCount(root, 0);
+            const template = scanTemplateCell(root);
+            verify(/^4\.11(?:\(\))?$/.test(template), "An edit with no results changes the template");
+            fitCompleteScan(root);
+            const first = scanRows(root);
+            scanSelect(1);
+            const fitted = scanCell().value;
+            scanCell().value = 4.217;
+            compare(scanCell().value, 4.217, "The fitted edit appears while the project is open");
+            scanSaveWithPendingCount(root, 1);
+            compare(scanCell().value, 4.217, "Save leaves the pending edit in the running model");
+            compare(scanTemplateCell(root), template, "Save leaves the fitted edit out of the template");
+            compare(scanRows(root), first, "Save leaves the fitted edit out of the result generation");
+            Session.project.undo();
+            compare(scanCell().value, fitted, "Undo restores the shown row value before Fit");
+            scanSaveWithPendingCount(root, 0);
+
+            scanCell().value = 4.217;
+            scanSelect(2);
+            const fittedSecond = scanCell().value;
+            scanCell().value = 4.24;
+            scanSaveWithPendingCount(root, 2);
+            Session.closeProject();
+            verify(Session.openProject(root), "The app can reopen the saved project without pending state");
+            scanSelect(1);
+            compare(scanCell().value, fitted, "Reopen shows the first published row value");
+            scanSelect(2);
+            compare(scanCell().value, fittedSecond, "Reopen drops the second pending edit too");
+            compare(scanRows(root), first, "Reopen keeps the published results");
+            scanSaveWithPendingCount(root, 0);
+
+            const wasFree = scanCell().free;
+            scanCell().free = !wasFree;
+            compare(scanCell().free, !wasFree, "The fitted point can still change the template Free flag");
+            scanSaveWithPendingCount(root, 0);
+            const afterFree = scanTemplateCell(root);
+            verify(afterFree !== template && /^4\.11(?:\(\))?$/.test(afterFree),
+                "Free changes the saved flag and retains the template value");
+            Session.project.undo();
+            Session.project.analysis.fittingMode = data.tag === "sequential" ? "independent" : "sequential";
+            scanSaveWithPendingCount(root, 0);
+            compare(scanTemplateCell(root), template, "Changing mode retains the template value");
+            Session.project.undo();
+
+            scanSelect(1);
+            scanCell().value = 4.217;
+            Session.project.fit.reset();
+            tryVerify(() => !Session.project.fit.canReset && scanRows(root).length === 0, 5000,
+                "Reset removes the fitted results");
+            scanSaveWithPendingCount(root, 0);
+            compare(scanTemplateCell(root), template, "Reset retains the saved template");
+            Session.project.undo();
+            tryVerify(() => scanRows(root).length === 6 && Session.project.fit.canReset, 5000,
+                "Undo of Reset restores the previously published results");
+            compare(scanRows(root), first, "Undo of Reset reproduces the previous result generation");
+            scanSelect(1);
+            compare(scanCell().value, 4.217, "Undo of Reset restores the edit only in the running model");
+            scanSaveWithPendingCount(root, 1);
+            Session.project.fit.reset();
+            tryVerify(() => !Session.project.fit.canReset && scanRows(root).length === 0, 5000,
+                "Reset again removes the restored results");
+            scanSaveWithPendingCount(root, 0);
+            fitCompleteScan(root);
+            compare(scanRows(root), first, "Fit after Reset reproduces the untouched template fit");
+        }
+        function test_scan_edit_consumption_data() {
+            return ["sequential", "independent", "joint"].map(mode => ({tag: mode}));
+        }
+        function test_scan_edit_consumption(data) {
+            const root = SettingsProof.copyProject(Probe.repoUrl("tests/fixtures/parametric_series/cubic"));
+            const analysis = "analysis/analysis.edi";
+            const configured = SettingsProof.text(root, analysis).split("loop_")[0]
+                .replace("_fitting_mode.type joint", "_fitting_mode.type " + data.tag)
+                .replace("_minimizer.max_iterations 100", "_minimizer.max_iterations 1");
+            verify(SettingsProof.write(root, analysis, configured), "The fit is limited to one iteration so the start has an observable effect");
+            verify(Session.openProject(root), "The live subject opens the same nonlinear scan data as each control");
+            fitCompleteScan(root);
+            function cellValue(path) {
+                const rows = scanRows(path);
+                const keys = rows[0].split(",");
+                const index = keys.indexOf("phase.cell.length_a");
+                const row = rows.find(line => /^["']?scan\/p1\.xy["']?,/.test(line));
+                verify(index >= 0 && row !== undefined, "The replacement generation publishes the selected cell by point and name");
+                return Number(row.split(",")[index]);
+            }
+            const controls = [], actual = [];
+            const authoredEdit = 4.31;
+            for (const action of ["edit", "none", "same-value", "undo"]) {
+                scanSelect(1);
+                const rowValue = scanCell().value;
+                controls.push(SettingsProof.copyProject(root));
+                if (action !== "none") {
+                    scanCell().value = authoredEdit;
+                    compare(scanCell().value, authoredEdit, "The requested value is staged over the chosen row");
+                }
+                if (action === "undo") {
+                    Session.project.undo();
+                    compare(scanCell().value, rowValue, "Undo restores the row start before the solver runs");
+                }
+                fitCompleteScan(root);
+                actual.push(cellValue(root));
+            }
+            scanSaveWithPendingCount(root, 0);
+            const expected = controls.map(control => {
+                Session.closeProject();
+                verify(Session.openProject(control), "A fresh control opens the same preceding result generation without a pending edit");
+                fitCompleteScan(control);
+                return cellValue(control);
+            });
+            verify(Math.abs(actual[0] - expected[0]) > 1e-4, "The first live edit changes the real fit relative to the row-only start");
+            fuzzyCompare(actual[1], expected[1], 1e-6, "A repeat in the same session starts from its own row after consumption");
+            verify(Math.abs(actual[2] - expected[2]) > 1e-4, "Entering the identical edited value again affects the fit once more");
+            fuzzyCompare(actual[3], expected[3], 1e-6, "Fit after Undo reproduces the row-only start and result");
+        }
+        Component {
+            id: scanEditParameters
+            ParametersGroup {
+                width: 900
+                tableViewportHeight: 240
+            }
+        }
+        function test_scan_drag_and_unfitted_point_data() {
+            return ["sequential", "independent", "joint"].map(mode => ({tag: mode}));
+        }
+        function test_scan_drag_and_unfitted_point(data) {
+            const root = SettingsProof.copyProject(Probe.repoUrl("tests/fixtures/parametric_series/cubic"));
+            const results = "analysis/results.csv";
+            verify(Session.openProject(root), "The private five-point scan opens in the app");
+            Session.project.analysis.fittingMode = data.tag;
+            scanSaveWithPendingCount(root, 0);
+            fitCompleteScan(root);
+            Session.closeProject();
+            const full = SettingsProof.text(root, results).split(/\r?\n/);
+            const remains = full.filter(line => !/^["']?scan\/p4\.xy["']?,/.test(line));
+            compare(remains.length + 1, full.length, "The source has one row for the last point");
+            verify(SettingsProof.write(root, results, remains.join("\n")), "The private scan retains results for four points");
+            verify(Session.openProject(root), "The app reopens the scan with a genuine missing row");
+            const project = Session.project;
+            scanSelect(4);
+            const original = scanCell().value;
+            const panel = scanEditParameters.createObject(surface, {project, selected: scanCell()});
+            verify(panel !== null && waitForPolish(panel), "The production Parameters slider is laid out");
+            const slider = findChild(panel, "parameters.slider");
+            verify(slider && slider.enabled && slider.handle, "The real value slider accepts a pointer drag");
+            const thumb = slider.handle.mapToItem(slider, slider.handle.width / 2, slider.handle.height / 2);
+            const delta = (thumb.x < slider.width / 2 ? 1 : -1) * slider.width / 5;
+            mousePress(slider, thumb.x, thumb.y);
+            verify(slider.pressed, "The pointer presses the production slider handle");
+            mouseMove(slider, thumb.x + delta, thumb.y);
+            mouseRelease(slider, thumb.x + delta, thumb.y);
+            tryVerify(() => scanCell().value !== original, 2000, "The drag changes the unfitted point's pending value");
+            panel.destroy();
+            scanSaveWithPendingCount(root, 1);
+            compare(SettingsProof.text(root, results), remains.join("\n"), "Save preserves the other points' rows");
+            project.undo();
+            compare(scanCell().value, original, "One Undo restores the selected point after the drag");
+            scanSaveWithPendingCount(root, 0);
+        }
+        function test_parametric_shared_edit_uses_shown_value() {
+            const root = SettingsProof.copyProject(Probe.repoUrl("tests/fixtures/parametric_series/cubic"));
+            verify(Session.openProject(root), "The app opens the Joint scan project before sharing the cell");
+            fitCompleteScan(root);
+            scanSelect(1);
+            const fitted = scanCell().value;
+            const originalFree = scanCell().free;
+            const template = scanTemplateCell(root);
+            verify(Math.abs(fitted - parseFloat(template)) > 1e-6, "The shown fitted value differs from the template");
+            scanCell().shared = true;
+            verify(scanCell().shared, "Shared applies to the fitted parameter");
+            compare(scanCell().free, originalFree, "Sharing keeps the group's Free flag");
+            scanSelect(2);
+            compare(scanCell().value, fitted, "Every point shows the value of the copy that was shared");
+            scanSaveWithPendingCount(root, 1);
+            verify(SettingsProof.text(root, "analysis/analysis.edi").includes("phase.cell.length_a"),
+                "Save persists the Shared name independently of its pending value");
+            scanCell().value = 4.217;
+            scanSelect(0);
+            compare(scanCell().value, 4.217, "Every point shows the replacement shared start");
+            scanSaveWithPendingCount(root, 1);
+            Session.project.undo();
+            compare(scanCell().value, fitted, "Undo restores the preceding in-memory shared value");
+            Session.project.undo();
+            verify(!scanCell().shared, "Undo of sharing restores the original unshared model");
+            scanSaveWithPendingCount(root, 0);
+            compare(scanTemplateCell(root), template, "The template survives sharing and both Undo operations");
+
+            scanSelect(1);
+            scanCell().shared = true;
+            scanCell().value = 4.217;
+            scanSaveWithPendingCount(root, 1);
+            Session.closeProject();
+            verify(Session.openProject(root), "The app reopens the saved Shared declaration");
+            scanSelect(1);
+            verify(scanCell().shared, "The Shared declaration survives reopen");
+            verify(scanCell().value !== 4.217, "Reopen drops the pending Shared value");
+            scanSaveWithPendingCount(root, 0);
+        }
+        function test_scan_reset_replays_first_fit_data() {
+            return [{tag: "sequential"}, {tag: "independent"}, {tag: "joint"}];
+        }
+        function test_scan_reset_replays_first_fit(data) {
+            const root = SettingsProof.copyProject(Probe.repoUrl("tests/fixtures/parametric_series/cubic"));
+            verify(Session.openProject(root), "The app opens the frozen scan through the real project loader");
+            const project = Session.project;
+            project.analysis.fittingMode = data.tag;
+            const fit = project.fit;
+            function rows() {
+                const receipt = SettingsProof.fileObservation(root, "analysis/results.csv");
+                verify(!receipt.error, "The results file observation remains readable");
+                if (!receipt.exists)
+                    return [];
+                return SettingsProof.text(root, "analysis/results.csv")
+                    .split(/\r?\n/).filter(line => line.length && !line.startsWith("#"));
+            }
+            fit.start();
+            tryVerify(() => !fit.running && fit.canReset && rows().length === 6, 12000,
+                "The first fit publishes one header and every point");
+            const first = rows();
+            verify(Session.save(), "The app saves the project with results before Reset");
+            fit.reset();
+            tryVerify(() => !fit.canReset && rows().length === 0, 5000,
+                "The real Reset discards the completed result generation");
+            fit.start();
+            tryVerify(() => !fit.running && fit.canReset && rows().length === 6, 12000,
+                "Fit after Reset processes the complete scan again");
+            compare(rows(), first, "Fit after the app Reset reproduces the first fitted rows");
+        }
+        function test_parametric_fit_reports_one_outcome() {
+            const root = SettingsProof.copyProject(Probe.repoUrl("tests/fixtures/parametric_series/cubic"));
+            verify(Session.openProject(root), "The status test opens an actual multi-file scan");
+            const project = Session.project;
+            project.analysis.fittingMode = "joint";
+            project.analysis.maxIterations = 1;
+            project.analysis.chiSquareTolerance = 1e-12;
+            project.analysis.shiftTolerance = 1e-12;
+            applicationWindow = applicationFactory.createObject(null);
+            verify(applicationWindow !== null && waitForRendering(applicationWindow.contentItem), "The actual application renders the fit status");
+            const fit = project.fit;
+            fit.start();
+            tryVerify(() => !fit.running && fit.scanFitted > 1, 15000, "The forced stop still publishes multiple fitted files");
+            compare(fit.outcome, "maxIterations", "One Joint scan solve reports its iteration limit");
+            const values = findChild(applicationWindow, "statusBar.fit.values");
+            verify(values !== null, "The real status bar supplies the displayed fit metrics");
+            verify(!values.children.some(item => item.shown && item.keyText === "Failed"), "A joint stop never appears as a tally of failed files");
+
+            const results = findChild(applicationWindow, "fit.results");
+            verify(results !== null, "The real app provides a fit results window");
+            results.open();
+            tryCompare(results, "opened", true, 2000, "The fit results window shows the finished scan");
+            const summary = Probe.rows(findChild(results, "fit.results.list").sourceModel);
+            compare(summary.filter(row => row.outcome !== "").length, 1,
+                "The results window assigns one outcome to the entire Joint scan");
+            verify(!summary.some(row => ["Files fitted", "Converged", "Failed"].includes(row.metric)),
+                "The Joint scan results window does not summarize patterns as separate outcomes");
+            results.close();
+
+            const dialog = findChild(applicationWindow, "fit.error");
+            verify(dialog !== null && !dialog.opened, "A completed scan with readable results raises no fit error");
+            fit.resultsUnreadable("results read-back failed");
+            tryCompare(dialog, "opened", true, 2000, "The real results-read failure signal opens the error dialog");
+            compare(dialog.title, "The fit ran, but its results could not be read", "The dialog distinguishes read-back failure from a refused fit");
+        }
         function test_joint_labels_outside_axis_data() {
             const rows = [];
             for (const mode of ["stacked", "map"])
@@ -1905,6 +2281,10 @@ Rectangle {
             verify(waitForPolish(applicationWindow), "The actual application lays out its scan-view tabs");
             applicationWindow.update();
             verify(waitForRendering(applicationWindow.contentItem), "The actual page has a completed frame before scan-tab input");
+            if (pageName === "experiment") {
+                const shownSections = Render.descendants(page).filter(item => item.visible && typeof item.title === "string");
+                verify(!shownSections.some(item => item.title === "Differences from the template"), "The real Experiment page omits the retired template differences group");
+            }
             const tab = Array.from(page.mainTabs).find(item => item.text === (mode === "map" ? "Map" : "Stacked"));
             verify(tab !== undefined && tab.enabled, "Experiment and Analysis both offer enabled Stacked/Map tabs for scans and every joint fit");
             if (!tab.checked)
@@ -2180,6 +2560,13 @@ Rectangle {
             const csv = rows.join("\n") + "\n";
             verify(SettingsProof.write(root, "analysis/results.csv", csv),
                    "The saved scan contains independent agreement fractions and chi-square values");
+            const analysis = SettingsProof.text(root, "analysis/analysis.edi");
+            const shared = "bank.background.P1.intensity";
+            verify(rows[0].split(",").includes(shared), "The authored CSV includes the parameter that will be excluded from Evolution");
+            verify(SettingsProof.write(root, "analysis/analysis.edi",
+                analysis.replace("_fitting_mode.type sequential", "_fitting_mode.type joint") +
+                "\nloop_\n_parametric_fit_shared.parameter_unique_name\n" + shared + "\n"),
+                "The private fitted scan declares a series-shared parameter");
             verify(Session.openProject(root), "The saved fitted scan opens through the real app");
             chart = evolutionFactory.createObject(surface, {
                 project: Session.project,
@@ -2187,6 +2574,13 @@ Rectangle {
                 height: Math.min(760, surface.Window.window.height)
             });
             verify(chart !== null, "The production Evolution chart opens");
+            const scope = findChild(chart, "evolution.toolbar.scope");
+            const experiments = findChild(chart, "evolution.toolbar.bank");
+            verify(scope && experiments, "Evolution retains the two experiment scope controls");
+            compare(scope.entries, ["Common", "Per experiment"], "The scope names common and per-experiment parameters");
+            compare(experiments.plain[0], "All experiments", "The experiment filter names its all-experiments choice");
+            for (const name of ["evolution.toolbar.compare", "evolution.rightTitle", "evolution.toolbar.map", "evolution.toolbar.banks"])
+                verify(findChild(chart, name) === null, "Evolution omits the retired control " + name);
             const evolution = Session.project.evolution;
             evolution.xMode = 0;
             Session.project.currentExperimentIndex = 0;
@@ -2204,6 +2598,9 @@ Rectangle {
                 evolution.currentParameter = index;
                 tryCompare(evolution, "yTitle", name, 3000, "The requested recorded column is drawn");
             }
+            select("bank.background.P2.intensity");
+            verify(!Array.from({length: evolution.parameters.count}, (_, i) => evolution.parameters.text(i, "name")).includes(shared),
+                "A series-shared result is absent from Evolution while its local neighbour remains available");
             select(column);
             verify(evolution.yLabel.includes("%"), "The agreement axis identifies its percent unit");
             tryCompare(layer, "count", 2, 3000, "The unplottable agreement value is excluded");

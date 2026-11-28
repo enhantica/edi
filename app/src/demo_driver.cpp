@@ -1019,18 +1019,18 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
         steps_.push_back({"included-1-stacked-byrun-q-off", {"resize:1480x800", open, analysis, basic, "mainArea.tab.stacked",
                                                              "scanView.stacked.toolbar.xaxis", "choose:x: Q"}});
         steps_.push_back({"included-2-stacked-byrun-q-on", {"scanView.stacked.toolbar.includedRange"}});
-        steps_.push_back({"included-3-stacked-bybank-q", {"scanView.stacked.toolbar.rows", "choose:Bank"}});
+        steps_.push_back({"included-3-stacked-bybank-q", {"scanView.stacked.toolbar.rows", "choose:Experiment"}});
         steps_.push_back({"included-5-stacked-byrun-d", {"scanView.stacked.toolbar.rows", "choose:File",
                                                           "scanView.stacked.toolbar.xaxis", "choose:x: d-spacing"}});
         steps_.push_back({"included-6-map-byrun-q", {"mainArea.tab.map", "scanView.map.toolbar.xaxis", "choose:x: Q"}});
-        steps_.push_back({"included-7-map-bybank-q", {"scanView.map.toolbar.rows", "choose:Bank"}});
+        steps_.push_back({"included-7-map-bybank-q", {"scanView.map.toolbar.rows", "choose:Experiment"}});
     }
     if (only.startsWith(QLatin1String("review-"))) {
         const QString experimentTab = QStringLiteral("appBar.tab.experiment");
         // Before the fit: the Map on Q by bank (the owner's empty map, 2026-11-16), then back to d.
         steps_.push_back({"review-00a-prefit-map-bybank-q",
                           {"resize:1480x800", "open-project:" + qEnvironmentVariable("EDI_DEMO_SCAN_PROJECT"),
-                           experimentTab, basic, "mainArea.tab.map", "scanView.map.toolbar.rows", "choose:Bank",
+                           experimentTab, basic, "mainArea.tab.map", "scanView.map.toolbar.rows", "choose:Experiment",
                            "scanView.map.toolbar.xaxis", "choose:x: Q"}});
         steps_.push_back({"review-00-fitted",
                           {"scanView.map.toolbar.xaxis", "choose:x: d-spacing", "scanView.map.toolbar.rows", "choose:File",
@@ -1038,13 +1038,13 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
         steps_.push_back({"review-01-experiment-pattern", {experimentTab, basic, "mainArea.tab.pattern"}});
         steps_.push_back({"review-02-experiment-meascalc", {"mainArea.tab.measCalc"}});
         steps_.push_back({"review-03-experiment-stacked-byrun", {"mainArea.tab.stacked"}});
-        steps_.push_back({"review-04-experiment-stacked-bybank", {"scanView.stacked.toolbar.rows", "choose:Bank"}});
+        steps_.push_back({"review-04-experiment-stacked-bybank", {"scanView.stacked.toolbar.rows", "choose:Experiment"}});
         steps_.push_back({"review-05-experiment-map-bybank", {"mainArea.tab.map"}});
         steps_.push_back({"review-05m-experiment-map-more", {"scanView.map.toolbar.more"}});
         steps_.push_back({"review-05n-experiment-map-more-closed", {"scanView.map.toolbar.more"}});
         steps_.push_back({"review-06-experiment-map-byrun", {"scanView.map.toolbar.rows", "choose:File"}});
         steps_.push_back({"review-06b-experiment-map-byrun-q", {"scanView.map.toolbar.xaxis", "choose:x: Q"}});
-        steps_.push_back({"review-06c-experiment-map-bybank-q", {"scanView.map.toolbar.rows", "choose:Bank"}});
+        steps_.push_back({"review-06c-experiment-map-bybank-q", {"scanView.map.toolbar.rows", "choose:Experiment"}});
         steps_.push_back({"review-06d-experiment-stacked-bybank-q", {"mainArea.tab.stacked"}});
         steps_.push_back({"review-06e-back-to-d", {"scanView.stacked.toolbar.xaxis", "choose:x: d-spacing",
                                                    "scanView.stacked.toolbar.rows", "choose:File"}});
@@ -1052,7 +1052,7 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
         steps_.push_back({"review-08-analysis-meascalc", {"mainArea.tab.measCalc"}});
         steps_.push_back({"review-09-analysis-structure", {"mainArea.tab.structure"}});
         steps_.push_back({"review-10-analysis-evolution-shared", {"mainArea.tab.evolution"}});
-        steps_.push_back({"review-11-analysis-evolution-perbank", {"evolution.toolbar.scope", "choose:Per bank"}});
+        steps_.push_back({"review-11-analysis-evolution-perbank", {"evolution.toolbar.scope", "choose:Per experiment"}});
         steps_.push_back({"review-11a-perbank-picker", {"evolution.parameters.box"}});
         steps_.push_back({"review-11b-bank-filter", {"key:Escape", "evolution.toolbar.bank"}});
         steps_.push_back({"review-11c-bank-selector", {"key:Escape", "mainArea.series.bank.box"}});
@@ -2028,6 +2028,138 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
                               + QStringList{analysis, basic, "statusBar.fit.button", "wait-fit", "choose:OK",
                                             "mainArea.tab.evolution"}});
     }
+    // The parametric fit's Shared column on the 213-file scan: the fitting mode selector open, Joint chosen, U, V
+    // and W shared, the whole table, then saved and opened again. Run only when asked (`--demo-only parametric-`).
+    if (only.startsWith(QLatin1String("parametric-"))) {
+        steps_.push_back({"parametric-1-selector",
+                          QStringList{"resize:1480x900", "theme:light"} + start
+                              + open_cli_project("pd-neut-cwl_cosio-d20_scan-213f")
+                              + QStringList{analysis, extras, "expand:group.fitting_mode", "reveal:fittingMode.type",
+                                            "fittingMode.type"}});
+        steps_.push_back({"parametric-2-chosen", {"choose:Joint: all patterns as one fit", basic}});
+        steps_.push_back({"parametric-3-uvw-shared", {"parameters.nameFilter", "type:broad_gauss", "parameters.shared.0",
+                                                      "parameters.shared.1", "parameters.shared.2"}});
+        steps_.push_back({"parametric-4-table", {"parameters.nameFilter", "key:Ctrl+A", "key:Backspace"}});
+        steps_.push_back({"parametric-5-reopened", {"save-as:parametric", "open-project:parametric", analysis, basic,
+                                                    "parameters.nameFilter", "type:broad_gauss"}});
+        steps_.push_back({"parametric-6-free-menu", {"parameters.nameFilter", "key:Ctrl+A", "key:Backspace",
+                                                     "parameters.freeHeader"}});
+        steps_.push_back({"parametric-7-shared-menu", {"key:Escape", "parameters.sharedHeader"}});
+    }
+    // A Joint scan fit's views after it ends: the selected pattern with its calculated curve, Meas vs calc, Evolution
+    // and the results window with one outcome, on the three-file scan with U, V and W shared. Run only when asked
+    // (`--demo-only parametricfit-`).
+    if (only.startsWith(QLatin1String("parametricfit-"))) {
+        steps_.push_back({"parametricfit-1-ready",
+                          QStringList{"resize:1480x900", "theme:light"} + start
+                              + open_cli_project("pd-neut-cwl_cosio-d20_scan-3f")
+                              + QStringList{analysis, extras, "expand:group.fitting_mode", "reveal:fittingMode.type",
+                                            "fittingMode.type", "choose:Joint: all patterns as one fit", basic,
+                                            "parameters.nameFilter", "type:broad_gauss", "parameters.shared.0",
+                                            "parameters.shared.1", "parameters.shared.2", "parameters.nameFilter",
+                                            "key:Ctrl+A", "key:Backspace"}});
+        steps_.push_back({"parametricfit-2-pattern", {"statusBar.fit.button", "wait-fit", "choose:OK",
+                                                      "mainArea.tab.pattern"}});
+        steps_.push_back({"parametricfit-3-meas-calc", {"mainArea.tab.measCalc"}});
+        steps_.push_back({"parametricfit-4-evolution", {"mainArea.tab.evolution"}});
+        steps_.push_back({"parametricfit-5-results", {"statusBar.fit.outcome"}});
+    }
+    // A running fit's every Analysis chart tab at two iterations after the first, then its status bar and results
+    // window: the 213-pattern Joint scan example with U, V and W shared (`parametriclive-`) and the taurine in Joint
+    // mode with x11, x22 and x33 shared (`jointlive-`, EDI_DEMO_JOINT_PROJECT). Run only when asked.
+    if (only.startsWith(QLatin1String("parametriclive-")) || only.startsWith(QLatin1String("jointlive-"))) {
+        const QStringList tabs{"structure", "pattern", "measCalc", "correlations", "stacked", "map", "evolution"};
+        const auto every_tab = [this, &tabs](const QString& prefix, int iteration, QStringList first) {
+            first << QStringLiteral("wait-iteration:%1").arg(iteration);
+            for (const QString& tab : tabs) {
+                first << "if-enabled:mainArea.tab." + tab << "capture-now";
+                steps_.push_back({QStringLiteral("%1-it%2-%3").arg(prefix).arg(iteration).arg(tab), first});
+                first.clear();
+            }
+        };
+        const bool parametric = only.startsWith(QLatin1String("parametriclive-"));
+        const QString prefix = parametric ? QStringLiteral("parametriclive") : QStringLiteral("jointlive");
+        const QStringList opened = parametric
+            ? QStringList{"resize:1920x1080", "theme:light"} + start + open_cli_project("pd-neut-cwl_cosio-d20_parametric") +
+                  QStringList{"wait-settled", analysis}
+            : QStringList{"resize:1920x1080", "theme:light"} + start +
+                  QStringList{"open-project:" + qEnvironmentVariable("EDI_DEMO_JOINT_PROJECT"), "wait-settled", analysis};
+        every_tab(prefix, 2, opened + QStringList{"statusBar.fit.button"});
+        every_tab(prefix, 3, {});
+        steps_.push_back({prefix + "-ended-status", {"wait-fit", "key:Escape", "mainArea.tab.pattern"}});
+        steps_.push_back({prefix + "-ended-results", {"statusBar.fit.outcome"}});
+    }
+    // The sidebar's Auto and Full widths with the Shared column: the joint taurine and the
+    // parametric CoSiO example, every column of the Parameters table shown, Change included. Run only when asked
+    // (`--demo-only sidebarshared-`).
+    if (only.startsWith(QLatin1String("sidebarshared-"))) {
+        steps_.push_back({"sidebarshared-1-joint-auto",
+                          QStringList{"resize:1920x1080", "theme:light"} + start
+                              + QStringList{"open-project:" + qEnvironmentVariable("EDI_DEMO_JOINT_PROJECT"), analysis,
+                                            basic, "sideBar.width", "sideBar.width.auto"}});
+        steps_.push_back({"sidebarshared-2-joint-full", {"sideBar.width", "sideBar.width.full"}});
+        steps_.push_back({"sidebarshared-3-parametric-full",
+                          open_cli_project("pd-neut-cwl_cosio-d20_parametric") + QStringList{"wait-settled", analysis, basic}});
+        steps_.push_back({"sidebarshared-4-parametric-auto", {"sideBar.width", "sideBar.width.auto"}});
+    }
+    // The Evolution additions on a series of joint fits, EDI_DEMO_WISH_PROJECT (a bank parameter tied the same for all
+    // banks): the fit, the Shared section listing the tied parameter, and every bank's curves. Run only when asked
+    // (`--demo-only evolutionshared-`).
+    if (only.startsWith(QLatin1String("evolutionshared-"))) {
+        steps_.push_back({"evolutionshared-2-fitted",
+                          QStringList{"resize:1480x900", "theme:light"} + start
+                              + QStringList{"open-project:" + qEnvironmentVariable("EDI_DEMO_WISH_PROJECT"), analysis,
+                                            basic, "statusBar.fit.button", "wait-fit", "choose:OK",
+                                            "mainArea.tab.evolution"}});
+        steps_.push_back({"evolutionshared-3-shared-list", {"evolution.parameters"}});
+        steps_.push_back({"evolutionshared-5-per-bank", {"key:Escape", "evolution.toolbar.scope", "choose:Per experiment"}});
+    }
+    // Shared in the bundled taurine joint fit: a structure parameter cannot be shared (one value for all experiments
+    // already); then, in EDI_DEMO_TIED_PROJECT (the example as it was, its copies tied by constraints), Shared is
+    // disabled on every copy and names the constraint. Run only when asked (`--demo-only jointtied-`).
+    if (only.startsWith(QLatin1String("jointtied-"))) {
+        steps_.push_back({"jointtied-1-structure",
+                          QStringList{"resize:1480x900", "theme:light"} + start
+                              + open_cli_project("sc-neut-tof_taurine-senju")
+                              + QStringList{analysis, basic, "parameters.nameFilter", "type:adp_11"}});
+        steps_.push_back({"jointtied-2-tied-before", {"open-project:" + qEnvironmentVariable("EDI_DEMO_TIED_PROJECT"), analysis,
+                                                      basic, "parameters.nameFilter", "type:coefficient_11"}});
+    }
+    // Shared in a joint fit: the project EDI_DEMO_JOINT_PROJECT names (the taurine example with its extinction shared
+    // instead of tied by constraints), its coefficients, one Free flag per shared group, the Shared menu, then saved and
+    // opened again. Run only when asked (`--demo-only jointshared-`).
+    if (only.startsWith(QLatin1String("jointshared-"))) {
+        steps_.push_back({"jointshared-1-opened",
+                          QStringList{"resize:1480x900", "theme:light"} + start
+                              + QStringList{"open-project:" + qEnvironmentVariable("EDI_DEMO_JOINT_PROJECT"), analysis,
+                                            basic, "parameters.nameFilter", "type:coefficient"}});
+        steps_.push_back({"jointshared-2-free-group", {"parameters.free.7"}});
+        steps_.push_back({"jointshared-3-unshared", {"parameters.free.7", "parameters.shared.2"}});
+        steps_.push_back({"jointshared-4-menu", {"parameters.sharedHeader"}});
+        steps_.push_back({"jointshared-5-reopened", {"key:Escape", "parameters.shared.2", "save-as:jointshared",
+                                                     "open-project:jointshared", analysis, basic,
+                                                     "parameters.nameFilter", "type:coefficient"}});
+    }
+    // The Shared column and the parameter colours: the joint taurine's shared extinction on the
+    // Analysis page in both themes and both palettes, and a constrained project's Experiment page. Run only when asked
+    // (`--demo-only sharedcolour-`).
+    if (only.startsWith(QLatin1String("sharedcolour-"))) {
+        const auto palette = [](const QString& name) {
+            return QStringList{"appBar.button.preferences", "preferences.tab.appearance", "preferences.colours",
+                               "choose:" + name, "choose:OK"};
+        };
+        steps_.push_back({"sharedcolour-1-main-light",
+                          QStringList{"resize:1480x900", "theme:light"} + start
+                              + QStringList{"open-project:" + qEnvironmentVariable("EDI_DEMO_JOINT_PROJECT"), analysis,
+                                            basic, "parameters.nameFilter", "type:coefficient"}});
+        steps_.push_back({"sharedcolour-2-main-dark", {"theme:dark"}});
+        steps_.push_back({"sharedcolour-3-safe-dark", palette(QStringLiteral("Colour-blind safe"))});
+        steps_.push_back({"sharedcolour-4-safe-light", {"theme:light"}});
+        steps_.push_back({"sharedcolour-5-constrained-experiment",
+                          palette(QStringLiteral("Main")) + QStringList{"open-project:" + qEnvironmentVariable("EDI_DEMO_TIED_PROJECT"),
+                                                                 "appBar.tab.experiment", "experiments.name.1",
+                                                                 "reveal:group.extinction", "expand:group.extinction"}});
+    }
     // The Evolution tab of a scan before and after its fit, with the parameter list open. Run only when asked
     // (`--demo-only evolution-`).
     if (only.startsWith(QLatin1String("evolution-"))) {
@@ -2607,6 +2739,15 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
                                                                     "preferences.tab.advanced", "preferences.diagnostics"}});
             steps_.push_back({"about-" + theme + "-6-closed", {"key:Escape", "key:Escape"}});
         }
+    }
+    // One fit timed in the app: a prepared copy of the 213-pattern scan in Independent mode
+    // (EDI_DEMO_INDEPENDENT_PROJECT) or of the Joint scan example with U, V and W shared (EDI_DEMO_PARAMETRIC_PROJECT),
+    // under the Cores for fitting preference in effect. Run one at a time (`--demo-only fittime-independent`).
+    if (only.startsWith(QLatin1String("fittime-"))) {
+        steps_.push_back({"fittime-independent", {"open-project:" + qEnvironmentVariable("EDI_DEMO_INDEPENDENT_PROJECT"),
+                                                  "wait-settled", analysis, "timed-fit:213"}});
+        steps_.push_back({"fittime-parametric", {"open-project:" + qEnvironmentVariable("EDI_DEMO_PARAMETRIC_PROJECT"),
+                                                 "wait-settled", analysis, "timed-fit:213"}});
     }
     if (only.startsWith(QLatin1String("perf-"))) {
         // EDI_DEMO_PERF_PROJECT names a prepared copy to open in place, so two builds time the same input.
@@ -4237,6 +4378,11 @@ void DemoDriver::next_action() {
             wait_scan_then([this] { next_action(); }, action.mid(10));
             return;
         }
+        // A running fit's iteration, for a capture made while it runs (capture-now).
+        if (action.startsWith(QLatin1String("wait-iteration:"))) {
+            wait_iteration_then([this] { next_action(); }, action.mid(15).toInt());
+            return;
+        }
         // The assistant answers at its own pace; the step waits until it has stopped working.
         if (action == QLatin1String("wait-assistant")) {
             wait_assistant_then([this] { settle_then([this] { next_action(); }); });
@@ -4633,11 +4779,40 @@ void DemoDriver::wait_fit_then(const std::function<void()>& next, int waited_ms,
     });
 }
 
+void DemoDriver::wait_iteration_then(const std::function<void()>& next, int iteration, int waited_ms) {
+    QQmlEngine* engine = qmlEngine(window_.contentItem());
+    auto* session = engine ? engine->singletonInstance<Session*>("edi.app", "Session") : nullptr;
+    const FitViewModel* fit = session != nullptr && session->project() != nullptr ? session->project()->fit() : nullptr;
+    if (fit == nullptr || !fit->running() || fit->iterations().toInt() >= iteration) {
+        next();
+        return;
+    }
+    if (waited_ms > kFitWaitMs) {
+        fail(QStringLiteral("step %1: the fit did not reach iteration %2 within %3 ms")
+                 .arg(steps_[current_].image)
+                 .arg(iteration)
+                 .arg(kFitWaitMs));
+        return;
+    }
+    QTimer::singleShot(kSettleIntervalMs, this, [this, next, iteration, waited_ms] {
+        wait_iteration_then(next, iteration, waited_ms + kSettleIntervalMs);
+    });
+}
+
 bool DemoDriver::perform(const QString& action) {
     if (documentation_) {
         if (auto handled = documentationAction(action)) return *handled;
     }
     // `uncover:` reveals a control only when none of it can be seen, so a page where it shows is captured as it is.
+    // A control clicked only when it is there and enabled (a chart tab a running fit has not enabled yet): otherwise
+    // the step goes on without it.
+    if (action.startsWith(QLatin1String("if-enabled:"))) {
+        QQuickItem* item = find(action.mid(11), false);
+        if (item == nullptr || !item->isEnabled() || !item->isVisible()) {
+            return true;
+        }
+        return perform(action.mid(11));
+    }
     if (action.startsWith(QLatin1String("uncover:"))) {
         QQuickItem* item = find(action.mid(8), false);
         if (item != nullptr && on_screen(item)) {
@@ -5814,8 +5989,9 @@ QString DemoDriver::scan_work(int files) const {
     if (scan == nullptr) {
         return QStringLiteral("no scan is open");
     }
-    if (project->analysis() == nullptr || project->analysis()->fittingMode() != QLatin1String("sequential")) {
-        return QStringLiteral("the scan does not run in its declared sequential mode");
+    const QString mode = project->analysis() != nullptr ? project->analysis()->fittingMode() : QString();
+    if (mode != QLatin1String("sequential") && mode != QLatin1String("independent") && mode != QLatin1String("joint")) {
+        return QStringLiteral("the scan does not run in a scan mode");
     }
     if (static_cast<int>(scan->datasets().files.size()) != files ||
         static_cast<int>(scan->index().rows.size()) != files) {
@@ -5894,6 +6070,10 @@ void DemoDriver::timed_fit_then(const std::function<void()>& next, int files, in
     connections->push_back(connect(fit, &FitViewModel::scanFinished, this, finish));
     connections->push_back(connect(fit, &FitViewModel::refused, this, [refusal, finish](const QString& reason) {
         *refusal = reason.isEmpty() ? QStringLiteral("the fit was refused") : reason;
+        finish();
+    }));
+    connections->push_back(connect(fit, &FitViewModel::resultsUnreadable, this, [refusal, finish](const QString& reason) {
+        *refusal = QStringLiteral("the fit ran but its results could not be read: ") + reason;
         finish();
     }));
     if (stop_after >= 0) {

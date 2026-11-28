@@ -14,8 +14,14 @@ namespace edi_app {
 namespace {
 const QStringList kRoles{"parameter", "path",  "blockKind", "blockName", "category", "rowLabel", "name",
                          "displayName", "value", "uncertainty", "hasUncertainty", "free", "minimum",
-                         "maximum", "units", "refinable", "fittable", "fitReason", "fitGroup"};
+                         "maximum", "units", "refinable", "fittable", "fitReason", "fitGroup", "sharedFollower"};
 // The full name the table's tooltip shows (cosio.cell.length_a), which the name filter finds too.
+// Whether a row is a shared group's other copy, read from the item itself, as its Shared box is: the row's own copy
+// of the flag can be older than the item's.
+bool shared_copy(const QVariant& parameter) {
+    const auto* item = qobject_cast<ParameterItem*>(parameter.value<QObject*>());
+    return item != nullptr && item->isSharedFollower();
+}
 QString full_name(const QVariant& parameter) {
     const auto* item = qobject_cast<ParameterItem*>(parameter.value<QObject*>());
     return item != nullptr ? item->fullName() : QString();
@@ -66,7 +72,7 @@ void ParameterTableModel::sync() {
                       item->category(), item->rowLabel(), item->name(), item->displayName(), item->value(),
                       item->uncertainty(), item->hasUncertainty(), item->isFree(), item->minimum(), item->maximum(),
                       item->displayUnits(), item->isRefinable(), item->isFittable(), item->fitReason(),
-                      item->fitGroup()}});
+                      item->fitGroup(), item->isSharedFollower()}});
         if (!item->isFree() && item->fitGroup() > 0) {
             ++group_counts[item->fitGroup() - 1];
         }
@@ -136,7 +142,13 @@ void ParameterFilterModel::setSourceModel(QAbstractItemModel* source) {
         // filters read rebuild them, so a fit no longer scans every row at each change (ADR-0102 rule 2).
         source_connections_.append(connect(source, &QAbstractItemModel::dataChanged, this,
                                            [this](const QModelIndex&, const QModelIndex&, const QList<int>& roles) {
-                                               if (affectsFilters(roles)) refresh();
+                                               if (!affectsFilters(roles)) return;
+                                               refresh();
+                                               // The proxy re-filters a changed row only for its own filter role, so
+                                               // a role this filter reads (a parameter becoming a shared copy) asks
+                                               // for it here.
+                                               beginFilterChange();
+                                               endFilterChange(Direction::Rows);
                                            }));
     }
     refresh();
@@ -156,7 +168,7 @@ bool matches_datablock(const QString& key, const QString& kind, const QString& n
 bool ParameterFilterModel::affectsFilters(const QList<int>& roles) const {
     if (roles.isEmpty() || sourceModel() == nullptr) return true;  // unnamed roles: any may have changed
     static const QList<QByteArray> kRead{"free",      "fittable",  "fitGroup", "path",    "displayName",
-                                         "blockKind", "blockName", "category", "name"};
+                                         "blockKind", "blockName", "category", "name", "sharedFollower"};
     const auto names = sourceModel()->roleNames();
     return std::any_of(roles.cbegin(), roles.cend(), [&](int role) { return kRead.contains(names.value(role)); });
 }
@@ -181,7 +193,7 @@ void ParameterFilterModel::refresh() {
         for (int row = 0; row < sourceModel()->rowCount(); ++row) {
             const bool free = value(row, "free").toBool();
             const bool fittable = value(row, "fittable").toBool();
-            if (!shownByGroup(free, value(row, "fitGroup").toInt())) {
+            if (!shownByGroup(free, value(row, "fitGroup").toInt()) || shared_copy(value(row, "parameter"))) {
                 continue;
             }
             const bool named = name_filter_.isEmpty() ||
@@ -431,7 +443,8 @@ bool ParameterFilterModel::filterAcceptsRow(int source_row, const QModelIndex& s
     }
     const bool free = value("free").toBool();
     const bool fittable = value("fittable").toBool();
-    if (!shownByGroup(free, value("fitGroup").toInt())) {
+    // A shared group shows as its leader's one row, as a user constraint hides its dependents.
+    if (!shownByGroup(free, value("fitGroup").toInt()) || shared_copy(value("parameter"))) {
         return false;
     }
     if ((variability_ == Free && !free) || (variability_ == Fixed && (free || !fittable)) ||

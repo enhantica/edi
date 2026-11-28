@@ -40,7 +40,9 @@ EaElements.ParamTextField {
     readonly property string warningText: refusal !== "" ? refusal : outsideRange ? qsTr("Outside its range, %1 to %2").arg(item.minimum).arg(item.maximum) : item !== null ? item.domainWarning : ""
 
     // A free value is in the status bar's green, the one green token (EaStyle.Colors.green; the owner, 2026-10-22).
-    color: warned ? EaStyle.Colors.red : !enabled || readOnly ? EaStyle.Colors.themeForegroundMinor : item && item.free && canFit ? EaStyle.Colors.green : EaStyle.Colors.themeForeground
+    // A value a user constraint computes is in the constrained colour, a shared one in Shared's, read-only or not (owner
+    // record 2026-11-26).
+    color: warned ? EaStyle.Colors.red : item && item.fitGroup === 3 ? AppColors.constrained : item && item.shared ? AppColors.shared : !enabled || readOnly ? EaStyle.Colors.themeForegroundMinor : item && item.free && canFit ? EaStyle.Colors.green : EaStyle.Colors.themeForeground
 
     enabled: refinable
     // The value and its uncertainty as the project file and the Text tab spell them (edi ADR-0051); a parameter the

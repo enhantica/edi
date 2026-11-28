@@ -3998,6 +3998,30 @@ void ProjectViewModel::postAutoModelReason(const std::string& experiment, const 
                               QString::number(100.0 * edi::kAutoModelBelowShare)));
 }
 
+bool ProjectViewModel::setParametersShared(const QList<ParameterItem*>& parameters, bool shared) {
+    const PublicationScope publication(*this);
+    if (const QString refusal = free_refusal(); !refusal.isEmpty()) {
+        announceRefused(refusal);
+        return false;
+    }
+    std::map<const edi::Parameter*, std::string> names;
+    for (const edi::NamedSlot& slot : edi::named_slots(*project_)) {
+        names.emplace(slot.parameter, slot.unique_name);
+    }
+    std::vector<std::string> changed;
+    for (const ParameterItem* item : parameters) {
+        if (item == nullptr || !item->isRefinable() || item->isShared() == shared) continue;
+        if (const auto found = names.find(item->parameter()); found != names.end()) changed.push_back(found->second);
+    }
+    if (changed.empty()) return true;
+    std::optional<std::string> at;
+    if (const std::optional<ShownPoint> point = shownPoint()) at.emplace(point->point);
+    const EditOutcome result =
+        applyRecordedEdit(edi::Edit::parameters_shared(*project_, std::move(changed), shared, std::move(at)), false);
+    if (!retired_ && !result.applied) announceRefused(result.message);
+    return result.applied;
+}
+
 bool ProjectViewModel::setParametersFree(const QList<ParameterItem*>& parameters, bool free) {
     const PublicationScope publication(*this);
     const QPointer<ProjectViewModel> self(this);
@@ -4488,7 +4512,7 @@ void ProjectViewModel::syncDatasets() {
             const auto at = static_cast<std::size_t>(index);
             if (at < files.size()) {
                 dataset.file = files[at].size() == 1 ? QString::fromStdString(files[at].front())
-                                                     : tr("%1 banks").arg(files[at].size());
+                                                     : tr("%1 experiments").arg(files[at].size());
             }
             return dataset;
         };
@@ -4702,6 +4726,35 @@ int ProjectViewModel::startDataset(const edi::Project& from, const edi::ScanResu
     return by_order == by_place ? by_order : kStartUnknown;
 }
 
+namespace {
+
+// A shown point's values with its pending starts over them, as the next Fit starts it: its
+// own, and a shared name's start, the whole series' one, on every copy of the group. Applied last in every read of a
+// point's values, after the series overlay, so a bank row never covers an edit.
+void overlay_starts(std::vector<edi::Edit::ScanValue>& values, const edi::Project& project,
+                    const std::vector<std::string>& files, int dataset) {
+    const auto& starts = project.sequential_fit.starts;
+    if (starts.empty() || dataset < 0 || dataset >= static_cast<int>(files.size())) return;
+    const std::string& shown = files[static_cast<std::size_t>(dataset)];
+    // As the fit uses them (crysta apply_point_starts): the point's own, by exact name, and in a Joint fit of the scan, where
+    // sharing is in effect, a shared name's start at every point.
+    const bool series_shared = edi::fit_kind(project) == "parametric";
+    std::set<std::string> shared;
+    for (const auto& row : project.sequential_fit.shared) shared.insert(row->parameter_unique_name.value());
+    for (const auto& start : starts) {
+        const std::string& name = start->parameter_unique_name.value();
+        const bool common = series_shared && shared.contains(name);
+        if (!common && start->point.value() != shown) continue;
+        for (edi::Edit::ScanValue& each : values) {
+            if (each.unique_name != name) continue;
+            each.value = start->value.get();
+            each.uncertainty.reset();
+        }
+    }
+}
+
+}  // namespace
+
 std::vector<edi::Edit::ScanValue> ProjectViewModel::pointValues(int index) const {
     const edi::Project& from = scanTemplateOrModel();
     const int start = startDataset(from, scan_session_->index(), index);
@@ -4710,6 +4763,7 @@ std::vector<edi::Edit::ScanValue> ProjectViewModel::pointValues(int index) const
                       scan_session_->row(*project_, start), start != kStartUnknown);
     overlaySeriesPoint(values, *project_, scan_session_->datasets(), index, start,
                        scan_session_->pointCheck(*project_, index), scan_session_->pointCheck(*project_, start));
+    overlay_starts(values, *project_, scan_session_->datasets().files, index);
     return values;
 }
 
@@ -4781,12 +4835,24 @@ std::vector<edi::Edit::ScanValue> ProjectViewModel::datasetValues(const std::vec
     for (const edi::ScanParameterColumns& parameter : index.parameters) {
         columns.emplace(parameter.name, &parameter);
     }
+    std::map<std::string, std::size_t> inputs;
+    for (const edi::ScanFactorColumn& input : index.inputs) inputs.emplace(input.name, input.value);
     for (edi::Edit::ScanValue& value : values) {
         const auto found = columns.find(edi::scan_results_column(value.unique_name));
         if (found == columns.end()) {
             // A parameter the results do not record keeps the template's value; its s.u. belonged to an
-            // earlier fit, not to the one this row records.
+            // earlier fit, not to the one this row records. A fixed input the fit used is that fit's
+            // value, without an s.u.
             value.uncertainty.reset();
+            if (const auto input = inputs.find(edi::scan_results_column(value.unique_name));
+                input != inputs.end() && input->second < row.size() && !row[input->second].empty()) {
+                double number = 0.0;
+                if (!edi::parse_scan_number(row[input->second], number)) {
+                    throw std::invalid_argument("analysis/results.csv: the row's 'input." + input->first +
+                                                "' cell is not a number");
+                }
+                value.value = number;
+            }
             continue;
         }
         double number = 0.0, uncertainty = 0.0;
@@ -4831,7 +4897,9 @@ void ProjectViewModel::viewDataset(int index, bool refresh) {
     }
     // The dataset already shown, with nothing pending: only its results row changed (a new row, Reset, Undo, a
     // run's end), so it is shown again at once from its row, with no file to read.
-    if (index == current_dataset_ && view_applied_ == view_request_ && projected_dataset_ == index) {
+    // A running parametric fit's iterate is drawn by a read, which calculates the pattern at its values (ADR-0107).
+    const bool live = live_iterate_.has_value() && fit_ != nullptr && fit_->running();
+    if (!live && index == current_dataset_ && view_applied_ == view_request_ && projected_dataset_ == index) {
         viewDatasetNow(index, false);
         return;
     }
@@ -4947,6 +5015,27 @@ void ProjectViewModel::startViewRead() {
         }
         values = datasetValues(scan_session_->row(*project_, index), scanTemplateOrModel(), scan_session_->index(),
                                scan_session_->row(*project_, start), start != kStartUnknown);
+        overlay_starts(values, *project_, scan_session_->datasets().files, index);
+        // A running parametric fit: the point's latest iterate values over its row's (ADR-0107), without s.u.
+        if (live_iterate_ && (fit_ == nullptr || !fit_->running())) {
+            live_iterate_.reset();
+        }
+        const auto& files = scan_session_->datasets().files;
+        if (live_iterate_ && index >= 0 && index < static_cast<int>(files.size())) {
+            for (const edi::ParametricIterate::IteratePoint& point : live_iterate_->points) {
+                if (point.name != files[static_cast<std::size_t>(index)]) continue;
+                // Only the values the view already holds: a name it does not know would make the view refuse,
+                // leaving the pattern without its calculated curve.
+                // The iterate names each value by its results column, as results.csv does.
+                for (edi::Edit::ScanValue& each : values) {
+                    if (const auto found = point.values.find(edi::scan_results_column(each.unique_name));
+                        found != point.values.end()) {
+                        each.value = found->second;
+                        each.uncertainty.reset();
+                    }
+                }
+            }
+        }
     } catch (const std::exception& refusal) {
         view_applied_ = request;
         const QString error = QString::fromUtf8(refusal.what());
@@ -4977,6 +5066,7 @@ void ProjectViewModel::startViewRead() {
         view.values = std::move(values);
         try {
             overlaySeriesPoint(view.values, *project_, datasets, index, start, own_check, from_check);
+            overlay_starts(view.values, *project_, datasets.files, index);
             readDataset(view, datasets, index, modes);
         } catch (const std::exception& refusal) {
             view.error = QString::fromUtf8(refusal.what());
@@ -5003,6 +5093,7 @@ void ProjectViewModel::startViewRead() {
         try {
             if (source) {
                 overlaySeriesPoint(view.values, *source, datasets, index, start, own_check, from_check);
+                overlay_starts(view.values, *source, datasets.files, index);
             }
             readDataset(view, datasets, index, modes);
             if (shown) {
@@ -5149,9 +5240,21 @@ void ProjectViewModel::syncOutOfDate() {
 }
 
 void ProjectViewModel::promoteShownToTemplate() {
-    // The shown dataset's values become the template's, over the template's own data file (edi ADR-0017 §19).
+    // An edit at a shown dataset reaches the template, over the template's own data file (edi ADR-0017 §19). While the
+    // scan has results the shown values are a point's: the template takes the edit's structure, flags, Shared names
+    // and starts, and keeps its own values; a value edit made a start.
     if (!scan_template_) return;
     edi::Project promoted = *project_;
+    if (scanProcessed()) {
+        std::map<std::string, const edi::Parameter*> kept;
+        for (const edi::NamedSlot& slot : edi::named_slots(*scan_template_)) kept.emplace(slot.unique_name, slot.parameter);
+        for (const edi::NamedSlot& slot : edi::named_slots(promoted)) {
+            const auto found = kept.find(slot.unique_name);
+            if (found == kept.end()) continue;
+            slot.parameter->value = found->second->value.get();
+            slot.parameter->uncertainty = found->second->uncertainty.get();
+        }
+    }
     // Every experiment keeps the template's own file: a series point showed one file of each.
     const std::size_t count = std::min(promoted.experiments.size(), scan_template_->experiments.size());
     for (std::size_t at = 0; at < count; ++at) {
@@ -5179,7 +5282,7 @@ void ProjectViewModel::markTemplateChanged() {
     syncOutOfDate();
 }
 
-QString ProjectViewModel::prepareScan(bool fresh) {
+QString ProjectViewModel::prepareScan(bool fresh, bool refit) {
     const PublicationScope publication(*this);
     if (const QString critical = criticalEditRefusal(); !critical.isEmpty()) return critical;
     if (fit_ != nullptr && fit_->running()) return tr("A fit is running");
@@ -5194,12 +5297,33 @@ QString ProjectViewModel::prepareScan(bool fresh) {
     if (scan_ && !scan_template_) copyModelToTemplate();
     run_identity_ = templateIdentityOf(scanTemplateOrModel());
     previous_run_.reset();
-    if (!fresh) { previous_run_ = scan_session_->run(); return {}; }
+    // The engine's own decision (crysta's scan drivers, ADR-0136 decision 9): a pending edit on a dataset that has a row
+    // makes the run a new pass, so it is one here too, with its Undo record.
+    if (!fresh && !refit && scan_session_ != nullptr && !project_->sequential_fit.starts.empty()) {
+        const std::vector<std::string>& files = scan_session_->datasets().files;
+        const auto& rows = scan_session_->index().rows;
+        for (const auto& start : project_->sequential_fit.starts) {
+            for (std::size_t at = 0; at < files.size() && at < rows.size(); ++at) {
+                refit = refit || (rows[at].offset >= 0 && files[at] == start->point.value());
+            }
+        }
+    }
+    // A complete scan fitted again replaces every row, from each dataset's own: a new run, not a Continue of the
+    // earlier one, whose files stay in place for the run to read and are copied for Undo.
+    if (!fresh && !refit) {
+        previous_run_ = scan_session_->run();
+        return {};
+    }
     undo_history_.reserve(undo_history_.size() + 1);
     undo_history_.emplace_back(ScanRun{});
     auto& record = std::get<ScanRun>(undo_history_.back());
+    // The edits pending before this run, which it may use: its Undo puts them back with the earlier rows.
+    record.starts = project_->sequential_fit.starts;
     QString refusal;
-    try { refusal = scan_session_->takeFiles(*project_, record.files); }
+    try {
+        refusal = refit && !fresh ? scan_session_->copyFiles(*project_, record.files)
+                                  : scan_session_->takeFiles(*project_, record.files);
+    }
     catch (...) { undo_history_.pop_back(); throw; } // takeFiles is the existing all-or-none file door.
     if (!refusal.isEmpty()) { undo_history_.pop_back(); return refusal; }
     try {
@@ -5224,6 +5348,7 @@ QString ProjectViewModel::resetScan() {
     run.shown_dataset = projected_dataset_;
     for (const edi::NamedSlot& slot : edi::named_slots(*project_))
         run.shown_values.push_back({slot.unique_name, slot.parameter->value.get(), slot.parameter->uncertainty.get(), std::nullopt});
+    run.starts = project_->sequential_fit.starts;
     undo_history_.reserve(undo_history_.size() + 1);
     editing_ = true;
     const auto release = qScopeGuard([this] { editing_ = false; });
@@ -5236,6 +5361,9 @@ QString ProjectViewModel::resetScan() {
     try {
         project_->fit_result = {};
         if (scan_template_) scan_template_->fit_result = {};
+        // Reset returns to the template: the points' starts go with the results.
+        project_->sequential_fit.starts = {};
+        if (scan_template_) scan_template_->sequential_fit.starts = {};
         syncCorrelations();
         if (retired_) return tr("The scan reset owner was replaced");
         syncUndo();
@@ -5295,6 +5423,10 @@ bool ProjectViewModel::restoreScanRun(const ScanRun& run, bool restoring) {
     if (records) {
         project_->fit_result = std::move(records->model);
         if (scan_template_ && records->stash) scan_template_->fit_result = std::move(*records->stash);
+    }
+    if (run.starts) {
+        project_->sequential_fit.starts = *run.starts;
+        if (scan_template_) scan_template_->sequential_fit.starts = *run.starts;
     }
     if (projection) { projection->commit(); project_->note_edit(); }
     if ((records || projection) && fit_) fit_->invalidateFitUndo();
@@ -5496,6 +5628,34 @@ void ProjectViewModel::followScanFile(const std::string& file, std::uint64_t tok
         follow_issuing_ = false;
     } else if (fit_ != nullptr) {
         fit_->followRendered(token, file, false);
+    }
+}
+
+void ProjectViewModel::showParametricIterate(const edi::ParametricIterate& iterate) {
+    if (evolution_ != nullptr) {
+        evolution_->showIterate(iterate);
+    }
+    live_iterate_ = iterate;
+    // Evolution places each point on its dataset's extracted value (a temperature, say), read only when asked: the
+    // points of a running parametric fit ask for theirs, and the chart redraws as they come in (metadataLoaded).
+    if (scan_session_ != nullptr) {
+        for (const edi::ParametricIterate::IteratePoint& point : iterate.points) {
+            const int dataset = scan_session_->place(point.name);
+            if (dataset >= 0 && scan_session_->extracted(dataset) == nullptr) scan_session_->want(dataset, true);
+        }
+    }
+    // The selection stays where it is: the shown dataset is drawn again with its point's values from this iterate.
+    if (scan_session_ != nullptr && current_dataset_ >= 0 && patternShown()) {
+        const auto& files = scan_session_->datasets().files;
+        if (current_dataset_ < static_cast<int>(files.size())) {
+            const std::string& file = files[static_cast<std::size_t>(current_dataset_)];
+            for (const edi::ParametricIterate::IteratePoint& point : iterate.points) {
+                if (point.name == file) {
+                    viewDataset(current_dataset_, true);
+                    break;
+                }
+            }
+        }
     }
 }
 
@@ -5976,6 +6136,59 @@ std::shared_ptr<ProjectViewModel::WidgetParameterInput> ProjectViewModel::prepar
 void ProjectViewModel::finishWidgetInput(const std::shared_ptr<WidgetParameterInput>& input) noexcept {
     if (widget_input_ == input) widget_input_.reset(); // Never detach a replacement input.
 }
+std::optional<ProjectViewModel::ShownPoint> ProjectViewModel::shownPoint() const {
+    // While a scan has results, a value edit is the shown point's start for the next Fit.
+    if (!scan_ || !scan_template_ || scan_session_ == nullptr || !scanProcessed() || current_dataset_ < 0) {
+        return std::nullopt;
+    }
+    const std::vector<std::string>& files = scan_session_->datasets().files;
+    if (current_dataset_ >= static_cast<int>(files.size())) return std::nullopt;
+    return ShownPoint{files[static_cast<std::size_t>(current_dataset_)]};
+}
+
+void ProjectViewModel::announceUnfittedEdits() {
+    const auto pending = static_cast<int>(project_->sequential_fit.starts.size());
+    if (pending == 1) emit information(tr("1 edit not yet fitted will not be kept"));
+    if (pending > 1) emit information(tr("%1 edits not yet fitted will not be kept").arg(pending));
+}
+
+void ProjectViewModel::dropUsedStarts(const std::vector<std::tuple<std::string, std::string, double>>& used) {
+    const std::set<std::tuple<std::string, std::string, double>> gone(used.begin(), used.end());
+    const auto drop = [&gone](edi::ItemVec<edi::ParametricFitStart>& starts) {
+        bool changed = false;
+        for (std::size_t i = starts.size(); i-- > 0;) {
+            if (gone.contains({starts[i]->point.value(), starts[i]->parameter_unique_name.value(), starts[i]->value.get()})) {
+                starts.erase_at(i);
+                changed = true;
+            }
+        }
+        return changed;
+    };
+    bool changed = drop(project_->sequential_fit.starts);
+    if (scan_template_ && drop(scan_template_->sequential_fit.starts)) {
+        changed = true;
+        identityMemoFor(&*scan_template_).reset();
+        template_snapshot_.reset();
+    }
+    if (changed) setModified(true);
+}
+
+edi::Edit ProjectViewModel::valueEdit(edi::Parameter& parameter, double value) {
+    const bool group = edi::shared_group(*project_, parameter).size() > 1;
+    if (const std::optional<ShownPoint> point = shownPoint()) {
+        const std::vector<edi::NamedParameter> named = edi::named_parameters(*project_);
+        // A shared parameter's start is the series' one start, under its group's listed name.
+        const bool shared = edi::parametric_shared(*project_, parameter);
+        const edi::Parameter* named_by = shared ? edi::shared_leader(*project_, parameter) : &parameter;
+        for (const edi::NamedParameter& each : named) {
+            if (each.parameter != named_by) continue;
+            return edi::Edit::point_start(*project_, parameter, point->point, each.unique_name, value, shared);
+        }
+    }
+    // No results: the value is the template's.
+    return group ? edi::Edit::group_value(*project_, parameter, value) : edi::Edit::value(parameter, value);
+}
+
 QString ProjectViewModel::assign_parameter_value(edi::Parameter& parameter, double value) {
     if (const auto refusal = value_refusal(parameter); !refusal.isEmpty()) return refusal;
     const PublicationScope publication(*this);
@@ -5994,7 +6207,7 @@ QString ProjectViewModel::assign_parameter_value(edi::Parameter& parameter, doub
             if (!retired_) setLastError(refusal);
             return refusal;
         }
-        const EditOutcome result = applyRecordedEdit(edi::Edit::value(parameter, value), false);
+        const EditOutcome result = applyRecordedEdit(valueEdit(parameter, value), false);
         if (!retired_ && !result.applied) setLastError(result.message);
         return result.applied ? QString{} : result.message;
     }
@@ -6008,7 +6221,7 @@ QString ProjectViewModel::assign_parameter_value(edi::Parameter& parameter, doub
     widget_input_executing_ = true;
     const QPointer<ProjectViewModel> self(this);
     const auto release = qScopeGuard([self] { if (self) self->widget_input_executing_ = false; });
-    input->outcome = applyRecordedEdit(edi::Edit::value(parameter, value), false);
+    input->outcome = applyRecordedEdit(valueEdit(parameter, value), false);
     return input->outcome.applied ? QString{} : input->outcome.message;
 }
 
@@ -6033,7 +6246,7 @@ QString ProjectViewModel::assign_parameter_free(edi::Parameter& parameter, bool 
             return pending;
         }
         if (parameter.free.get() == free) return {};
-        const EditOutcome result = applyRecordedEdit(edi::Edit::assign(parameter.free, free), false);
+        const EditOutcome result = applyRecordedEdit(edi::shared_group(*project_, parameter).size() > 1 ? edi::Edit::group_free(*project_, parameter, free) : edi::Edit::assign(parameter.free, free), false);
         if (!retired_ && !result.applied) setLastError(result.message);
         return result.applied ? QString{} : result.message;
     }
@@ -6043,8 +6256,45 @@ QString ProjectViewModel::assign_parameter_free(edi::Parameter& parameter, bool 
     widget_input_executing_ = true;
     const QPointer<ProjectViewModel> self(this);
     const auto release = qScopeGuard([self] { if (self) self->widget_input_executing_ = false; });
-    input->outcome = applyRecordedEdit(edi::Edit::assign(parameter.free, free), false);
+    input->outcome = applyRecordedEdit(edi::shared_group(*project_, parameter).size() > 1 ? edi::Edit::group_free(*project_, parameter, free) : edi::Edit::assign(parameter.free, free), false);
     return input->outcome.applied ? QString{} : input->outcome.message;
+}
+
+bool ProjectViewModel::parameter_shared(const edi::Parameter& parameter) const {
+    return edi::parametric_shared(*project_, parameter);
+}
+
+const edi::Parameter* ProjectViewModel::parameter_shared_leader(const edi::Parameter& parameter) const {
+    return edi::shared_leader(*project_, parameter);
+}
+
+QString ProjectViewModel::parameter_share_refusal(const edi::Parameter& parameter) const {
+    return QString::fromStdString(edi::share_refusal(*project_, parameter));
+}
+
+QString ProjectViewModel::assign_parameter_shared(edi::Parameter& parameter, bool shared) {
+    if (const auto refusal = free_refusal(); !refusal.isEmpty()) return refusal;
+    const PublicationScope publication(*this);
+    if (edi::parametric_shared(*project_, parameter) == shared) return {};
+    QString pending = fit_ != nullptr && fit_->running() ? tr("The project cannot be edited while a fit is running")
+                                                         : editReadinessRefusal(false);
+    if (!pending.isEmpty()) {
+        if (!retired_) setLastError(pending);
+        return pending;
+    }
+    // The same write as the bulk Shared action (ADR-0107 decision 13): while the scan has results, a newly shared group
+    // takes the clicked copy's value as the series' one start.
+    std::vector<std::string> names;
+    for (const edi::NamedSlot& slot : edi::named_slots(*project_)) {
+        if (slot.parameter == &parameter) names.push_back(slot.unique_name);
+    }
+    if (names.empty()) return tr("Only a parameter of the project can be shared");
+    std::optional<std::string> at;
+    if (const std::optional<ShownPoint> point = shownPoint()) at.emplace(point->point);
+    const EditOutcome result =
+        applyRecordedEdit(edi::Edit::parameters_shared(*project_, std::move(names), shared, std::move(at)), false);
+    if (!retired_ && !result.applied) setLastError(result.message);
+    return result.applied ? QString{} : result.message;
 }
 
 QString ProjectViewModel::apply(const edi::Edit& change, bool structural) {
@@ -6595,7 +6845,7 @@ ProjectViewModel::EditOutcome ProjectViewModel::changeBackgroundPoint(
     } catch (...) {
         if (input && input->outcome.applied) result = input->outcome;
         if (prepared && prepared->committed) result.applied = true;
-        if (!result.applied) result.message = tr("The background edit was refused; check its current bank, ID, measured domain and relation ownership");
+        if (!result.applied) result.message = tr("The background edit was refused; check its current experiment, ID, measured domain and relation ownership");
         else { result.published = false; result.message = tr("The background edit was applied; final presentation was not confirmed"); }
     }
     if (input) input->outcome = result;
@@ -7250,6 +7500,7 @@ QString ProjectViewModel::stageScan(const QString& directory, const edi::Project
                                        scan.listing->row(staged, start), start != kStartUnknown);
             overlaySeriesPoint(*scan.shown, staged, scan.listing->datasets(), current_dataset_, start,
                                scan.listing->pointCheck(staged, current_dataset_), scan.listing->pointCheck(staged, start));
+            overlay_starts(*scan.shown, staged, scan.listing->datasets().files, current_dataset_);
         } catch (const std::exception& refusal) {
             return QString::fromUtf8(refusal.what());
         }

@@ -24,6 +24,7 @@
 #include "edi/io.hpp"
 #include "edi/parameter_walk.hpp"
 #include "edi/selectors.hpp"
+#include "edi/sharing.hpp"
 
 // Lifted verbatim out of adapter.cpp; see the header for what this file is.
 
@@ -628,7 +629,8 @@ std::vector<std::string> clear_unfittable_free(Project& project) {
     for (const auto& [parameter, name] : parameter_names(project)) {
         if (parameter->free.get() && !parameter->fit_idle && !free_refusal(*parameter).empty()) {
             notes.push_back(name + " " + free_refusal(*parameter) + "; loaded fixed");
-            parameter->free = false;
+            // A shared group keeps one flag (ADR-0107): a copy no fit can vary fixes the group.
+            for (Parameter* member : shared_group(project, *parameter)) member->free = false;
         }
     }
     return notes;
@@ -685,7 +687,7 @@ FitResultBase Project::fit_joint(const IterationCallback& on_iteration,
     // Review-1 F4: the third native entry point gets the same refusal as fit(). A scan
     // project reaching fit_joint() would fit the template's banks once and write no
     // results.csv — the same wrong-answer-to-a-different-question, one function along.
-    if (!fitting_mode.empty() && fitting_mode != "joint") {
+    if ((!fitting_mode.empty() && fitting_mode != "joint") || sequential_fit.declared()) {
         throw std::invalid_argument(
             "edi fit_joint: _fitting_mode.type is '" + fitting_mode +
             "' - this entry point serves exactly the 'joint' mode; use analysis.fit(), which "

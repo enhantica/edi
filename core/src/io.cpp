@@ -16,6 +16,7 @@
 #include "edi/background_estimate.hpp"
 #include "edi/parameter_walk.hpp"
 #include "edi/categories.hpp"
+#include "edi/sharing.hpp"
 #include "edi/display.hpp"
 #include "edi/fittability.hpp"
 #include "edi/validation.hpp"
@@ -44,6 +45,7 @@
 #include <filesystem>
 #include <functional>
 #include <fstream>
+#include <iterator>
 #include <iostream>
 #include <limits>
 #include <locale>
@@ -3900,6 +3902,23 @@ void rename_experiment(Project& project, ExperimentBase& experiment, const std::
             set->template_experiment_id = name;
         }
     }
+    // ADR-0107: the shared names and the points' starts name the experiment's parameters by unique name.
+    const std::string prefix = experiment.name.value() + ".";
+    const auto renamed = [&prefix, &name](const std::string& unique_name) {
+        return unique_name.rfind(prefix, 0) == 0 ? name + "." + unique_name.substr(prefix.size()) : unique_name;
+    };
+    // The shared names are the rows' keys, so the rows are made again, admitted whole before the live write.
+    std::vector<std::shared_ptr<ParametricSharedParameter>> shared_rows;
+    for (const auto& row : project.sequential_fit.shared) {
+        auto copy = std::make_shared<ParametricSharedParameter>();
+        copy->parameter_unique_name = renamed(row->parameter_unique_name.value());
+        shared_rows.push_back(std::move(copy));
+    }
+    ItemVec<ParametricSharedParameter> prepared_shared(std::move(shared_rows));
+    project.sequential_fit.shared = std::move(prepared_shared);
+    for (const auto& row : project.sequential_fit.starts) {
+        row->parameter_unique_name = renamed(row->parameter_unique_name.value());
+    }
     experiment.name = name;
 }
 
@@ -4032,6 +4051,12 @@ static Project load_project_folder(const std::string& directory, const WarningSi
                                    ProjectLoadPolicy policy=ProjectLoadPolicy::Complete, bool assistant_result=false,
                                    const std::string& data_root = {}) {
     const bool whole=policy==ProjectLoadPolicy::Complete;
+    // A parametric fit's publication a crash interrupted is settled before the results are read; a folder that
+    // cannot be written is read as it is.
+    try {
+        recover_scan_publication(directory);
+    } catch (const std::exception&) {  // NOLINT(bugprone-empty-catch)
+    }
     // The project file being read, for a sourced sink (relative to the project; empty between files).
     std::string source;
     // One exit for the loader's warnings — the sourced sink while a file's text is applied, else the sink when given,
@@ -4218,11 +4243,13 @@ static Project load_project_folder(const std::string& directory, const WarningSi
             // Review-1 F4: the closed set is enforced at LOAD on this side too. Without it a
             // lookalike survived loading and then performed one plausible template fit through
             // the single-bank path, writing no scan CSV — a wrong answer that looked right.
-            if (!is_declared_fitting_mode(*mode)) {
+            // A project saved while the scan's Joint fit was spelled `parametric` reads as Joint; no release wrote it.
+            const std::string read = *mode == "parametric" ? std::string("joint") : *mode;
+            if (!is_declared_fitting_mode(read)) {
                 throw IoError("_fitting_mode.type is '" + *mode + "', expected " +
                               declared_fitting_modes() + ": " + analysis_file.string());
             }
-            project.fitting_mode = *mode;
+            project.fitting_mode = read;
         }
         // ADR-0036 §7: the correlation chart's threshold and the pattern chart's x axis, each checked by crysta's rules.
         try {
@@ -4419,6 +4446,14 @@ static Project load_project_folder(const std::string& directory, const WarningSi
                 project.sequential_fit.experiments.push_back(member);
             }
         }
+        if (const Loop* shared = block.loop_with("_parametric_fit_shared.parameter_unique_name")) {
+            for (const auto& row : shared->rows) {
+                ParametricSharedParameter parameter;
+                parameter.parameter_unique_name = loop_cell(
+                    *shared, row, "_parametric_fit_shared.parameter_unique_name", analysis_file.string());
+                project.sequential_fit.shared.push_back(std::move(parameter));
+            }
+        }
         if (const Loop* sets = block.loop_with("_experiment_set.id")) {
             for (const auto& row : sets->rows) {
                 ExperimentSet set;
@@ -4495,8 +4530,9 @@ static Project load_project_folder(const std::string& directory, const WarningSi
                 project.constraints.push_back(constraint);
             }
         }
-        // edi ADR-0081: independent without a scan fits each experiment alone; only sequential needs one.
-        if (project.fitting_mode == "sequential" && !project.sequential_fit.declared()) {
+        // edi ADR-0081: independent without a scan fits each experiment alone; sequential needs one.
+        if (project.fitting_mode == "sequential" &&
+            !project.sequential_fit.declared()) {
             throw IoError("_fitting_mode.type is '" + project.fitting_mode +
                           "' but no _sequential_fit.data_dir is declared - a scan fit needs the "
                           "scan directory: " +
@@ -5116,7 +5152,12 @@ static Project load_project_folder(const std::string& directory, const WarningSi
     }
     // A free mark a fit could not honour (a descriptor, a value this fit's data cannot determine, one crysta cannot
     // differentiate) loads fixed, its value and s.u. kept, and is said (ADR-0053).
+    // ADR-0107: a shared parameter counts as free; a name that cannot be shared is dropped. Settled first, so the
+    // unfittable marks are cleared from the flags the groups end with, and a group stays one flag (the group rule).
     source.clear();
+    for (const std::string& note : settle_parametric_shared(project)) {
+        warn("crysta.domain.shared_ignored: " + note);
+    }
     for (const std::string& note : clear_unfittable_free(project)) {
         warn("crysta.domain.unfittable_free_ignored: " + note);
     }

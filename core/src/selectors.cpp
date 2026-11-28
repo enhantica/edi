@@ -110,7 +110,7 @@ std::vector<std::string> supported_fitting_modes() {
 
 std::vector<std::string> applicable_fitting_modes(const Project& project) {
     if (project.sequential_fit.declared()) {
-        return {"sequential", "independent", "single"};
+        return {"sequential", "independent", "joint", "single"};
     }
     if (project.experiments.size() > 1) {
         return {"joint", "independent"};  // independent: each experiment alone (ADR-0081)

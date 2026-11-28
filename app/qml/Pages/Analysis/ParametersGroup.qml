@@ -52,19 +52,22 @@ SideBarGroup {
     readonly property color freeTitleColor: !measured ? EaStyle.Colors.themeForegroundMinor : freeTitleHovered ? EaStyle.Colors.themeAccent : EaStyle.Colors.themeForeground
     // A cell's margin on the left, so "Max" and "Free" are an em apart (T1).
     readonly property real freeColumnWidth: Math.ceil(AppSizes.tableCellMargin + freeTitleText.advanceWidth + freeGap + freeArrowText.advanceWidth + freeInset)
-    // "Same for all" (edi ADR-0087 point 3): a switch on each experiment parameter tying it in every other experiment of
-    // its set to the template's, through alias and constraint rows. Not shown for now: the parametric fit will offer it
-    // through the Free box (ADR-0087, amended 2026-11-17).
-    readonly property bool sameShown: false
-    readonly property real sameColumnWidth: sameShown ? Math.ceil(sameTitleText.advanceWidth) + AppSizes.tableCellMargin * 2 + EaStyle.Sizes.fontPixelSize : 0
+    // Shared (edi ADR-0107): one value for every dataset of the scan or for every experiment, in a Joint fit.
+    // Shown in that mode only, beside Free, and independent of it: a shared parameter has one value for every dataset,
+    // fixed or free (owner, 2026-11-26).
+    readonly property bool sharedShown: measured && project !== null && project.analysis !== null && project.analysis.fittingMode === "joint"
+    // Sized by Free's rule: a cell margin, the title, the gap, the arrow and the inset.
+    readonly property real sharedColumnWidth: sharedShown ? Math.ceil(AppSizes.tableCellMargin + sharedTitleText.advanceWidth + freeGap + freeArrowText.advanceWidth + freeInset) : 0
+    property bool sharedTitleHovered: false
+    readonly property color sharedTitleColor: !measured ? EaStyle.Colors.themeForegroundMinor : sharedTitleHovered ? EaStyle.Colors.themeAccent : EaStyle.Colors.themeForeground
     // Read again whenever the relation rows change.
     readonly property int relationRows: project && project.analysis ? project.analysis.constraints.count + project.analysis.aliases.count : 0
 
     TextMetrics {
-        id: sameTitleText
+        id: sharedTitleText
         font.family: EaStyle.Fonts.fontFamily
         font.pixelSize: EaStyle.Sizes.fontPixelSize
-        text: qsTr("Same for all")
+        text: qsTr("Shared")
     }
 
     TextMetrics {
@@ -420,7 +423,7 @@ SideBarGroup {
             // bounds, which are short (0, 1, inf). A fitted run changes values, never a column, so a fit measures no row.
             // Its columns by kind, measured from their content (DataTable.columnKinds); the widths are this table's
             // own rule below, which drops columns in a narrow sidebar.
-            columnKinds: ["index", "name", "value", "value", "unit", "uncertainty", "change", "number", "number"].concat(group.measured ? ["control", "control"] : []).concat(group.sameShown ? ["control"] : [])
+            columnKinds: ["index", "name", "value", "value", "unit", "uncertainty", "change", "number", "number"].concat(group.measured ? ["control", "control"] : []).concat(group.sharedShown ? ["control"] : [])
             onRowActivated: row => group.selected = parameterFilter.parameterAt(row)
 
             // A layout of its own (the owner, 2026-10-27): every column as wide as its type (ADR-0103 decision 4), the
@@ -480,8 +483,8 @@ SideBarGroup {
             // A dropped column takes no width and no spacing: only the shown columns' gaps are counted, so their
             // width goes to the name rather than to empty space (the owner, 2026-11-22).
             function roomAt(tableWidth: real, dropped: var): real {
-                const shown = (dropped.includes(0) ? 0 : 1) + 1 + fittedColumns.filter(column => !dropped.includes(column)).length + (group.measured ? 1 : 0) + (group.sameShown ? 1 : 0);
-                return tableWidth - rowPadding * 2 - EaStyle.Sizes.borderThickness * 2 - EaStyle.Sizes.tableColumnSpacing * (shown - 1) - (dropped.includes(0) ? 0 : numberColumnWidth) - freeWidth - group.sameColumnWidth - nameMinimum;
+                const shown = (dropped.includes(0) ? 0 : 1) + 1 + fittedColumns.filter(column => !dropped.includes(column)).length + (group.measured ? 1 : 0) + (group.sharedShown ? 1 : 0);
+                return tableWidth - rowPadding * 2 - EaStyle.Sizes.borderThickness * 2 - EaStyle.Sizes.tableColumnSpacing * (shown - 1) - (dropped.includes(0) ? 0 : numberColumnWidth) - freeWidth - group.sharedColumnWidth - nameMinimum;
             }
             readonly property real fittedRoom: roomAt(width, droppedColumns)
             function droppedAt(tableWidth: real): var {
@@ -580,7 +583,7 @@ SideBarGroup {
             // the sidebar takes from about 1280 px up (AppSizes.sideBarFullWidth; the owner, 2026-11-22), noted with the
             // sidebar's own insets. (With the table's full margin on every column it came to about 950 px, leaving the
             // main view less than its tab bar at 1280.)
-            readonly property real allColumnsWidth: rowPadding * 2 + EaStyle.Sizes.borderThickness * 2 + EaStyle.Sizes.tableColumnSpacing * (9 + (group.sameShown ? 1 : 0)) + numberColumnWidth + freeWidth + group.sameColumnWidth + nameContent + fittedColumns.reduce((sum, column) => sum + contentOf(column), 0)
+            readonly property real allColumnsWidth: rowPadding * 2 + EaStyle.Sizes.borderThickness * 2 + EaStyle.Sizes.tableColumnSpacing * (9 + (group.sharedShown ? 1 : 0)) + numberColumnWidth + freeWidth + group.sharedColumnWidth + nameContent + fittedColumns.reduce((sum, column) => sum + contentOf(column), 0)
             // The sidebar's own insets around this table.
             readonly property real sideBarInsets: EaStyle.Sizes.groupBoxSpacing + EaStyle.Sizes.sideBarPadding
             // The table width that shows exactly the columns left after `dropped` (each at its fixed width, the name at
@@ -633,7 +636,7 @@ SideBarGroup {
             // Past one column spacing the spare is an empty column before Free (or the row's right end without it);
             // up to one spacing the name holds it (the owner, 2026-11-23: at most one spacing past the widest name).
             // The row without the spare: the name at the smaller of its content and its room.
-            readonly property var baseColumns: [shows(0) ? numberColumnWidth : 0, Math.min(nameRoom, Math.ceil(nameContent))].concat(fittedColumns.map(column => fittedColumn(column))).concat(group.measured ? [freeWidth] : []).concat(group.sameShown ? [group.sameColumnWidth] : [])
+            readonly property var baseColumns: [shows(0) ? numberColumnWidth : 0, Math.min(nameRoom, Math.ceil(nameContent))].concat(fittedColumns.map(column => fittedColumn(column))).concat(group.sharedShown ? [group.sharedColumnWidth] : []).concat(group.measured ? [freeWidth] : [])
             // What the row leaves of the table's inner width, its spacings counted between the columns that take width.
             readonly property real leftOver: {
                 const taking = baseColumns.filter(column => column > 0.5);
@@ -649,7 +652,7 @@ SideBarGroup {
             readonly property bool spares: afterName > EaStyle.Sizes.tableColumnSpacing + 1
             readonly property real spareWidth: group.measured && spares ? afterName - EaStyle.Sizes.tableColumnSpacing : 0
             readonly property real nameWidth: baseColumns[1] + nameGrow + (spares ? 0 : Math.max(0, afterName))
-            readonly property var wantedColumns: [shows(0) ? numberColumnWidth : 0, nameWidth].concat(fittedColumns.map(column => fittedColumn(column))).concat(group.measured ? [spareWidth, freeWidth] : []).concat(group.sameShown ? [group.sameColumnWidth] : [])
+            readonly property var wantedColumns: [shows(0) ? numberColumnWidth : 0, nameWidth].concat(fittedColumns.map(column => fittedColumn(column))).concat(group.measured ? [spareWidth] : []).concat(group.sharedShown ? [group.sharedColumnWidth] : []).concat(group.measured ? [freeWidth] : [])
             // Applied a moment later: new widths remake rows and measure them again, which would otherwise feed back
             // into the widths while they are being worked out.
             function applyColumns() {
@@ -732,6 +735,50 @@ SideBarGroup {
                     visible: group.measured && table.spareWidth > 0
                     height: 1
                 }
+                // Shared (edi ADR-0107) copies Free's title: the same word-and-arrow button, colours and menu kind.
+                EaComponents.ListViewLabel {
+                    id: sharedTitle
+                    elide: Text.ElideRight
+                    readonly property bool keepsAlignment: true
+                    objectName: "parameters.sharedHeader"
+                    visible: group.sharedShown
+                    horizontalAlignment: Text.AlignRight
+                    rightPadding: sharedArrow.width + group.freeGap + group.freeInset
+                    color: group.sharedTitleColor
+                    text: qsTr("Shared")
+
+                    readonly property SharedHeaderMenu menu: sharedMenu
+
+                    EaElements.Label {
+                        id: sharedArrow
+                        x: sharedTitle.width - sharedTitle.rightPadding + group.freeGap
+                        anchors.verticalCenter: parent.verticalCenter
+                        font: freeArrowProbe.font
+                        color: group.sharedTitleColor
+                        text: freeArrowProbe.text
+                    }
+
+                    MouseArea {
+                        id: sharedArea
+                        parent: sharedTitle.parent ? sharedTitle.parent.parent : sharedTitle
+                        z: 1
+                        x: sharedTitle.parent ? sharedTitle.parent.x + sharedTitle.x : 0
+                        y: sharedTitle.y
+                        width: sharedTitle.width
+                        height: sharedTitle.height
+                        enabled: group.sharedShown
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onContainsMouseChanged: group.sharedTitleHovered = containsMouse
+                        onClicked: sharedMenu.open()
+                    }
+                    SharedHeaderMenu {
+                        id: sharedMenu
+                        header: sharedTitle
+                        project: group.project
+                        filter: parameterFilter
+                    }
+                }
                 // The title is a button, marked by the combo boxes' arrow: a click frees or fixes every row the
                 // filters show, as one Undo step (the owner, 2026-10-11). The arrow ends where the right-aligned check
                 // boxes do; its menu opens centred, so the title is as wide as itself.
@@ -780,16 +827,10 @@ SideBarGroup {
                     }
                     FreeHeaderMenu {
                         id: freeMenu
+                        header: freeTitle
                         project: group.project
                         filter: parameterFilter
                     }
-                }
-                EaComponents.ListViewLabel {
-                    elide: Text.ElideRight
-                    objectName: "parameters.sameHeader"
-                    visible: group.sameShown
-                    horizontalAlignment: Text.AlignHCenter
-                    text: qsTr("Same for all")
                 }
             }
 
@@ -959,6 +1000,28 @@ SideBarGroup {
                     visible: group.measured && table.spareWidth > 0
                     height: 1
                 }
+                Item {
+                    property int horizontalAlignment: Text.AlignRight
+                    visible: group.sharedShown
+                    height: parent.height
+
+                    // Enabled where the parameter can be shared, its reason otherwise, as Free shows one that cannot be fitted.
+                    EaComponents.ListViewCheckBox {
+                        id: sharedBox
+                        anchors.right: parent.right
+                        horizontalAlignment: Text.AlignRight
+                        objectName: `parameters.shared.${row.index}`
+                        color: AppColors.shared
+                        enabled: group.measured && row.parameter !== null && (row.parameter.shareReason === "" || row.parameter.shared)
+                        checked: row.parameter ? row.parameter.shared : false
+                        // The row Shared is ticked on stays and carries the group.
+                        onToggled: {
+                            row.parameter.shared = checked;
+                            checked = Qt.binding(() => row.parameter ? row.parameter.shared : false);
+                        }
+                        ToolTip.text: row.parameter && row.parameter.shareReason !== "" ? qsTr("Cannot be shared: %1").arg(row.parameter.shareReason) : ""
+                    }
+                }
                 // Enabled where a fit can vary the value, or while it is free so a flag set before a change can be
                 // cleared; otherwise disabled, its tooltip naming why (edi ADR-0053). Without measured data every box
                 // is disabled.
@@ -973,30 +1036,12 @@ SideBarGroup {
                         anchors.right: parent.right
                         horizontalAlignment: Text.AlignRight
                         objectName: `parameters.free.${row.index}`
+                        // The free value's green.
+                        color: EaStyle.Colors.green
                         enabled: group.measured && row.parameter !== null && (row.parameter.fittable || row.parameter.free)
                         checked: row.parameter ? row.parameter.free : false
                         onToggled: row.parameter.free = checked
                         ToolTip.text: row.parameter && !row.parameter.fittable ? qsTr("Cannot be fitted: %1").arg(row.parameter.fitReason) : ""
-                    }
-                }
-                Item {
-                    property int horizontalAlignment: Text.AlignHCenter
-                    visible: group.sameShown
-                    height: parent.height
-
-                    EaComponents.ListViewCheckBox {
-                        id: sameBox
-                        anchors.fill: parent
-                        horizontalAlignment: Text.AlignHCenter
-                        objectName: `parameters.same.${row.index}`
-                        readonly property bool applies: group.sameShown && group.relationRows >= 0 && group.project.sameForAllApplies(row.parameter)
-                        visible: applies
-                        checked: applies && group.relationRows >= 0 && group.project.sameForAll(row.parameter)
-                        onToggled: {
-                            group.project.setSameForAll(row.parameter, checked);
-                            checked = Qt.binding(() => sameBox.applies && group.relationRows >= 0 && group.project.sameForAll(row.parameter));
-                        }
-                        ToolTip.text: qsTr("The same value in every experiment of the set, through a constraint each")
                     }
                 }
             }

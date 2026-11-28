@@ -44,6 +44,10 @@ struct ScanDatasets {
 /// an undeclared scan, a project with no directory, a missing directory or no matching file.
 ScanDatasets scan_datasets(const Project& project);
 
+/// Finishes or undoes a parametric fit's publication of `directory`'s results that a crash interrupted;
+/// nothing when none was. Throws when the folder cannot be changed.
+void recover_scan_publication(const std::string& directory);
+
 /// Every file of the scan's folder its datasets name: a scan's files, or a series' files of every point, incomplete
 /// points included. What copying a linked scan into the project carries and what its size counts (ADR-0088 point 3).
 std::vector<std::string> scan_data_files(const ScanDatasets& datasets);
@@ -127,6 +131,9 @@ struct ScanResultIndex {
     std::vector<ScanParameterColumns> parameters;
     /// Each point's agreement factors, in the file's order; none in an older file.
     std::vector<ScanFactorColumn> factors;
+    /// The fixed inputs a point's fit used: `input.<column>` cells after every other column, a value without an
+    /// s.u., by the parameter's results column name (the `input.` taken off).
+    std::vector<ScanFactorColumn> inputs;
     std::vector<Row> rows;      ///< by dataset place
     std::int64_t end = 0;       ///< the offset after the last complete row (0: no file)
     std::size_t fitted = 0;     ///< datasets with a row

@@ -57,18 +57,21 @@ updates during a scan**, and kept on this computer:
   are drawn after the run ends.
 - **Only at the end**: no pattern while the run fits; the last file is shown when it ends.
 
-Several files can be fitted at once: set **Parallel fits in a scan** in Preferences, Performance
-(1 by default, kept on this computer, not in the project). The files then go in groups of that
-size, and every file of a group starts from where the previous group ended, each on one thread. A
-scan finishes sooner, but its results can differ a little from fitting the files one after
-another. The Analysis page's Settings tab shows the count under **Performance**, with a link to
-Preferences.
+**Cores for fitting** in Preferences, Performance (Auto, every core, by default; kept on this
+computer, not in the project) says how many cores a fit uses. A sequential scan uses them inside
+each file's calculation, since each file starts from the one before; an independent scan fits that
+many files at once, each on one core; a parametric fit fits that many patterns at once. The
+Analysis page's Settings tab shows the count under **Performance**, with a link to Preferences.
 
 The fitting button reads **Start fitting** while no file is fitted and **Continue fitting** while
 some are not, for example after **Stop fitting**, which keeps the files fitted so far. Continuing
-fits from the first unfitted file. Once every file is fitted the button is disabled. **Reset
-fits**, between the fitting button and Follow, clears every file's result so the scan can be
-fitted again; it is one Undo step. Undo after a run puts back the results the run replaced.
+fits from the first unfitted file. Once every file is fitted, fitting again fits every file anew,
+each starting from its own latest result, never from another file's. **Reset fits**, between the
+fitting button and Follow, clears every file's result, so the next fit starts every file from the
+template again; it is one Undo step. Undo after a run puts back the results the run replaced.
+
+A scan fit never changes the template: its values stay as they were, each dataset shows its own
+result, and saving after a fit writes the template unchanged.
 
 When the run ends, the results window shows its outcome, the files fitted, the converged and
 failed counts and the χ² range, with **Show evolution** to see the results as a chart.

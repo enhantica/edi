@@ -293,7 +293,7 @@ void ScanViewModel::setScan(const ScanSession* session, const edi::Project* proj
 
 void ScanViewModel::setJoint(const edi::Project* project) {
     // Several experiments fitted together or each alone (independent without a scan, ADR-0081).
-    const std::string fitting = project != nullptr ? edi::effective_fitting_mode(*project) : std::string();
+    const std::string fitting = project != nullptr ? edi::fit_kind(*project) : std::string();
     const bool joint = project != nullptr && project->experiments.size() >= 2 &&
                        (fitting == "joint" || (fitting == "independent" && !project->sequential_fit.declared()));
     if (!joint && !joint_) {

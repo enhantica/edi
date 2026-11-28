@@ -5,6 +5,7 @@
 #include <QMetaObject>
 #include <QPointer>
 #include <algorithm>
+#include <set>
 #include <cmath>
 #include <cstdint>
 #include <exception>
@@ -16,7 +17,9 @@
 
 #include "background.hpp"
 #include "edi/categories.hpp"
+#include "edi/selectors.hpp"
 #include "edi/scan.hpp"
+#include "edi/sharing.hpp"
 
 namespace edi_app {
 
@@ -91,6 +94,56 @@ void EvolutionViewModel::finishRow() {
     }
 }
 
+void EvolutionViewModel::showIterate(const edi::ParametricIterate& iterate) {
+    live_ = iterate;
+    syncFitted();
+    finishRow();
+}
+
+void EvolutionViewModel::clearIterate() {
+    if (!live_) return;
+    live_.reset();
+    syncFitted();
+    rebuild();
+}
+
+std::vector<EvolutionViewModel::Point> EvolutionViewModel::livePoints() const {
+    std::vector<Point> live;
+    if (!live_ || session_ == nullptr || current_ < 0 || current_ >= names_.size()) {
+        return live;
+    }
+    const std::string name = names_[current_].toStdString();
+    // Per experiment a row names an experiment's parameter; the iterate names it by its full name, the experiment's
+    // first: the shown experiment's, or each one's when every bank is shown.
+    std::vector<std::pair<std::string, int>> keys;
+    if (per_experiment_) {
+        for (int e = 0; e < experiments_.size(); ++e) {
+            if (current_experiment_ >= 0 && e != current_experiment_) continue;
+            keys.emplace_back(experiments_[e].toStdString() + "." + name, allBanks() ? e : -1);
+        }
+    } else {
+        keys.emplace_back(name, -1);
+    }
+    for (const edi::ParametricIterate::IteratePoint& each : live_->points) {
+        const int dataset = session_->place(each.name);
+        if (dataset < 0) continue;
+        const std::optional<double> x = xOf(dataset, session_->extracted(dataset));
+        for (const auto& [key, bank] : keys) {
+            const auto value = each.values.find(key);
+            if (value == each.values.end()) continue;
+            Point point;
+            point.dataset = dataset;
+            point.bank = bank;
+            point.error = std::numeric_limits<double>::quiet_NaN();
+            point.y = edi::scan_display_value(name, value->second);
+            if (!x || !drawable(*x, point.y, point.error)) continue;
+            point.x = *x;
+            live.push_back(point);
+        }
+    }
+    return live;
+}
+
 void EvolutionViewModel::setScan(const ScanSession* session, const edi::Project* project,
                                  const QString& extracted_title) {
     session_ = session;
@@ -155,7 +208,8 @@ std::optional<EvolutionViewModel::Point> EvolutionViewModel::templatePoint() con
 }
 
 void EvolutionViewModel::syncFitted() {
-    const bool fitted = scanRows() || templatePoint().has_value();
+    // A running parametric fit's iterate counts as fitted values (ADR-0107).
+    const bool fitted = scanRows() || templatePoint().has_value() || live_.has_value();
     if (fitted != fitted_) {
         fitted_ = fitted;
         emit fittedChanged();
@@ -247,15 +301,34 @@ bool EvolutionViewModel::syncNames() {
     // kept, else the first. Per experiment, the columns results_experiments.csv records
     // (edi::evolution_experiment_parameters).
     QStringList columns;
+    // ADR-0089 point 1: an experiment parameter tied equal across experiments is listed once, under Shared, and read
+    // from its leader's rows; Per experiment leaves it out.
+    shared_paths_.clear();
+    if (project_ != nullptr && series()) {
+        for (const auto& [path, leader] : edi::experiment_shared_paths(*project_)) {
+            shared_paths_.insert(QString::fromStdString(path), static_cast<int>(leader));
+        }
+    }
     if (project_ != nullptr && per_experiment_) {
         for (const std::string& name : edi::evolution_experiment_parameters(*project_)) {
-            columns.append(QString::fromStdString(name));
+            if (!shared_paths_.contains(QString::fromStdString(name))) columns.append(QString::fromStdString(name));
         }
     } else if (project_ != nullptr) {
         static const edi::ScanResultIndex kNoResults;
+        // ADR-0107: a parameter shared across the series has one value, so it is no curve.
+        std::set<std::string> series_shared;
+        if (edi::fit_kind(*project_) == "parametric") {
+            for (const auto& row : project_->sequential_fit.shared) series_shared.insert(row->parameter_unique_name.value());
+        }
         for (const std::string& name :
              edi::evolution_parameters(*project_, session_ != nullptr ? session_->index() : kNoResults)) {
-            columns.append(QString::fromStdString(name));
+            if (!series_shared.contains(name)) columns.append(QString::fromStdString(name));
+        }
+        const std::vector<std::string> recorded = edi::evolution_experiment_parameters(*project_);
+        for (auto shared = shared_paths_.cbegin(); shared != shared_paths_.cend(); ++shared) {
+            if (std::find(recorded.begin(), recorded.end(), shared.key().toStdString()) != recorded.end()) {
+                columns.append(shared.key());
+            }
         }
     }
     const QString shown = current_ >= 0 && current_ < names_.size() ? names_[current_] : QString();
@@ -265,7 +338,8 @@ bool EvolutionViewModel::syncNames() {
         QStringList groups;
         names_ = ordered(columns_, groups);
         QStringList labels;
-        for (const QString& name : names_) labels.append(labeller_ ? labeller_(name, per_experiment_) : QString());
+        for (const QString& name : names_)
+            labels.append(labeller_ ? labeller_(name, per_experiment_ || shared_paths_.contains(name)) : QString());
         labels_ = labels;
         parameters_->setNames(names_, labels, groups);
     }
@@ -332,6 +406,10 @@ void EvolutionViewModel::addRow(int dataset, const std::vector<std::string>& cel
         if (added) {
             finishRow();
         }
+        return;
+    }
+    if (shared_paths_.contains(names_[current_])) {  // read from the leader's rows, as the rebuild does
+        rebuild();
         return;
     }
     const std::string name = names_[current_].toStdString();
@@ -470,10 +548,11 @@ void EvolutionViewModel::rebuild() {
     read.places = session_->places();
     read.index = session_->indexSnapshot();  // shared, not copied: a long scan's index is large
     read.datasets = session_->datasets();
-    if (per_experiment_) {
+    read.name = names_[current_].toStdString();
+    read.leader = per_experiment_ ? -1 : shared_paths_.value(names_[current_], -1);
+    if (per_experiment_ || read.leader >= 0) {
         read.rule = session_->bankRule(*project_);
     }
-    read.name = names_[current_].toStdString();
     read.by_value = x_mode_ == 0 && !extracted_title_.isEmpty();
     read.per_experiment = per_experiment_;
     read.experiment = current_experiment_;
@@ -517,6 +596,14 @@ std::vector<EvolutionViewModel::Point> EvolutionViewModel::readPoints(const Read
     // the points thinning the whole column keeps, without ever holding it.
     int bank = -1;
     const auto points = [&](const std::function<void(const edi::EvolutionPoint&)>& visit) {
+        if (read.leader >= 0) {  // a shared experiment parameter: its leader's rows
+            edi::evolution_experiment_series(*read.project, read.places, *read.index, read.rule, read.datasets,
+                                             read.name, read.by_value,
+                                             [&](std::size_t experiment, const edi::EvolutionPoint& point) {
+                                                 if (experiment == static_cast<std::size_t>(read.leader)) visit(point);
+                                             });
+            return;
+        }
         if (read.per_experiment) {
             edi::evolution_experiment_series(*read.project, read.places, *read.index, read.rule, read.datasets,
                                              read.name, read.by_value,
@@ -621,6 +708,11 @@ void EvolutionViewModel::thin() {
 }
 
 bool EvolutionViewModel::finish() {
+    // A running parametric fit's latest iterate is what the chart shows, also right after it is opened or rebuilt.
+    if (std::vector<Point> live = livePoints(); !live.empty()) {
+        template_point_.reset();
+        points_ = std::move(live);
+    }
     thin();
     double x_min = 0.0, x_max = 1.0, y_min = 0.0, y_max = 1.0;
     if (!points_.empty()) {

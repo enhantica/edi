@@ -775,7 +775,8 @@ def assert_scan_status(text):
 
 };const qsTr=x=>x;
 const FitOutcomes={separator:' | '};
-const bar={fit:{running:true,scanning:true,ok:7,fail:2,scanOk:7,scanFailed:2,elapsed:'TIME',
+const bar={fit:{running:true,scanning:true,parametric:false,scanSummary:true,
+ok:7,fail:2,scanOk:7,scanFailed:2,elapsed:'TIME',
 
 eta:'ETA',chi:'CHI',goodnessOfFit:'CHI',completed:12,total:24,fraction:0.5,
 
@@ -784,7 +785,7 @@ const fitArea={};const outcome='success';const outdated=false;
 const EaStyle={Colors:{red:'red',green:'green',themeForeground:'neutral',
 statusBarIconForeground:'neutral'}};"""
     running = property_value(area, 'running')
-    states = [(True, True), (True, False), (False, True)]
+    states = [(True, True, False), (True, False, False), (False, True, False), (True, True, True)]
     prop = 'fraction' if re.search(r'(?m)^\s*fraction:', progress) else 'value'
     maximum = property_value(progress, 'to') if re.search(r'(?m)^\s*to:', progress) else '1'
     expressions = [
@@ -796,15 +797,18 @@ statusBarIconForeground:'neutral'}};"""
     ]
     context += '\nconst states=' + json.dumps(states) + ';'
     actual = evaluate(
-        'states.map(([run,scan])=>{ bar.fit.running=run; bar.fit.scanning=scan; '
+        'states.map(([run,scan,parametric])=>{ bar.fit.running=run; bar.fit.scanning=scan; '
+        'bar.fit.parametric=parametric; '
         'fitArea.running=('
         + running
-        + '); fitArea.summary=!fitArea.running; return ['
+        + '); fitArea.summary=!fitArea.running; fitArea.scanning=('
+        + property_value(area, 'scanning')
+        + '); return ['
         + ','.join(expressions)
         + '];})',
         context,
     )
-    for (run, scan), (visible, terminal, striped, fill, maximum) in zip(
+    for (run, scan, parametric), (visible, terminal, striped, fill, maximum) in zip(
         states, actual, strict=True
     ):
         assert visible == run, (
@@ -814,10 +818,10 @@ statusBarIconForeground:'neutral'}};"""
             'Status bar wiring: outcome visibility follows the terminal producer'
         )
         if run:
-            assert striped == (not scan), (
-                'Status bar wiring: single fits stripe and scans have determinate fill'
+            assert striped == (not scan or parametric), (
+                'Single fits and Joint scans stripe, while per-file scans have determinate fill'
             )
-            if scan:
+            if scan and not parametric:
                 assert isinstance(fill, (int, float)) and isinstance(maximum, (int, float)), (
                     'Status bar wiring: processed count division produces a numeric fill'
                 )

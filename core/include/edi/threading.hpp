@@ -2,6 +2,9 @@
 #ifndef EDI_THREADING_HPP
 #define EDI_THREADING_HPP
 
+#include <memory>
+#include <string>
+
 namespace edi {
 
 // Forward to the engine's shipped threading applier. The effective seam for an edi process is
@@ -37,6 +40,40 @@ int engine_threads_setting() noexcept;
 // count it can change a scan's results, so it is one value for the whole process, read when a scan starts.
 void set_scan_workers(int count) noexcept;
 int scan_workers_setting() noexcept;
+
+// The app's one "Cores for fitting" preference: 0 is Auto, every core of the machine, N >= 1 that many. Every
+// calculation runs on that many threads, and each fit spends them by its mode (apply_cores_for_mode). Until it is set,
+// the two settings above are used as they are (the CLI and Python set them themselves).
+void set_cores_for_fitting(int count) noexcept;
+// The cores in effect, Auto resolved; 0 while the preference is unset.
+int cores_for_fitting() noexcept;
+// Before a fit of `mode`, once the preference is set: Independent fits that many files at once and Parametric that many
+// points (ADR-0107 decision 11); Sequential, single and Joint fit one at a time, each calculation on that many threads.
+void apply_cores_for_mode(const std::string& mode) noexcept;
+
+// One fit's cores, taken from the preference and the fit's mode when the fit is asked for, so a preference or mode
+// changed while it runs, or another fit's, does not change it. Zero fields: the preference is unset.
+struct CoresBudget {
+    int threads = 0;       // each calculation's threads
+    int scan_workers = 0;  // the files or points of a scan fitted at once; 0 for a fit that is not a scan
+};
+CoresBudget cores_budget_for_mode(const std::string& mode) noexcept;
+
+// Holds a budget for one fit on the calling thread: the calculation threads and the scan workers are both that thread's
+// own, so another fit, here or on another thread, never changes them.
+class ScopedCores {
+   public:
+    explicit ScopedCores(const CoresBudget& budget);
+    ~ScopedCores();
+    ScopedCores(const ScopedCores&) = delete;
+    ScopedCores& operator=(const ScopedCores&) = delete;
+    ScopedCores(ScopedCores&&) = delete;
+    ScopedCores& operator=(ScopedCores&&) = delete;
+
+   private:
+    struct Held;
+    std::unique_ptr<Held> held_;
+};
 
 }  // namespace edi
 

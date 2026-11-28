@@ -64,10 +64,16 @@ def assert_work(actual, expected, stage, common_hash=None):
 
 
 @pytest.fixture(scope='module')
-def projection_execution(tmp_path_factory):
+def scan_app_harness(tmp_path_factory):
     root = tmp_path_factory.mktemp('scan-app-execution')
     library, preload = _build_native_observer(root)
-    harness = Harness(root, library, preload)
+    return Harness(root, library, preload)
+
+
+@pytest.fixture(scope='module')
+def projection_execution(scan_app_harness):
+    harness = scan_app_harness
+    root = harness.scratch
     observed = {'harness': harness, 'root': root, 'modes': {}}
     full_observations(harness, root, observed)
     return observed
@@ -183,7 +189,6 @@ def transition_observations(harness, root, observed):
     )
     single = copy_project(FULL, root / 'single', iterations=1)
     observed['single'] = harness.invoke('single', single, 17)
-    observed['joint'] = harness.invoke('joint', copy_project(FULL, root / 'joint'))
     observed['singleReopened'] = harness.invoke('inventory', Path(str(single) + '-saved'))
     observed['bundle'] = harness.invoke(
         'bundle', 'pd-neut-cwl_cosio-d20_scan-213f', root / 'saved-bundle'
@@ -773,11 +778,9 @@ def test_original_bundle_or_readonly_tree_is_unchanged_and_reopens_fresh(executi
             )
 
 
-def test_joint_mode_cannot_be_selected_in_a_scan_project(execution):
-    joint = execution['joint']
-    assert joint['after'] == joint['before'] == 'sequential', (
-        'Stop and continue: joint mode must be refused at the real scan-project edit boundary'
+def test_joint_can_be_selected_in_a_scan_project(tmp_path, scan_app_harness):
+    joint = scan_app_harness.invoke('joint', copy_project(SMALL, tmp_path / 'joint'))
+    assert (joint['before'], joint['after']) == ('sequential', 'joint'), (
+        'The real scan-project model switches from Sequential to Joint'
     )
-    assert joint['error'], (
-        'Stop and continue: a refused joint-mode choice must explain the refusal'
-    )
+    assert not joint['error'], 'A valid Joint scan mode selection emits no refusal'

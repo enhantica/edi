@@ -77,7 +77,6 @@ def test_gui_fitting_modes_use_the_owner_descriptions():
         if row['uid'] == 'fitting_mode.type'
     )
     source = '\n'.join(path.read_text() for path in files)
-    # A scan defaults to Single until the user switches.
     assert 'std::find(modes.begin(), modes.end(), "single") != modes.end()' in source and (
         'setItemOptions("fitting_mode.type", modes, '
         'single ? std::string("single") : modes.front())' in source
@@ -102,7 +101,7 @@ def test_gui_fitting_modes_use_the_owner_descriptions():
     )
     for label in [
         'Single experiment',
-        'Joint: all experiments at once',
+        'Joint: all patterns as one fit',
         'Sequential: each from the previous',
         'Independent: each from the same start',
     ]:

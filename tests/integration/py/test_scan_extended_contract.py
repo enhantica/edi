@@ -41,6 +41,8 @@ def test_scan_worker_routes_both_modes_to_existing_driver(tmp_path):
     assert [row[:1] + row[3:] for row in actual] == [
         ['sequential', '33', '55', '44', '66'],
         ['independent', '33', '55', '44', '66'],
+        ['joint scan', '33', '55', '44', '66', '77'],
+        ['joint', '33'],
     ], (
         'Scan worker wiring: each scan mode reaches its own driver with cancellation, '
         'scan-start, per-file completion and fitted-project subscribers'
@@ -59,9 +61,9 @@ def test_scan_availability_and_joint_mode_follow_scan_declaration(tmp_path):
         r'options:\s*row\.analysis\s*\?\s*row\.analysis\.fittingModeOptions',
         'Scan mode wiring: the actual picker uses the guarded options model',
     )
-    assert joint_options(model, tmp_path) == ['1', '0', '1'], (
-        'Scan mode wiring: joint availability follows declaration in both '
-        'directions in the consumed options producer'
+    assert joint_options(model, tmp_path) == ['1', '1', '1'], (
+        'Scan mode wiring: the consumed picker offers Joint for several experiments '
+        'and for a declared scan, including after returning to the experiment view'
     )
 
 
@@ -754,8 +756,10 @@ def cpp_probe(program, tmp_path):
 
 def worker_dispatch(text, tmp_path):
     dispatch = block(text, 'FitResultBase fit_by_mode(')
+    selectors = (ROOT / 'core/include/edi/selectors.hpp').read_text()
+    kind = block(selectors, 'inline std::string fit_kind(')
     if 'FileCompleteCallback' not in dispatch:
-        return ['REFUSED', 'REFUSED']
+        return ['REFUSED'] * 4
     program = """#include <iostream>
 #include <string>
 #include <stdexcept>
@@ -763,12 +767,15 @@ using IterationCallback=int; using PreambleCallback=int; using CancelCallback=in
 
  using FileCompleteCallback=int; using ScanStartCallback=int; using FileFittedCallback=int;
 using FitResultBase=std::string;
+using ParametricIterateCallback=int;
+struct CoresBudget {};
+struct ScopedCores { explicit ScopedCores(const CoresBudget&) {} };
 std::string receipt(std::string mode,std::initializer_list<int> args){
 
 for(int arg:args)mode+=":"+std::to_string(arg);return mode;}
-struct Project {struct Scan {bool declared() const {return true;}} sequential_fit;
+struct Project {struct Scan {bool value;bool declared() const {return value;}} sequential_fit;
 std::string mode;
-Project(std::string selected):mode(selected){}
+Project(std::string selected,bool scan):sequential_fit{scan},mode(selected){}
 std::string fit(int a,int b,int c){return receipt("single",{a,b,c});
 
 }
@@ -780,17 +787,21 @@ return receipt("sequential",{a,b,c,scan,d,fitted});
 }
 std::string fit_independent(int a,int b,int scan,int d,int c,int fitted){
 return receipt("independent",{a,b,c,scan,d,fitted});
+}
+std::string fit_parametric(int a,int b,int scan,int d,int c,int fitted,int iterate){
+return receipt("joint scan",{a,b,c,scan,d,fitted,iterate});
 }};
-std::string effective_fitting_mode(Project& p){return p.mode;}
+std::string effective_fitting_mode(const Project& p){return p.mode;}
+KIND
 BODY
-int main(){for(auto mode:{"sequential","independent"}){Project p{mode}
-
-;try{std::cout<<fit_by_mode(p,11,22,33,55,44,66)<<"\\n";}catch(std::exception&
-e){std::cout<<"REFUSED\\n";}}}""".replace('BODY', dispatch)
+int main(){for(Project p: {Project{"sequential",true}, Project{"independent",true},
+Project{"joint",true}, Project{"joint",false}}){
+try{std::cout<<fit_by_mode(p,11,22,33,55,44,66,77,{})<<"\\n";}catch(std::exception&
+e){std::cout<<"REFUSED\\n";}}}""".replace('KIND', kind).replace('BODY', dispatch)
     if 'ScanStartCallback' not in dispatch:
         program = program.replace('{a,b,c,scan,d,fitted}', '{a,b,c,d,fitted}')
         program = program.replace(
-            'fit_by_mode(p,11,22,33,55,44,66)', 'fit_by_mode(p,11,22,33,44,66)'
+            'fit_by_mode(p,11,22,33,55,44,66,77,{})', 'fit_by_mode(p,11,22,33,44,66)'
         )
     return cpp_probe(program, tmp_path)
 
@@ -821,7 +832,8 @@ struct Scan{bool value=false;bool declared()const{return value;}};
 struct Project{Scan sequential_fit;std::vector<int> experiments{1,2};};
 BODY
 int main(){Project project;for(bool declared:{false,true,false}){
-project.sequential_fit.value=declared;const auto modes=applicable_fitting_modes(project);
+project.sequential_fit.value=declared;project.experiments.resize(declared ? 1 : 2);
+const auto modes=applicable_fitting_modes(project);
 std::printf("%d\\n",std::find(modes.begin(),modes.end(),"joint")!=modes.end());}}
 """.replace('BODY', rule)
     return cpp_probe(program, tmp_path)

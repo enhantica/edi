@@ -8,6 +8,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <tuple>
 #include <vector>
 
 #include "edi/model.hpp"
@@ -39,6 +40,9 @@ struct FitReport {
     std::string refusal;
     // What the fit returned; absent when it was refused.
     std::optional<FitResultBase> result;
+    // A scan: the point starts it used (point, parameter, value), however it ended; the app removes exactly those,
+    // so an edit made while it ran is kept.
+    std::vector<std::tuple<std::string, std::string, double>> used_starts;
     FitFailureReason reason = FitFailureReason::None;
     bool adopted() const noexcept {
         return status == FitStatus::DONE || status == FitStatus::MAX_ITER || status == FitStatus::NO_STEP ||
@@ -72,6 +76,9 @@ class FitJob {
         // its `file_completed`, in place of the frames a single fit draws. Nothing is calculated for it. The job
         // sends the next only after `frame_shown`, with the next file it fits (edi ADR-0029).
         std::function<void(const std::string& file, const FitFrame&)> file_frame;
+        // A parametric fit: the latest accepted iteration's every point, at most every 250 ms and always the last
+        // (ADR-0107). Empty: no iterate is built.
+        std::function<void(const ParametricIterate&)> parametric_iterate;
     };
     // Test instrumentation: production constructs a FitJob without it.
     struct Seams {

@@ -57,6 +57,7 @@ header include/crysta/legacy_metadata.hpp
 header include/crysta/magnetic.hpp
 header include/crysta/magnetic_types.hpp
 header include/crysta/model.hpp
+header include/crysta/normal_system.hpp
 header include/crysta/owner.hpp
 header include/crysta/parameter.hpp
 header include/crysta/partype.hpp
@@ -79,10 +80,12 @@ header include/crysta/recompute.hpp
 header include/crysta/reflection_admission.hpp
 header include/crysta/report_settings.hpp
 header include/crysta/residual.hpp
+header include/crysta/results_publication.hpp
 header include/crysta/rows.hpp
 header include/crysta/scale_estimate.hpp
 header include/crysta/scattering.hpp
 header include/crysta/schema.hpp
+header include/crysta/sharing.hpp
 header include/crysta/single_crystal.hpp
 header include/crysta/solver_rung.hpp
 header include/crysta/stamped.hpp

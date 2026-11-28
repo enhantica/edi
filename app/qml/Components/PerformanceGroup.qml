@@ -11,12 +11,12 @@ import EasyApplication.Gui.Elements as EaElements
 import edi.app
 
 // What a page runs with, read-only, on its Settings tab: the count is this machine's Performance preference, never
-// saved in a project, and the link at its right opens Preferences on that tab (the owner, 2026-11-04, 2026-11-10). The Analysis page shows how
-// many scan files are fitted at once, the Experiment page how many threads a calculation runs on.
+// saved in a project, and the link at its right opens Preferences on that tab (the owner, 2026-11-04, 2026-11-10). Both
+// pages show the one Cores for fitting setting.
 SideBarGroup {
     id: group
 
-    // "parallelFits" or "threads".
+    // Which page shows it; both show Cores for fitting.
     property string shows: "threads"
     readonly property string openKey: "Settings:performance"
     readonly property string threads: !ApplicationInfo.engineThreadsSelectable ? "1" : Preferences.engineThreads > 0 ? String(Preferences.engineThreads) : qsTr("Auto")
@@ -45,7 +45,7 @@ SideBarGroup {
             anchors.verticalCenter: parent.verticalCenter
             width: parent.width - link.width - EaStyle.Sizes.fontPixelSize
             elide: Text.ElideRight
-            text: group.shows === "parallelFits" ? qsTr("Parallel fits: %1").arg(Preferences.scanWorkersApplied) : qsTr("Threads per calculation: %1").arg(group.threads)
+            text: qsTr("Cores for fitting: %1").arg(group.threads)
         }
         IconLink {
             id: link

@@ -553,6 +553,8 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // The parameter table's "free" header: free or fix every one of `parameters` (the rows the filters show) that can
     // be fitted, as one edit with one Undo step (the owner, 2026-10-11).
     Q_INVOKABLE bool setParametersFree(const QList<ParameterItem*>& parameters, bool free);
+    // ADR-0107: share or unshare the given rows (the Shared header menu), one undo step; dependents are left out.
+    Q_INVOKABLE bool setParametersShared(const QList<ParameterItem*>& parameters, bool shared);
     struct EditOutcome {
         bool applied = false;
         bool published = false;
@@ -745,6 +747,10 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     QString apply(const edi::Edit& change, bool structural) override;
     QString assign_parameter_value(edi::Parameter& parameter, double value) override;
     QString assign_parameter_free(edi::Parameter& parameter, bool free) override;
+    bool parameter_shared(const edi::Parameter& parameter) const override;
+    const edi::Parameter* parameter_shared_leader(const edi::Parameter& parameter) const override;
+    QString parameter_share_refusal(const edi::Parameter& parameter) const override;
+    QString assign_parameter_shared(edi::Parameter& parameter, bool shared) override;
     QString apply_relation_edit(const edi::Edit& change) override;
     QString apply_relation_control(const edi::Edit& change, const ProjectEditor::RelationAction& action) override;
     RelationOutcome append_constraint(edi::Project&, edi::ParameterConstraint&&, const ProjectEditor::RelationAction&) override;
@@ -768,7 +774,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // A scan run's owner-thread steps (FitViewModel): before a fresh run, the previous results set aside, which
     // Undo restores; each file it fits; the file it shows while followed; its end, after which the shown dataset is
     // viewed again from the rows on disk. The shown dataset stays in the model while the scan runs from the template.
-    QString prepareScan(bool fresh);
+    QString prepareScan(bool fresh, bool refit = false);
     // Reset fits (FitViewModel::reset): every dataset's fit result cleared, one Undo step; the refusal, if any.
     QString resetScan();
     // Why an edit or a single or joint fit waits: a chosen dataset is still being read, so the model still shows the
@@ -784,6 +790,8 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // A followed file with its pattern as the fit left it: shown like followScanFile, its pattern not calculated
     // again (edi ADR-0029).
     void followScanFrame(const std::string& file, const edi::FitFrame& frame, std::uint64_t token);
+    // A parametric fit's latest iterate (ADR-0107), drawn as one snapshot; the selection stays where it is.
+    void showParametricIterate(const edi::ParametricIterate& iterate);
     // Every pattern with no pattern chart shown (the Stacked or the Map view): the file is presented by becoming the
     // current dataset, counted once a frame is synchronised with it.
     void followScanSelection(const std::string& file, std::uint64_t token);
@@ -1138,6 +1146,9 @@ class ProjectViewModel : public QObject, public ProjectEditor {
         std::optional<FitRecords> fit_records;  // Reset fits only
         int shown_dataset = -1;                 // Reset fits only: the dataset the model showed, and its values
         std::vector<edi::Edit::ScanValue> shown_values;
+        // Reset fits and a fresh or new-pass run: the pending edits as they were, which Reset clears and a run may use;
+        // Undo puts them back with the earlier rows.
+        std::optional<edi::ItemVec<edi::ParametricFitStart>> starts;
     };
     // Load data: the experiment as it was before (a simulation, or its earlier data, with its file name).
     struct LoadedData {
@@ -1298,6 +1309,8 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     bool view_reading_ = false;  // a read is in flight
     // A followed file's pattern from the scan's fit (its dataset and the frame), until its dataset is shown.
     std::optional<std::pair<int, edi::FitFrame>> follow_frame_;
+    // A running parametric fit's latest iterate (ADR-0107): the shown dataset is drawn with its point's values.
+    std::optional<edi::ParametricIterate> live_iterate_;
     // A followed file handed over while a scan runs, its dataset and name, until the chart is drawn with it: once
     // its dataset is applied, the main window's first frame synchronised after that, which draws it; or never, when
     // the read or the application fails, or the read or the drawing takes longer than kRenderWaitMs (edi ADR-0029).
@@ -1442,6 +1455,20 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     bool modified_held_ = false;  // a drag step changed the project: modified and `edited` are announced on release  // a drag step changed a scan's template: its identity is hashed on release
     bool template_promotion_held_ = false;  // a drag step changed a shown dataset: the template takes it on release
     void promoteShownToTemplate();
+    // The shown scan point while the scan has results: its name (file, or series key).
+    struct ShownPoint {
+        std::string point;
+    };
+    std::optional<ShownPoint> shownPoint() const;
+   public:
+    // After a scan fit: the point starts it used go from the model and the template, exactly those (an edit made while
+    // it ran is kept); the project is modified when that changed it.
+    void dropUsedStarts(const std::vector<std::tuple<std::string, std::string, double>>& used);
+    // Before a save: says how many pending scan edits it will not keep (they live in the running model only).
+    void announceUnfittedEdits();
+
+   private:
+    edi::Edit valueEdit(edi::Parameter& parameter, double value);
     // What a held slider deferred, done once (release, or a save during the hold).
     void settleHeld();
     // On release the edit's and the calculation's publications run as one: the fields, texts and report once.

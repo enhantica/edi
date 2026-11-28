@@ -346,6 +346,17 @@ void ParameterItem::setFree(bool free) {
     setLastError(editor_.assign_parameter_free(*parameter, free));
 }
 
+void ParameterItem::setShared(bool shared) {
+    // Shared and Free are independent; a parameter that cannot be shared says why (edi ADR-0107).
+    if (const QString refusal = own_ == nullptr ? editor_.parameter_share_refusal(*parameter_) : tr("a setting");
+        shared && !refusal.isEmpty()) {
+        setLastError(tr("Cannot be shared: %1").arg(refusal));
+        return;
+    }
+    edi::Parameter* parameter = parameter_;
+    setLastError(editor_.assign_parameter_shared(*parameter, shared));
+}
+
 int ParameterItem::publish(bool formatted) {
     int changed = 0;
     const bool was_outside = outsideRange();
@@ -362,6 +373,20 @@ int ParameterItem::publish(bool formatted) {
         free_ = parameter_->free;
         changed |= FreeField;
     }
+    if (const bool shared = own_ == nullptr && editor_.parameter_shared(*parameter_); shared != shared_) {
+        shared_ = shared;
+        changed |= SharedField;
+    }
+    if (const edi::Parameter* leader = own_ == nullptr ? editor_.parameter_shared_leader(*parameter_) : nullptr;
+        (leader != nullptr && leader != parameter_) != shared_follower_) {
+        shared_follower_ = !shared_follower_;
+        changed |= SharedField;
+    }
+    if (const QString reason = own_ == nullptr ? editor_.parameter_share_refusal(*parameter_) : tr("a setting");
+        reason != share_reason_) {
+        share_reason_ = reason;
+        changed |= SharedField;
+    }
     if ((changed & ValueField) != 0) {
         emit valueChanged();
         emit sliderStepChanged();
@@ -377,6 +402,9 @@ int ParameterItem::publish(bool formatted) {
     }
     if ((changed & FreeField) != 0) {
         emit freeChanged();
+    }
+    if ((changed & SharedField) != 0) {
+        emit sharedChanged();
     }
     // A symmetry change alters how a value is written without changing it, so the text is read again each time.
     if (formatted) refreshFileText();

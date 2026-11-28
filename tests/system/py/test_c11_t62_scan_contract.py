@@ -236,7 +236,7 @@ def test_scan_boundary_keyboard_interrupt_is_also_clean(tmp_path, mode, callback
 
 # Boundary means the first/middle/last FILE, not an arbitrary count of minimizer
 # polls. on_scan_start runs once, so its positions are fresh/one-row/two-row
-# resumes; the fully completed resume separately exercises the zero-fit path.
+# resumes; the completed scan separately exercises cancellation before a new pass.
 BOUNDARIES = [
     *[('on_file_complete', position) for position in (1, 2, 3)],
     *[('on_iteration', position) for position in (1, 2, 3)],
@@ -328,6 +328,7 @@ def test_every_reachable_scan_boundary_observes_cancel_before_writeback(
     completed, reached, single_preambles = [], [], []
     armed = False
     frozen_rows = {}
+    previous_generation = _ledger_bytes(target)
 
     def predicate():
         if not armed:
@@ -347,7 +348,7 @@ def test_every_reachable_scan_boundary_observes_cancel_before_writeback(
         if reached:
             return
         reached.append((boundary, position))
-        frozen_rows = _ledger_bytes(target)
+        frozen_rows = previous_generation if prior == 3 else _ledger_bytes(target)
         if route in {'sigint', 'sigint-predicate'}:
             os.kill(os.getpid(), signal.SIGINT)
         elif route == 'keyboard':
@@ -437,17 +438,19 @@ def _assert_boundary_cancel(target, project, outcome, expected_rows, frozen_rows
         defects.append('finished results/provenance rows were changed or new rows followed cancel')
     assert not defects, (
         ' all callback-boundary cancellation routes must stop before publication, '
-        'including the last event and a no-op resume: ' + '; '.join(defects)
+        'including the last event and early repeat cancellation: ' + '; '.join(defects)
     )
     resumed = []
     edi.Project.load(target).analysis.fit(on_file_complete=resumed.append)
-    assert len(resumed) == 3 - expected_rows and len(_rows(target)) == 3, (
+    refit_count = 3 if expected_rows == 3 else 3 - expected_rows
+    assert len(resumed) == refit_count and len(_rows(target)) == 3, (
         ' a boundary cancel must resume exactly the uncommitted files without duplicates'
     )
-    for name, prefix in frozen_rows.items():
-        assert (target / 'analysis' / name).read_bytes().startswith(prefix), (
-            ' resume must retain every completed results and provenance row byte'
-        )
+    if expected_rows < 3:
+        for name, prefix in frozen_rows.items():
+            assert (target / 'analysis' / name).read_bytes().startswith(prefix), (
+                'An interrupted pass retains every completed results and provenance row byte'
+            )
 
 
 @pytest.mark.parametrize('mode', ['sequential', 'independent'])
@@ -460,5 +463,5 @@ def test_scan_never_calls_the_single_fit_preamble_even_on_noop_resume(tmp_path, 
     for _ in range(2):
         fit(on_start=calls.append)
     assert not calls and len(_rows(target)) == 3, (
-        ' on_start is not a scan callback: fresh scans and no-op resumes keep it silent'
+        ' on_start is not a scan callback: first and repeat scans keep it silent'
     )

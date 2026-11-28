@@ -148,6 +148,14 @@ def _add_performance_options(fit: argparse.ArgumentParser, calc: argparse.Argume
         help='scan files fitted together (default: 1); each uses one thread and in a sequential '
         "scan each group starts from the preceding group's result",
     )
+    fit.add_argument(
+        '--cores',
+        type=_thread_count,
+        default=None,
+        metavar='auto|N',
+        help="cores for fitting, spent as the fitting mode needs them, as the app's Cores for "
+        'fitting does (auto: every core); given, it replaces --threads and --parallel-fits',
+    )
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -562,7 +570,9 @@ def human_fit(
         # `measured_completed`.
         # Prose note: this function must not contain the scan line's format literals — the core
         # owns every one of them — so the groups are described here by name, never quoted.
-        state = {'total': None, 'elapsed': 0.0}
+        # `measured` counts the rows this run fitted: a repeat replaces earlier rows, so the
+        # tally's count alone does not tell them apart.
+        state = {'total': None, 'elapsed': 0.0, 'measured': 0}
         tally = _ScanTally()
         prior = [0]
         previous = [0.0]
@@ -617,10 +627,9 @@ def human_fit(
 
         def on_file_complete(record: object) -> None:
             tally.add(record)
+            state['measured'] += 1
             state['elapsed'] = clock() - started
-            _emit_progress(
-                _row(record.reduced_chi_square, record.file_name, tally.completed - prior[0])
-            )
+            _emit_progress(_row(record.reduced_chi_square, record.file_name, state['measured']))
 
         def on_scan_iteration(record: object) -> None:
             sys.stdout.write(edi.iteration_line(record, previous[0], variant) + '\n')
@@ -650,9 +659,8 @@ def human_fit(
         # from what the earlier runs left; on a terminal it replaces the in-place row whatever
         # the throttle kept back (a partial or cancelled scan included). Its time is the one
         # read at the last completed file, so the count and the time describe the same moment.
-        if tally.completed == prior[0] or tty:
-            measured = tally.completed - prior[0]
-            final = _row(tally.last_chi2, tally.last_file, measured, final_row=True)
+        if state['measured'] == 0 or tty:
+            final = _row(tally.last_chi2, tally.last_file, state['measured'], final_row=True)
             sys.stdout.write(final + '\n')
         skipped = _skipped_line(project)
         if skipped:
@@ -694,13 +702,15 @@ def _skipped_line(project: edi.Project) -> str:
 
 
 class _ScanTally:
-    """The scan-wide aggregates, folded one committed row at a time.
+    """The scan-wide aggregates, folded one committed row at a time, one row per file.
 
-    Constant work per row, so a scan's progress costs the same at file 5 000 as at file 1.
+    A file's new row replaces its earlier one: a repeat fit's preamble carries the previous
+    rows and its callbacks the replacements, and each file counts once. Constant work per new
+    row, so a scan's progress costs the same at file 5 000 as at file 1.
     """
 
     def __init__(self) -> None:
-        self.completed = 0
+        self.rows: dict[str, tuple[float, bool]] = {}
         self.ok = 0
         self.chi2_min = float('nan')
         self.chi2_max = float('nan')
@@ -709,17 +719,29 @@ class _ScanTally:
         self.last_file = ''
 
     @property
+    def completed(self) -> int:
+        return len(self.rows)
+
+    @property
     def failed(self) -> int:
         return self.completed - self.ok
 
     def add(self, record: object) -> None:
         chi = record.reduced_chi_square
-        if not math.isnan(chi):  # a refused file has none
+        name = getattr(record, 'file_name', '')
+        earlier = self.rows.pop(name, None)
+        if earlier is not None:
+            self.ok -= 1 if earlier[1] else 0
+        self.rows[name] = (chi, bool(record.converged))
+        self.ok += 1 if record.converged else 0
+        if earlier is not None and earlier[0] in {self.chi2_min, self.chi2_max}:
+            values = [value for value, _ in self.rows.values() if not math.isnan(value)]
+            self.chi2_min = min(values, default=float('nan'))
+            self.chi2_max = max(values, default=float('nan'))
+        elif not math.isnan(chi):  # a refused file has none
             self.chi2_min = chi if math.isnan(self.chi2_min) else min(self.chi2_min, chi)
             self.chi2_max = chi if math.isnan(self.chi2_max) else max(self.chi2_max, chi)
-        self.completed += 1
-        self.ok += 1 if record.converged else 0
-        self.last_chi2, self.last_file = chi, getattr(record, 'file_name', '')
+        self.last_chi2, self.last_file = chi, name
 
 
 def _stream_single_fit(project: edi.Project, verbosity, project_name: str) -> int:
@@ -1044,6 +1066,8 @@ def main(argv: list[str] | None = None) -> int:
     if args.command in {'fit', 'calc'}:
         _native._set_engine_threads(args.threads)
         _native._set_scan_workers(getattr(args, 'parallel_fits', 1))
+        if getattr(args, 'cores', None) is not None:
+            _native._set_cores_for_fitting(args.cores)
     # The commands without a fit record: an error is one stderr line beside the non-zero exit.
     plain = {'report': run_report, 'export': run_export, 'collection': run_collection}
     plain.update(

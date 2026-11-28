@@ -966,9 +966,9 @@ QString ApplicationInfo::diagnostics() const {
     // The engine's own report: which backend its parallel fill runs on, with how many threads, and SIMD.
     const edi::EngineThreading engine = edi::engine_threading();
     add(QStringLiteral("Engine backend"), QString::fromLatin1(engine.backend));
-    const int threads = edi::engine_threads_setting();
-    add(QStringLiteral("Threads per calculation (preference)"), threads > 0 ? QString::number(threads) : QStringLiteral("Auto"));
-    add(QStringLiteral("Parallel fits in a scan (preference)"), QString::number(edi::scan_workers_setting()));
+    add(QStringLiteral("Cores for fitting (in effect)"), QString::number(edi::cores_for_fitting()));
+    add(QStringLiteral("Threads per calculation (engine)"), QString::number(edi::engine_threads_setting()));
+    add(QStringLiteral("Parallel fits in a scan (engine)"), QString::number(edi::scan_workers_setting()));
     add(QStringLiteral("Engine workers"), QString::number(engine.workers));
     add(QStringLiteral("WebAssembly SIMD"), engine.wasm_simd ? QStringLiteral("on") : QStringLiteral("off"));
 #ifdef Q_OS_WASM
@@ -5048,7 +5048,6 @@ void ApplicationInfo::applyPreferences() const {
     // The app folds its sidebar groups itself, leaving pinned ones open (SideBarGroup).
     assistantMemberWrite(f, globals, "autoCollapseSideBarGroups", QJSValue(false));
     projectInvoke(f, "ApplicationInfo", "setEngineThreads", {assistantContextField(f, "preferences", "engineThreads")});
-    projectInvoke(f, "ApplicationInfo", "setScanWorkers", {assistantContextField(f, "preferences", "scanWorkersApplied")});
     globals = assistantContextField(f, "EaGlobals", "Vars");
     assistantMemberWrite(f, globals, "checkUpdateOnAppStart", QJSValue(false));
     const auto sizes = assistantContextField(f, "EaStyle", "Sizes");
@@ -8600,6 +8599,13 @@ QJSValue ApplicationInfo::statusProgressText() const {
     const auto f = panelUsageEngine(this);
     if (panelUsageTruth(assistantContextField(f, "fitArea", "scanning"))) return panelUsageRead(f, assistantContextField(f, "bar", "fit"), "scanText");
     const auto fitting = panelUsageGlobalCall(f, "qsTr", {QJSValue(QString::fromUtf8(QT_TRANSLATE_NOOP("StatusBar", "fitting")))}); QJSValue iterations(QStringLiteral(""));
+    // A parametric fit before its first iteration is reading and preparing every pattern (ADR-0107).
+    if (const auto fit = assistantContextField(f, "bar", "fit"); panelUsageTruth(fit) &&
+        panelUsageTruth(panelUsageRead(f, fit, "parametric")) &&
+        panelUsageRead(f, fit, "iterations").strictlyEquals(QJSValue(QStringLiteral("")))) {
+        const auto format = panelUsageGlobalCall(f, "qsTr", {QJSValue(QString::fromUtf8(QT_TRANSLATE_NOOP("StatusBar", "preparing %1 patterns")))});
+        return panelUsageMemberCall(f, format, "arg", {panelUsageRead(f, fit, "scanTotal")});
+    }
     if (panelUsageTruth(assistantContextField(f, "bar", "fit"))
         && !panelUsageRead(f, assistantContextField(f, "bar", "fit"), "iterations").strictlyEquals(QJSValue(QStringLiteral("")))) {
         const auto format = panelUsageGlobalCall(f, "qsTr", {QJSValue(QString::fromUtf8(QT_TRANSLATE_NOOP("StatusBar", "it %1")))});
@@ -11901,7 +11907,9 @@ void ApplicationInfo::windowWebDownloaded(const QJSValue& name, const QJSValue& 
     projectInvoke(f, "webNotice", "show", {text});
 }
 void ApplicationInfo::windowFailure(int kind, const QJSValue& message) const {
-    const auto f = panelUsageEngine(this); const char* popup = kind == 0 ? "webFilesError" : kind == 3 ? "fitError" : "refusal";
+    const auto f = panelUsageEngine(this); const char* popup = kind == 0 ? "webFilesError" : kind == 3 || kind == 4 ? "fitError" : "refusal";
+    // A fit refused before it ran, or one that ran and whose results could not be read back: the title names which.
+    if (kind == 3 || kind == 4) { const auto target = panelUsageContextRead(f, popup); assistantMemberWrite(f, target, "title", mainText(f, kind == 3 ? QT_TRANSLATE_NOOP("Main", "The fit did not run") : QT_TRANSLATE_NOOP("Main", "The fit ran, but its results could not be read"))); }
     if (kind == 1 || kind == 2) { const auto target = panelUsageContextRead(f, popup); assistantMemberWrite(f, target, "title", mainText(f, kind == 1 ? QT_TRANSLATE_NOOP("Main", "The project was not opened") : QT_TRANSLATE_NOOP("Main", "The change was not made"))); }
     projectWrite(f, popup, "message", message); projectInvoke(f, popup, "open");
 }
@@ -13028,7 +13036,7 @@ bool ApplicationInfo::engineThreadsSelectable() const {
 
 int ApplicationInfo::engineThreadsMaximum() const { return std::clamp(2 * QThread::idealThreadCount(), 16, 64); }
 
-void ApplicationInfo::setEngineThreads(int count) const { edi::set_engine_threads(count); }
+void ApplicationInfo::setEngineThreads(int count) const { edi::set_cores_for_fitting(count); }
 
 int ApplicationInfo::scanWorkersMaximum() const { return std::max(1, QThread::idealThreadCount()); }
 

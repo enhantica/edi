@@ -341,3 +341,15 @@ sites:
     case: cosio-d20-scan-3f
     why: Both real CLI hosts fit a disposable pinned scan to exercise pipe and PTY progress routing.
     assertion_feed: Actual completion cardinality, fixed numeric fields, bounded terminal writes and saved failure totals.
+
+  - file: tests/system/py/test_parametric_linear.py
+    case: constraint-covariance
+    # why: Authored series extension exercises shared linear coordinates and cancellation on small background-only patterns.
+    # assertion_feed: Closed-form weighted normal equations, authored endpoint values, independent decimal rounding and publication invariants.
+    # audit: 2026-11-26; three five-row blocks with orthogonal residuals and independently counted local and shared columns.
+
+  - file: tests/system/py/test_parametric_cubic.py
+    case: constraint-covariance
+    # why: A cubic five-point series extends the authored inverse-fit family with shared peak widths and local cell, scale and displacement.
+    # assertion_feed: Frozen noiseless forward patterns and independently declared input parameter truth.
+    # audit: 2026-11-26; expected values are the generator inputs, fixed before a parametric solve.

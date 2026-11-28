@@ -56,8 +56,8 @@ to know where Qt puts it.
 
    Extras holds what the `.edi` project saves; Settings holds how the app runs and shows it (the owner, 2026-11-04).
    So each page's Settings tab also has a read-only Performance group naming the Preferences count that applies there,
-   with a link that opens Preferences on its Performance tab (ADR-0017 §12): "Parallel fits: N" on the Analysis page,
-   for a scan, and "Threads per calculation: …" on the Experiment page, whose Settings tab holds only this group.
+   with a link that opens Preferences on its Performance tab (ADR-0017 §12): "Cores for fitting: …" on the Analysis
+   and Experiment pages; the Experiment page's Settings tab holds only this group.
 3. **One ini file on the desktop.** The store is `QSettings` in `IniFormat` on every desktop platform, one file named
    after the organisation and the application: `~/.config/EasyDiffraction/EasyDiffraction.ini` on Linux and macOS,
    `%APPDATA%\EasyDiffraction\EasyDiffraction.ini` on Windows (the organisation was `EasyScience` before ADR-0091). Not the native formats (a property list on macOS, the

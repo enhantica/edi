@@ -109,7 +109,7 @@ Row {
         blocks: bankModel
         blocksTextRole: "label"
         blockKind: "bank"
-        numberPrefix: qsTr("Bank")
+        numberPrefix: qsTr("Experiment")
         blockIndex: row.project ? row.project.currentBank : -1
         onBlockActivated: index => row.project.currentBank = index
     }

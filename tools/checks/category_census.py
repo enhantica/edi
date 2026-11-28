@@ -116,6 +116,8 @@ NOT_MODEL = {
     'StructureGeometry': 'the computed structure categories, published whole',
     'WindowGeometry': 'a geometry computed for a view window',
     'IterationRecord': 'a fit report',
+    'ParametricIterate': 'a fit report',
+    'IteratePoint': 'one point of a parametric fit report',
     'WeightFraction': "a linked structure's weight fraction, derived from the model on each read",
     'DerivedQuantity': 'a derived value with its s.u., computed from the model on each read',
     'SphericalMoment': "a moment's spherical form, derived from the model on each read",

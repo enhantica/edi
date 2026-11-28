@@ -3695,6 +3695,15 @@
      "reason": "C",
      "verdict": "public"
     },
+    "shared": {
+     "need": {
+      "by": "deviation",
+      "ref": "D101",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
     "start_uncertainty": {
      "need": {
       "by": "counterpart",
@@ -5023,6 +5032,15 @@
      "need": {
       "by": "deviation",
       "ref": "D3",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "fit_parametric": {
+     "need": {
+      "by": "deviation",
+      "ref": "D101",
       "verdict": "keep"
      },
      "reason": "C",
@@ -8557,6 +8575,7 @@
     "max_value",
     "min_value",
     "name",
+    "shared",
     "start_uncertainty",
     "start_value",
     "symmetry_constrained",
@@ -8773,6 +8792,7 @@
     "fit",
     "fit_independent",
     "fit_joint",
+    "fit_parametric",
     "fit_sequential",
     "fitting_mode",
     "free_parameters",

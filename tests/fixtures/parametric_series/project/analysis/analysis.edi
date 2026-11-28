@@ -1,0 +1,20 @@
+_edi.schema_version 3
+_fitting_mode.type joint
+_minimizer.max_iterations 60
+_minimizer.chi_square_tolerance 1e-10
+loop_
+_joint_fit.experiment_id
+_joint_fit.weight
+zeta 1
+alpha 1
+third 1
+
+loop_
+_experiment_set.id
+_experiment_set.template_experiment_id
+paired zeta
+loop_
+_experiment_set_member.experiment_id
+_experiment_set_member.set_id
+zeta paired
+alpha paired

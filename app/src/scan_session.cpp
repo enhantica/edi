@@ -23,6 +23,7 @@
 
 #include "background.hpp"
 #include "crysta/project_output.hpp"
+#include "crysta/results_publication.hpp"
 #include "edi/io.hpp"
 
 namespace edi_app {
@@ -347,6 +348,8 @@ std::vector<std::string> ScanSession::row(const edi::Project& project, int datas
     if (dataset < 0 || dataset >= static_cast<int>(index().rows.size()) || index().rows[static_cast<std::size_t>(dataset)].offset < 0) {
         return {};
     }
+    // The header and the row are read under one hold of the publication lock, so both are the same set's.
+    const crysta::PublicationReadLock reading(analysis_dir(project));
     if (!edi::scan_state_present(analysis_dir(project) / "results.csv", "analysis/results.csv")) {
         throw std::invalid_argument("analysis/results.csv changed under the app: it is no longer there");
     }
@@ -450,8 +453,11 @@ std::string ScanSession::templateIdentity(const std::vector<std::pair<std::strin
             start = end + 1;
             // A fit's results (its summary, its banks, the start values it began from) are what a run writes, not
             // the template it ran from: a finished scan leaves its results current.
+            // Nor is the Shared list (ADR-0107 decision 13): sharing changes how the next fit continues, not which
+            // results are current, so it never removes the rows a next fit continues from.
             if (line.starts_with("_fit_parameter_correlation.") || line.starts_with("_fit_parameter.") ||
-                line.starts_with("_fit_result.") || line.starts_with("_fit_result_bank.")) {
+                line.starts_with("_fit_result.") || line.starts_with("_fit_result_bank.") ||
+                line.starts_with("_parametric_fit_shared.")) {
                 correlations = true;
                 pending.clear();
                 continue;
@@ -562,12 +568,39 @@ QString kept_aside(const fs::path& aside, const std::exception& refusal) {
         .arg(QString::fromUtf8(refusal.what()), QString::fromStdString(aside.string()));
 }
 
+// A parametric fit publishes the result files as one set: one it interrupted is settled first, and copying the files
+// holds its publication lock shared, so no fit swaps the set meanwhile. Taking them away or putting them back (Reset
+// fits, its Undo) changes the set, so it holds the lock alone: no reader or second Reset meets it.
+template <typename Lock>
+void hold_results(const edi::Project& project, std::optional<Lock>& held) {
+    const fs::path directory = analysis_dir(project);
+    crysta::recover_publication(directory);
+    held.emplace(directory);
+}
+
 }  // namespace
+
+QString ScanSession::copyFiles(const edi::Project& project, Files& copied) {
+    const fs::path directory = analysis_dir(project);
+    copied = {};
+    try {
+        std::optional<crysta::PublicationReadLock> held;
+        hold_results(project, held);
+        for (int which = 0; which < kResultFileCount; ++which) {
+            *slot(copied, which) = read_file(directory / kResultFiles[which]);
+        }
+    } catch (const std::exception& refusal) {
+        return QString::fromUtf8(refusal.what());
+    }
+    return {};
+}
 
 QString ScanSession::takeFiles(const edi::Project& project, Files& taken) {
     const fs::path directory = analysis_dir(project);
     taken = {};
+    std::optional<crysta::PublicationWriteLock> held;
     try {
+        hold_results(project, held);
         for (int which = 0; which < kResultFileCount; ++which) {
             *slot(taken, which) = read_file(directory / kResultFiles[which]);
         }
@@ -604,8 +637,10 @@ QString ScanSession::putFiles(const edi::Project& project, const Files& files, b
     moved_in.reserve(kResultFileCount);
     const fs::path directory = analysis_dir(project);
     Files current;
+    std::optional<crysta::PublicationWriteLock> held;
     try {
         own_analysis_dir(project);
+        hold_results(project, held);
         for (int which = 0; which < kResultFileCount; ++which) {
             *slot(current, which) = read_file(directory / kResultFiles[which]);
         }

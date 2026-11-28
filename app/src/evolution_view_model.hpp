@@ -2,6 +2,7 @@
 #ifndef EDI_APP_EVOLUTION_VIEW_MODEL_HPP
 #define EDI_APP_EVOLUTION_VIEW_MODEL_HPP
 
+#include <QHash>
 #include <QObject>
 #include <functional>
 #include <QPointer>
@@ -85,6 +86,11 @@ class EvolutionViewModel : public QObject {
     // The scan's results (the session's index and the project they belong to) and its first extract rule's title,
     // after a load or a refresh: the chart reads the selected parameter's column from the file. Neither is copied.
     void setScan(const ScanSession* session, const edi::Project* project, const QString& extracted_title);
+    // A parametric fit's latest iterate (ADR-0107): the chosen parameter's every point redrawn from it, without s.u.
+    // A parameter the iterate does not carry keeps its points. The fit's end or cancel rebuilds from the files.
+    void showIterate(const edi::ParametricIterate& iterate);
+    // The fit has ended: the chart goes back to the results files.
+    void clearIterate();
     // A row a run just appended: its point joins the chart without reading the file again.
     void addRow(int dataset, const std::vector<std::string>& cells);
     // After an edit: a parameter freed or fixed joins or leaves the selector.
@@ -214,6 +220,7 @@ class EvolutionViewModel : public QObject {
         std::string name;
         bool by_value = false, per_experiment = false, all_banks = false;
         int experiment = -1;
+        int leader = -1;  // a shared experiment parameter's leader experiment, else -1
     };
     // The points of a parameter's column, read from the results (throws when the read refuses).
     static std::vector<Point> readPoints(const Read& read);
@@ -221,6 +228,7 @@ class EvolutionViewModel : public QObject {
     bool rebuild_owed_ = false;  // a rebuild asked for while no chart showed the points (ADR-0102 rule 1)
     void draw();
 
+    QHash<QString, int> shared_paths_;  // ADR-0089 point 1: path -> leader experiment
     EvolutionParameterListModel* parameters_;
     QPointer<MeasuredLayer> layer_;
     QList<QPointer<MeasuredLayer>> bank_layers_;
@@ -245,6 +253,8 @@ class EvolutionViewModel : public QObject {
     QTimer row_redraw_;
     bool row_redraw_due_ = false;
     void finishRow();
+    std::vector<Point> livePoints() const;
+    std::optional<edi::ParametricIterate> live_;
     // The x of a dataset: its first extracted value, or its place in the scan from 1; nullopt when not finite.
     std::optional<double> xOf(int dataset, const std::vector<std::string>* extracted) const;
     // Publishes the points; false when an observer deleted this view meanwhile (nothing may touch it then).

@@ -9,7 +9,7 @@ Fit the amino-sulfonic acid taurine to six time-of-flight neutron single-crystal
 
 ## Start
 
-Built by `tools/cli_projects/build_sc_projects.py`: FullProf's positions with S1 x, O1 y, N1 z and C1 x moved by 0.005 (S1 x 0.20800 for 0.20300, O1 y 0.23701 for 0.24201, N1 z 0.33658 for 0.33158, C1 x 0.33574 for 0.34074), every beta tensor 0, its scales Sc1-Sc6 and its extinction model 4 (anisotropic Larson) with x11, x22 and x33 0, x12, x13 and x23 0 and fixed. Experiments 2-6 take experiment 1's extinction through constraints. Free: every position and beta, the six scales and the three extinction terms (135 parameters). As FullProf (Rmub 3.0), the fit uses only reflections with F² > 3 su(F²).
+Built by `tools/cli_projects/build_sc_projects.py`: FullProf's positions with S1 x, O1 y, N1 z and C1 x moved by 0.005 (S1 x 0.20800 for 0.20300, O1 y 0.23701 for 0.24201, N1 z 0.33658 for 0.33158, C1 x 0.33574 for 0.34074), every beta tensor 0, its scales Sc1-Sc6 and its extinction model 4 (anisotropic Larson) with x11, x22 and x33 0, x12, x13 and x23 0 and fixed. Experiments 2-6 share experiment 1's three extinction terms (one value for all). Free: every position and beta, the six scales and the three extinction terms (135 parameters). As FullProf (Rmub 3.0), the fit uses only reflections with F² > 3 su(F²).
 
 ## Differences from the source
 

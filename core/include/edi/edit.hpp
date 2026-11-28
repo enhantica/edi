@@ -109,6 +109,15 @@ struct RelationsUndo {
     std::vector<ParameterAlias> aliases;
     std::vector<ParameterConstraint> constraints;
     std::vector<ParameterState> parameters;
+    // ADR-0107: the shared names, which a Shared edit and a relation edit both change, and the points' own starts,
+    // which a Shared edit and a point's value edit change.
+    std::vector<std::string> shared;
+    struct Start {
+        std::string point;
+        std::string unique_name;
+        double value = 0.0;
+    };
+    std::vector<Start> starts;
 };
 
 inline RelationsUndo capture_relations(Project& project) {
@@ -118,6 +127,12 @@ inline RelationsUndo capture_relations(Project& project) {
     }
     for (const auto& constraint : project.constraints) {
         before.constraints.push_back(*constraint);
+    }
+    for (const auto& row : project.sequential_fit.shared) {
+        before.shared.push_back(row->parameter_unique_name.value());
+    }
+    for (const auto& row : project.sequential_fit.starts) {
+        before.starts.push_back({row->point.value(), row->parameter_unique_name.value(), row->value.get()});
     }
     for (const NamedSlot& slot : named_slots(project)) {
         before.parameters.push_back({slot.unique_name, slot.parameter->value.get(),
@@ -539,8 +554,8 @@ class Edit {
         return Edit([&field, value] { field = value; });
     }
     // Free or fix several parameters, by unique name, all or none (the parameter table's "free" header; the owner,
-    // 2026-10-11): every name is resolved before any flag is written. Its undo is the same edit with the flags as
-    // they were.
+    // 2026-10-11): every name is resolved before any flag is written. A shared parameter's group takes the flag
+    // whole, its hidden copies included (ADR-0107). Its undo is the same edit with the flags as they were.
     static Edit set_free(Project& project, std::vector<std::pair<std::string, bool>> flags) {
         return Edit([&project, flags = std::move(flags)] {
             std::map<std::string, Parameter*> by_name;
@@ -556,7 +571,7 @@ class Edit {
                 resolved.emplace_back(found->second, free);
             }
             for (const auto& [parameter, free] : resolved) {
-                parameter->free = free;
+                for (Parameter* member : shared_group(project, *parameter)) member->free = free;
             }
         });
     }
@@ -746,7 +761,73 @@ class Edit {
                     "are fitted one at a time against the template experiment");
             }
             set_fitting_mode(project, mode);
+            // The stored groups are admitted again for the mode sharing now takes effect in (ADR-0107): a group no
+            // longer whole is dropped, and each takes its listed copy's value and one free flag.
+            (void)settle_parametric_shared(project);
         });
+    }
+    // A value entered while a scan has results is the shown point's own start for the next Fit: the shown value and
+    // the point's pending start for the name; the template keeps
+    // its value. A shared parameter's start is the whole series' one start: the group takes the value, and a start for
+    // the name at any other point goes.
+    static Edit point_start(Project& project, Parameter& parameter, std::string point, std::string unique_name,
+                            double value, bool shared) {
+        return Edit([&project, &parameter, point = std::move(point), unique_name = std::move(unique_name), value,
+                     shared] {
+            if (shared) {
+                for (Parameter* member : shared_group(project, parameter)) assign_value(*member, value);
+            } else {
+                assign_value(parameter, value);
+            }
+            auto& starts = project.sequential_fit.starts;
+            for (std::size_t i = starts.size(); i-- > 0;) {
+                if (starts[i]->parameter_unique_name.value() == unique_name &&
+                    (starts[i]->point.value() == point || shared)) {
+                    starts.erase_at(i);
+                }
+            }
+            ParametricFitStart row;
+            row.point = point;
+            row.parameter_unique_name = unique_name;
+            row.value = value;
+            starts.push_back(std::move(row));
+        });
+    }
+    // ADR-0107: share or unshare parameters, by unique name, in one edit: a row's Shared box and the Shared header menu
+    // alike; the free flags are left as they are.
+    // `at` (the shown point), while the scan has results: a newly shared group takes the shown copy's value as the
+    // whole series' one start.
+    static Edit parameters_shared(Project& project, std::vector<std::string> names, bool shared,
+                                  std::optional<std::string> at = std::nullopt) {
+        return Edit([&project, names = std::move(names), shared, at = std::move(at)] {
+            for (const std::string& name : names) {
+                for (const NamedSlot& slot : named_slots(project)) {
+                    if (slot.unique_name != name) continue;
+                    const bool was = parametric_shared(project, *slot.parameter);
+                    const double shown = slot.parameter->value.get();
+                    set_parametric_shared(project, *slot.parameter, shared);
+                    if (shared && !was && at && parametric_shared(project, *slot.parameter)) {
+                        const Parameter* leader = shared_leader(project, *slot.parameter);
+                        for (const NamedSlot& listed : named_slots(project)) {
+                            if (listed.parameter != leader) continue;
+                            ParametricFitStart row;
+                            row.point = *at;
+                            row.parameter_unique_name = listed.unique_name;
+                            row.value = shown;
+                            project.sequential_fit.starts.push_back(std::move(row));
+                        }
+                    }
+                    break;
+                }
+            }
+        });
+    }
+    // ADR-0107: a shared group's free flag and value, set on every member in one edit.
+    static Edit group_free(Project& project, Parameter& parameter, bool free) {
+        return Edit([&project, &parameter, free] { (void)set_group_free(project, parameter, free); });
+    }
+    static Edit group_value(Project& project, Parameter& parameter, double value) {
+        return Edit([&project, &parameter, value] { set_group_value(project, parameter, value); });
     }
     static Edit descent(Project& project, std::string id) {
         return Edit([&project, id = std::move(id)] { set_descent(project, id); });
@@ -1791,14 +1872,45 @@ class Edit {
             // collections before either live write; their move commits cannot throw.
             ItemVec<ParameterAlias> prepared_aliases(std::move(aliases));
             ItemVec<ParameterConstraint> prepared_constraints(std::move(constraints));
+            std::vector<std::shared_ptr<ParametricSharedParameter>> shared_rows;
+            for (const std::string& name : before.shared) {
+                auto row = std::make_shared<ParametricSharedParameter>();
+                row->parameter_unique_name = name;
+                shared_rows.push_back(std::move(row));
+            }
+            ItemVec<ParametricSharedParameter> prepared_shared(std::move(shared_rows));
+            std::vector<std::shared_ptr<ParametricFitStart>> start_rows;
+            for (const RelationsUndo::Start& start : before.starts) {
+                auto row = std::make_shared<ParametricFitStart>();
+                row->point = start.point;
+                row->parameter_unique_name = start.unique_name;
+                row->value = start.value;
+                start_rows.push_back(std::move(row));
+            }
+            ItemVec<ParametricFitStart> prepared_starts(std::move(start_rows));
             project.aliases = std::move(prepared_aliases);
             project.constraints = std::move(prepared_constraints);
+            project.sequential_fit.shared = std::move(prepared_shared);
+            project.sequential_fit.starts = std::move(prepared_starts);
             for (const auto& [parameter, state] : targets) {
                 parameter->value = state->value;
                 parameter->uncertainty = state->uncertainty;
                 parameter->free = state->free;
             }
         });
+    }
+
+    // ADR-0107: a relation edit admits the stored shared groups again on the completed candidate: a group a user
+    // constraint now sets a copy of is dropped from the live project too (Undo restores the rows with the relations).
+    static void readmit_shared(Project& live, Project& candidate) {
+        (void)settle_parametric_shared(candidate);
+        std::set<std::string> kept;
+        for (const auto& row : candidate.sequential_fit.shared) kept.insert(row->parameter_unique_name.value());
+        for (std::size_t i = live.sequential_fit.shared.size(); i-- > 0;) {
+            if (!kept.contains(live.sequential_fit.shared[i]->parameter_unique_name.value())) {
+                live.sequential_fit.shared.erase_at(i);
+            }
+        }
     }
 
     // FIRST ordinary relation edits: complete the prospective declaration inside
@@ -1811,6 +1923,7 @@ class Edit {
                 if (complete->enabled.get() && candidate.structures.empty())
                     throw std::invalid_argument("An active constraint requires a structure");
                 complete_relations(candidate);
+                readmit_shared(project, candidate);
             }
             auto inserted = std::make_shared<ParameterConstraint>(*complete);
             project.constraints.push_back(inserted);
@@ -1828,6 +1941,7 @@ class Edit {
                 if (candidate.constraints[at]->enabled.get() && candidate.structures.empty())
                     throw std::invalid_argument("An active constraint requires a structure");
                 complete_relations(candidate);
+                readmit_shared(project, candidate);
             }
             member.expression = text;
         });
@@ -1843,6 +1957,7 @@ class Edit {
                 if (enabled && candidate.structures.empty())
                     throw std::invalid_argument("An active constraint requires a structure");
                 complete_relations(candidate);
+                readmit_shared(project, candidate);
             }
             member.enabled = enabled;
         });

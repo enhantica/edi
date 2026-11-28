@@ -1,5 +1,6 @@
 """Retained scan inputs are proved before resume can change or discard them."""
 
+import csv
 import os
 import shutil
 import stat
@@ -67,10 +68,19 @@ def test_native_resume_accepts_complete_retained_history(tmp_path, mode, history
             'file_path,negative_points,skipped_dataset,refusal\nexperiments/scan/01.xy,0,False,\n'
         )
     before = notes.read_bytes()
-    engine.Project.load(directory).analysis.fit()
-    assert notes.read_bytes() == before, (
-        'A valid no-op resume must retain complete notes with and without fitted results'
-    )
+    output = directory / 'analysis/results.csv'
+    completed = []
+    engine.Project.load(directory).analysis.fit(on_file_complete=completed.append)
+    if history == 'all-skipped':
+        assert notes.read_bytes() == before, 'All-skipped history retains its exact notes'
+        assert not completed, 'The all-skipped history has no fitted point to seed a new pass'
+    else:
+        with output.open(newline='') as stream:
+            repeated = list(csv.DictReader(stream))
+        assert len(repeated) == len(completed) == 3, (
+            'A complete fitted history starts a fresh generation for all measured datasets'
+        )
+        assert not notes.exists(), 'The new successful generation drops the obsolete note'
 
 
 @pytest.mark.parametrize('mode', ['sequential', 'independent'])

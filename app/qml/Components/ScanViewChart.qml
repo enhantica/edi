@@ -768,9 +768,9 @@ Item {
             toolTip: qsTr("Y axis: the rows' places")
             readonly property var runEntries: ApplicationInfo.scanRowEntries()
             readonly property bool offersBanks: chart.scan !== null && chart.scan.series && chart.project !== null && chart.project.bankLabels.length > 1
-            readonly property var entries: offersBanks ? runEntries.concat([qsTr("Bank")]) : runEntries
+            readonly property var entries: offersBanks ? runEntries.concat([qsTr("Experiment")]) : runEntries
             model: entries
-            closedTexts: offersBanks ? ApplicationInfo.scanClosedTexts(1).concat([qsTr("y: Bank")]) : ApplicationInfo.scanClosedTexts(1)
+            closedTexts: offersBanks ? ApplicationInfo.scanClosedTexts(1).concat([qsTr("y: Experiment")]) : ApplicationInfo.scanClosedTexts(1)
             shownIndex: offersBanks && chart.scan.rowsByBank ? entries.length - 1 : hasValue && !chart.scan.rowsByIndex ? 0 : runEntries.length - 1
             onActivated: index => {
                 if (offersBanks && index === entries.length - 1) {

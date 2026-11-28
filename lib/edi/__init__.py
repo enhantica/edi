@@ -271,6 +271,9 @@ from edi._edi import (  # noqa: E402 - after the __path__ resolution
     _calc_report as _calc_report,
 )
 from edi._edi import (  # noqa: E402 - after the __path__ resolution
+    _cores_for_fit as _cores_for_fit,
+)
+from edi._edi import (  # noqa: E402 - after the __path__ resolution
     _default_descent as _default_descent,
 )
 from edi._edi import (  # noqa: E402 - after the __path__ resolution
@@ -655,34 +658,47 @@ class Analysis:
             return human_fit(
                 self._project, _FIT_VERBOSITY[verbosity], self._project.name, cancel=should_cancel
             )
-        if self._project.fitting_mode == 'sequential':
-            return self._project.fit_sequential(
-                on_iteration=on_iteration,
-                on_start=on_start,
-                on_scan_start=on_scan_start,
-                on_file_complete=on_file_complete,
-                should_cancel=should_cancel,
-            )
-        if self._project.fitting_mode == 'independent':
-            return self._project.fit_independent(
-                on_iteration=on_iteration,
-                on_start=on_start,
-                on_scan_start=on_scan_start,
-                on_file_complete=on_file_complete,
-                should_cancel=should_cancel,
-            )
-        if on_scan_start is not None or on_file_complete is not None:
-            raise ValueError(
-                'on_scan_start/on_file_complete are scan-mode subscribers - this project '
-                f"declares _fitting_mode.type '{self._project.fitting_mode}'"
-            )
-        if self._project.fitting_mode == 'joint':
-            return self._project.fit_joint(
+        # The cores for this fit's mode, held for the fit so another thread's fit does not
+        # change them; nothing unless --cores or the preference was given.
+        # Joint over a declared scan fits every pattern of the scan as one fit.
+        joint_scan = self._project.fitting_mode == 'joint' and self._project._scan_declared
+        with _cores_for_fit('parametric' if joint_scan else self._project.fitting_mode):
+            if self._project.fitting_mode == 'sequential':
+                return self._project.fit_sequential(
+                    on_iteration=on_iteration,
+                    on_start=on_start,
+                    on_scan_start=on_scan_start,
+                    on_file_complete=on_file_complete,
+                    should_cancel=should_cancel,
+                )
+            if self._project.fitting_mode == 'independent':
+                return self._project.fit_independent(
+                    on_iteration=on_iteration,
+                    on_start=on_start,
+                    on_scan_start=on_scan_start,
+                    on_file_complete=on_file_complete,
+                    should_cancel=should_cancel,
+                )
+            if joint_scan:
+                return self._project.fit_parametric(
+                    on_iteration=on_iteration,
+                    on_start=on_start,
+                    on_scan_start=on_scan_start,
+                    on_file_complete=on_file_complete,
+                    should_cancel=should_cancel,
+                )
+            if on_scan_start is not None or on_file_complete is not None:
+                raise ValueError(
+                    'on_scan_start/on_file_complete are scan-mode subscribers - this project '
+                    f"declares _fitting_mode.type '{self._project.fitting_mode}'"
+                )
+            if self._project.fitting_mode == 'joint':
+                return self._project.fit_joint(
+                    on_iteration=on_iteration, on_start=on_start, should_cancel=should_cancel
+                )
+            return self._project.fit(
                 on_iteration=on_iteration, on_start=on_start, should_cancel=should_cancel
             )
-        return self._project.fit(
-            on_iteration=on_iteration, on_start=on_start, should_cancel=should_cancel
-        )
 
     def calculate(self) -> None:
         # The model is the single source of truth — no grid/bank/cutoff/scattering argument

@@ -802,6 +802,8 @@ std::optional<Session::SaveOperation> Session::beginSave(bool wholeTree, bool st
         setLastError(refusal);
         return std::nullopt;
     }
+    // Pending scan edits live in the running model only: the save says what it will not keep.
+    if (!replanning_) project_->announceUnfittedEdits();
     if (!replanning_) folder_wait_left_ = folder_wait_per_save;
     SaveOperation operation;
     operation.id = ++save_operations_;

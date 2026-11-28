@@ -7,6 +7,7 @@ import numpy as np
 import pytest
 
 from tests.fixtures.phase_factors.reference import axial_profiles
+from tests.fixtures.project_save.reference import six_digits
 from tests.fixtures.saved_spelling.profile_bounds import phase_errors, polynomial_error
 from tests.fixtures.xray_doublet import phase_membership as doublet_phase
 from tests.integration.py.test_anisotropic_adps import loop_rows
@@ -170,6 +171,8 @@ def phase_checks(project, text, parts, observations, backgrounds=None, *, saved=
                 if row['_fit_result_phase.experiment_id'] == experiment.name
                 and row['_fit_result_phase.structure_id'] == name
             )
+            if backgrounds is not None:
+                bragg, amplitude = six_digits(bragg), six_digits(amplitude)
             assert float(row['_fit_result_phase.bragg_r_factor']) == pytest.approx(
                 bragg, rel=1e-12
             ), '_fit_result_phase.bragg_r_factor must use its phase observations'
@@ -264,7 +267,7 @@ def test_phase_and_profile_results_follow_reload_and_changed_free_set_refit(tmp_
     if mode in {'sequential', 'independent'}:
         backgrounds = {
             'bank': scan_template_background(
-                project, tmp_path / 'saved', declared['bank'], constrained=False
+                project, declared['bank'], constrained=False, net_pattern=sum(parts)
             )
         }
     phase_checks(
@@ -321,7 +324,7 @@ def test_phase_and_profile_results_follow_reload_and_changed_free_set_refit(tmp_
     if mode in {'sequential', 'independent'}:
         backgrounds = {
             'bank': scan_template_background(
-                loaded, tmp_path / 'refitted', declared['bank'], constrained=False
+                loaded, declared['bank'], constrained=False, net_pattern=sum(parts)
             )
         }
     phase_checks(
@@ -461,6 +464,8 @@ def test_doublet_phase_membership_and_orbit_share_survive_fit_and_reload(  # noq
             total = profiles[0] + profiles[1]
             share = np.sum(total[used] * multiplier[used]) / np.sum(total[used])
         expected = (abs(share - 1) / share, abs(math.sqrt(share) - 1) / math.sqrt(share))
+    if mode in {'sequential', 'independent'}:
+        expected = tuple(map(six_digits, expected))
     for destination in (saved, tmp_path / 'copied'):
         phase_rows = loop_rows(
             (destination / 'analysis/analysis.edi').read_text(), '_fit_result_phase'

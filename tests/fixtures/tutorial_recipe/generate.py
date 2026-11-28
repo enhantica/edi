@@ -56,6 +56,10 @@ def build():
     for case, recipe in output.items():
         if any('background.estimate' in item['actions'] for item in recipe['plan']['steps']):
             recipe['estimated_background_paths'] = estimated_background_paths(case)
+        if case == 'sc-neut-tof_taurine-senju':
+            recipe['shared_parameters'] = [
+                f'senju_1.extinction.coefficient_{axis}' for axis in ('11', '22', '33')
+            ]
         recipe['boundaries'] = boundary_contracts(recipe)
     return output
 

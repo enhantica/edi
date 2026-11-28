@@ -4560,6 +4560,25 @@ struct IterationRecord {
 };
 
 
+// ADR-0107: one accepted iteration of a parametric fit, for live charts. Per point: its data file, its free
+// parameters' values by unique name, and its calculated pattern on its fitted grid; for a series point, each
+// experiment's name and where its slice of the grid and pattern starts.
+struct ParametricIterate {
+    struct IteratePoint {
+        std::string name;
+        std::map<std::string, double> values;
+        std::vector<double> grid;
+        std::vector<double> calculated;
+        std::vector<std::string> experiments;
+        std::vector<std::size_t> offsets;
+    };
+    int iteration = 0;
+    double reduced_chi_square = 0.0;
+    std::vector<IteratePoint> points;
+};
+// Building an iterate costs one pattern per point; with no subscriber none is built.
+using ParametricIterateCallback = std::function<void(const ParametricIterate&)>;
+
 // Optional per-iteration progress subscriber. Passing none costs nothing: with no subscriber there
 // is no host crossing at all, while the history below is populated either way.
 using IterationCallback = std::function<void(const IterationRecord&)>;
@@ -4758,6 +4777,7 @@ struct FitResultBase {
     // first-class fields precisely so both paths can answer.
     std::size_t n_points_loaded = 0;
     std::size_t n_points_fitted = 0;
+    std::size_t n_free = 0;  // a parametric series: every point's and the shared ones; 0: the values' count
     // Per-iteration history. ALWAYS populated, callback or not: a notebook caller cannot consume a
     // streaming callback after the fact, so the history has to be readable off the result. Collected
     // by crysta::IterationHistoryCollector, the one place rwp/reduced-chi2/elapsed are derived.
@@ -4967,6 +4987,30 @@ struct KeyTraits<SequentialFitExperiment> {
     static const char* category() { return "sequential-fit experiment"; }
 };
 
+// ADR-0107: one parameter the parametric fit gives one value for every point, by its unique name.
+struct ParametricSharedParameter {
+    ItemKey parameter_unique_name;
+};
+
+template <>
+struct KeyTraits<ParametricSharedParameter> {
+    static ItemKey& key(ParametricSharedParameter& row) { return row.parameter_unique_name; }
+    static const ItemKey& key(const ParametricSharedParameter& row) { return row.parameter_unique_name; }
+    static std::string canonical(const std::string& name) { return name; }
+    static const char* category() { return "shared parameter"; }
+};
+
+// ADR-0107 decision 13: one point's own start for one parameter of a scan fit, made by a value edit while the scan had
+// results, in every scan mode: pending in the running model only, never written to the
+// project files, until a fit uses it and writes the point's row (crysta's apply_point_starts, ADR-0136 decision 9). The
+// point is its data file relative to the scan folder, or the text the `*` matches in a series of joint fits; a shared
+// parameter's start is the whole series' one start. Its row schema is the collection's in-memory layout only.
+struct ParametricFitStart {
+    detail::WrittenText point;
+    detail::WrittenText parameter_unique_name;
+    detail::Written<double> value{0.0};
+};
+
 // ADR-0087: an experiment set, a template experiment and its members, each an ordinary experiment.
 struct ExperimentSet {
     ItemKey id;
@@ -5011,6 +5055,20 @@ struct RowSchema<edi::SequentialFitExperiment> {
     static constexpr auto fields =
         std::tuple{&edi::SequentialFitExperiment::experiment_id, &edi::SequentialFitExperiment::file_pattern};
     static constexpr std::array items{"experiment_id", "file_pattern"};
+};
+template <>
+struct RowSchema<edi::ParametricSharedParameter> {
+    static constexpr const char* name = "_parametric_fit_shared";
+    static constexpr auto fields = std::tuple{&edi::ParametricSharedParameter::parameter_unique_name};
+    static constexpr std::array items{"parameter_unique_name"};
+};
+template <>
+struct RowSchema<edi::ParametricFitStart> {
+    static constexpr const char* name = "_parametric_fit_start";
+    static constexpr auto fields = std::tuple{&edi::ParametricFitStart::point,
+                                              &edi::ParametricFitStart::parameter_unique_name,
+                                              &edi::ParametricFitStart::value};
+    static constexpr std::array items{"point", "parameter_unique_name", "value"};
 };
 template <>
 struct RowSchema<edi::ExperimentSet> {
@@ -5130,6 +5188,11 @@ struct SequentialFitConfig {
     // ADR-0088: a series of joint fits, one file pattern per experiment; empty for a scan of one
     // experiment, which reads `file_pattern`.
     ItemVec<SequentialFitExperiment> experiments;
+    // ADR-0107: the `_parametric_fit_shared` names, the parameters a parametric fit gives one value for every
+    // point (each also free). Kept in every mode; only `parametric` reads them.
+    ItemVec<ParametricSharedParameter> shared;
+    // ADR-0107 decision 13: the pending point starts, in memory only (never saved).
+    ItemVec<ParametricFitStart> starts;
     bool declared() const { return !data_dir.empty(); }
     bool joint() const { return !experiments.empty(); }
     // ADR-0018: the row of this object's non-loop categories.
@@ -5202,18 +5265,20 @@ struct FitResultRecord {
 //   joint        several banks, one simultaneous fit
 //   sequential   scan: each file seeded from the previous fit's converged parameters
 //   independent  scan: each file seeded from the SAME initial parameters
-// Both scan modes execute SERIALLY; the distinction is the starting point, never concurrency.
+//   joint over a declared scan: every file in one fit, the shared parameters one value for all
+//                (ADR-0107); the fit kind `parametric` (fit_kind) names it inside edi
+// The scan modes execute SERIALLY; the distinction is the starting point, never concurrency.
 inline bool is_declared_fitting_mode(const std::string& mode) {
     return mode == "single" || mode == "joint" || mode == "sequential" || mode == "independent";
 }
-// True for the two modes driven by crysta's scan driver over a declared `_sequential_fit` block.
+// True for the three fit kinds (fit_kind) driven by crysta's scan driver over a declared `_sequential_fit` block.
 // A site that means "a scan" asks this instead of comparing against `sequential` and forgetting
 // `independent` — which is exactly how the mode contract drifted in the first place.
 inline bool is_scan_fitting_mode(const std::string& mode) {
-    return mode == "sequential" || mode == "independent";
+    return mode == "sequential" || mode == "independent" || mode == "parametric";
 }
 inline std::string declared_fitting_modes() {
-    return "'single', 'joint', 'sequential', 'independent'";
+    return "'single', 'joint', 'sequential', 'independent', 'parametric'";
 }
 
 // The SPELLING half of the scan-directory containment rule, mirroring crysta's
@@ -5390,6 +5455,15 @@ class Project : public detail::ProjectAnchor {
                                      const FileCompleteCallback& on_file_complete = {},
                                      const CancelCallback& should_cancel = {},
                                      const FileFittedCallback& on_file_fitted = {});
+    // The `parametric` scan mode's entry point (ADR-0107): the whole scan as one fit, the shared parameters one value
+    // for every file. Same driver and refusals; the mode must be exactly `parametric`.
+    FitResultBase fit_parametric(const IterationCallback& on_iteration = {},
+                                 const PreambleCallback& on_start = {},
+                                 const ScanStartCallback& on_scan_start = {},
+                                 const FileCompleteCallback& on_file_complete = {},
+                                 const CancelCallback& should_cancel = {},
+                                 const FileFittedCallback& on_file_fitted = {},
+                                 const ParametricIterateCallback& on_iterate = {});
     // The shared scan implementation both public scan entries delegate to AFTER each has
     // proved its own exact mode token. It is deliberately not bound to Python — making the
     // public entries aliases of one another is exactly what let an `independent` project

@@ -186,7 +186,6 @@ def scan_probe(package, source, fail_first):
     def run():
         fitter(on_iteration=iteration, on_file_complete=calls.append, **callbacks)
         csv_path = source / 'analysis/results.csv'
-        initial = csv_path.read_bytes()
         with csv_path.open() as stream:
             rows = list(csv.DictReader(stream))
         result = {
@@ -201,11 +200,16 @@ def scan_probe(package, source, fail_first):
             'first_failed': rows[0]['fit_result.success'] == 'False',
         }
         fitter(on_file_complete=calls.append, **callbacks)
-        result['resume_unchanged'] = csv_path.read_bytes() == initial
+        with csv_path.open() as stream:
+            repeated = list(csv.DictReader(stream))
+        result['refit_files'] = [row['file_path'] for row in repeated]
         result['completed_before_restart'] = len(calls)
-        csv_path.write_bytes(b''.join(initial.splitlines(keepends=True)[:-1]))
+        result['refit_template'] = points(project)
+        retained = b''.join(csv_path.read_bytes().splitlines(keepends=True)[:-1])
+        csv_path.write_bytes(retained)
         fitter(on_file_complete=calls.append, **callbacks)
         result['completed_after_restart'] = len(calls)
+        result['retained_prefix'] = csv_path.read_bytes().startswith(retained)
         return result
 
     try:

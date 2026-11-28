@@ -178,9 +178,10 @@ The app does not edit the project while a fit runs: the door refuses an edit the
 
 ### 10. The engine's thread count
 
-The Performance preference "Threads per calculation" (ADR-0017 §12; Develop's "Engine threads" until 2026-11-04)
-sets how many threads crysta uses for every fit and calculation in the process. While "Parallel fits in a scan" is
-above 1, each fit of a scan's group runs on one thread instead.
+The Performance preference "Cores for fitting" (ADR-0017 §12; "Threads per calculation" until 2026-11-27, Develop's
+"Engine threads" until 2026-11-04) sets how many threads crysta uses for every fit and calculation in the process;
+before each fit `edi::apply_cores_for_mode` spends them by the fit's mode, so an Independent scan fits that many files
+at once, each on one thread, and a Parametric fit that many patterns.
 
 - **Auto** (0, the default) keeps the engine's own thread policy, which honours `OMP_NUM_THREADS` when it is set.
   **A count N** replaces that policy and the environment: the user chose it, so the environment does not override it.

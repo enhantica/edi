@@ -147,8 +147,8 @@ Item {
             // As wide as its widest entry, so the row stays where it is as the scope changes (the owner, 2026-11-24).
             toolbarGroup: "series"
             visible: !chart.fromReport && chart.evolution !== null && chart.evolution.series
-            toolTip: qsTr("Parameters shared by the banks, or each bank's own")
-            readonly property var entries: [qsTr("Shared"), qsTr("Per bank")]
+            toolTip: qsTr("Parameters common to all experiments, or each experiment's own")
+            readonly property var entries: [qsTr("Common"), qsTr("Per experiment")]
             model: entries
             shownIndex: chart.evolution !== null && chart.evolution.perExperiment ? 1 : 0
             onActivated: index => {
@@ -165,10 +165,10 @@ Item {
             fitShown: true
             toolbarGroup: "series"
             visible: !chart.fromReport && chart.evolution !== null && chart.evolution.series && chart.evolution.perExperiment
-            toolTip: qsTr("Every bank's curve, or one bank's")
+            toolTip: qsTr("Every experiment's curve, or one experiment's")
             // Each bank with the experiment icon in its curve's colour, as the legend and the Bank selector show it;
             // All banks with the neutral icon (the owner, 2026-11-17). The base box draws $ICONS_FAMILY and $ICON_COLOR.
-            readonly property var plain: chart.evolution !== null ? [qsTr("All banks")].concat(chart.evolution.experiments) : []
+            readonly property var plain: chart.evolution !== null ? [qsTr("All experiments")].concat(chart.evolution.experiments) : []
             readonly property var entries: plain.map((name, i) => {
                 const colour = i === 0 ? "$ICON_COLOR" : String(AppColors.experiment(i - 1, chart.colors.isDarkPalette));
                 return `<font face="$ICONS_FAMILY" color="${colour}">microscope</font>&nbsp;&nbsp;${name}`;
@@ -613,4 +613,5 @@ Item {
         width: Math.min(implicitWidth, parent.width - 2 * chart.sideMargin)
         text: qsTr("No fitted results yet")
     }
+
 }

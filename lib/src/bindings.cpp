@@ -807,9 +807,38 @@ static void def_free_parameters(nb::class_<Class>& cls) {
         "free_parameters",
         [](Class& self) {
             edi::detail::point_parameters(self);  // X12: each handle's row
-            return self.free_parameters();
+            std::vector<edi::Parameter*> free = self.free_parameters();
+            if constexpr (std::is_same_v<Class, edi::Project>) {
+                // A Joint shared group is one fitted coordinate, free if any copy is (ADR-0107): listed once, by its
+                // listed copy, as the fit's ties count it.
+                if (!self.sequential_fit.declared() && self.fitting_mode == "joint" && !self.sequential_fit.shared.empty()) {
+                    std::vector<edi::Parameter*> out;
+                    for (edi::Parameter* parameter : free) {
+                        edi::Parameter* counted = parameter;
+                        if (edi::parametric_shared(self, *parameter)) {
+                            if (const edi::Parameter* leader = edi::shared_leader(self, *parameter)) {
+                                counted = const_cast<edi::Parameter*>(leader);  // the project's own parameter
+                            }
+                        }
+                        if (std::find(out.begin(), out.end(), counted) == out.end()) out.push_back(counted);
+                    }
+                    return out;
+                }
+            }
+            return free;
         },
-        nb::rv_policy::reference_internal, "The subset of `parameters` whose `free` is set.");
+        nb::rv_policy::reference_internal,
+        "The subset of `parameters` whose `free` is set; a Joint shared group counts once, by its listed copy.");
+}
+
+// Pending scan edits live in the running model only: a save says how many it will not keep.
+// A warning raised as an error stops the save before it writes.
+static void warn_unfitted_edits(const edi::Project& project) {
+    const std::size_t pending = project.sequential_fit.starts.size();
+    if (pending == 0) return;
+    const std::string message = std::to_string(pending) + (pending == 1 ? " edit" : " edits") +
+                                " not yet fitted will not be kept";
+    if (PyErr_WarnEx(PyExc_UserWarning, message.c_str(), 1) != 0) throw nb::python_error();
 }
 
 // The Python edi.IoError type (subclass of ValueError), kept alive for the exception translator so a
@@ -2316,6 +2345,19 @@ NB_MODULE(_edi, m) {
     m.def("log_level", [] { return edi::log_level(); }, "The current message level.");
     m.def("_set_engine_threads", &edi::set_engine_threads, "count"_a);
     m.def("_set_scan_workers", &edi::set_scan_workers, "count"_a);
+    m.def("_set_cores_for_fitting", &edi::set_cores_for_fitting, "count"_a);
+    m.def("_apply_cores_for_mode", &edi::apply_cores_for_mode, "mode"_a);
+    // One fit's cores, held for the fit (`with _cores_for_fit(mode):`), so another thread's fit does not change them.
+    struct CoresForFit {
+        explicit CoresForFit(const std::string& mode) : budget(edi::cores_budget_for_mode(mode)) {}
+        edi::CoresBudget budget;
+        std::optional<edi::ScopedCores> held;
+    };
+    nb::class_<CoresForFit>(m, "_cores_for_fit")
+        .def(nb::init<const std::string&>(), "mode"_a)
+        .def("__enter__",
+             [](CoresForFit& self) { self.held.emplace(self.budget); })
+        .def("__exit__", [](CoresForFit& self, const nb::args&) { self.held.reset(); });
     m.def("_collection_defaults", [] {
         return nb::make_tuple(edi::online::default_collection_sources(), edi::online::default_tutorials_source());
     });
@@ -2448,6 +2490,12 @@ NB_MODULE(_edi, m) {
                     throw;
                 }
                 complete_tensors_of(p.category.get());
+                // ADR-0107: a shared group has one value.
+                if (edi::Project* owner = project_of(p); owner != nullptr) {
+                    for (edi::Parameter* member : edi::shared_group(*owner, p)) {
+                        if (member != &p) member->value = value;
+                    }
+                }
             })
         .def_prop_rw(
             "uncertainty", [](const edi::Parameter& p) { return p.uncertainty.get(); },
@@ -2481,7 +2529,8 @@ NB_MODULE(_edi, m) {
                 if (const std::string refusal = edi::free_refusal(p); free && !refusal.empty()) {
                     throw std::invalid_argument(parameter_name(p) + " " + refusal);
                 }
-                if (!edi::set_free(p, free)) {
+                edi::Project* owner = project_of(p);  // a shared group has one free flag (ADR-0107)
+                if (!(owner != nullptr ? edi::set_group_free(*owner, p, free) : edi::set_free(p, free))) {
                     const std::string name = p.spec != nullptr ? p.spec->name : std::string("parameter");
                     const std::string message =
                         "crysta.domain.dependent_free_ignored: parameter '" + name + "' is " +
@@ -2494,6 +2543,26 @@ NB_MODULE(_edi, m) {
                         throw nb::python_error();
                     }
                 }
+            })
+        // ADR-0107: whether the parametric fit gives this parameter one value for every point, fixed or free. It is
+        // independent of `free`.
+        .def_prop_rw(
+            "shared",
+            [](const edi::Parameter& p) {
+                const edi::Project* project = project_of(p);
+                return project != nullptr && edi::parametric_shared(*project, p);
+            },
+            [](edi::Parameter& p, bool shared) {
+                refuse_detached(p);
+                edi::Project* project = project_of(p);
+                if (project == nullptr) {
+                    if (shared) {
+                        throw std::invalid_argument(parameter_name(p) + " belongs to no project and cannot be shared");
+                    }
+                    return;
+                }
+                (void)dependence_now(p);
+                edi::set_parametric_shared(*project, p, shared);
             })
         // Whether a declared constraint or the space group sets this parameter (diffraction-lib
         // GenericParameter.user_constrained / .symmetry_constrained), from crysta's relation graph.
@@ -5110,7 +5179,18 @@ NB_MODULE(_edi, m) {
                     throw std::invalid_argument("_fitting_mode.type is '" + value + "', expected " +
                                                 edi::declared_fitting_modes());
                 }
+                // The stored shared groups are admitted again for the mode now in effect, as the app's mode
+                // edit admits them (ADR-0107): a group no longer whole is dropped and said. Worked out on a copy and
+                // said first, so a warning raised as an error leaves the project as it was.
+                edi::Project trial = self;
+                trial.fitting_mode = value;
+                for (const std::string& note : edi::settle_parametric_shared(trial)) {
+                    if (PyErr_WarnEx(PyExc_UserWarning, ("crysta.domain.shared_ignored: " + note).c_str(), 1) != 0) {
+                        throw nb::python_error();
+                    }
+                }
                 self.fitting_mode = value;
+                (void)edi::settle_parametric_shared(self);
             })
         .def(
             "reflection_admission",
@@ -5298,6 +5378,7 @@ NB_MODULE(_edi, m) {
         .def(
             "save_as",
             [](edi::Project& self, const std::filesystem::path& directory) {
+                warn_unfitted_edits(self);
                 // edi NARRATES its saves (the display facade is edi's, R6); the write itself
                 // is delegated to crysta's silent writer (:save_project validates and hands
                 // over).
@@ -5420,6 +5501,7 @@ NB_MODULE(_edi, m) {
                         "this project has no directory yet (never loaded or saved): use "
                         "save_as(directory) first");
                 }
+                warn_unfitted_edits(self);
                 nb::module_::import_("builtins").attr("print")(
                     "Saving project to '" + (self.archive.empty() ? self.path : self.archive) + "'");
                 // review-32 F2 +: advance before the write, roll back on failure.
@@ -5565,6 +5647,29 @@ NB_MODULE(_edi, m) {
             "Carries the same scan-event subscribers as `fit_sequential`. `should_cancel` is polled between iterations; true, or a "
             "KeyboardInterrupt raised in any callback, stops the fit cleanly with a CANCELLED "
             "result.")
+        .def(
+            "fit_parametric",
+            [](edi::Project& self, const std::optional<nb::callable>& on_iteration,
+               const std::optional<nb::callable>& on_start,
+               const std::optional<nb::callable>& on_scan_start,
+               const std::optional<nb::callable>& on_file_complete,
+               const std::optional<nb::callable>& should_cancel) {
+                warn_dependents(self);
+                return fit_with_scan_callbacks(
+                    on_iteration, on_start, on_scan_start, on_file_complete, should_cancel,
+                    [&](const edi::IterationCallback& cb, const edi::PreambleCallback& pre,
+                        const edi::ScanStartCallback& scan_start,
+                        const edi::FileCompleteCallback& file_complete,
+                        const edi::CancelCallback& cancel) {
+                        return self.fit_parametric(cb, pre, scan_start, file_complete, cancel);
+                    });
+            },
+            "on_iteration"_a = nb::none(), "on_start"_a = nb::none(),
+            "on_scan_start"_a = nb::none(), "on_file_complete"_a = nb::none(),
+            "should_cancel"_a = nb::none(),
+            "The joint fit of a scan: every file of the scan in one fit, the shared parameters "
+            "(Parameter.shared) one value for all files. Rows are written as the 'independent' mode "
+            "writes them. Raises ValueError unless the fitting mode is 'joint' over a declared scan.")
         // The stop rules are model state too, as crysta reads them; the setter validates the list.
         .def_prop_rw(
             "stop_rules",
