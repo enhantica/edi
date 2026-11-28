@@ -185,6 +185,8 @@ class ApplicationInfo : public QObject {
     /// Whether this build carries the AI assistant at all (EDI_APP_ASSISTANT, off for the web, ADR-0023 §6).
     Q_PROPERTY(bool assistantBuilt READ assistantBuilt CONSTANT)
     Q_PROPERTY(QString assistantUnavailableReason READ assistantUnavailableReason CONSTANT)
+    /// The assistant providers public builds offer, by name, from the bundled distribution policy.
+    Q_PROPERTY(QStringList assistantPublicProviders READ assistantPublicProviders CONSTANT)
 
    public:
     enum EditorKind { ParameterFieldEditor, ParameterCellEditor, TextCellEditor };
@@ -965,6 +967,7 @@ class ApplicationInfo : public QObject {
     bool assistantBuilt() const;
     /// Localized desktop-only explanation, or empty when available. No network access.
     QString assistantUnavailableReason() const;
+    QStringList assistantPublicProviders() const;
     // How to cite the app, from the bundled CITATION.cff, the one place its citation is kept.
     Q_INVOKABLE Citation citation() const;
     // The built-in tutorials (app/tutorials/manifest.json), in its order.

@@ -19,7 +19,6 @@ namespace {
 // The CLI waits up to MCP_TIMEOUT (30 s by default) for edi's server before the first turn.
 constexpr int readback_ms = 120000;
 constexpr int status_ms = 30000;
-constexpr int login_ms = 15 * 60 * 1000;
 constexpr int logout_ms = 60000;
 constexpr qsizetype login_output_cap = qsizetype{64} * 1024;
 
@@ -217,10 +216,9 @@ ClaudeSession::ClaudeSession(QObject* parent) : AssistantRuntimeSession(parent) 
     readback_timer_.setSingleShot(true);
     connect(&readback_timer_, &QTimer::timeout, this, [this] {
         if (!process_ || readbacks_done_) return;
-        // No input is ever written before `system/init`, so a runtime that never sends it cannot be used.
-        startFailed(initialize_passed_ && !init_verified_
-                        ? QStringLiteral("Claude did not report its tools within %1 seconds.").arg(readback_ms / 1000)
-                        : QStringLiteral("Claude did not finish starting within %1 seconds.").arg(readback_ms / 1000),
+        // No input is written before the tools are read back, so a runtime that never reports them cannot be used.
+        startFailed(initialize_passed_ && !tools_verified_ ? QStringLiteral("Claude didn't report its tools in time.")
+                                                            : QStringLiteral("Claude didn't finish starting."),
                     AssistantProvider::FailureKind::OperationDeadline);
     });
 }
@@ -340,7 +338,8 @@ QProcess* ClaudeSession::runOneShot(const AssistantRuntimeLaunch& launch, const 
         process->kill();
         finish(QStringLiteral("it did not finish within %1 seconds").arg(timeoutMs / 1000), true);
     });
-    timer->start(timeoutMs);
+    // No limit (0) for the sign-in: the user may take minutes, e.g. through an e-mail link; Cancel ends it.
+    if (timeoutMs > 0) timer->start(timeoutMs);
     process->start();
     return process;
 }
@@ -361,6 +360,7 @@ void ClaudeSession::launch(Purpose purpose, bool resume) {
         process_effort_ = effort_;
         process_used_ = resume;
     }
+    if (purpose == Purpose::Restart) emit processRestarting();
     // JSON is the default output of `claude auth status`, with `authMethod` and `configDirectory` (CLI reference).
     // It runs with the turn process's environment, so it reports what that process will use.
     status_ = runOneShot(launch_, environment_, {QStringLiteral("auth"), QStringLiteral("status")}, status_ms,
@@ -399,8 +399,11 @@ void ClaudeSession::launch(Purpose purpose, bool resume) {
                                 false);
             return;
         }
-        // Only sign-in and the folder are decided here; the identity comes from the turn process itself.
+        // Only sign-in and the folder are decided here; the identity comes from the turn process itself. The key's
+        // source and a cloud provider (Bedrock, Vertex) are reported here, not before the first turn.
         auth_method_ = method;
+        api_key_source_ = status.value(QStringLiteral("apiKeySource")).toString();
+        api_provider_ = status.value(QStringLiteral("apiProvider")).toString();
         spawn(resume, generation);
     });
 }
@@ -408,6 +411,8 @@ void ClaudeSession::launch(Purpose purpose, bool resume) {
 void ClaudeSession::spawn(bool resume, quint64 generation) {
     launching_ = false;
     auto* process = new AssistantProcess(this);
+    // A tool result comes back twice in the echoed user record, JSON-escaped, so a line holds more than 1 MiB.
+    process->setLimits(AssistantProcess::Limits::stream_wire_bytes, AssistantProcess::Limits::request_bytes);
     process_ = process;
     connect(process, &AssistantProcess::started, this, [this, generation] {
         if (generation == generation_) control(QStringLiteral("initialize"));
@@ -448,13 +453,13 @@ void ClaudeSession::retireProcess() {
         status_->deleteLater();
     }
     launching_ = false;
-    initialize_passed_ = init_verified_ = readbacks_done_ = hooks_ran_ = false;
+    initialize_passed_ = tools_verified_ = init_verified_ = readbacks_done_ = hooks_ran_ = false;
     requests_.clear();
     tools_.clear();
     account_info_ = {};
-    api_key_source_.clear();
     capabilities_.clear();
     dropped_messages_.clear();
+    steers_.clear();
     dropping_.clear();
     turn_active_ = interrupted_ = false;
     streamed_items_.clear();
@@ -532,6 +537,13 @@ void ClaudeSession::controlResponse(const QJsonObject& response) {
             startFailed(QStringLiteral("Claude did not start the session: %1").arg(error));
         else
             initializeReply(response.value(QStringLiteral("response")).toObject());
+    } else if (subtype == QStringLiteral("mcp_status") || subtype == QStringLiteral("get_context_usage")) {
+        if (!success)
+            toolsProblem(QStringLiteral("Claude did not report its tools: %1").arg(error));
+        else if (subtype == QStringLiteral("mcp_status"))
+            mcpStatusReply(response.value(QStringLiteral("response")).toObject());
+        else
+            contextUsageReply(response.value(QStringLiteral("response")).toObject());
     } else if (subtype == QStringLiteral("interrupt") && success) {
         const auto receipt = response.value(QStringLiteral("response")).toObject();
         for (const auto& id : receipt.value(QStringLiteral("still_queued")).toArray())
@@ -572,7 +584,81 @@ void ClaudeSession::initializeReply(const QJsonObject& reply) {
                                   {QStringLiteral("defaultEffort"), QString()}});
     }
     models_ = models;
+    capabilities_.clear();
+    for (const auto& value : reply.value(QStringLiteral("capabilities")).toArray())
+        capabilities_.append(value.toString());
     initialize_passed_ = true;
+    control(QStringLiteral("mcp_status"));
+}
+
+void ClaudeSession::toolsProblem(const QString& problem) {
+    if (!readbacks_done_) {
+        startFailed(problem);
+        return;
+    }
+    // Found after input was sent (the first turn's `system/init`): the process is not used again.
+    retireProcess();
+    emit failed(problem, AssistantProvider::FailureKind::Other);
+}
+
+void ClaudeSession::mcpStatusReply(const QJsonObject& reply) {
+    // edi's server must be the only one, connected, listing exactly edi's tools.
+    QStringList servers, tools;
+    for (const auto& value : reply.value(QStringLiteral("mcpServers")).toArray()) {
+        const auto server = value.toObject();
+        servers.append(QStringLiteral("%1 (%2)").arg(server.value(QStringLiteral("name")).toString(),
+                                                     server.value(QStringLiteral("status")).toString()));
+        for (const auto& tool : server.value(QStringLiteral("tools")).toArray())
+            tools.append(tool.toObject().value(QStringLiteral("name")).toString());
+    }
+    const QStringList wanted{QStringLiteral("edi (connected)")};
+    if (servers != wanted) {
+        toolsProblem(QStringLiteral("Claude's tool servers differ from edi's. Expected: %1. Observed: %2.")
+                         .arg(listed(wanted), listed(servers)));
+        return;
+    }
+    if (expected_tools_.isEmpty()) {
+        toolsProblem(QStringLiteral("edi has no tool list to compare Claude's tools with."));
+        return;
+    }
+    if (QSet<QString>(tools.cbegin(), tools.cend()) !=
+            QSet<QString>(expected_tools_.cbegin(), expected_tools_.cend()) ||
+        tools.size() != expected_tools_.size()) {
+        toolsProblem(QStringLiteral("Claude's tools from edi's server differ from edi's. Expected: %1. Observed: %2.")
+                         .arg(listed(expected_tools_), listed(tools)));
+        return;
+    }
+    control(QStringLiteral("get_context_usage"));
+}
+
+void ClaudeSession::contextUsageReply(const QJsonObject& reply) {
+    // The context Claude would send: edi's MCP tools and no built-in tool (with built-ins on, a `system_tools`
+    // category is listed; the skill loader alone adds none).
+    QStringList categories, tools;
+    for (const auto& value : reply.value(QStringLiteral("categories")).toArray()) {
+        const auto id = value.toObject().value(QStringLiteral("id")).toString();
+        if (id.startsWith(QStringLiteral("system_tools")) || id.startsWith(QStringLiteral("custom_tools")))
+            categories.append(id);
+    }
+    for (const auto& value : reply.value(QStringLiteral("mcpTools")).toArray())
+        tools.append(value.toObject().value(QStringLiteral("name")).toString());
+    QStringList expected;
+    for (const auto& name : expected_tools_) expected.append(edi_tool_prefix + name);
+    QString problem;
+    if (!reply.value(QStringLiteral("categories")).isArray() || !reply.value(QStringLiteral("mcpTools")).isArray())
+        problem = QStringLiteral("Claude did not report which tools it would use.");
+    else if (!categories.isEmpty())
+        problem = QStringLiteral("Claude would use its own tools: %1.").arg(listed(categories));
+    else if (QSet<QString>(tools.cbegin(), tools.cend()) != QSet<QString>(expected.cbegin(), expected.cend()) ||
+             tools.size() != expected.size())
+        problem = QStringLiteral("Claude's tools differ from edi's. Expected: %1. Observed: %2.")
+                      .arg(listed(expected), listed(tools));
+    if (!problem.isEmpty()) {
+        toolsProblem(problem);
+        return;
+    }
+    tools_ = QStringList{skill_tool} + expected;
+    tools_verified_ = true;
     maybeReadbacksDone();
 }
 
@@ -625,31 +711,24 @@ void ClaudeSession::systemInit(const QJsonObject& init) {
             problem = QStringLiteral("Claude did not load edi's skills: %1.").arg(missing.join(QStringLiteral(", ")));
     }
     if (!problem.isEmpty()) {
-        if (!readbacks_done_) {
-            startFailed(problem);
-        } else {
-            retireProcess();
-            emit failed(problem, AssistantProvider::FailureKind::Other);
-        }
+        toolsProblem(problem);
         return;
     }
     tools_ = tools;
-    api_key_source_ = init.value(QStringLiteral("apiKeySource")).toString();
-    capabilities_.clear();
     for (const auto& value : init.value(QStringLiteral("capabilities")).toArray())
-        capabilities_.append(value.toString());
+        if (!capabilities_.contains(value.toString())) capabilities_.append(value.toString());
     init_verified_ = true;
-    maybeReadbacksDone();
 }
 
 void ClaudeSession::maybeReadbacksDone() {
-    if (readbacks_done_ || !initialize_passed_ || !init_verified_) return;
+    if (readbacks_done_ || !initialize_passed_ || !tools_verified_) return;
     const auto text = [this](const char* key) { return account_info_.value(QLatin1String(key)).toString(); };
     identity_ = {{QStringLiteral("email"), text("email")},
                  {QStringLiteral("organization"), text("organization")},
                  {QStringLiteral("plan"), text("subscriptionType")},
                  {QStringLiteral("authMethod"), auth_method_},
-                 {QStringLiteral("apiKeySource"), api_key_source_},
+                 {QStringLiteral("apiKeySource"), text("apiKeySource").isEmpty() ? api_key_source_ : text("apiKeySource")},
+                 {QStringLiteral("apiProvider"), api_provider_},
                  {QStringLiteral("tokenSource"), text("tokenSource")},
                  {QStringLiteral("host"), launch_.account.host}};
     if (!managed_settings_.isEmpty()) identity_.insert(QStringLiteral("managedSettings"), managed_settings_);
@@ -728,7 +807,9 @@ void ClaudeSession::sendMessage(const QString& thread, const QString& clientMess
         if (process_ || launching_) beginTurn(clientMessageId);
         return;
     }
-    if (!turn_active_) beginTurn(clientMessageId);
+    // A message sent while a turn runs may be taken into that same turn; its result then lists it.
+    if (turn_active_) steers_.insert(clientMessageId);
+    else beginTurn(clientMessageId);
     if (!readbacks_done_) {
         queued_.push_back(message);
         return;
@@ -737,12 +818,11 @@ void ClaudeSession::sendMessage(const QString& thread, const QString& clientMess
 }
 
 bool ClaudeSession::writeUser(const Message& message) {
-    // One stream-json user message; its uuid is edi's client message id. The header block keeps a message that
-    // starts with "/" from running as one of the binary's commands.
-    const QJsonArray content{
-        QJsonObject{{QStringLiteral("type"), QStringLiteral("text")},
-                    {QStringLiteral("text"), QStringLiteral("Message from the edi user:")}},
-        QJsonObject{{QStringLiteral("type"), QStringLiteral("text")}, {QStringLiteral("text"), message.text}}};
+    // One stream-json user message; its uuid is edi's client message id. One text block that starts with edi's
+    // header: the binary runs a slash command when its last text block starts with "/".
+    const QJsonArray content{QJsonObject{
+        {QStringLiteral("type"), QStringLiteral("text")},
+        {QStringLiteral("text"), QStringLiteral("Message from the edi user:\n\n") + message.text}}};
     const QJsonObject record{
         {QStringLiteral("type"), QStringLiteral("user")},
         {QStringLiteral("message"),
@@ -914,7 +994,13 @@ void ClaudeSession::result(const QJsonObject& record) {
     last_error_.clear();
     streamed_items_.clear();
     streaming_item_.clear();
-    emit turnFinished(session_id_, turn_id_, status, error);
+    int absorbed = 0;
+    for (const auto& id : record.value(QStringLiteral("user_message_uuids")).toArray())
+        if (steers_.remove(id.toString())) ++absorbed;
+    steers_.clear();
+    const auto session = session_id_, turn = turn_id_;
+    if (absorbed > 0) emit followUpsAnswered(session, absorbed);
+    emit turnFinished(session, turn, status, error);
 }
 
 bool ClaudeSession::dropRecord(const QJsonObject& record) {
@@ -1022,7 +1108,7 @@ void ClaudeSession::signIn(const AssistantRuntimeLaunch& launch) {
     const auto environment =
         claude_runtime_environment(launch.environment, launch.account.home, launch.toolTimeoutMs);
     // No flag: the binary's login keeps every method it offers.
-    login_ = runOneShot(launch, environment, {QStringLiteral("auth"), QStringLiteral("login")}, login_ms,
+    login_ = runOneShot(launch, environment, {QStringLiteral("auth"), QStringLiteral("login")}, 0,
                         QProcess::MergedChannels, [this](QProcess& process, const QString& problem, bool) {
         login_output_ += QString::fromUtf8(process.readAll());
         if (!problem.isEmpty()) {
@@ -1063,7 +1149,10 @@ void ClaudeSession::loginOutput() {
     if (url == login_url_ && prompt == login_prompt_) return;
     login_url_ = url;
     login_prompt_ = prompt;
-    emit signInOpened(url, {}, prompt);
+    // The binary opens its own page (a local callback ends the sign-in); the printed one is the fallback that ends
+    // with a code to paste. edi opening it too would leave a second sign-in tab.
+    const bool opened = text.left(match.capturedStart()).contains(QStringLiteral("Opening browser"), Qt::CaseInsensitive);
+    emit signInOpened(url, {}, prompt, opened);
 }
 
 void ClaudeSession::answerSignIn(const QString& input) {

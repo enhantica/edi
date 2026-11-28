@@ -49,10 +49,23 @@ AppDialog {
             addAccount(assistant.activeProvider.provider);
         refreshOffer();
     }
+    // The provider of the account last added here, so opening the dialog again does not add another one.
+    property string addedProvider: ""
     function addAccount(provider) {
         const host = provider === "copilot" ? (typedHost ?? "") : "";
         appliedHost = host;
+        addedProvider = provider;
         assistant.addAccount(provider, host);
+    }
+    // Opening the dialog makes the active provider one that is installed and has an account to sign in with: with a
+    // single installed provider that is the one, and a provider other than ChatGPT gets its account added here.
+    function prepareProvider() {
+        if (assistant.connected || assistant.state === "connecting")
+            return;
+        if (installedProviders.length === 1 && assistant.activeProvider.provider !== installedProviders[0].provider)
+            chooseProvider(0);
+        else if (assistant.activeProvider.provider !== "chatgpt" && providerAccounts.length === 0 && addedProvider !== assistant.activeProvider.provider)
+            addAccount(assistant.activeProvider.provider);
     }
     function applyHost() {
         if (!hostShown || typedHost === null || typedHost === appliedHost)
@@ -106,7 +119,7 @@ AppDialog {
     }
     Component.onCompleted: refreshDisclosedContext()
     readonly property var disclosedContext: ApplicationInfo.connectionDisclosedContext()
-    title: assistant.connected ? qsTr("Approve project information") : qsTr("Connect %1").arg(assistant.activeProvider.name)
+    title: assistant.connected ? qsTr("Approve project information") : qsTr("Connect assistant")
     readonly property real viewportHeight: Math.max(0, parent.height - AppSizes.unit * 2)
     width: Math.min(AppSizes.unit * 40 + leftPadding + rightPadding, Math.max(0, parent.width - AppSizes.unit * 2))
     height: Math.min(implicitHeight, viewportHeight)
@@ -142,6 +155,7 @@ AppDialog {
     // The disclosure is refreshed before the dialog shows, not only once it has opened: an OK pressed while it
     // opens must approve what the project holds now, or it would be refused for a stale offer.
     onAboutToShow: {
+        prepareProvider();
         refreshDisclosedContext();
         updateAcceptButton();
     }
@@ -172,46 +186,8 @@ AppDialog {
             ApplicationInfo.connectionResetOffer(false, true);
         }
     }
+    // A failed connection shows only in the panel's notice, like every other assistant error.
     onAccepted: ApplicationInfo.connectionAccepted()
-    AppDialog {
-        id: connectionFailure
-        objectName: "assistant.connectionFailure"
-        property string message: ""
-        title: qsTr("%1 connection was not completed").arg(dialog.assistant.activeProvider.name)
-        width: dialog.width
-        height: Math.min(implicitHeight, dialog.viewportHeight)
-        contentWidth: Math.max(0, width - leftPadding - rightPadding)
-        contentHeight: Math.min(failureText.implicitHeight, Math.max(0, dialog.viewportHeight - topPadding - bottomPadding - (implicitHeaderHeight > 0 ? implicitHeaderHeight + spacing : 0) - (implicitFooterHeight > 0 ? implicitFooterHeight + spacing : 0)))
-        standardButtons: Dialog.Ok
-        footer: EaElements.DialogButtonBox {
-            id: failureButtons
-            visible: count > 0
-            delegate: EaElements.Button {
-                highlighted: true
-                padding: EaStyle.Sizes.fontPixelSize * 0.5
-                fontIcon: failureButtons.roleIcon(DialogButtonBox.buttonRole)
-            }
-        }
-        ScrollView {
-            id: failureScroll
-            ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
-            width: connectionFailure.contentWidth
-            height: connectionFailure.contentHeight
-            contentWidth: Math.max(0, width - leftPadding - rightPadding)
-            clip: true
-            ScrollBar.vertical: EaElements.ScrollBar {
-                policy: ScrollBar.AsNeeded
-                interactive: false
-            }
-            EaElements.Label {
-                id: failureText
-                width: failureScroll.contentWidth
-                text: connectionFailure.message
-                textFormat: Text.PlainText
-                wrapMode: Text.Wrap
-            }
-        }
-    }
     ScrollView {
         id: disclosure
         ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
@@ -228,32 +204,30 @@ AppDialog {
             id: content
             width: disclosure.contentWidth
             spacing: AppSizes.unit
+            // The provider choice stands alone, full width, with no label of its own. With one installed provider it
+            // still names it, disabled.
+            EaElements.ComboBox {
+                id: providerBox
+                objectName: "assistant.connection.provider"
+                width: parent.width
+                visible: !dialog.assistant.connected && dialog.installedProviders.length > 0
+                enabled: dialog.assistant.state !== "connecting" && dialog.installedProviders.length > 1
+                model: dialog.installedProviders.map(entry => entry.name)
+                currentIndex: dialog.installedProviders.findIndex(entry => entry.provider === dialog.assistant.activeProvider.provider)
+                onActivated: index => dialog.chooseProvider(index)
+            }
             Grid {
                 id: choice
                 objectName: "assistant.connection.choice"
-                readonly property real labelWidth: Math.max(providerLabel.implicitWidth, accountLabel.implicitWidth, hostLabel.implicitWidth)
+                readonly property real labelWidth: Math.max(accountLabel.implicitWidth, hostLabel.implicitWidth)
                 readonly property real fieldWidth: Math.max(0, width - labelWidth - columnSpacing)
                 width: parent.width
-                visible: dialog.choiceShown || dialog.hostShown
+                visible: (dialog.choiceShown || dialog.hostShown) && (dialog.providerAccounts.length > 0 || dialog.hostShown)
                 enabled: dialog.assistant.state !== "connecting"
                 columns: 2
                 columnSpacing: AppSizes.unit
                 rowSpacing: AppSizes.unit * 0.5
                 verticalItemAlignment: Grid.AlignVCenter
-                EaElements.Label {
-                    id: providerLabel
-                    visible: providerBox.visible
-                    text: qsTr("Assistant")
-                }
-                EaElements.ComboBox {
-                    id: providerBox
-                    objectName: "assistant.connection.provider"
-                    width: choice.fieldWidth
-                    visible: dialog.installedProviders.length > 1
-                    model: dialog.installedProviders.map(entry => entry.name)
-                    currentIndex: dialog.installedProviders.findIndex(entry => entry.provider === dialog.assistant.activeProvider.provider)
-                    onActivated: index => dialog.chooseProvider(index)
-                }
                 EaElements.Label {
                     id: accountLabel
                     visible: accountBox.visible
@@ -296,12 +270,15 @@ AppDialog {
                 width: parent.width
                 wrapMode: Text.WordWrap
                 textFormat: Text.PlainText
-                text: dialog.assistant.connected ? qsTr("Allow the assistant to use current project information and attached files for your message.") : qsTr("Sign in with your %1 account. Your existing sign-in is reused when available; otherwise %2 opens to sign in.").arg(dialog.assistant.activeProvider.name).arg(dialog.assistant.activeProvider.company)
+                // Before sign-in: one sentence on how the chosen provider signs in and where the data goes. Copilot
+                // signs in with a one-time code on GitHub's page.
+                text: dialog.assistant.connected ? qsTr("Allow the assistant to use current project information and attached files for your message.") : dialog.assistant.activeProvider.provider === "copilot" ? qsTr("Signs in with your GitHub account and a one-time code in the browser; messages and project data go to %1.").arg(dialog.assistant.activeProvider.company) : qsTr("Signs in with your %1 account in the browser; messages and project data go to %2.").arg(dialog.assistant.activeProvider.name).arg(dialog.assistant.activeProvider.company)
             }
             EaElements.Label {
                 width: parent.width
                 wrapMode: Text.WordWrap
                 textFormat: Text.PlainText
+                visible: dialog.assistant.connected
                 text: qsTr("Your messages, attachments and relevant project data, including measurements, are sent to %1. Your account's availability and usage limits apply.").arg(dialog.assistant.activeProvider.company)
             }
             EaElements.Label {
@@ -309,8 +286,9 @@ AppDialog {
                 width: parent.width
                 wrapMode: Text.WordWrap
                 textFormat: Text.PlainText
-                visible: dialog.assistant.activeProvider.provider === "claude" && !dialog.assistant.connected
-                text: qsTr("If your organisation manages Claude, its settings can run their own commands when Claude starts and before each message. Those commands are outside edi's tools.")
+                // Only when managed Claude settings are actually found on this computer.
+                visible: dialog.assistant.activeProvider.provider === "claude" && !dialog.assistant.connected && dialog.assistant.claudeManagedSettingsFound
+                text: qsTr("Your organisation's Claude settings apply to this account.")
             }
             EaElements.Label {
                 width: parent.width

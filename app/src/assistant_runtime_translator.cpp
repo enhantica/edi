@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <cmath>
 #include <limits>
+#include <memory>
 #include <stdexcept>
 #include <utility>
 #include "assistant_native_tools.hpp"
@@ -93,6 +94,12 @@ AssistantRuntimeTranslator::AssistantRuntimeTranslator(AssistantProviderId provi
     connect(runtime, &AssistantRuntimeSession::ready, this, &AssistantRuntimeTranslator::onReady);
     connect(runtime, &AssistantRuntimeSession::accountRefused, this, &AssistantRuntimeTranslator::onAccountRefused);
     connect(runtime, &AssistantRuntimeSession::signInOpened, this, &AssistantRuntimeTranslator::onSignInOpened);
+    connect(runtime, &AssistantRuntimeSession::followUpsAnswered, this, [this](const QString& thread, int count) {
+        if (live_ && !failed_ && thread == thread_) follow_ups_ = std::max(0, follow_ups_ - count);
+    });
+    connect(runtime, &AssistantRuntimeSession::processRestarting, this, [this] {
+        if (live_ && !failed_) bindTools();
+    });
     connect(runtime, &AssistantRuntimeSession::signInFinished, this, &AssistantRuntimeTranslator::onSignInFinished);
     connect(runtime, &AssistantRuntimeSession::signedOut, this, &AssistantRuntimeTranslator::onSignedOut);
     connect(runtime, &AssistantRuntimeSession::removedOnly, this, &AssistantRuntimeTranslator::onSignedOut);
@@ -389,6 +396,15 @@ void AssistantRuntimeTranslator::handle(const QString& id, const QString& method
         login_id_ = QStringLiteral("edi-login-%1-%2").arg(generation_).arg(next_id_);
         ack_deadlines_.insert(id, now + static_cast<qint64>(Limits::http_json_ms));
         session_->signIn(launch_);
+    } else if (method == QLatin1StringView("account/login/answer")) {
+        // What the user typed for the sign-in's prompt goes to the sign-in process only; edi keeps no copy.
+        if (login_id_.isEmpty() || string_field(params, "loginId") != login_id_ ||
+            !params.value(QLatin1StringView("answer")).isString()) {
+            refuse(id, method, kInvalidRequest, tr("No sign-in is waiting for an answer."));
+            return;
+        }
+        session_->answerSignIn(params.value(QLatin1StringView("answer")).toString());
+        respond(id, method, {});
     } else if (method == QLatin1StringView("account/logout")) {
         logout_rpc_ = id;
         ack_deadlines_.insert(id, now + static_cast<qint64>(Limits::http_json_ms));
@@ -479,7 +495,8 @@ QJsonObject AssistantRuntimeTranslator::accountResult() const {
     const auto method = string_field(identity_, "authMethod");
     if (!method.isEmpty()) account["authMethod"] = method;
     // Non-secret parts of the principal, so the dialog can name it and an unidentified key can be told apart.
-    for (const auto* field : {"organization", "apiKeySource", "tokenSource", "login", "host", "managedSettings"}) {
+    for (const auto* field :
+         {"organization", "apiKeySource", "tokenSource", "apiProvider", "login", "host", "managedSettings"}) {
         const auto value = string_field(identity_, field);
         if (!value.isEmpty()) account[QLatin1StringView(field)] = value;
     }
@@ -583,13 +600,8 @@ bool AssistantRuntimeTranslator::writeInstructions(const QString& text) const {
 
 void AssistantRuntimeTranslator::openThread(const QString& id, const QString& method, const QJsonObject& params) {
     if (provider_ == AssistantProviderId::Copilot) {
-        // No input without proof of the effective tools and of the selected login and host (ADR-0108 §5).
-        if (!assistant_copilot_input_open) {
-            refuse(id, method, kInvalidRequest,
-                   tr("GitHub Copilot is not available yet: edi cannot confirm which tools it would use."));
-            return;
-        }
-        // The record's host as the Copilot session spells it: lower case, no scheme, github.com when empty.
+        // The tools are closed by the launch filter and permission denial (ADR-0108 §5); no input without the
+        // selected login and host read back. The record's host as the Copilot session spells it: lower case, no scheme, github.com when empty.
         auto host = launch_.account.host.trimmed().toLower();
         if (host.startsWith(QStringLiteral("https://"))) host = host.mid(8);
         while (host.endsWith(QLatin1Char('/'))) host.chop(1);
@@ -678,13 +690,25 @@ void AssistantRuntimeTranslator::onAccountRefused(const QString& reason, bool si
     service();
 }
 
-void AssistantRuntimeTranslator::onSignInOpened(const QString& url, const QString& code, const QString& prompt) {
-    if (!live_ || failed_ || login_rpc_.isEmpty()) return;
+void AssistantRuntimeTranslator::onSignInOpened(const QString& url, const QString& code, const QString& prompt,
+                                                bool browserOpened) {
+    if (!live_ || failed_ || login_id_.isEmpty()) return;
+    QJsonObject fields;
+    if (!url.isEmpty()) fields["authUrl"] = url;
+    if (!code.isEmpty()) fields["userCode"] = code;
+    if (!prompt.isEmpty()) fields["prompt"] = prompt;
+    if (browserOpened) fields["browserOpened"] = true;
+    if (login_rpc_.isEmpty()) {
+        // A device code or a question that comes after the page (Copilot's code, Claude's paste prompt).
+        fields["loginId"] = login_id_;
+        notify(QStringLiteral("account/login/updated"), fields);
+        return;
+    }
     const auto rpc = std::exchange(login_rpc_, {});
-    QJsonObject result{{"type", accountKind()}, {"loginId", login_id_}, {"authUrl", url}};
-    if (!code.isEmpty()) result["userCode"] = code;
-    if (!prompt.isEmpty()) result["prompt"] = prompt;
-    respond(rpc, QStringLiteral("account/login/start"), result);
+    fields["type"] = accountKind();
+    fields["loginId"] = login_id_;
+    if (!fields.contains(QStringLiteral("authUrl"))) fields["authUrl"] = url;
+    respond(rpc, QStringLiteral("account/login/start"), fields);
 }
 
 void AssistantRuntimeTranslator::onSignInFinished(bool success, const QString& message) {
@@ -720,6 +744,25 @@ void AssistantRuntimeTranslator::onSignInFinished(bool success, const QString& m
         restarted = false;
     }
     if (self && generation_ == scope && !restarted) fail(tr("The assistant could not be restarted after sign-in."));
+}
+
+bool AssistantRuntimeTranslator::signOutDisconnected() {
+    // Only Claude's one-shot logout runs without a live runtime; Copilot's removal is the view model's own.
+    if (provider_ != AssistantProviderId::Claude || !session_) return false;
+    auto launch = launch_.executable.isEmpty() ? template_ : launch_;
+    if (launch.executable.isEmpty()) launch.executable = assistant_provider_executable(provider_);
+    if (launch.executable.isEmpty() || launch.account.home.isEmpty()) return false;
+    auto done = std::make_shared<QList<QMetaObject::Connection>>();
+    const auto finish = [this, done](bool success, const QString& message) {
+        for (const auto& connection : std::as_const(*done)) disconnect(connection);
+        done->clear();
+        emit signedOutDisconnected(success, message);
+    };
+    done->append(connect(session_.get(), &AssistantRuntimeSession::signedOut, this, [finish] { finish(true, {}); }));
+    done->append(connect(session_.get(), &AssistantRuntimeSession::failed, this,
+                         [finish](const QString& explanation, FailureKind) { finish(false, explanation); }));
+    session_->signOut(launch);
+    return true;
 }
 
 void AssistantRuntimeTranslator::onSignedOut() {
@@ -1306,6 +1349,17 @@ bool AssistantRuntimeTranslator::answer(const QJsonValue& originalId, const QJso
         text.append(item.value(QLatin1StringView("text")).toString().toUtf8());
     }
     if (request.closed) return true;  // resolved already, as an answer Codex writes after a cancellation
+    // Claude moves a result over this many characters to a file its model cannot open (no Read tool), so the model
+    // is asked for a smaller one instead.
+    constexpr qsizetype claude_result_chars = 500000;
+    if (provider_ == AssistantProviderId::Claude && success && QString::fromUtf8(text).size() > claude_result_chars) {
+        const auto refusal = QStringLiteral("The result is too large to return (over 500,000 characters). Ask for "
+                                            "less: a smaller count, or view=summary.");
+        const QJsonArray items{QJsonObject{{"type", "inputText"}, {"text", refusal}}};
+        const bool refused = tools_ && tools_->reply(request.toolId, false, refusal.toUtf8());
+        if (refused) completeCall(request, false, items);
+        return refused;
+    }
     const bool delivered = tools_ && tools_->reply(request.toolId, success, text);
     if (delivered) completeCall(request, success, contentItems);
     return delivered;

@@ -73,7 +73,9 @@ signals:
     void ready(const QJsonObject& identity, const QStringList& tools, const QStringList& skills);
     /// A signed-out home, an identity other than the account's, or a refusal (no seat, policy). Plain words.
     void accountRefused(const QString& reason, bool signedOut);
-    void signInOpened(const QString& url, const QString& code, const QString& prompt);
+    /// The sign-in's page, device code or question; emitted again whenever one of them changes. `browserOpened`:
+    /// the runtime opened the page itself, so edi shows it only as a fallback link.
+    void signInOpened(const QString& url, const QString& code, const QString& prompt, bool browserOpened = false);
     void signInFinished(bool success, const QString& message);
     void signedOut();
     /// The sign-out was not confirmed, or the runtime offers none; the account is not signed out. Plain words.
@@ -83,6 +85,9 @@ signals:
     /// Catalogue rows {id, displayName, efforts: [..], defaultEffort} (defaultEffort may be empty).
     void modelsListed(const QJsonArray& models);
     void threadOpened(const QString& thread);
+    /// A new process is about to start for the open thread (an effort change); edi's tool server must accept its
+    /// connection even while the old process's bridge is still closing.
+    void processRestarting();
     void turnStarted(const QString& thread, const QString& turn);
     /// Streamed assistant text; `item` names one message within the turn.
     void textDelta(const QString& thread, const QString& turn, const QString& item, const QString& delta);
@@ -93,6 +98,8 @@ signals:
                  const QString& runtimeId);
     /// A tool the session must not offer appeared (a built-in): the translator ends the turn and retires.
     void foreignTool(const QString& thread, const QString& turn, const QString& tool);
+    /// `count` messages sent during the turn that is ending were answered within it, so no later turn comes for them.
+    void followUpsAnswered(const QString& thread, int count);
     /// status: completed | interrupted | failed; error {message, signedOut?} when failed.
     void turnFinished(const QString& thread, const QString& turn, const QString& status, const QJsonObject& error);
     /// {available, stale, buckets: [{window: session|weekly, usedPercent, resetsAt}], observedAt}

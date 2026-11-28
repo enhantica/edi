@@ -97,7 +97,8 @@ Column {
                 fontIcon: "plus-circle"
                 text: qsTr("Add account")
                 ToolTip.visible: hovered && !enabled
-                ToolTip.text: qsTr("Add %1 with the Maintenance Tool first.").arg(group.modelData.name)
+                // A provider this release does not offer has no Maintenance Tool route to point at.
+                ToolTip.text: group.modelData.distributed ? qsTr("Add %1 with the Maintenance Tool first.").arg(group.modelData.name) : qsTr("Not included in this release.")
                 onClicked: list.addRequested(group.modelData.provider)
             }
         }

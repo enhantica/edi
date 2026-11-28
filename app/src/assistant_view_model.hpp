@@ -25,6 +25,45 @@
 #endif
 
 namespace edi_app {
+
+// Built only with the assistant, so the web build carries no provider types (ADR-0108).
+// One assistant provider as the connect and Account dialogs show it (edi ADR-0108).
+struct AssistantProviderInfo {
+    Q_GADGET
+    QML_VALUE_TYPE(assistantProviderInfo)
+    Q_PROPERTY(QString provider MEMBER provider CONSTANT)
+    Q_PROPERTY(QString name MEMBER name CONSTANT)
+    Q_PROPERTY(QString company MEMBER company CONSTANT)
+    Q_PROPERTY(bool installed MEMBER installed CONSTANT)
+    /// Whether this release offers the provider to install; an internal one is not offered where it is missing.
+    Q_PROPERTY(bool distributed MEMBER distributed CONSTANT)
+
+   public:
+    QString provider, name, company;
+    bool installed = false;
+    bool distributed = true;
+    bool operator==(const AssistantProviderInfo&) const = default;
+};
+
+// One saved account in the Account dialog's provider groups (edi ADR-0108 §8).
+struct AssistantAccountEntry {
+    Q_GADGET
+    QML_VALUE_TYPE(assistantAccountEntry)
+    Q_PROPERTY(QString provider MEMBER provider CONSTANT)
+    Q_PROPERTY(QString providerName MEMBER providerName CONSTANT)
+    Q_PROPERTY(QString id MEMBER id CONSTANT)
+    Q_PROPERTY(QString email MEMBER email CONSTANT)
+    Q_PROPERTY(QString plan MEMBER plan CONSTANT)
+    Q_PROPERTY(QString host MEMBER host CONSTANT)
+    Q_PROPERTY(bool active MEMBER active CONSTANT)
+    Q_PROPERTY(bool installed MEMBER installed CONSTANT)
+
+   public:
+    QString provider, providerName, id, email, plan, host;
+    bool active = false, installed = false;
+    bool operator==(const AssistantAccountEntry&) const = default;
+};
+
 class ProjectViewModel;
 class Session;
 
@@ -112,8 +151,15 @@ class AssistantViewModel : public QObject {
     /// Non-empty while the active Claude account runs under an organisation's managed settings or hooks that the user
     /// has not acknowledged yet; Send waits for acknowledgeManagedSettings() (ADR-0108 §4).
     Q_PROPERTY(QString managedSettingsNotice READ managedSettingsNotice NOTIFY managedSettingsNoticeChanged)
+    /// Whether an organisation's managed Claude settings exist on this computer, so the Connect dialog can say so
+    /// before sign-in. Read when the dialog is made; a policy installed while edi runs shows after a restart.
+    Q_PROPERTY(bool claudeManagedSettingsFound READ claudeManagedSettingsFound CONSTANT)
     /// The active account's provider (chatgpt, claude, copilot) and the company receiving the data.
     Q_PROPERTY(edi_app::AssistantProviderInfo activeProvider READ activeProvider NOTIFY activeProviderChanged)
+    /// The open sign-in as the runtime reports it: `url`, `browserOpened` (the runtime opened the page itself), `code`
+    /// (a device code to type on the page), `prompt` and `promptKind` (`code` for a pasted code, `question` for a yes or
+    /// no question). Empty while no sign-in is open (ADR-0108 §4, §5).
+    Q_PROPERTY(QVariantMap signInDetails READ signInDetails NOTIFY signInDetailsChanged)
     Q_PROPERTY(QString contextPreview READ contextPreview NOTIFY contextPreviewChanged)
     Q_PROPERTY(QString contextConsentIdentity READ contextConsentIdentity NOTIFY contextConsentIdentityChanged)
     Q_PROPERTY(bool draftAdmissionReady READ draftAdmissionReady NOTIFY draftAdmissionReadyChanged)
@@ -264,7 +310,11 @@ class AssistantViewModel : public QObject {
     Q_INVOKABLE void addAccount(const QString& provider, const QString& host = {});
     QList<AssistantAccountEntry> accounts() const;
     QString managedSettingsNotice() const;
+    bool claudeManagedSettingsFound() const;
     AssistantProviderInfo activeProvider() const;
+    QVariantMap signInDetails() const;
+    /// Write the user's answer to the open sign-in's prompt to the sign-in process only; edi keeps no copy.
+    Q_INVOKABLE void answerSignIn(const QString& answer);
     /// The user read the managed-settings notice for the active account; remembered per account.
     Q_INVOKABLE void acknowledgeManagedSettings();
     QList<AssistantProviderInfo> providers() const;
@@ -301,8 +351,11 @@ class AssistantViewModel : public QObject {
     void accountsChanged();
     void managedSettingsNoticeChanged();
     void activeProviderChanged();
-    /// A saved conversation of another account was asked for; the panel offers Switch account and Cancel.
-    void sessionAccountSwitchRequested(const QString& threadId, const QString& account, const QString& provider);
+    /// A saved conversation of another account was asked for; the panel offers Switch account and Cancel, which
+    /// passes `provider` and `accountId` to switchAccount (ADR-0108 §8).
+    void sessionAccountSwitchRequested(const QString& threadId, const QString& provider, const QString& accountId,
+                                       const QString& email);
+    void signInDetailsChanged();
     void showActionsChanged();
     void showingActionsChanged();
     void actionControlsRequested(); // Original control reveal request, including repeated true requests.

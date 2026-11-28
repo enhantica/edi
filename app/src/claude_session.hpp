@@ -90,12 +90,14 @@ private:
     AssistantRuntimeLaunch launch_;
     QProcessEnvironment environment_;
     QJsonObject principal_, account_info_;
-    QString auth_method_, api_key_source_, managed_settings_;
+    QString auth_method_, api_key_source_, api_provider_, managed_settings_;
     quint64 generation_ = 0;
 
     QPointer<AssistantProcess> process_;
     Purpose purpose_ = Purpose::Probe;
-    bool initialize_passed_ = false, init_verified_ = false, readbacks_done_ = false, hooks_ran_ = false;
+    // `tools_verified_`: the tool readback before input passed; `init_verified_`: the first turn's `system/init` passed.
+    bool initialize_passed_ = false, tools_verified_ = false, init_verified_ = false, readbacks_done_ = false,
+         hooks_ran_ = false;
     QStringList expected_tools_;
     QJsonObject identity_;
     QJsonArray models_;
@@ -111,6 +113,8 @@ private:
     bool turn_active_ = false, interrupted_ = false;
     // Steers the runtime kept after Stop; their turns are stopped and not shown.
     QSet<QString> dropped_messages_;
+    // Messages sent while the current turn ran, by client id.
+    QSet<QString> steers_;
     QString dropping_;
     QString turn_id_, last_error_;
     std::deque<QString> streamed_items_;
@@ -136,6 +140,11 @@ private:
     bool prepareWorkspace(QString& problem);
     void launch(Purpose purpose, bool resume);
     void spawn(bool resume, quint64 generation);
+    /// The pinned CLI sends `system/init` only with the first turn, so the tools are read back before any input
+    /// through `mcp_status` and `get_context_usage`.
+    void mcpStatusReply(const QJsonObject& reply);
+    void contextUsageReply(const QJsonObject& reply);
+    void toolsProblem(const QString& problem);
     bool dropRecord(const QJsonObject& record);
     void retireProcess();
     void receive(const QJsonObject& record);

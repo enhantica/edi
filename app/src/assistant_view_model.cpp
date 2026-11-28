@@ -118,6 +118,7 @@
 #include "codex_agent.hpp"
 #include "assistant_providers.hpp"
 #include "assistant_accounts.hpp"
+#include "claude_session.hpp"
 #include "assistant_outgoing.hpp"
 #include "build_version.hpp"
 #include "assistant_native_tools.hpp"
@@ -1554,7 +1555,7 @@ struct AssistantViewModel::State {
             if(history_unqueued && history_retry_revision && view.durable>=history_retry_revision) {
                 history_unqueued=false;history_retry_revision=0;
             }
-            if(view.failure_stage || history_unqueued)history_error=QObject::tr("Assistant history is retained in memory, but its local archive is not durable (%1).").arg(
+            if(view.failure_stage || history_unqueued)history_error=QObject::tr("The conversation is kept for now, but it could not be saved to disk (%1).").arg(
                 view.failure_stage?QString::fromLatin1(view.failure_stage):QStringLiteral("retain"));
             else history_error.clear();
             const auto metadata=history_persistence();
@@ -1564,7 +1565,7 @@ struct AssistantViewModel::State {
             if(receiver && receiver->state_.get()==this)emit owner.lastErrorChanged();
         }catch(...) {if(receiver && receiver->state_.get()==this) {
             work_reports.missEvidence();
-            history_error=QObject::tr("Retained assistant history could not be displayed; its archive state remains separately available.");
+            history_error=QObject::tr("The conversation could not be shown. Its saved copy is unaffected.");
         }}
     }
     void initialize_history(bool adoptInitial=true) {
@@ -1639,14 +1640,14 @@ struct AssistantViewModel::State {
             for(const auto& target:cache_clear_targets) {
                 const auto view=target.view();if(view.durable>=target.revision())continue;
                 if(view.working)pending=true;
-                if(view.failure_stage)failure=QObject::tr("The local chat cache could not be cleared (%1). You can retry; projects, reports, runtime sessions and sign-in were preserved.").arg(QLatin1StringView(view.failure_stage));
+                if(view.failure_stage)failure=QObject::tr("The chat cache could not be cleared (%1). Try again; your projects, reports and sign-in are unaffected.").arg(QLatin1StringView(view.failure_stage));
                 else if(!view.working)failure=QObject::tr("The original local cache clear could not be confirmed. You can retry without clearing newer messages.");
             }
             const bool changed=cache_clear_pending!=pending || cache_clear_error!=failure;
             cache_clear_pending=pending;cache_clear_error=std::move(failure);
             if(changed && receiver && receiver->state_.get()==this)emit owner.cachedHistoryChanged();
         }catch(...) {if(receiver && receiver->state_.get()==this) {
-            cache_clear_error=QObject::tr("The local cache clear could not be confirmed; no runtime session was deleted.");
+            cache_clear_error=QObject::tr("edi could not confirm that the chat cache was cleared. No conversation was deleted.");
             emit owner.cachedHistoryChanged();
         }}
     }
@@ -1664,7 +1665,7 @@ struct AssistantViewModel::State {
         const QPointer<AssistantViewModel> receiver(&owner);const auto proof=file_projection();
         if(!cache_clear_targets.empty() && !cache_clear_error.isEmpty()) {
             bool accepted=true;for(auto& target:cache_clear_targets)accepted=target.retry() && accepted;
-            if(!accepted)cache_clear_error=QObject::tr("The original cache-clear retry could not be retained. Newer messages were preserved.");
+            if(!accepted)cache_clear_error=QObject::tr("Clearing the chat cache could not be tried again. Newer messages are kept.");
             cache_clear_pending=true;cache_clear_completed();
             if(proof.input_current())emit owner.cachedHistoryChanged();
             return;
@@ -1721,9 +1722,9 @@ struct AssistantViewModel::State {
     std::optional<FailureSlot> failure_slot;
     QString queued_request, connection_scope;
     bool publishing = true, render_queued = false, render_dirty = false;
-    const QString capacity_error = QObject::tr("Assistant history capacity is unavailable. Existing history and project state are preserved.");
-    const QString storage_error = QObject::tr("Assistant history could not be saved. The pending outcome and project state are preserved; retry after storage is available.");
-    const QString quarantine_error = QObject::tr("The complete assistant outcome is pending retention. Stop preserves it; retry retention or explicitly clear the conversation.");
+    const QString capacity_error = QObject::tr("There is no room to keep more of this conversation. Your history and project are unaffected.");
+    const QString storage_error = QObject::tr("The conversation could not be saved. The latest reply and your project are kept; try again later.");
+    const QString quarantine_error = QObject::tr("The latest reply is not saved yet. Stop keeps it; try saving again or clear the conversation.");
 
 #ifndef __EMSCRIPTEN__
     // The default native facade uses one official runtime. The existing injected
@@ -1736,7 +1737,8 @@ struct AssistantViewModel::State {
     QString generic_context_retention_error;
     QString generic_interrupt_rpc, generic_interrupt_thread, generic_interrupt_turn;
     std::unique_ptr<AssistantProvider> agent;
-    // The account the next provider runs as; the default ChatGPT login until accounts are chosen (ADR-0108 §8).
+    // The account the next provider runs as; the default ChatGPT login until accounts are chosen (ADR-0108 §8), or
+    // the first installed provider when ChatGPT is not installed.
     AssistantAccountRef active_provider_account;
     QString runtime_policy_patch() const { return agent ? agent->runtimePolicyPatch() : CodexAgent::policyPatch(); }
     QString runtime_executable() const { return agent ? agent->runtimeExecutable() : CodexAgent::executable(); }
@@ -1749,8 +1751,9 @@ struct AssistantViewModel::State {
             case AssistantProviderId::ChatGpt: return host=="auth.openai.com" || host=="chatgpt.com";
             case AssistantProviderId::Claude: return under("claude.ai") || under("claude.com") || under("anthropic.com");
             case AssistantProviderId::Copilot: {
-                const auto own=QUrl(active_provider_account.host).host();
-                return host=="github.com" || (!own.isEmpty() && host==own && own.endsWith(QStringLiteral(".ghe.com")));
+                // The record holds a bare host such as name.ghe.com, which QUrl alone would read as a path.
+                const auto own=QUrl::fromUserInput(active_provider_account.host.trimmed()).host().toLower();
+                return host=="github.com" || (!own.isEmpty() && host.toLower()==own && own.endsWith(QStringLiteral(".ghe.com")));
             }
         }
         return false;
@@ -1781,6 +1784,19 @@ struct AssistantViewModel::State {
             if (const auto active = account_store().active(); active && assistant_provider_available(active->provider))
                 active_provider_account = active->ref();
         } catch (...) {}
+        if (!active_provider_account.id.isEmpty() || !active_provider_account.home.isEmpty() ||
+            assistant_provider_available(active_provider_account.provider)) return;
+        // ChatGPT is not installed: the first installed provider is the default instead, with its first saved account
+        // if it has one. Without one, the Connect dialog adds the account when it opens.
+        for (const auto id : {AssistantProviderId::Claude, AssistantProviderId::Copilot}) {
+            if (!assistant_provider_available(id)) continue;
+            AssistantAccountRef fallback;
+            fallback.provider = id;
+            try { if (const auto saved = account_store().accounts(id); !saved.isEmpty()) fallback = saved.front().ref(); }
+            catch (...) {}
+            active_provider_account = fallback;
+            return;
+        }
     }
     // The signed-in identity of the active (or just added) account, read from the runtime. A home reporting
     // another identity than its record stops the connection; the default ChatGPT login is the user's own
@@ -1793,6 +1809,9 @@ struct AssistantViewModel::State {
                 if (other.id != record.id && !email.isEmpty() && other.email == email && other.host == record.host) {
                     store.removeHome(record.home);
                     pending_account.reset();
+                    // The account active before the add is active again; the caller runs its provider.
+                    active_provider_account = {};
+                    resolve_active_account();
                     throw std::runtime_error("This account is already added; switch to it instead");
                 }
             record.email = email;
@@ -1810,7 +1829,7 @@ struct AssistantViewModel::State {
             if (current && (current->email.isEmpty() || email.isEmpty() || current->email == email)) chosen = current;
             else if (current && account_chosen_explicitly)
                 // The user switched to this record: its identity is the one wanted, so a different login is an error.
-                throw std::runtime_error("The default ChatGPT login is now another account; sign it back in as this account");
+                throw std::runtime_error("ChatGPT is now signed in as another account. Sign in again as this account.");
             else
                 for (const auto& other : store.accounts(AssistantProviderId::ChatGpt))
                     if (other.home.isEmpty() && !email.isEmpty() && other.email == email) chosen = other;
@@ -1824,8 +1843,12 @@ struct AssistantViewModel::State {
             if (!active || active->id != record.id) store.setActive(record.provider, record.id);
             active_provider_account = record.ref();
         } else if (auto record = store.find(active_provider_account.provider, active_provider_account.id)) {
-            if (!record->email.isEmpty() && !email.isEmpty() && record->email != email)
+            // An added ChatGPT home signed in as someone else is signed out before the failure shows, so it does not
+            // stay stuck on the wrong person. The default home is the user's own Codex login and is left alone.
+            if (!record->email.isEmpty() && !email.isEmpty() && record->email != email) {
+                logout_before_failure = record->provider == AssistantProviderId::ChatGpt && !record->home.isEmpty();
                 throw std::runtime_error("This account's sign-in now belongs to someone else; sign in again with the right account");
+            }
             if (record->email != email || record->plan != plan_type) {
                 record->email = email;
                 record->plan = plan_type;
@@ -1835,7 +1858,87 @@ struct AssistantViewModel::State {
         account_chosen_explicitly = false;
         emit owner.accountsChanged();
     }
+    // Set by record_signed_in_account when its refusal must sign the home out first; the reason waits for the
+    // account/logout reply.
+    bool logout_before_failure = false;
+    QString logout_failure_reason;
+    // The active account changed without the user switching (a refused add, a removed account): run the new one's
+    // provider once the current callback has unwound, as switchAccount does.
+    void rebuild_provider_later() {
+        const QPointer<AssistantViewModel> receiver(&owner);
+        QTimer::singleShot(0, &owner, [this, receiver] {
+            if (!receiver || receiver->state_.get() != this || generic_connecting || generic_authenticated) return;
+            if (agent) {
+                agent->retire();
+                agent.release()->deleteLater();  // queued replies fence on a QPointer to it
+            }
+            generic_initialize();
+            emit owner.accountsChanged();
+            emit owner.activeProviderChanged();
+            emit owner.accountChanged();
+            sync();
+        });
+    }
+    static QString copilot_removed_notice() {
+        return QObject::tr("The GitHub Copilot account was removed from edi. Its GitHub sign-in stays in the system keychain until you remove it there or revoke it on GitHub.");
+    }
+    // Sign out the active account while its connection is not live, for example after its runtime reported another
+    // person. Copilot's account is removed from edi as its Remove action does; Claude runs its one-shot sign-out.
+    void sign_out_disconnected() {
+        const auto account = active_provider_account;
+        std::optional<AssistantAccountRecord> record;
+        try { if (!account.id.isEmpty()) record = account_store().find(account.provider, account.id); } catch (...) {}
+        if (!record) { error = QObject::tr("That account is no longer saved on this computer."); notify(); return; }
+        if (account.provider == AssistantProviderId::Copilot) {
+            auto store = account_store();
+            if (!record->home.isEmpty() && !store.removeHome(record->home)) {
+                error = QObject::tr("The GitHub Copilot account folder could not be removed."); notify(); return;
+            }
+            try { store.remove(AssistantProviderId::Copilot, record->id); }
+            catch (const std::exception& failure) { error = bounded_error(QString::fromUtf8(failure.what())); notify(); return; }
+            error = copilot_removed_notice();
+            activate_another_account();
+            rebuild_provider_later();
+            emit owner.accountsChanged();
+            notify();
+            return;
+        }
+        if (!agent) generic_initialize();
+        const QPointer<AssistantViewModel> receiver(&owner);
+        const QPointer<AssistantProvider> transport(agent.get());
+        QObject::connect(agent.get(), &AssistantProvider::signedOutDisconnected, &owner,
+            [this, receiver, transport](bool success, const QString& message) {
+                if (!receiver || receiver->state_.get() != this || !transport || agent.get() != transport.data()) return;
+                error = success ? QString() : bounded_error(message.isEmpty() ? QObject::tr("%1 could not sign out.").arg(provider_label()) : message);
+                notify();
+            }, Qt::SingleShotConnection);
+        if (!agent->signOutDisconnected()) {
+            error = QObject::tr("Connect %1 first, then sign out.").arg(provider_label());
+            notify();
+        }
+    }
+    // After the active account was dropped: another account of the same provider becomes active, else one of
+    // another installed provider, else the default ChatGPT login.
+    void activate_another_account() {
+        const auto removed = active_provider_account.provider;
+        active_provider_account = {};
+        try {
+            auto store = account_store();
+            std::optional<AssistantAccountRecord> next;
+            for (const auto id : {removed, AssistantProviderId::ChatGpt, AssistantProviderId::Claude, AssistantProviderId::Copilot}) {
+                if (next || !assistant_provider_available(id)) continue;
+                if (const auto saved = store.accounts(id); !saved.isEmpty()) next = saved.front();
+            }
+            if (next) {
+                store.setActive(next->provider, next->id);
+                active_provider_account = next->ref();
+            }
+        } catch (...) {}
+        resolve_active_account();
+    }
     QString generic_workspace, generic_thread, generic_turn, generic_login, generic_terminal_turn;
+    // The open sign-in as the runtime reported it: authUrl, and userCode, prompt and browserOpened when present.
+    Object generic_login_info;
     bool generic_login_attempted = false;
     QString genuine_objective_row;
     QPointer<ProjectViewModel> genuine_objective_project;
@@ -2140,7 +2243,7 @@ struct AssistantViewModel::State {
         try {auto index=session_associations();if(index.isEmpty())return;auto rows=index.value("threads").toObject();
             for(auto it=rows.begin();it!=rows.end();++it) {auto row=it.value().toObject();row["cacheCleared"]=true;it.value()=row;}
             index["threads"]=rows;store_session_associations(index);
-        }catch(...) {cache_clear_error=QObject::tr("The cache clear was retained, but its restart preference could not be saved.");}
+        }catch(...) {cache_clear_error=QObject::tr("The chat cache was cleared, but edi could not save that for the next start.");}
     }
     QString session_draft,session_restore_target,resume_metadata_thread;
     bool restore_last_attempted=false,restore_last_requested=false,restore_last_metadata_unavailable=false;
@@ -2163,8 +2266,9 @@ struct AssistantViewModel::State {
     bool startup_reopen_kept=false;
     void retire_startup_restore() {restore_last_target.clear();restore_last_metadata_unavailable=false;restore_last_attempted=true;}
     // The automatic reopen of the last conversation at startup failed. It is retired, so Connect no longer repeats it;
-    // the saved association is kept; the reason is shown in plain words; and the ordinary Connect ChatGPT offer,
+    // the saved association is kept; the reason is shown in plain words; and the ordinary Connect offer,
     // with its consent to exactly what is shared, is the way on. Nothing connects or approves a context by itself.
+    // The notice names no provider and no Sessions list: before connecting, the header shows only Connect.
     // cppcheck-suppress passedByValue ; by value, a caller may pass the fields this clears
     void startup_reopen_failed(const QString reason) noexcept {  // NOLINT(performance-unnecessary-value-param): by value, a caller may pass the fields this clears
         try {
@@ -2177,7 +2281,7 @@ struct AssistantViewModel::State {
             sessions_loading=false;
             retire_startup_restore();
             startup_restore_observation["reopen_failure"]=reason;
-            const auto message=QObject::tr("Your last conversation could not be reopened. %1 It is still listed in Sessions. Choose Connect ChatGPT to start a new conversation.").arg(reason);
+            const auto message=QObject::tr("Your last conversation could not be reopened: %1").arg(reason);
             error=sessions_error=message;
             // A connection the failed reopen had started is retired too, so the ordinary Connect offer is what remains.
             startup_reopen_kept=true;
@@ -2288,7 +2392,7 @@ struct AssistantViewModel::State {
             }
             if(changed)store_session_associations(index);
             if(!archived.isEmpty())session_archive_persistence_errors.remove(archived);
-        }catch(...) {if(!archived.isEmpty())try{session_archive_persistence_errors[archived]=QObject::tr("The session was archived, but its automatic-reopen preference could not be saved. Its retained history and project were preserved.");}catch(...) {}}
+        }catch(...) {if(!archived.isEmpty())try{session_archive_persistence_errors[archived]=QObject::tr("The session was archived, but edi could not save whether to reopen it at start. Its history and project are kept.");}catch(...) {}}
     }
     Object session_file_record(const Object& descriptor) const {
         const auto file=descriptor.value("id").toString();const auto origin=generic_input_origins.value(file);
@@ -2457,7 +2561,7 @@ struct AssistantViewModel::State {
     void commit_session_preparation() {
         if(account_confirmation_pending)return;
         if(!session_preparation || !session_preparation_current(*session_preparation))throw std::runtime_error("The original conversation selection or project changed before preparation completed");
-        if(session_preparation->email.isEmpty())throw std::runtime_error("The original managed account identity is unavailable; the current conversation was preserved");
+        if(session_preparation->email.isEmpty())throw std::runtime_error("The account this conversation belongs to could not be confirmed. The current conversation is kept.");
         session_preparation_observation["stage"]="prepared_transfer";
         auto prepared=std::move(session_preparation);auto proof=prepared->proof;
         // All input, disclosure and workspace I/O is complete while the old helper
@@ -2488,7 +2592,7 @@ struct AssistantViewModel::State {
         schedule_resume_connection();
     }
     std::unique_ptr<SessionPreparation> stage_session_preparation(const QString& id,ProjectViewModel* target,const Object& record,const QString& expectedEmail) {
-        if(expectedEmail.isEmpty())throw std::runtime_error("The original managed account identity is unavailable; sign in with that account before selecting another conversation");
+        if(expectedEmail.isEmpty())throw std::runtime_error("The account could not be confirmed. Sign in with it before choosing another conversation.");
         const auto proof=file_projection();
         const auto previousApproval=disclosure_approved()?approved_scope:std::shared_ptr<const DisclosureScope>{};
         if(!proof.input_current())return {};
@@ -2603,16 +2707,19 @@ struct AssistantViewModel::State {
                     for(const auto& candidate:store.accounts(AssistantProviderId::ChatGpt))
                         if(candidate.home.isEmpty() && candidate.email==record.value("email").toString()) belongs=candidate;
             } catch(...) {}
-            if(!belongs) {
-                saved_session_refusal=record.value("email").toString().isEmpty()
-                    ? QObject::tr("It belongs to an account this computer has not recorded.")
-                    : QObject::tr("It belongs to %1, an account this computer has not recorded.").arg(record.value("email").toString());
+            // A conversation saved before accounts were recorded belongs to the default ChatGPT login. Its record may
+            // not exist yet (it is written when that login is first read), so the saved e-mail is checked against the
+            // live login below instead, as before the update.
+            const bool legacyChatGpt=!record.contains("account") && !record.value("email").toString().isEmpty() &&
+                active_provider_account.provider==AssistantProviderId::ChatGpt && active_provider_account.home.isEmpty();
+            if(!belongs && !legacyChatGpt) {
+                saved_session_refusal=QObject::tr("Its account is no longer added.");
                 return false;
             }
-            if(belongs->id!=active_provider_account.id) {
+            if(belongs && belongs->id!=active_provider_account.id) {
                 // Another account's conversation: offer to switch instead of mixing histories.
                 saved_session_refusal=QObject::tr("It belongs to another account.");
-                emit owner.sessionAccountSwitchRequested(id,belongs->email,assistant_provider_name(active_provider_account.provider));
+                emit owner.sessionAccountSwitchRequested(id,assistant_provider_key(belongs->provider),belongs->id,belongs->email);
                 return false;
             }
         }
@@ -2663,12 +2770,12 @@ struct AssistantViewModel::State {
         if(!session_account_preflight || session_account_operation!=session_operation || session_restore_target!=session_account_target ||
             generic_connecting || generic_busy || generic_retiring || !agent || agent->outputOwnerState()!=AssistantProvider::OutputOwnerState::Released)return;
         const auto root=QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation)+"/assistant";
-        if(!QDir().mkpath(root))throw std::runtime_error("The account-check workspace is unavailable");
+        if(!QDir().mkpath(root))throw std::runtime_error("edi could not prepare the account check.");
         session_account_workspace=std::make_unique<QTemporaryDir>(root+"/account-check-XXXXXX");
-        if(!session_account_workspace->isValid())throw std::runtime_error("The account-check workspace is unavailable");
+        if(!session_account_workspace->isValid())throw std::runtime_error("edi could not prepare the account check.");
         const auto proof=file_projection();generic_connecting=true;
         if(!agent->start(agent->runtimeExecutable(),session_account_workspace->path()) && proof.input_current())
-            throw std::runtime_error("The original account could not be checked before opening the saved project");
+            throw std::runtime_error("Its account could not be checked.");
     }
     struct SessionRequest {
         QString kind,target,cursor,currentThread,email,name;
@@ -2803,7 +2910,7 @@ struct AssistantViewModel::State {
             session_history_thread=thread;session_history_cursors.clear();session_history_loading=true;
             (void)session_request("thread/items/list",{{"threadId",thread},{"sortDirection","asc"}},"history",thread);
         }catch(...) {if(receiver && receiver->state_.get()==this && proof.input_current()) {
-            session_history_loading=false;sessions_error=QObject::tr("The conversation resumed, but its older app activity could not be restored from runtime history.");
+            session_history_loading=false;sessions_error=QObject::tr("The conversation reopened, but its older steps could not be shown.");
         }}
     }
     void restore_history_page(const SessionRequest& request,const Object& result) {
@@ -2970,7 +3077,7 @@ struct AssistantViewModel::State {
         if(session_history_explicit_target==id)session_history_explicit_target.clear();
         if(resume_checkpoint && resume_checkpoint->thread==id){resume_checkpoint.reset();generic_resuming=false;}
         if(session_restore_target==id || session_selection_target==id) {
-            fail_session_operation(session_operation,id,QObject::tr("The selected conversation was archived. Its saved project and activity were preserved."));
+            fail_session_operation(session_operation,id,QObject::tr("This conversation was archived. Its project and history are kept."));
             if(!current())return false;
         }
         if(generic_thread!=id)return true;
@@ -2984,7 +3091,7 @@ struct AssistantViewModel::State {
             native_call->resolved=true;native_call->retiring=true;native_call->receipt->retired=true;
             transport->resolved(native_call->rpc);
             if(!current())return false;
-            native_supersede_operation(QObject::tr("The runtime archived this conversation; its actual partial work was retained."));
+            native_supersede_operation(QObject::tr("This conversation was archived. The work done so far is kept."));
             if(!current())return false;
         }
         const auto questionRpc=generic_detach_question();
@@ -3083,13 +3190,13 @@ struct AssistantViewModel::State {
             if(receiver && receiver->state_.get()==this && request.operation==session_operation && request.kind=="select-read")session_preparation_observation["failure_class"]="nonstandard_exception";
             if(!current()) {
                 if(receiver && receiver->state_.get()==this && request.kind=="select-read")fail_session_operation(request.operation,request.target,
-                    this->error.isEmpty()?QObject::tr("Conversation preparation failed with an unclassified local exception; its exact phase is retained in Diagnostics. No earlier action was replayed."):this->error);
+                    this->error.isEmpty()?QObject::tr("The conversation could not be prepared. Details are in Diagnostics."):this->error);
                 return;
             }
             if(request.kind=="name"){retireName();return;}
-            if(request.kind=="history") {session_history_loading=false;session_history_error=QObject::tr("Older runtime history is unavailable; retained app activity was preserved.");
+            if(request.kind=="history") {session_history_loading=false;session_history_error=QObject::tr("Older messages are unavailable. Recent steps are kept.");
                 work_reports.missEvidence();history_error=session_history_error;emit owner.lastErrorChanged();return;}
-            fail_session_operation(request.operation,request.target,QObject::tr("Session information is unavailable; no archive outcome was assumed."));
+            fail_session_operation(request.operation,request.target,QObject::tr("Session information is unavailable, so edi cannot tell whether it was archived."));
         }
     }
 
@@ -3106,7 +3213,8 @@ struct AssistantViewModel::State {
             if(receiver && receiver->state_.get()==this && proof.input_current() && operation==session_operation && generic_thread==id)emit owner.sessionSelected(id);
             return;
         }
-        (void)begin_saved_session(id);
+        // A refusal (another account's conversation, an archived one) ends the loading state with its reason.
+        if(!begin_saved_session(id))fail_session_operation(session_operation,id,saved_session_refusal);
     }
     bool resume_identity_current() {
         if(!resume_checkpoint)return false;
@@ -3148,7 +3256,7 @@ struct AssistantViewModel::State {
             if(!resume_checkpoint)return;
             if(!identity_current) {
                 const auto target=resume_checkpoint->thread;resume_checkpoint.reset();
-                fail_session_operation(session_operation,target,QObject::tr("The original project or disclosure changed before this conversation could resume."));return;
+                fail_session_operation(session_operation,target,QObject::tr("The project or what you chose to share changed before this conversation could reopen."));return;
             }
             resume_checkpoint->attempted=true;
             const QPointer<AssistantViewModel> receiver(&owner);const auto binding=generation;const auto thread=resume_checkpoint->thread;
@@ -14507,8 +14615,7 @@ struct AssistantViewModel::State {
     }
     QString retain_event_failure(const EventFailure& diagnostic) noexcept {
         try {
-            const auto explanation=QObject::tr("The official agent event could not be processed [%1/%2/%3]. The task and original account identity are retained for recovery; no login expiry was established.")
-                .arg(QLatin1StringView(diagnostic.method),QLatin1StringView(diagnostic.first_stage),QLatin1StringView(diagnostic.first_class));
+            const auto explanation=QObject::tr("edi could not read a message from the assistant. Your work is kept and you are still signed in.");
             const Object facts{{"method",work_report_observed(QLatin1StringView(diagnostic.method))},
                 {"first_stage",work_report_observed(QLatin1StringView(diagnostic.first_stage))},
                 {"first_class",work_report_observed(QLatin1StringView(diagnostic.first_class))}};
@@ -14546,6 +14653,8 @@ struct AssistantViewModel::State {
             projection = file_projection();
             const auto original_explanation = explanation;  // NOLINT(performance-unnecessary-copy-initialization): a snapshot; a reentrant call may replace the original
             settings_observe_terminal(kind);
+            // Only a conversation that already had messages has work worth mentioning in the failure.
+            const bool hadMessages=generic_thread_has_input;
             const auto browserOperation=session_operation;const auto browserTarget=session_selection_target;
             capture_resume_checkpoint();generic_resuming=false;
             // Transport failure retires execution; the verified recovery checkpoint is a separate owner.
@@ -14554,6 +14663,7 @@ struct AssistantViewModel::State {
             generic_retiring = true; generic_revoke_pending = true; generic_blocked = true;
             retire_session_history();account_read_rpc.clear();account_confirmation_pending=false;account_read_ready=false;account_bootstrap_verified=false;account_bootstrap_waiting=false;account_bootstrap_reply.reset();
             session_account_target.clear();session_account_email.clear();session_account_preflight=false;
+            logout_failure_reason.clear();logout_before_failure=false;
             const bool ownsTerminal=work_open_failure(projection,kind);
             const QPointer<AssistantViewModel> terminalReceiver(&owner);
             const auto terminal=qScopeGuard([this,terminalReceiver,ownsTerminal,&projection] {
@@ -14578,9 +14688,13 @@ struct AssistantViewModel::State {
             else if(!terminalRows)std::fprintf(stderr,"Edi terminal history stage=RELEASE_OBSERVATION class=UNAVAILABLE\n");
             if (!projection.retirement_current()) return;
             if (kind == AssistantProvider::FailureKind::LocalCapacity)
-                error = bounded_error(original_explanation + QObject::tr(" This is a local data-capacity limit, not evidence that your login expired. Your task messages and project changes remain retained; inspect them before continuing after reconnecting."));
+                error = bounded_error(original_explanation + (hadMessages
+                    ? QObject::tr(" It was more data than edi can handle. Your messages and project changes are kept; check them after you connect again.")
+                    : QObject::tr(" It was more data than edi can handle. Try again.")));
             else if (kind == AssistantProvider::FailureKind::OperationDeadline)
-                error = bounded_error(original_explanation + QObject::tr(" This is the local operation-time budget, not evidence that your login expired. Your task messages and project changes remain retained; inspect actual outcomes before continuing."));
+                error = bounded_error(original_explanation + (hadMessages
+                    ? QObject::tr(" Your messages and project changes are kept; check them before you continue.")
+                    : QObject::tr(" Try again.")));
             else error = bounded_error(original_explanation);
             if(ownsTerminal && work_failure.stage==WorkFailureStage::Building)work_failure.explanation=error;
             generic_rpc_rows.clear(); generic_rpc_turns.clear();
@@ -14740,7 +14854,7 @@ struct AssistantViewModel::State {
             if(!current())return false;
             work_cancel_failure();work_reports.retireScope();work_scope_bound=work_reports.available() && !work_reports.scope().isEmpty();
             work_registration={};work_terminal.clear();work_first_cause.clear();work_automatic_terminal=false;
-            generic_thread.clear(); generic_thread_has_input=false; invalidate_policy(); generic_turn.clear(); generic_login.clear(); generic_terminal_turn.clear();
+            generic_thread.clear(); generic_thread_has_input=false; invalidate_policy(); generic_turn.clear(); generic_login.clear(); generic_login_info = {}; generic_terminal_turn.clear();
             generic_items.clear(); generic_item_rows.clear(); generic_final_items.clear(); generic_rpc_rows.clear(); generic_rpc_turns.clear();
             (void)generic_detach_question();
             generic_item_bytes = 0; generic_progress_bytes = 2; generic_plan_progress = {}; generic_summary_parts.clear(); generic_workspace.clear(); generic_skill_paths.clear(); staged_skill_inventory.reset(); generic_skill_declarations={};
@@ -14989,38 +15103,44 @@ struct AssistantViewModel::State {
         sync();
     }
     static const char* generic_bootstrap_stage(const QString& method) noexcept {
-        if (method == "initialize") return "starting the official agent";
+        // Shown in the failure text, so plain words and no provider: any provider's runtime may answer these.
+        if (method == "initialize") return "starting";
         if (method == "account/read") return "checking the account";
-        if (method == "account/login/start") return "opening ChatGPT sign-in";
-        if (method == "model/list") return "loading available models";
-        if (method == "skills/list") return "checking bundled skills";
-        if (method == "thread/start" || method == "thread/resume") return "checking the working context";
+        if (method == "account/login/start") return "opening the sign-in page";
+        if (method == "model/list") return "loading the models";
+        if (method == "skills/list") return "checking edi's skills";
+        if (method == "thread/start" || method == "thread/resume") return "opening the conversation";
         return nullptr;
     }
-    void generic_response_failure(const QString& method, const char* reason) noexcept {
+    // `detail` is a sign-in refusal's own message (such as "Claude's sign-in stopped: ..."), shown instead of the stage.
+    void generic_response_failure(const QString& method, const char* reason, const QString& detail = {}) noexcept {
         const auto publication = file_projection();
         try {
             if(method=="account/read") {
                 QString cause;
                 const QLatin1StringView code(reason);
-                if(code=="ACCOUNT_IDENTITY_UNAVAILABLE")cause=QObject::tr("The original managed account identity is unavailable. Sign in with that account before resuming this conversation.");
-                else if(code=="ACCOUNT_SAVED_MISMATCH")cause=QObject::tr("The confirmed managed account differs from this saved conversation's original account. Its saved association was preserved.");
-                else if(code=="ACCOUNT_LOGIN_NOT_ESTABLISHED")cause=QObject::tr("Managed ChatGPT sign-in was not established. Complete sign-in with the intended account and reconnect.");
-                else if(code=="ACCOUNT_DISCLOSURE_CHANGED")cause=QObject::tr("The information selected for sign-in changed. Review the current sharing choice before reconnecting.");
-                else if(code=="ACCOUNT_SHAPE" || code=="ACCOUNT_EMAIL_SHAPE" || code=="ACCOUNT_PUBLIC_METADATA")cause=QObject::tr("The managed account reply contains invalid metadata. No conversation was resumed.");
-                else if(code=="ACCOUNT_UNSUPPORTED_KIND")cause=QObject::tr("This connection requires managed ChatGPT sign-in; the returned account kind is unsupported.");
-                else cause=QObject::tr("The managed account check could not be completed. Its actual processing stage is retained in diagnostics.");
-                generic_fail(cause+QStringLiteral(" [account/read: %1]").arg(QString::fromLatin1(reason)));return;
+                if(code=="ACCOUNT_IDENTITY_UNAVAILABLE")cause=QObject::tr("The account this conversation belongs to could not be confirmed. Sign in with that account to continue it.");
+                else if(code=="ACCOUNT_SAVED_MISMATCH")cause=QObject::tr("This conversation belongs to another account.");
+                else if(code=="ACCOUNT_LOGIN_NOT_ESTABLISHED")cause=QObject::tr("%1 sign-in did not finish. Sign in with the account you want and connect again.").arg(provider_label());
+                else if(code=="ACCOUNT_DISCLOSURE_CHANGED")cause=QObject::tr("What you chose to share changed. Check it and connect again.");
+                else if(code=="ACCOUNT_SHAPE" || code=="ACCOUNT_EMAIL_SHAPE" || code=="ACCOUNT_PUBLIC_METADATA")cause=QObject::tr("The account details could not be read.");
+                else if(code=="ACCOUNT_UNSUPPORTED_KIND")cause=QObject::tr("This kind of sign-in is not supported. Sign in with a %1 account.").arg(provider_label());
+                else cause=QObject::tr("The account could not be checked.");
+                generic_fail(cause);return;
             }
-            if (const auto* stage = generic_bootstrap_stage(method)) {
-                generic_fail(QObject::tr("%4 sign-in could not continue while %1 [%2: %3].")
-                    .arg(QString::fromLatin1(stage), method, QString::fromLatin1(reason), provider_label()));
+            if (method == "account/login/start" && !detail.trimmed().isEmpty()) {
+                generic_fail(bounded_error(detail.trimmed()));
                 return;
             }
-            generic_fail(QObject::tr("The official agent reply is invalid or exceeds its limits."));
+            if (const auto* stage = generic_bootstrap_stage(method)) {
+                generic_fail(QObject::tr("%2 could not connect while %1.")
+                    .arg(QString::fromLatin1(stage), provider_label()));
+                return;
+            }
+            generic_fail(QObject::tr("The assistant sent a reply edi could not read."));
             return;
         } catch (...) {}
-        if (publication.input_current()) generic_fail(QStringLiteral("The official agent reply could not be processed [UNEXPECTED_PROCESSING]."));
+        if (publication.input_current()) generic_fail(QStringLiteral("The assistant sent a reply edi could not read."));
     }
     void resume_account_admissions() {
         const auto proof=file_projection();const QPointer<AssistantViewModel> receiver(&owner);
@@ -15093,7 +15213,7 @@ struct AssistantViewModel::State {
             session_account_observation["request_id"]=id;return true;
         });
         if(!current())return;
-        if(rpc.isEmpty())throw std::runtime_error("The current managed account identity could not be requested");
+        if(rpc.isEmpty())throw std::runtime_error("The account could not be checked.");
     }
     void generic_initialize() {
         // Browser settlement may release the existing accepted Send while a
@@ -15110,7 +15230,7 @@ struct AssistantViewModel::State {
             const auto publication = file_projection();
             try {
                 generic_request("initialize", {{"clientInfo", Object{{"name", "edi"}, {"title", "Edi"}, {"version", "1"}}}, {"capabilities", Object{{"experimentalApi", true}}}});
-            } catch (...) { if (publication.input_current()) generic_fail(QObject::tr("The official agent could not be initialized.")); }
+            } catch (...) { if (publication.input_current()) generic_fail(QObject::tr("The assistant could not be started.")); }
         });
         const QPointer<AssistantProvider> originalTransport(agent.get());
         const QPointer<AssistantViewModel> usageReceiver(&owner);
@@ -15220,8 +15340,7 @@ struct AssistantViewModel::State {
                         // A local request-processing failure is not account revocation.
                         // Keep the original channel/task; actual transport failure still
                         // arrives through AssistantProvider::failed and its existing owner.
-                        const auto message=QObject::tr("The app could not retain this request [%1: %2]. Inspect its actual outcome before continuing; no account expiration was established.")
-                            .arg(QLatin1StringView(diagnostic.first_stage),QLatin1StringView(diagnostic.first_class));
+                        const auto message=QObject::tr("edi could not keep this request. Check what it changed before you continue; you are still signed in.");
                         try {
                             const auto record=native_call && native_call->rpc==id?native_call->record:std::shared_ptr<NativeRecord>{};
                             const auto row=record?record->row:generic_item_rows.value(params.value("callId").toString());
@@ -15285,7 +15404,7 @@ struct AssistantViewModel::State {
         generic_catalog_bytes = 2;
         const auto executable = runtime_executable();
         if (executable.isEmpty()) {
-            generic_fail(QObject::tr("The bundled official agent is unavailable. Rebuild or reinstall this Edi candidate.")); return;
+            generic_fail(QObject::tr("The assistant that comes with edi is missing. Reinstall edi.")); return;
         }
         generic_connecting = true;
         const bool started = agent->start(executable, generic_workspace);
@@ -15372,7 +15491,7 @@ struct AssistantViewModel::State {
             generic_prepare_workspace();
         } catch (...) {
             if(!publication.input_current())return false;
-            error = QObject::tr("The internal instruction context could not be prepared. Your account, conversation and selected inputs are preserved.");
+            error = QObject::tr("edi could not prepare the assistant's instructions. Your conversation and files are kept.");
             notify(); return false;
         }
         if (!publication.input_current()) return false;
@@ -15420,7 +15539,7 @@ struct AssistantViewModel::State {
         const bool resume_only=generic_resuming && resume_checkpoint &&
             !resume_checkpoint->share_approved && resume_identity_current();
         if ((!approved && !resume_only) || usage_read_epoch != usage_epoch)
-            throw std::runtime_error("The original account/project scope changed during bootstrap");
+            throw std::runtime_error("The account or project changed while connecting. Try again.");
         if (!select_from_catalog(generic_native.value("models").toArray(), true)) return;
         if (!publication.input_current()) return;
         bootstrap_scope = approved_scope;
@@ -15538,6 +15657,12 @@ struct AssistantViewModel::State {
     void generic_response(const QString& id, const QString& method, const Object& reply, const char*& reason_code, FileProjection& publication, quint64 settingsObservation=0) {
         if (!publishing || !generic_mode || (generic_retiring && method != "account/logout")) return;
         if (method == "account/rateLimits/read") { usage_response(id, reply); return; }
+        // The home that signed in as someone else is signed out (or could not be): now the refusal shows.
+        if (method == "account/logout" && !logout_failure_reason.isEmpty()) { generic_fail(std::exchange(logout_failure_reason, {})); return; }
+        if (method == "account/login/answer") {
+            if (reply.contains("error")) { error = QObject::tr("The sign-in did not take that answer. Try again."); notify(); }
+            return;
+        }
         if(method=="account/read" && id!=account_read_rpc)return;
         if((method=="thread/start" || method=="thread/resume") && account_confirmation_pending) {
             account_bootstrap_reply=AccountBootstrapReply{id,method,reply,publication,agent?agent->outputGeneration():0};return;
@@ -15577,7 +15702,7 @@ struct AssistantViewModel::State {
             if (!reply.value("error").isObject() || !code.isDouble() || !std::isfinite(code.toDouble()) ||
                 std::floor(code.toDouble()) != code.toDouble() || code.toDouble() < -2147483648.0 || code.toDouble() > 2147483647.0 || !message.isString())
                 throw std::runtime_error("Agent request refusal has an invalid shape");
-            if (generic_bootstrap_stage(method)) { generic_response_failure(method, "RPC_REFUSED"); return; }
+            if (generic_bootstrap_stage(method)) { generic_response_failure(method, "RPC_REFUSED", message.toString()); return; }
             const auto number = static_cast<qint32>(code.toDouble());
             if(method=="thread/settings/update") {
                 const auto observation=settingsObservation;
@@ -15613,11 +15738,11 @@ struct AssistantViewModel::State {
             const bool retainSession = nonadmitted && currentInput && generic_rpc_rows.contains(id);
             // Display no arbitrary server prose/data, echoed input, path,
             // credential, reasoning or stderr. Known explanations are app-owned.
-            const auto safeReason = contextGate ? QObject::tr("Application context requires an unsupported experimental capability") :
-                turnMismatch ? QObject::tr("The active turn changed before this input was admitted") :
-                steerReason ? QObject::tr("The active turn could not accept this follow-up") : QObject::tr("Unrecognized request refusal; operation authority was blocked");
-            const auto diagnostic = bounded_error(QObject::tr("%1 refused (%2): %3. The message is retained; no automatic retry was made.")
-                .arg(method).arg(number).arg(safeReason));
+            const auto safeReason = contextGate ? QObject::tr("it needs a feature this assistant does not offer") :
+                turnMismatch ? QObject::tr("the reply changed before it arrived") :
+                steerReason ? QObject::tr("the current reply could not take a follow-up") : QObject::tr("the reason was not recognised");
+            const auto diagnostic = bounded_error(QObject::tr("The assistant did not take this message: %1. Your message is kept.")
+                .arg(safeReason));
             if (generic_rpc_rows.contains(id)) {
                 const auto rowId = generic_rpc_rows.take(id);
                 bool retained = generic_clear_pending || generic_context_pending; // Its exact old input UI is retired; protocol proof remains.
@@ -15670,10 +15795,10 @@ struct AssistantViewModel::State {
             session_account_observation["email_presence"]=email.isUndefined()?"missing":email.isNull()?"null":email.isString()?(emailProof?"string":"empty_string"):"invalid";
             accountStage("ACCOUNT_SHAPE");
             if((!account_value.isNull() && !account_value.isObject()) || (account_value.isObject() && !kind.isString()))
-                throw std::runtime_error("The managed account response has invalid metadata");
+                throw std::runtime_error("The account details could not be read.");
             if(kind==account_kind()) {
                 accountStage("ACCOUNT_EMAIL_SHAPE");
-                if(!email.isNull() && !email.isString())throw std::runtime_error("The managed account identity field has invalid metadata");
+                if(!email.isNull() && !email.isString())throw std::runtime_error("The account email could not be read.");
             }
             accountStage("ACCOUNT_IDENTITY_COMPARE");
             if(account_read_check_only) {
@@ -15683,15 +15808,15 @@ struct AssistantViewModel::State {
                 if(kind==account_kind() && (!expectedProof || !emailProof)) {
                     accountStage("ACCOUNT_IDENTITY_UNAVAILABLE");session_account_observation["same_identity"]="unknown";
                     account_confirmation_pending=true;
-                    error=QObject::tr("The managed account did not provide the identity needed to confirm new actions. The current conversation and accepted work were preserved; reconnect with the original account to continue.");
+                    error=QObject::tr("The account could not be confirmed, so new actions are paused. Your conversation and work are kept; connect again with the same account to continue.");
                     notify();return;
                 }
                 const bool same=kind==account_kind() && expectedProof && emailProof && email==expected;
                 session_account_observation["same_identity"]=same;account_confirmation_pending=false;
                 if(!same) {
                     accountStage(kind==account_kind()?"ACCOUNT_CURRENT_MISMATCH":"ACCOUNT_MANAGED_UNAVAILABLE");
-                    generic_fail(kind==account_kind()?QObject::tr("The confirmed managed account differs from the original account. Reconnect with the original account; no conversation action was replayed."):
-                        QObject::tr("The correlated read no longer has the original managed ChatGPT account. Sign in with that account; accepted work was retained."));return;
+                    generic_fail(kind==account_kind()?QObject::tr("This is not the account the conversation started with. Connect with that account to continue."):
+                        QObject::tr("The ChatGPT account changed. Sign in with the account the conversation started with; your work is kept."));return;
                 }
                 session_account_observation["stage"]="same_current_account";
                 if(account_bootstrap_reply) {
@@ -15714,15 +15839,21 @@ struct AssistantViewModel::State {
                 session_account_observation["expected_identity_present"]=!expected.isEmpty();
                 if(kind!=account_kind() || !emailProof || expected.isEmpty()) {
                     accountStage("ACCOUNT_IDENTITY_UNAVAILABLE");
-                    const auto reason=QObject::tr("The original managed account identity could not be confirmed before opening this conversation's saved project. Sign in with that account; its saved association was preserved.");
+                    const auto reason=QObject::tr("The account this conversation belongs to could not be confirmed. Sign in with that account to reopen it.");
                     generic_fail(reason);return;
                 }
                 if(email.toString()!=expected) {
                     accountStage("ACCOUNT_SAVED_MISMATCH");
-                    const auto reason=QObject::tr("The confirmed account differs from this conversation's original managed account. Its saved project was not opened.");
+                    const auto reason=QObject::tr("This conversation belongs to another account, so its project was not opened.");
                     generic_fail(reason);return;
                 }
                 session_account_email=email.toString();session_account_preflight=false;
+                // A conversation from before the update: the account it was verified against gets its record now, so
+                // the default ChatGPT record exists before the conversation reopens (ADR-0108 §8).
+                accountStage("ACCOUNT_RECORD");
+                try {record_signed_in_account(email.toString(),account.value("planType").toString());}
+                catch(const std::exception& failure) {generic_fail(bounded_error(QString::fromUtf8(failure.what())));return;}
+                if(!publication.input_current())return;
                 generic_connecting=false;agent->settleOperation();
                 if(!publication.input_current())return;
                 agent->retire();
@@ -15743,20 +15874,37 @@ struct AssistantViewModel::State {
                     const bool expected=resume_checkpoint && !resume_checkpoint->email.isEmpty();
                     session_account_observation["expected_identity_present"]=expected;
                     accountStage("ACCOUNT_IDENTITY_UNAVAILABLE");
-                    if(!expected || !emailProof)throw std::runtime_error("The original managed account identity is unavailable; the saved conversation was not resumed");
+                    if(!expected || !emailProof)throw std::runtime_error("The account this conversation belongs to could not be confirmed, so it was not reopened.");
                     accountStage("ACCOUNT_SAVED_MISMATCH");
-                    if(email.toString()!=resume_checkpoint->email)throw std::runtime_error("The current managed account differs; the previous session was not resumed");
+                    if(email.toString()!=resume_checkpoint->email)throw std::runtime_error("This is another account, so the previous session was not reopened.");
                 }
                 accountStage("ACCOUNT_RECORD");
                 // Only an e-mail names the person; an organisation or a key's source does not (ADR-0108 §4).
                 identity_unidentified=!emailProof && active_provider_account.provider==AssistantProviderId::Claude;
-                record_signed_in_account(emailProof?email.toString():QString(),account.value("planType").toString());
+                const auto recordedBefore=active_provider_account;
+                try {record_signed_in_account(emailProof?email.toString():QString(),account.value("planType").toString());}
+                catch(const std::exception& failure) {
+                    // The record's own reason is what the user needs (already added, another person signed in).
+                    const auto reason=bounded_error(QString::fromUtf8(failure.what()));
+                    if(std::exchange(logout_before_failure,false) && agent) {
+                        logout_failure_reason=reason;
+                        agent->beginOperation(Limits::revoke_ms,0);
+                        if(!publication.input_current())return;
+                        try {generic_request("account/logout");}
+                        catch(...) {logout_failure_reason.clear();generic_fail(reason);}
+                        return;
+                    }
+                    generic_fail(reason);
+                    if(recordedBefore.provider!=active_provider_account.provider || recordedBefore.id!=active_provider_account.id)
+                        rebuild_provider_later();
+                    return;
+                }
                 update_managed_notice(account);
                 emit owner.managedSettingsNoticeChanged();
                 accountStage("ACCOUNT_PUBLIC_METADATA");
                 account_bootstrap_verified=true;usage_read_epoch=usage_epoch;
                 Object public_account;
-                for(const auto* field:{"email","planType","authMethod","organization","apiKeySource","tokenSource","login","host","managedSettings"})if(account.value(field).isString())public_account[field]=usage_text(account.value(field));
+                for(const auto* field:{"email","planType","authMethod","organization","apiKeySource","tokenSource","apiProvider","login","host","managedSettings"})if(account.value(field).isString())public_account[field]=usage_text(account.value(field));
                 if(account.value("hooksRan").isBool())public_account["hooksRan"]=account.value("hooksRan");
                 generic_native["account"]=public_account;generic_native["accountEpoch"]=QString::number(usage_epoch);
                 generic_native["label"]=emailProof?email:QJsonValue(provider_label());generic_native["models"]=QJsonArray{};
@@ -15764,24 +15912,32 @@ struct AssistantViewModel::State {
             } else if(account_value.isNull() || (account_value.isObject() &&
                 (kind=="apiKey" || (kind=="amazonBedrock" && (!account.contains("usesCodexManagedCredentials") || account.value("usesCodexManagedCredentials").isBool()))))) {
                 accountStage("ACCOUNT_LOGIN_NOT_ESTABLISHED");
-                if(generic_login_attempted)throw std::runtime_error("Managed ChatGPT login was not established");
+                if(generic_login_attempted)throw std::runtime_error(QObject::tr("%1 sign-in did not finish.").arg(provider_label()).toStdString());
                 accountStage("ACCOUNT_DISCLOSURE_CHANGED");
                 const bool still_approved=disclosure_approved();if(!publication.input_current())return;
                 if(!still_approved)throw std::runtime_error("The selected login disclosure changed");
                 accountStage("ACCOUNT_LOCAL_PROCESSING");
                 login_scope=std::make_shared<DisclosureScope>(*approved_scope);generic_login_attempted=true;
                 accountStage("REQUEST_ADMISSION");generic_request("account/login/start",{{"type",account_kind()}});
-            } else {accountStage("ACCOUNT_UNSUPPORTED_KIND");throw std::runtime_error("Managed ChatGPT login is required");}
+            } else {accountStage("ACCOUNT_UNSUPPORTED_KIND");throw std::runtime_error(QObject::tr("Sign in with a %1 account.").arg(provider_label()).toStdString());}
         } else if (method == "account/login/start") {
             reason_code = "LOGIN_KIND";
-            if (result.value("type") != account_kind()) throw std::runtime_error("Managed ChatGPT login is required");
+            if (result.value("type") != account_kind()) throw std::runtime_error(QObject::tr("Sign in with a %1 account.").arg(provider_label()).toStdString());
             reason_code = "LOGIN_ID";
             generic_login = generic_id(result.value("loginId"));
             reason_code = "LOGIN_URL";
             const QUrl url(result.value("authUrl").toString());
             if (!url.isValid() || url.scheme() != "https" || !url.userInfo().isEmpty() || !sign_in_host_allowed(url.host())) throw std::runtime_error("Agent login URL is unavailable");
             reason_code = "BROWSER_OPEN";
-            if (!QDesktopServices::openUrl(url)) throw std::runtime_error("The sign-in browser could not be opened");
+            // A runtime that opened the page itself gets no second tab; the page stays offered as a link.
+            if (!result.value("browserOpened").toBool() && !QDesktopServices::openUrl(url))
+                throw std::runtime_error("The sign-in browser could not be opened");
+            generic_login_info = result;
+            // No deadline while the user signs in (an e-mail link can take minutes); Cancel ends it. The account
+            // read after the sign-in gets a fresh one.
+            agent->settleOperation();
+            if (!publication.input_current()) return;
+            notify();
         } else if (method == "model/list") {
             reason_code = "MODEL_SHAPE";
             if (!result.value("data").isArray()) throw std::runtime_error("Agent model catalog is unavailable");
@@ -16047,7 +16203,10 @@ struct AssistantViewModel::State {
             if (active_provider_account.provider == AssistantProviderId::Copilot && !active_provider_account.id.isEmpty()) {
                 // Copilot's account was removed from edi, not signed out of GitHub (ADR-0108 §5).
                 try { account_store().remove(AssistantProviderId::Copilot, active_provider_account.id); } catch (...) {}
-                error = QObject::tr("The GitHub Copilot account was removed from edi. Its GitHub sign-in stays in the system keychain until you remove it there or revoke it on GitHub.");
+                error = copilot_removed_notice();
+                // The removed account does not stay active: another one takes its place (ADR-0108 §9).
+                activate_another_account();
+                rebuild_provider_later();
                 emit owner.accountsChanged();
             }
         }
@@ -16084,7 +16243,7 @@ struct AssistantViewModel::State {
                     for(const auto& file:files)ids.push_back(file.toObject().value("id").toString().toStdString());
                     const auto consumed=controller->consume_selected_files(
                         input->selected_context.value("collection_id").toString().toStdString(),file_generation(input->selected_context),ids);
-                    if(!consumed.ok)error=QObject::tr("The message was accepted, but its attachment draft acknowledgment could not be retained. Its admitted files are preserved.");
+                    if(!consumed.ok)error=QObject::tr("The message was sent, but edi could not update the draft's attachments. The files are kept.");
                 }
                 generic_thread_has_input=true;
                 if(!input->objective.trimmed().isEmpty() && (genuine_objective_row.isEmpty() || genuine_objective_generation!=generation ||
@@ -16143,7 +16302,7 @@ struct AssistantViewModel::State {
             if(!code.isEmpty()) {payload["code"]=code;observation.cause="provider."+code;}
             else if(!observation.message.isEmpty())observation.cause=observation.message;
             const QString description=observation.message.isEmpty()
-                ?QObject::tr("The agent reported no usable public error explanation; retained work was preserved."):observation.message;
+                ?QObject::tr("The assistant reported an error without a reason. Your work is kept."):observation.message;
             const auto text=willRetry?QObject::tr("The agent reported an error and will retry automatically: %1").arg(description):description;
             // Repeated identical observations retain one original row. Different
             // facts and a terminal carrier remain distinct; neither replays input.
@@ -16453,12 +16612,28 @@ struct AssistantViewModel::State {
             if (usage_account_ready && !generic_retiring) usage_updated();
             return;
         }
+        if (method == "account/login/updated") {
+            // A later line of the open sign-in: a device code, a question or the page's address.
+            diagnostic.stage = "LOGIN_VALIDATE";
+            if (generic_login.isEmpty() || params.value("loginId") != generic_login) return;
+            if (params.contains("authUrl")) {
+                const QUrl url(params.value("authUrl").toString());
+                if (!url.isValid() || url.scheme() != "https" || !url.userInfo().isEmpty() || !sign_in_host_allowed(url.host()))
+                    throw std::runtime_error("Agent login URL is unavailable");
+            }
+            for (const auto* field : {"authUrl", "userCode", "prompt", "browserOpened"})
+                if (params.contains(field)) generic_login_info[field] = params.value(field);
+            notify();
+            return;
+        }
         if (method == "account/login/completed") {
             diagnostic.stage = "LOGIN_VALIDATE";
             if (params.value("loginId") != generic_login) return;
             if (!params.value("success").toBool()) throw std::runtime_error("Agent sign-in was not completed");
             diagnostic.stage = "LOGIN_ACCOUNT_READ";
-            generic_login.clear(); request_account_read(); return;
+            generic_login.clear(); generic_login_info = {};
+            agent->beginOperation(Limits::sign_in_ms, 0);
+            request_account_read(); return;
         }
         if (method == "account/updated") {
             diagnostic.stage="ACCOUNT_MODE_READ";
@@ -16704,8 +16879,8 @@ struct AssistantViewModel::State {
                 if (!publication.input_current()) return;
             }
             if(status!="completed" && !generic_clear_pending)error=!observedError.message.isEmpty()?observedError.message:
-                status=="interrupted"?QObject::tr("The agent turn was interrupted. Retained work is preserved."):
-                QObject::tr("The agent turn failed without an available explanation. Retained work is preserved.");
+                status=="interrupted"?QObject::tr("The reply was interrupted. Your work is kept."):
+                QObject::tr("The reply failed without a reason. Your work is kept.");
         }
         diagnostic.stage = "EVENT_PRESENT";
         if (!publication.input_current()) return;
@@ -17110,21 +17285,21 @@ struct AssistantViewModel::State {
             return {}; // Definite pre-admission wait, never a spent turn retry.
         }
         if(!session_selection_target.isEmpty()) {
-            error=input_refusal(QObject::tr("Finish or cancel the conversation selection before sending. Your draft and attachments are retained."));notify();return {};
+            error=input_refusal(QObject::tr("Finish or cancel choosing a conversation before sending. Your draft and attachments are kept."));notify();return {};
         }
         if(account_confirmation_pending) {
             if(accountWaiting){*accountWaiting=true;return {};}
-            error=input_refusal(QObject::tr("The current account is being verified. Your draft and attachments are retained; send when ready."));notify();return {};
+            error=input_refusal(QObject::tr("Your account is being checked. Your draft and attachments are kept; send when ready."));notify();return {};
         }
         if (generic_revoke_pending || generic_context_pending || generic_clear_pending || !generic_interrupt_rpc.isEmpty()) {
-            error = input_refusal(QObject::tr("The previous interruption is still settling. Your draft is retained; send when ready."));
+            error = input_refusal(QObject::tr("The previous stop is still finishing. Your draft is kept; send when ready."));
             notify(); return {}; // No new input or turn can reuse an older control's authority.
         }
         if (generic_connecting && generic_authenticated && generic_thread.isEmpty()) {
-            error = input_refusal(QObject::tr("A fresh project conversation is being prepared. Your draft is retained; send when ready.")); notify(); return {};
+            error = input_refusal(QObject::tr("A new project conversation is being prepared. Your draft is kept; send when ready.")); notify(); return {};
         }
         if (!generic_authenticated || generic_retiring || generic_revoke_pending || generic_connecting || generic_native.value("status") != "ready")
-            throw std::runtime_error("Connect the official agent before submitting work");
+            throw std::runtime_error("Connect the assistant before sending.");
         if (generic_thread.isEmpty()) {
             const bool still_approved=disclosure_approved();
             if(!projection.current())return {};
@@ -17135,11 +17310,11 @@ struct AssistantViewModel::State {
                     if(accountWaiting)*accountWaiting=true;
                     return {}; // No turn/input admitted; original draft waits for this exact resume.
                 }
-                error = input_refusal(QObject::tr("A fresh conversation is being prepared for the approved scope. Your draft is retained; send when ready."));
-            } else error = input_refusal(QObject::tr("Approve the current project context to prepare a fresh agent conversation."));
+                error = input_refusal(QObject::tr("A new conversation is being prepared for what you approved. Your draft is kept; send when ready."));
+            } else error = input_refusal(QObject::tr("Approve the current project information to start a new conversation."));
             notify(); return {};
         }
-        if (!policy_current()) throw std::runtime_error("The actual read-only thread policy is not ready");
+        if (!policy_current()) throw std::runtime_error("The conversation is not ready yet.");
         const auto originalModel=model,originalEffort=effort;
         const auto originalEffectiveModel=generic_policy_model,originalEffectiveEffort=generic_policy_effort;
         const auto originalPolicy=generic_policy_epoch;
@@ -17153,13 +17328,13 @@ struct AssistantViewModel::State {
 
         auto capturedSources=capture_input_scopes(text,projection);
         completeContext["input_scopes"]=input_scope_catalog(capturedSources);
-        if (completeContext.contains("error")) throw std::runtime_error("Complete native context is unavailable; no request was admitted");
+        if (completeContext.contains("error")) throw std::runtime_error("Project information is unavailable. Nothing was sent.");
         const auto disclosure = current_disclosure(&completeContext);
         if(!settings_current())return {};
         if (!same_disclosure(approved_scope, disclosure) || !same_disclosure(backend_scope, disclosure)) {
             (void)generic_context_changed();
             if (!projection.current()) return {};
-            error = input_refusal(QObject::tr("The project input scope changed. Approve its current disclosure before sending; your draft is preserved."));
+            error = input_refusal(QObject::tr("What the project shares has changed. Approve it again before sending; your draft is kept."));
             notify(); return {};
         }
         const auto outgoing_bytes=outgoing::size(completeContext,outgoing::Role::Context);
@@ -17197,7 +17372,7 @@ struct AssistantViewModel::State {
             // No steer has been admitted or written. Keep the draft and the
             // original running request alive; a preflight refusal is not a
             // transport/retention failure and must not retire its process.
-            error = input_refusal(QObject::tr("The agent is starting this turn. Submit the retained draft when its turn is ready."));
+            error = input_refusal(QObject::tr("The assistant is starting its reply. Send your draft when it is ready."));
             notify(); return {};
         }
         // Stable UserInput::Text preserves the complete approved context in the
@@ -17543,10 +17718,10 @@ struct AssistantViewModel::State {
             }
             if (!publish_selected_rows(std::move(rows), proof)) return false;
             selected_rows_dirty = false;
-            if (error == QObject::tr("Selected files were retained, but their list could not be displayed. Sending is blocked until the list recovers or the conversation is cleared.")) error.clear();
+            if (error == QObject::tr("The selected files are kept, but their list could not be shown. Sending waits until the list is back or the conversation is cleared.")) error.clear();
             return true;
         } catch (...) {
-            if (proof.current()) error = QObject::tr("Selected files were retained, but their list could not be displayed. Sending is blocked until the list recovers or the conversation is cleared.");
+            if (proof.current()) error = QObject::tr("The selected files are kept, but their list could not be shown. Sending waits until the list is back or the conversation is cleared.");
             return false;
         }
     }
@@ -17563,7 +17738,7 @@ struct AssistantViewModel::State {
                 const auto pending=input_file_payload().value("files").toArray().size();
                 constexpr auto maximum=static_cast<qsizetype>(edi::assistant::SelectedFileLimits::message_files);
                 if(pending>maximum || urls.size()>maximum-pending)
-                    throw std::runtime_error(QObject::tr("Attach at most %1 files to one message. Existing draft files were preserved.").arg(maximum).toStdString());
+                    throw std::runtime_error(QObject::tr("Attach at most %1 files to one message. Files already attached are kept.").arg(maximum).toStdString());
                 if(urls.size()>static_cast<qsizetype>(edi::assistant::SelectedFileLimits::files))
                     throw std::length_error("Selected-file count exceeds limit");
                 if (project && project->fit()->running()) throw std::runtime_error("Finish the active operation before selecting files");
@@ -17605,7 +17780,7 @@ struct AssistantViewModel::State {
                 error = bounded_error(QString::fromUtf8(exception.what()));
             } catch (...) {
                 if(!projection.current())return admitted;
-                error = QObject::tr("Selected files could not be retained. Existing files are preserved.");
+                error = QObject::tr("The selected files could not be added. Files already attached are kept.");
             }
             if(!projection.current())return admitted;
             file_staging = false;
@@ -17628,7 +17803,7 @@ struct AssistantViewModel::State {
         } catch (...) {
             if (!projection.current()) return admitted;
             file_staging = false;
-            error = QObject::tr("Selected files could not be retained. Inspect the file list before retrying.");
+            error = QObject::tr("The selected files could not be added. Check the file list before trying again.");
             if (file_selection && file_selection->id == requestId) {
                 projection.files = file_epoch == UINT64_MAX ? UINT64_MAX : file_epoch + 1;
                 retire_file_selection();
@@ -18103,6 +18278,7 @@ struct AssistantViewModel::State {
             if (!property("activeJobId", &AssistantViewModel::activeJobId, &AssistantViewModel::activeJobIdChanged)) return;
             if (!property("canCancel", &AssistantViewModel::canCancel, &AssistantViewModel::canCancelChanged)) return;
             if (!property("lastError", &AssistantViewModel::lastError, &AssistantViewModel::lastErrorChanged)) return;
+            if (!property("signInDetails", &AssistantViewModel::signInDetails, &AssistantViewModel::signInDetailsChanged)) return;
             // The context text, and the consent identity made from it, serialise the whole project. Their readers ask
             // for them when they need them, so they are worked out here only while something listens for a change (an
             // open connection dialog, a send waiting for consent): a closed panel costs nothing per change (ADR-0102
@@ -18483,22 +18659,32 @@ struct AssistantViewModel::State {
         } else if (type == "error") error = bounded_error(value.value("message").toString());
         if (!queue_render()) throw std::runtime_error("Assistant presentation queue is unavailable");
     }
+    // Each provider remembers its own model and effort; ChatGPT's key is the one used before accounts existed.
+    QString choice_key() const {
+#ifndef __EMSCRIPTEN__
+        return QStringLiteral("Assistant/Providers/%1/selection").arg(assistant_provider_key(active_provider_account.provider));
+#else
+        return QStringLiteral("Assistant/Providers/chatgpt/selection");
+#endif
+    }
     void load_choice_preference() noexcept {
         try {
             const auto path = settings_file_path();
-            if (path != choice_store) {
+            const auto key = choice_key();
+            // A new store or another provider's key: the remembered pair and its read state start over.
+            const auto store = path.isEmpty() ? QString() : path + QLatin1Char('\n') + key;
+            if (store != choice_store) {
                 // Retire the old association before any fallible new-store preparation.
                 remembered_model.clear(); remembered_effort.clear();
                 preference_error.clear(); preference_save_error.clear();
                 choice_read_complete = false;
                 restore_choice_pending = true; choice_warning_shown = false;
-                choice_store = path;
+                choice_store = store;
             }
             if (path.isEmpty()) return; // Retired store ownership; never use a personal/default store.
             if (choice_read_complete) return;
             QSettings settings(path, QSettings::IniFormat);
             settings.sync(); // Import actual same-path recovery before interpreting absence.
-            const auto key = QStringLiteral("Assistant/Providers/chatgpt/selection");
             const bool present = settings.contains(key);
             if (settings.status() != QSettings::NoError) {
                 preference_error = QObject::tr("Assistant preferences could not be read. Restoration will retry when the store is available.");
@@ -18552,7 +18738,7 @@ struct AssistantViewModel::State {
             if (path.isEmpty()) { preference_error.clear(); preference_save_error.clear(); return; } // No personal/default-store fallback.
             QSettings settings(path, QSettings::IniFormat);
             // A single value binds the effort to its actual model; fallback never writes this value.
-            settings.setValue(QStringLiteral("Assistant/Providers/chatgpt/selection"), QStringList{model, effort});
+            settings.setValue(choice_key(), QStringList{model, effort});
             settings.sync();
             if (settings.status() != QSettings::NoError) {
                 preference_save_error = QObject::tr("The assistant selection changed, but its preference could not be saved.");
@@ -18605,11 +18791,11 @@ struct AssistantViewModel::State {
                 restore_choice_pending = !supported;
                 if (supported && choice_read_complete) preference_error.clear();
                 if (!supported && !choice_warning_shown) {
-                    preference_error = QObject::tr("The saved reasoning effort is unavailable. Provider default is selected; your preference is preserved.");
+                    preference_error = QObject::tr("The saved reasoning effort is unavailable, so the provider default is used. Your setting is kept.");
                     choice_warning_shown = true;
                 }
             } else if (!choice_warning_shown) {
-                preference_error = QObject::tr("The saved model is unavailable. Inspect the available model and effort before sending; your preference is preserved.");
+                preference_error = QObject::tr("The saved model is unavailable. Check the model and effort before sending; your setting is kept.");
                 choice_warning_shown = true;
             }
         }
@@ -18620,8 +18806,8 @@ struct AssistantViewModel::State {
             const auto offered=available(savedModel);
             if(!savedModel.isEmpty() && !offered.isEmpty()) {
                 model=savedModel;effort=savedEffort.isEmpty() || offered.value("efforts").toArray().contains(savedEffort)?savedEffort:QString();
-                if(effort!=savedEffort)preference_error=QObject::tr("The conversation's previous reasoning effort is unavailable; the actual provider default is selected.");
-            } else if(!savedModel.isEmpty())preference_error=QObject::tr("The conversation's previous model is unavailable; inspect the actual selected model before continuing.");
+                if(effort!=savedEffort)preference_error=QObject::tr("The conversation's previous reasoning effort is unavailable, so the provider default is used.");
+            } else if(!savedModel.isEmpty())preference_error=QObject::tr("The conversation's previous model is unavailable. Check the selected model before continuing.");
         }
 #endif
         if (available(model).isEmpty()) {
@@ -19187,7 +19373,7 @@ std::shared_ptr<AssistantViewModel::ProjectResetInputs> AssistantViewModel::prep
         return result;
     }catch(const std::exception& error) {
         if(receiver && receiver->state_.get()==original) {original->error=State::bounded_error(QString::fromUtf8(error.what()));original->notify();}
-    }catch(...) {if(receiver && receiver->state_.get()==original){original->error=tr("The pending attachments could not be retained; the project was kept.");original->notify();}}
+    }catch(...) {if(receiver && receiver->state_.get()==original){original->error=tr("The attached files could not be kept. The project is unaffected.");original->notify();}}
     return {};
 }
 
@@ -19652,7 +19838,8 @@ bool AssistantViewModel::conversationAvailable() const {
     return false;
 #endif
 }
-QString AssistantViewModel::connectionLabel() const { return state() == "connecting" ? tr("Connecting to ChatGPT…") : connected() ? state_->native.value("label").toString() : tr("Connect ChatGPT"); }
+// Neutral until connected: no account may be chosen yet while connecting.
+QString AssistantViewModel::connectionLabel() const { return state() == "connecting" ? tr("Connecting…") : connected() ? state_->native.value("label").toString() : tr("Connect"); }
 RowTableModel* AssistantViewModel::models() const { return &state_->models; }
 QString AssistantViewModel::selectedModel() const { return state_->model; }
 QString AssistantViewModel::selectedEffort() const { return state_->effort; }
@@ -19825,7 +20012,7 @@ void AssistantViewModel::continueSessionRestore(const QString& id) {
     catch(const std::exception& failure) {if(receiver && receiver->state_.get()==original) {
         original->settle_reopen_failure(operation,id,original->bounded_error(QString::fromUtf8(failure.what())));
     }}catch(...) {if(receiver && receiver->state_.get()==original) {
-        original->settle_reopen_failure(operation,id,tr("The selected session could not reconnect. Original projects and attachments were preserved; no action was replayed."));}}
+        original->settle_reopen_failure(operation,id,tr("The session could not reconnect. Its projects and attachments are kept."));}}
 #else
     Q_UNUSED(id);
 #endif
@@ -19843,7 +20030,7 @@ bool AssistantViewModel::requestAssistantPane(QObject* originalToggle) {
     if(!toggle || toggle->window()!=original->action_window || original->widget_named(QStringLiteral("assistant.toggle"))!=toggle)return false;
     // Covering an owned visible sequence retires it even in an inter-control
     // gap, retaining its actual prefix. An already-running background fit stays.
-    if(retireSequence)original->native_supersede_operation(tr("The visible action was interrupted by your sidebar choice; its actual partial result was retained."));
+    if(retireSequence)original->native_supersede_operation(tr("Your sidebar choice interrupted the action. What it did so far is kept."));
     if(!receiver || receiver->state_.get()!=original || !proof.input_current() || original->native_serial!=serial || original->widget_input.get()!=helper)return false;
     if(retireSequence && ((helper && helper->active()) || original->native_widget || original->native_create_widget))return false;
     // A successor tool can share the same user-input serial. The old manual
@@ -19894,7 +20081,7 @@ void AssistantViewModel::restoreLastSession() {
         original->fail_session_operation(original->session_operation,original->session_selection_target,reason);
         if(receiver && receiver->state_.get()==original && original->startup_restore_pending())original->startup_reopen_failed(reason);
     }}catch(...) {if(receiver && receiver->state_.get()==original) {
-        const auto reason=tr("The cause was not reported; your draft is retained.");
+        const auto reason=tr("The cause was not reported. Your draft is kept.");
         original->fail_session_operation(original->session_operation,original->session_selection_target,reason);
         if(receiver && receiver->state_.get()==original && original->startup_restore_pending())original->startup_reopen_failed(reason);
     }}
@@ -19908,7 +20095,7 @@ void AssistantViewModel::clearCachedHistory() {
     const QPointer<AssistantViewModel> receiver(this);auto* const original=state_.get();
     try { original->clear_cached_history(); }
     catch(...) {if(receiver && receiver->state_.get()==original) {
-        original->cache_clear_error=tr("The local chat cache could not be cleared. Projects, reports, runtime sessions and sign-in were preserved.");
+        original->cache_clear_error=tr("The chat cache could not be cleared. Your projects, reports and sign-in are unaffected.");
         emit cachedHistoryChanged();
     }}
 }
@@ -20653,8 +20840,8 @@ QString AssistantViewModel::submitDraftImpl(const QString& text,bool* accountWai
         if (!projection.current()) return {};
 #ifndef __EMSCRIPTEN__
         if (state_->generic_mode) {
-            if (state_->generic_writing_input) state_->generic_fail(tr("Agent input delivery is uncertain. Inspect the retained message before retrying."));
-            else { state_->error = state_->input_refusal(tr("The new input was not admitted. The existing operation and draft are preserved.")); try { state_->notify(); } catch (...) {} }
+            if (state_->generic_writing_input) state_->generic_fail(tr("edi cannot tell whether your message reached the assistant. Check it before sending again."));
+            else { state_->error = state_->input_refusal(tr("The new message was not taken. The current task and your draft are kept.")); try { state_->notify(); } catch (...) {} }
             if (projection.current()) state_->generic_writing_input = false;
             return {};
         }
@@ -20813,7 +21000,7 @@ bool AssistantViewModel::openReport(const QString& rowId, const QString& link) {
         return true;
     } catch (...) {
         if (!publication.input_current()) return false;
-        state_->error = tr("This report is unavailable, outside its retained workspace, or cannot be opened. No external link was followed.");
+        state_->error = tr("This report is unavailable or cannot be opened. No link was followed.");
         state_->notify(); return false;
     }
 #else
@@ -20952,7 +21139,7 @@ void AssistantViewModel::answerQuestion(const QString& id, const QString& answer
             if (!delivered) state_->generic_fail(tr("The question answer could not be delivered."));
             if (!publication.input_current()) return;
             state_->notify();
-        } catch (...) { if (publication.input_current()) state_->generic_fail(tr("The question answer could not be retained.")); }
+        } catch (...) { if (publication.input_current()) state_->generic_fail(tr("Your answer could not be kept.")); }
         return;
     }
 #endif
@@ -21124,7 +21311,7 @@ bool AssistantViewModel::resumeConnection() {
         }
         if(!s->resume_identity_current() || !s->resume_checkpoint) {
             const auto selectionTarget=s->session_selection_target;
-            s->fail_session_operation(s->session_operation,selectionTarget,tr("The original conversation scope changed before reconnecting."));
+            s->fail_session_operation(s->session_operation,selectionTarget,tr("What this conversation shares changed before it could reconnect."));
             return false;
         }
         if(s->generic_connecting)return true;
@@ -21136,7 +21323,7 @@ bool AssistantViewModel::resumeConnection() {
         return true;
     }catch(...) {
         if(receiver && state_.get()==s){
-            const auto reason=tr("The retained session could not reconnect. Its task and inputs remain; no uncertain action was replayed.");
+            const auto reason=tr("The session could not reconnect. Its task and files are kept; nothing was repeated.");
             s->error=reason;s->fail_session_operation(operation,target,reason);
             if(receiver && state_.get()==s)s->notify();
         }
@@ -21199,7 +21386,7 @@ void AssistantViewModel::signIn() {
         // A successful reread proved there is no saved intent: normal Connect is allowed.
     }
     if(state_->account_confirmation_pending && !state_->session_preparation) {
-        state_->error=tr("The current account is being verified. Your conversation and inputs are preserved.");state_->notify();return;
+        state_->error=tr("Your account is being checked. Your conversation and files are kept.");state_->notify();return;
     }
     if(state_->session_preparation) {
         const QPointer<AssistantViewModel> receiver(this);auto* original=state_.get();const auto operation=original->session_operation;const auto target=original->session_selection_target;
@@ -21248,7 +21435,7 @@ void AssistantViewModel::signIn() {
             if(!state_->session_restore_target.isEmpty()) {
                 const auto target=state_->session_restore_target;const auto record=state_->saved_session(target);
                 const auto expectedEmail=state_->original_session_email(target,record);
-                if(expectedEmail.isEmpty())throw std::runtime_error("The original managed account identity is unavailable; the conversation was not resumed");
+                if(expectedEmail.isEmpty())throw std::runtime_error("The account this conversation belongs to could not be confirmed, so it was not reopened.");
                 state_->approved_scope=approval;state_->generic_prepare_workspace();
                 if(!publication.input_current())return;
                 state_->resume_checkpoint=State::ResumeCheckpoint{target,state_->generic_workspace,expectedEmail,state_->project,approval,state_->generation,bool(state_->project),true,false,true};
@@ -21257,7 +21444,7 @@ void AssistantViewModel::signIn() {
         } catch (const std::exception& failure) {
             if (publication.input_current() && receiver && state_->generation == binding)
                 state_->generic_fail(tr("%1 could not connect: %2").arg(state_->provider_label(),state_->bounded_error(QString::fromUtf8(failure.what()))));
-        } catch (...) { if (publication.input_current() && receiver && state_->generation == binding) state_->generic_fail(tr("%1 could not connect, and the cause was not reported. Try Connect %1 again.").arg(state_->provider_label())); }
+        } catch (...) { if (publication.input_current() && receiver && state_->generation == binding) state_->generic_fail(tr("%1 could not connect, and the cause was not reported. Try again.").arg(state_->provider_label())); }
         return;
     }
 #endif
@@ -21279,7 +21466,16 @@ void AssistantViewModel::signIn() {
 #endif
     state_->sync();
 }
-void AssistantViewModel::signOut() { retireConnection(true); }
+void AssistantViewModel::signOut() {
+#ifndef __EMSCRIPTEN__
+    // An account whose connection ended (another person signed in, for example) can still be signed out.
+    if (state_->generic_mode && !state_->generic_authenticated && !state_->generic_connecting && !state_->generic_retiring) {
+        state_->sign_out_disconnected();
+        return;
+    }
+#endif
+    retireConnection(true);
+}
 void AssistantViewModel::retireConnection(bool logout) {
 #ifndef __EMSCRIPTEN__
     // Disconnecting ends this session's trial: its candidate goes back to the accepted fit first (edi ADR-0055).
@@ -21350,12 +21546,25 @@ void AssistantViewModel::retireConnection(bool logout) {
     if (!current()) return;
     state_->sync();
 }
+namespace {
+// Whether public builds offer a provider, from the bundled distribution policy ("<key>_distribution": "public"). ChatGPT
+// has no entry and is always public; an unreadable policy counts as internal.
+[[maybe_unused]] bool provider_distribution_public(const QString& key) {  // unused in the web build
+    if (key == QLatin1String("chatgpt")) return true;
+    static const auto policy = [] {
+        QFile file(QStringLiteral(":/edi/distribution.json"));
+        return file.open(QIODevice::ReadOnly) ? QJsonDocument::fromJson(file.readAll()).object() : QJsonObject{};
+    }();
+    return policy.value(key + QStringLiteral("_distribution")).toString() == QLatin1String("public");
+}
+}  // namespace
 QList<AssistantProviderInfo> AssistantViewModel::providers() const {
     QList<AssistantProviderInfo> result;
 #ifndef __EMSCRIPTEN__
+    // One record for every provider; `distributed` says whether this release offers a missing one to install.
     for (const auto id : {AssistantProviderId::ChatGpt, AssistantProviderId::Claude, AssistantProviderId::Copilot})
         result.append({assistant_provider_key(id), assistant_provider_name(id), assistant_provider_company(id),
-                       assistant_provider_available(id)});
+                       assistant_provider_available(id), provider_distribution_public(assistant_provider_key(id))});
 #endif
     return result;
 }
@@ -21363,9 +21572,43 @@ AssistantProviderInfo AssistantViewModel::activeProvider() const {
 #ifndef __EMSCRIPTEN__
     const auto id = state_->active_provider_account.provider;
     return {assistant_provider_key(id), assistant_provider_name(id), assistant_provider_company(id),
-            assistant_provider_available(id)};
+            assistant_provider_available(id), provider_distribution_public(assistant_provider_key(id))};
 #else
     return {QStringLiteral("chatgpt"), QStringLiteral("ChatGPT"), QStringLiteral("OpenAI"), false};
+#endif
+}
+QVariantMap AssistantViewModel::signInDetails() const {
+    QVariantMap details;
+#ifndef __EMSCRIPTEN__
+    const auto* s = state_.get();
+    if (!s->generic_mode || !s->generic_connecting || s->generic_authenticated || s->generic_login.isEmpty()) return details;
+    const auto& info = s->generic_login_info;
+    // The address was checked against the provider's sign-in hosts when it arrived.
+    if (info.value("authUrl").isString()) details["url"] = info.value("authUrl").toString();
+    details["browserOpened"] = info.value("browserOpened").toBool();
+    // Shown as they are, so bounded and on one line.
+    const auto line = [](const QJsonValue& value) { return State::bounded_error(value.toString().simplified()).left(200); };
+    if (info.value("userCode").isString() && !info.value("userCode").toString().isEmpty()) details["code"] = line(info.value("userCode"));
+    if (info.value("prompt").isString() && !info.value("prompt").toString().isEmpty()) {
+        details["prompt"] = line(info.value("prompt"));
+        // Claude asks for a code from its page; Copilot asks whether to keep its token in a plain file.
+        details["promptKind"] = s->active_provider_account.provider == AssistantProviderId::Copilot ? QStringLiteral("question") : QStringLiteral("code");
+    }
+#endif
+    return details;
+}
+void AssistantViewModel::answerSignIn(const QString& answer) {
+#ifndef __EMSCRIPTEN__
+    auto* s = state_.get();
+    if (!s->generic_mode || s->generic_login.isEmpty() || !s->agent || answer.isEmpty()) return;
+    // The answer goes to the sign-in process only: it is never stored, logged or kept in a reply.
+    try { s->generic_request("account/login/answer", {{"loginId", s->generic_login}, {"answer", answer}}); }
+    catch (...) { s->error = tr("The sign-in did not take that answer. Try again."); s->notify(); return; }
+    // The question is answered; a new one comes as a later update.
+    s->generic_login_info.remove("prompt");
+    s->notify();
+#else
+    Q_UNUSED(answer);
 #endif
 }
 QString AssistantViewModel::managedSettingsNotice() const {
@@ -21373,6 +21616,14 @@ QString AssistantViewModel::managedSettingsNotice() const {
     return state_->managed_notice;
 #else
     return {};
+#endif
+}
+bool AssistantViewModel::claudeManagedSettingsFound() const {
+#ifndef __EMSCRIPTEN__
+    // The same existence probe the Claude session runs at start; the dialog shows it only while Claude is chosen.
+    return !claude_managed_settings().isEmpty();
+#else
+    return false;
 #endif
 }
 void AssistantViewModel::acknowledgeManagedSettings() {
@@ -21409,7 +21660,9 @@ void AssistantViewModel::switchAccount(const QString& provider, const QString& i
     try { if (which) record = state_->account_store().find(*which, id); } catch (...) {}
     if (!record) { state_->error = tr("That account is no longer saved on this computer."); state_->notify(); return; }
     if (!assistant_provider_available(record->provider)) {
-        state_->error = tr("%1 is not installed. Add it with the Maintenance Tool.").arg(assistant_provider_name(record->provider));
+        state_->error = (provider_distribution_public(assistant_provider_key(record->provider))
+            ? tr("%1 is not installed. Add it with the Maintenance Tool.") : tr("%1 is not included in this release."))
+            .arg(assistant_provider_name(record->provider));
         state_->notify(); return;
     }
     const auto& active = state_->active_provider_account;
@@ -21448,7 +21701,9 @@ void AssistantViewModel::addAccount(const QString& provider, const QString& host
     const auto which = assistant_provider_from_key(provider);
     if (!which) return;
     if (!assistant_provider_available(*which)) {
-        state_->error = tr("%1 is not installed. Add it with the Maintenance Tool.").arg(assistant_provider_name(*which));
+        state_->error = (provider_distribution_public(assistant_provider_key(*which))
+            ? tr("%1 is not installed. Add it with the Maintenance Tool.") : tr("%1 is not included in this release."))
+            .arg(assistant_provider_name(*which));
         state_->notify(); return;
     }
     if ((state_->project && state_->project->fit()->trialOpen()) || state_->generic_busy) {
@@ -21619,7 +21874,7 @@ QString AssistantViewModel::beginFileSelection(bool requireSignedIn) {
         return id;
     } catch (...) {
         if (projection.current()) {
-            const auto explanation = tr("File selection could not be prepared. Existing files are preserved.");
+            const auto explanation = tr("The file selection could not be prepared. Files already attached are kept.");
             state_->error = refused ? state_->input_refusal(explanation) : explanation;
             try { state_->notify(); } catch (...) {}
         }
@@ -21686,7 +21941,7 @@ bool AssistantViewModel::removeSelectedFile(const QString& id) {
         if (projection.current()) state_->notify();
     } catch (...) {
         if (projection.current()) {
-            const auto explanation = tr("Selected file could not be removed. Inspect the retained file list before retrying.");
+            const auto explanation = tr("The file could not be removed. Check the file list before trying again.");
             state_->error = refused ? state_->input_refusal(explanation) : explanation;
             try { state_->notify(); } catch (...) {}
         }

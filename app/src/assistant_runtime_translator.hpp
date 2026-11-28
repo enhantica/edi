@@ -53,6 +53,8 @@ public:
     quint64 outputGeneration() const noexcept override { return generation_; }
     bool optionalUsageBackpressured() const noexcept override { return false; }
     void retire() override;
+    /// Claude's own `claude auth logout` for the account, also when no runtime runs (e.g. after a refused identity).
+    bool signOutDisconnected() override;
     void beginOperation(quint64 totalMs, quint64 idleMs) override;
     void settleOperation() override;
     bool beginHumanWait(const QJsonValue& originalRequestId, quint64 originalGeneration) override;
@@ -127,7 +129,7 @@ private:
     // Session events.
     void onReady(const QJsonObject& identity, const QStringList& tools, const QStringList& skills);
     void onAccountRefused(const QString& reason, bool signedOut);
-    void onSignInOpened(const QString& url, const QString& code, const QString& prompt);
+    void onSignInOpened(const QString& url, const QString& code, const QString& prompt, bool browserOpened);
     void onSignInFinished(bool success, const QString& message);
     void onSignedOut();
     void onModelsListed(const QJsonArray& models);

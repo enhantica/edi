@@ -175,7 +175,8 @@ struct AssistantAccount {
 
    public:
     // When the user's own credential decides the identity instead of a provider sign-in, credentialKind is "apiKey"
-    // or "token" and credentialSource is where the runtime says it came from, if it says (edi ADR-0108 §4).
+    // or "token" and credentialSource is where the runtime says it came from, if it says; for a cloud provider it is
+    // "cloudProvider" and credentialSource names the provider (edi ADR-0108 §4).
     QString email, planType, credentialKind, credentialSource;
     bool operator==(const AssistantAccount&) const = default;
 
@@ -186,7 +187,15 @@ struct AssistantAccount {
         };
         AssistantAccount account{source.value("email").toString(), source.value("planType").toString(), {}, {}};
         const auto method = named("authMethod").toLower().remove(QLatin1Char('-')).remove(QLatin1Char('_'));
-        if (const auto key = named("apiKeySource"); !key.isEmpty() || method == QLatin1StringView("apikey")) {
+        // A cloud provider from the environment (Amazon Bedrock, Google Vertex AI) decides the identity first.
+        if (const auto cloud = source.value("apiProvider").toString();
+            !cloud.isEmpty() && cloud.compare(QLatin1StringView("firstParty"), Qt::CaseInsensitive) != 0) {
+            account.credentialKind = QStringLiteral("cloudProvider");
+            account.credentialSource = cloud == QLatin1StringView("bedrock")  ? QStringLiteral("Amazon Bedrock")
+                                       : cloud == QLatin1StringView("vertex") ? QStringLiteral("Google Vertex AI")
+                                       : cloud == QLatin1StringView("foundry") ? QStringLiteral("Microsoft Foundry")
+                                                                               : cloud;
+        } else if (const auto key = named("apiKeySource"); !key.isEmpty() || method == QLatin1StringView("apikey")) {
             account.credentialKind = QStringLiteral("apiKey");
             account.credentialSource = key;
         } else if (const auto token = named("tokenSource"); !token.isEmpty()) {
@@ -195,40 +204,6 @@ struct AssistantAccount {
         }
         return account;
     }
-};
-
-// One assistant provider as the connect and Account dialogs show it (edi ADR-0108).
-struct AssistantProviderInfo {
-    Q_GADGET
-    QML_VALUE_TYPE(assistantProviderInfo)
-    Q_PROPERTY(QString provider MEMBER provider CONSTANT)
-    Q_PROPERTY(QString name MEMBER name CONSTANT)
-    Q_PROPERTY(QString company MEMBER company CONSTANT)
-    Q_PROPERTY(bool installed MEMBER installed CONSTANT)
-
-   public:
-    QString provider, name, company;
-    bool installed = false;
-    bool operator==(const AssistantProviderInfo&) const = default;
-};
-
-// One saved account in the Account dialog's provider groups (edi ADR-0108 §8).
-struct AssistantAccountEntry {
-    Q_GADGET
-    QML_VALUE_TYPE(assistantAccountEntry)
-    Q_PROPERTY(QString provider MEMBER provider CONSTANT)
-    Q_PROPERTY(QString providerName MEMBER providerName CONSTANT)
-    Q_PROPERTY(QString id MEMBER id CONSTANT)
-    Q_PROPERTY(QString email MEMBER email CONSTANT)
-    Q_PROPERTY(QString plan MEMBER plan CONSTANT)
-    Q_PROPERTY(QString host MEMBER host CONSTANT)
-    Q_PROPERTY(bool active MEMBER active CONSTANT)
-    Q_PROPERTY(bool installed MEMBER installed CONSTANT)
-
-   public:
-    QString provider, providerName, id, email, plan, host;
-    bool active = false, installed = false;
-    bool operator==(const AssistantAccountEntry&) const = default;
 };
 
 // What creating a project did (Session::createProjectWithOutcome), and the project and replacement it was made against,

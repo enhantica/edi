@@ -90,10 +90,17 @@ void start_installer_smoke(QQuickWindow& window, const QString& output) {
             report.insert("calculated_points", static_cast<qint64>(values.size()));
             const auto helper = edi_app::CodexAgent::executable();
             const bool assistantAvailable = !helper.isEmpty();
+            // The app offers the assistant when any provider's runtime is installed, as
+            // ApplicationInfo decides (app_info.cpp).
+            bool anyAvailable = false;
+            for (const auto id : {edi_app::AssistantProviderId::ChatGpt,
+                                  edi_app::AssistantProviderId::Claude,
+                                  edi_app::AssistantProviderId::Copilot})
+                anyAvailable = anyAvailable || edi_app::assistant_provider_available(id);
             const auto* aiTab = window.findChild<QObject*>("preferences.tab.aiAssistance");
-            if (!aiTab || aiTab->property("enabled").toBool() != assistantAvailable)
+            if (!aiTab || aiTab->property("enabled").toBool() != anyAvailable)
                 throw std::runtime_error("AI preferences do not match the installed components");
-            if (!assistantAvailable) {
+            if (!anyAvailable) {
                 auto* robot = window.findChild<QObject*>("assistant.toggle");
                 auto* dialog = window.findChild<QObject*>("assistant.desktopOnly");
                 if (!robot || !robot->property("enabled").toBool() || !dialog ||

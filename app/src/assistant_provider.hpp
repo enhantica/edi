@@ -78,6 +78,9 @@ public:
     virtual bool endNativeWork(const QJsonValue& originalRequestId, quint64 originalGeneration) = 0;
     virtual FailureKind failureKind() const noexcept = 0;
     virtual bool failureActive() const noexcept = 0;
+    /// Sign the account out while no connection is live, also after retire() or a failure (a runtime that reported
+    /// another identity). The outcome comes as signedOutDisconnected. False when this provider cannot do it.
+    virtual bool signOutDisconnected() { return false; }
 
 signals:
     void outputOwnersReleased();  // Hint only; recheck owner state and room.
@@ -98,6 +101,8 @@ signals:
     void optionalUsageUnavailable(const QString& id, UsageDisposition disposition);
     // Hint after the write queue drains; never a retry loop.
     void optionalUsageReady();
+    // The outcome of signOutDisconnected(); `message` says why it failed.
+    void signedOutDisconnected(bool success, const QString& message);
 };
 
 }  // namespace edi_app

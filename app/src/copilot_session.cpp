@@ -20,7 +20,7 @@ constexpr int login_ms = 15 * 60'000;  // a device code lives 15 minutes
 constexpr int login_answer_ms = 5 * 60'000;
 constexpr int auth_required = -32000;  // ACP: authentication required
 constexpr int method_not_found = -32601;
-// Each prompt starts with this block, so a message that starts with `/` is never run as a CLI command.
+// Each prompt is one text block starting with this header, so a message starting with `/` never runs a CLI command.
 const QString prompt_header = QStringLiteral("Message from the edi user:");
 
 const QString edi_prefix = QStringLiteral("edi-");
@@ -749,8 +749,7 @@ void CopilotSession::startTurn(const QString& session, const QString& text) {
     if (process_.generation() != generation) return;
     request(QStringLiteral("session/prompt"),
             {{"sessionId", session},
-             {"prompt", QJsonArray{QJsonObject{{"type", "text"}, {"text", prompt_header}},
-                                   QJsonObject{{"type", "text"}, {"text", text}}}}},
+             {"prompt", QJsonArray{QJsonObject{{"type", "text"}, {"text", prompt_header + QStringLiteral("\n\n") + text}}}}},
             [this, session, turn](const QJsonObject& result, const QJsonObject& error) {
                 const auto t = threads_.constFind(session);
                 if (t == threads_.constEnd() || t->turn != turn || !t->running) return;
