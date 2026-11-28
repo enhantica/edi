@@ -636,26 +636,6 @@ Popup {
                         id: signedOutControls
                         width: parent.width
                         spacing: AppSizes.unit
-                        // The account dialog's icon button, for the sign-in steps below.
-                        component SignInButton: EaElements.Button {
-                            id: signInButton
-                            contentItem: Row {
-                                spacing: AppSizes.unit * 0.5
-                                EaElements.Label {
-                                    anchors.verticalCenter: parent.verticalCenter
-                                    text: signInButton.fontIcon
-                                    font.family: EaStyle.Fonts.iconsFamily
-                                    color: signInButton.foregroundColor()
-                                    Accessible.ignored: true
-                                }
-                                EaElements.Label {
-                                    anchors.verticalCenter: parent.verticalCenter
-                                    text: signInButton.text
-                                    color: signInButton.foregroundColor()
-                                }
-                            }
-                            Accessible.name: text
-                        }
                         EdiNotice {
                             id: signedOutNotice
                             width: parent.width
@@ -1282,5 +1262,25 @@ Popup {
                 }
             }
         }
+    }
+    // The account dialog's icon button, for the sign-in steps below.
+    component SignInButton: EaElements.Button {
+        id: signInButton
+        contentItem: Row {
+            spacing: AppSizes.unit * 0.5
+            EaElements.Label {
+                anchors.verticalCenter: parent.verticalCenter
+                text: signInButton.fontIcon
+                font.family: EaStyle.Fonts.iconsFamily
+                color: signInButton.foregroundColor()
+                Accessible.ignored: true
+            }
+            EaElements.Label {
+                anchors.verticalCenter: parent.verticalCenter
+                text: signInButton.text
+                color: signInButton.foregroundColor()
+            }
+        }
+        Accessible.name: text
     }
 }
