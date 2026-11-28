@@ -5,6 +5,7 @@ import QtTest
 import edi.app
 import EdiAcceptance 1.0
 import ReportAcceptance 1.0
+import EasyApplication.Gui.Style as Style
 import "NativeTurn.js" as Turn
 import "UiInteraction.js" as Ui
 import "RenderedTable.js" as Render
@@ -171,7 +172,7 @@ TestCase {
         verify(popup().found !== null, "The selected k produces its magnetic graph: " + popup().refusal);
     }
     function shownNodes() {
-        return Render.descendants(popup().contentItem).filter(item => item.visible && /^magnetic\.node\./.test(item.objectName));
+        return Render.descendants(popup().contentItem).filter(item => item.visible && /^magnetic\.node\.\d+$/.test(item.objectName));
     }
     function snapshot() {
         return JSON.stringify({
@@ -199,26 +200,24 @@ TestCase {
     }
     function graph(kind, vector) {
         openPopup();
-        const zero = pcontrol("magnetic.zeroMoment");
-        if (!zero.checked)
-            press(zero);
         wave(vector);
         const expected = Oracle.expected[kind].nodes;
-        const maximal = pcontrol("magnetic.maximalOnly");
-        verify(maximal.checked, "The graph opens with Maximal only selected");
+        const levels = pcontrol("magnetic.levels");
+        compare(levels.currentText, "Maximal only", "The graph opens with Maximal only selected");
         compare(shownNodes().length, expected.filter(node => node.row === 1).length, "Only the independent maximal classes are initially visible");
-        const renderedEdges = () => Render.descendants(popup().contentItem).filter(item => item.visible && item.to !== undefined && item.to.x !== undefined);
+        const renderedEdges = () => Render.descendants(popup().contentItem).filter(item => item.visible && item.corners !== undefined && item.corners.length >= 2);
         compare(renderedEdges().length, 0, "Maximal-only cards render without subgroup edges");
         const footer = pcontrol("magnetic.add");
         const footerY = footer.mapToItem(popup().contentItem, 0, 0).y;
         verify(popup().height <= app.height * .91 && popup().width <= app.width * .91, "The dialog fits within the window with an outer margin");
-        press(maximal);
+        choose(levels, "All");
         const nodes = shownNodes();
         compare(nodes.length, expected.length, "Expanding levels retains every independently enumerated class");
         const headers = Render.descendants(popup().contentItem).filter(item => item.visible && /^magnetic\.level\./.test(item.objectName));
-        compare(headers.length, Math.max(...expected.map(node => node.row)), "Every independent subgroup level has a selection header");
+        compare(headers.length, Math.max(...expected.map(node => node.row)), "Every independent subgroup level has a title");
         for (let i = 0; i < headers.length; ++i) {
             const count = expected.filter(node => node.row === i + 1).length;
+            verify(headers[i].font.bold && !Render.descendants(headers[i].parent).some(item => item.checked !== undefined), "The level title is bold and has no level-selection checkbox");
             verify(headers[i].text.includes(count + (count === 1 ? " group" : " groups")), "Each level header displays its independent group count");
         }
         const actualRows = nodes.map(item => {
@@ -230,35 +229,77 @@ TestCase {
         }).sort();
         const expectedRows = expected.map(node => [node.bns, node.row, node.fm].join("|")).sort();
         compare(actualRows.join(";"), expectedRows.join(";"), "Rendered levels and FM marks equal the independent signed census");
-        const withChildren = expected.findIndex((node, i) => expected.some(child => child.parents.includes(i)) && expected.filter(peer => peer.bns === node.bns).length === 1);
-        verify(withChildren >= 0, "The independent graph has an unambiguous parent with covering edges");
-        const firstCard = nodes.find(node => node.data_.bns === expected[withChildren].bns);
-        verify(firstCard, "The graph renders that independent parent");
-        Ui.scrollIntoView(firstCard);
-        const point = Ui.clickPoint(firstCard);
-        verify(point !== null, "A maximal card is reachable by pointer");
-        mouseMove(firstCard, point.x, point.y);
-        tryVerify(() => /Co1.*[Mm][xyz]/.test(pcontrol("magnetic.details").text), 2000, "Pointing at a card moves the split-site moment components to the details strip");
-        const outgoing = expected.filter(child => child.parents.includes(withChildren));
-        const targets = renderedEdges().map(edge => {
-            const target = nodes.find(node => node.x === edge.to.x && node.y === edge.to.y);
-            verify(target, "A rendered edge terminates at a card");
-            return target.data_.bns;
+        const withChildren = expected.findIndex((node, i) => node.parents.length > 0 && expected.some(child => child.parents.includes(i)) && expected.filter(peer => peer.bns === node.bns).length === 1);
+        verify(withChildren >= 0, "The independent graph has an unambiguous interior group with ancestors and descendants");
+        const card = nodes.find(node => node.data_.bns === expected[withChildren].bns);
+        verify(card, "The graph renders the independently identified interior group");
+        const labels = Render.texts(card).filter(item => item.visible && item.text !== "thumbtack");
+        compare(labels.length, 2, "A card displays its symbol and identity in two lines");
+        verify(labels.every(item => item.horizontalAlignment === Text.AlignLeft) && !labels[0].font.bold, "Both card labels align left and the group symbol uses normal weight");
+        compare(String(card.color), String(Style.Colors.chartBackground), "An unselected card uses the chart background");
+        verify(!Render.descendants(card).some(item => item.checked !== undefined), "A group card has no checkbox");
+        verify(!findChild(popup().contentItem, "magnetic.details"), "The popup has no card details strip");
+
+        Ui.scrollIntoView(card);
+        const point = Ui.clickPoint(card);
+        verify(point, "The interior card is reachable by pointer");
+        mouseMove(card, point.x, point.y);
+        const tip = findChild(card, card.objectName + ".tooltip");
+        tryVerify(() => tip && tip.visible && /Co1.*[Mm][xyz]/.test(tip.text), 3000, "Hover reveals the chosen site's signed moment form in the card tooltip");
+        const walk = next => {
+            const reached = new Set([withChildren]);
+            for (const i of reached)
+                for (const j of next(i))
+                    reached.add(j);
+            return reached;
+        };
+        const ancestors = walk(i => expected[i].parents);
+        const descendants = walk(i => expected.map((node, j) => node.parents.includes(i) ? j : -1).filter(j => j >= 0));
+        const lineage = [];
+        for (const [i, node] of expected.entries()) {
+            for (const parent of node.parents) {
+                if (ancestors.has(i) && ancestors.has(parent) || descendants.has(i) && descendants.has(parent))
+                    lineage.push(expected[parent].bns + ">" + node.bns);
+            }
+        }
+        const edges = () => renderedEdges().map(edge => {
+            const first = edge.corners[0], last = edge.corners[edge.corners.length - 1];
+            const source = nodes.find(node => node.x + node.width / 2 === first.x && node.y + node.height === first.y);
+            const target = nodes.find(node => node.x === last.x && node.y + node.height / 2 === last.y);
+            verify(source && target, "Every visible lineage edge terminates at two actual cards");
+            return source.data_.bns + ">" + target.data_.bns;
         }).sort();
-        compare(targets.join("|"), outgoing.map(node => node.bns).sort().join("|"), "Only the pointed card's independently known covering endpoints are visible");
-        const header = headers[0];
-        press(header);
-        verify(header.checked && popup().selected.length > 0, "The maximal-level checkbox selects its selectable cards");
-        const selected = popup().selected.length;
-        verify(selected <= expected.filter(node => node.row === 1).length, "Selecting a level never selects lower-level cards");
-        verify(footer.text.includes(String(selected)), "The fixed Add button shows the selected count");
-        compare(footer.mapToItem(popup().contentItem, 0, 0).y, footerY, "Expanding and selecting levels keeps the footer fixed");
-        press(pcontrol("magnetic.clear"));
-        compare(popup().selected.length, 0, "The footer Clear resets level selection");
+        compare(edges(), lineage.sort(), "The hovered interior card shows exactly the independent ancestor and descendant edges");
+        const pin = findChild(card, card.objectName + ".pin");
+        verify(pin && pin.visible, "A hovered card exposes its pin");
+        press(pin);
+        mouseMove(levels, levels.width / 2, levels.height / 2);
+        compare(edges(), lineage, "Moving the pointer keeps the pinned lineage");
+        keyClick(Qt.Key_Escape);
+        tryVerify(() => !pin.on, 2000, "Escape unpins the lineage while leaving the popup open");
+        verify(popup(), "Unpinning with Escape leaves the analysis open");
+
+        press(card);
+        compare(popup().selected.length, 1, "A click selects exactly the clicked card");
+        compare(String(card.color), String(Style.Colors.themeAccent), "The selected card uses the app accent fill");
+        verify(labels.every(item => String(item.color) === String(Qt.rgba(1, 1, 1, 1))), "A selected card draws white text");
+        verify(footer.text.includes("1"), "The fixed Add button shows the selected count");
+        compare(footer.mapToItem(popup().contentItem, 0, 0).y, footerY, "Changing levels and selecting a card keeps the footer fixed");
+        press(card);
+        compare(popup().selected.length, 0, "Clicking the selected card again clears it");
         press(pcontrol("magnetic.listView"));
         const list = pcontrol("magnetic.list");
         compare(list.count, expected.length, "The list retains every class shown by the expanded graph");
         verify(/Co1/.test(Ui.text(popup().contentItem)), "The list has per-site moment columns");
+        const net = pcontrol("magnetic.netMoment");
+        for (const [label, predicate] of [["Ferromagnetic", node => node.fm], ["Zero", node => !node.fm], ["Any", () => true]]) {
+            choose(net, label);
+            const filtered = expected.filter(predicate).map(node => node.bns).sort();
+            compare(list.count, filtered.length, "List uses the independent class count for " + label);
+            press(pcontrol("magnetic.graphView"));
+            compare(shownNodes().map(item => item.data_.bns).sort(), filtered, "Graph uses the same independently classified identities for " + label);
+            press(pcontrol("magnetic.listView"));
+        }
     }
     function test_half_graph() {
         graph("half", "1/2,0,0");
@@ -272,9 +313,7 @@ TestCase {
         verify(nodes.length >= 2, "The synthetic parent offers multiple selectable candidates");
         press(nodes[0]);
         press(nodes[1]);
-        const starts = pcontrol("magnetic.startMoments");
-        if (starts.checked)
-            press(starts);
+        choose(pcontrol("magnetic.startMoments"), "Zero");
     }
     function test_add_links_and_undo() {
         openPopup();
@@ -340,13 +379,45 @@ TestCase {
         openInput("find-k");
         const page = Ui.page(app);
         verify(!Probe.objectsWithProperty(page, "categoryId").some(item => item.shown && item.categoryId === "propagation_vectors"), "A Crystal structure has no Propagation vectors group");
+        const atomGroup = group("atom_site");
+        const atomTable = findChild(atomGroup, "atomSites.list");
+        verify(atomTable && atomTable.headerItem && atomTable.count === 1, "The original Atom sites table supplies the one cobalt row");
+        const headerUids = table => Render.descendants(table.headerItem).filter(item => item.uid && item.uid.startsWith("atom_site.")).map(item => item.uid);
+        const sourceHeaders = headerUids(atomTable);
         group("space_group");
         const action = findChild(page, "spaceGroup.magneticAnalysis");
         verify(action && action.visible, "The Crystal Space group exposes Magnetic symmetry analysis");
         press(action);
         tryVerify(() => !!popup(), 2000, "The Space group button independently opens magnetic symmetry analysis");
         compare(Ui.page(app), page, "The Structure analysis opens over the current page");
-        verify(pcontrol("magnetic.k").visible, "The popup keeps its preset and typed k control");
+        const toolbar = pcontrol("magnetic.toolbar");
+        const names = ["k", "sites", "levels", "netMoment", "startMoments", "graphView", "listView"];
+        const controls = names.map(name => pcontrol("magnetic." + name));
+        verify(controls.every(item => item.visible && item.parent === toolbar), "Every symmetry control is in the same toolbar");
+        const bounds = controls.map(item => item.mapToItem(toolbar, 0, item.height / 2));
+        verify(bounds.every(point => Math.abs(point.y - bounds[0].y) < 1), "The controls align in one horizontal row");
+        const gaps = bounds.slice(1).map((point, i) => point.x - bounds[i].x - controls[i].width);
+        verify(gaps.every(gap => gap > 0) && [1, 3, 4].every(i => gaps[i] > Math.max(gaps[0], gaps[2], gaps[5])), "The toolbar orders k and sites, levels and net moment, start, then Graph and List");
+        verify(/^k: .*\(0, 0, 0\).*·.*1/.test(controls[0].displayText), "The closed k choice shows the Gamma vector and its magnetic cell");
+        verify(!findChild(toolbar, "magnetic.zeroMoment"), "Zero-only groups have no header toggle");
+        const sites = controls[1];
+        press(sites);
+        tryCompare(sites.popup, "opened", true, 2000, "The actual sites toolbar button opens the Atom sites dropdown");
+        const table = sites.popup.contentItem;
+        compare(headerUids(table), sourceHeaders, "The dropdown renders the Atom sites headers in their original order");
+        compare(table.columnKinds, atomTable.columnKinds, "The site table keeps the Atom sites column layout, including the trailing control slot");
+        let cobalt;
+        tryVerify(() => {
+            table.forceLayout();
+            cobalt = table.itemAtIndex(0);
+            return !!cobalt;
+        }, 2000, "The selectable cobalt row reaches the dropdown");
+        const choice = findChild(cobalt, "magnetic.site.0");
+        const cells = Array.from(cobalt.children).filter(item => item.visible && item.width > 0 && typeof item.horizontalAlignment === "number");
+        verify(choice && choice.checked && !choice.enabled && choice.parent === cells[cells.length - 1], "The checked cobalt has the selection checkbox in the last column");
+        verify(cells[0].marksCurrentRow && cells[0].text === "1" && cells[1].text === "Co1", "The dropdown leads with the grey-style row number and the actual site name");
+        verify(Render.descendants(cobalt).filter(item => item.locked === true && item.item).length === 4, "The dropdown renders the coordinates and occupancy as read-only Atom sites cells");
+        sites.popup.close();
         verify(!/Find k from data/i.test(Ui.text(popup().contentItem)), "Peak search is available from the experiment pattern");
     }
     function test_type_iv_letters_and_coordinate_edit() {
@@ -490,28 +561,23 @@ TestCase {
         return chart;
     }
     function startMarking(chart) {
-        if (!Ui.find(Ui.page(app), "group.k_search", true))
-            Ui.click(test, Probe, app, "sideBar.tab.basic");
+        Ui.click(test, Probe, app, "sideBar.tab.extras");
         Ui.expandGroup(test, Probe, app, "group.k_search");
         const sidebar = Ui.find(Ui.page(app), "group.k_search", true);
-        compare(sidebar.title, "Propagation vector (k) search", "The Experiment sidebar names the inactive search group");
+        compare(sidebar.title, "k-vector search", "Experiment Extra names the search group");
         const tools = Render.descendants(chart.imageToolbar).filter(item => item.visible && (/findK|kSearch/i.test(item.objectName) || ["Find k", "Clear", "Mark peaks"].includes(item.text)));
         compare(tools.length, 0, "The chart toolbar has no propagation-vector search controls");
-        const items = ["list", "findK", "clear"].map(name => findChild(sidebar, "kSearch." + name));
-        const toggle = findChild(sidebar, "kSearch.mark");
-        verify(toggle && toggle.checkable && toggle.enabled && !toggle.checked, "The search group initially offers an enabled unchecked Mark peaks toggle");
-        compare(toggle.text, "Mark peaks", "The sidebar uses the owner-approved marking label");
-        verify(items.every(item => !item || !item.visible), "The table and search actions are hidden until marking starts");
-        const visibleContent = Array.from(toggle.parent.children).filter(item => item.visible && item.width > 0 && item.height > 0);
-        compare(visibleContent, [toggle], "The visible group content initially consists of the toggle alone");
+        const toggle = sidebarControl("mark");
+        const table = sidebarControl("list");
+        const find = sidebarControl("findK");
+        verify(toggle.checkable && toggle.enabled && !toggle.checked, "The search starts with marking off");
+        compare(toggle.text, "Mark peaks", "The inactive button offers Mark peaks");
+        compare(table.count, 0, "The search table starts empty");
+        verify(!table.enabled && !find.enabled, "The visible empty table and Find k start disabled");
         press(toggle);
-        tryCompare(toggle, "checked", true, 2000, "The group toggle starts chart marking");
-        tryVerify(() => ["list", "findK", "clear"].every(name => {
-                const item = findChild(sidebar, "kSearch." + name);
-                return item && item.visible;
-            }), 2000, "Marking reveals the peak table, Find k and Clear in the same group");
-        compare(sidebarControl("findK").text, "Find k", "The revealed search button uses its visible label");
-        compare(sidebarControl("clear").text, "Clear", "The revealed Clear button uses its visible label");
+        tryCompare(toggle, "checked", true, 2000, "The Extra group starts chart marking");
+        compare(toggle.text, "Stop marking", "The active button offers Stop marking");
+        compare(find.text, "Find k", "The search uses its visible Find k label");
         return sidebar;
     }
     function sidebarControl(name) {
@@ -616,6 +682,18 @@ TestCase {
         compare(headings, ["2θ (°)", "d (Å)", "Role"], "The table identifies the observed angle, spacing and indexing role");
         checkMarkingNavigation(chart);
         const x = peaks[index].x;
+        const peakLayer = chartControl("chart.peaks");
+        const mark = findChild(peakLayer, "chart.peak." + chart.peakMarks[index]);
+        verify(mark && mark.visible, "The observed satellite has a visible line and pin");
+        const bars = Array.from(mark.children).filter(item => item.visible && item.color !== undefined);
+        compare(bars.length, 2, "Each chart mark draws a line and a pin");
+        const widths = bars.map(item => item.width);
+        const colors = bars.map(item => String(item.color));
+        mouseMove(peakLayer, peakLayer.px(x), peakLayer.height * .75);
+        tryVerify(() => bars.every(item => String(item.color) === String(Style.Colors.themeForegroundMinor)), 2000, "Hovering low on the line greys both the mark line and its pin");
+        verify(colors.some(color => color !== String(Style.Colors.themeForegroundMinor)), "Hover changes the actual mark color");
+        compare(bars.map(item => item.width), widths, "Hovering leaves the drawn line and pin widths unchanged");
+        verify(!/click to remove/i.test(Ui.text(peakLayer)), "A hovered line offers no removal tooltip");
         const rowIndex = peaks.filter(peak => peak.x < x).length;
         const row = sidebarPeak(table, rowIndex, satellite, "forbidden reflection");
         const remove = findChild(row, "kSearch.remove." + rowIndex);
@@ -639,22 +717,32 @@ TestCase {
         const free = markedPeaks(chart).findIndex(peak => Math.abs(peak.x - clicked) < .02);
         verify(free >= 0, "With no maximum nearby the chart keeps the clicked angle");
         sidebarPeak(table, free, blank, "added by hand");
-        clickPeak(chart, x);
-        tryCompare(table, "count", peaks.length, 2000, "Clicking the snapped mark directly drops its sidebar row");
+        mouseClick(layer, Math.round(layer.px(x)), layer.height * .85);
+        tryCompare(table, "count", peaks.length, 2000, "Clicking down the line drops the snapped sidebar row");
         verify(!markedPeaks(chart).some(peak => Math.abs(peak.x - x) < 1e-8), "The click drops only the snapped maximum");
         clickPeak(chart, clicked);
         tryCompare(table, "count", peaks.length - 1, 2000, "Clicking the new free mark removes it");
+        const toggle = sidebarControl("mark");
+        const kept = JSON.stringify(markedPeaks(chart));
+        const occupiedHeight = table.height;
+        press(toggle);
+        tryCompare(toggle, "checked", false, 2000, "Stop marking turns off marking mode");
+        verify(table.visible && chartControl("chart.peaks").visible, "Stopping leaves the table and plotted marks visible");
+        compare(JSON.stringify(markedPeaks(chart)), kept, "Stopping keeps the exact current marks");
+        press(toggle);
+        tryCompare(toggle, "checked", true, 2000, "Mark peaks resumes marking mode");
+        compare(JSON.stringify(markedPeaks(chart)), kept, "Resuming an occupied table does not resuggest a removed peak");
         const clear = sidebarControl("clear");
-        compare(clear.text, "Clear", "The Experiment group has a Clear button");
+        compare(clear.fontIcon, "minus-circle", "Clear is the remove-all icon in the table heading");
         press(clear);
         compare(table.count, 0, "Clear empties the sidebar table");
         compare(markedPeaks(chart).length, 0, "Clear removes all chart marks");
         compare(snapshot(), before, "Transient marking changes neither the saved model nor Undo history");
         verify(!sidebarControl("findK").enabled && !clear.enabled, "An empty sidebar disables Find k and Clear");
-        const toggle = sidebarControl("mark");
+        tryVerify(() => table.height < occupiedHeight, 2000, "Clearing a populated table retracts its row-driven height");
         press(toggle);
-        tryCompare(toggle, "checked", false, 2000, "The same sidebar toggle stops marking");
-        verify(!table.visible && !clear.visible, "Stopping marking folds the table and actions back into the toggle");
+        press(toggle);
+        tryVerify(() => markedPeaks(chart).some(peak => Math.abs(peak.x - x) < .051), 2000, "Restarting on the empty table suggests the independently known satellite again");
     }
     function test_find_k_mask_excludes_observed_peak() {
         const chart = openPattern();
@@ -666,6 +754,9 @@ TestCase {
         const peaks = markedPeaks(chart);
         verify(peaks.length > 0, "Other unmasked peaks still reach the chart");
         verify(peaks.every(peak => peak.x < 13 || peak.x > 13.6), "An excluded strong peak is not pre-marked");
+        clickPeak(chart, 13.285477100052015);
+        verify(waitForRendering(app.contentItem), "The chart processes a tap within the excluded interval");
+        compare(markedPeaks(chart).map(peak => peak.x), peaks.map(peak => peak.x), "A real click inside the mask adds no mark");
     }
     function test_find_k_disabled_parent_refuses() {
         const chart = openPattern();
@@ -687,6 +778,22 @@ TestCase {
         verify(!sidebarControl("findK").enabled, "The ambiguous target cannot start indexing");
         compare(snapshot(), before, "Refusing an ambiguous target leaves both links unchanged");
     }
+    function indexedTooltip(results, row, index, expected) {
+        verify(!findChild(results.contentItem, "chart.kVectorRoles"), "The k dialog has no role details strip");
+        const cell = findChild(row, "chart.kVector." + index + ".indexedCell");
+        verify(cell && Ui.exposed(cell), "The selected row exposes its actual Indexed cell");
+        mouseMove(cell, cell.width / 2, cell.height / 2);
+        const tip = findChild(cell, "chart.kVector." + index + ".indexed");
+        tryVerify(() => tip && tip.visible, 2500, "Hovering Indexed opens the application's data tooltip");
+        const roles = Array.from(tip.contentItem.children).filter(item => item.modelData !== undefined);
+        compare(roles.length, results.markedPeaks.length, "The tooltip displays one status for every marked reflection");
+        for (const [position, role, indexed] of expected) {
+            const text = position.toFixed(2) + "° " + role;
+            const match = roles.find(item => Ui.text(item).includes(text));
+            verify(match, "The rendered Indexed tooltip lists " + text);
+            verify(Render.descendants(match).some(item => item.icon === (indexed ? "check-circle" : "times-circle")), "The row carries the matching app status icon for " + text);
+        }
+    }
     function test_find_k_gamma_labels_forbidden_and_allowed_marks() {
         const chart = openPattern("find-k-gamma");
         const bank = Session.project.currentExperiment;
@@ -700,6 +807,8 @@ TestCase {
         sidebarPeak(table, 0, bragg(8), "forbidden reflection");
         sidebarPeak(table, 1, allowedPosition, "excess on an allowed reflection");
         const allowed = peaks[1];
+        const free = clickPeak(chart, 16.2);
+        tryCompare(table, "count", 3, 2000, "An off-reflection click adds a third mark to the Gamma coverage witness");
         const results = runSearch();
         const index = results.rows.findIndex(row => row.k === "0,0,0");
         verify(index >= 0, "Gamma indexes both Pnma lattice peaks");
@@ -713,19 +822,22 @@ TestCase {
         }, 2000, "The selected k row is instantiated in the visible table");
         verify(row, "The Gamma result is visibly available");
         pressChart(row);
-        const text = Ui.text(findChild(results.contentItem, "chart.kVectorRoles"));
-        verify(text.includes(peaks[0].x.toFixed(2) + "° forbidden reflection"), "The vector dialog pairs 001 with the forbidden role");
-        verify(text.includes(allowed.x.toFixed(2) + "° allowed reflection"), "The vector dialog pairs 101 with the allowed role");
+        compare(results.current, index, "A pointer click chooses the actual Gamma row");
+        indexedTooltip(results, row, index, [[peaks[0].x, "forbidden reflection", true], [allowed.x, "allowed reflection", true], [free, "not indexed", false]]);
         pressChart(findChild(results.footer, "chart.kVectorPopup.cancel"));
         tryVerify(() => !openedVectors(), 2000, "Closing the vector dialog reveals the updated sidebar");
         sidebarPeak(table, 0, bragg(8), "forbidden reflection");
-        sidebarPeak(table, 1, allowedPosition, "allowed reflection");
+        const sorted = markedPeaks(chart).map(peak => peak.x).sort((a, b) => a - b);
+        const allowedRow = sorted.findIndex(x => Math.abs(x - allowed.x) < 1e-8);
+        verify(allowedRow >= 0, "The allowed reflection stays in the marked sidebar");
+        sidebarPeak(table, allowedRow, allowedPosition, "allowed reflection");
     }
     function test_find_k_table_analyse_add_stays_on_pattern() {
         const chart = openPattern();
         const project = Session.project;
         const bank = project.currentExperiment;
         const page = Ui.page(app);
+        const before = snapshot();
         startMarking(chart);
         const table = sidebarControl("list");
         const peaks = markedPeaks(chart).sort((a, b) => a.x - b.x);
@@ -748,18 +860,24 @@ TestCase {
         const cells = Render.texts(row).map(label => label.text);
         verify(cells.includes("2 parent cells") && cells.some(text => /^\d+\.\d{2}$/.test(text)), "The same row renders cell size and numeric misfit");
         pressChart(row);
-        const roles = Ui.text(findChild(results.contentItem, "chart.kVectorRoles"));
-        verify(roles.includes(peaks[satelliteIndex].x.toFixed(2) + "° satellite"), "The vector dialog identifies the isolated peak as a satellite of the selected vector");
+        compare(results.current, index, "A pointer click chooses the actual half-period row");
+        indexedTooltip(results, row, index, [[peaks[satelliteIndex].x, "satellite", true]]);
+        verify(results.rows.length > 1, "The ranked fixture supplies a second row for keyboard navigation");
+        const adjacent = index === 0 ? 1 : index - 1;
+        keyClick(index === 0 ? Qt.Key_Down : Qt.Key_Up);
+        tryCompare(results, "current", adjacent, 2000, "A keyboard arrow moves the actual ranked table selection");
+        keyClick(index === 0 ? Qt.Key_Up : Qt.Key_Down);
+        tryCompare(results, "current", index, 2000, "Reversing the arrow restores the selected half-period result");
         pressChart(findChild(results.footer, "chart.kVectorPopup.analyse"));
         tryVerify(() => !!popup() && !popup().busy && popup().found !== null, 5000, "Analyse closes the k table and builds the graph over the chart");
         verify(!openedVectors(), "The k table closes on Analyse");
         compare(popup().k, "1/2,0,0", "The chart hands off the exact selected k");
         compare(Ui.page(app), page, "The analysis overlays Experiment Pattern");
-        const starts = pcontrol("magnetic.startMoments");
-        if (starts.checked)
-            press(starts);
+        choose(pcontrol("magnetic.startMoments"), "Zero");
         const node = shownNodes().find(item => item.data_.type === 4 && item.data_.momentAllowed && item.data_.bns);
         verify(node, "The half-period graph offers a selectable type IV candidate");
+        const expectedBns = node.data_.bns;
+        const expectedSymbol = node.data_.name + " " + expectedBns;
         press(node);
         press(pcontrol("magnetic.add"));
         tryVerify(() => !popup(), 2000, "Add closes magnetic analysis");
@@ -775,11 +893,30 @@ TestCase {
         verify(bank.measCalcPoints().calc.some(value => Number.isFinite(value) && value > 0), "A populated calculated powder profile remains on the experiment");
         const vector = Probe.rows(child.propagationVectors)[0];
         verify(vector && /^(?:1\/2|0\.5),\s*0,\s*0$/.test(String(vector.vector)), "The active child publishes the chosen non-default propagation vector");
-        tryVerify(() => /1 magnetic structure added.*no magnetic intensity at.*13\.[23]\d°/i.test(Ui.text(Ui.control(Probe, app, "chart.findK.added"))), 5000, "The post-Add chart notice reports the marked satellite with no magnetic intensity");
-        verify(Ui.text(chartControl("chart.findK.openStructure")).includes("Open in Structure page"), "The chart offers an explicit way to open Structure");
+        let added;
+        tryVerify(() => {
+            added = Probe.objectsWithProperty(app, "opened").find(item => item.opened && item.objectName === "chart.findK.addedDialog");
+            return !!added;
+        }, 5000, "Chart Add opens the Magnetic structures added dialog");
+        compare(added.title, "Magnetic structures added", "The after-Add report has its own dialog title");
+        const entry = findChild(added.contentItem, "chart.findK.added.0");
+        verify(entry, "The dialog renders a row for the enabled child");
+        compare(child.magneticGroup.number_bns, expectedBns, "The added child has the selected card's BNS number");
+        compare(entry.text, child.name + " · " + expectedSymbol, "The after-Add row contains exactly the added name and BNS symbol");
+        compare(Render.descendants(added.contentItem).filter(item => /^chart\.findK\.added\.\d+$/.test(item.objectName)).length, 1, "The after-Add report lists exactly the one added structure");
+        verify(!/no magnetic intensity|not indexed|allowed reflection/i.test(Ui.text(added.contentItem)), "The removed marked-peak intensity check leaves no notice in the dialog");
+        verify(!Ui.find(page, "chart.findK.added", true), "Add leaves no status strip above the chart");
         verify(markedPeaks(chart).length > 0, "After Add the original marks remain available on the recalculated chart");
-        pressChart(chartControl("chart.findK.openStructure"));
+        const close = findChild(added.footer, "chart.findK.addedDialog.close");
+        verify(close && close.enabled && close.text === "Close", "The dialog offers Close");
+        const open = findChild(added.footer, "chart.findK.openStructure");
+        verify(open && open.text === "Open in Structure page", "The dialog offers an explicit way to open Structure");
+        pressChart(open);
         tryVerify(() => Ui.page(app) !== page && chartControl("appBar.tab.structure").checked, 2000, "The explicit Open in Structure action opens the Structure page");
+        compare(project.currentStructure, child, "Structure opens the first added magnetic child");
+        Ui.click(test, Probe, app, "appBar.button.undo");
+        tryCompare(project, "calculating", false, 5000, "Undo republishes the original chart bank");
+        compare(snapshot(), before, "Undo from the chart-Add route restores every original scientific record");
     }
     function staleRowChoice(kind) {
         const chart = openPattern();
@@ -814,18 +951,23 @@ TestCase {
     function noteNodes(name, forms) {
         openPopup(name);
         wave("0,0,0");
-        press(pcontrol("magnetic.maximalOnly"));
+        choose(pcontrol("magnetic.levels"), "All");
         const nodes = shownNodes();
+        if (name === "note-longitudinal") {
+            const expected = Oracle.expected.pmmmOrigin;
+            verify(expected.forbidden.length > 0, "The independent Pmmm origin has groups with no allowed axial component");
+            compare(nodes.map(node => node.data_.bns).sort(), expected.allowed, "Groups with zero local moment are excluded before showing All");
+        }
         for (const form of forms) {
             const node = nodes.find(item => form.test(String(item.data_.moments).replace(/\s/g, "")));
             verify(node !== undefined, "The independent point-group moment form is selectable");
             press(node);
         }
-        verify(pcontrol("magnetic.startMoments").checked, "Nonzero starting moments are on by default");
+        compare(pcontrol("magnetic.startMoments").currentText, "Non-zero", "Nonzero starting moments are selected by default");
         press(pcontrol("magnetic.add"));
         tryVerify(() => !popup(), 1000, "The note witness is added through the live popup");
         tryCompare(Session.project, "calculating", false, 3000, "The note witness completes its observed reflection calculation");
-        return Probe.rows(Session.loadWarnings).map(row => row.message).join("\n") + Ui.text(app.contentItem);
+        return Probe.rows(Session.loadWarnings).map(row => row.message).join("\n");
     }
     function test_start_longitudinal_note() {
         const text = noteNodes("note-longitudinal", [/0,0,[Mm]z/]);
@@ -846,11 +988,11 @@ TestCase {
     function test_start_mn3o4_has_no_note() {
         openPopup("note-mn3o4");
         wave("1/2,0,0");
-        press(pcontrol("magnetic.maximalOnly"));
+        choose(pcontrol("magnetic.levels"), "All");
         const node = shownNodes().find(item => item.data_.bns === "62.452");
         verify(node !== undefined, "The MAGNDATA Mn3O4 signed group is offered at the published propagation vector");
         press(node);
-        verify(pcontrol("magnetic.startMoments").checked, "The published positive-intensity witness uses nonzero starting moments");
+        compare(pcontrol("magnetic.startMoments").currentText, "Non-zero", "The published positive-intensity witness uses nonzero starting moments");
         press(pcontrol("magnetic.add"));
         tryVerify(() => !popup(), 1000, "The published candidate is added through the live popup");
         tryCompare(Session.project, "calculating", false, 3000, "The Mn3O4 candidate finishes the linked powder calculation");
@@ -861,7 +1003,7 @@ TestCase {
         const bank = Probe.rows(Session.project.experiments)[0].experiment;
         const started = bank.measCalcPoints().calc.slice();
         verify(started.length > 0 && started.every(Number.isFinite), "The linked Mn3O4 starting state has a calculable powder pattern");
-        const text = Probe.rows(Session.loadWarnings).map(row => row.message).join("\n") + Ui.text(app.contentItem);
+        const text = Probe.rows(Session.loadWarnings).map(row => row.message).join("\n");
         verify(!/no magnetic intensity/i.test(text), "The linked Mn3O4 positive-signal witness does not show the zero-intensity note");
         for (const row of moments)
             for (const axis of ["mx", "my", "mz"])
