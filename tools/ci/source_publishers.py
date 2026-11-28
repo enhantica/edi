@@ -94,6 +94,7 @@ SCAN_ARCHIVE = {'${{ runner.temp }}/scan-archive/44k.zip': 'edi-scan-archive-'}
 WASM = {'~/.cache/edi-ccache': 'ccache2-wasm-', '~/.cache/edi-wasm': 'edi-wasm2-'}
 DURATIONS = {'build/test-durations.json': 'test-durations-'}
 CRYSTA = {'${{ runner.temp }}/crysta-ccache': 'ccache2-crysta-checks-'}
+CRYSTA_PYTHON_FULL = {'${{ runner.temp }}/crysta-ccache': 'ccache2-crysta-python-full-'}
 CACHES = {
     **dict.fromkeys(
         [
@@ -126,7 +127,6 @@ CACHES = {
                 'checks',
                 'tidy',
                 'python',
-                'python-full',
                 'audit',
                 'edi-verification',
                 'cpp-full',
@@ -138,6 +138,7 @@ CACHES = {
         ],
         CRYSTA,
     ),
+    'crysta.yml/python-full': CRYSTA_PYTHON_FULL,
 }
 USES = {
     'actions/upload-artifact': 'artifact',

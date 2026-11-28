@@ -529,7 +529,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        part: [1/2, 2/2]
+        part: [1/6, 2/6, 3/6, 4/6, 5/6, 6/6]
     # Ubuntu 22.04, as crysta's own runners: its byte pins were taken with that release's C library.
     runs-on: ubuntu-22.04
     timeout-minutes: 180
@@ -546,7 +546,13 @@ jobs:
       - *pixi-cpp
       - *install-cpp
       - *ccache-env
-      - *ccache-restore
+      # Its own compiler cache: the suite's dependencies build objects no other crysta job builds.
+      - name: Restore the crysta compiler cache of the full Python tier
+        if: needs.plan.outputs.skip != 'true'
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ runner.temp }}/crysta-ccache
+          key: ccache2-crysta-python-full-${{ runner.os }}-${{ steps.ccache.outputs.lock }}-${{ inputs.crysta-sha }}
       - name: Build C++ extension + CLI
         if: needs.plan.outputs.skip != 'true'
         env:
@@ -576,11 +582,22 @@ jobs:
           python3 "$GITHUB_WORKSPACE/tools/ci/crysta_tasks.py" --root "$RUNNER_TEMP/crysta" --findings "$RUNNER_TEMP/findings" \
             --record "$CRYSTA_PYTEST_RECORD" cpp-ci suite-coverage
       - name: Seeded series (slow cadence)
-        if: ${{ needs.plan.outputs.skip != 'true' && (!cancelled() && matrix.part == '1/2' && contains(fromJSON(needs.plan.outputs.rows), 'seeded')) }}
+        if: ${{ needs.plan.outputs.skip != 'true' && (!cancelled() && matrix.part == '1/6' && contains(fromJSON(needs.plan.outputs.rows), 'seeded')) }}
         run: |
           cd "$RUNNER_TEMP/crysta"
           python3 "$GITHUB_WORKSPACE/tools/ci/crysta_findings.py" --root "$RUNNER_TEMP/crysta" run check "$RUNNER_TEMP/findings/slow-seeded-series.log" -- \
             pixi run -e cpp-ci --skip-deps slow-seeded-series
+      - name: Compiler cache statistics
+        if: ${{ needs.plan.outputs.skip != 'true' && (!cancelled()) }}
+        run: cd "$RUNNER_TEMP/crysta" && pixi run -e cpp-ci --skip-deps ccache --show-stats
+      # Part 1 keeps it, on main pushes, at night and once in the measuring round, as the checks do.
+      - name: Keep the crysta compiler cache of the full Python tier
+        if: ${{ needs.plan.outputs.skip != 'true' && (!cancelled() && matrix.part == '1/6' && !inputs.diagnostic && steps.ccache.outcome == 'success' && (github.event_name != 'pull_request' || needs.plan.outputs.probe == 'true' && github.run_attempt == '1')) }}
+        uses: ./.github/actions/store
+        with:
+          ccache: pixi run --manifest-path "$RUNNER_TEMP/crysta/pixi.toml" -e cpp-ci --skip-deps python
+          path: ${{ runner.temp }}/crysta-ccache
+          key: ccache2-crysta-python-full-${{ runner.os }}-${{ steps.ccache.outputs.lock }}-${{ inputs.crysta-sha }}-${{ github.run_id }}-${{ github.run_attempt }}
 
   audit:
     needs: plan
