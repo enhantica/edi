@@ -142,6 +142,7 @@ nav:
           - "ADR-0105 Declared columns": dev/adrs/0105-declared-columns.md
           - "ADR-0106 Versions and checksum updates": dev/adrs/0106-versions-and-checksum-updates.md
           - "ADR-0108 Assistant providers and accounts": dev/adrs/0108-assistant-providers-and-accounts.md
+          - "ADR-0111 Updates carry only the components that changed": dev/adrs/0111-updates-carry-only-changed-components.md
           - dev/adrs/template.md
       - Design:
           - dev/design/api-types.md

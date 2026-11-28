@@ -22,6 +22,9 @@ from promote import (
     validate_repository,
 )
 
+# Testing repositories are still pushed to edi-sites, where GitHub refuses a file over 100 MiB.
+PUSHED_ARCHIVE_LIMIT = 95_000_000
+
 
 def qualified_run(repo: str, branch: str, run_id: int) -> tuple[dict, list[dict], int]:
     """A completed installer run on this branch, its artifacts and its complete attempt."""
@@ -155,7 +158,7 @@ def copy_preview(
         allowed = [names | {MAINTENANCE_COMPONENT} for names in allowed]
     if packages not in allowed:
         raise ValueError(f'Unknown preview component set: {platform}')
-    validate_repository(repository, version, expected=packages)
+    validate_repository(repository, version, expected=packages, limit=PUSHED_ARCHIVE_LIMIT)
     shutil.copytree(repository, output / 'components' / 'testing' / platform)
     (output / 'assets').mkdir(exist_ok=True)
     shutil.copy2(delivery / name, output / 'assets' / name)
