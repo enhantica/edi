@@ -4638,21 +4638,46 @@ void ProjectViewModel::kRemeasure() {
     const std::uint64_t inputs = kInputs(experiment);
     if (inputs == k_marks_.inputs && k_marks_.bank.lock().get() == project_->experiments[static_cast<std::size_t>(experiment)].get())
         return;
-    // Each kept mark measured again where it stands, on the data and calibration it is now shown with: its d, width
-    // and tolerance follow; what it is (a suggestion, a measured maximum) stays.
+    // Each kept mark measured again where it stands, on the data and calibration it is now shown with (review 24,
+    // F4): a mark now outside the measured range or inside an excluded region goes; what a mark is (a suggestion, a
+    // measured maximum, on an allowed line) comes from the detection on these data, not from the earlier one, and a
+    // mark no detected peak matches is one placed by hand.
+    const edi::BraggPdExperiment& bank = *project_->experiments[static_cast<std::size_t>(experiment)];
+    std::vector<edi::MagneticPeak> fresh;
+    try {
+        fresh = edi::magnetic_mark_candidates(*project_, static_cast<std::size_t>(experiment),
+                                              static_cast<std::size_t>(k_marks_.parent));
+    } catch (const std::exception&) {
+        fresh.clear();
+    }
+    const auto measurable = [&bank](double at) {
+        if (!bank.data.has_value() || bank.data->axis().empty()) return false;
+        const auto [lo, hi] = std::minmax_element(bank.data->axis().begin(), bank.data->axis().end());
+        if (at < *lo || at > *hi) return false;
+        for (const auto& region : bank.excluded_regions) {
+            if (!region->axis.value().empty()) continue;
+            if (at >= std::min(region->first.get(), region->second.get()) &&
+                at <= std::max(region->first.get(), region->second.get()))
+                return false;
+        }
+        return true;
+    };
     std::vector<edi::MagneticPeak> measured;
     for (const int m : k_marks_.marks) {
-        const edi::MagneticPeak& kept = k_marks_.candidates[static_cast<std::size_t>(m)];
+        const double x = k_marks_.candidates[static_cast<std::size_t>(m)].x;
+        if (!measurable(x)) continue;
+        const auto match = std::find_if(fresh.begin(), fresh.end(), [x](const edi::MagneticPeak& p) {
+            return std::abs(p.x - x) <= std::max({p.half_width, p.tolerance, 1e-9});
+        });
+        if (match != fresh.end()) {
+            measured.push_back(*match);
+            continue;
+        }
         try {
-            edi::MagneticPeak again = edi::magnetic_peak_at(*project_, static_cast<std::size_t>(experiment),
-                                                            static_cast<std::size_t>(k_marks_.parent), kept.x);
-            again.significance = kept.significance;
-            again.on_allowed_reflection = kept.on_allowed_reflection;
-            again.suggested = kept.suggested;
-            again.observed = kept.observed;
-            measured.push_back(again);
+            measured.push_back(edi::magnetic_peak_at(*project_, static_cast<std::size_t>(experiment),
+                                                     static_cast<std::size_t>(k_marks_.parent), x));
         } catch (const std::exception&) {
-            // outside the new calibration's range: that mark goes
+            // outside the calibration's range: that mark goes
         }
     }
     changeKMarks();
@@ -4662,9 +4687,15 @@ void ProjectViewModel::kRemeasure() {
     k_marks_.roles.clear();
     k_marks_.bank = project_->experiments[static_cast<std::size_t>(experiment)];
     k_marks_.inputs = inputs;
+    emit kSearchChanged();
 }
 
 bool ProjectViewModel::kMarkingCurrent() const {
+    // The same bank object too (review 24, F4): a bank replaced at the same place is other data.
+    const int experiment = k_marks_.experiment;
+    if (experiment < 0 || experiment >= static_cast<int>(project_->experiments.size()) ||
+        k_marks_.bank.lock().get() != project_->experiments[static_cast<std::size_t>(experiment)].get())
+        return false;
     return k_marks_.parent >= 0 && k_marks_.experiment == currentExperimentIndex() &&
            magneticParentOf(k_marks_.experiment) == k_marks_.parent &&
            project_->structures[static_cast<std::size_t>(k_marks_.parent)]->name.value() == k_marks_.parent_name;
@@ -8424,9 +8455,12 @@ void ProjectViewModel::syncParameterTable(bool refresh_report) {
             if (QString::fromStdString(experiment->name.value()) != selected->name()) continue;
             for (const auto& structure : project_->structures) {
                 const bool enabled = std::any_of(experiment->linked_structures.begin(), experiment->linked_structures.end(),
-                                                 [&structure](const auto& link) {
+                                                 [&structure, this](const auto& link) {
+                                                     // A lone link with no id names the lone structure.
                                                      return link->enabled.get() &&
-                                                            link->structure_id.value() == structure->name.value();
+                                                            (link->structure_id.value() == structure->name.value() ||
+                                                             (link->structure_id.value().empty() &&
+                                                              project_->structures.size() == 1));
                                                  });
                 if (!enabled) unscoped.insert(QString::fromStdString(structure->name.value()));
             }
