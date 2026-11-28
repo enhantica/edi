@@ -558,7 +558,7 @@ void FitViewModel::startNative(std::function<void(const edi::FitReport&, bool)> 
 void FitViewModel::start() {
     const QPointer<FitViewModel> self(this);
     // With nothing free there is nothing to fit: refused before it starts, so it never reports Failed.
-    if (!native_completion_ && !running_ && project_.free_parameters().empty()) {
+    if (!native_completion_ && !running_ && !project_.anything_to_fit()) {
         emit refused(tr("Select at least one free parameter"));
         return;
     }
@@ -873,7 +873,7 @@ void FitViewModel::sync() {
     QString reason;
     if (!measured) {
         reason = tr("A fit needs measured data: no experiment in this project has any");
-    } else if (project_.free_parameters().empty()) {
+    } else if (!project_.anything_to_fit()) {
         reason = tr("Select at least one free parameter");
     } else if (scan) {
         reason = owner_.scanRefusal();

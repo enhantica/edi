@@ -453,11 +453,15 @@ FitResultBase fit_experiments_independently(Project& project, const IterationCal
             }
         }
     }
+    // An experiment takes part when its own fit has something to vary, by crysta's rule: free Pawley intensities,
+    // or rows a Pawley fit will create, count; idle flags do not. One the rule cannot read takes part, so its own
+    // fit says why.
     for (One& one : fits) {
-        const std::vector<ParameterEntry> entries = parameter_entries(one.copy);
-        one.fitted = std::any_of(entries.begin(), entries.end(), [](const ParameterEntry& entry) {
-            return entry.parameter != nullptr && entry.parameter->free.get();
-        });
+        try {
+            one.fitted = one.copy.anything_to_fit();
+        } catch (const std::exception&) {
+            one.fitted = true;
+        }
     }
     if (std::none_of(fits.begin(), fits.end(), [](const One& one) { return one.fitted; })) {
         throw std::invalid_argument("edi fit_independent: no free parameters (mark parameters refinable via their free flags)");

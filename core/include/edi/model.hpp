@@ -3242,6 +3242,8 @@ bool extracts_intensities(const Structure& structure);
 // extracted_intensity_key), in order. Throws when the structure's symmetry does not resolve.
 std::vector<std::array<int, 3>> extracted_intensity_keys(const Structure& structure,
                                                          const std::vector<std::array<int, 3>>& hkls);
+// Marks every parameter with crysta's fit rule (fittability.hpp); Project::free_parameters reads the idle marks.
+void refresh_fittability(Project& project);
 
 // ADR-0016: a structure name is a datablock, compared by its canonical key.
 template <>
@@ -5600,6 +5602,9 @@ class Project : public detail::ProjectAnchor {
     // `Project.parameters` / `Project.free_parameters`).
     std::vector<Parameter*> parameters();
     std::vector<Parameter*> free_parameters();
+    // Whether a fit has anything to vary: a free parameter, or a Pawley structure whose rows the fit will create
+    // (the app's Fit button and the independent fit ask this, not free_parameters alone).
+    bool anything_to_fit();
 
     // An admitted edit through an editor transaction. The app's one write door
     // (ProjectEditor::apply) calls it after every change it runs, so every GUI edit — any field,
@@ -6798,46 +6803,44 @@ inline std::vector<Parameter*> Project::free_parameters() {
             }
         }
     }
-    // crysta's rule (edi ADR-0109): a Le Bail or Pawley structure keeps its atoms' flags, but no fit reads its atoms, its links'
-    // scales and texture, or a Le Bail structure's intensities.
-    std::map<std::string, std::string> methods;
-    for (const std::shared_ptr<Structure>& structure : structures) {
-        methods[datablock_key(structure->name, "structure")] = calc_method_token(*structure);
-        if (!extracts_intensities(*structure)) continue;
-        const std::vector<Parameter*> cell = structure->cell.parameters();
-        for (Parameter* parameter : structure->parameters()) {
-            if (std::find(cell.begin(), cell.end(), parameter) == cell.end()) idle.push_back(parameter);
-        }
-    }
-    const auto method_of = [&methods, this](const std::string& id) {
-        // A link without a structure id names the project's one structure.
-        const auto found = methods.find(id.empty() && structures.size() == 1
-                                            ? datablock_key(structures.front()->name, "structure")
-                                            : datablock_key(id, "structure"));
-        return found != methods.end() ? found->second : std::string("rietveld");
-    };
-    for (const std::shared_ptr<BraggPdExperiment>& experiment : experiments) {
-        for (const std::shared_ptr<LinkedStructure>& link : experiment->linked_structures) {
-            if (method_of(link->structure_id) == "rietveld") continue;
-            idle.push_back(&link->scale);
-            for (const std::shared_ptr<PrefOrient>& row : experiment->preferred_orientation) {
-                if (datablock_key(row->structure_id, "structure") == datablock_key(link->structure_id, "structure")) {
-                    idle.push_back(&row->march_r);
-                    idle.push_back(&row->march_random_fract);
-                }
-            }
-        }
-        for (const std::shared_ptr<ExtractedIntensity>& row : experiment->extracted_intensities) {
-            if (method_of(row->structure_id) != "pawley") idle.push_back(&row->f_squared);
-        }
-    }
+    // What crysta's fit leaves out of a free set is crysta's to say (edi ADR-0109): the parameters it marks idle, such
+    // as a Le Bail or Pawley structure's atoms and its links' scales, keep their flags but are not fitted.
+    refresh_fittability(*this);
     std::vector<Parameter*> out;
     for (Parameter* parameter : detail::free_of(parameters())) {
-        if (std::find(idle.begin(), idle.end(), parameter) == idle.end()) {
+        if (!parameter->fit_idle && std::find(idle.begin(), idle.end(), parameter) == idle.end()) {
             out.push_back(parameter);
         }
     }
     return out;
+}
+inline bool Project::anything_to_fit() {
+    if (!free_parameters().empty()) {
+        return true;
+    }
+    // A Pawley fit creates the rows it needs, free, so a Pawley structure an enabled link names in an experiment that
+    // holds none of its rows gives the fit something to vary before any row exists.
+    for (const std::shared_ptr<Structure>& structure : structures) {
+        try {
+            if (calc_method_token(*structure) != "pawley") continue;
+        } catch (const std::exception&) {  // an unknown token: the fit refuses it by name
+            continue;
+        }
+        const std::string key = datablock_key(structure->name, "structure");
+        for (const std::shared_ptr<BraggPdExperiment>& experiment : experiments) {
+            const auto names = [&](const auto& row) {
+                return datablock_key(row->structure_id, "structure") == key ||
+                       (row->structure_id.value().empty() && structures.size() == 1);
+            };
+            const bool linked = std::any_of(experiment->linked_structures.begin(), experiment->linked_structures.end(),
+                                            [&](const auto& link) { return link->enabled.get() && names(link); });
+            if (linked && std::none_of(experiment->extracted_intensities.begin(),
+                                       experiment->extracted_intensities.end(), names)) {
+                return true;
+            }
+        }
+    }
+    return false;
 }
 
 // Point every parameter a node holds at its category's row link, so its Python handle answers
