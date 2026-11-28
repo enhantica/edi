@@ -20,6 +20,7 @@ namespace {
 constexpr int readback_ms = 120000;
 constexpr int status_ms = 30000;
 constexpr int logout_ms = 60000;
+constexpr int mcp_status_retry_ms = 250;
 constexpr qsizetype login_output_cap = qsizetype{64} * 1024;
 
 const QString edi_server = QStringLiteral("edi");
@@ -610,6 +611,14 @@ void ClaudeSession::mcpStatusReply(const QJsonObject& reply) {
                                                      server.value(QStringLiteral("status")).toString()));
         for (const auto& tool : server.value(QStringLiteral("tools")).toArray())
             tools.append(tool.toObject().value(QStringLiteral("name")).toString());
+    }
+    // The server is still starting: ask again until it connects, within the start deadline (Cancel retires it).
+    if (servers == QStringList{QStringLiteral("edi (pending)")}) {
+        const auto generation = generation_;
+        QTimer::singleShot(mcp_status_retry_ms, this, [this, generation] {
+            if (generation == generation_ && process_ && !readbacks_done_) control(QStringLiteral("mcp_status"));
+        });
+        return;
     }
     const QStringList wanted{QStringLiteral("edi (connected)")};
     if (servers != wanted) {
