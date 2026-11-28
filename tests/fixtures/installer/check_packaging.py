@@ -850,3 +850,24 @@ def test_smoke_run_retries_once_after_a_timeout(tmp_path, outcomes, calls, raise
                 PACKAGE.smoke_installed_app(tmp_path / 'app', tmp_path, {}, tmp_path)
     assert seen == [120] * calls
     assert (tmp_path / 'app.log').read_text().count('--- smoke run') == calls
+
+
+def test_voice_component_inputs_are_the_model_pin_and_whisper_release():
+    pins = json.loads((PACKAGE.ROOT / 'tools/deps/voice/models.json').read_text(encoding='utf-8'))
+    cmake = (PACKAGE.ROOT / 'cmake/EdiWhisper.cmake').read_text(encoding='utf-8')
+    whisper = re.search(r'^set\(EDI_WHISPER_VERSION (\S+)\)$', cmake, re.MULTILINE).group(1)
+    expected = {'model_sha256': pins['models']['small']['sha256'], 'whisper_cpp': whisper}
+    assert PACKAGE.COMPONENT_INPUTS[PACKAGE.VOICE_COMPONENT]() == expected, (
+        'The voice component is decided by its model checksum and whisper.cpp release only'
+    )
+
+
+def test_voice_row_sorts_after_the_assistant(tmp_path):
+    PACKAGE.write_voice_metadata(tmp_path, '26.18')
+    voice = ElementTree.parse(tmp_path / 'package.xml')
+    assert int(voice.findtext('SortingPriority')) < 100, (
+        'Voice input sorts below the AI assistant (100)'
+    )
+    assert voice.findtext('DisplayName') == 'Voice input for AI assistant', (
+        'The row names voice input'
+    )

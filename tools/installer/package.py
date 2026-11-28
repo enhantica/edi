@@ -474,22 +474,44 @@ def write_assistant_metadata(meta: Path, version: str) -> None:
 
 
 def write_voice_metadata(meta: Path, version: str) -> None:
-    """Voice input's component; its row is on the assistant's form (Installer.qs)."""
+    """Voice input's component; its row is the last on the assistant's form (Installer.qs)."""
     xml_file(
         meta / 'package.xml',
         'Package',
         {
             'DisplayName': 'Voice input for AI assistant',
-            # Package metadata only: the row shows the name and size, no description.
+            # The row's tooltip, as every row's; the row itself shows only the name and size.
             'Description': 'Speech recognition on this computer for the AI assistant.',
             'Version': version,
             'ReleaseDate': datetime.datetime.now(datetime.UTC).date().isoformat(),
             'Dependencies': APP_COMPONENT,
             'Default': 'false',
             'RequiresAdminRights': 'false',
-            'SortingPriority': '90',  # after the AI assistant
+            # Below every assistant (100 and lower), the last row.
+            'SortingPriority': '70',
         },
     )
+
+
+def voice_component_inputs() -> dict:
+    """What decides whether the voice component changed between releases (edi ADR-0071).
+
+    The model's pinned checksum and the whisper.cpp release that reads it. A release whose inputs
+    equal the last one's keeps that release's component instead of building a new one.
+    """
+    whisper = re.search(
+        r'^set\(EDI_WHISPER_VERSION ([0-9.]+)\)$',
+        (ROOT / 'cmake/EdiWhisper.cmake').read_text(encoding='utf-8'),
+        re.MULTILINE,
+    )
+    if not whisper:
+        raise RuntimeError('cmake/EdiWhisper.cmake pins no whisper.cpp version')
+    return {'model_sha256': release_voice_pin()['sha256'], 'whisper_cpp': whisper.group(1)}
+
+
+# Each component's declared inputs, for the rule that a component keeps the version of the release
+# that last changed it.
+COMPONENT_INPUTS = {VOICE_COMPONENT: voice_component_inputs}
 
 
 def release_voice_pin() -> dict:
