@@ -346,10 +346,10 @@ def component_names(platform: str) -> frozenset[str]:
     return APP_COMPONENTS
 
 
-# The download site's host refuses a file over 100 MB, which stopped v2026.11.24 at the site
-# push after its release was published; a repository archive over 95 MB (decimal, as the host
-# counts) stops the release here instead.
-ARCHIVE_LIMIT = 95_000_000
+# Each component archive is attached to the release as its own asset, which GitHub keeps under
+# 2 GiB (edi ADR-0071). The earlier 95 MB cap was for GitHub's 100 MiB limit on files pushed to
+# edi-sites, which used to hold the archives; the download site's host never refused one.
+ARCHIVE_LIMIT = 2_000_000_000
 
 
 def require_archive_size(path: Path) -> None:
@@ -357,7 +357,7 @@ def require_archive_size(path: Path) -> None:
     if size > ARCHIVE_LIMIT:
         raise ValueError(
             f'{path.name} is {size:,} bytes, over the {ARCHIVE_LIMIT:,}-byte limit'
-            ' the download site can hold'
+            ' of a release asset'
         )
 
 
