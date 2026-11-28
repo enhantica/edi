@@ -38,6 +38,7 @@ import sys
 from pathlib import Path
 
 TOOLS = ('clang-tidy', 'cppcheck')
+OBJECTIVE_C = {'.m', '.mm'}
 # run-clang-tidy prints `[i/n][seconds] <clang-tidy invocation> <file>` after each file it ran.
 TIDY_RAN = re.compile(r'\[\s*\d+/\d+\]\[\d+(?:\.\d+)?s\] (\S.*)')
 # cppcheck prints `Checking <file> ...` as it starts a database entry; its configurations follow
@@ -89,7 +90,13 @@ def select(root: str, database: str, tool: str, patterns: list[str]) -> list[str
     filters = [
         glob(p.removeprefix('--file-filter=')) for p in patterns if p.startswith('--file-filter=')
     ]
-    return sorted(name for name in files if not filters or any(f.fullmatch(name) for f in filters))
+    # cppcheck's project import leaves Objective-C out (app/mac_titlebar.mm on macOS).
+    return sorted(
+        name
+        for name in files
+        if Path(name).suffix not in OBJECTIVE_C
+        and (not filters or any(f.fullmatch(name) for f in filters))
+    )
 
 
 def part(spec: str, offset: int, lines: list[str]) -> list[str]:
