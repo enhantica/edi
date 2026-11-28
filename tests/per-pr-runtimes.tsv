@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-28T13:10:48Z
+# measured_utc = 2026-11-28T18:20:21Z
 #
-# Recorded from: measured test run (26 node(s) measured once, 187686 banked, 0 stale row(s) dropped)
-# Collected tests: 267650; with a reported duration: 86333
+# Recorded from: measured test run (4 node(s) measured once, 187707 banked, 0 stale row(s) dropped)
+# Collected tests: 267653; with a reported duration: 86336
 # Module-scoped fixture costs recorded: 222
 #
 # Breaches are decided PER TIER against the table
@@ -29,12 +29,12 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 267650
+# inventory_python = 267653
 # inventory_cpp = 0
-# inventory_measured = 187708
+# inventory_measured = 187711
 # inventory_unmeasured = 79942
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
-# inventory_pr_python = 92739
+# inventory_pr_python = 92742
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -187310,8 +187310,11 @@ UNMEASURED:failed-in-this-run	tests/system/app/test_assistant_step_folding.py::t
 2.830	tests/system/app/test_claude_account_journey.py::test_claude_discloses_inherited_credential_before_input
 0.170	tests/system/app/test_claude_account_journey.py::test_claude_interactive_login_stays_owned_until_callback_or_cancel[cancel]
 0.210	tests/system/app/test_claude_account_journey.py::test_claude_interactive_login_stays_owned_until_callback_or_cancel[delayed-callback]
-1.570	tests/system/app/test_claude_account_journey.py::test_claude_shows_edi_tool_reply_and_switches_accounts
+1.440	tests/system/app/test_claude_account_journey.py::test_claude_shows_edi_tool_reply_and_switches_accounts
 UNMEASURED:failed-in-this-run	tests/system/app/test_claude_account_journey.py::test_claude_waits_for_the_mcp_catalogue_before_input
+1.930	tests/system/app/test_claude_account_journey.py::test_first_turn_reaches_the_connected_runtime_after_attaching_files[claude]
+0.700	tests/system/app/test_claude_account_journey.py::test_first_turn_reaches_the_connected_runtime_after_attaching_files[copilot]
+0.790	tests/system/app/test_claude_account_journey.py::test_refused_conversation_open_keeps_the_account_connected
 UNMEASURED:not-completed-in-this-run	tests/system/app/test_feedback_attachment_typing.py::test_typing_with_a_real_attachment_stays_responsive
 UNMEASURED:not-completed-in-this-run	tests/system/app/test_large_collection_open.py::test_collection_first_open[large_offline]
 UNMEASURED:not-completed-in-this-run	tests/system/app/test_large_collection_open.py::test_collection_first_open[large_online]

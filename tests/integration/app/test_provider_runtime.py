@@ -73,9 +73,14 @@ def stage_install(tmp_path, provider, receipt, scenario):
     return binaries / PROBE.name, executable
 
 
-def write_case(tmp_path, provider, mismatch, credential, scenario):
+def write_case(tmp_path, provider, mismatch, credential, scenario, receipt):
     sample = tmp_path / 'sample.txt'
     sample.write_text('xxvisibleyy', encoding='utf-8')
+    files = [str(sample)]
+    if scenario in {'attach-after-connect', 'refused-open'}:
+        second = tmp_path / 'second.txt'
+        second.write_text('additional context', encoding='utf-8')
+        files.append(str(second))
     identity = 'selected@example.invalid' if provider == 'claude' else 'selected-user'
     other = 'other@example.invalid' if provider == 'claude' else 'other-user'
     account_id, other_id = (str(uuid.uuid4()) for _ in range(2))
@@ -97,6 +102,8 @@ def write_case(tmp_path, provider, mismatch, credential, scenario):
             'credential': credential,
             'scenario': scenario,
             'file': str(sample),
+            'files': files,
+            'runtimeReceipt': str(receipt),
         }),
         encoding='utf-8',
     )
@@ -107,8 +114,10 @@ def run_probe(tmp_path, provider, *, mismatch=False, credential=False, scenario=
     assert PROBE.is_file() and GUARD.is_file(), (
         'The provider check requires the desktop assistant UI test and guard from this build'
     )
-    case, account_id, other_id = write_case(tmp_path, provider, mismatch, credential, scenario)
     receipt = tmp_path / 'wire.jsonl'
+    case, account_id, other_id = write_case(
+        tmp_path, provider, mismatch, credential, scenario, receipt
+    )
     probe, _ = stage_install(tmp_path, provider, receipt, scenario)
     home = tmp_path / 'home'
     home.mkdir()
@@ -146,13 +155,14 @@ def run_probe(tmp_path, provider, *, mismatch=False, credential=False, scenario=
         timeout=12,
     )
     assert result.returncode == 0, (
-        'The desktop must connect only the selected provider and display its offline tool reply '
-        'or refuse a mismatched login.\n' + result.stdout + result.stderr
+        f'The {provider} desktop account journey must complete ({scenario or "tool turn"}).\n'
+        + result.stdout
+        + result.stderr
     )
     assert receipt.is_file(), 'The desktop probe must reach the selected real runtime launch path'
     rows = [json.loads(line) for line in receipt.read_text(encoding='utf-8').splitlines()]
     expected_homes = {(provider, account_id)}
-    if provider == 'claude' and not (mismatch or credential):
+    if provider == 'claude' and not (mismatch or credential or scenario == 'refused-open'):
         expected_homes.add((provider, other_id))
     return rows, check_launches(rows, home, (provider, account_id), expected_homes)
 

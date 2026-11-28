@@ -410,7 +410,8 @@ private slots:
                  "The connection offer must use the installed provider the user selected");
         // The owner's order (attach-after-connect): connect with nothing attached and no project, then attach
         // files and send them in the first turn.
-        const bool attachLater = scenario == "attach-after-connect";
+        const bool refuseOpen = scenario == "refused-open";
+        const bool attachLater = scenario == "attach-after-connect" || refuseOpen;
         QString fileId;
         if (!attachLater) {
             const auto selection = assistant->beginFileSelection();
@@ -467,10 +468,30 @@ private slots:
             QVERIFY2(showsCredentialSource(), "The Account dialog must identify the active Claude environment key");
             return;
         }
+        bool connectionDropped = false;
+        QMetaObject::Connection connectionObservation;
+        const auto disconnectObservation = qScopeGuard([&] { QObject::disconnect(connectionObservation); });
         if (attachLater) {
-            QTRY_VERIFY2_WITH_TIMEOUT(assistant->state() == "idle" && assistant->draftAdmissionReady(),
+            QTRY_VERIFY2_WITH_TIMEOUT(assistant->connected() && assistant->state() == "idle" &&
+                                          assistant->draftAdmissionReady(),
                                      qPrintable(assistant->lastError()), 3000);
-            QVERIFY2(!session->project(), "This case has no project open");
+            QVERIFY2(!session->project() && assistant->selectedFiles()->rowCount() == 0,
+                     "The account must connect before a project or any attachment is present");
+            if (refuseOpen) {
+                QFile receipt(test.value("runtimeReceipt").toString());
+                QVERIFY2(receipt.open(QIODevice::ReadOnly), "The connected runtime must record its launch");
+                QString instructions;
+                while (!receipt.atEnd() && instructions.isEmpty()) {
+                    const auto argv = QJsonDocument::fromJson(receipt.readLine()).object().value("argv").toArray();
+                    for (qsizetype index = 0; index + 1 < argv.size(); ++index)
+                        if (argv.at(index).toString() == "--append-system-prompt-file")
+                            instructions = argv.at(index + 1).toString();
+                }
+                QVERIFY2(QFile::remove(instructions) && QDir().mkdir(instructions),
+                         "A directory at the connected runtime's prompt-file path must refuse the next open");
+            }
+            connectionObservation = QObject::connect(assistant, &edi_app::AssistantViewModel::connectedChanged,
+                [&] { connectionDropped |= !assistant->connected(); });
             QList<QUrl> files;
             for (const auto& path : test.value("files").toArray()) files.append(QUrl::fromLocalFile(path.toString()));
             QVERIFY2(files.size() >= 2, "The case attaches two files, as the owner did");
@@ -483,6 +504,15 @@ private slots:
                      "Files attached after connecting must be covered by a new approval");
             // What the panel does when Send finds new attachments: the dialog's approval, then the held draft.
             const auto again = assistant->acceptConnectionOffer(attached);
+            if (refuseOpen) {
+                QTRY_VERIFY2_WITH_TIMEOUT(assistant->lastError().contains("could not open the conversation") ||
+                                              !assistant->connected(), qPrintable(assistant->lastError()), 3000);
+                QVERIFY2(!connectionDropped && assistant->connected() &&
+                             assistant->account().email == account.value("email").toString(),
+                         qPrintable("A refused conversation open must keep the selected account connected: " +
+                                    assistant->lastError()));
+                return;
+            }
             QVERIFY2(again == "approved", qPrintable(assistant->lastError() + " Approval: " + again));
         }
         const auto prompt = "Read the attached sample. fixture-file-id=" + fileId;
@@ -496,7 +526,7 @@ private slots:
         }
         QTRY_VERIFY2_WITH_TIMEOUT(assistant->state() == "idle" && assistant->draftAdmissionReady(),
                                  qPrintable(assistant->lastError()), 3000);
-        if (provider == "claude") {
+        if (provider == "claude" && !attachLater) {
             assistant->setSelectedModel("sonnet");
             QVERIFY2(assistant->selectedModel() == "sonnet", "The selected model must come from Claude's readback");
         }
@@ -510,8 +540,7 @@ private slots:
             [&] { errors.append(assistant->lastError()); });
         const auto disconnectErrors = qScopeGuard([&] { QObject::disconnect(errorObservation); });
         if (attachLater) {
-            // The held draft goes once the panel's conditions hold (composerSubmitApprovedDraft); the model choice
-            // above restarts Claude's process first.
+            // The panel submits the held draft once the conversation is ready.
             QTRY_VERIFY2_WITH_TIMEOUT(!assistant->connected() || (!assistant->contextConsentRequired() &&
                                           assistant->state() == "idle" && !assistant->canCancel()),
                                       qPrintable(assistant->lastError()), 3000);
@@ -548,6 +577,8 @@ private slots:
         }
         QTRY_VERIFY2_WITH_TIMEOUT(appearsInTranscript(), qPrintable(assistant->lastError()), 3000);
         QTRY_COMPARE_WITH_TIMEOUT(assistant->state(), QString("idle"), 3000);
+        QVERIFY2(!connectionDropped && assistant->connected(),
+                 "The account must stay connected through the tool reply");
         if (provider == "claude") {
             QVERIFY2(QMetaObject::invokeMethod(assistant, "switchAccount", Q_ARG(QString, provider), Q_ARG(QString, otherId)),
                      "Switch account must reach the view model's normal account action");

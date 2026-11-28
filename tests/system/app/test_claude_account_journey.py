@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: BSD-3-Clause
-"""Desktop journeys spanning an installed Claude runtime and the app session."""
+"""Desktop account journeys with installed Claude and GitHub Copilot runtimes."""
 
 import json
 import os
@@ -38,23 +38,43 @@ def test_claude_shows_edi_tool_reply_and_switches_accounts(tmp_path):
         'The tool-using prompt must run once under the selected account'
     )
     session_events = [row for row in rows if row.get('session') == prompts[0]['session']]
-    controls = [row['subtype'] for row in session_events if row['event'] == 'claude-control']
-    assert controls[:3] == ['initialize', 'mcp_status', 'get_context_usage'], (
-        'The Claude turn process must independently read back its identity and tools before use'
-    )
-    phase = [
-        row['event']
+    before_init = [
+        row['subtype'] if row['event'] == 'claude-control' else row['event']
         for row in session_events
         if row['event'] in {'claude-control', 'prompt', 'claude-init'}
     ]
-    assert phase[:5] == [
-        'claude-control',
-        'claude-control',
-        'claude-control',
+    assert before_init[:6] == [
+        'initialize',
+        'mcp_status',
+        'get_context_usage',
+        'get_usage',
         'prompt',
         'claude-init',
-    ], 'The pre-input controls must succeed before the first user input causes init'
+    ], 'The Claude turn process must read identity, tools and plan usage before input causes init'
     require_selected_file_reply(rows)
+
+
+@pytest.mark.skipif(os.name == 'nt', reason='The offline CLI fixture is a shell script')
+@pytest.mark.parametrize('provider', ['claude', 'copilot'])
+def test_first_turn_reaches_the_connected_runtime_after_attaching_files(tmp_path, provider):
+    rows, _ = run_probe(tmp_path, provider, scenario='attach-after-connect')
+    prompts = [row['identity'] for row in rows if row['event'] == 'prompt']
+    expected = 'selected@example.invalid' if provider == 'claude' else 'selected-user'
+    assert prompts == [expected], (
+        'The first attached-file prompt must reach the selected login once'
+    )
+    require_selected_file_reply(rows)
+
+
+@pytest.mark.skipif(os.name == 'nt', reason='The offline CLI fixture is a shell script')
+def test_refused_conversation_open_keeps_the_account_connected(tmp_path):
+    rows, _ = run_probe(tmp_path, 'claude', scenario='refused-open')
+    assert any(row['event'] == 'claude-readback' for row in rows), (
+        'The offline runtime must verify the account before the later conversation is refused'
+    )
+    assert not any(row['event'] in {'prompt', 'mcp-reply'} for row in rows), (
+        'A refused conversation open must send no input and execute no tool'
+    )
 
 
 @pytest.mark.skipif(os.name == 'nt', reason='The offline CLI fixture is a shell script')
