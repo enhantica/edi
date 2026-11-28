@@ -13,6 +13,7 @@ import re
 import shutil
 import stat
 import subprocess
+import sys
 from pathlib import Path, PureWindowsPath
 
 import pytest
@@ -226,7 +227,7 @@ file(WRITE "${CMAKE_BINARY_DIR}/accepted" "original function returned")
         }
         self.manifest.write_text(json.dumps(value, sort_keys=True))
 
-    def configure(self, label, *, known_paths=()):
+    def configure(self, label, *, known_paths=(), timeout=15):
         self.serial += 1
         log = self.root / f'{self.serial:02d}-{label}'
         log.mkdir()
@@ -239,6 +240,7 @@ file(WRITE "${CMAKE_BINARY_DIR}/accepted" "original function returned")
             '-B',
             str(self.build),
             f'-DTEST_SYSTEM={self.system}',
+            f'-DPython3_EXECUTABLE:FILEPATH={sys.executable}',
             f'-DTEST_RUNTIME_MODULE={self.module}',
             f'-DEDI_ASSISTANT_DEDICATED_RUNTIME={"ON" if self.dedicated else "OFF"}',
             f'-DEDI_CODEX_INPUT_MANIFEST={self.manifest}',
@@ -268,7 +270,7 @@ file(WRITE "${CMAKE_BINARY_DIR}/accepted" "original function returned")
         before_inputs = {str(path): _inventory(path) for path in input_paths}
         try:
             run = subprocess.run(
-                command, env=env, capture_output=True, text=True, check=False, timeout=15
+                command, env=env, capture_output=True, text=True, check=False, timeout=timeout
             )
         except subprocess.TimeoutExpired as error:
             for name, value in [('stdout', error.stdout), ('stderr', error.stderr)]:
@@ -302,7 +304,7 @@ file(WRITE "${CMAKE_BINARY_DIR}/accepted" "original function returned")
             )
             pytest.fail(
                 'Missing/nonregular/symlink input must refuse before a blocking read; '
-                f'the unchanged bounded configure observation expired: {error}\n'
+                f'the bounded configure observation expired: {error}\n'
                 f'Last actual CMake trace bytes:\n{trace_tail}'
             )
         (log / 'stdout').write_text(run.stdout)
@@ -588,17 +590,33 @@ def _change_declared_manifest(fixture, escape):
     fixture.manifest.write_text(json.dumps(value))
 
 
+def _change_member_preserving_mtime(member, original_mtime):
+    payload = member.read_bytes()
+    changed = payload.replace(b'exit 97', b'exit 98', 1)
+    assert changed != payload, 'The independent entrypoint mutation changes a byte'
+    member.write_bytes(changed)
+    os.utime(member, ns=(member.stat().st_atime_ns, original_mtime))
+    after = member.stat()
+    assert after.st_size == len(payload), 'File size cannot expose the mutation'
+    assert after.st_mtime_ns == original_mtime, 'The filesystem preserves the prior mtime'
+    assert member.read_bytes() == changed, 'The altered contents survive timestamp restoration'
+
+
 @pytest.mark.parametrize('escape', platform_cases(SOURCE_ESCAPES))
 def test_reuse_fully_revalidates_original_source_before_any_blocking_read(tmp_path, escape):
     fixture = RuntimeFixture(tmp_path)
-    _successful(fixture.configure('establish-valid-publication'))
-    publication = fixture.publication()
-    original = _inventory(publication)
     member = fixture.payload / ENTRYPOINT
     if escape == 'changed_byte_same_mtime':
-        old = member.stat()
-        member.write_bytes(member.read_bytes() + b'# Changed independently, same old timestamp.\n')
-        os.utime(member, ns=(old.st_atime_ns, old.st_mtime_ns))
+        # An even whole-second time can be restored on filesystems with coarse timestamps.
+        os.utime(member, (1_600_000_000, 1_600_000_000))
+        original_mtime = member.stat().st_mtime_ns
+    _successful(
+        fixture.configure('establish-valid-publication', timeout=30 if os.name == 'nt' else 15)
+    )
+    publication = fixture.publication()
+    original = _inventory(publication)
+    if escape == 'changed_byte_same_mtime':
+        _change_member_preserving_mtime(member, original_mtime)
     elif escape == 'unexpected_member':
         (fixture.payload / 'unexpected').write_bytes(b'Not admitted by the input manifest.')
     elif escape in {'missing_member', 'directory_member', 'symlink_member', 'fifo_member'}:
@@ -645,6 +663,10 @@ def test_reuse_fully_revalidates_original_source_before_any_blocking_read(tmp_pa
         ),
     )
     _refused(refused)
+    assert (
+        escape != 'changed_byte_same_mtime'
+        or f'Corrupt provisioned helper member {ENTRYPOINT}' in refused[0].stderr
+    ), 'The verifier refuses the altered entrypoint through the manifest digest check'
     _assert_no_verified_source_copy(refused, fixture)
     assert _inventory(publication) == original and _inventory(fixture.payload) == source, (
         'Invalid source is not made acceptable by a cached receipt/mtime; existing '

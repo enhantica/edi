@@ -31,6 +31,15 @@ Rectangle {
             }
         }
     }
+    // The refused name's warning goes as another project's replacement starts, before it shows (AppState.retirePopup).
+    Connections {
+        target: Session
+        function onProjectReplacing() {
+            AppState.retirePopup(nameWarning, () => {
+                nameInput.refusal = "";
+            });
+        }
+    }
 
     Flickable {
         id: descriptionView
@@ -93,6 +102,7 @@ Rectangle {
                 ToolTip.text: refusal
                 // In the warning's style, as every refused value's.
                 WarningToolTip {
+                    id: nameWarning
                     text: nameInput.refusal
                     requested: nameInput.warned && (nameInput.hovered || nameInput.activeFocus)
                 }

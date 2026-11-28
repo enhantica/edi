@@ -32,7 +32,8 @@ def reset_handler_vector(handler, guard, *, pending_text=False, settle_text=True
     return (
         '(()=>{const observations=[];'
         'for(const project of [null,{modified:false},{modified:true}]){'
-        'let resets=0;const queued=[],questions=[];const Session={project};'
+        'let resets=0;const queued=[],questions=[];'
+        'const Session={project,projectGeneration:()=>0};'
         'const Qt={callLater:action=>queued.push(action)};const settlements=[];'
         'let textEdit='
         + ('{settleEdit:action=>settlements.push(action)};' if pending_text else 'null;')

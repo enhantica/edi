@@ -27,6 +27,7 @@ SideBarGroup {
     icon: "ruler-horizontal"
 
     EaElements.ComboBox {
+        id: ruleBox
         objectName: "project.suRule"
         width: AppSizes.loneControlWidth
         enabled: group.project !== null
@@ -35,5 +36,14 @@ SideBarGroup {
         model: ApplicationInfo.nativeListProjection(3)
         currentIndex: group.project ? group.rules.indexOf(group.project.suRule) : 0
         onActivated: index => group.project.suRule = group.rules[index]
+    }
+
+    // The open list goes as another project's replacement starts, before it shows (AppState.retirePopup): a choice from
+    // it would otherwise land on the next project.
+    Connections {
+        target: Session
+        function onProjectReplacing() {
+            AppState.retirePopup(ruleBox.popup);
+        }
     }
 }

@@ -2851,6 +2851,11 @@ void neutron_scattering_tables(const PCR& pcr, Project& project, const std::vect
     }
     if (overrides) {
         for (const auto& [phase, lengths] : tables) {
+            try {
+                check_deuterium_lengths(lengths, "FullProf phase '" + phase->name.value() + "'");
+            } catch (const std::invalid_argument& refusal) {
+                pcr.fail(refusal.what());
+            }
             phase->scattering_lengths_fm = lengths;
         }
         for (const auto& experiment : project.experiments) {
