@@ -2698,7 +2698,9 @@ struct AssistantViewModel::State {
         }
         if(!record.isEmpty()) {
             // The account a saved conversation belongs to (ADR-0108 §8): its recorded id, or for a legacy record the
-            // default-home record holding its saved e-mail; with neither it stays unbound.
+            // default-home record holding its saved e-mail; with neither it stays unbound. At startup the reopen may
+            // come before the active account was read from the settings, so it is read here first.
+            resolve_active_account();
             std::optional<AssistantAccountRecord> belongs;
             try {
                 const auto store=account_store();
@@ -2716,7 +2718,12 @@ struct AssistantViewModel::State {
                 saved_session_refusal=QObject::tr("Its account is no longer added.");
                 return false;
             }
-            if(belongs && belongs->id!=active_provider_account.id) {
+            // The default ChatGPT login before its record is active again is that same login; the saved e-mail is
+            // checked against the live one below.
+            const bool defaultLogin=belongs && belongs->provider==AssistantProviderId::ChatGpt && belongs->home.isEmpty() &&
+                active_provider_account.provider==AssistantProviderId::ChatGpt && active_provider_account.id.isEmpty() &&
+                active_provider_account.home.isEmpty();
+            if(belongs && belongs->id!=active_provider_account.id && !defaultLogin) {
                 // Another account's conversation: offer to switch instead of mixing histories.
                 saved_session_refusal=QObject::tr("It belongs to another account.");
                 emit owner.sessionAccountSwitchRequested(id,assistant_provider_key(belongs->provider),belongs->id,belongs->email);
