@@ -5726,7 +5726,19 @@ void DemoDriver::park_pointer() {
     // action: a capture then never shows the hover state of whatever lies under the host's own cursor. Without
     // it the images differed by host: a headless Linux display keeps its cursor at the window's centre, which
     // highlighted the Messages row drawn there, and a macOS runner's cursor did not (edi PR 97).
-    const QPointF corner(1, 1);
+    // A modal dialog takes every move outside it, so the controls a step used inside it would keep their hover; the
+    // pointer then rests just inside the topmost open popup's corner instead, where nothing reacts either.
+    QPointF corner(1, 1);
+    for (QQuickItem* layer : window_.contentItem()->childItems()) {
+        if (QString::fromLatin1(layer->metaObject()->className()) != QLatin1String("QQuickOverlay")) continue;
+        const QList<QQuickItem*> popups = layer->childItems();
+        for (auto it = popups.crbegin(); it != popups.crend(); ++it) {
+            if ((*it)->isVisible() && (*it)->inherits("QQuickPopupItem")) {
+                corner = (*it)->mapToScene(QPointF(2, 2));
+                break;
+            }
+        }
+    }
     QMouseEvent move(QEvent::MouseMove, corner, window_.mapToGlobal(corner), Qt::NoButton, Qt::NoButton,
                      Qt::NoModifier);
     QCoreApplication::sendEvent(&window_, &move);
