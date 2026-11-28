@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-27T04:46:54Z
+# measured_utc = 2026-11-28T07:40:20Z
 #
-# Recorded from: focused e04-t65-seq3-path-launcher.out
-# Collected tests: 267553; with a reported duration: 86290
+# Recorded from: measured test run (2 node(s) measured once, 187602 banked, 0 stale row(s) dropped)
+# Collected tests: 267555; with a reported duration: 86290
 # Module-scoped fixture costs recorded: 221
 #
 # Breaches are decided PER TIER against the table
@@ -29,12 +29,12 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 267553
+# inventory_python = 267555
 # inventory_cpp = 0
 # inventory_measured = 187602
-# inventory_unmeasured = 79951
+# inventory_unmeasured = 79953
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
-# inventory_pr_python = 92642
+# inventory_pr_python = 92644
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -251494,6 +251494,8 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_e04_t12_public_release.py::te
 0.280	tests/system/py/test_e09_t74_ci_source_consumption.py::test_actual_workflow_consumes_its_common_output_at_fetch_or_build[docs]
 0.520	tests/system/py/test_e09_t74_ci_source_consumption.py::test_actual_workflow_consumes_its_common_output_at_fetch_or_build[native]
 0.290	tests/system/py/test_e09_t74_ci_source_consumption.py::test_actual_workflow_consumes_its_common_output_at_fetch_or_build[notebooks]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e09_t74_ci_source_consumption.py::test_actual_workflow_consumes_its_common_output_at_fetch_or_build[static-linux]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e09_t74_ci_source_consumption.py::test_actual_workflow_consumes_its_common_output_at_fetch_or_build[static-macos]
 1.640	tests/system/py/test_e09_t74_ci_source_consumption.py::test_actual_workflow_consumes_its_common_output_at_fetch_or_build[system]
 0.100	tests/system/py/test_e09_t74_ci_source_consumption.py::test_new_consumers_really_consuming_the_shared_sha_are_admitted[checkout]
 0.220	tests/system/py/test_e09_t74_ci_source_consumption.py::test_new_consumers_really_consuming_the_shared_sha_are_admitted[composite]
