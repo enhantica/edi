@@ -267,8 +267,9 @@ AppDialog {
                 height: 1
             }
             ToolbarComboBox {
+                // Levels, net moment and start filter or set up what a search shows, so they stay open while it runs:
+                // a click on one ends a k edit, which starts the search, and must still open it (review 29).
                 objectName: "magnetic.levels"
-                enabled: !popup.busy
                 toolTip: qsTr("Which levels of groups are shown")
                 model: [qsTr("All"), qsTr("Maximal only")]
                 closedTexts: [qsTr("levels: All"), qsTr("levels: Maximal only")]
@@ -281,7 +282,6 @@ AppDialog {
             }
             ToolbarComboBox {
                 objectName: "magnetic.netMoment"
-                enabled: !popup.busy
                 toolTip: qsTr("Groups by their net moment: ferromagnetic (FM on the cards) or zero")
                 model: [qsTr("Any"), qsTr("Ferromagnetic"), qsTr("Zero")]
                 closedTexts: [qsTr("net moment: Any"), qsTr("net moment: Ferromagnetic"), qsTr("net moment: Zero")]
@@ -299,7 +299,6 @@ AppDialog {
             // What Add creates, a group of its own (owner, 2026-11-28).
             ToolbarComboBox {
                 objectName: "magnetic.startMoments"
-                enabled: !popup.busy
                 toolTip: qsTr("The moments each new structure starts with: 2 to 3 μB along the allowed components, or zero")
                 model: [qsTr("Non-zero"), qsTr("Zero")]
                 closedTexts: [qsTr("start: Non-zero"), qsTr("start: Zero")]
