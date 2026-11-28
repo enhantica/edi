@@ -74,12 +74,13 @@ equality (TOPAS, GSAS-II, FullProf, Jana); general fitting tools put a Share col
     and the next fit starts every dataset from the template.
 13. **Edits while a scan has results** (owner decision 2026-11-28, every scan mode). A value typed or dragged at the
     shown dataset is that dataset's pending start for the next fit, kept in the project's `_parametric_fit_start`
-    loop (crysta ADR-0136 decision 9); a shared value is the whole series' one start, and a newly shared group takes
-    the shown copy's value as it; unsharing drops it. The fit uses a start once and removes it as the point's row is
-    written; the app, Python and the CLI take back what is left. A pending start does not make the results out of
-    date. Undo removes it. Free, Shared, the mode and every other edit reach the template with the template's own
-    values kept; the template's values change only where no results exist. Reset fits clears the starts with the
-    results.
+    loop (crysta ADR-0136 decision 9); in a Parametric fit a shared value is the whole series' one start, and a newly
+    shared group takes the clicked copy's value as it (one write for a row's Shared box and the header menu);
+    unsharing drops it. The fit records the starts it applied with its results and the project then loses exactly
+    those; a start on a fixed parameter stays, the point's input. Reopening a project drops a start its results record
+    as used. Neither a pending start nor the Shared list makes the results out of date. Undo removes a start. Free, the
+    mode and every other edit reach the template with the template's own values kept; the template's values change
+    only where no results exist. Reset fits clears the starts with the results and their record.
 
 ## Consequences
 

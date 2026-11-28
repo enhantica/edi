@@ -8,6 +8,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <tuple>
 #include <vector>
 
 #include "edi/model.hpp"
@@ -39,8 +40,9 @@ struct FitReport {
     std::string refusal;
     // What the fit returned; absent when it was refused.
     std::optional<FitResultBase> result;
-    // A scan: the point starts it left pending, however it ended (crysta ADR-0136 decision 9); the app takes them.
-    std::optional<ItemVec<ParametricFitStart>> pending_starts;
+    // A scan: the point starts it used (point, parameter, value), however it ended (crysta ADR-0136 decision 9); the
+    // app removes exactly those, so an edit made while it ran is kept.
+    std::vector<std::tuple<std::string, std::string, double>> used_starts;
     FitFailureReason reason = FitFailureReason::None;
     bool adopted() const noexcept {
         return status == FitStatus::DONE || status == FitStatus::MAX_ITER || status == FitStatus::NO_STEP ||

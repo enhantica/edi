@@ -47,17 +47,19 @@ void own_analysis_dir(const edi::Project& project) {
 }
 
 // A series of joint fits' bank rows are its results too (ADR-0132): taken, set aside and put back with the point rows,
-// so both files always come from the same run.
+// so both files always come from the same run. So is the record of the point starts the run used (crysta ADR-0136
+// decision 9): Reset takes it with the rows, and Undo of a Reset puts both back.
 const char* const kResultFiles[] = {"results.csv", "results-provenance.csv", "scan-run.json", "scan-notes.csv",
-                                    "results_experiments.csv"};
-constexpr int kResultFileCount = 5;
+                                    "results_experiments.csv", "scan-starts-used.csv"};
+constexpr int kResultFileCount = 6;
 
 std::optional<std::string>* slot(ScanSession::Files& files, int which) {
     return which == 0   ? &files.results
            : which == 1 ? &files.provenance
            : which == 2 ? &files.run
            : which == 3 ? &files.skipped
-                        : &files.experiments;
+           : which == 4 ? &files.experiments
+                        : &files.used_starts;
 }
 
 const std::optional<std::string>* slot(const ScanSession::Files& files, int which) {
@@ -65,7 +67,8 @@ const std::optional<std::string>* slot(const ScanSession::Files& files, int whic
            : which == 1 ? &files.provenance
            : which == 2 ? &files.run
            : which == 3 ? &files.skipped
-                        : &files.experiments;
+           : which == 4 ? &files.experiments
+                        : &files.used_starts;
 }
 
 // A file's bytes; nullopt when it does not exist; throws when it exists and cannot be read, or is not a regular
@@ -427,10 +430,7 @@ std::string ScanSession::templateIdentity(const edi::Project& project) {
     // Hashed from a copy, which is never calculated: a save of a calculated project adds its computed columns and
     // categories (and a newer schema version), so the same inputs would hash differently before and after a
     // calculation, e.g. the shown model at a scan's start against the template copy at its end.
-    // Nor are the pending point starts (owner record 2026-11-28): an edit made while results exist is a start for the
-    // next Fit, so it leaves the results current and their rows there to continue from.
-    edi::Project inputs = project;
-    inputs.sequential_fit.starts = {};
+    const edi::Project inputs = project;  // NOLINT(performance-unnecessary-copy-initialization): see above.
     return templateIdentity(edi::project_edi_files(inputs));
 }
 
@@ -456,8 +456,12 @@ std::string ScanSession::templateIdentity(const std::vector<std::pair<std::strin
             start = end + 1;
             // A fit's results (its summary, its banks, the start values it began from) are what a run writes, not
             // the template it ran from: a finished scan leaves its results current.
+            // Nor are the pending point starts or the Shared list (ADR-0107 decision 13): an edit made while results
+            // exist is a start for the next fit, and sharing changes how the next fit continues, not which results
+            // are current; neither removes the rows a next fit continues from.
             if (line.starts_with("_fit_parameter_correlation.") || line.starts_with("_fit_parameter.") ||
-                line.starts_with("_fit_result.") || line.starts_with("_fit_result_bank.")) {
+                line.starts_with("_fit_result.") || line.starts_with("_fit_result_bank.") ||
+                line.starts_with("_parametric_fit_start.") || line.starts_with("_parametric_fit_shared.")) {
                 correlations = true;
                 pending.clear();
                 continue;

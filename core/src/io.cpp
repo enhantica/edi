@@ -5191,6 +5191,35 @@ static Project load_project_folder(const std::string& directory, const WarningSi
         } catch (const std::exception&) {  // NOLINT(bugprone-empty-catch)
         }
     }
+    // A start the results record as used was used by a fit that wrote its row (crysta ADR-0136 decision 9): a run
+    // cancelled after a row, or a fit not saved, never uses it again. A fixed one stays: it is the point's input.
+    if (!project.sequential_fit.starts.empty()) {
+        std::ifstream record(std::filesystem::path(directory) / "analysis" / "scan-starts-used.csv", std::ios::binary);
+        std::string line;
+        if (record && std::getline(record, line)) {
+            std::set<std::tuple<std::string, std::string, double>> used;
+            while (std::getline(record, line)) {
+                if (!line.empty() && line.back() == '\r') line.pop_back();
+                const std::size_t last = line.rfind(',');
+                if (last == std::string::npos || line.substr(last + 1) != "False") continue;
+                const std::string head = line.substr(0, last);
+                const std::size_t first = head.find(',');
+                const std::size_t value_at = head.rfind(',');
+                if (first == std::string::npos || value_at == first) continue;
+                char* end = nullptr;
+                const std::string number = head.substr(value_at + 1);
+                const double value = std::strtod(number.c_str(), &end);
+                if (end == number.c_str()) continue;
+                used.emplace(head.substr(0, first), head.substr(first + 1, value_at - first - 1), value);
+            }
+            for (std::size_t i = project.sequential_fit.starts.size(); i-- > 0;) {
+                const auto& start = project.sequential_fit.starts[i];
+                if (used.contains({start->point.value(), start->parameter_unique_name.value(), start->value.get()})) {
+                    project.sequential_fit.starts.erase_at(i);
+                }
+            }
+        }
+    }
     rename_for_saving(project, on_warning);
     return project;
 }

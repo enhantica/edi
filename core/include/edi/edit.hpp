@@ -793,11 +793,8 @@ class Edit {
             starts.push_back(std::move(row));
         });
     }
-    // ADR-0107: share or unshare a parameter in the parametric fit; its free flag is left as it is.
-    static Edit parameter_shared(Project& project, Parameter& parameter, bool shared) {
-        return Edit([&project, &parameter, shared] { set_parametric_shared(project, parameter, shared); });
-    }
-    // ADR-0107: share or unshare several parameters, by unique name, in one edit (the Shared header menu).
+    // ADR-0107: share or unshare parameters, by unique name, in one edit: a row's Shared box and the Shared header menu
+    // alike; the free flags are left as they are.
     // `at` (the shown point), while the scan has results: a newly shared group takes the shown copy's value as the
     // whole series' one start (owner record 2026-11-28).
     static Edit parameters_shared(Project& project, std::vector<std::string> names, bool shared,

@@ -4736,19 +4736,17 @@ void overlay_starts(std::vector<edi::Edit::ScanValue>& values, const edi::Projec
     const auto& starts = project.sequential_fit.starts;
     if (starts.empty() || dataset < 0 || dataset >= static_cast<int>(files.size())) return;
     const std::string& shown = files[static_cast<std::size_t>(dataset)];
-    std::map<std::string, const edi::Parameter*> by_name;
-    for (const edi::NamedParameter& each : edi::named_parameters(project)) by_name.emplace(each.unique_name, each.parameter);
-    const auto path_of = [](const std::string& name) { return name.substr(name.find('.') + 1); };
+    // As the fit uses them (crysta apply_point_starts): the point's own, by exact name, and in a Parametric fit, where
+    // sharing is in effect, a shared name's start at every point.
+    const bool series_shared = project.fitting_mode == "parametric";
+    std::set<std::string> shared;
+    for (const auto& row : project.sequential_fit.shared) shared.insert(row->parameter_unique_name.value());
     for (const auto& start : starts) {
         const std::string& name = start->parameter_unique_name.value();
-        const auto found = by_name.find(name);
-        if (found == by_name.end()) continue;
-        const bool shared = edi::parametric_shared(project, *found->second);
-        if (!shared && start->point.value() != shown) continue;
+        const bool common = series_shared && shared.contains(name);
+        if (!common && start->point.value() != shown) continue;
         for (edi::Edit::ScanValue& each : values) {
-            const bool copy = each.unique_name == name || (shared && project.sequential_fit.joint() &&
-                                                           path_of(each.unique_name) == path_of(name));
-            if (!copy) continue;
+            if (each.unique_name != name) continue;
             each.value = start->value.get();
             each.uncertainty.reset();
         }
@@ -6123,20 +6121,25 @@ std::optional<ProjectViewModel::ShownPoint> ProjectViewModel::shownPoint() const
     return ShownPoint{files[static_cast<std::size_t>(current_dataset_)]};
 }
 
-void ProjectViewModel::takePendingStarts(const edi::ItemVec<edi::ParametricFitStart>& pending) {
-    const auto rows = [](const edi::ItemVec<edi::ParametricFitStart>& starts) {
-        std::vector<std::tuple<std::string, std::string, double>> out;
-        for (const auto& row : starts) out.emplace_back(row->point.value(), row->parameter_unique_name.value(), row->value.get());
-        return out;
+void ProjectViewModel::dropUsedStarts(const std::vector<std::tuple<std::string, std::string, double>>& used) {
+    const std::set<std::tuple<std::string, std::string, double>> gone(used.begin(), used.end());
+    const auto drop = [&gone](edi::ItemVec<edi::ParametricFitStart>& starts) {
+        bool changed = false;
+        for (std::size_t i = starts.size(); i-- > 0;) {
+            if (gone.contains({starts[i]->point.value(), starts[i]->parameter_unique_name.value(), starts[i]->value.get()})) {
+                starts.erase_at(i);
+                changed = true;
+            }
+        }
+        return changed;
     };
-    if (rows(project_->sequential_fit.starts) == rows(pending)) return;
-    project_->sequential_fit.starts = pending;
-    if (scan_template_) {
-        scan_template_->sequential_fit.starts = pending;
+    bool changed = drop(project_->sequential_fit.starts);
+    if (scan_template_ && drop(scan_template_->sequential_fit.starts)) {
+        changed = true;
         identityMemoFor(&*scan_template_).reset();
         template_snapshot_.reset();
     }
-    setModified(true);
+    if (changed) setModified(true);
 }
 
 edi::Edit ProjectViewModel::valueEdit(edi::Parameter& parameter, double value) {
@@ -6248,7 +6251,17 @@ QString ProjectViewModel::assign_parameter_shared(edi::Parameter& parameter, boo
         if (!retired_) setLastError(pending);
         return pending;
     }
-    const EditOutcome result = applyRecordedEdit(edi::Edit::parameter_shared(*project_, parameter, shared), false);
+    // The same write as the bulk Shared action (ADR-0107 decision 13): while the scan has results, a newly shared group
+    // takes the clicked copy's value as the series' one start.
+    std::vector<std::string> names;
+    for (const edi::NamedSlot& slot : edi::named_slots(*project_)) {
+        if (slot.parameter == &parameter) names.push_back(slot.unique_name);
+    }
+    if (names.empty()) return tr("Only a parameter of the project can be shared");
+    std::optional<std::string> at;
+    if (const std::optional<ShownPoint> point = shownPoint()) at.emplace(point->point);
+    const EditOutcome result =
+        applyRecordedEdit(edi::Edit::parameters_shared(*project_, std::move(names), shared, std::move(at)), false);
     if (!retired_ && !result.applied) setLastError(result.message);
     return result.applied ? QString{} : result.message;
 }

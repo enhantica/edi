@@ -9013,19 +9013,28 @@ FitResultBase Project::fit_scan(const IterationCallback& on_iteration,
         struct ReturnStarts {
             Project& model;
             const crysta::Project& engine;
+            std::vector<crysta::ParametricStart> before = engine.sequential_fit.starts.to_vector();
             ~ReturnStarts() {
                 try {
-                    std::set<std::pair<std::string, std::string>> pending;
+                    // Exactly the starts the run used: those it was given that its copy no longer holds. An edit
+                    // made at the same point and name since the run took its copy has another value and is kept.
+                    std::set<std::tuple<std::string, std::string, double>> left, used;
                     for (const crysta::ParametricStart& start : engine.sequential_fit.starts) {
-                        pending.emplace(start.point.get(), start.parameter_unique_name.get());
+                        left.emplace(start.point.get(), start.parameter_unique_name.get(), start.value.get());
+                    }
+                    for (const crysta::ParametricStart& start : before) {
+                        std::tuple<std::string, std::string, double> key{start.point.get(), start.parameter_unique_name.get(),
+                                                                          start.value.get()};
+                        if (!left.contains(key)) used.insert(std::move(key));
                     }
                     auto& starts = model.sequential_fit.starts;
                     for (std::size_t i = starts.size(); i-- > 0;) {
-                        if (!pending.contains({starts[i]->point.value(), starts[i]->parameter_unique_name.value()})) {
+                        if (used.contains({starts[i]->point.value(), starts[i]->parameter_unique_name.value(),
+                                           starts[i]->value.get()})) {
                             starts.erase_at(i);
                         }
                     }
-                } catch (...) {  // NOLINT(bugprone-empty-catch): the starts stay pending, used again next time
+                } catch (...) {  // NOLINT(bugprone-empty-catch): the results' record still drops them at the next load
                 }
             }
         } return_starts{*this, cproject};

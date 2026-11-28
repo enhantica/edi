@@ -7,7 +7,9 @@
 #include <exception>
 #include <map>
 #include <mutex>
+#include <set>
 #include <stdexcept>
+#include <tuple>
 #include <iomanip>
 #include <locale>
 #include <sstream>
@@ -72,7 +74,7 @@ struct Outcome {
     std::optional<FitResultBase> result;
     std::string refusal;
     bool scan = false;
-    std::optional<ItemVec<ParametricFitStart>> pending_starts;  // a scan's, however it ended
+    std::vector<std::tuple<std::string, std::string, double>> used_starts;  // a scan's, however it ended
 };
 
 // Worker thread: the project's own fit entry for its mode, as the CLI's fit takes it (edi.Analysis.fit).
@@ -173,7 +175,7 @@ struct FitJob::State {
         FitReport report;
         report.result = std::move(outcome.result);
         report.refusal = std::move(outcome.refusal);
-        report.pending_starts = std::move(outcome.pending_starts);
+        report.used_starts = std::move(outcome.used_starts);
         if (!report.result.has_value()) {
             report.status = FitStatus::ERROR;
             if (report.refusal.empty()) {
@@ -219,13 +221,19 @@ bool FitJob::start(const Project* scan_template) {
     }
     auto snapshot =
         std::make_shared<WorkSnapshot>(snapshot_for_work(scan_template != nullptr ? *scan_template : state_->live));
+    // The point starts the fit takes with its copy, to tell afterwards which it used.
+    std::vector<std::tuple<std::string, std::string, double>> starts_before;
+    for (const auto& row : snapshot->project.sequential_fit.starts) {
+        starts_before.emplace_back(row->point.value(), row->parameter_unique_name.value(), row->value.get());
+    }
     auto inputs = std::make_shared<FitInputs>(inputs_of(state_->live));
     // The cores are the preference's and the mode's when the fit is asked for (edi ADR-0107 decision 11).
     const CoresBudget budget = cores_budget_for_mode(effective_fitting_mode(snapshot->project));
     state_->frame_wanted.store(true, std::memory_order_release);
     const std::shared_ptr<State> self = state_;
     state_->ticket = state_->worker.submit(
-        kChannel, [self, snapshot, inputs, budget](const work::CancelToken& token, const work::Emit& emit) -> work::Delivery {
+        kChannel, [self, snapshot, inputs, budget, starts_before = std::move(starts_before)](
+                      const work::CancelToken& token, const work::Emit& emit) -> work::Delivery {
             auto outcome = std::make_shared<Outcome>();
             outcome->stamps = snapshot->stamps;
             outcome->inputs = *inputs;
@@ -375,7 +383,15 @@ bool FitJob::start(const Project* scan_template) {
             } catch (...) {
                 outcome->refusal = "the fit failed";
             }
-            if (outcome->scan) outcome->pending_starts = snapshot->project.sequential_fit.starts;
+            if (outcome->scan) {
+                std::set<std::tuple<std::string, std::string, double>> left;
+                for (const auto& row : snapshot->project.sequential_fit.starts) {
+                    left.emplace(row->point.value(), row->parameter_unique_name.value(), row->value.get());
+                }
+                for (const auto& start : starts_before) {
+                    if (!left.contains(start)) outcome->used_starts.push_back(start);
+                }
+            }
             return [self, outcome] { State::finish(self, *outcome); };
         });
     return true;

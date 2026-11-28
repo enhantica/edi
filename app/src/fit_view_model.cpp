@@ -1361,9 +1361,9 @@ void FitViewModel::ended(const edi::FitReport& report) {
     const bool visible = !owner_.retired_;
     pending_accept_.reset();
     ++fit_writing_;
-    // A scan used some pending starts; the model and the template keep only those it left (ADR-0107 decision 13).
-    if (visible && report.pending_starts) {
-        try { owner_.takePendingStarts(*report.pending_starts); } catch (...) { failure = std::current_exception(); }
+    // A scan used some pending starts; the model and the template lose exactly those (ADR-0107 decision 13).
+    if (visible && !report.used_starts.empty()) {
+        try { owner_.dropUsedStarts(report.used_starts); } catch (...) { failure = std::current_exception(); }
     }
     try { if (visible) presentEnded(report, automatic_results, attempt); } catch (...) { failure = std::current_exception(); }
     --fit_writing_;

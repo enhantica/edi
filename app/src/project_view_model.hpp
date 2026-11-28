@@ -1460,9 +1460,9 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     };
     std::optional<ShownPoint> shownPoint() const;
    public:
-    // After a scan fit: the point starts it left pending replace the model's and the template's (a used start is gone);
-    // the project is modified when that changed it.
-    void takePendingStarts(const edi::ItemVec<edi::ParametricFitStart>& pending);
+    // After a scan fit: the point starts it used go from the model and the template, exactly those (an edit made while
+    // it ran is kept); the project is modified when that changed it.
+    void dropUsedStarts(const std::vector<std::tuple<std::string, std::string, double>>& used);
 
    private:
     edi::Edit valueEdit(edi::Parameter& parameter, double value);
