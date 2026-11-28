@@ -169,7 +169,9 @@ AliasListModel::AliasListModel(edi::Project& project, ProjectEditor& editor, QOb
 
 void AliasListModel::sync() {
     QList<Row> rows;
+    const edi::HiddenRelations hidden = edi::hidden_relations(project_);  // a disabled phase's stay out (review 31)
     for (const auto& alias : project_.aliases) {
+        if (hidden.aliases.contains(alias->id.value())) continue;
         rows.append({alias.get(),
                      {QString::fromStdString(alias->id.value()),
                       QString::fromStdString(alias->parameter_unique_name.value())}});
@@ -234,7 +236,12 @@ void AliasListModel::remove(int row) {
         return;
     }
     edi::Project& project = project_;
-    editor_.apply_relation_control(edi::Edit::erase(project.aliases, static_cast<std::size_t>(row)), {ProjectEditor::RelationAction::Kind::AliasRemove,keyAt(row)});
+    // The row's own alias: the table leaves a disabled phase's out (review 31), so a row is not a project index.
+    const auto at = std::find_if(project.aliases.begin(), project.aliases.end(),
+                                 [this, row](const auto& alias) { return alias.get() == keyAt(row); });
+    if (at == project.aliases.end()) return;
+    const auto index = static_cast<std::size_t>(std::distance(project.aliases.begin(), at));
+    editor_.apply_relation_control(edi::Edit::erase(project.aliases, index), {ProjectEditor::RelationAction::Kind::AliasRemove,keyAt(row)});
 }
 
 // ---- ConstraintListModel ------------------------------------------------------------------------
@@ -246,7 +253,9 @@ ConstraintListModel::ConstraintListModel(edi::Project& project, ProjectEditor& e
 
 void ConstraintListModel::sync() {
     QList<Row> rows;
+    const edi::HiddenRelations hidden = edi::hidden_relations(project_);  // a disabled phase's stay out (review 31)
     for (const auto& constraint : project_.constraints) {
+        if (hidden.constraints.contains(constraint->id.value())) continue;
         rows.append({constraint.get(),
                      {QString::fromStdString(constraint->id.value()),
                       QString::fromStdString(constraint->expression.value()), constraint->enabled.get()}});
@@ -305,13 +314,18 @@ void ConstraintListModel::append() {
     }
     std::map<std::string, double> values;
     for (const edi::NamedParameter& named : edi::named_parameters(project)) values[named.unique_name] = named.parameter->value.get();
-    for (std::size_t dependent = 1; dependent < project.aliases.size() && constraint.expression.value().empty(); ++dependent) {
-        const std::string& name = project.aliases[dependent]->id.value();
+    // Only the aliases the table shows: a disabled phase's stay out of a new expression too (review 31).
+    const edi::HiddenRelations hidden = edi::hidden_relations(project);
+    std::vector<const edi::ParameterAlias*> shown;
+    for (const auto& alias : project.aliases)
+        if (!hidden.aliases.contains(alias->id.value())) shown.push_back(alias.get());
+    for (std::size_t dependent = 1; dependent < shown.size() && constraint.expression.value().empty(); ++dependent) {
+        const std::string& name = shown[dependent]->id.value();
         if (dependents.contains(name)) continue;
-        const auto own = values.find(project.aliases[dependent]->parameter_unique_name.value());
-        const auto first = values.find(project.aliases[0]->parameter_unique_name.value());
+        const auto own = values.find(shown[dependent]->parameter_unique_name.value());
+        const auto first = values.find(shown[0]->parameter_unique_name.value());
         if (own == values.end() || first == values.end() || own->second == first->second) {
-            constraint.expression = name + " = " + project.aliases[0]->id.value();
+            constraint.expression = name + " = " + shown[0]->id.value();
         } else {
             std::array<char, 32> text{};
             const auto written = std::to_chars(text.data(), text.data() + text.size(), own->second);
@@ -346,7 +360,12 @@ void ConstraintListModel::remove(int row) {
         return;
     }
     edi::Project& project = project_;
-    editor_.apply_relation_control(edi::Edit::erase(project.constraints, static_cast<std::size_t>(row)), {ProjectEditor::RelationAction::Kind::ConstraintRemove,keyAt(row)});
+    // The row's own constraint: the table leaves a disabled phase's out (review 31), so a row is not a project index.
+    const auto at = std::find_if(project.constraints.begin(), project.constraints.end(),
+                                 [this, row](const auto& constraint) { return constraint.get() == keyAt(row); });
+    if (at == project.constraints.end()) return;
+    const auto index = static_cast<std::size_t>(std::distance(project.constraints.begin(), at));
+    editor_.apply_relation_control(edi::Edit::erase(project.constraints, index), {ProjectEditor::RelationAction::Kind::ConstraintRemove,keyAt(row)});
 }
 
 // ---- FitStartListModel --------------------------------------------------------------------------

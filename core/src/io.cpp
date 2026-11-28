@@ -5315,6 +5315,30 @@ std::vector<FitStartRow> fit_start_rows(const Project& project) {
     return rows;
 }
 
+HiddenRelations hidden_relations(const Project& project) {
+    HiddenRelations out;
+    // hidden_parameters only reads; it is non-const for the pointers it hands back.
+    const std::vector<const Parameter*> hidden = const_cast<Project&>(project).hidden_parameters();
+    if (hidden.empty()) return out;
+    const std::set<const Parameter*> idle(hidden.begin(), hidden.end());
+    std::map<std::string, const Parameter*> by_name;
+    for (const NamedParameter& named : named_parameters(project)) by_name.emplace(named.unique_name, named.parameter);
+    for (const auto& alias : project.aliases) {
+        const auto found = by_name.find(alias->parameter_unique_name.value());
+        if (found != by_name.end() && idle.contains(found->second)) out.aliases.insert(alias->id.value());
+    }
+    for (const auto& constraint : project.constraints) {
+        const std::string& text = constraint->expression.value();
+        std::size_t start = 0;
+        while (start < text.size() && !(std::isalnum(static_cast<unsigned char>(text[start])) || text[start] == '_'))
+            ++start;
+        std::size_t end = start;
+        while (end < text.size() && (std::isalnum(static_cast<unsigned char>(text[end])) || text[end] == '_')) ++end;
+        if (out.aliases.contains(text.substr(start, end - start))) out.constraints.insert(constraint->id.value());
+    }
+    return out;
+}
+
 std::vector<NamedParameter> named_parameters(const Project& project) {
     std::vector<NamedParameter> named;
     for (const auto& slot : parameter_slots(project)) {

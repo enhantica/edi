@@ -1026,10 +1026,12 @@ std::unordered_map<std::string, bool> fittable_of(const Project& project) {
 // (edi ADR-0079).
 std::vector<ReportCategory> relations_of(const Project& project) {
     std::vector<ReportCategory> out;
+    const HiddenRelations hidden = hidden_relations(project);  // a disabled phase's stay out (review 31)
     if (!project.aliases.empty()) {
         ReportCategory aliases = category("alias");
         aliases.table.columns = {label("alias.id"), label("alias.parameter_unique_name")};
         for (const auto& alias : project.aliases) {
+            if (hidden.aliases.contains(alias->id.value())) continue;
             aliases.table.rows.push_back({alias->id.value(), alias->parameter_unique_name.value()});
         }
         out.push_back(std::move(aliases));
@@ -1039,6 +1041,7 @@ std::vector<ReportCategory> relations_of(const Project& project) {
         constraints.table.columns = {label("constraint.id"), label("constraint.expression"),
                                      label("constraint.enabled")};
         for (const auto& constraint : project.constraints) {
+            if (hidden.constraints.contains(constraint->id.value())) continue;
             constraints.table.rows.push_back(
                 {constraint->id.value(), constraint->expression.value(), constraint->enabled.get() ? "Yes" : "No"});
         }

@@ -15,6 +15,7 @@
 #include <cmath>
 #include <cstddef>
 #include <map>
+#include <set>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -399,6 +400,14 @@ struct NamedParameter {
     const Parameter* parameter = nullptr;
 };
 std::vector<NamedParameter> named_parameters(const Project& project);
+// The aliases and constraints of a phase no enabled link reads (review 31), by id: an alias naming one of
+// Project::hidden_parameters, and a constraint whose target (its first identifier, before '=') is such an alias. They
+// stay in the project for save and re-enable; Analysis and the report leave them out, as they leave out the phase.
+struct HiddenRelations {
+    std::set<std::string> aliases;
+    std::set<std::string> constraints;
+};
+HiddenRelations hidden_relations(const Project& project);
 // One exact member, formatted only by the FIRST writer slot walk. Callers own
 // this preparation bound through the lookup and output ownership transfer.
 std::size_t named_parameter_preparation_bytes(std::size_t maximum_name_bytes);
