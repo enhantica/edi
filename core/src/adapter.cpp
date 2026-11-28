@@ -10997,11 +10997,12 @@ std::vector<MagneticPeak> magnetic_mark_candidates(const Project& project, std::
     {
         double d_lo = std::numeric_limits<double>::infinity();
         double d_hi = 0.0;
-        // The detectors' own interval (review 30): the included samples with a finite value and a positive
-        // uncertainty, from the first and the last of them whose d the calibration gives, as d is monotonic.
+        // The detectors' own interval (reviews 30 and 31): the included samples with a finite position and intensity
+        // and a positive uncertainty, from the first and the last of them whose d the calibration gives, as d is monotonic.
         const std::vector<double>& sigma = data.intensity_meas_su.get();
         const auto usable = [&](std::size_t i) {
-            return included[i] && std::isfinite(x[i]) && i < sigma.size() && sigma[i] > 0.0;
+            return included[i] && std::isfinite(x[i]) && i < sigma.size() && sigma[i] > 0.0 &&
+                   i < data.intensity_meas.get().size() && std::isfinite(data.intensity_meas.get()[i]);
         };
         const auto widen = [&](std::size_t i) {
             if (!usable(i)) return false;
