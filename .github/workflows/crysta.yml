@@ -526,8 +526,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        part: [1/6, 2/6, 3/6, 4/6, 5/6, 6/6]
-    runs-on: ubuntu-24.04
+        part: [1/2, 2/2]
+    # Ubuntu 22.04, as crysta's own runners: its byte pins were taken with that release's C library.
+    runs-on: ubuntu-22.04
     timeout-minutes: 180
     defaults:
       run:
@@ -571,7 +572,7 @@ jobs:
           export PYTHONPATH="$GITHUB_WORKSPACE/tools/ci${PYTHONPATH:+:$PYTHONPATH}"
           python3 "$GITHUB_WORKSPACE/tools/ci/crysta_findings.py" run pytest "$CRYSTA_PYTEST_RECORD" -- pixi run -e cpp-ci suite-coverage
       - name: Seeded series (slow cadence)
-        if: ${{ needs.plan.outputs.skip != 'true' && (!cancelled() && matrix.part == '1/6' && contains(fromJSON(needs.plan.outputs.rows), 'seeded')) }}
+        if: ${{ needs.plan.outputs.skip != 'true' && (!cancelled() && matrix.part == '1/2' && contains(fromJSON(needs.plan.outputs.rows), 'seeded')) }}
         run: |
           cd "$RUNNER_TEMP/crysta"
           python3 "$GITHUB_WORKSPACE/tools/ci/crysta_findings.py" --root "$RUNNER_TEMP/crysta" run check "$RUNNER_TEMP/findings/slow-seeded-series.log" -- \
