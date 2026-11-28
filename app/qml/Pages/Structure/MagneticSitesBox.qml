@@ -24,7 +24,8 @@ ToolbarComboBox {
     signal toggled(string id, bool on)
 
     readonly property AtomSiteListModel rows: structure ? structure.atomSites : null
-    readonly property string shownText: qsTr("sites: %1").arg(chosen.join(", "))
+    // Up to three chosen sites by name, more as a count, so the closed box keeps a bounded width whatever the ids.
+    readonly property string shownText: chosen.length <= 3 ? qsTr("sites: %1").arg(chosen.join(", ")) : qsTr("sites: %1 chosen").arg(chosen.length)
 
     toolTip: qsTr("The magnetic sites: the sites each new structure gives a moment")
     model: [shownText]
@@ -36,7 +37,9 @@ ToolbarComboBox {
     // content, wider than the box when it needs to be: no value is cut. Until the table has measured itself, a width
     // that holds it.
     popup.objectName: "magnetic.sites.popup"
-    popup.width: Math.max(table.naturalWidth > 0 ? table.naturalWidth : EaStyle.Sizes.fontPixelSize * 44, box.width)
+    // Never wider than the window: a wider table scrolls sideways, so every column stays reachable (DataTable).
+    popup.width: Math.min(Math.max(table.naturalWidth > 0 ? table.naturalWidth : EaStyle.Sizes.fontPixelSize * 44, box.width),
+                          box.Window.window ? box.Window.window.width - 2 * EaStyle.Sizes.fontPixelSize : Number.MAX_VALUE)
     popup.height: Math.min(table.contentHeight, EaStyle.Sizes.tableRowHeight * 12)
     popup.padding: 0
     popup.contentItem: DataTable {

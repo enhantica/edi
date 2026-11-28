@@ -200,17 +200,19 @@ AppDialog {
         anchors.fill: parent
         spacing: AppSizes.groupContentSpacing
 
-        // One toolbar row, built from the chart toolbar's own boxes and buttons and spaced as Experiment → Pattern's
-        // (owner, 2026-11-28, header design B), in groups a toolbar group's gap apart: what is analysed (k with its
-        // magnetic cell, the sites), which groups are shown (levels, net moment), what Add creates (the starting
-        // moments), and how the groups are shown (Graph, List).
-        Row {
+        // One toolbar row, the charts' own (ToolbarLines, edi ADR-0103; owner, 2026-11-28, header design B), in groups a
+        // toolbar group's gap apart: what is analysed (k with its magnetic cell, the sites), which groups are shown
+        // (levels, net moment), what Add creates (the starting moments), and how the groups are shown (Graph, List).
+        // In a narrow window what does not fit moves into its More popup, so every control stays reachable; it starts
+        // at the left, as the dialog's other content.
+        ToolbarLines {
             id: toolbar
             objectName: "magnetic.toolbar"
-            spacing: AppSizes.toolbarSpacing
-            // The chart toolbar's gap between groups (ToolbarLines.groupSpacing), less the spacing around the gap item.
-            // Whole pixels, so the boxes after it sit on the pixel grid and their text stays sharp (owner, Retina).
-            readonly property real groupGap: Math.round(EaStyle.Sizes.fontPixelSize * 0.5 + 2 * AppSizes.toolbarSpacing - 2 * spacing)
+            Layout.fillWidth: true
+            Layout.preferredHeight: implicitHeight
+            sharesSelectorRow: false
+            leftEdge: 0
+            rightEdge: naturalWidth > 0 ? Math.min(width, naturalWidth) : width
 
             readonly property var kEntries: popup.presets.map(p => {
                 const k = p.k.split(",").join(", ");
@@ -225,6 +227,7 @@ AppDialog {
             ToolbarComboBox {
                 id: kChoice
                 objectName: "magnetic.k"
+                toolbarGroup: "analysed"
                 enabled: !popup.busy
                 toolTip: qsTr("Propagation vector k and its magnetic cell")
                 model: toolbar.kEntries
@@ -239,37 +242,40 @@ AppDialog {
                         popup.invalidateGraph();
                 }
             }
-            Repeater {
-                id: kFields
-                model: 3
-                delegate: EaElements.TextField {
-                    required property int index
-                    enabled: !popup.busy
-                    visible: popup.kIndex === popup.presets.length
-                    width: EaStyle.Sizes.fontPixelSize * 4
-                    height: AppSizes.toolbarControlSize
-                    placeholderText: ["k₁", "k₂", "k₃"][index]
-                    text: "0"
-                    onTextEdited: popup.invalidateGraph()
-                    onEditingFinished: popup.find()
+            // Other k: its three components, kept together as one item of the row.
+            Row {
+                objectName: "magnetic.kFields"
+                visible: popup.kIndex === popup.presets.length
+                spacing: AppSizes.toolbarSpacing
+                Repeater {
+                    id: kFields
+                    model: 3
+                    delegate: EaElements.TextField {
+                        required property int index
+                        enabled: !popup.busy
+                        width: Math.round(EaStyle.Sizes.fontPixelSize * 4)
+                        height: AppSizes.toolbarControlSize
+                        placeholderText: ["k₁", "k₂", "k₃"][index]
+                        text: "0"
+                        onTextEdited: popup.invalidateGraph()
+                        onEditingFinished: popup.find()
+                    }
                 }
             }
             MagneticSitesBox {
                 objectName: "magnetic.sites"
+                toolbarGroup: "analysed"
                 enabled: !popup.busy
                 structure: popup.structure
                 sites: popup.sites
                 chosen: popup.chosenSites
                 onToggled: (id, on) => popup.setSite(id, on)
             }
-            Item {
-                width: toolbar.groupGap
-                height: 1
-            }
             ToolbarComboBox {
                 // Levels, net moment and start filter or set up what a search shows, so they stay open while it runs:
                 // a click on one ends a k edit, which starts the search, and must still open it.
                 objectName: "magnetic.levels"
+                toolbarGroup: "shown"
                 toolTip: qsTr("Which levels of groups are shown")
                 model: [qsTr("All"), qsTr("Maximal only")]
                 closedTexts: [qsTr("levels: All"), qsTr("levels: Maximal only")]
@@ -282,6 +288,7 @@ AppDialog {
             }
             ToolbarComboBox {
                 objectName: "magnetic.netMoment"
+                toolbarGroup: "shown"
                 toolTip: qsTr("Groups by their net moment: ferromagnetic (FM on the cards) or zero")
                 model: [qsTr("Any"), qsTr("Ferromagnetic"), qsTr("Zero")]
                 closedTexts: [qsTr("net moment: Any"), qsTr("net moment: Ferromagnetic"), qsTr("net moment: Zero")]
@@ -292,23 +299,16 @@ AppDialog {
                     popup.selected = popup.selected.filter(i => popup.selectable(i));
                 }
             }
-            Item {
-                width: toolbar.groupGap
-                height: 1
-            }
             // What Add creates, a group of its own (owner, 2026-11-28).
             ToolbarComboBox {
                 objectName: "magnetic.startMoments"
+                toolbarGroup: "add"
                 toolTip: qsTr("The moments each new structure starts with: 2 to 3 μB along the allowed components, or zero")
                 model: [qsTr("Non-zero"), qsTr("Zero")]
                 closedTexts: [qsTr("start: Non-zero"), qsTr("start: Zero")]
                 fitShown: true
                 shownIndex: popup.startMoments ? 0 : 1
                 onActivated: index => popup.startMoments = index === 0
-            }
-            Item {
-                width: toolbar.groupGap
-                height: 1
             }
             ChartToolButton {
                 objectName: "magnetic.graphView"
