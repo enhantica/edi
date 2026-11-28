@@ -3,6 +3,9 @@
 #include <QPointer>
 #include <QScopeGuard>
 
+#include <algorithm>
+#include <iterator>
+
 #include "edi/background_estimate.hpp"
 #include "edi/categories.hpp"
 #include "edi/display.hpp"
@@ -50,6 +53,63 @@ void ParameterRegistry::rebuild(edi::Project& project) {
         if (const auto named = names.find(entry.parameter); named != names.end()) item->setFullName(named->second);
         items.append(item);
         by_key.emplace(key, item);
+    }
+    // A Pawley structure's intensities in one experiment are one row, after the experiment's own (edi ADR-0109 §5); a
+    // Le Bail structure's are not listed.
+    const bool several = project.experiments.size() > 1;
+    for (const auto& experiment : project.experiments) {
+        std::vector<std::pair<std::string, std::vector<edi::Parameter*>>> groups;
+        for (const auto& row : experiment->extracted_intensities) {
+            const std::string& structure_id = row->structure_id.value();
+            const auto held = std::find_if(project.structures.begin(), project.structures.end(), [&](const auto& structure) {
+                return edi::datablock_key(structure->name, "structure") == edi::datablock_key(structure_id, "structure");
+            });
+            bool pawley = false;
+            try {
+                pawley = held != project.structures.end() && edi::calc_method_token(**held) == "pawley";
+            } catch (const std::exception&) {
+                pawley = false;
+            }
+            if (!pawley) {
+                continue;
+            }
+            auto group = std::find_if(groups.begin(), groups.end(), [&](const auto& g) { return g.first == structure_id; });
+            if (group == groups.end()) {
+                groups.emplace_back(structure_id, std::vector<edi::Parameter*>{});
+                group = std::prev(groups.end());
+            }
+            group->second.push_back(&row->f_squared);
+        }
+        for (auto& [structure_id, members] : groups) {
+            const std::string prefix = several ? "experiments[" + experiment->name.value() + "]." : std::string("experiment.");
+            std::string path = prefix;
+            path.append("extracted_intensities[").append(structure_id).append("].f_squared");
+            edi::ParameterEntry entry{members.front(), path,
+                                      "experiment", experiment->name.value(), "extracted_intensity", structure_id,
+                                      "f_squared", true};
+            const auto key = std::make_pair(static_cast<const edi::Parameter*>(entry.parameter),
+                                            entry.path + '\n' + entry.block_name);
+            auto found = by_key_.find(key);
+            ParameterItem* item = nullptr;
+            if (found != by_key_.end()) {
+                item = found->second;
+                by_key_.erase(found);
+            } else {
+                item = new ParameterItem(entry, editor_, this);
+            }
+            item->setGroup(std::move(members));
+            const auto place = experiment_index.find(entry.block_name);
+            item->setBlockIndex(place != experiment_index.end() ? place->second : -1);
+            qsizetype at = -1;
+            for (qsizetype i = 0; i < items.size(); ++i) {
+                if (items[i]->blockKind() == QLatin1String("experiment") &&
+                    items[i]->blockName().toStdString() == entry.block_name) {
+                    at = i;
+                }
+            }
+            items.insert(at < 0 ? items.size() : at + 1, item);
+            by_key.emplace(key, item);
+        }
     }
     // Each descriptor that is no parameter after the last row of its block's category, else at its block's end.
     for (const edi::DescriptorEntry& entry : edi::model_descriptors(project)) {
@@ -165,6 +225,13 @@ void ParameterRegistry::refreshElements(const edi::Project& project) {
                 owned(row->structure_id, &row->march_r);
                 owned(row->structure_id, &row->march_random_fract);
             }
+            // A Pawley row stands for its structure's intensities, in the structure's colour.
+            for (const auto& row : experiment->extracted_intensities) {
+                const auto found = place.find(row->structure_id.value());
+                if (found != place.end()) {
+                    phase.emplace(&row->f_squared, found->second);
+                }
+            }
         }
     }
     for (ParameterItem* item : items_) {
@@ -249,7 +316,7 @@ void ParameterRegistry::refreshFittability(edi::Project& project) {
             return ParameterItem::NoGroup;
         }();
         item->setFittability(parameter.fit_blocker == edi::FitBlocker::None,
-                             QString::fromStdString(parameter.fit_reason), group);
+                             QString::fromStdString(parameter.fit_reason), group, parameter.fit_method_idle);
     }
 }
 

@@ -125,8 +125,8 @@ The current [nuclear neutron](diffraction.md#eq-nuclear-structure-factor) and [X
 
 | Model | Status | Explanation |
 | --- | --- | --- |
-| Le Bail | Proposed | [Analysis](rietveld.md#le-bail-intensity-extraction) |
-| Pawley | Proposed | [Analysis](rietveld.md#pawley-intensity-extraction) |
+| Le Bail | Available | [Analysis](rietveld.md#le-bail-intensity-extraction) |
+| Pawley | Available | [Analysis](rietveld.md#pawley-intensity-extraction) |
 
 ## <span class="ed-reference-icon" aria-hidden="true">&#62398;</span> Descent {#descent}
 

@@ -141,6 +141,7 @@ nav:
           - "ADR-0104 The label registry": dev/adrs/0104-label-registry.md
           - "ADR-0105 Declared columns": dev/adrs/0105-declared-columns.md
           - "ADR-0106 Versions and checksum updates": dev/adrs/0106-versions-and-checksum-updates.md
+          - "ADR-0109 Le Bail and Pawley fits": dev/adrs/0109-le-bail-and-pawley.md
           - dev/adrs/template.md
       - Design:
           - dev/design/api-types.md
@@ -222,6 +223,7 @@ nav:
           - user/guides/the-text-tab.md
           - "Fit quality": user/guides/fit-quality.md
           - user/guides/which-values-a-fit-can-free.md
+          - "Rietveld, Le Bail, Pawley": user/guides/rietveld-le-bail-and-pawley.md
           - "Assistant desktop": user/guides/the-assistant.md
       - Tutorials:
           - user/tutorials/index.md

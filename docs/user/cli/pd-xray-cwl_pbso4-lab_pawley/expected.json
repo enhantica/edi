@@ -1,0 +1,40 @@
+{
+  "schema": 1,
+  "source": {
+    "engine": "FullProf 8.40 Le Bail and Rietveld (references)",
+    "artifact": "fullprof/le-bail.out",
+    "provenance": "PROVENANCE.md"
+  },
+  "quantities": {
+    "n_points_fitted": {
+      "value": 5799.0,
+      "kind": "reference",
+      "tol_abs": 0.0,
+      "tol_rel": null
+    },
+    "rwp": {
+      "value": 0.0748,
+      "kind": "reference",
+      "tol_abs": null,
+      "tol_rel": 0.1
+    },
+    "param.cell_length_a.value": {
+      "value": 8.4806633,
+      "kind": "reference",
+      "tol_abs": 0.0004413669,
+      "tol_rel": null
+    },
+    "param.cell_length_b.value": {
+      "value": 5.3988767,
+      "kind": "reference",
+      "tol_abs": 0.0002846698,
+      "tol_rel": null
+    },
+    "param.cell_length_c.value": {
+      "value": 6.9602642,
+      "kind": "reference",
+      "tol_abs": 0.0003695626,
+      "tol_rel": null
+    }
+  }
+}

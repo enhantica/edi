@@ -1167,6 +1167,9 @@ QString ProjectViewModel::apply_creation_control(const edi::Edit& change, bool s
         if(const auto pending=editReadinessRefusal(false);!pending.isEmpty()){if(input)input->outcome.message=pending;return pending;}
         if(phase_control) {
             QString refusal;
+            // crysta's reason a link would be refused (a Le Bail or Pawley structure on a single crystal), which the
+            // user sees; the other refusals here are of a stale offer.
+            std::string link_refused;
             if(actual.kind==Kind::PhaseRetarget) {
                 const auto id=actual.text.toStdString();bool offered=false;
                 for(const auto& structure:project_->structures) {
@@ -1174,22 +1177,28 @@ QString ProjectViewModel::apply_creation_control(const edi::Edit& change, bool s
                     if((raw.empty()?std::string_view("structure"):std::string_view(raw))==id)offered=true;
                 }
                 if(!link || !link->enabled.get() || !offered)refusal=tr("The linked structure target is unavailable or disabled");
+                else if(edi::KeyTraits<edi::LinkedStructure>::canonical(link->structure_id.value())!=id)
+                    link_refused=link_refusal(*project_,*experiment,id);
             } else if(actual.kind==Kind::PhaseRemove && experiment->linked_structures.size()<=1)
                 refusal=tr("The final linked structure cannot be removed");
             else if(actual.kind==Kind::PhaseEnabled && actual.number!=0 && actual.number!=1)
                 refusal=tr("The linked structure flag must be boolean");
+            else if(actual.kind==Kind::PhaseEnabled && actual.number==1 && link && !link->enabled.get())
+                link_refused=link_refusal(*project_,*experiment,link->structure_id.value());
             else if(actual.kind==Kind::PhaseAppend) {
-                std::string next;
-                for(const auto& structure:project_->structures) {
-                    const auto& raw=structure->name.value();
-                    const std::string_view id=raw.empty()?std::string_view("structure"):std::string_view(raw);
-                    if(std::none_of(experiment->linked_structures.begin(),experiment->linked_structures.end(),[&](const auto& row){return (row->structure_id.value().empty()?std::string_view("structure"):std::string_view(row->structure_id.value()))==id;})){next=std::string(id);break;}
+                const std::string next=next_link_target(*project_,*experiment,link_refused);
+                if(!next.empty() || link_refused.empty()) {
+                    link_refused.clear();
+                    if(next.empty() || next!=actual.text.toStdString())refusal=tr("The original linked structure append offer changed");
+                    if(input && input->bounded_result && !assistant_result_name(next)) {
+                        input->result_identity_refused=true;
+                        refusal=tr("The linked structure identity exceeds the assistant result limit; no edit was made");
+                    }
                 }
-                if(next.empty() || next!=actual.text.toStdString())refusal=tr("The original linked structure append offer changed");
-                if(input && input->bounded_result && !assistant_result_name(next)) {
-                    input->result_identity_refused=true;
-                    refusal=tr("The linked structure identity exceeds the assistant result limit; no edit was made");
-                }
+            }
+            if(refusal.isEmpty() && !link_refused.empty()) {
+                refusal=QString::fromStdString(link_refused);
+                if(!input)announceRefused(refusal);
             }
             if(!refusal.isEmpty()){if(input)input->outcome.message=refusal;return refusal;}
         }
@@ -4010,13 +4019,14 @@ bool ProjectViewModel::setParametersFree(const QList<ParameterItem*>& parameters
         for(const auto* member:input->members) {
             const auto* item=registry_->find(member);
             if(!item || std::count(input->members.begin(),input->members.end(),member)!=1)return false;
-            if(free?item->isFittable():item->isFree())++expected;
+            if(free?item->isFittable():(item->isFree() || item->partiallyFree()))++expected;
         }
         if(expected!=static_cast<std::size_t>(parameters.size()))return false;
         for(const auto* item:parameters) {
             if(!item || registry_->find(item->parameter())!=item ||
                 std::count(input->members.begin(),input->members.end(),item->parameter())!=1 ||
-                std::count(parameters.begin(),parameters.end(),item)!=1 || (free?!item->isFittable():!item->isFree()))return false;
+                std::count(parameters.begin(),parameters.end(),item)!=1 ||
+                (free?!item->isFittable():(!item->isFree() && !item->partiallyFree())))return false;
         }
         input->consumed=true;widget_input_executing_=true;
     }
@@ -4024,20 +4034,41 @@ bool ProjectViewModel::setParametersFree(const QList<ParameterItem*>& parameters
         announceRefused(refusal);
         return false;
     }
-    std::map<const edi::Parameter*, std::string> names;
+    std::map<const edi::Parameter*, edi::NamedSlot> by_parameter;
     for (const edi::NamedSlot& slot : edi::named_slots(*project_)) {
-        names.emplace(slot.parameter, slot.unique_name);
+        by_parameter.emplace(slot.parameter, slot);
     }
     std::vector<std::pair<std::string, bool>> flags;
+    std::vector<edi::Parameter*> changed;
+    bool grouped = false;
     for (const ParameterItem* item : parameters) {
         if (item == nullptr || (free && !item->isFittable())) {
             continue;  // a flag is set only where a fit can vary the value; any is cleared (ADR-0053)
         }
-        const auto found = names.find(item->parameter());
-        if (found == names.end() || item->isFree() == free) {
+        if (item->groupSize() > 0) {
+            // A Pawley row: every intensity it stands for, partly free or not.
+            for (edi::Parameter* member : item->group()) {
+                if (member->free.get() != free) {
+                    changed.push_back(member);
+                    grouped = true;
+                }
+            }
             continue;
         }
-        flags.emplace_back(found->second, free);
+        const auto found = by_parameter.find(item->parameter());
+        if (found == by_parameter.end() || item->isFree() == free) {
+            continue;
+        }
+        flags.emplace_back(found->second.unique_name, free);
+        changed.push_back(found->second.parameter);
+    }
+    if (grouped) {
+        // The intensities are in no parameter walk, so this takes the Pawley row's own path, one Undo step for all.
+        const EditOutcome result = applyFreeFlags(changed, free);
+        if(input)input->outcome=result;
+        if (!self || retired_) return result.applied;
+        if (!result.applied) { announceRefused(result.message); return false; }
+        return true;
     }
     if (flags.empty()) {
         if(input)input->outcome={false,true,{}};
@@ -6047,6 +6078,34 @@ QString ProjectViewModel::assign_parameter_free(edi::Parameter& parameter, bool 
     return input->outcome.applied ? QString{} : input->outcome.message;
 }
 
+QString ProjectViewModel::assign_group_free(const std::vector<edi::Parameter*>& parameters, bool free) {
+    if (const auto refusal = free_refusal(); !refusal.isEmpty()) return refusal;
+    const PublicationScope publication(*this);
+    const EditOutcome result = applyFreeFlags(parameters, free);
+    if (!retired_ && !result.applied && !result.message.isEmpty()) setLastError(result.message);
+    return result.applied ? QString{} : result.message;
+}
+
+ProjectViewModel::EditOutcome ProjectViewModel::applyFreeFlags(const std::vector<edi::Parameter*>& parameters, bool free) {
+    const PublicationScope publication(*this);
+    const QPointer<ProjectViewModel> self(this);
+    std::vector<std::pair<edi::Parameter*, bool>> flags;
+    for (edi::Parameter* parameter : parameters) {
+        if (parameter->free.get() != free) flags.emplace_back(parameter, free);
+    }
+    if (flags.empty()) return {false, true, {}};
+    // The extracted intensities are in no parameter walk, so Undo puts back the rows they belong to (edi ADR-0109 §5),
+    // and with them every other parameter's state.
+    edi::StructuresUndo before = edi::capture_structure_edit(*project_);
+    const EditOutcome result = applyEdit(edi::Edit::free_flags(std::move(flags)), false);
+    if (!self || retired_) return result;
+    if (result.applied) {
+        undo_history_.emplace_back(std::move(before));
+        syncUndo();
+    }
+    return result;
+}
+
 QString ProjectViewModel::apply(const edi::Edit& change, bool structural) {
     const PublicationScope publication(*this);
     const EditOutcome result = applyEdit(change, structural);
@@ -6690,6 +6749,27 @@ QString ProjectViewModel::rename_structure(edi::Structure& structure, const std:
         record.results_after = project_->fit_result.scan_results;
         undo_history_.emplace_back(std::move(record));
         syncUndo();
+    }
+    return refusal;
+}
+
+QString ProjectViewModel::apply_calc_method(edi::Structure& structure, const std::string& token) {
+    const PublicationScope publication(*this);
+    const QPointer<ProjectViewModel> self(this);
+    // The switch and the scale starts it gives are one Undo step (edi ADR-0109 §2), which puts back the structures, the
+    // links with their scales and the extracted intensities as they were.
+    edi::StructuresUndo before = edi::capture_structure_edit(*project_);
+    auto outcome = std::make_shared<edi::CalcMethodOutcome>();
+    const QString refusal = apply(edi::Edit::calc_method(*project_, structure, token, outcome), true);
+    if (!self || retired_) return refusal;
+    if (refusal.isEmpty()) {
+        undo_history_.emplace_back(std::move(before));
+        syncUndo();
+        for (const std::string& experiment : outcome->unscaled) {
+            emit message(tr("%1: no scale start could be worked out for the structure %2 after the switch to "
+                            "Rietveld, so its scale is kept")
+                             .arg(QString::fromStdString(experiment), QString::fromStdString(structure.name.value())));
+        }
     }
     return refusal;
 }

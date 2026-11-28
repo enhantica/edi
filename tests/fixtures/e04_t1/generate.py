@@ -368,6 +368,15 @@ def app_only_ids(registry):
     return identities
 
 
+def atom_count(file):
+    loops = tables(file)
+    fields = scalars(file)
+    method = fields.get('_structure.calc_method', fields.get('_edi_structure.calc_method'))
+    if method in {'le_bail', 'pawley'}:
+        return len(loops.get('atom_site', []))
+    return len(loops['atom_site'])
+
+
 def generate(  # noqa: PLR0912, PLR0914, PLR0915 - one input capture retains old witnesses
     warning_project=None,
     added_project=None,
@@ -394,7 +403,7 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915 - one input capture retains old
         structures = [
             {
                 'name': file.stem,
-                'atoms': len(tables(file)['atom_site']),
+                'atoms': atom_count(file),
                 'cellA': scalars(file)['_cell.length_a']['value'],
                 'displayCell': report_cell(file),
                 'spaceGroup': scalars(file)['_space_group.name_h_m'],

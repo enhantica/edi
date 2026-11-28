@@ -6681,7 +6681,7 @@ struct AssistantViewModel::State {
             auto* item=filter->parameterAt(row);
             // Free touches the shown fittable set; Fixed also clears free
             // flags whose current native eligibility has become blocked.
-            if(!item || (entry->free ? !item->isFittable() : (!item->isFittable() && !item->isFree())))continue;
+            if(!item || (entry->free ? !item->isFittable() : (!item->isFittable() && !item->isFree() && !item->partiallyFree())))continue;
             std::size_t matches=0;
             for(std::size_t at=range.first;at<range.second;++at) {
                 const auto& expected=run->parameter_entries[at];
@@ -12244,10 +12244,14 @@ struct AssistantViewModel::State {
             throw ActionRefusal("target_unavailable","experiment");
         if(experiment_phase(run->arguments)) {
             if(op=="phase_append") {
+                // Add linked structure's own offer; when every unlinked structure is refused, the first, which the
+                // control refuses with crysta's reason.
+                std::string refused;
+                const std::string next=next_link_target(*run->project->assistantProject(),*run->operation_member,refused);
                 for(const auto& structure:run->project->assistantProject()->structures) {
                     const auto& name=structure->name.value();
                     const std::string_view id=name.empty()?std::string_view("structure"):std::string_view(name);
-                    if(std::none_of(run->operation_member->linked_structures.begin(),run->operation_member->linked_structures.end(),[&](const auto& row){return (row->structure_id.value().empty()?std::string_view("structure"):std::string_view(row->structure_id.value()))==id;})) {
+                    if(next.empty()?std::none_of(run->operation_member->linked_structures.begin(),run->operation_member->linked_structures.end(),[&](const auto& row){return (row->structure_id.value().empty()?std::string_view("structure"):std::string_view(row->structure_id.value()))==id;}):id==next) {
                         if(id.size()>Limits::id_bytes || !edi::assistant::detail::utf8(id))throw ActionRefusal("unsupported_input","phase");
                         run->append_phase_structure=structure.get();break;
                     }

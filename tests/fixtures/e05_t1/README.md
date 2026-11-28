@@ -126,6 +126,16 @@ These values come from the committed count generator and its frozen external
 source, never a native parameter walk. All twenty unrelated CLI/count rows and
 full records remain intact.
 
+The LBCO HRPT Le Bail and PbSO4 lab Pawley records each come from one private-copy
+`generate.py --only` capture. These records pin CLI wiring and supply codec
+inputs. The corresponding published `expected.json` files supply the separate
+FullProf numerical references, which the registered CLI variant tests exercise.
+`append_extraction_model_counts.py` projects the frozen external selections
+onto the declared inputs. LBCO keeps its four atom sites and drops the removed
+orientation and absorption fields. PbSO4 keeps the lab profile and six cell
+slots and omits the atom sites. The count covers the starting model and its
+fixed fields. Intensities generated during the fit are outside that count.
+
 The stop-classification inputs in `stop_projects.py` separate a zero-gain
 column from a blocked improving step. The former retains
 the old zero-occupancy, free-ADP recipe and now expects convergence. The latter

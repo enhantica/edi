@@ -11,6 +11,8 @@ from pathlib import Path
 
 import pytest
 
+from tests.fixtures.c06_t8.capture_later_schema9 import remove_appended_cases
+
 ROOT = Path(__file__).resolve().parents[3]
 UNKNOWN = 'stopping_rule=none\nstopping_value=nan\nlast_shift_su=nan\n'
 
@@ -45,6 +47,15 @@ def _restore_capture(text):
     return text.replace('schema=9\n', 'schema=8\n', 1)
 
 
+def _restore_appended_cases(name, data, appended):
+    if name not in appended['sha256']:
+        return data
+    assert hashlib.sha256(data).hexdigest() == appended['sha256'][name], (
+        'The appended report epoch binds the complete current fixture document'
+    )
+    return remove_appended_cases(name, data, appended['ids'])
+
+
 def test_c06_t8_report_projection_preserves_all_captured_bytes():
     receipt = json.loads((ROOT / 'tests/fixtures/c06_t8/schema9-projection.json').read_text())
     assert receipt['authority'] == '01fd45799', 'Stop metadata must name its committed authority'
@@ -55,12 +66,12 @@ def test_c06_t8_report_projection_preserves_all_captured_bytes():
     paths.update(ROOT / f'tests/fixtures/e05_t1/cli.{suffix}' for suffix in ('json', 'hpp'))
     paths.update(ROOT / f'tests/fixtures/e05_t1/{name}.json' for name in ('stops', 'refusal'))
     later = json.loads((ROOT / 'tests/fixtures/c06_t8/later-schema9.json').read_text())
+    case = json.loads((ROOT / 'tests/fixtures/e05_t1/cli.json').read_text())
     for name, digest in later['native_records'].items():
         data = (ROOT / name).read_bytes()
         assert hashlib.sha256(data).hexdigest() == digest and data.startswith(b'schema=9\n'), (
             'A later native capture binds its own schema-nine epoch and exact captured bytes'
         )
-        case = json.loads((ROOT / 'tests/fixtures/e05_t1/cli.json').read_text())
         rows = [row for row in case['cases'] if row['id'] == Path(name).stem]
         assert (
             len(rows) == 1
@@ -71,7 +82,7 @@ def test_c06_t8_report_projection_preserves_all_captured_bytes():
         p.relative_to(ROOT).as_posix() for p in paths
     }, 'The version projection must cover every current native and CLI capture exactly'
     for name, hashes in receipt['records'].items():
-        actual = (ROOT / name).read_bytes()
+        actual = _restore_appended_cases(name, (ROOT / name).read_bytes(), later['appended_cases'])
         if name == later['warning_spelling']['file']:
             actual = _restore_warning_spelling(name, actual, later['warning_spelling'])
         if name in later['files']:

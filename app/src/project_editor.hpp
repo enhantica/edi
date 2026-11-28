@@ -8,7 +8,9 @@
 #include <functional>
 #include <memory>
 #include <string>
+#include <utility>
 #include <variant>
+#include <vector>
 
 #include "edi/background_estimate.hpp"
 #include "edi/edit.hpp"
@@ -60,6 +62,13 @@ class ProjectEditor {
     }
     virtual QString assign_parameter_free(edi::Parameter& parameter, bool free) {
         return apply(edi::Edit::assign(parameter.free, free), false);
+    }
+    // Every flag of a group of parameters set or cleared at once (a Pawley structure's intensities, edi ADR-0109 §5).
+    virtual QString assign_group_free(const std::vector<edi::Parameter*>& parameters, bool free) {
+        std::vector<std::pair<edi::Parameter*, bool>> flags;
+        flags.reserve(parameters.size());
+        for (edi::Parameter* parameter : parameters) flags.emplace_back(parameter, free);
+        return apply(edi::Edit::free_flags(std::move(flags)), false);
     }
     // An edit of the declared relations (edi ADR-0024): applied as `apply` does, and recorded, so the
     // app bar's Undo restores the rows and every parameter state it changed.
@@ -116,6 +125,11 @@ class ProjectEditor {
                                           bool structural) {
         const QString refusal = estimated_background_refusal(experiment);
         return refusal.isEmpty() ? apply(change, structural) : refusal;
+    }
+    // A structure's calculation method (edi::Edit::calc_method): applied as `apply` does and recorded with the scale
+    // starts a switch to Rietveld gives, so one Undo puts back the method, the scales and the extracted intensities.
+    virtual QString apply_calc_method(edi::Structure& /*structure*/, const std::string& /*token*/) {
+        return QStringLiteral("The calculation method cannot be changed here");
     }
     // A structure's or an experiment's name, which every name of its parameters follows: applied as `apply` does, and
     // recorded, so Undo names it back the same way.

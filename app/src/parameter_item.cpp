@@ -6,6 +6,8 @@
 #include <cmath>
 #include <optional>
 #include <unordered_map>
+#include <utility>
+#include <vector>
 
 #include <QRegularExpression>
 #include <QStringList>
@@ -78,13 +80,14 @@ ParameterItem::ParameterItem(const edi::DescriptorEntry& entry, ProjectEditor& e
     full_name_ = block_name_ + QLatin1Char('.') + category_ + (row_label_.isEmpty() ? QString() : QLatin1Char('.') + row_label_) + QLatin1Char('.') + name_;
 }
 
-void ParameterItem::setFittability(bool fittable, const QString& reason, int group) {
+void ParameterItem::setFittability(bool fittable, const QString& reason, int group, bool method_idle) {
     if (fit_group_ != group) {
         fit_group_ = group;
         emit fitGroupChanged();
     }
-    if (fittable_ != fittable) {
+    if (fittable_ != fittable || method_idle_ != method_idle) {
         fittable_ = fittable;
+        method_idle_ = method_idle;
         emit fittableChanged();
     }
     if (fit_reason_ != reason) {
@@ -122,6 +125,15 @@ void ParameterItem::setLabel(const QString& name, const QString& units) {
     if (display_units_ != units) {
         display_units_ = units;
         emit displayUnitsChanged();
+    }
+}
+
+void ParameterItem::setGroup(std::vector<edi::Parameter*> group) {
+    const bool resized = group.size() != group_.size();
+    group_ = std::move(group);
+    if (resized) {
+        setLabel(tr("Pawley intensities (%1)").arg(static_cast<int>(group_.size())), QString());
+        emit groupSizeChanged();
     }
 }
 
@@ -342,6 +354,10 @@ void ParameterItem::setFree(bool free) {
         setLastError(refusal);
         return;
     }
+    if (!group_.empty()) {
+        setLastError(editor_.assign_group_free(group_, free));
+        return;
+    }
     edi::Parameter* parameter = parameter_;
     setLastError(editor_.assign_parameter_free(*parameter, free));
 }
@@ -358,9 +374,20 @@ int ParameterItem::publish(bool formatted) {
         uncertainty_ = parameter_->uncertainty;
         changed |= UncertaintyField;
     }
-    if (parameter_->free != free_) {
-        free_ = parameter_->free;
+    // A group is free when every parameter it stands for is.
+    bool all_free = parameter_->free.get();
+    bool any_free = all_free;
+    for (const edi::Parameter* member : group_) {
+        all_free = all_free && member->free.get();
+        any_free = any_free || member->free.get();
+    }
+    if (all_free != free_) {
+        free_ = all_free;
         changed |= FreeField;
+    }
+    if ((any_free && !all_free) != partially_free_) {
+        partially_free_ = any_free && !all_free;
+        emit partiallyFreeChanged();
     }
     if ((changed & ValueField) != 0) {
         emit valueChanged();

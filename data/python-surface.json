@@ -944,6 +944,15 @@
      "reason": "C",
      "verdict": "public"
     },
+    "extracted_intensities": {
+     "need": {
+      "by": "deviation",
+      "ref": "D102",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
     "instrument": {
      "need": {
       "by": "counterpart",
@@ -2432,6 +2441,15 @@
      "reason": "C",
      "verdict": "public"
     },
+    "extracted_intensities": {
+     "need": {
+      "by": "deviation",
+      "ref": "D102",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
     "linked_structure": {
      "need": {
       "by": "deviation",
@@ -2766,6 +2784,62 @@
      "need": {
       "by": "counterpart",
       "ref": "CollectionBase.values",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    }
+   },
+   "ExtractedIntensity": {
+    "f_squared": {
+     "need": {
+      "by": "deviation",
+      "ref": "D102",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "f_squared_su": {
+     "need": {
+      "by": "deviation",
+      "ref": "D102",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "index_h": {
+     "need": {
+      "by": "deviation",
+      "ref": "D102",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "index_k": {
+     "need": {
+      "by": "deviation",
+      "ref": "D102",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "index_l": {
+     "need": {
+      "by": "deviation",
+      "ref": "D102",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "structure_id": {
+     "need": {
+      "by": "deviation",
+      "ref": "D102",
       "verdict": "keep"
      },
      "reason": "C",
@@ -4038,6 +4112,15 @@
      "need": {
       "by": "counterpart",
       "ref": "ScExperimentBase.extinction",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "extracted_intensities": {
+     "need": {
+      "by": "deviation",
+      "ref": "D102",
       "verdict": "keep"
      },
      "reason": "C",
@@ -5488,6 +5571,15 @@
      "reason": "C",
      "verdict": "public"
     },
+    "extracted_intensities": {
+     "need": {
+      "by": "deviation",
+      "ref": "D102",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
     "linked_structure": {
      "need": {
       "by": "deviation",
@@ -5830,6 +5922,15 @@
      "need": {
       "by": "deviation",
       "ref": "D72",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "calc_method": {
+     "need": {
+      "by": "deviation",
+      "ref": "D102",
       "verdict": "keep"
      },
      "reason": "C",
@@ -7149,6 +7250,15 @@
     "reason": "C",
     "verdict": "public"
    },
+   "ExtractedIntensity": {
+    "need": {
+     "by": "deviation",
+     "ref": "D102",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
    "FitParameterCorrelationItem": {
     "need": {
      "by": "counterpart",
@@ -8054,6 +8164,7 @@
     "excluded_regions",
     "experiment_type",
     "extinction",
+    "extracted_intensities",
     "instrument",
     "linked_structure",
     "linked_structures",
@@ -8320,6 +8431,7 @@
    "members": [
     "dataset_weight",
     "experiment_type",
+    "extracted_intensities",
     "linked_structure",
     "linked_structures",
     "name",
@@ -8372,6 +8484,17 @@
     "remove",
     "show_names",
     "values"
+   ]
+  },
+  "ExtractedIntensity": {
+   "kind": "class",
+   "members": [
+    "f_squared",
+    "f_squared_su",
+    "index_h",
+    "index_k",
+    "index_l",
+    "structure_id"
    ]
   },
   "FitParameterCorrelationItem": {
@@ -8610,6 +8733,7 @@
     "excluded_regions",
     "experiment_type",
     "extinction",
+    "extracted_intensities",
     "linked_structure",
     "linked_structures",
     "name",
@@ -8858,6 +8982,7 @@
    "members": [
     "dataset_weight",
     "experiment_type",
+    "extracted_intensities",
     "linked_structure",
     "linked_structures",
     "name",
@@ -8950,6 +9075,7 @@
     "atom_site_moment",
     "atom_sites",
     "atom_sites_cartn_transform",
+    "calc_method",
     "cell",
     "expanded_atom_site_moment",
     "expanded_atom_sites",

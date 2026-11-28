@@ -17,6 +17,18 @@
     "after_sha256": "c82453d654aa037901ab169fb460ae3d06f865af259ddfc3362e0dbae8ecfe43"
   },
   "native_records": {
-    "tests/fixtures/e05_t1/sc-neut-cwl_tb2ti2o7-heidi_exclusions.record": "daf70f19a9d7c8a9c518b188ddaea6fc0e103a5f753167c0454ef827c5eedb9a"
+    "tests/fixtures/e05_t1/sc-neut-cwl_tb2ti2o7-heidi_exclusions.record": "daf70f19a9d7c8a9c518b188ddaea6fc0e103a5f753167c0454ef827c5eedb9a",
+    "tests/fixtures/e05_t1/pd-neut-cwl_lbco-hrpt_le-bail.record": "f8bb2af187d0497ab3ec15e24f87814d1e78bebca43b7389c0b64f683f60d6f2",
+    "tests/fixtures/e05_t1/pd-xray-cwl_pbso4-lab_pawley.record": "3ff6fcac0696d04abc1cee149f175157f827feb836b3a6e3eeed3eda49f52f08"
+  },
+  "appended_cases": {
+    "ids": [
+      "pd-neut-cwl_lbco-hrpt_le-bail",
+      "pd-xray-cwl_pbso4-lab_pawley"
+    ],
+    "sha256": {
+      "tests/fixtures/e05_t1/cli.json": "11d046203147843acb29b90e9b04f74776a3313f67624dfd0582302fc48092ca",
+      "tests/fixtures/e05_t1/cli.hpp": "cf600766c158a4393a6e77faf103cfc883cfd91dcf011d2a2267ec4d8abb713c"
+    }
   }
 }

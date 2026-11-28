@@ -346,6 +346,12 @@ extinction.type=becker-coppens-type-2	Isotropic Becker-Coppens type II
 extinction.type=larson-anisotropic	Anisotropic Larson		
 extinction.type=larson-isotropic	Isotropic Larson		
 extinction.type=none	None		
+extracted_intensity	Extracted intensities		list
+extracted_intensity.f_squared	F²		
+extracted_intensity.index_h	h		
+extracted_intensity.index_k	k		
+extracted_intensity.index_l	l		
+extracted_intensity.structure_id	Structure		
 feedback.copyReport	Copy report		copy
 feedback.files.add	Attach files		paperclip
 feedback.files.workReport	Attach AI work report		file
@@ -583,6 +589,7 @@ pd_calc.component_intensities_magnetic	Structure magnetic calc
 pd_calc.component_intensities_net	Structure calc		
 pd_calc_overall	Structure curves		chart-area
 pd_calc_overall.component_presentation_order	Structure order		
+pd_calc_overall.method	Method		
 peak	Peak profile		shapes
 peak.asym_beba_a0	A₀		balance-scale-left
 peak.asym_beba_a1	A₁		balance-scale-left
@@ -671,6 +678,8 @@ refln.f_calc	F calc
 refln.f_m_perp_squared_calc	|F_M⊥|² calc		
 refln.f_meas	F meas		
 refln.f_squared_calc	F² calc		
+refln.f_squared_meas	F² extracted		
+refln.f_squared_meas_su	s.u.		
 refln.f_squared_total_calc	F² total calc		
 refln.index_h	h		
 refln.index_k	k		
@@ -789,11 +798,16 @@ space_group_symop_magn_centering.xyz	Operation
 space_group_symop_magn_operation	Magnetic operators		sync-alt
 space_group_symop_magn_operation.id	ID		
 space_group_symop_magn_operation.xyz	Operation		
+structure	Calculation		calculator
 structure.appearance.axes	Axes		
 structure.appearance.bonds	Bonds		
 structure.appearance.cell	Cell		
 structure.appearance.labels	Labels		
 structure.appearance.polyhedra	Polyhedra		
+structure.calc_method	Calculation	Calc.	
+structure.calc_method=le_bail	Le Bail		
+structure.calc_method=pawley	Pawley		
+structure.calc_method=rietveld	Rietveld		
 structure.view.unavailable	The structure view needs a 3D graphics API, which this display does not provide		
 structure_view	Appearance		palette
 structure_view.adp_probability	Probability		arrows-alt

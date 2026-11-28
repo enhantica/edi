@@ -4280,7 +4280,8 @@ QJSValue ApplicationInfo::typedInputRefusal(const QString& text, const QString& 
     return QJSValue(QString{});
 }
 namespace {
-// The free header menu's shown rows, as its filter model has them now, that can be fitted, are free, or either.
+// The free header menu's shown rows, as its filter model has them now, that can be fitted, are free, or either. A
+// partly free Pawley row counts as free: Fixed clears it.
 enum class MenuRows { Fittable, Free, Acted };
 QJSValue parameterMenuRows(const PanelUsageFrame& f, MenuRows kind) {
     if (!panelUsageReady(f)) return {};
@@ -4293,9 +4294,13 @@ QJSValue parameterMenuRows(const PanelUsageFrame& f, MenuRows kind) {
         const auto current = assistantContextField(f, "menu", "filter");
         const auto parameter = panelUsageMemberCall(f, current, "parameterAt", {QJSValue(index)});
         if (parameter.isNull()) continue;
-        const bool wanted = kind == MenuRows::Acted
-            ? panelUsageTruth(panelUsageRead(f, parameter, "fittable")) || panelUsageTruth(panelUsageRead(f, parameter, "free"))
-            : panelUsageTruth(panelUsageRead(f, parameter, kind == MenuRows::Fittable ? "fittable" : "free"));
+        const auto flagged = [&] {
+            return panelUsageTruth(panelUsageRead(f, parameter, "free")) ||
+                   panelUsageTruth(panelUsageRead(f, parameter, "partiallyFree"));
+        };
+        const bool wanted = kind == MenuRows::Acted ? panelUsageTruth(panelUsageRead(f, parameter, "fittable")) || flagged()
+                            : kind == MenuRows::Fittable ? panelUsageTruth(panelUsageRead(f, parameter, "fittable"))
+                                                         : flagged();
         if (wanted) panelUsageMemberCall(f, rows, "push", {parameter});
     }
     return rows;
@@ -4305,12 +4310,23 @@ QJSValue ApplicationInfo::parameterFreeRows(bool fittable) const {
     return parameterMenuRows(panelUsageEngine(this), fittable ? MenuRows::Fittable : MenuRows::Free);
 }
 QJSValue ApplicationInfo::parameterActedRows() const { return parameterMenuRows(panelUsageEngine(this), MenuRows::Acted); }
+// The shown rows with a free flag, a partly free Pawley row included.
 QJSValue ApplicationInfo::parameterFreeCount() const {
+    const auto f = panelUsageEngine(this);
+    const auto shown = panelUsageContextRead(f, "shown");
+    const auto rows = panelUsageMemberCall(f, shown, "filter", {panelUsageClosure(f, 399, {}, 1)});
+    return panelUsageRead(f, rows, "length");
+}
+// The shown rows not wholly free, a partly free Pawley row included, so such a row makes the menu mixed.
+QJSValue ApplicationInfo::parameterFixedCount() const {
     const auto f = panelUsageEngine(this);
     const auto shown = panelUsageContextRead(f, "shown");
     const auto callback = panelUsageCallback(f, 30);
     const auto rows = panelUsageMemberCall(f, shown, "filter", {callback});
-    return panelUsageRead(f, rows, "length");
+    const auto all = panelUsageNumber(f, panelUsageRead(f, shown, "length"));
+    const auto wholly = panelUsageNumber(f, panelUsageRead(f, rows, "length"));
+    if (!all || !wholly) return {};
+    return QJSValue(*all - *wholly);
 }
 QJSValue ApplicationInfo::parameterFittableCount() const {
     const auto f = panelUsageEngine(this);
@@ -11820,6 +11836,10 @@ QJSValue lifecycleCallback(const PanelUsageFrame& f, uint op,
         return panelUsageGlobalCall(f, "afterChanges", {saved(0), saved(1)});
     }
     if (op == 394) return panelUsageRead(f, a(0), "fittable");
+    if (op == 399) {
+        return QJSValue(panelUsageTruth(panelUsageRead(f, a(0), "free")) ||
+                        panelUsageTruth(panelUsageRead(f, a(0), "partiallyFree")));
+    }
     if (op == 395) {
         const auto table = saved(0), life = saved(1);
         if (!tableDeferredCurrent(f, table, life)) return {};

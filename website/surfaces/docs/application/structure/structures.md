@@ -19,6 +19,8 @@ On **Structure → Main**, expand **Structures** and select a row to make it cur
 
 The **Model** column says how each structure is described: **Atom-based**, by its atom sites, for every structure you create or load today. A mode-based structure, described by symmetry modes, will come from a mode-based CIF or a parent structure; it is shown, never chosen.
 
+The **Calculation** column sets where each structure's reflection intensities come from: **Rietveld**, the default, calculates them from the atoms; **Le Bail** and **Pawley** take them from the measured pattern, so a fit needs only the cell, peak profile, background and zero. Under Le Bail or Pawley the **Atom sites**, **Atomic displacement** and **Magnetic moments** groups are hidden. Their values stay in the structure and are back when you switch to Rietveld, which also gives the phase scale a new start. The column is disabled, with the reason in its tooltip, for a structure linked to a single-crystal or total-scattering experiment: only Rietveld applies there. **Undo** reverses a switch. See [calculation method](../../user-guide/analysis-workflow/structure.md#calculation-method).
+
 Edit the name in the list or use the row's remove control. Removing a structure also removes its experiment links; **Undo** restores the change.
 
 <!-- gui-guide:load-create-or-duplicate -->

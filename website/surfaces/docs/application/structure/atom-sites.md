@@ -13,7 +13,7 @@ template: gui.html
 
 On **Structure → Main**, expand **Atom sites**. Select a row and edit its label, atom type, fractional coordinates and occupancy. Check its Wyckoff position and any coordinates controlled by symmetry.
 
-Use the add or duplicate controls for another site, and the remove control to delete one. Each row represents an independent crystallographic site, rather than every symmetry-generated atom shown in the picture.
+Use the add or duplicate controls for another site, and the remove control to delete one. Each row represents an independent crystallographic site, rather than every symmetry-generated atom shown in the picture. Under Le Bail or Pawley, set in the **Calculation** column of [Structures](structures.md), this group is hidden; its values are kept and come back with Rietveld.
 
 Choose the displacement representation for the site, then edit its values in [Atomic displacement](atomic-displacement.md). See [coordinates and symmetry](../../physics/crystallography.md) and [occupancy and scattering](../../physics/diffraction.md#eq-nuclear-structure-factor).
 

@@ -438,6 +438,7 @@ class ApplicationInfo : public QObject {
     Q_INVOKABLE QJSValue parameterFreeRows(bool fittable) const;
     Q_INVOKABLE QJSValue parameterActedRows() const;
     Q_INVOKABLE QJSValue parameterFreeCount() const;
+    Q_INVOKABLE QJSValue parameterFixedCount() const;
     Q_INVOKABLE QJSValue parameterFittableCount() const;
     Q_INVOKABLE void applyParametersFree(const QJSValue& free) const;
     Q_INVOKABLE void parameterMenuMembershipChanged() const;

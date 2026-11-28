@@ -37,9 +37,10 @@ class ScanSession : public QObject {
         bool invalid = false;      // a provenance file was there but did not read as one (`error` says why)
         QString error{};
     };
-    // The result files a fresh run replaces, as they were (absent: none): a series' bank rows among them.
+    // The result files a fresh run replaces, as they were (absent: none): a series' bank rows and a Le Bail or Pawley
+    // scan's intensities among them.
     struct Files {
-        std::optional<std::string> results, provenance, run, skipped, experiments;
+        std::optional<std::string> results, provenance, run, skipped, experiments, intensities;
         std::string kept;  // where the taken files wait on disk until they are put back
     };
 

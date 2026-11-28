@@ -7,6 +7,12 @@ sites:
   # exact gate file and a whole canonical example tree; never arbitrary scratch models.
   - file: tests/system/py/test_case_regression_pins.py
     catalogue: true
+  - file: tests/system/py/test_powder_calculation_cli.py
+    catalogue: true
+    executing_projects: [pd-neut-cwl_lbco-hrpt_le-bail, pd-xray-cwl_pbso4-lab_pawley]
+    why: The standalone CLI fits disposable byte-identical copies of two declared powder examples.
+    assertion_feed: The persisted structure method and uniquely keyed intensities, with Pawley uncertainties.
+    audit: The Le Bail and Pawley examples run through the ordinary fit command.
   - file: tests/system/py/test_cosio_heidi_case.py
     catalogue: true
     why: Unit 9 fits a disposable byte-identical canonical three-temperature example.

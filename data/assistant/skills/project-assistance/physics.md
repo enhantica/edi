@@ -970,15 +970,22 @@ Every dataset starts from the same template values, so the starting model does n
 
 ## Intensity extraction {#intensity-extraction}
 
-**Proposed.** These methods are not available fitting modes in this reference snapshot. See [Pattern fitting](../user-guide/features.md#pattern-fitting) for current alternatives.
+Le Bail and Pawley take each reflection's intensity from the measured pattern instead of calculating it from the atoms. For such a structure the product $s_p\,|F_h|^2$ in the [calculated pattern](#eq-rietveld-pattern) holds one extracted value per reflection, so the atoms, displacements, moments and the phase scale do not enter; the cell, profile, background and zero still do. The method is chosen per structure: see [calculation method](../user-guide/analysis-workflow/structure.md#calculation-method). One value is kept per set of Laue-equivalent reflections, in the units of $|F_h|^2$, so it compares directly with a Rietveld value. R Bragg and weight fractions are not defined for an extracted structure.
 
 ### Le Bail intensity extraction {#le-bail-intensity-extraction}
 
-Reflection intensities are updated by iterative decomposition of the measured powder pattern, alongside profile fitting.
+Between fit steps every intensity takes its share of the measured net counts:
+
+$$
+|F_h|^2 \leftarrow |F_h|^2\,\frac{\sum_i p_{hi}\,r_i}{\sum_i p_{hi}},\qquad
+r_i=\frac{y_i^{\rm obs}-b_i}{y_i^{\rm calc}-b_i}.
+$$
+
+$p_{hi}$ is reflection $h$'s calculated contribution at point $i$, $b_i$ the background and $y_i^{\rm calc}$ the calculation of all structures together. A point below the background counts with its negative net, as in FullProf: clamping it at zero inflates weak reflections. The cell, profile, background and zero are fitted by least squares with the intensities held. Exactly overlapping reflections keep the ratio they start with. Le Bail intensities have no standard uncertainty and are not counted as fitted parameters.
 
 ### Pawley intensity extraction {#pawley-intensity-extraction}
 
-Reflection intensities are adjustable variables in a least-squares fit of the powder pattern.
+Every intensity is a linear parameter of the least-squares fit, fitted together with the cell, profile, background and zero. Reflections that coincide for every allowed cell share one parameter. Reflections that only nearly overlap are pulled towards equal shares, a pull that matters only where the data cannot separate them. No intensity goes below zero. The fit gives a standard uncertainty for each intensity above zero; one held at zero has none.
 
 The distinction is described in the [IUCr intensity-extraction overview](https://onlinelibrary.wiley.com/iucr/itc/Ha/ch4o2v0001/sec4o2o2/).
 
@@ -989,3 +996,5 @@ Fitting improves agreement under the model and its uncertainties. Convergence do
 ## References
 
 1. McCusker, L. B., Von Dreele, R. B., Cox, D. E., Louër, D. & Scardi, P. (1999). *Rietveld refinement guidelines*. **Journal of Applied Crystallography**, 32, 36–50.
+2. Le Bail, A., Duroy, H. & Fourquet, J. L. (1988). *Ab-initio structure determination of LiSbWO6 by X-ray powder diffraction*. **Materials Research Bulletin**, 23, 447–452.
+3. Pawley, G. S. (1981). *Unit-cell refinement from powder diffraction scans*. **Journal of Applied Crystallography**, 14, 357–361.

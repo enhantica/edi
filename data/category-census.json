@@ -536,6 +536,78 @@
       "row": "ExcludedReflection"
     },
     {
+      "name": "_extracted_intensity",
+      "form": "loop",
+      "columns": [
+        {
+          "member": "ExtractedIntensity::id",
+          "type": "ItemKey",
+          "items": [],
+          "storage": [
+            "crysta::Column<std::string>"
+          ]
+        },
+        {
+          "member": "ExtractedIntensity::structure_id",
+          "type": "detail::WrittenText",
+          "items": [
+            "structure_id"
+          ],
+          "storage": [
+            "crysta::Column<std::string>"
+          ]
+        },
+        {
+          "member": "ExtractedIntensity::index_h",
+          "type": "detail::Written<int>",
+          "items": [
+            "index_h"
+          ],
+          "storage": [
+            "crysta::Column<int>"
+          ]
+        },
+        {
+          "member": "ExtractedIntensity::index_k",
+          "type": "detail::Written<int>",
+          "items": [
+            "index_k"
+          ],
+          "storage": [
+            "crysta::Column<int>"
+          ]
+        },
+        {
+          "member": "ExtractedIntensity::index_l",
+          "type": "detail::Written<int>",
+          "items": [
+            "index_l"
+          ],
+          "storage": [
+            "crysta::Column<int>"
+          ]
+        },
+        {
+          "member": "ExtractedIntensity::f_squared",
+          "type": "Parameter",
+          "items": [
+            "f_squared"
+          ],
+          "storage": [
+            "value: crysta::Column<double>",
+            "uncertainty: crysta::Column<std::optional<double>>",
+            "free: crysta::Column<std::uint8_t>",
+            "start_value: crysta::Column<std::optional<double>>",
+            "start_uncertainty: crysta::Column<std::optional<double>>"
+          ]
+        }
+      ],
+      "row": "ExtractedIntensity",
+      "legacy": [
+        "_edi_extracted_intensity"
+      ]
+    },
+    {
       "name": "_background",
       "form": "loop",
       "columns": [
@@ -1136,6 +1208,23 @@
         }
       ],
       "owner": "Geom"
+    },
+    {
+      "name": "_structure",
+      "form": "one row",
+      "columns": [
+        {
+          "member": "Structure::calc_method",
+          "type": "detail::WrittenText",
+          "items": [
+            "calc_method"
+          ]
+        }
+      ],
+      "owner": "Structure",
+      "legacy": [
+        "_edi_structure"
+      ]
     },
     {
       "name": "_experiment_type",
@@ -2997,6 +3086,20 @@
           ]
         },
         {
+          "member": "PowderReflnDataBase::f_squared_meas",
+          "type": "ComputedColumn<double>",
+          "items": [
+            "f_squared_meas"
+          ]
+        },
+        {
+          "member": "PowderReflnDataBase::f_squared_meas_su",
+          "type": "ComputedColumn<double>",
+          "items": [
+            "f_squared_meas_su"
+          ]
+        },
+        {
           "member": "PowderReflnDataBase::position",
           "type": "ComputedColumn<double>",
           "items": [
@@ -3344,6 +3447,11 @@
     },
     {
       "member": "Parameter::fit_idle",
+      "type": "bool",
+      "not_storage": "a parameter: the cells of one parameter column bundle"
+    },
+    {
+      "member": "Parameter::fit_method_idle",
       "type": "bool",
       "not_storage": "a parameter: the cells of one parameter column bundle"
     },
@@ -4060,6 +4168,16 @@
       "category": "_structure_view"
     },
     {
+      "member": "Structure::calc_method",
+      "type": "detail::WrittenText",
+      "category": "_structure"
+    },
+    {
+      "member": "Structure::table_row",
+      "type": "detail::CategoryRow",
+      "part": "the row token of the object's non-loop categories"
+    },
+    {
       "member": "Structure::epoch",
       "type": "detail::Epoch",
       "part": "the row's identity as a calculation input"
@@ -4179,6 +4297,46 @@
     },
     {
       "member": "ExcludedReflection::epoch",
+      "type": "detail::Epoch",
+      "part": "the row's identity as a calculation input"
+    },
+    {
+      "member": "ExtractedIntensity::id",
+      "type": "ItemKey",
+      "category": "_extracted_intensity"
+    },
+    {
+      "member": "ExtractedIntensity::structure_id",
+      "type": "detail::WrittenText",
+      "category": "_extracted_intensity"
+    },
+    {
+      "member": "ExtractedIntensity::index_h",
+      "type": "detail::Written<int>",
+      "category": "_extracted_intensity"
+    },
+    {
+      "member": "ExtractedIntensity::index_k",
+      "type": "detail::Written<int>",
+      "category": "_extracted_intensity"
+    },
+    {
+      "member": "ExtractedIntensity::index_l",
+      "type": "detail::Written<int>",
+      "category": "_extracted_intensity"
+    },
+    {
+      "member": "ExtractedIntensity::f_squared",
+      "type": "Parameter",
+      "category": "_extracted_intensity"
+    },
+    {
+      "member": "ExtractedIntensity::row",
+      "type": "detail::RowLink",
+      "part": "the row's link to its collection"
+    },
+    {
+      "member": "ExtractedIntensity::epoch",
       "type": "detail::Epoch",
       "part": "the row's identity as a calculation input"
     },
@@ -5003,6 +5161,16 @@
       "category": "_refln"
     },
     {
+      "member": "PowderReflnDataBase::f_squared_meas",
+      "type": "ComputedColumn<double>",
+      "category": "_refln"
+    },
+    {
+      "member": "PowderReflnDataBase::f_squared_meas_su",
+      "type": "ComputedColumn<double>",
+      "category": "_refln"
+    },
+    {
       "member": "PowderReflnDataBase::position",
       "type": "ComputedColumn<double>",
       "category": "_refln"
@@ -5323,6 +5491,13 @@
       "type": "ItemVec<ExcludedReflection>",
       "holds": [
         "_excluded_reflection"
+      ]
+    },
+    {
+      "member": "ExperimentBase::extracted_intensities",
+      "type": "ItemVec<ExtractedIntensity>",
+      "holds": [
+        "_extracted_intensity"
       ]
     },
     {
@@ -5752,6 +5927,11 @@
     {
       "member": "FitResultBase::engine_uncertainty",
       "type": "std::map<std::string, double>",
+      "not_storage": "a fit report"
+    },
+    {
+      "member": "FitResultBase::intensity_columns",
+      "type": "std::size_t",
       "not_storage": "a fit report"
     },
     {
@@ -6421,8 +6601,14 @@
     "_edi": [
       "_edi"
     ],
+    "_edi_extracted_intensity": [
+      "_extracted_intensity"
+    ],
     "_edi_magnetic_form_factor": [
       "_magnetic_form_factor"
+    ],
+    "_edi_structure": [
+      "_structure"
     ],
     "_evolution_chart": [
       "_evolution_chart"
@@ -6444,6 +6630,9 @@
     ],
     "_extinction": [
       "_extinction"
+    ],
+    "_extracted_intensity": [
+      "_extracted_intensity"
     ],
     "_fit_parameter": [
       "_fit_parameter"
@@ -6564,6 +6753,9 @@
     ],
     "_space_group_symop_magn_operation": [
       "_space_group_symop_magn_operation"
+    ],
+    "_structure": [
+      "_structure"
     ],
     "_structure_view": [
       "_structure_view"

@@ -173,7 +173,9 @@ ExcludedRegionListModel::ExcludedRegionListModel(edi::ExperimentBase& experiment
 }
 
 ReflectionListModel::ReflectionListModel(const edi::ExperimentBase& experiment, QObject* parent)
-    : RowTableModel({"hkl", "dSpacing", "position", "fSquaredCalc", "fMPerpSquaredCalc", "fSquaredTotalCalc"}, parent),
+    : RowTableModel({"hkl", "dSpacing", "position", "fSquaredCalc", "fMPerpSquaredCalc", "fSquaredTotalCalc",
+                     "fSquaredMeas", "fSquaredMeasSu"},
+                    parent),
       experiment_(experiment) {
     sync();
 }
@@ -187,11 +189,15 @@ void ReflectionListModel::sync() {
         const auto& m_perp = refln.f_m_perp_squared_calc;
         const auto& total = refln.f_squared_total_calc;
         magnetic = m_perp.size() == refln.size() && total.size() == refln.size() && refln.size() > 0;
+        // crysta writes these two only when some row has a value (edi ADR-0109).
+        const bool meas = refln.f_squared_meas.size() == refln.size();
+        const bool meas_su = refln.f_squared_meas_su.size() == refln.size();
         for (std::size_t i = 0; i < refln.size(); ++i) {
             const QString hkl = QStringLiteral("%1 %2 %3").arg(refln.index_h[i]).arg(refln.index_k[i]).arg(refln.index_l[i]);
             rows.append({reinterpret_cast<const void*>(i + 1),
                          {hkl, refln.d_spacing[i], refln.position[i], refln.f_squared_calc[i],
-                          magnetic ? m_perp[i] : qQNaN(), magnetic ? total[i] : qQNaN()}});
+                          magnetic ? m_perp[i] : qQNaN(), magnetic ? total[i] : qQNaN(),
+                          meas ? refln.f_squared_meas[i] : qQNaN(), meas_su ? refln.f_squared_meas_su[i] : qQNaN()}});
         }
     } else if (const auto& loop = experiment_.carried_reflections; loop.has_value()) {
         const auto column = [&loop](const char* name) {
@@ -200,7 +206,8 @@ void ReflectionListModel::sync() {
         };
         const int h = column("index_h"), k = column("index_k"), l = column("index_l"), d = column("d_spacing"),
                   f2 = column("f_squared_calc"), m2 = column("f_m_perp_squared_calc"),
-                  total = column("f_squared_total_calc");
+                  total = column("f_squared_total_calc"), meas = column("f_squared_meas"),
+                  meas_su = column("f_squared_meas_su");
         magnetic = m2 >= 0;
         const int position = column("two_theta") >= 0 ? column("two_theta") : column("time_of_flight");
         for (std::size_t i = 0; i < loop->rows.size(); ++i) {
@@ -215,13 +222,34 @@ void ReflectionListModel::sync() {
             };
             rows.append({reinterpret_cast<const void*>(i + 1),
                          {QStringList{text(h), text(k), text(l)}.join(QLatin1Char(' ')), number(d), number(position),
-                          number(f2), number(m2), number(total)}});
+                          number(f2), number(m2), number(total), number(meas), number(meas_su)}});
         }
     }
     setTableRows(rows);
     if (magnetic != magnetic_) {
         magnetic_ = magnetic;
         emit magneticChanged();
+    }
+    // Which columns hold a value in some row (a `.` reads as NaN).
+    const auto any = [&rows](int role) {
+        return std::any_of(rows.begin(), rows.end(), [role](const Row& row) {
+            return !std::isnan(row.values.at(role).toDouble());
+        });
+    };
+    const bool extracted = any(6);
+    const bool extracted_su = any(7);
+    const bool calculated = any(3);
+    if (extracted != extracted_) {
+        extracted_ = extracted;
+        emit extractedChanged();
+    }
+    if (extracted_su != extracted_su_) {
+        extracted_su_ = extracted_su;
+        emit extractedSuChanged();
+    }
+    if (calculated != calculated_) {
+        calculated_ = calculated;
+        emit calculatedChanged();
     }
 }
 
@@ -614,10 +642,60 @@ QVariantMap weight_fraction_cell(const edi::LinkedStructure& link) {
 
 }  // namespace
 
+std::string link_refusal(const edi::Project& project, const edi::ExperimentBase& experiment,
+                         const std::string& structure_id) {
+    const std::string key = edi::datablock_key(structure_id, "structure");
+    const auto named = [&key](const auto& structure) { return edi::datablock_key(structure->name, "structure") == key; };
+    const auto found = std::find_if(project.structures.begin(), project.structures.end(), named);
+    if (found == project.structures.end()) return {};
+    const auto of_structure = [&key](const auto& link) {
+        return edi::datablock_key(link->structure_id, "structure") == key;
+    };
+    const auto& links = experiment.linked_structures;
+    const bool linked = std::any_of(links.begin(), links.end(), of_structure);
+    const bool enabled = std::any_of(links.begin(), links.end(),
+                                     [&](const auto& link) { return of_structure(link) && link->enabled.get(); });
+    const auto at = std::find_if(project.experiments.begin(), project.experiments.end(),
+                                 [&experiment](const auto& held) { return held.get() == &experiment; });
+    if (!linked || enabled || at == project.experiments.end()) {
+        return edi::calc_method_link_refusal(project, experiment, **found);
+    }
+    try {
+        if (!edi::extracts_intensities(**found)) return {};
+    } catch (const std::exception& error) {
+        return error.what();
+    }
+    // crysta reads enabled links only, so a disabled one is asked of a copy where it is enabled.
+    // The copy is changed through its cloned items, which clang-tidy cannot see.
+    // NOLINTNEXTLINE(performance-unnecessary-copy-initialization)
+    edi::Project copy(project);
+    auto& held = *copy.experiments[static_cast<std::size_t>(std::distance(project.experiments.begin(), at))];
+    for (const auto& link : held.linked_structures) {
+        if (of_structure(link)) link->enabled = true;
+    }
+    const auto structure = std::find_if(copy.structures.begin(), copy.structures.end(), named);
+    return structure == copy.structures.end() ? std::string() : edi::calc_method_link_refusal(copy, held, **structure);
+}
+
+std::string next_link_target(const edi::Project& project, const edi::ExperimentBase& experiment, std::string& refusal) {
+    refusal.clear();
+    const auto spelled = [](const std::string& id) { return id.empty() ? std::string("structure") : id; };
+    for (const auto& structure : project.structures) {
+        const std::string name = spelled(structure->name.value());
+        const bool linked = std::any_of(experiment.linked_structures.begin(), experiment.linked_structures.end(),
+                                        [&](const auto& link) { return spelled(link->structure_id.value()) == name; });
+        if (linked) continue;
+        std::string reason = link_refusal(project, experiment, name);
+        if (reason.empty()) return name;
+        if (refusal.empty()) refusal = std::move(reason);
+    }
+    return {};
+}
+
 LinkedStructureListModel::LinkedStructureListModel(edi::Project& project, edi::ExperimentBase& experiment,
                                                    ProjectEditor& editor, ParameterRegistry& registry,
                                                    QObject* parent)
-    : RowTableModel({"structureId", "scale", "enabled", "colorIndex", "weightFraction"}, parent),
+    : RowTableModel({"structureId", "scale", "enabled", "colorIndex", "weightFraction", "calcMethod", "extracted"}, parent),
       project_(project),
       experiment_(experiment),
       editor_(editor),
@@ -627,18 +705,44 @@ LinkedStructureListModel::LinkedStructureListModel(edi::Project& project, edi::E
 
 void LinkedStructureListModel::sync() {
     QStringList names;
+    QStringList refusals;
     for (const auto& structure : project_.structures) {
         names.append(QString::fromStdString(edi::datablock_key(structure->name, "structure")));
+        refusals.append(QString::fromStdString(link_refusal(project_, experiment_, structure->name.value())));
     }
-    if (names != structure_names_) {
+    if (names != structure_names_ || refusals != structure_refusals_) {
         structure_names_ = names;
+        structure_refusals_ = refusals;
         emit structureNamesChanged();
     }
+    // Each link's structure's method, crysta's reading; a link naming no structure of the project is Rietveld.
+    const auto method_of = [this](const edi::LinkedStructure& link) {
+        const std::string key = edi::datablock_key(link.structure_id, "structure");
+        for (const auto& structure : project_.structures) {
+            if (edi::datablock_key(structure->name, "structure") == key ||
+                (link.structure_id.value().empty() && project_.structures.size() == 1)) {
+                try {
+                    return QString::fromStdString(edi::calc_method_token(*structure));
+                } catch (const std::exception&) {
+                    break;
+                }
+            }
+        }
+        return QStringLiteral("rietveld");
+    };
+    bool extracting = false;
+    for (const auto& link : experiment_.linked_structures) {
+        extracting = extracting || (link->enabled.get() && method_of(*link) != QLatin1String("rietveld"));
+    }
     // A single enabled structure's fraction is exactly 1, as the saved file writes it; it is shown without asking the
-    // engine, which would convert the whole project for a known answer.
+    // engine, which would convert the whole project for a known answer. With a Le Bail or Pawley structure enabled,
+    // crysta gives none (edi ADR-0109).
     const auto enabled_links = std::count_if(experiment_.linked_structures.begin(), experiment_.linked_structures.end(),
                                              [](const auto& link) { return link->enabled.get(); });
-    const auto fraction = [enabled_links](const edi::LinkedStructure& link) {
+    const auto fraction = [enabled_links, extracting](const edi::LinkedStructure& link) {
+        if (extracting) {
+            return QVariantMap();
+        }
         if (enabled_links > 1) {
             return weight_fraction_cell(link);
         }
@@ -650,12 +754,17 @@ void LinkedStructureListModel::sync() {
     QList<Row> rows;
     for (const auto& link : experiment_.linked_structures) {
         const QString id = QString::fromStdString(link->structure_id.value());
+        const QString method = method_of(*link);
         rows.append({link.get(),
                      {id, parameter_role(registry_, &link->scale), link->enabled.get(),
                       static_cast<int>(names.indexOf(id)),
-                      fraction(*link)}});
+                      fraction(*link), method, method != QLatin1String("rietveld")}});
     }
     setTableRows(rows);
+    if (extracting != extracting_) {
+        extracting_ = extracting;
+        emit extractingChanged();
+    }
     const auto linked = [this](const QString& name) {
         return std::any_of(experiment_.linked_structures.begin(), experiment_.linked_structures.end(),
                            [&](const auto& link) { return QString::fromStdString(link->structure_id.value()) == name; });
@@ -691,20 +800,19 @@ bool LinkedStructureListModel::setEnabled(int row, bool enabled) {
 }
 
 void LinkedStructureListModel::append() {
-    // The first CURRENT project structure not linked yet, at the original defaults.
+    // The first CURRENT project structure not linked yet that may be linked, at the original defaults.
     // Cached Qt offers/counts are presentation, never live membership authority.
-    for(const auto& structure:project_.structures) {
-        const auto& raw=structure->name.value();
-        const std::string_view name=raw.empty()?std::string_view("structure"):std::string_view(raw);
-        const bool linked=std::any_of(experiment_.linked_structures.begin(),experiment_.linked_structures.end(),
-            [&](const auto& link){return (link->structure_id.value().empty()?std::string_view("structure"):std::string_view(link->structure_id.value()))==name;});
-        if(!linked) {
-            edi::LinkedStructure link;link.structure_id=std::string(name);
-            editor_.apply_creation_control(edi::Edit::append(experiment_.linked_structures,link),true,
-                {ProjectEditor::CreationAction::Kind::PhaseAppend,&experiment_,{},QString::fromUtf8(name.data(),static_cast<qsizetype>(name.size()))});
-            return;
-        }
+    std::string refusal;
+    const std::string name=next_link_target(project_,experiment_,refusal);
+    if(name.empty()) {
+        // Every unlinked structure is refused here: the control refuses with crysta's reason.
+        if(!refusal.empty())
+            editor_.apply_creation_control(edi::Edit::unchanged(),true,{ProjectEditor::CreationAction::Kind::PhaseAppend,&experiment_,{},{}});
+        return;
     }
+    edi::LinkedStructure link;link.structure_id=name;
+    editor_.apply_creation_control(edi::Edit::append(experiment_.linked_structures,link),true,
+        {ProjectEditor::CreationAction::Kind::PhaseAppend,&experiment_,{},QString::fromStdString(name)});
 }
 
 void LinkedStructureListModel::estimateScale() {

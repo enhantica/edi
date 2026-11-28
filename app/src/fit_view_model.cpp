@@ -129,8 +129,9 @@ void FitAgreementModel::setRecord(const edi::Project& project) {
     // The profile factors in the order FullProf prints them, then each linked structure's two (the owner,
     // 2026-10-21).
     QList<AgreementColumn> columns;
-    const auto column = [&columns](const QString& factor, const QString& structure = QString(), int place = -1) {
-        columns.append(AgreementColumn{factor, structure, place});
+    const auto column = [&columns](const QString& factor, const QString& structure = QString(), int place = -1,
+                                   const QString& reason = QString()) {
+        columns.append(AgreementColumn{factor, structure, place, reason});
     };
     // A single crystal's fit is over F²: crysta records its R(F²) and wR(F²) as the profile pair, which the dictionary
     // names by the sample form.
@@ -236,11 +237,39 @@ void FitAgreementModel::setRecord(const edi::Project& project) {
     const auto has_magnetic = [&magnetic](const std::string& name) {
         return std::find(magnetic.begin(), magnetic.end(), name) != magnetic.end();
     };
+    // A Le Bail or Pawley fit records no R factors for the structure: its intensities come from the pattern (edi
+    // ADR-0109). A factor the record holds is shown, so a Rietveld fit's stay after a switch without a new fit.
+    const auto recorded = [&](const std::string& name) {
+        for (const auto& experiment : project.experiments) {
+            for (const auto& link : experiment->linked_structures) {
+                if (structure_of(*link) == name &&
+                    (link->fit_bragg_r_factor.has_value() || link->fit_f_r_factor.has_value() ||
+                     link->fit_magnetic_r_factor.has_value())) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    };
+    const auto extracted = [&](const std::string& name) {
+        for (const auto& structure : project.structures) {
+            if (structure->name.value() == name) {
+                try {
+                    return edi::extracts_intensities(*structure) && !recorded(name);
+                } catch (const std::exception&) {
+                    return false;
+                }
+            }
+        }
+        return false;
+    };
+    const QString no_factor = tr("No R factor: the structure's intensities are extracted");
     for (const auto& [name, place] : ordered) {
-        column(QStringLiteral("R<sub>Bragg</sub>"), QString::fromStdString(name), place);
-        column(QStringLiteral("R<sub>F</sub>"), QString::fromStdString(name), place);
+        const QString reason = extracted(name) ? no_factor : QString();
+        column(QStringLiteral("R<sub>Bragg</sub>"), QString::fromStdString(name), place, reason);
+        column(QStringLiteral("R<sub>F</sub>"), QString::fromStdString(name), place, reason);
         if (has_magnetic(name)) {
-            column(QStringLiteral("R<sub>mag</sub>"), QString::fromStdString(name), place);
+            column(QStringLiteral("R<sub>mag</sub>"), QString::fromStdString(name), place, reason);
         }
     }
 
@@ -291,6 +320,9 @@ void FitAgreementModel::setRecord(const edi::Project& project) {
                     bragg = percent("fit_result_phase.bragg_r_factor", link->fit_bragg_r_factor);
                     f = percent("fit_result_phase.f_r_factor", link->fit_f_r_factor);
                     mag = percent("fit_result_phase.magnetic_r_factor", link->fit_magnetic_r_factor);
+                    if (extracted(name)) {
+                        bragg = f = mag = QString(QChar(0x2014));  // an em dash
+                    }
                 }
             }
             values << bragg << f;
@@ -539,7 +571,7 @@ void FitViewModel::startNative(std::function<void(const edi::FitReport&, bool)> 
 void FitViewModel::start() {
     const QPointer<FitViewModel> self(this);
     // With nothing free there is nothing to fit: refused before it starts, so it never reports Failed.
-    if (!native_completion_ && !running_ && project_.free_parameters().empty()) {
+    if (!native_completion_ && !running_ && !project_.anything_to_fit()) {
         emit refused(tr("Select at least one free parameter"));
         return;
     }
@@ -854,7 +886,7 @@ void FitViewModel::sync() {
     QString reason;
     if (!measured) {
         reason = tr("A fit needs measured data: no experiment in this project has any");
-    } else if (project_.free_parameters().empty()) {
+    } else if (!project_.anything_to_fit()) {
         reason = tr("Select at least one free parameter");
     } else if (scan) {
         reason = owner_.scanRefusal();

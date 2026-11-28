@@ -8,6 +8,7 @@
 
 #include <memory>
 #include <string>
+#include <vector>
 
 #include "edi/parameter_walk.hpp"
 
@@ -33,6 +34,9 @@ class ParameterItem : public QObject {
     // free toggle is enabled while it is fittable or free, so a flag set before a change can still be cleared.
     Q_PROPERTY(bool fittable READ isFittable NOTIFY fittableChanged)
     Q_PROPERTY(QString fitReason READ fitReason NOTIFY fitReasonChanged)
+    // Idle because a Le Bail or Pawley structure's method does not use it (its atoms, its link's scale): drawn fixed with
+    // its Free box disabled whatever its flag, which waits for a switch back to Rietveld (edi ADR-0109).
+    Q_PROPERTY(bool methodIdle READ isMethodIdle NOTIFY fittableChanged)
     // Which group of rows no fit can vary it belongs to, the Analysis table's show-filters (FitGroup); None when
     // fittable.
     Q_PROPERTY(int fitGroup READ fitGroup NOTIFY fitGroupChanged)
@@ -89,6 +93,11 @@ class ParameterItem : public QObject {
     // The item's label for its variant and its `.edi` name, as a field's and a cell's tooltip names it (edi ADR-0051);
     // empty for a parameter the dictionary does not know.
     Q_PROPERTY(QString toolTip READ toolTip NOTIFY toolTipChanged)
+    // A Pawley structure's intensities in one experiment are one row of the Analysis table (edi ADR-0109 §5): such an
+    // item stands for all of them. `groupSize` is their number, 0 on any other item; `free` is true when every one is
+    // free, `partiallyFree` when some are and some are not, and setting `free` sets or clears them all.
+    Q_PROPERTY(int groupSize READ groupSize NOTIFY groupSizeChanged)
+    Q_PROPERTY(bool partiallyFree READ partiallyFree NOTIFY partiallyFreeChanged)
 
    public:
     enum Field { ValueField = 1, UncertaintyField = 2, FreeField = 4 };
@@ -111,8 +120,9 @@ class ParameterItem : public QObject {
     bool isFittable() const { return fittable_; }
     QString fitReason() const { return fit_reason_; }
     int fitGroup() const { return fit_group_; }
+    bool isMethodIdle() const { return method_idle_; }
     // Set by the registry at each publish from the parameter's mark (edi::refresh_fittability).
-    void setFittability(bool fittable, const QString& reason, int group);
+    void setFittability(bool fittable, const QString& reason, int group, bool method_idle = false);
     bool isDescriptorValue() const { return own_ != nullptr; }
     // A descriptor row's value, as the model holds it now; set by the registry before each publish.
     void setDescriptorValue(double value);
@@ -190,6 +200,11 @@ class ParameterItem : public QObject {
     // The project's s.u. rule, and whether its save writes this value exactly (edi::save_spelling).
     void setSpelling(const std::string& rule, bool exact);
 
+    int groupSize() const { return static_cast<int>(group_.size()); }
+    bool partiallyFree() const { return partially_free_; }
+    // The parameters a group item stands for, its own parameter first; set by the registry at each rebuild.
+    void setGroup(std::vector<edi::Parameter*> group);
+    const std::vector<edi::Parameter*>& group() const { return group_; }
     const edi::Parameter* parameter() const { return parameter_; }
     // Emit a signal for each field whose core value differs from the last published one; returns
     // the changed fields (ParameterItem::Field bits). With `formatted` false (a slider drag, edi ADR-0070) the file
@@ -225,6 +240,8 @@ class ParameterItem : public QObject {
     void suReasonChanged();
     void sliderStepChanged();
     void toolTipChanged();
+    void groupSizeChanged();
+    void partiallyFreeChanged();
 
    private:
     void setLastError(const QString& error);
@@ -239,6 +256,7 @@ class ParameterItem : public QObject {
     bool free_;
     bool refinable_;
     bool fittable_ = true;
+    bool method_idle_ = false;
     QString fit_reason_;
     int fit_group_ = NoGroup;
     bool estimated_ = false;
@@ -253,6 +271,8 @@ class ParameterItem : public QObject {
     int block_index_ = -1;
     int phase_index_ = -1;
     int change_direction_ = 0;
+    std::vector<edi::Parameter*> group_;
+    bool partially_free_ = false;
 };
 
 }  // namespace edi_app

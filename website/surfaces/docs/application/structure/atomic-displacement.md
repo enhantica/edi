@@ -13,7 +13,7 @@ template: gui.html
 
 On **Structure → Main**, expand **Atomic displacement**. Choose the representation for each atom site, then edit its isotropic value or independent tensor components. Symmetry-related components remain linked.
 
-For an anisotropic site, the equivalent isotropic value is shown for reference. Use the representation and units shown in the table; converting between B, U and β requires the cell convention. See [atomic displacement](../../physics/displacement.md).
+For an anisotropic site, the equivalent isotropic value is shown for reference. Use the representation and units shown in the table; converting between B, U and β requires the cell convention. See [atomic displacement](../../physics/displacement.md). Under Le Bail or Pawley, set in the **Calculation** column of [Structures](structures.md), this group is hidden; its values are kept and come back with Rietveld.
 
 To inspect ellipsoids, choose the displacement display in [Appearance](appearance.md#change-the-appearance).
 

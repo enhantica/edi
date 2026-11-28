@@ -39,15 +39,18 @@ EaComponents.ListViewParameter {
     // tooltip help text (the ADP cells) keeps the warning and its style.
     readonly property string warningText: refusal !== "" ? refusal : outsideRange ? qsTr("Outside its range, %1 to %2").arg(item.minimum).arg(item.maximum) : item !== null ? item.domainWarning : ""
     readonly property bool refinable: item === null || item.refinable
+    // A flag the fit cannot use now and the cell keeps as it is (a Le Bail or Pawley structure's scale, edi ADR-0109):
+    // the value is drawn fixed and its Free box is shown disabled. Switching back to Rietveld uses the flag again.
+    property bool fitBlocked: false
     // The fit toggle where a fit can vary the value, or while it is free so the flag can be cleared (edi ADR-0053).
-    readonly property bool canFit: item === null || item.fittable || item.free
+    readonly property bool canFit: item === null || !fitBlocked && (item.fittable || item.free)
     // Without measured data in any experiment nothing is fitted, so the free toggle is disabled (edi ADR-0046).
     readonly property bool measured: Session.project === null || Session.project.fit.measured
     Binding {
         target: cell.fitCheckBox
         when: cell.fitCheckBox !== null
         property: "enabled"
-        value: cell.measured
+        value: cell.measured && !cell.fitBlocked
     }
 
     // The column's alignment, unless the value is wider than the cell: then it shows from its start and clips at
@@ -152,7 +155,7 @@ EaComponents.ListViewParameter {
         "value": cell.shownValue,
         "error": cell.written ? item.fileSu : item.hasUncertainty ? NumberText.error(item.uncertainty, 0, item.value) : "",
         "enabled": cell.refinable,
-        "fittable": cell.canFit,
+        "fittable": cell.canFit || cell.fitBlocked,
         "fit": item.free && cell.canFit,
         "category": item.category,
         "fullName": ParameterNames.fullName(item),

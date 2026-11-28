@@ -1242,6 +1242,9 @@ struct Parameter {
     // names). Its free flag is kept for when a link reads it again, so a fit leaves it out and neither a fit nor a load
     // refuses or clears it.
     bool fit_idle = false;
+    // Set with them: idle because a Le Bail or Pawley structure's method does not use it (its atoms, its link's scale
+    // and texture). Pages draw such a value fixed whatever its flag, which waits for a switch back to Rietveld.
+    bool fit_method_idle = false;
 
     Parameter() = default;
     Parameter(double value_, std::optional<double> esd_ = 0.0, bool free_ = false)
@@ -3094,6 +3097,12 @@ struct Structure : std::enable_shared_from_this<Structure> {
     // How the Structure view shows this structure (`_structure_view`, by item name: atom_view, atom_scale, ...),
     // saved with it; empty: the view's defaults. No calculation reads it. Written whole.
     detail::Written<std::map<std::string, std::string>> view;
+    // How the structure's reflection intensities are calculated (`_structure.calc_method`, edi ADR-0109): crysta's
+    // token, empty for Rietveld. Le Bail and Pawley take them from the measured pattern; the atoms are kept and
+    // saved under every method. Changed through select_calc_method.
+    detail::WrittenText calc_method;
+    // ADR-0018: the row of the structure's own non-loop category (`_structure`).
+    detail::CategoryRow table_row;
 
     // The cell's parameters, then every site's, in collection order.
     std::vector<Parameter*> parameters();
@@ -3142,6 +3151,7 @@ inline Structure::Structure(const Structure& other)
       magnetic_form_factors(other.magnetic_form_factors),
       scattering_lengths_fm(other.scattering_lengths_fm),
       view(other.view),
+      calc_method(other.calc_method),
       epoch(other.epoch),
       geom(other.geom),
       geometry(other.geometry),
@@ -3225,6 +3235,22 @@ bool window_geometry_current(const Structure& structure, const WindowGeometry& r
 // crysta's defaults for the two `geom` values (0 and 0.25 angstrom), which an unset one takes.
 double default_min_bond_distance_cutoff();
 double default_bond_distance_inc();
+
+// The structure's calculation method as crysta reads it (edi ADR-0109): `rietveld`, `le_bail` or `pawley`, Rietveld
+// when it states none. Throws crysta's refusal for a token crysta does not know.
+std::string calc_method_token(const Structure& structure);
+// Le Bail or Pawley: the structure takes its intensities from the measured pattern.
+bool extracts_intensities(const Structure& structure);
+// The key of the Laue orbit each h k l of the structure belongs to, as `_extracted_intensity` names its rows (crysta's
+// extracted_intensity_key), in order. Throws when the structure's symmetry does not resolve.
+std::vector<std::array<int, 3>> extracted_intensity_keys(const Structure& structure,
+                                                         const std::vector<std::array<int, 3>>& hkls);
+// Marks every parameter with crysta's fit rule (fittability.hpp); Project::free_parameters reads the idle marks.
+void refresh_fittability(Project& project);
+// Whether a fit has intensities to fit with nothing else free, by crysta's rule (fits_intensities): a Le Bail
+// structure linked to powder data, or a Pawley one holding a free row there or none yet. False for a project whose
+// structures are all Rietveld, which crosses nothing.
+bool fits_intensities(Project& project);
 
 // ADR-0016: a structure name is a datablock, compared by its canonical key.
 template <>
@@ -3349,6 +3375,42 @@ struct RowTraits<ExcludedReflection> {
     static const detail::RowLink* primary(const ExcludedReflection& row) noexcept { return &row.row; }
 };
 
+/// One row of a powder experiment's `_extracted_intensity` loop (edi ADR-0109): the |F|² a Le Bail
+/// or Pawley fit holds for one Laue orbit of one structure, in the units of F² calc. The row is named by its
+/// structure and the orbit's indices; its id is its place in the loop and is never written. Only a Pawley
+/// structure's values are fitted.
+struct ExtractedIntensity : std::enable_shared_from_this<ExtractedIntensity> {
+    ItemKey id;
+    detail::WrittenText structure_id;
+    detail::Written<int> index_h{0};
+    detail::Written<int> index_k{0};
+    detail::Written<int> index_l{0};
+    Parameter f_squared{1.0};
+
+    ExtractedIntensity() { f_squared.spec = &spec::extracted_intensity_f_squared; }
+
+    std::vector<Parameter*> parameters() { return {&f_squared}; }
+    detail::RowLink row;
+    detail::Epoch epoch;
+};
+template <>
+struct KeyTraits<ExtractedIntensity> {
+    static constexpr bool ordinal_defaults = true;
+    static ItemKey& key(ExtractedIntensity& row) { return row.id; }
+    static const ItemKey& key(const ExtractedIntensity& row) { return row.id; }
+    static std::string canonical(const std::string& id) {
+        if (id.empty()) throw std::invalid_argument("extracted-intensity id must not be empty");
+        return id;
+    }
+    static const char* category() { return "extracted intensity"; }
+};
+template <>
+struct RowTraits<ExtractedIntensity> {
+    static void link(ExtractedIntensity& row, const std::shared_ptr<detail::Membership>& record) noexcept { row.row.link(record); }
+    static void unlink(ExtractedIntensity& row) noexcept { row.row.unlink(); }
+    static const detail::RowLink* primary(const ExtractedIntensity& row) noexcept { return &row.row; }
+};
+
 // A background point is a row of its experiment's `background`.
 template <>
 struct RowTraits<LineSegment> {
@@ -3390,6 +3452,16 @@ struct RowSchema<edi::ExcludedReflection> {
     static constexpr auto fields = std::tuple{&edi::ExcludedReflection::id, &edi::ExcludedReflection::index_h,
                                               &edi::ExcludedReflection::index_k, &edi::ExcludedReflection::index_l};
     static constexpr std::array items{"id", "index_h", "index_k", "index_l"};
+};
+// The id is the row's place, which no file item carries; a row is named by its structure and indices.
+template <>
+struct RowSchema<edi::ExtractedIntensity> {
+    static constexpr const char* name = "_extracted_intensity";
+    static constexpr auto fields = std::tuple{&edi::ExtractedIntensity::id, &edi::ExtractedIntensity::structure_id,
+                                              &edi::ExtractedIntensity::index_h, &edi::ExtractedIntensity::index_k,
+                                              &edi::ExtractedIntensity::index_l, &edi::ExtractedIntensity::f_squared};
+    static constexpr std::array items{"", "structure_id", "index_h", "index_k", "index_l", "f_squared"};
+    static constexpr std::array legacy{"_edi_extracted_intensity"};
 };
 }
 
@@ -3888,7 +3960,7 @@ struct PreparedAbsorptionRestore {
                 // their written identities; Undo restores only differing state.
                 const bool equal=held.value.get()==wanted.value.get() && held.uncertainty.get()==wanted.uncertainty.get() &&
                     held.free.get()==wanted.free.get() && held.start_value.get()==wanted.start_value.get() &&
-                    held.start_uncertainty.get()==wanted.start_uncertainty.get() && held.spec==wanted.spec && held.dependence==wanted.dependence && held.fit_blocker==wanted.fit_blocker && held.fit_reason==wanted.fit_reason && held.fit_idle==wanted.fit_idle;
+                    held.start_uncertainty.get()==wanted.start_uncertainty.get() && held.spec==wanted.spec && held.dependence==wanted.dependence && held.fit_blocker==wanted.fit_blocker && held.fit_reason==wanted.fit_reason && held.fit_idle==wanted.fit_idle && held.fit_method_idle==wanted.fit_method_idle;
                 if(!equal)held=std::move(incoming.live_->parameter);
             }
             else if(!current.live_ && incoming.live_) {
@@ -3964,7 +4036,7 @@ struct PreparedExtinctionRestore {
                 // their written identities; Undo restores only differing state.
                 const bool equal=held.value.get()==wanted.value.get() && held.uncertainty.get()==wanted.uncertainty.get() &&
                     held.free.get()==wanted.free.get() && held.start_value.get()==wanted.start_value.get() &&
-                    held.start_uncertainty.get()==wanted.start_uncertainty.get() && held.spec==wanted.spec && held.dependence==wanted.dependence && held.fit_blocker==wanted.fit_blocker && held.fit_reason==wanted.fit_reason && held.fit_idle==wanted.fit_idle;
+                    held.start_uncertainty.get()==wanted.start_uncertainty.get() && held.spec==wanted.spec && held.dependence==wanted.dependence && held.fit_blocker==wanted.fit_blocker && held.fit_reason==wanted.fit_reason && held.fit_idle==wanted.fit_idle && held.fit_method_idle==wanted.fit_method_idle;
                 if(!equal)held=std::move(incoming.live_->parameter);
             }
             else if(!current.live_ && incoming.live_) {
@@ -4135,6 +4207,10 @@ struct PowderReflnDataBase {
     ComputedColumn<double> f_m_perp_squared_calc;
     // F² + |M⊥|² per reflection, as crysta computes it, on the same condition.
     ComputedColumn<double> f_squared_total_calc;
+    // A Le Bail or Pawley structure's extracted F² (`f_squared_meas`, NaN on a Rietveld structure's row) and a free
+    // Pawley value's s.u. (`f_squared_meas_su`, NaN otherwise), both crysta's; both empty when no row has one.
+    ComputedColumn<double> f_squared_meas;
+    ComputedColumn<double> f_squared_meas_su;
     ComputedColumn<double> position;
     // For an object the Python `refln` getter handed out, the experiment it came from;
     // unlinked on a copy (detail::DataSource).
@@ -4158,6 +4234,8 @@ struct PowderReflnDataBase {
         f_squared_calc.clear();
         f_m_perp_squared_calc.clear();
         f_squared_total_calc.clear();
+        f_squared_meas.clear();
+        f_squared_meas_su.clear();
         position.clear();
     }
 };
@@ -4343,6 +4421,10 @@ struct ExperimentBase : std::enable_shared_from_this<ExperimentBase> {
     std::optional<std::string> reflns_merge;
     std::optional<std::string> reflns_absences;
     ItemVec<ExcludedReflection> excluded_reflections;
+    // The intensities a Le Bail or Pawley fit holds for the structures of this powder experiment, one row per Laue
+    // orbit (`_extracted_intensity`, edi ADR-0109). Fit state, saved only when there are rows; empty for a project
+    // whose structures are all Rietveld.
+    ItemVec<ExtractedIntensity> extracted_intensities;
     // A data-free constant-wavelength single crystal's resolution limit (`_data_range.sin_theta_over_lambda_max`,
     // inverse angstroms): it then calculates the reflections its space group allows up to it.
     std::optional<double> sin_theta_over_lambda_max;
@@ -4788,6 +4870,9 @@ struct FitResultBase {
     // `values`/`uncertainty`/`start` and are what the HUMAN format shows.
     std::map<std::string, double> engine_values;
     std::map<std::string, double> engine_uncertainty;
+    // The Pawley intensity columns the fit varied beside `engine_values`, those not held at 0, as crysta counts them
+    // in the degrees of freedom; 0 for Rietveld and Le Bail.
+    std::size_t intensity_columns = 0;
     // The descent-flow registry id the engine reports for this run (crysta schema 7) — carried
     // verbatim: the machine record must name its descent, and edi never re-derives an engine
     // fact (ADR-0009).
@@ -5527,6 +5612,9 @@ class Project : public detail::ProjectAnchor {
     // `Project.parameters` / `Project.free_parameters`).
     std::vector<Parameter*> parameters();
     std::vector<Parameter*> free_parameters();
+    // Whether a fit has anything to vary: a free parameter, or a Pawley structure whose rows the fit will create
+    // (the app's Fit button and the independent fit ask this, not free_parameters alone).
+    bool anything_to_fit();
 
     // An admitted edit through an editor transaction. The app's one write door
     // (ProjectEditor::apply) calls it after every change it runs, so every GUI edit — any field,
@@ -5837,6 +5925,15 @@ inline void rename_structure_links(Project& project, const std::string& from, co
             }
         }
     }
+    // The structure's extracted intensities name it too (edi ADR-0109); their names are plain texts.
+    std::vector<detail::WrittenText*> rows;
+    for (const auto& experiment : project.experiments) {
+        for (const auto& row : experiment->extracted_intensities) {
+            if (KeyTraits<Structure>::canonical(row->structure_id.value()) == named) {
+                rows.push_back(&row->structure_id);
+            }
+        }
+    }
     for (ItemKey* key : keys) {  // every one is admitted before any is written
         if (key->owner() != nullptr) {
             key->owner()->admit_rename(*key, to);
@@ -5844,6 +5941,9 @@ inline void rename_structure_links(Project& project, const std::string& from, co
     }
     for (ItemKey* key : keys) {
         *key = to;
+    }
+    for (detail::WrittenText* row : rows) {
+        *row = to;
     }
 }
 
@@ -5879,6 +5979,17 @@ struct GeomCategory {
     static constexpr std::array items{"min_bond_distance_cutoff", "bond_distance_inc"};
 };
 static_assert(detail::one_entry_per_column(GeomCategory::columns, GeomCategory::items));
+
+// How the structure's intensities are calculated (edi ADR-0109). Its CIF name is `_edi_structure`, which a `.edi`
+// block may use too.
+struct StructureCategory {
+    using Owner = Structure;
+    static constexpr const char* name = "_structure";
+    static constexpr auto columns = std::tuple{&Structure::calc_method};
+    static constexpr std::array items{"calc_method"};
+    static constexpr std::array legacy{"_edi_structure"};
+};
+static_assert(detail::one_entry_per_column(StructureCategory::columns, StructureCategory::items));
 
 // The experiment datablock.
 struct ExperimentTypeCategory {
@@ -6307,11 +6418,11 @@ static_assert(detail::one_entry_per_column(CartnTransformCategory::columns, Cart
 
 struct ReflnCategory {
     static constexpr const char* name = "_refln";
-    static constexpr auto columns = std::tuple{&PowderReflnDataBase::structure_id, &PowderReflnDataBase::d_spacing, &PowderReflnDataBase::sin_theta_over_lambda, &PowderReflnDataBase::index_h, &PowderReflnDataBase::index_k, &PowderReflnDataBase::index_l, &PowderReflnDataBase::f_calc, &PowderReflnDataBase::f_squared_calc, &PowderReflnDataBase::f_m_perp_squared_calc, &PowderReflnDataBase::f_squared_total_calc, &PowderReflnDataBase::position, &ReflnDataBase::index_h, &ReflnDataBase::index_k, &ReflnDataBase::index_l, &ReflnDataBase::intensity_meas, &ReflnDataBase::intensity_meas_su, &ReflnDataBase::wavelength, &ReflnDataBase::d_spacing, &ReflnDataBase::sin_theta_over_lambda, &ReflnDataBase::intensity_calc, &ReflnDataBase::generated_index_h, &ReflnDataBase::generated_index_k, &ReflnDataBase::generated_index_l};
+    static constexpr auto columns = std::tuple{&PowderReflnDataBase::structure_id, &PowderReflnDataBase::d_spacing, &PowderReflnDataBase::sin_theta_over_lambda, &PowderReflnDataBase::index_h, &PowderReflnDataBase::index_k, &PowderReflnDataBase::index_l, &PowderReflnDataBase::f_calc, &PowderReflnDataBase::f_squared_calc, &PowderReflnDataBase::f_m_perp_squared_calc, &PowderReflnDataBase::f_squared_total_calc, &PowderReflnDataBase::f_squared_meas, &PowderReflnDataBase::f_squared_meas_su, &PowderReflnDataBase::position, &ReflnDataBase::index_h, &ReflnDataBase::index_k, &ReflnDataBase::index_l, &ReflnDataBase::intensity_meas, &ReflnDataBase::intensity_meas_su, &ReflnDataBase::wavelength, &ReflnDataBase::d_spacing, &ReflnDataBase::sin_theta_over_lambda, &ReflnDataBase::intensity_calc, &ReflnDataBase::generated_index_h, &ReflnDataBase::generated_index_k, &ReflnDataBase::generated_index_l};
     // A powder's computed reflections and a single crystal's measured ones with their calculated
     // columns: one category on file, as in diffraction-lib, held by two classes. A simulated single
     // crystal's generated indices are its calculated rows' index columns.
-    static constexpr std::array items{"structure_id", "d_spacing", "sin_theta_over_lambda", "index_h", "index_k", "index_l", "f_calc", "f_squared_calc", "f_m_perp_squared_calc", "f_squared_total_calc", "two_theta time_of_flight", "index_h", "index_k", "index_l", "intensity_meas", "intensity_meas_su", "wavelength", "d_spacing", "sin_theta_over_lambda", "intensity_calc", "index_h", "index_k", "index_l"};
+    static constexpr std::array items{"structure_id", "d_spacing", "sin_theta_over_lambda", "index_h", "index_k", "index_l", "f_calc", "f_squared_calc", "f_m_perp_squared_calc", "f_squared_total_calc", "f_squared_meas", "f_squared_meas_su", "two_theta time_of_flight", "index_h", "index_k", "index_l", "intensity_meas", "intensity_meas_su", "wavelength", "d_spacing", "sin_theta_over_lambda", "intensity_calc", "index_h", "index_k", "index_l"};
 };
 static_assert(detail::one_entry_per_column(ReflnCategory::columns, ReflnCategory::items));
 
@@ -6507,6 +6618,9 @@ inline std::vector<Parameter*> ExperimentBase::parameters() {
     for (const std::shared_ptr<PolynomialTerm>& term : background_terms) {
         out.push_back(&term->coef);
     }
+    for (const std::shared_ptr<ExtractedIntensity>& row : extracted_intensities) {
+        out.push_back(&row->f_squared);
+    }
     return out;
 }
 inline LinkedStructure& ExperimentBase::linked_structure() {
@@ -6699,13 +6813,31 @@ inline std::vector<Parameter*> Project::free_parameters() {
             }
         }
     }
+    // What crysta's fit leaves out of a free set under Le Bail or Pawley is crysta's to say (edi ADR-0109): the
+    // parameters it marks idle, such as such a structure's atoms and its links' scales, keep their flags but are not
+    // fitted. A project whose structures are all Rietveld keeps the rule above alone.
+    const bool extracting = std::any_of(structures.begin(), structures.end(), [](const auto& structure) {
+        try {
+            return extracts_intensities(*structure);
+        } catch (const std::exception&) {  // an unknown token: the fit refuses it by name
+            return false;
+        }
+    });
+    if (extracting) {
+        refresh_fittability(*this);
+    }
     std::vector<Parameter*> out;
     for (Parameter* parameter : detail::free_of(parameters())) {
-        if (std::find(idle.begin(), idle.end(), parameter) == idle.end()) {
+        if (!(extracting && parameter->fit_idle) && std::find(idle.begin(), idle.end(), parameter) == idle.end()) {
             out.push_back(parameter);
         }
     }
     return out;
+}
+inline bool Project::anything_to_fit() {
+    // A Le Bail fit moves its intensities by its cycles, and a Pawley fit creates the rows it lacks free, so either can
+    // fit at a fixed cell and profile.
+    return !free_parameters().empty() || fits_intensities(*this);
 }
 
 // Point every parameter a node holds at its category's row link, so its Python handle answers
@@ -6740,6 +6872,7 @@ inline void point_parameters(LineSegment& point) { point_at_row(point); }
 inline void point_parameters(PolynomialTerm& term) { point_at_row(term); }
 inline void point_parameters(PrefOrient& row) { point_at_row(row); }
 inline void point_parameters(LinkedStructure& link) { point_at_row(link); }
+inline void point_parameters(ExtractedIntensity& row) { point_at_row(row); }
 inline void point_parameters(PeakBase& peak) { point_at_row(peak); }
 inline void point_parameters(InstrumentBase& instrument) { point_at_row(instrument); }
 inline void point_parameters(AbsorptionBase& absorption) { point_at_row(absorption); }
@@ -6776,6 +6909,9 @@ inline void point_parameters(ExperimentBase& experiment) {
     }
     for (const std::shared_ptr<PolynomialTerm>& term : experiment.background_terms) {
         point_parameters(*term);
+    }
+    for (const std::shared_ptr<ExtractedIntensity>& row : experiment.extracted_intensities) {
+        point_parameters(*row);
     }
 }
 inline void point_parameters(Project& project) {

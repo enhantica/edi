@@ -13,6 +13,8 @@ template: gui.html
 
 On **Experiment → Extra**, expand **Reflections**. It lists the Bragg reflections of each linked structure. This group is read-only. See [Reflections](../../physics/parameters.md#refln) in the parameter reference.
 
+For a Le Bail or Pawley structure the rows show **F² extracted**, the squared structure factor taken from the measured pattern, in place of the calculated F, F² and |F_M⊥|². A Pawley structure also shows its **s.u.** The values are in the units of F² calc, so they compare directly with a Rietveld F².
+
 <!-- gui-guide:use-this-group -->
 <div class="gui-viewer" markdown="1">
 

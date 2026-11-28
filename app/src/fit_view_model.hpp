@@ -58,19 +58,22 @@ struct ScanSummary {
 };
 
 // One column of the agreement factors: `factor` (its name in Qt rich text, with the subscript), `structure` (the
-// structure's name, empty for a profile factor) and `place` (the structure's colour place, -1 for none). QML reads a
-// list of them as an array (edi ADR-0030).
+// structure's name, empty for a profile factor), `place` (the structure's colour place, -1 for none) and `reason` (why
+// the factor is "—" for its structure: a Le Bail or Pawley structure's intensities are extracted, edi ADR-0109; empty
+// otherwise). QML reads a list of them as an array (edi ADR-0030).
 struct AgreementColumn {
     Q_GADGET
     QML_VALUE_TYPE(agreementColumn)
     Q_PROPERTY(QString factor MEMBER factor CONSTANT)
     Q_PROPERTY(QString structure MEMBER structure CONSTANT)
     Q_PROPERTY(int place MEMBER place CONSTANT)
+    Q_PROPERTY(QString reason MEMBER reason CONSTANT)
 
    public:
     QString factor;
     QString structure;
     int place = -1;
+    QString reason;
     bool operator==(const AgreementColumn&) const = default;
 };
 
