@@ -351,6 +351,16 @@ def component_names(platform: str) -> frozenset[str]:
 # edi-sites, which used to hold the archives; the download site's host never refused one.
 ARCHIVE_LIMIT = 2_000_000_000
 
+# A component archive's release asset is component-<platform>-<component>-<version><archive>,
+# in the characters GitHub keeps in asset names. The archive name starts with a letter so the
+# download site's redirect can tell it from the version in front of it.
+COMPONENT_ID = r'org\.easydiffraction(?:\.[A-Za-z0-9_-]+)+'
+ARCHIVE_NAME = r'[A-Za-z][A-Za-z0-9._-]*\.7z'
+
+# The data/distribution.json setting that can keep a component off the release and the download
+# site; the component is published only while its setting says "public". None yet.
+WITHHOLDING_SETTINGS: dict[str, str] = {}
+
 
 def require_archive_size(path: Path) -> None:
     size = path.stat().st_size
@@ -359,6 +369,26 @@ def require_archive_size(path: Path) -> None:
             f'{path.name} is {size:,} bytes, over the {ARCHIVE_LIMIT:,}-byte limit'
             ' of a release asset'
         )
+
+
+def component_asset(platform: str, component: str, version: str, archive: str) -> str:
+    """The release asset name of one component archive."""
+    if (
+        platform not in INSTALLER_PLATFORMS
+        or not re.fullmatch(COMPONENT_ID, component)
+        or not re.fullmatch(ARCHIVE_NAME, archive)
+    ):
+        raise ValueError(f'{component}/{version}{archive} cannot be named as a release asset')
+    return f'component-{platform}-{component}-{version}{archive}'
+
+
+def withheld(component: str) -> bool:
+    """Whether the distribution policy keeps this component off every public download."""
+    setting = WITHHOLDING_SETTINGS.get(component)
+    if setting is None:
+        return False
+    policy = json.loads((ROOT / 'data/distribution.json').read_text(encoding='utf-8'))
+    return policy.get(setting) != 'public'
 
 
 def validate_repository(
@@ -381,13 +411,9 @@ def validate_repository(
             raise ValueError('Component repository does not match the qualified release')
         component = folder / package.findtext('Name')
         archives = package.findtext('DownloadableArchives', '').split(',')
-        if not archives or any(
-            not name
-            or Path(name).name != name
-            or '\\' in name
-            or ':' in name
-            or not name.endswith('.7z')
-            for name in archives
+        # Each archive becomes a release asset, so its name must fit one (component_asset).
+        if not re.fullmatch(COMPONENT_ID, package.findtext('Name')) or any(
+            not re.fullmatch(ARCHIVE_NAME, name) for name in archives
         ):
             raise ValueError('Component archive names are invalid')
         for name in archives:
