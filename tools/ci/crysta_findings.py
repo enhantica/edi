@@ -168,8 +168,9 @@ def pytest(report: Path) -> tuple[list[str], Counter]:
         else:
             counts[f'error in {when}'] += 1
         if outcome == 'failed':
+            error = f', {row["error"]}' if row.get('error') else ''
             found.append(
-                f'FAILED {row.get("nodeid")} ({row.get("file")}:{row.get("line")}, {when})'
+                f'FAILED {row.get("nodeid")} ({row.get("file")}:{row.get("line")}, {when}{error})'
             )
     return found, counts
 

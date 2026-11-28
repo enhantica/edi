@@ -6,7 +6,8 @@
 CRYSTA_PYTEST_PART=k/n keeps every n-th test file of the sorted collection, starting at the k-th,
 so the parts of one tier share no file and together hold all of it. CRYSTA_PYTEST_RECORD names a
 file that gets one JSON line per test phase: node id, file, line, phase, outcome and seconds. It
-never holds a test's message or traceback, which can quote crysta's source (ADR-0083).
+never holds a test's message or traceback, which can quote crysta's source (ADR-0083), only the
+class of a failure's exception.
 """
 
 from __future__ import annotations
@@ -16,6 +17,8 @@ import os
 import pathlib
 import re
 import sys
+from collections.abc import Generator
+from typing import Any
 
 import pytest
 
@@ -62,6 +65,13 @@ def pytest_collection_modifyitems(config, items) -> None:
     items[:] = kept
 
 
+@pytest.hookimpl(hookwrapper=True)
+def pytest_runtest_makereport(call) -> Generator[None, Any, None]:
+    """Keep the class of a failure's exception; its message can quote crysta's source."""
+    outcome = yield
+    outcome.get_result().crysta_error = call.excinfo.typename if call.excinfo else None
+
+
 def pytest_runtest_logreport(report) -> None:
     """One line per phase; a passed setup or teardown is left out."""
     path = ASKED['CRYSTA_PYTEST_RECORD']
@@ -75,6 +85,7 @@ def pytest_runtest_logreport(report) -> None:
         'when': report.when,
         'outcome': report.outcome,
         'seconds': round(report.duration, 3),
+        'error': getattr(report, 'crysta_error', None) if report.failed else None,
     }
     with pathlib.Path(path).open('a', encoding='utf-8') as sink:
         sink.write(json.dumps(row) + '\n')
