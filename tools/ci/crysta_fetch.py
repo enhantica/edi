@@ -100,12 +100,13 @@ def fetch(home: Path, sha: str, also: set[str], token: str, *, full: bool = Fals
     home.mkdir(parents=True)
     git(home, 'init', '-q')
     wanted = [sha, *sorted(also - {sha})]
-    scope = ('--tags',) if full else ('--depth', '1')
-    git(
-        home,
-        *('fetch', '-q', *scope, f'{SERVER}/{REPOSITORY}', *wanted),
-        **credentials(token),
-    )
+    if full:
+        # As crysta's own CI checks it out: every branch as origin/*, every tag, all history.
+        git(home, 'remote', 'add', 'origin', f'{SERVER}/{REPOSITORY}')
+        scope = ('--tags', 'origin', '+refs/heads/*:refs/remotes/origin/*')
+    else:
+        scope = ('--depth', '1', f'{SERVER}/{REPOSITORY}')
+    git(home, 'fetch', '-q', *scope, *wanted, **credentials(token))
     git(home, 'checkout', '-q', '--detach', sha)
     if git(home, 'rev-parse', 'HEAD').decode().strip() != sha:
         raise RefusedError('the checkout is another commit')

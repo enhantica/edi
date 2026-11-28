@@ -66,7 +66,10 @@ can restore a cache of main. CI therefore keeps built crysta only.
    person wrote in it with its mark and length, the blob ids of what edi publishes itself, and what the SDK carries. The
    recorded data among crysta's tests, its lock and its licences are listed as whole files only: single lines of them
    recur in any tool's output. What edi publishes is its commit, not the working folder, and the public sample
-   collection `edi-data`; their files and lines are not source.
+   collection `edi-data`; their files and lines are not source. crysta's own checks read its history, so their jobs
+   fetch every branch and tag beside the commit, as crysta's CI does; the lists hold the lines of the commit and of
+   those edi pins, and such a job prints what each check found, and the end of a check's output only when it failed
+   with no finding.
 2. **Two phases.** Before the fetch each script of the job names `shell: bash`; no crysta file exists yet. After it every
    script runs under `tools/ci/public_log.py`, a local action's scripts too. It withholds a source line from standard
    output, standard error and the step summary and runs nothing when the lists cannot be read. A line is found alone,

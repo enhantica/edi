@@ -178,6 +178,8 @@ jobs:
           sha: ${{ inputs.crysta-sha }}
           app-id: ${{ vars.ENHANTICA_APP_ID }}
           private-key: ${{ secrets.CRYSTA_READ_KEY }}
+          # crysta's tests read its history, branches and tags, as its own CI checks it out.
+          full-history: 'true'
       - &subject
         if: needs.plan.outputs.skip != 'true'
         name: The crysta commit under test
