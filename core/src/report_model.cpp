@@ -781,8 +781,8 @@ ReportExperiment experiment_of(const BraggPdExperiment& experiment, const std::s
             }
         } else if (listed.id == "linked_structure") {
             next.table.columns = {header("linked_structure.structure_id"), header("linked_structure.scale")};
-            for (const auto& link : experiment.linked_structures) {
-                if (!link->enabled.get()) continue;  // a disabled link is in no report table (owner decision 2026-11-27)
+            // A disabled link is in no report table (owner decision 2026-11-27): the view's links (review 33).
+            for (const LinkedStructure* link : ActiveView::links_of(experiment)) {
                 next.table.rows.push_back({link->structure_id.value(), value_of(link->scale, rule).text});
             }
         } else if (listed.id == "excluded_region") {
@@ -1265,9 +1265,9 @@ ReportModel build_report(const Project& input, const ReportOptions& options) {
     model.authors = authors == "." || authors == "?" ? std::string() : authors;
     model.description = project.metadata.description;
     // A disabled linked structure appears nowhere in the report (owner decision 2026-11-27).
-    const std::vector<const Parameter*> hidden = const_cast<Project&>(project).hidden_parameters();
-    for (const auto& structure : project.structures) {
-        if (project.structure_hidden(structure->name.value())) continue;
+    // What a disabled link hides is decided by the one view every consumer reads (edi::ActiveView, review 33).
+    const ActiveView view(project);
+    for (const Structure* structure : view.structures()) {
         model.structure_ids.push_back(structure->name.value());
     }
     for (const auto& experiment : project.experiments) {
@@ -1299,7 +1299,7 @@ ReportModel build_report(const Project& input, const ReportOptions& options) {
     };
     const std::unordered_map<const Parameter*, SuMarks> marks = su_marks(project);
     for (const NamedParameter& named : named_parameters(project)) {
-        if (std::find(hidden.begin(), hidden.end(), named.parameter) != hidden.end()) continue;
+        if (!view.shown(named.parameter)) continue;
         const Parameter& parameter = *named.parameter;
         const std::optional<double>& su = parameter.uncertainty.get();
         const auto variant = variants.find(&parameter);
@@ -1352,8 +1352,7 @@ ReportModel build_report(const Project& input, const ReportOptions& options) {
         }
     }
     model.relations = relations_of(project);
-    for (const auto& structure : project.structures) {
-        if (project.structure_hidden(structure->name.value())) continue;
+    for (const Structure* structure : view.structures()) {
         ReportStructure built = structure_of(*structure, rule);
         if (charts) {
             add_scene(built, *structure, options.element_colours);
@@ -1413,10 +1412,10 @@ std::unordered_map<const Parameter*, SuMarks> su_marks(const Project& project) {
     std::unordered_map<const Parameter*, SuMarks> marks;
     const std::unordered_map<const Parameter*, std::string> variants = parameter_variants(project);
     std::unordered_map<std::string, const Parameter*> by_name;
-    // A hidden parameter is no partner and gets no mark (review 23).
-    const std::vector<const Parameter*> hidden = const_cast<Project&>(project).hidden_parameters();
+    // A hidden parameter is no partner and gets no mark (review 23), by the one view (review 33).
+    const ActiveView view(project);
     for (const NamedParameter& named : named_parameters(project)) {
-        if (std::find(hidden.begin(), hidden.end(), named.parameter) != hidden.end()) continue;
+        if (!view.shown(named.parameter)) continue;
         by_name.emplace(named.unique_name, named.parameter);
         const Parameter& parameter = *named.parameter;
         const std::optional<double> su = parameter.uncertainty.get();

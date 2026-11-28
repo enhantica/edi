@@ -134,13 +134,9 @@ std::set<std::string> correlation_hidden_names(Project& project, std::optional<s
             }
         }
     }
-    std::set<std::string> names;
-    for (const NamedParameter& named : named_parameters(project)) {
-        if (std::find(left_out.begin(), left_out.end(), named.parameter) != left_out.end()) {
-            names.insert(named.unique_name);
-        }
-    }
-    return names;
+    // Every spelling of each left-out parameter, constrained ones included, by the one view (edi::ActiveView): a pair a
+    // fit saved under either name is dropped (review 33).
+    return ActiveView(project).spellings(std::set<const Parameter*>(left_out.begin(), left_out.end()));
 }
 
 void drop_correlation_names(std::vector<std::string>& names, std::vector<double>& matrix,

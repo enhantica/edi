@@ -5367,7 +5367,7 @@ std::vector<const Structure*> ActiveView::structures() const {
     return out;
 }
 
-std::vector<const LinkedStructure*> ActiveView::links(const BraggPdExperiment& experiment) const {
+std::vector<const LinkedStructure*> ActiveView::links_of(const BraggPdExperiment& experiment) {
     std::vector<const LinkedStructure*> out;
     for (const auto& link : experiment.linked_structures)
         if (link->enabled.get()) out.push_back(link.get());
@@ -5375,31 +5375,17 @@ std::vector<const LinkedStructure*> ActiveView::links(const BraggPdExperiment& e
 }
 
 bool ActiveView::admits(const std::string& expression) const {
-    for (std::size_t i = 0; i < expression.size();) {
-        const char c = expression[i];
-        if (std::isdigit(static_cast<unsigned char>(c)) || c == '.') {  // a number, its exponent included
-            while (i < expression.size() &&
-                   (std::isalnum(static_cast<unsigned char>(expression[i])) || expression[i] == '.'))
-                ++i;
-            continue;
-        }
-        if (!(std::isalpha(static_cast<unsigned char>(c)) || c == '_')) {
-            ++i;
-            continue;
-        }
-        std::size_t end = i;
-        while (end < expression.size() &&
-               (std::isalnum(static_cast<unsigned char>(expression[end])) || expression[end] == '_'))
-            ++end;
-        const std::string word = expression.substr(i, end - i);
-        std::size_t next = end;
-        while (next < expression.size() && std::isspace(static_cast<unsigned char>(expression[next]))) ++next;
-        const bool function = next < expression.size() && expression[next] == '(';
-        // crysta's expression grammar: a function call, the constant pi, or an alias; a hidden alias is refused.
-        if (!function && word != "pi" && hidden_aliases_.contains(word)) return false;
-        i = end;
-    }
+    for (const std::string& alias : constraint_aliases(expression))
+        if (hidden_aliases_.contains(alias)) return false;
     return true;
+}
+
+std::set<std::string> ActiveView::spellings(const std::set<const Parameter*>& parameters) const {
+    std::set<std::string> out;
+    for (const auto& [name, held] : by_name_)
+        if (std::any_of(held.begin(), held.end(), [&](const Parameter* p) { return parameters.contains(p); }))
+            out.insert(name);
+    return out;
 }
 
 std::optional<std::size_t> ActiveView::alias_index(std::size_t row) const {
