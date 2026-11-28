@@ -513,8 +513,9 @@ names. A release asset may be up to 2 GiB, so the 100 MiB limit that GitHub puts
 caps an archive. Installers and installed apps keep their repository URLs.
 
 The download site keeps only the small files. Per platform the release carries `repoindex-stable-<platform>.tar.gz`
-with `Updates.xml`, every `.sha1` and `meta.7z`, and an `.htaccess` written at the tag. It answers a request for an
-archive the site does not hold with a 302 to `https://github.com/enhantica/edi/releases/download/v<version>/<asset>`.
+with `Updates.xml`, every `.sha1` and `meta.7z`, and `redirect.htaccess`, rules written at the tag that edi-download
+puts in the site's `.htaccess`. They answer a request for an archive the site does not hold with a 302 to
+`https://github.com/enhantica/edi/releases/download/v<version>/<asset>`.
 The version in the archive's file name names the tag, so an earlier release's archives resolve for as long as that
 release exists. A file the site holds is always served first. The redirect names github.com, never the signed address
 GitHub forwards to, which expires.

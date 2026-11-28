@@ -23,7 +23,8 @@ The apps' feed bases (data/distribution.json) do not serve ``pages/`` or ``offsi
 behind both is built by enhantica/edi-download from the GitHub release's assets with these tools,
 its two feeds with ``legacy_feed.write_feeds``. The download site serves each stable repository
 from its index, ``repoindex-stable-<platform>.tar.gz``: everything but the component archives, and
-an ``.htaccess`` that redirects each archive to its release asset (edi ADR-0071).
+``redirect.htaccess``, the rules edi-download puts in the site's ``.htaccess`` to redirect each
+archive to its release asset (edi ADR-0071).
 
     python tools/release/distribution.py --publication publication --output copies --repo <repo>
     python tools/release/distribution.py --dry-run --output copies   # a fixture, then the checks
@@ -145,7 +146,7 @@ def build(publication: Path, output: Path, published: list[list[dict]] | None = 
         for platform in sorted((incoming / 'repository/stable').iterdir()):
             where = paths['repository_paths']['stable'].format(platform=platform.name).rstrip('/')
             index = Path(scratch) / platform.name
-            attach_components(tree / where, platform.name, attached, index)
+            attach_components(tree / where, where, platform.name, attached, index)
             name = f'repoindex-stable-{platform.name}.tar.gz'
             reproducible_archive(index, where, attached / name)
     (attached / 'SHA256SUMS').write_text(manifest(attached), encoding='utf-8')
@@ -162,11 +163,13 @@ def downloadable_archives(repository: Path) -> list[tuple[str, str, str]]:
     ]
 
 
-def attach_components(repository: Path, platform: str, attached: Path, index: Path) -> None:
+def attach_components(
+    repository: Path, where: str, platform: str, attached: Path, index: Path
+) -> None:
     """Attach each archive of a stable repository as a release asset; copy the rest to `index`.
 
-    The index is what the download site serves itself: Updates.xml, every .sha1 and meta.7z, and
-    the .htaccess that sends the archives to their assets.
+    The index is what the download site serves itself at `where`: Updates.xml, every .sha1 and
+    meta.7z, and the redirect rules that send the archives to their assets.
     """
     archives = {}
     for component, version, name in downloadable_archives(repository):
@@ -181,36 +184,36 @@ def attach_components(repository: Path, platform: str, attached: Path, index: Pa
         target = attached / archives[relative] if relative in archives else index / relative
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(path, target)
-    (index / '.htaccess').write_text(redirect_rules(platform), encoding='utf-8')
+    (index / RULE_FILE).write_text(redirect_rules(where, platform), encoding='utf-8')
 
 
-def redirect_rules(platform: str) -> str:
-    """The download site's .htaccess for one platform's stable repository.
+# The index file holding the redirect rules. edi-download puts them in the download site's
+# .htaccess, so their paths start at the site root.
+RULE_FILE = 'redirect.htaccess'
+
+
+def redirect_rules(where: str, platform: str) -> str:
+    """The download site's redirect rules for one platform's stable repository at `where`.
 
     A component archive the site does not hold is redirected to the asset of the release its
-    version names. Updates.xml, the .sha1 files and meta.7z are never redirected: the installer
-    fetches an archive from wherever its .sha1 finally came from, so a redirected .sha1 fails.
+    version names. Every file the site holds is served as it is, Updates.xml, the .sha1 files and
+    meta.7z among them: the installer fetches an archive from wherever its .sha1 finally came
+    from, so a redirected .sha1 fails.
     """
     return (
-        'RewriteEngine On\n'
-        f'RewriteRule ^[^/]+/{PATTERN}meta\\.7z$ - [L]\n'
         'RewriteCond %{REQUEST_FILENAME} !-f\n'
-        f'RewriteRule ^({COMPONENT_ID})/({PATTERN})({ARCHIVE_NAME})$'
+        f'RewriteRule ^{where}/({COMPONENT_ID})/({PATTERN})({ARCHIVE_NAME})$'
         f' {RELEASES}/v$2/component-{platform}-$1-$2$3 [R=302,L]\n'
     )
 
 
 def redirected(rules: str, path: str) -> str | None:
-    """Where an .htaccess from redirect_rules sends a request for `path`, or None."""
+    """Where rules from redirect_rules send a request for a `path` the site does not hold."""
     for line in rules.splitlines():
         if line.startswith('RewriteRule '):
             _, pattern, target, _ = line.split(' ')
             if match := re.match(pattern, path):
-                return (
-                    None
-                    if target == '-'
-                    else re.sub(r'\$(\d)', lambda m: match[int(m[1])], target)
-                )
+                return re.sub(r'\$(\d)', lambda m: match[int(m[1])], target)
     return None
 
 
@@ -278,10 +281,11 @@ def component_problems(pages: Path, attached: Path, version: str) -> list[str]:
             where = paths['repository_paths']['stable'].format(platform=platform).rstrip('/')
             with tarfile.open(archive) as opened:
                 opened.extractall(Path(scratch) / platform, filter='data')
+            index = Path(scratch) / platform / where
             problems += [
                 f'{archive.name}: {problem}'
                 for problem in repository_index_problems(
-                    Path(scratch) / platform / where, pages / where, attached, version, named
+                    index, pages / where, where, attached, version, named
                 )
             ]
     if named != {p.name for p in attached.glob('component-*')}:
@@ -290,24 +294,26 @@ def component_problems(pages: Path, attached: Path, version: str) -> list[str]:
 
 
 def repository_index_problems(
-    index: Path, repository: Path, attached: Path, version: str, named: set[str]
+    index: Path, repository: Path, where: str, attached: Path, version: str, named: set[str]
 ) -> list[str]:
-    """What the download site would serve wrongly from one platform's index.
+    """What the download site would serve wrongly from one platform's index at `where`.
 
-    Each archive must be redirected to its own release asset, every other file served as it is.
-    The asset names go into `named`.
+    The site serves every file it holds, and no rule may match a .sha1. Each archive, which it
+    does not hold, must be redirected to its own release asset. The asset names go into `named`.
     """
-    rules = (index / '.htaccess').read_text(encoding='utf-8')
+    rules = (index / RULE_FILE).read_text(encoding='utf-8')
     archives = {f'{c}/{v}{n}' for c, v, n in downloadable_archives(repository)}
     served = {p.relative_to(index).as_posix() for p in index.rglob('*') if p.is_file()}
-    problems, expected = [], {'.htaccess'}
+    problems, expected = [], {RULE_FILE}
     for path in sorted(p for p in repository.rglob('*') if p.is_file()):
         relative = path.relative_to(repository).as_posix()
-        target = redirected(rules, relative)
+        target = redirected(rules, f'{where}/{relative}')
         if relative not in archives:
             expected.add(relative)
-            if target or relative not in served or sha256(index / relative) != sha256(path):
+            if relative not in served or sha256(index / relative) != sha256(path):
                 problems.append(f'{relative} is not served as it is')
+            elif target and relative.endswith('.sha1'):
+                problems.append(f'{relative}: a rule matches it')
             continue
         asset = (target or '').removeprefix(f'{RELEASES}/v{version}/')
         named.add(asset)
