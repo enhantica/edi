@@ -978,14 +978,14 @@ Between fit steps every intensity takes its share of the measured net counts:
 
 $$
 |F_h|^2 \leftarrow |F_h|^2\,\frac{\sum_i p_{hi}\,r_i}{\sum_i p_{hi}},\qquad
-r_i=\frac{\max(y_i^{\rm obs}-b_i,\,0)}{y_i^{\rm calc}-b_i}.
+r_i=\frac{y_i^{\rm obs}-b_i}{y_i^{\rm calc}-b_i}.
 $$
 
-$p_{hi}$ is reflection $h$'s calculated contribution at point $i$, $b_i$ the background and $y_i^{\rm calc}$ the calculation of all structures together. The cell, profile, background and zero are fitted by least squares with the intensities held. Exactly overlapping reflections keep the ratio they start with. Le Bail intensities have no standard uncertainty and are not counted as fitted parameters.
+$p_{hi}$ is reflection $h$'s calculated contribution at point $i$, $b_i$ the background and $y_i^{\rm calc}$ the calculation of all structures together. A point below the background counts with its negative net, as in FullProf: clamping it at zero inflates weak reflections. The cell, profile, background and zero are fitted by least squares with the intensities held. Exactly overlapping reflections keep the ratio they start with. Le Bail intensities have no standard uncertainty and are not counted as fitted parameters.
 
 ### Pawley intensity extraction {#pawley-intensity-extraction}
 
-Every intensity is a linear parameter of the least-squares fit, fitted together with the cell, profile, background and zero. Reflections that coincide for every allowed cell share one parameter. No intensity goes below zero. The fit gives a standard uncertainty for each intensity; where peaks overlap it shows how well they are separated.
+Every intensity is a linear parameter of the least-squares fit, fitted together with the cell, profile, background and zero. Reflections that coincide for every allowed cell share one parameter. Reflections that only nearly overlap are pulled towards equal shares, a pull that matters only where the data cannot separate them. No intensity goes below zero. The fit gives a standard uncertainty for each intensity above zero; one held at zero has none.
 
 The distinction is described in the [IUCr intensity-extraction overview](https://onlinelibrary.wiley.com/iucr/itc/Ha/ch4o2v0001/sec4o2o2/).
 
