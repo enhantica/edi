@@ -15,7 +15,8 @@ import zipfile
 from collections.abc import Callable
 from pathlib import Path, PurePosixPath
 
-from plan import markdown_notes, validate_history, version_key
+from legacy_feed import write_feeds
+from plan import installer_stem, markdown_notes, validate_history, version_key
 
 PLATFORMS = {'Linux': 'linux-x86_64', 'macOS': 'macos-arm64', 'Windows': 'windows-x86_64'}
 ROOT = Path(__file__).resolve().parents[2]
@@ -31,10 +32,8 @@ INSTALLER_PLATFORMS = {
 
 def installer_name(version: str, platform: str, kind: str) -> str:
     """The file name of a platform's online or offline installer download."""
-    offline = '-Offline' if kind == 'offline' else ''
     return (
-        f'EasyDiffraction-Installer{offline}-{version}-{INSTALLER_PLATFORMS[platform]}'
-        f'{INSTALLER_SUFFIXES[platform]}'
+        installer_stem(version, INSTALLER_PLATFORMS[platform], kind) + INSTALLER_SUFFIXES[platform]
     )
 
 
@@ -476,8 +475,9 @@ def stage(repo: str, identity: int, output: Path) -> None:
     for name in ['release.json', 'release-history.json']:
         shutil.copy2(plan / name, assets / name)
     shutil.copy2(plan / 'notes.md', output / 'notes.md')
-    (incoming / 'releases').mkdir()
-    shutil.copy2(plan / 'release-history.json', incoming / 'releases/stable.json')
+    # stable-v2.json for current apps, and stable.json for apps up to v2026.11.31, which drop a
+    # feed holding any YY.N version (edi ADR-0106); refused if their parser would drop it too.
+    write_feeds(plan / 'release-history.json', incoming / 'releases')
     (assets / 'SHA256SUMS').write_text(
         ''.join(f'{digest(path)}  {path.name}\n' for path in sorted(assets.iterdir()))
     )

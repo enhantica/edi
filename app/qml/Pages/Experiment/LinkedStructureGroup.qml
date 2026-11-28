@@ -37,7 +37,7 @@ Column {
         // beside it), scale and weight fraction numbers; the rest of the row is left empty, so the remove button always
         // shows (the owner, 2026-11-21).
         // Its columns by kind (the shared column model, DataTable.columnKinds; ADR-0103 decision 4).
-        columnKinds: ["index", "mark", "short", "number", "number", "control", "control"]
+        columnKinds: ["index", "mark", "name", "value", "number", "control", "control"]
 
         header: EaComponents.ListViewHeader {
             EaComponents.ListViewLabel {

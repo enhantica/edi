@@ -4,11 +4,10 @@
 import argparse
 import hashlib
 import json
-import re
 import subprocess
 from pathlib import Path
 
-from plan import markdown_note, note_interfaces, release_body, release_title
+from plan import is_version, markdown_note, note_interfaces, release_body, release_title
 from promote import (
     ROOT,
     components_validator,
@@ -60,7 +59,7 @@ def prepare(
         version = metadata['version']
         if platform not in expected or platform in archives:
             raise ValueError('Unexpected or duplicate installer platform')
-        if not re.fullmatch(r'[0-9]{4}\.(0[1-9]|1[0-2])\.(0|[1-9][0-9]*)', version):
+        if not is_version(version):
             raise ValueError('Expected a calendar version')
         archive = delivery / installer_name(version, platform, 'online')
         if (

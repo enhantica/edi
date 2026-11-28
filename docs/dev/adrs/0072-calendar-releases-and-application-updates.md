@@ -2,7 +2,10 @@
 
 ## Status
 
-Accepted for implementation.
+Accepted for implementation. Its version scheme, `YYYY.MM.SEQUENCE`, is superseded by
+[ADR-0106](0106-versions-and-checksum-updates.md): releases are `YY.N` from 26.17, ordered after the old ones by one
+key, and updates are offered by content checksum. The rest stands; where it says calendar version, read release
+version.
 
 ## Context
 
@@ -14,8 +17,8 @@ Scipp demonstrates calendar versioning accompanied by an explicit compatibility 
 
 ## Decision
 
-Use `YYYY.MM.SEQUENCE`: a four-digit year, release month and zero-based release sequence within that
-month. For example, `2026.11.0`, `2026.11.1`, then `2026.12.0`. Every release in a month advances the
+*Superseded by ADR-0106 (`YY.N`):* use `YYYY.MM.SEQUENCE`: a four-digit year, release month and zero-based release
+sequence within that month. For example, `2026.11.0`, `2026.11.1`, then `2026.12.0`. Every release in a month advances the
 sequence, regardless of its contents. Release automation chooses the next unused version from the
 release calendar and existing releases; rerunning the same release must not create another version.
 Use the same release identity in the app, installer, component repository and GitHub release.

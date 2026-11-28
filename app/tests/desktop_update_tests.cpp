@@ -45,7 +45,9 @@ public:
         });
         if (!server.listen(QHostAddress::LocalHost)) qFatal("Unable to bind local recorded feed");
     }
-    QUrl url() const { return QUrl(QStringLiteral("http://127.0.0.1:%1/releases.json").arg(server.serverPort())); }
+    QUrl url(const QString& path = QStringLiteral("/releases.json")) const {
+        return QUrl(QStringLiteral("http://127.0.0.1:%1%2").arg(QString::number(server.serverPort()), path));
+    }
 };
 }
 
@@ -71,6 +73,25 @@ private slots:
         QVERIFY(!updates.newerVersion("2026.13.0", "2026.11.0"));
         QVERIFY(!updates.newerVersion("2026.11.01", "2026.11.0"));
         QVERIFY(!updates.newerVersion("2026.11.0", "git-build"));
+    }
+    void yearCounterOrdering() {
+        // Old releases come first, then YY.N by year and counter, though 26.17 is the smaller number.
+        edi_app::DesktopUpdates updates("26.17", {}, {}, false);
+        const QStringList ordered{"2026.11.0", "2026.11.31", "26.17", "26.18", "27.1"};
+        for (qsizetype i = 1; i < ordered.size(); ++i) {
+            QVERIFY2(updates.newerVersion(ordered[i], ordered[i - 1]), qPrintable(ordered[i]));
+            QVERIFY2(!updates.newerVersion(ordered[i - 1], ordered[i]), qPrintable(ordered[i]));
+        }
+        for (const auto* invalid : {"26.0", "26.017", "05.1", "2026.17", "126.1", "v26.17"})
+            QVERIFY2(!edi_app::release_version_key(QString::fromLatin1(invalid)), invalid);
+        bool valid = false;
+        const auto values = edi_app::release_changes(
+            history({release("2026.11.31"), release("26.18"), release("26.17"), release("2026.11.0")}), "26.17", &valid);
+        QVERIFY(valid);
+        QCOMPARE(values.size(), 3);
+        QCOMPARE(values[0].toMap()["version"].toString(), "26.17");
+        QCOMPARE(values[1].toMap()["version"].toString(), "2026.11.31");
+        QCOMPARE(values[2].toMap()["version"].toString(), "2026.11.0");
     }
     void orderedBundledRangeAndEscapedTitles() {
         bool valid = false;
@@ -128,6 +149,23 @@ private slots:
         QVERIFY(!development.managed());
         development.checkNow();
         QVERIFY(!development.checking());
+    }
+    void previewNotesOnlyFromTestingV2() {
+        // testing.json is the legacy feed for old apps now, so only testing-v2.json may carry preview notes.
+        auto entry = release("26.17");
+        entry["notes"] = QJsonObject{{"Added", QJsonArray{QJsonObject{{"title", "Preview build"}, {"pull_request", 0}}}},
+                                     {"Changed", QJsonArray{}}, {"Fixed", QJsonArray{}}};
+        FeedServer feed(QJsonDocument(QJsonObject{{"schema", "edi.preview-releases/1"}, {"releases", QJsonArray{entry}}}).toJson());
+        edi_app::DesktopUpdates testing("2026.11.31", QCoreApplication::applicationFilePath(), {feed.url("/edi/releases/testing-v2.json")}, false);
+        testing.checkNow();
+        QTRY_VERIFY_WITH_TIMEOUT(!testing.checking(), 3000);
+        QVERIFY(testing.available());
+        QCOMPARE(testing.availableVersion(), "26.17");
+        edi_app::DesktopUpdates legacy("2026.11.31", QCoreApplication::applicationFilePath(), {feed.url("/edi/releases/testing.json")}, false);
+        legacy.checkNow();
+        QTRY_VERIFY_WITH_TIMEOUT(!legacy.checking(), 3000);
+        QVERIFY(!legacy.available());
+        QVERIFY(legacy.status().contains("Unable"));
     }
     void updaterLaunchFailureKeepsTheApplicationOpen() {
         QTemporaryDir temp;

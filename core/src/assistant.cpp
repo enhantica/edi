@@ -364,17 +364,19 @@ std::string_view selected_text(const SelectedFile& file) {
     if (file.bytes.empty()) return {};
     return {reinterpret_cast<const char*>(file.bytes.data()), file.bytes.size()};
 }
-bool selected_readable(const SelectedFile& file) {
+std::string_view selected_format(const SelectedFile& file) {
     // GPX is never unpickled or executed, even if a particular byte sequence happens to be UTF-8.
     auto name = file.relative_name;
     for (char& c : name) if (c >= 'A' && c <= 'Z') c += 'a' - 'A';
     const auto text = selected_text(file);
-    return !name.ends_with(".gpx") && text.find('\0') == std::string_view::npos && utf8(text);
+    if (name.ends_with(".gpx") || text.find('\0') != std::string_view::npos) return selected_binary_format;
+    if (utf8(text)) return selected_utf8_format;
+    return windows_1252_text(text) ? selected_windows_1252_format : selected_binary_format;
 }
 J selected_descriptor(const SelectedFile& file) {
-    const bool readable = selected_readable(file);
+    const auto format = selected_format(file);
     return O{{"id", file.id}, {"name", file.relative_name}, {"bytes", static_cast<double>(file.bytes.size())},
-             {"text_readable", readable}, {"format", readable ? "unverified_text" : "unsupported_binary"}};
+             {"text_readable", format != selected_binary_format}, {"format", std::string(format)}};
 }
 
 J manifest() {

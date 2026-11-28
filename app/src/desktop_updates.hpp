@@ -8,11 +8,25 @@
 #include <QVariantList>
 #include <QtQml/qqmlregistration.h>
 
+#include <array>
+#include <optional>
+
 #include "app_info.hpp"
 
 namespace edi_app {
 
-/// Managed desktop release availability and maintenance-tool launch (ADR-0072).
+/// A release's place in the order (edi ADR-0106): year, form, then the numbers. Old YYYY.MM.N releases come before
+/// the YY.N releases of their year, which plain numbers would not give (26.17 < 2026.11.31).
+using ReleaseKey = std::array<quint64, 4>;
+/// The key of a YY.N or old YYYY.MM.N version, or none for anything else.
+std::optional<ReleaseKey> release_version_key(const QString& value);
+/// macOS: an update stopped between moving the installed Maintenance Tool aside and moving the new one in leaves the
+/// only copy as MaintenanceTool.app.old (ADR-0106). When the bundle holding `executable` has no tool and the kept one
+/// has, put the kept one back and drop its mark. Returns whether it did; anything else, a path outside a .app bundle,
+/// or an update still running (its mark names a live process), changes nothing.
+bool restore_kept_maintenance_tool(const QString& executable);
+
+/// Managed desktop release availability and maintenance-tool launch (ADR-0072, versions ADR-0106).
 class DesktopUpdates : public QObject {
     Q_OBJECT
     QML_ELEMENT
@@ -36,7 +50,7 @@ public:
     bool checking() const { return checking_; }
     /// Whether the recorded available release is newer than the running release.
     bool available() const { return !available_version_.isEmpty(); }
-    /// The validated available calendar identity, or an empty string.
+    /// The validated available release version, or an empty string.
     QString availableVersion() const { return available_version_; }
     /// The latest human-readable check or launch result.
     QList<ChangeDay> availableChanges() const { return available_changes_; }
@@ -46,7 +60,7 @@ public:
     /// Launch the fixed installed updater; call only after the existing unsaved-work guard succeeds.
     Q_INVOKABLE bool startUpdate();
     Q_INVOKABLE bool startMaintenance();
-    /// Compare validated calendar versions numerically; invalid identities are never newer.
+    /// Compare validated release versions by their key; invalid identities are never newer.
     Q_INVOKABLE bool newerVersion(const QString& candidate, const QString& previous) const;
     /// Bundled release notes through the running release, newest first; malformed history yields none.
     Q_INVOKABLE QList<ChangeDay> releaseChanges() const;

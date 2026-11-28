@@ -4,20 +4,32 @@
 // desktop (when the home folder has one) on Linux. The installer undoes these operations when the app is removed.
 function Component() {}
 
+// What EasyDiffraction is, as the installer's pages say it (Installer.qs): the shortcut's and the menu entry's comment.
+var DESCRIPTION = "Calculate diffraction patterns and fit a structural model to your data.";
+
+// The maintenance tool's pages, which an online build ships with this component (package.py names the file here). The
+// running tool keeps its pages in MaintenanceTool.dat and copies them over at the end of every update, so without this
+// a newer tool shows the pages of the release first installed. Named as the replacement, the file goes into that data
+// file instead and the Framework deletes it (edi ADR-0106).
+var MAINTENANCE_RESOURCE = "";
+
 Component.prototype.createOperations = function () {
     component.createOperations();
     holdProgress();
     var target = installer.value("TargetDir");
+    if (MAINTENANCE_RESOURCE !== "")
+        installer.setValue("DefaultResourceReplacement", target + "/" + MAINTENANCE_RESOURCE);
     // The install page's "Add a desktop shortcut" box (Installer.qs); the command line keeps it.
     var desktopShortcut = installer.value("EdiDesktopShortcut") !== "false";
     if (systemInfo.kernelType === "winnt") {
         var program = target + "/bin/EasyDiffraction.exe";
-        var folder = "workingDirectory=" + target, icon = "iconPath=" + program, about = "description=EasyDiffraction";
+        var folder = "workingDirectory=" + target, icon = "iconPath=" + program;
+        var about = "description=" + DESCRIPTION;
         component.addOperation("CreateShortcut", program, "@StartMenuDir@/EasyDiffraction.lnk", folder, icon, about);
         if (desktopShortcut)
             component.addOperation("CreateShortcut", program, "@DesktopDir@/EasyDiffraction.lnk", folder, icon, about);
     } else if (systemInfo.kernelType === "linux") {
-        var entry = "Type=Application\nName=EasyDiffraction\nComment=Diffraction analysis\n"
+        var entry = "Type=Application\nName=EasyDiffraction\nComment=" + DESCRIPTION + "\n"
             + "Exec=\"" + target + "/bin/EasyDiffraction\"\nIcon=" + target + "/share/icons/EasyDiffraction.png\n"
             + "Terminal=false\nCategories=Science;Education;\n";
         component.addOperation("CreateDesktopEntry", "EasyDiffraction.desktop", entry);

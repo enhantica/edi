@@ -66,7 +66,7 @@ See [ADR-0071](adrs/0071-desktop-installers.md) for the deployment and qualifica
 
 Each platform first qualifies the offline bundle, then generates an online-only bootstrap and tests
 its ZIP against a local file repository. The final installer artifacts contain only that online ZIP.
-Development component versions use `0.0.RUN.ATTEMPT`; published calendar releases use their single
+Development component versions use `0.0.RUN.ATTEMPT`; published releases use their single
 release-plan identity instead. Offline candidates remain local qualification inputs.
 
 For a testing prerelease, manually run **Desktop installers** with
@@ -108,7 +108,10 @@ CLI ZIPs are separate GitHub assets and require no Pages component repository.
 
 ## Calendar release and update notes
 
-The version is `YYYY.MM.SEQUENCE`, starting at zero each month. Merged PR titles describe the user
+The version is `YY.N`, the year's last two digits and a counter within the year (26.17, then 27.1),
+ordered after the old `YYYY.MM.SEQUENCE` releases (ADR-0106). The component repositories are built with
+`repogen --sha-update`, so the Maintenance Tool offers a component whose content changed, whatever its version,
+and an update also replaces the Maintenance Tool on macOS and Windows. Merged PR titles describe the user
 outcome and become the release notes. Exactly one existing scope label groups a PR into Added,
 Fixed or Changed; the label does not select a semantic-version increment.
 
@@ -137,6 +140,16 @@ The history feed and bundled notes share one source. Managed calendar installati
 independently of optional update notifications. The red Update button follows the existing unsaved-work
 guard and starts the maintenance tool. On the updated app's next launch, What's new includes every
 release since the user's previous version. Ordinary developer builds retain their git version.
+
+Apps from 26.17 on read the history feed as `releases/stable-v2.json`, or `releases/testing-v2.json` on the testing
+channel. The tools also publish `releases/stable.json` for 2026.11.x apps, whose update check drops a feed holding any
+version that is not `YYYY.MM.N`: it keeps the old releases and adds only the newest `YY.N` release, under the alias
+`2026.11.<31 + k>`, `k` being its place among the published `YY.N` releases (26.17 is 2026.11.32), with a first note
+naming the real release. `tools/release/legacy_feed.py` checks it by the 2026.11 app's rules, and a feed it rejects
+is not published. The apps fetch both feeds from the site that enhantica/edi-download builds for each release. It
+writes them from the release's `release-history.json` asset with `legacy_feed.write_feeds`; the apps never read the
+copies `distribution.py` writes. The testing channel has no feed on those bases yet, so testing-channel apps find no
+update there (ADR-0106).
 
 ## Python preview distribution
 

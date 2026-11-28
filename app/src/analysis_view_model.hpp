@@ -36,20 +36,32 @@ class JointWeightListModel : public RowTableModel {
     edi::Project& project_;
 };
 
-// The declared `_sequential_fit` block (scan modes), read-only. The scan's extraction rules
-// (`_sequential_fit_extract`, read-only like the scan declaration): `id`,
-// `target`, `pattern` and `required` (a loop is a table).
+// The scan's extraction rules (`_sequential_fit_extract`): `id`, `target` and `pattern`, editable as text, and
+// `required`; append, duplicate and remove as the constraints. An edit changes the scan's declaration, so results
+// fitted before it are out of date, as after any edit of the template.
 class SequentialExtractListModel : public RowTableModel {
     Q_OBJECT
     QML_ELEMENT
     QML_UNCREATABLE("Belongs to the analysis")
 
    public:
-    SequentialExtractListModel(const edi::Project& project, QObject* parent);
+    SequentialExtractListModel(edi::Project& project, ProjectEditor& editor, QObject* parent);
     void sync();
+    Q_INVOKABLE bool setText(int row, const QString& role, const QString& value);
+    Q_INVOKABLE bool setRequired(int row, bool required);
+    Q_INVOKABLE void append();
+    Q_INVOKABLE void duplicate(int row);
+    Q_INVOKABLE void remove(int row);
+
+   protected:
+    bool setRole(int row, const QString& role, const QVariant& value) override;
 
    private:
-    const edi::Project& project_;
+    edi::SequentialExtractRule* ruleAt(int row) const;
+    // A name of `stem` and a number that neither an id nor a target of the rules has.
+    std::string unusedName(const std::string& stem) const;
+    edi::Project& project_;
+    ProjectEditor& editor_;
 };
 
 // The declared parameter aliases (`_alias`): `id`, editable as text, and `parameter`, the unique name of

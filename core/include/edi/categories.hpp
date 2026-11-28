@@ -417,8 +417,8 @@ std::vector<NamedSlot> named_slots(Project& project);
 // The analysis categories shown (D-i): the minimizer and the fitting mode always; the scan declaration
 // in a scan mode. Every loop the block writes is shown as its own category ("loop in .edi — table in
 // gui"): the aliases and the constraints always (the first of each is added from its table), the joint
-// weights in joint mode only, as they are written (the owner, 2026-10-11), the scan extraction rules and
-// the fit start state when there are any.
+// weights in joint mode only, as they are written (the owner, 2026-10-11), the extraction rules of every
+// declared scan, whose first one is added from its table too, and the fit start state when there is any.
 inline std::vector<Category> analysis_categories(const Project& project) {
     std::vector<Category> categories{{"minimizer"}, {"fitting_mode"}};
     // A single crystal's fit cutoff (edi ADR-0050).
@@ -435,7 +435,7 @@ inline std::vector<Category> analysis_categories(const Project& project) {
     if (is_scan_fitting_mode(project.fitting_mode)) {
         categories.push_back({"sequential_fit"});
     }
-    if (!project.sequential_fit.extract.empty()) {
+    if (project.sequential_fit.declared() || !project.sequential_fit.extract.empty()) {
         categories.push_back({"sequential_fit_extract", true, project.sequential_fit.extract.size()});
     }
     if (const std::size_t starts = fit_start_rows(project).size(); starts > 0) {

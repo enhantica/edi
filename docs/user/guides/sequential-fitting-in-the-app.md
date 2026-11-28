@@ -16,6 +16,10 @@ the last run ended on it (Fit), its file and the value each extract rule takes f
 the temperature. The selector above the chart lists the same datasets; with more than ten entries
 it has a search field, which matches any part of the entry, the temperature included.
 
+The rules themselves are on the Analysis page, Extra, under **Scan extraction rules**: each is a
+regular expression whose group in parentheses is the value read, and the results column it goes to.
+Edit them in the table, and use **Append**, **Duplicate** and the remove button for rows.
+
 Choosing a dataset shows its measured points with the template's settings. Once the scan has
 been fitted, it shows that dataset's fitted values from `analysis/results.csv` on the Experiment
 and Structure pages, and the pattern calculated from them. A file is read only when it is shown

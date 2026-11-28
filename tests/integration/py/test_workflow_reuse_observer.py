@@ -30,7 +30,7 @@ def test_actual_shared_sdk_exposes_all_platform_runners_and_only_source_read_sco
     assert len(calls) == 1 and calls[0]['with'] == {
         'sha': '${{ needs.resolve.outputs.sha }}',
         'app-id': '${{ vars.ENHANTICA_APP_ID }}',
-        'private-key': '${{ secrets.ENHANTICA_APP_KEY }}',
+        'private-key': '${{ secrets.CRYSTA_READ_KEY }}',
     }, 'The shared SDK delegates the exact pinned read to the local source action'
     action = yaml.safe_load((ROOT / source_action / 'action.yml').read_text())
     caller_steps = [step for _, child in expanded for step in child.get('steps', [])]

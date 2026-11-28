@@ -3,8 +3,9 @@
 #
 # A job that builds against crysta needs a read token for crysta's prebuilt SDK, so it runs only for
 # events from this repository (never a fork's pull request) and in the reviewed `crysta-sdk`
-# environment, which holds the app key. A fork's pull request runs the jobs that need no token, and
-# the pin-currency job without its token steps.
+# environment. The app key is edi's own repository secret `CRYSTA_READ_KEY`, which reaches no other
+# repository. A fork's pull request runs the jobs that need no token, and the pin-currency job
+# without its token steps.
 # Compatible native consumers share this run's validated Edi artifacts and qualified SDK.
 # Qt and browser configurations keep their own builds; compiler caches cover both.
 name: Tests
@@ -148,7 +149,7 @@ jobs:
         with:
           sha: ${{ env.CRYSTA_SOURCE_SHA }}
           app-id: ${{ vars.ENHANTICA_APP_ID }}
-          private-key: ${{ secrets.ENHANTICA_APP_KEY }}
+          private-key: ${{ secrets.CRYSTA_READ_KEY }}
       - name: Build the native code once (core-build, then edi_tests in the same tree)
         id: build
         run: pixi run core-build
@@ -280,7 +281,7 @@ jobs:
       - name: The crysta consumer proof
         if: ${{ !cancelled() && steps.build.outcome == 'success' }}
         run: pixi run crysta-consumer
-      - name: Python surface and CLI vocabulary checks
+      - name: Python surface, CLI vocabulary and label registry checks
         if: ${{ !cancelled() && steps.build.outcome == 'success' }}
         run: |
           status=0
@@ -288,6 +289,7 @@ jobs:
           pixi run --skip-deps python-surface-check || status=1
           pixi run --skip-deps cli-vocabulary-check || status=1
           pixi run --skip-deps display-sources-check || status=1
+          pixi run --skip-deps label-registry-check || status=1
           exit $status
       # The declared group runs as parallel jobs (owner, 2026-10-08): the C++ unit tests, unit and
       # integration here, and the system tier in the three `system` jobs below, which pull requests skip.
@@ -571,7 +573,7 @@ jobs:
         with:
           sha: ${{ env.CRYSTA_SOURCE_SHA }}
           app-id: ${{ vars.ENHANTICA_APP_ID }}
-          private-key: ${{ secrets.ENHANTICA_APP_KEY }}
+          private-key: ${{ secrets.CRYSTA_READ_KEY }}
       - name: Build the native code
         if: ${{ env.NIGHTLY == 'true' && (github.event.pull_request.head.repo.fork == false) }}
         run: pixi run core-build
@@ -708,7 +710,7 @@ jobs:
         with:
           sha: ${{ env.CRYSTA_SOURCE_SHA }}
           app-id: ${{ vars.ENHANTICA_APP_ID }}
-          private-key: ${{ secrets.ENHANTICA_APP_KEY }}
+          private-key: ${{ secrets.CRYSTA_READ_KEY }}
       - name: Prepare notebooks
         if: env.NIGHTLY == 'true'
         run: pixi run notebook-prepare
@@ -961,6 +963,10 @@ jobs:
       # The app's own tests run only at night and on a manual run.
       - name: The app's Qt Quick Test tier
         if: ${{ runner.os != 'Windows' && (!cancelled() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && steps.apphost.outcome == 'success') }}
+        # Qt Test's own per-function limit is 5 min; 4 min (the slowest data row seen took 83 s) names a hung test.
+        timeout-minutes: 120
+        env:
+          QTEST_FUNCTION_TIMEOUT: '240000'
         run: pixi run -e app --skip-deps app-test
       - name: The UI test against the one committed image set
         if: ${{ runner.os != 'Windows' && (!cancelled() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && steps.apphost.outcome == 'success') }}
@@ -1121,6 +1127,11 @@ jobs:
         run: >-
           pixi run --skip-deps wasm-check "$RUNNER_TEMP/edi-webapp-checks" tests/system/manual/e04_t11_browser.mjs
           tests/system/py/test_e04_t11_wasm_fit.py tests/system/py/test_e04_t11_wasm_delivery.py tests/system/py/test_web_multithread_loader.py
+      - name: Check the first click after opening a project
+        if: ${{ !cancelled() && steps.site.outcome == 'success' }}
+        run: >-
+          pixi run --skip-deps wasm-check "$RUNNER_TEMP/edi-webapp-checks/first-click" tests/system/manual/e04_t11_browser.mjs
+          --project-open-click-only
       # The multithread kit's parallel fit: all three routes timed against each other (the speed ratio is in the log)
       # and crysta's executed-body witness built from the same crysta source with the same options. It takes about
       # 20 minutes, so it runs on main pushes, the nightly run and dispatch, not on pull requests.

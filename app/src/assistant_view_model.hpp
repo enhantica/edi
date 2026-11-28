@@ -156,6 +156,7 @@ class AssistantViewModel : public QObject {
     bool cachedHistoryClearing() const;
     QString cachedHistoryError() const;
     Q_INVOKABLE void clearCachedHistory();
+    Q_INVOKABLE void showSteps(const QString& group, bool shown);
     RowTableModel* selectedFiles() const;
     RowTableModel* skills() const;
     QString selectedSkill() const;
@@ -231,7 +232,9 @@ class AssistantViewModel : public QObject {
     Q_INVOKABLE void answerQuestion(const QString& id, const QString& answer);
     Q_INVOKABLE bool nativeProjectCreateCurrent(const QString& intent) const;
     Q_INVOKABLE void nativeProjectCreateReady(const QString& intent,bool ready);
-    Q_INVOKABLE void nativeProjectCreateSaveChoice(const QString& intent,QObject* form,QObject* button);
+    Q_INVOKABLE void nativeProjectCreateAsked(const QString& intent,QObject* form);
+    Q_INVOKABLE void nativeProjectCreateDiscard(const QString& intent);
+    Q_INVOKABLE bool nativeProjectCreateDiscards(const QString& intent) const;
     Q_INVOKABLE bool nativeProjectCreateSave(const QString& intent);
     // Actual grab owns this opaque proof until its sole tap, cancel or ungrab.
     // Final delivery only validates the original owner; it never cancels anew.
