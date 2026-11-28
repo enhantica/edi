@@ -57,7 +57,12 @@ void ParameterTableModel::sync() {
             item->blockName() != experiment_scope_) {
             continue;  // a scan mode fits one experiment at a time: another experiment's parameter
         }
-        free_count += item->isFree() ? 1 : 0;
+        // A Pawley row counts each free intensity it stands for (edi ADR-0109 §5).
+        if (item->groupSize() > 0) {
+            for (const edi::Parameter* member : item->group()) free_count += member->free.get() ? 1 : 0;
+        } else {
+            free_count += item->isFree() ? 1 : 0;
+        }
         // An s.u. the column would show: one read or fitted, above zero (an unset or zero one shows nothing).
         any_uncertainty = any_uncertainty || (item->hasUncertainty() && std::isfinite(item->uncertainty()) && item->uncertainty() > 0.0);
         not_fittable_count += !item->isFree() && !item->isFittable() ? 1 : 0;
@@ -72,8 +77,16 @@ void ParameterTableModel::sync() {
         }
     }
     setTableRows(rows);
-    // Free, fixed (could be freed) and not fittable partition the rows (edi ADR-0053).
-    const int fixed_count = count() - free_count - not_fittable_count;
+    // Free, fixed (could be freed) and not fittable partition the rows (edi ADR-0053); a Pawley row is fixed while
+    // none of its intensities is free.
+    int fixed_count = 0;
+    for (ParameterItem* item : registry_.items()) {
+        if (!experiment_scope_.isEmpty() && item->blockKind() == QLatin1String("experiment") &&
+            item->blockName() != experiment_scope_) {
+            continue;
+        }
+        fixed_count += !item->isFree() && !item->partiallyFree() && item->isFittable() ? 1 : 0;
+    }
     if (free_count != free_count_) {
         free_count_ = free_count;
         emit freeCountChanged();

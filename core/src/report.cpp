@@ -973,6 +973,26 @@ std::string parameter_table(const FitResultBase& outcome, const Project* project
         }
         out << '\n';
     }
+    // The structures whose intensities come from the pattern, by name and method (edi ADR-0109); a project whose
+    // structures are all Rietveld prints what it always printed.
+    if (project != nullptr) {
+        std::string methods;
+        for (const auto& structure : project->structures) {
+            std::string token;
+            try {
+                token = calc_method_token(*structure);
+            } catch (const std::exception&) {
+                token = structure->calc_method.value();
+            }
+            if (token != "rietveld") {
+                methods += (methods.empty() ? "" : ", ") + structure->name.value() + " " +
+                           option_label("structure.calc_method", token);
+            }
+        }
+        if (!methods.empty()) {
+            out << "\n  calculation: " << methods << '\n';
+        }
+    }
     out << "\n  refined parameters (" << outcome.values.size() << " free):\n";
     // With the project, each row is its parameter's, found by the result path (parameter_entries walks the paths a fit
     // result carries): its item, an ADP labelled and rounded by its site's type, and a value and its s.u. by the

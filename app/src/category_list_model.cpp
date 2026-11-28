@@ -174,13 +174,14 @@ void CategoryListModel::setCategories(const std::vector<edi::Category>& categori
     // Nor what another group shows: a structure's saved view (Appearance). The magnetic form factors have their own
     // group, which the core lists for a magnetic structure. The parent group gets a group in Extra with both its
     // transforms, the one to the magnetic cell included; Main shows it only when it differs from the space group.
+    // A structure's calculation method is chosen in the Structures table (edi ADR-0109).
     static const char* const kNotGenerated[] = {"geom",     "experiment_type",           "edi",
                                                 "calculator", "atom_sites_cartn_transform", "pd_calc_overall",
                                                 "pd_block", "fit_parameter_correlation", "structure_view",
-                                                "magnetic_form_factor", "geom_bond"};
-    const auto generates = [](const std::string& id) {
+                                                "magnetic_form_factor", "geom_bond", "structure"};
+    const auto generates = [this](const std::string& id) {
         return std::find(std::begin(kNotGenerated), std::end(kNotGenerated), id) == std::end(kNotGenerated) &&
-               !edi::category_label(id).empty();
+               std::find(hidden_.begin(), hidden_.end(), id) == hidden_.end() && !edi::category_label(id).empty();
     };
     if (text) {
         const std::string saved = text();

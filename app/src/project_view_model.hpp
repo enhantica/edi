@@ -745,10 +745,12 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     QString apply(const edi::Edit& change, bool structural) override;
     QString assign_parameter_value(edi::Parameter& parameter, double value) override;
     QString assign_parameter_free(edi::Parameter& parameter, bool free) override;
+    QString assign_group_free(const std::vector<edi::Parameter*>& parameters, bool free) override;
     QString apply_relation_edit(const edi::Edit& change) override;
     QString apply_relation_control(const edi::Edit& change, const ProjectEditor::RelationAction& action) override;
     RelationOutcome append_constraint(edi::Project&, edi::ParameterConstraint&&, const ProjectEditor::RelationAction&) override;
     QString rename_structure(edi::Structure& structure, const std::string& name) override;
+    QString apply_calc_method(edi::Structure& structure, const std::string& token) override;
     QString rename_experiment(edi::Project& project, edi::ExperimentBase& experiment, const std::string& name) override;
     bool canUndo() const { return can_undo_; }
     Q_INVOKABLE void undo();

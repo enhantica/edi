@@ -126,26 +126,41 @@ class BackgroundTermListModel : public RowTableModel {
 
 // The reflections the loaded file carried (`_refln`), read-only: `hkl` ("h k l"),
 // `dSpacing`, `position` (2θ or TOF), `fSquaredCalc` and, for a magnetic structure seen by neutrons,
-// `fMPerpSquaredCalc` (|M⊥|², edi ADR-0078) and `fSquaredTotalCalc` (F² + |M⊥|², as crysta computes it), numbers as
-// read; NaN where a cell is not one.
+// `fMPerpSquaredCalc` (|M⊥|², edi ADR-0078) and `fSquaredTotalCalc` (F² + |M⊥|², as crysta computes it), then for a
+// Le Bail or Pawley structure's row `fSquaredMeas` (F² extracted) and, for Pawley, `fSquaredMeasSu` (its s.u.; edi
+// ADR-0109), numbers as read; NaN where a cell is not one.
 class ReflectionListModel : public RowTableModel {
     Q_OBJECT
     QML_ELEMENT
     QML_UNCREATABLE("Belongs to an experiment")
     // Whether the reflections carry |M⊥|²: the table then shows it beside F²calc.
     Q_PROPERTY(bool magnetic READ magnetic NOTIFY magneticChanged)
+    // Whether a row has F² extracted, one has its s.u., and one has F² calc: the table shows F² extracted (and its
+    // s.u.) for extracted rows, and F² calc while any row has one.
+    Q_PROPERTY(bool extracted READ extracted NOTIFY extractedChanged)
+    Q_PROPERTY(bool extractedSu READ extractedSu NOTIFY extractedSuChanged)
+    Q_PROPERTY(bool calculated READ calculated NOTIFY calculatedChanged)
 
    public:
     ReflectionListModel(const edi::ExperimentBase& experiment, QObject* parent);
     void sync();
     bool magnetic() const { return magnetic_; }
+    bool extracted() const { return extracted_; }
+    bool extractedSu() const { return extracted_su_; }
+    bool calculated() const { return calculated_; }
 
    signals:
     void magneticChanged();
+    void extractedChanged();
+    void extractedSuChanged();
+    void calculatedChanged();
 
    private:
     const edi::ExperimentBase& experiment_;
     bool magnetic_ = false;
+    bool extracted_ = false;
+    bool extracted_su_ = false;
+    bool calculated_ = false;
 };
 
 // A single crystal's reflections: `h`, `k`, `l`, the measured F² and its su, the calculated F² and the
@@ -316,24 +331,31 @@ class ExcludedRegionListModel : public RowTableModel {
 // The experiment's linked structures (phases): roles `structureId`, `scale` (ParameterItem), `enabled`,
 // `colorIndex` (the structure's place in the project, its colour) and `weightFraction`, the read-only
 // Hill-Howard weight fraction as a map of `value` and `uncertainty` (exactly 1 for a single enabled structure, empty
-// when there is none). `structureNames` lists the project's
-// structures, the choices of a row's name. A row is added naming a structure not yet linked, removed while
-// another remains, and disabled — kept and saved, but neither calculated nor fitted.
+// when there is none), then `calcMethod` (the structure's method token) and `extracted` (it is Le Bail or Pawley, so
+// it has no R factors; edi ADR-0109). `structureNames` lists the project's structures, the choices of a row's name,
+// and `structureRefusals`, index for index, why one cannot be linked here (a Le Bail or Pawley structure on a single
+// crystal), empty when it can. `extracting`: an enabled row is extracted, so no row has a weight fraction. A row is
+// added naming a structure not yet linked, removed while another remains, and disabled — kept and saved, but neither
+// calculated nor fitted.
 class LinkedStructureListModel : public RowTableModel {
     Q_OBJECT
     QML_ELEMENT
     QML_UNCREATABLE("Belongs to an experiment")
     Q_PROPERTY(QStringList structureNames READ structureNames NOTIFY structureNamesChanged)
+    Q_PROPERTY(QStringList structureRefusals READ structureRefusals NOTIFY structureNamesChanged)
     Q_PROPERTY(bool canAppend READ canAppend NOTIFY canAppendChanged)
     Q_PROPERTY(bool canRemove READ canRemove NOTIFY canRemoveChanged)
+    Q_PROPERTY(bool extracting READ extracting NOTIFY extractingChanged)
 
    public:
     LinkedStructureListModel(edi::Project& project, edi::ExperimentBase& experiment, ProjectEditor& editor,
                              ParameterRegistry& registry, QObject* parent);
     void sync();
     QStringList structureNames() const { return structure_names_; }
+    QStringList structureRefusals() const { return structure_refusals_; }
     bool canAppend() const { return can_append_; }
     bool canRemove() const { return can_remove_; }
+    bool extracting() const { return extracting_; }
     Q_INVOKABLE bool setStructureId(int row, const QString& id);
     Q_INVOKABLE bool setEnabled(int row, bool enabled);
     Q_INVOKABLE void append();
@@ -352,6 +374,7 @@ class LinkedStructureListModel : public RowTableModel {
     void structureNamesChanged();
     void canAppendChanged();
     void canRemoveChanged();
+    void extractingChanged();
 
    private:
     edi::Project& project_;
@@ -359,8 +382,10 @@ class LinkedStructureListModel : public RowTableModel {
     ProjectEditor& editor_;
     ParameterRegistry& registry_;
     QStringList structure_names_;
+    QStringList structure_refusals_;
     bool can_append_ = false;
     bool can_remove_ = false;
+    bool extracting_ = false;
 };
 
 // The preferred-orientation rows: `structureId`, the texture axis `indexH/K/L` (the library's bounds,
