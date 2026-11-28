@@ -4,7 +4,8 @@ A long c axis isolates 001. Pmmm at the origin permits only Mz in
 Stokes-Campbell 47.252 (Pm'm'm), hence I_M/I_bound = 0; its rotated
 embeddings allow a transverse moment and give ratio 1. Uniform occupancy
 cancels from this ratio. P1 controls tilt c so the seeded moment has a
-specified transverse fraction on either side of the cancellation threshold.
+specified transverse fraction on either side of the cancellation threshold,
+using the owner-approved 2 to 3 μB starting range.
 """
 
 import json
@@ -22,7 +23,7 @@ def draw(axis):
     value = (value + 0x9E3779B97F4A7C15) & MASK
     value = ((value ^ (value >> 30)) * 0xBF58476D1CE4E5B9) & MASK
     value = ((value ^ (value >> 27)) * 0x94D049BB133111EB) & MASK
-    return 1 + ((value ^ (value >> 31)) / 2**64)
+    return 2 + ((value ^ (value >> 31)) / 2**64)
 
 
 def tilted(ratio):

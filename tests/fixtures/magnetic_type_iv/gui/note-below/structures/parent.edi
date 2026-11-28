@@ -3,8 +3,8 @@ _edi.schema_version 3
 _cell.length_a 1
 _cell.length_b 1
 _cell.length_c 10
-_cell.angle_alpha 90.529840546696164
-_cell.angle_beta 91.149289389004821
+_cell.angle_alpha 90.691622507618803
+_cell.angle_beta 91.016867997405456
 _cell.angle_gamma 170
 _space_group.name_h_m "P 1"
 loop_
