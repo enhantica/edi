@@ -8,6 +8,7 @@ import QtQuick.Shapes
 
 import EasyApplication.Gui.Style as EaStyle
 import EasyApplication.Gui.Elements as EaElements
+import EasyApplication.Gui.Globals as EaGlobals
 
 import edi.app
 
@@ -348,14 +349,17 @@ Flickable {
                     id: details
                     objectName: `magnetic.node.${node.index}.tooltip`
                     requested: graph.hovered === node.index && node.data_.bns !== ""
-                    data: true
+                    data: true  // shown whatever the help level: it holds the card's data
+                    delay: EaGlobals.Vars.toolTipDelay  // after the app's usual delay (owner)
                     text: node.data_.bns !== "" ? graph.detailsOf(node.data_).join(" ") : ""
                     contentItem: GridLayout {
                         columns: 2
                         columnSpacing: EaStyle.Sizes.fontPixelSize
                         rowSpacing: EaStyle.Sizes.fontPixelSize * 0.2
                         Repeater {
-                            model: graph.hovered === node.index ? graph.detailsOf(node.data_) : []
+                            // Always the card's own rows (owner bug): gated on the hover or on the tooltip's visibility,
+                            // the frame showed empty as it appeared or faded out, or while the pointer swept across cards.
+                            model: node.data_.bns !== "" ? graph.detailsOf(node.data_) : []
                             delegate: EaElements.Label {
                                 required property string modelData
                                 required property int index
