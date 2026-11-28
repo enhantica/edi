@@ -181,6 +181,9 @@ private:
     QJsonArray models_;
     bool models_known_ = false;
     QJsonObject usage_;
+    bool usage_reported_ = false;    // the runtime has said what it knows about usage at least once
+    QStringList usage_waiting_;      // usage reads that arrived before that, answered when it does
+    void answerUsage(const QString& id);
     QList<Waiting> waiting_;
     QHash<QString, qint64> ack_deadlines_;  // requests that wait for the session, by id
     QString login_rpc_, login_id_, logout_rpc_;

@@ -27,6 +27,8 @@ using Limits = edi::assistant::Limits;
 constexpr int kUnsupported = -32601;
 constexpr int kInvalidRequest = -32600;
 constexpr int kRefused = -32000;
+// How long a usage read waits for the runtime's first report before it is answered with what is known.
+constexpr int usage_wait_ms = 10000;
 
 QString string_field(const QJsonObject& object, const char* key) {
     const auto value = object.value(QLatin1StringView(key));
@@ -224,6 +226,8 @@ void AssistantRuntimeTranslator::clearState() {
     models_ = {};
     models_known_ = false;
     usage_ = {};
+    usage_reported_ = false;
+    usage_waiting_.clear();
     thread_.clear();
     thread_rpc_.clear();
     thread_method_.clear();
@@ -413,8 +417,18 @@ void AssistantRuntimeTranslator::handle(const QString& id, const QString& method
         if (provider_ == AssistantProviderId::Copilot) session_->removeAccount(launch_);
         else session_->signOut(launch_);
     } else if (method == QLatin1StringView("account/rateLimits/read")) {
-        if (!session_->reportsUsage()) refuse(id, method, kUnsupported, tr("This assistant does not report usage."));
-        else respond(id, method, usageResult());
+        if (!session_->reportsUsage()) {
+            refuse(id, method, kUnsupported, tr("This assistant does not report usage."));
+        } else if (usage_reported_) {
+            answerUsage(id);
+        } else {
+            // Claude reports its plan's limits once its process is ready; a read before that waits for it, briefly.
+            usage_waiting_.append(id);
+            const auto scope = generation_;
+            QTimer::singleShot(usage_wait_ms, this, [this, scope, id] {
+                if (generation_ == scope && usage_waiting_.removeOne(id)) answerUsage(id);
+            });
+        }
     } else if (method == QLatin1StringView("thread/read")) {
         const auto thread = string_field(params, "threadId");
         if (thread.isEmpty()) refuse(id, method, kInvalidRequest, tr("No conversation was named."));
@@ -804,9 +818,19 @@ void AssistantRuntimeTranslator::answerThread() {
     respond(rpc, method, result);
 }
 
+void AssistantRuntimeTranslator::answerUsage(const QString& id) {
+    if (usage_.value(QLatin1StringView("unsupported")).toBool())
+        refuse(id, QStringLiteral("account/rateLimits/read"), kUnsupported, tr("This account reports no plan limits."));
+    else
+        respond(id, QStringLiteral("account/rateLimits/read"), usageResult());
+}
+
 void AssistantRuntimeTranslator::onUsageChanged(const QJsonObject& snapshot) {
     if (!live_ || failed_) return;
     usage_ = snapshot;
+    usage_reported_ = true;
+    for (const auto& id : std::exchange(usage_waiting_, {})) answerUsage(id);
+    if (usage_.value(QLatin1StringView("unsupported")).toBool()) return;
     if (account_ == Account::Ready)
         notify(QStringLiteral("account/rateLimits/updated"), {{"rateLimits", usageResult().value(QLatin1StringView("rateLimits"))}});
 }

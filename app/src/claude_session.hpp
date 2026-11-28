@@ -156,6 +156,7 @@ private:
     void assistantMessage(const QJsonObject& record);
     void result(const QJsonObject& record);
     void rateLimit(const QJsonObject& record);
+    void usageReply(const QJsonObject& reply);
     void beginTurn(const QString& id);
     bool control(const QString& subtype, const QJsonObject& fields = {});
     bool writeUser(const Message& message);

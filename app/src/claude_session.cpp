@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "claude_session.hpp"
 #include <QDateTime>
+#include <QDebug>
 #include <QDir>
 #include <QDirIterator>
 #include <QFile>
@@ -12,6 +13,8 @@
 #include <QUrl>
 #include <QUuid>
 #include "assistant_process.hpp"
+
+#include <algorithm>
 
 namespace edi_app {
 namespace {
@@ -545,6 +548,8 @@ void ClaudeSession::controlResponse(const QJsonObject& response) {
             mcpStatusReply(response.value(QStringLiteral("response")).toObject());
         else
             contextUsageReply(response.value(QStringLiteral("response")).toObject());
+    } else if (subtype == QStringLiteral("get_usage")) {
+        if (success) usageReply(response.value(QStringLiteral("response")).toObject());
     } else if (subtype == QStringLiteral("interrupt") && success) {
         const auto receipt = response.value(QStringLiteral("response")).toObject();
         for (const auto& id : receipt.value(QStringLiteral("still_queued")).toArray())
@@ -573,7 +578,9 @@ void ClaudeSession::initializeReply(const QJsonObject& reply) {
     for (const auto& value : reply.value(QStringLiteral("models")).toArray()) {
         const auto model = value.toObject();
         const auto id = model.value(QStringLiteral("value")).toString();
-        if (id.isEmpty()) continue;
+        // Current models only: Claude names them by alias (opus, sonnet, ...). A subscription also lists pinned
+        // older versions and variants (claude-opus-4-6, opus[1m]), which are left out of edi's short list.
+        if (id.isEmpty() || std::any_of(id.cbegin(), id.cend(), [](QChar c) { return c.isDigit(); })) continue;
         QJsonArray efforts;
         for (const auto& effort : model.value(QStringLiteral("supportedEffortLevels")).toArray())
             if (effort.isString()) efforts.append(effort);
@@ -597,9 +604,17 @@ void ClaudeSession::toolsProblem(const QString& problem) {
         startFailed(problem);
         return;
     }
-    // Found after input was sent (the first turn's `system/init`): the process is not used again.
+    // Found after input was sent (a turn's `system/init`): the process is not used again, but the account stays
+    // connected. The turn fails and the next message starts a new process, checked again before its input.
+    qWarning().noquote() << "claude:" << problem;
+    const bool turn = turn_active_;
+    const auto session = session_id_, turn_id = turn_id_;
     retireProcess();
-    emit failed(problem, AssistantProvider::FailureKind::Other);
+    queued_.clear();
+    restart_pending_ = true;
+    if (turn)
+        emit turnFinished(session, turn_id, QStringLiteral("failed"),
+                          {{QStringLiteral("message"), QStringLiteral("Claude stopped before answering. Try again.")}});
 }
 
 void ClaudeSession::mcpStatusReply(const QJsonObject& reply) {
@@ -701,7 +716,13 @@ void ClaudeSession::systemInit(const QJsonObject& init) {
         bool plugin_ours = true;
         for (const auto& value : init.value(QStringLiteral("plugins")).toArray()) {
             const auto plugin = value.toObject();
-            plugins.append(plugin.value(QStringLiteral("name")).toString());
+            const auto name = plugin.value(QStringLiteral("name")).toString();
+            // The pinned binary's own built-in plugins (agents-md, telemetry, privacy, ...) load in every session
+            // and add no tools; the tool list above is still exactly edi's.
+            if (plugin.value(QStringLiteral("path")).toString() == QStringLiteral("builtin") &&
+                plugin.value(QStringLiteral("source")).toString() == name + QStringLiteral("@builtin"))
+                continue;
+            plugins.append(name);
             const auto path = plugin.value(QStringLiteral("path")).toString();
             if (!path.isEmpty() && !same_folder(path, plugin_dir)) plugin_ours = false;
         }
@@ -763,6 +784,9 @@ void ClaudeSession::maybeReadbacksDone() {
     }
     readbacks_done_ = true;
     readback_timer_.stop();
+    // The plan's limits as /usage shows them (an experimental request of the pinned binary): read by the connect
+    // process, so they show before the first turn, and after each turn. A thread's input follows its readbacks directly.
+    if (purpose_ == Purpose::Probe) control(QStringLiteral("get_usage"), {{QStringLiteral("skip_behaviors"), true}});
     // A model chosen while this process was starting.
     if (!model_.isEmpty() && model_ != process_model_ && purpose_ != Purpose::Probe) {
         control(QStringLiteral("set_model"), {{QStringLiteral("model"), model_}});
@@ -802,7 +826,8 @@ void ClaudeSession::openThread(const QString& resumeId, const QString& model, co
 }
 
 void ClaudeSession::sendMessage(const QString& thread, const QString& clientMessageId, const QString& text) {
-    if (thread.isEmpty() || thread != session_id_ || (!process_ && !launching_) || purpose_ == Purpose::Probe) {
+    if (thread.isEmpty() || thread != session_id_ || (!process_ && !launching_ && !restart_pending_) ||
+        purpose_ == Purpose::Probe) {
         emit failed(QStringLiteral("This Claude conversation is not open."), AssistantProvider::FailureKind::Other);
         return;
     }
@@ -883,7 +908,8 @@ void ClaudeSession::selectModel(const QString& thread, const QString& model, con
         }
     }
     effort_ = effort;
-    restart_pending_ = effort_ != process_effort_;
+    // A process retired after a refused turn stays due for a restart whatever the effort.
+    restart_pending_ = (!process_ && !launching_) || effort_ != process_effort_;
 }
 
 void ClaudeSession::beginTurn(const QString& id) {
@@ -1010,6 +1036,7 @@ void ClaudeSession::result(const QJsonObject& record) {
     const auto session = session_id_, turn = turn_id_;
     if (absorbed > 0) emit followUpsAnswered(session, absorbed);
     emit turnFinished(session, turn, status, error);
+    if (process_) control(QStringLiteral("get_usage"), {{QStringLiteral("skip_behaviors"), true}});
 }
 
 bool ClaudeSession::dropRecord(const QJsonObject& record) {
@@ -1079,6 +1106,30 @@ void ClaudeSession::rateLimit(const QJsonObject& record) {
         // Undocumented scale: a value up to 1 is read as a fraction, a larger one as a percentage.
         const auto used = utilization.toDouble();
         usage_.insert(window, {qBound(0, qRound(used <= 1.0 ? used * 100.0 : used), 100), resets_at});
+        changed = true;
+    }
+    if (changed) emitUsage();
+}
+
+void ClaudeSession::usageReply(const QJsonObject& reply) {
+    // `rate_limits` is null for an API key, Bedrock or Vertex: such an account has no plan limits to show.
+    const auto limits = reply.value(QStringLiteral("rate_limits"));
+    if (!reply.value(QStringLiteral("rate_limits_available")).toBool() || !limits.isObject()) {
+        if (usage_.isEmpty() && usage_status_.isEmpty())
+            emit usageChanged({{QStringLiteral("available"), false},
+                               {QStringLiteral("unsupported"), true},
+                               {QStringLiteral("stale"), false},
+                               {QStringLiteral("buckets"), QJsonArray{}}});
+        return;
+    }
+    const auto windows = limits.toObject();
+    bool changed = false;
+    for (const auto& [key, window] : {std::pair{"five_hour", "session"}, std::pair{"seven_day", "weekly"}}) {
+        const auto entry = windows.value(QLatin1String(key)).toObject();
+        const auto used = entry.value(QStringLiteral("utilization"));
+        if (!used.isDouble()) continue;
+        const auto resets = QDateTime::fromString(entry.value(QStringLiteral("resets_at")).toString(), Qt::ISODateWithMs);
+        usage_.insert(QLatin1String(window), {qBound(0, qRound(used.toDouble()), 100), resets.isValid() ? resets.toSecsSinceEpoch() : -1});
         changed = true;
     }
     if (changed) emitUsage();
