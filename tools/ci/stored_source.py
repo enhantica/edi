@@ -103,7 +103,14 @@ def seven_program(data: bytes) -> list[tuple[str, bytes]]:
             if 'Path = ' in entry
         ]
         listed = [e['Path'] for e in entries if not e.get('Attributes', '').startswith('D')]
-        unpack = ['7z', 'x', '-y', '-bd', f'-o{held}', str(packed)]
+        if escapes(entries):
+            raise ValueError('an entry would be unpacked through a link or out of the folder')
+        # 7-Zip skips a link that starts with ../ (an app bundle's qml plugins) unless given -snld.
+        # Nothing is unpacked through a link (checked above) and no link is followed, so a link
+        # that points out of the folder stays a name. p7zip lacks the switch and keeps every link.
+        banner = subprocess.run(['7z'], capture_output=True, check=False).stdout
+        switch = [] if b'p7zip' in banner else ['-snld']
+        unpack = ['7z', 'x', '-y', '-bd', *switch, f'-o{held}', str(packed)]
         subprocess.run(unpack, capture_output=True, check=True)
         found = [
             (path.relative_to(held).as_posix(), link_or_file(path))
@@ -113,6 +120,24 @@ def seven_program(data: bytes) -> list[tuple[str, bytes]]:
     if len(listed) != len({alias(name) for name in listed}) or len(found) != len(listed):
         raise ValueError('an entry is hidden by another')
     return found
+
+
+def escapes(entries: list[dict[str, str]]) -> bool:
+    """Whether unpacking could write through a link the archive makes, or out of the folder."""
+    names = [alias(e['Path']) for e in entries]
+    links = {alias(e['Path']) for e in entries if is_link(e.get('Attributes', ''))}
+    for name in names:
+        parts = name.split('/')
+        folders = {'/'.join(parts[:i]) for i in range(1, len(parts))}
+        if {'', '.', '..'} & set(parts) or links & folders:
+            return True
+    return len(names) != len(set(names))
+
+
+def is_link(attributes: str) -> bool:
+    """Whether a 7z listing marks an entry a link: Unix mode l, or Windows' reparse point L."""
+    letters, _, mode = attributes.partition(' ')
+    return 'L' in letters or mode.startswith('l')
 
 
 def alias(name: str) -> str:
