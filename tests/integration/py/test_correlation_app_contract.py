@@ -126,7 +126,7 @@ def test_create_project_passes_the_chosen_location_to_the_session():
       projectLocation:'/chosen/first',
       projectTitle:'title',projectAuthors:'author'};
     const WebFiles={available:false};
-    const Session={project:null,createProjectWithOutcome(...args){
+    const Session={project:null,projectGeneration:()=>0,createProjectWithOutcome(...args){
       calls.push(args);return {success:true,current:true,error:''}}};
     function chooseCreate(){CHOOSE}
     chooseCreate();
