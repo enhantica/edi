@@ -131,6 +131,9 @@ struct ScanResultIndex {
     std::vector<ScanParameterColumns> parameters;
     /// Each point's agreement factors, in the file's order; none in an older file.
     std::vector<ScanFactorColumn> factors;
+    /// The fixed inputs a point's fit used (crysta ADR-0136 decision 9): `input.<column>` cells after every other
+    /// column, a value without an s.u., by the parameter's results column name (the `input.` taken off).
+    std::vector<ScanFactorColumn> inputs;
     std::vector<Row> rows;      ///< by dataset place
     std::int64_t end = 0;       ///< the offset after the last complete row (0: no file)
     std::size_t fitted = 0;     ///< datasets with a row

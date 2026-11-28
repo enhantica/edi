@@ -4835,12 +4835,24 @@ std::vector<edi::Edit::ScanValue> ProjectViewModel::datasetValues(const std::vec
     for (const edi::ScanParameterColumns& parameter : index.parameters) {
         columns.emplace(parameter.name, &parameter);
     }
+    std::map<std::string, std::size_t> inputs;
+    for (const edi::ScanFactorColumn& input : index.inputs) inputs.emplace(input.name, input.value);
     for (edi::Edit::ScanValue& value : values) {
         const auto found = columns.find(edi::scan_results_column(value.unique_name));
         if (found == columns.end()) {
             // A parameter the results do not record keeps the template's value; its s.u. belonged to an
-            // earlier fit, not to the one this row records.
+            // earlier fit, not to the one this row records. A fixed input the fit used is that fit's value
+            // (crysta ADR-0136 decision 9), without an s.u.
             value.uncertainty.reset();
+            if (const auto input = inputs.find(edi::scan_results_column(value.unique_name));
+                input != inputs.end() && input->second < row.size() && !row[input->second].empty()) {
+                double number = 0.0;
+                if (!edi::parse_scan_number(row[input->second], number)) {
+                    throw std::invalid_argument("analysis/results.csv: the row's 'input." + input->first +
+                                                "' cell is not a number");
+                }
+                value.value = number;
+            }
             continue;
         }
         double number = 0.0, uncertainty = 0.0;

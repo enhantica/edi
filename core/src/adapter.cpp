@@ -3189,6 +3189,14 @@ void check_scan_header(const Project& project, ScanResultIndex& index) {
             taken.insert(i);
         }
     }
+    // The fixed inputs a fit used, values without an s.u. column (crysta ADR-0136 decision 9).
+    index.inputs.clear();
+    for (std::size_t i = 0; i < header.size(); ++i) {
+        if (!taken.contains(i) && header[i].starts_with("input.")) {
+            index.inputs.push_back({header[i].substr(6), i});
+            taken.insert(i);
+        }
+    }
     index.parameters.clear();
     for (std::size_t i = 0; i < header.size(); ++i) {
         if (taken.contains(i) || header[i].ends_with(".uncertainty")) {
