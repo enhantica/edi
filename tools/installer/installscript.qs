@@ -36,10 +36,14 @@ function runtimeCommand(script) {
 }
 
 // IFW 4.11 calls this for each component it is about to install, before it undoes the installed release's
-// operations.
+// operations. Without the copy that undo could delete the only runtime, so the update stops here instead, before
+// anything has changed.
 Component.prototype.beginInstallation = function () {
-    if (keepsRuntime() && installer.value("TargetDir") !== "")
-        installer.execute("/bin/sh", runtimeCommand(SWAP_SCRIPT));
+    if (!keepsRuntime() || installer.value("TargetDir") === "")
+        return;
+    var result = installer.execute("/bin/sh", runtimeCommand(SWAP_SCRIPT));
+    if (result.length !== 2 || result[1] !== 0)
+        throw new Error("The update could not keep a copy of the Maintenance Tool's files.");
 };
 
 // After a success or a rollback.
