@@ -990,21 +990,15 @@ jobs:
     steps:
       - *marker
       - *checkout
-      # The wheel's version comes from crysta's tags.
-      - if: needs.plan.outputs.skip != 'true'
-        name: crysta's source, whose lines no later step prints or stores
-        uses: ./.github/actions/crysta-source
-        with:
-          sha: ${{ inputs.crysta-sha }}
-          app-id: ${{ vars.ENHANTICA_APP_ID }}
-          private-key: ${{ secrets.CRYSTA_READ_KEY }}
-          full-history: 'true'
+      - *source
       - *subject
       # Built to prove the wheels build; they are not stored.
       - name: Build the wheels
         if: needs.plan.outputs.skip != 'true'
         run: |
           python3 -m pip install --quiet 'cibuildwheel==3.4.1'
+          # cibuildwheel builds only a project inside the folder it runs in.
+          cd "$RUNNER_TEMP/crysta"
           python3 "$GITHUB_WORKSPACE/tools/ci/crysta_findings.py" run quiet "$RUNNER_TEMP/findings/wheels.log" -- \
-            python3 -m cibuildwheel "$RUNNER_TEMP/crysta" --output-dir "$RUNNER_TEMP/wheels"
+            python3 -m cibuildwheel . --output-dir "$RUNNER_TEMP/wheels"
           ls -l "$RUNNER_TEMP/wheels"
