@@ -35,8 +35,9 @@ ToolbarComboBox {
         objectName: "magnetic.sites.popup"
         y: box.height
         padding: 1
-        // As wide as the Atom sites group shows its table, so no value is cut.
-        width: Math.max(table.rowsWidth, EaStyle.Sizes.fontPixelSize * 36) + 2
+        // The table at its natural width, every column as wide as its content, wider than the box when it needs to
+        // be: no value is cut (owner, 2026-11-28). Until the table has measured itself, a width that holds it.
+        width: Math.max(table.naturalWidth > 0 ? table.naturalWidth : EaStyle.Sizes.fontPixelSize * 44, box.width) + 2
         height: Math.min(table.contentHeight + 2, EaStyle.Sizes.tableRowHeight * 12)
         background: Rectangle {
             color: EaStyle.Colors.contentBackground
