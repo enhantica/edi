@@ -36,7 +36,9 @@ WorkflowPage {
         }
     ]
     textEnabled: project !== null
-    basicItem: Component {
+    // Export writes the report's files and edits no `.edi` category: a tool (owner, 2026-11-28, sidebar tabs by role;
+    // edi ADR-0017 §2). Contents, the report's own settings in reports/report.edi, stays on Main.
+    toolsItem: Component {
         EaComponents.SideBarColumn {
             ExportGroup {
                 report: page.report
@@ -44,6 +46,10 @@ WorkflowPage {
                 shown: page.current
                 onSavingChanged: page.saving = saving
             }
+        }
+    }
+    basicItem: Component {
+        EaComponents.SideBarColumn {
             ContentsGroup {
                 report: page.report
                 shown: page.current

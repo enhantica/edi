@@ -1234,9 +1234,11 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
         if (inventory.isEmpty()) {
             const QList<std::pair<QString, QStringList>> builtin{
                 {QStringLiteral("structure/basic"), {"structures", "space_group", "cell", "atom_site", "atom_site_aniso"}},
-                {QStringLiteral("structure/extras"), {"scattering_length", "geom", "space_group_symop", "expanded_atom_site", "appearance", "polyhedra"}},
+                {QStringLiteral("structure/extras"), {"scattering_length", "geom", "space_group_symop", "expanded_atom_site"}},
+                {QStringLiteral("structure/settings"), {"appearance", "polyhedra"}},
                 {QStringLiteral("experiment/basic"), {"experiments", "background", "instrument", "peak", "excluded_region", "linked_structure"}},
-                {QStringLiteral("experiment/extras"), {"background_estimate", "peak", "absorption", "preferred_orientation", "scattering_source", "data", "refln"}},
+                {QStringLiteral("experiment/extras"), {"peak", "absorption", "preferred_orientation", "scattering_source", "data", "refln"}},
+                {QStringLiteral("experiment/tools"), {"background_estimate"}},
                 {QStringLiteral("analysis/extras"), {"minimizer", "fitting_mode", "alias", "constraint", "fit_parameter", "fit_result", "fit_result_bank", "fit_result_phase"}}};
             for (const auto& [where, groups] : builtin)
                 for (const QString& group : groups) inventory.append({where.section(QLatin1Char('/'), 0, 0), where.section(QLatin1Char('/'), 1), "group." + group});
@@ -1266,7 +1268,8 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
             {QStringLiteral("structure/basic"), {"structures", "space_group", "cell", "atom_site", "atom_site_aniso"}},
             {QStringLiteral("structure/extras"), {"scattering_length", "geom", "space_group_symop", "expanded_atom_site"}},
             {QStringLiteral("experiment/basic"), {"experiments", "background", "instrument", "peak", "excluded_region", "linked_structure"}},
-            {QStringLiteral("experiment/extras"), {"background_estimate", "absorption", "data", "refln"}},
+            {QStringLiteral("experiment/extras"), {"absorption", "data", "refln"}},
+            {QStringLiteral("experiment/tools"), {"background_estimate"}},
             {QStringLiteral("analysis/basic"), {"parameters"}},
             {QStringLiteral("analysis/extras"), {"alias", "constraint", "fit_parameter", "fit_result_bank", "fit_result_phase"}}};
         int n = 0;

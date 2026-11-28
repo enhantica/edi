@@ -91,6 +91,22 @@ WorkflowPage {
                     contents: page.contents
                 }
             }
+        }
+    }
+    // Tools (owner, 2026-11-28, sidebar tabs by role; edi ADR-0017 §2): the magnetic symmetry analysis.
+    toolsItem: Component {
+        EaComponents.SideBarColumn {
+            MagneticAnalysisGroup {
+                project: page.project
+                structure: page.structure
+                popupComponent: magneticAnalysisComponent
+            }
+        }
+    }
+    // Settings: how the page shows the structure, the view's appearance and polyhedra (moved from Extra, owner,
+    // 2026-11-28, sidebar tabs by role).
+    settingsItem: Component {
+        EaComponents.SideBarColumn {
             AppearanceGroup {
                 options: page.project ? page.project.structureViewOptions : null
                 controller: page.pageViewItem ? page.pageViewItem.structureController : null
@@ -115,22 +131,6 @@ WorkflowPage {
             spacing: AppSizes.inputSpacing
             SpaceGroupGroup {
                 structure: page.structure
-            }
-            // A Crystal structure's magnetic symmetry analysis (owner, 2026-11-27): the magnetic popup over this page.
-            EaElements.SideBarButton {
-                objectName: "spaceGroup.magneticAnalysis"
-                width: EaStyle.Sizes.sideBarContentWidth
-                visible: page.structure !== null && !page.structure.magnetic
-                fontIcon: "magnet"
-                text: qsTr("Magnetic symmetry analysis…")
-                onClicked: {
-                    const popup = magneticAnalysisComponent.createObject(Overlay.overlay, {
-                        project: page.project,
-                        structureIndex: page.project.currentStructureIndex,
-                        structure: page.structure
-                    }) as MagneticPopup;
-                    popup.open();
-                }
             }
         }
     }

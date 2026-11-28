@@ -301,6 +301,7 @@ qt_add_qml_module(edi_app_module
         qml/Pages/Experiment/BackgroundGroup.qml
         qml/Pages/Experiment/ExcludedRegionsGroup.qml
         qml/Pages/Experiment/KSearchGroup.qml
+        qml/Pages/Structure/MagneticAnalysisGroup.qml
         qml/Pages/Experiment/ExperimentPage.qml
         qml/Pages/Experiment/ExperimentTypeGroup.qml
         qml/Pages/Experiment/ExperimentsGroup.qml
