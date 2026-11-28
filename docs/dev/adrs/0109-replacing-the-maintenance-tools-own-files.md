@@ -86,13 +86,14 @@ update replaces while the tool runs. So the runtime takes the bundle's design ra
    back the runtime the same run kept.
 
    Windows has no shell and keeps ADR-0106's path: the component's script calls `installer.setInstallerBaseBinary` on
-   the staged tool and the Framework replaces the installed tool once it quits. The staged tool is one file,
-   `<target>\MaintenanceTool.update.exe`, not a folder. The Framework writes `MaintenanceTool.exe.new` from it as the
-   update's tool quits, deletes it, and renames the new tool into place once the tool has exited
-   (`writeMaintenanceTool` in Qt Installer Framework 4.11), but goes on when it cannot delete it. So an operation after
-   the unpack moves the staged tool to the user's temporary folder, under a name for this run, and the script points
-   the Framework there: neither an installation nor an update leaves it in the installation folder, and a copy the
-   Framework fails to delete stays in the temporary folder.
+   the staged tool and the Framework replaces the installed tool once it quits. The Framework writes
+   `MaintenanceTool.exe.new` from the staged tool as the update's tool quits, deletes it, and renames the new tool into
+   place once the tool has exited (`writeMaintenanceTool` in Qt Installer Framework 4.11), but goes on when it cannot
+   delete it. So the component's script unpacks its archive, one file `MaintenanceTool.update.exe`, straight into the
+   user's temporary folder (`%TEMP%`, or `%LOCALAPPDATA%\Temp`; without either the update stops) and points the
+   Framework there: neither an installation nor an update puts it in the installation folder, a copy the Framework
+   fails to delete stays in the temporary folder, and no operation of ours moves or removes it, so none can fail and be
+   ignored. The unpack's undo removes it on a rollback and finds nothing to do on a later update or a removal.
 
 4. **The app puts a kept item back.** On start, and before Maintenance or Update opens the tool, the app takes the
    lock; when it finds no usable `<item>` but a usable `<item>.old`, it moves the kept item back and removes its mark,
@@ -131,12 +132,8 @@ update replaces while the tool runs. So the runtime takes the bundle's design ra
    cannot go stops the update with nothing changed, where a failed operation would let the user ignore it. The app
    component is in every update, the tool's only when the tool changed. The app touches no Windows staging: it cannot
    tell whether an update in another session needs it, and without it the Framework would write an unsigned tool
-   (ADR-0091). The rollback of a failed update leaves the tool it staged (measured on CI),
-   so the tool component adds an operation after its unpack whose undo deletes `MaintenanceTool.update.exe`, after the
-   move's undo has brought it back; the rollback runs it, and so do the next update's and the purge's undo of the saved
-   operations. Both commands run
-   `cmd.exe` in the installation folder and name only the file or folder, so no part of the folder's path, which may
-   hold characters `cmd.exe` expands, reaches it.
+   (ADR-0091). The command that removes the old folder runs `cmd.exe` in the installation folder and names only the
+   folder, so no part of the folder's path, which may hold characters `cmd.exe` expands, reaches it.
 
 6. **Purge.** On a successful uninstallation the control script removes `<item>.old`, `<item>.old-token`,
    `maintenance-update/` and `.MaintenanceTool.lock` (on macOS an older `maintenancetool/` too), and on Linux
