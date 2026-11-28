@@ -10619,12 +10619,18 @@ std::shared_ptr<const PreparedMagneticCandidates> prepare_magnetic_candidates(
                             std::to_string(h[2]) + ") in the magnetic cell, beyond the 1000 limit");
                     }
                 }
-                // Its free flags go to the first child, the enabled one, and to no other (owner, 2026-11-27).
-                prepared->textures.push_back({e, name, row->march_r.value.get(),
-                                              row->march_random_fract.value.get(), i == 0 && row->march_r.free.get(),
-                                              i == 0 && row->march_random_fract.free.get(),
-                                              {static_cast<int>(h[0]), static_cast<int>(h[1]),
-                                               static_cast<int>(h[2])}});
+                // Each child gets the parent's values, uncertainties and free flags (packet A9; review 29).
+                PreparedMagneticCandidates::Texture texture;
+                texture.experiment = e;
+                texture.structure = name;
+                texture.march_r = row->march_r.value.get();
+                texture.march_random_fract = row->march_random_fract.value.get();
+                texture.march_r_free = row->march_r.free.get();
+                texture.march_random_fract_free = row->march_random_fract.free.get();
+                texture.axis = {static_cast<int>(h[0]), static_cast<int>(h[1]), static_cast<int>(h[2])};
+                texture.march_r_uncertainty = row->march_r.uncertainty.get();
+                texture.march_random_fract_uncertainty = row->march_random_fract.uncertainty.get();
+                prepared->textures.push_back(std::move(texture));
             }
         }
     }
@@ -10732,12 +10738,13 @@ void check_magnetic_candidates(const Project& project, const PreparedMagneticCan
         m = mine;
     }
     const double n = static_cast<double>(m[0] * m[1] * m[2]);
-    // The parent's free flags, scale and texture alike, go to the first candidate only, as preparation gives them
-    // (owner, 2026-11-27); every other candidate's are fixed (review 28).
+    // The link's free scale goes to the first candidate only, as preparation gives it (review 28); each candidate's
+    // texture keeps the parent's free flags and uncertainties (packet A9; review 29).
     using LinkKey = std::tuple<std::size_t, std::string, bool, bool>;
     std::multiset<LinkKey> expected_links;
     std::map<LinkKey, double> expected_scale;
-    using TextureKey = std::tuple<std::size_t, std::string, double, double, bool, bool, std::array<int, 3>>;
+    using TextureKey = std::tuple<std::size_t, std::string, double, double, bool, bool, std::array<int, 3>,
+                                  std::optional<double>, std::optional<double>>;
     std::multiset<TextureKey> expected_textures;
     for (std::size_t e = 0; e < project.experiments.size(); ++e) {
         const auto& experiment = project.experiments[e];
@@ -10757,9 +10764,10 @@ void check_magnetic_candidates(const Project& project, const PreparedMagneticCan
             for (long long& x : h) x /= g == 0 ? 1 : g;
             for (std::size_t i = 0; i < children.size(); ++i) {
                 expected_textures.insert({e, children[i]->name.value(), row->march_r.value.get(),
-                                          row->march_random_fract.value.get(), i == 0 && row->march_r.free.get(),
-                                          i == 0 && row->march_random_fract.free.get(),
-                                          {static_cast<int>(h[0]), static_cast<int>(h[1]), static_cast<int>(h[2])}});
+                                          row->march_random_fract.value.get(), row->march_r.free.get(),
+                                          row->march_random_fract.free.get(),
+                                          {static_cast<int>(h[0]), static_cast<int>(h[1]), static_cast<int>(h[2])},
+                                          row->march_r.uncertainty.get(), row->march_random_fract.uncertainty.get()});
             }
         }
     }
@@ -10781,12 +10789,13 @@ void check_magnetic_candidates(const Project& project, const PreparedMagneticCan
     std::multiset<TextureKey> textures;
     for (const auto& texture : prepared.textures) {
         textures.insert({texture.experiment, texture.structure, texture.march_r, texture.march_random_fract,
-                         texture.march_r_free, texture.march_random_fract_free, texture.axis});
+                         texture.march_r_free, texture.march_random_fract_free, texture.axis,
+                         texture.march_r_uncertainty, texture.march_random_fract_uncertainty});
     }
     if (textures != expected_textures) {
         throw std::invalid_argument("the batch's texture rows are not the parent's, carried to each candidate's cell");
     }
-    for (const auto& [e, name, march_r, random, r_free, random_free, axis] : expected_textures) {
+    for (const auto& [e, name, march_r, random, r_free, random_free, axis, r_su, random_su] : expected_textures) {
         if (axis == std::array<int, 3>{0, 0, 0}) {
             throw std::invalid_argument("the texture axis of '" + name + "' is zero");
         }

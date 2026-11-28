@@ -106,6 +106,8 @@ struct PreparedMagneticCandidates {
         double march_random_fract = 0.0;
         bool march_r_free = false;
         bool march_random_fract_free = false;
+        std::optional<double> march_r_uncertainty;
+        std::optional<double> march_random_fract_uncertainty;
         std::array<int, 3> axis{0, 0, 1};
     };
     std::vector<Texture> textures;

@@ -26,6 +26,7 @@
 // Outside the claim: an allocation failing inside an operation's write.
 
 #include <algorithm>
+#include <cctype>
 #include <cmath>
 #include <cstddef>
 #include <functional>
@@ -1359,6 +1360,8 @@ class Edit {
                     row->march_r.free = add.march_r_free;
                     row->march_random_fract.value = add.march_random_fract;
                     row->march_random_fract.free = add.march_random_fract_free;
+                    row->march_r.uncertainty = add.march_r_uncertainty;
+                    row->march_random_fract.uncertainty = add.march_random_fract_uncertainty;
                     row->index_h = add.axis[0];
                     row->index_k = add.axis[1];
                     row->index_l = add.axis[2];
@@ -1369,8 +1372,88 @@ class Edit {
                 project.experiments[i]->linked_structures.assign(std::move(links[i]));
                 project.experiments[i]->preferred_orientation.assign(std::move(texture[i]));
             }
+            carry_texture_relations(project, *prepared);
             project.structures.assign(std::move(structures));
         });
+    }
+    // The parent texture's relations, carried to each child's own texture parameters (packet A9; review 29): an alias
+    // naming a parent March–Dollase parameter gets a copy naming the child's, and each constraint using such aliases
+    // gets a copy using the child's. The parent's own aliases and constraints stay.
+    static void carry_texture_relations(Project& project, const PreparedMagneticCandidates& prepared) {
+        const auto split = [](const std::string& text) {
+            std::vector<std::string> parts;
+            std::size_t start = 0;
+            for (std::size_t dot; (dot = text.find('.', start)) != std::string::npos; start = dot + 1)
+                parts.push_back(text.substr(start, dot - start));
+            parts.push_back(text.substr(start));
+            return parts;
+        };
+        std::vector<std::string> children;
+        for (const auto& texture : prepared.textures)
+            if (std::find(children.begin(), children.end(), texture.structure) == children.end())
+                children.push_back(texture.structure);
+        std::map<std::string, std::string> parent_aliases;  // alias id -> its parameter name
+        for (const auto& alias : project.aliases) {
+            const std::vector<std::string> parts = split(alias->parameter_unique_name.value());
+            if ((parts.back() == "march_r" || parts.back() == "march_random_fract") &&
+                std::find(parts.begin(), parts.end() - 1, prepared.parent) != parts.end() - 1)
+                parent_aliases[alias->id.value()] = alias->parameter_unique_name.value();
+        }
+        if (parent_aliases.empty() || children.empty()) return;
+        std::set<std::string> taken;
+        for (const auto& alias : project.aliases) taken.insert(alias->id.value());
+        for (const auto& constraint : project.constraints) taken.insert(constraint->id.value());
+        const auto fresh = [&taken](const std::string& base) {
+            std::string id = base;
+            for (int n = 2; taken.contains(id); ++n) id = base + "_" + std::to_string(n);
+            taken.insert(id);
+            return id;
+        };
+        const auto word = [](char c) { return std::isalnum(static_cast<unsigned char>(c)) != 0 || c == '_'; };
+        std::vector<ItemVec<ParameterAlias>::Ptr> aliases(project.aliases.begin(), project.aliases.end());
+        std::vector<ItemVec<ParameterConstraint>::Ptr> constraints(project.constraints.begin(), project.constraints.end());
+        for (const std::string& child : children) {
+            std::map<std::string, std::string> renamed;  // parent alias id -> the child's
+            for (const auto& [id, name] : parent_aliases) {
+                std::vector<std::string> parts = split(name);
+                std::string spelled;
+                for (std::size_t i = 0; i < parts.size(); ++i) {
+                    if (i + 1 < parts.size() && parts[i] == prepared.parent) parts[i] = child;
+                    spelled += (i ? "." : "") + parts[i];
+                }
+                auto alias = std::make_shared<ParameterAlias>();
+                const std::string child_id = fresh(id + "_" + child);
+                renamed[id] = child_id;
+                alias->id = child_id;
+                alias->parameter_unique_name = spelled;
+                aliases.push_back(std::move(alias));
+            }
+            for (const auto& constraint : project.constraints) {
+                const std::string& text = constraint->expression.value();
+                std::string out;
+                bool uses = false;
+                for (std::size_t i = 0; i < text.size();) {
+                    if (!word(text[i])) {
+                        out += text[i++];
+                        continue;
+                    }
+                    std::size_t end = i;
+                    while (end < text.size() && (word(text[end]) || text[end] == '.')) ++end;
+                    const std::string token = text.substr(i, end - i);
+                    const auto hit = renamed.find(token);
+                    uses = uses || hit != renamed.end();
+                    out += hit != renamed.end() ? hit->second : token;
+                    i = end;
+                }
+                if (!uses) continue;
+                auto copy = std::make_shared<ParameterConstraint>(*constraint);
+                copy->id = fresh(constraint->id.value() + "_" + child);
+                copy->expression = out;
+                constraints.push_back(std::move(copy));
+            }
+        }
+        project.aliases.assign(std::move(aliases));
+        project.constraints.assign(std::move(constraints));
     }
     // A structure removed with every experiment's link to it and texture row for it, all or none.
     static Edit remove_structure(Project& project, std::size_t index) {
