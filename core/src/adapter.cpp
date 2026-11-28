@@ -10811,12 +10811,44 @@ void check_magnetic_candidates(const Project& project, const PreparedMagneticCan
 
 namespace {
 // The engine project a calculation would build, and the parent's structure in it.
+// The project as Find k reads it (review 33): only what participates. A disabled link, its texture row and the
+// relations edi::ActiveView hides are left out, so crysta's one-phase k search sees the experiment's enabled phases.
+Project participating(const Project& project) {
+    Project out(project);
+    const ActiveView view(project);
+    std::vector<ItemVec<ParameterAlias>::Ptr> aliases;
+    for (const auto& alias : out.aliases)
+        if (view.shown(*alias)) aliases.push_back(alias);
+    std::vector<ItemVec<ParameterConstraint>::Ptr> constraints;
+    for (const auto& constraint : out.constraints)
+        if (view.shown(*constraint)) constraints.push_back(constraint);
+    out.aliases.assign(std::move(aliases));
+    out.constraints.assign(std::move(constraints));
+    for (const auto& experiment : out.experiments) {
+        std::vector<ItemVec<LinkedStructure>::Ptr> links;
+        for (const auto& link : experiment->linked_structures)
+            if (link->enabled.get()) links.push_back(link);
+        std::vector<ItemVec<PrefOrient>::Ptr> texture;
+        for (const auto& row : experiment->preferred_orientation) {
+            const bool read = std::any_of(links.begin(), links.end(), [&](const auto& link) {
+                return link->structure_id.value() == row->structure_id.value();
+            });
+            if (read || row->structure_id.value().empty()) texture.push_back(row);
+        }
+        experiment->linked_structures.assign(std::move(links));
+        experiment->preferred_orientation.assign(std::move(texture));
+    }
+    return out;
+}
+
 struct KEngine {
     explicit KEngine(const Project& project)
-        : banks(calculation_banks(project.experiments)),
-          engine(to_crysta_structures(project), experiment_list(banks)) {
-        fill_crysta_relations(project, engine);
+        : active(participating(project)),
+          banks(calculation_banks(active.experiments)),
+          engine(to_crysta_structures(active), experiment_list(banks)) {
+        fill_crysta_relations(active, engine);
     }
+    Project active;  // first: the banks read it
     BuiltExperiments banks;
     crysta::Project engine;
 };
