@@ -167,13 +167,15 @@ TestCase {
                     return;
                 tryCompare(fields[i], "enabled", true, 5000, "The typed k field becomes ready after the preceding entry");
                 press(fields[i]);
+                tryCompare(fields[i], "activeFocus", true, 2000, "The real typed component owns keyboard focus");
                 keyClick(Qt.Key_A, Qt.ControlModifier);
                 for (const character of value)
                     keyClick(character.charCodeAt(0));
+                tryCompare(fields[i], "text", value, 2000, "Pointer and keyboard enter the independent k component literally");
                 keyClick(Qt.Key_Return);
             });
         }
-        tryVerify(() => !popup().busy, 5000, "The bounded magnetic graph computation finishes");
+        tryVerify(() => !popup().busy && popup().found !== null, 5000, "The bounded magnetic graph computation finishes from the submitted k");
         verify(popup().found !== null, "The selected k produces its magnetic graph: " + popup().refusal);
     }
     function shownNodes() {
@@ -289,7 +291,7 @@ TestCase {
         compare(popup().selected.length, 1, "A click selects exactly the clicked card");
         compare(String(card.color), String(Style.Colors.themeAccent), "The selected card uses the app accent fill");
         const textColours = () => labels.map(item => [item.color.r, item.color.g, item.color.b, item.color.a]);
-        compare(textColours(), [[1, 1, 1, 1], [1, 1, 1, 1]], "A selected card draws both labels in opaque white");
+        tryVerify(() => textColours().every(channels => channels.every(channel => channel === 1)), 2000, "A selected card draws both labels in opaque white: " + JSON.stringify(textColours()));
         verify(footer.text.includes("1"), "The fixed Add button shows the selected count");
         compare(footer.mapToItem(popup().contentItem, 0, 0).y, footerY, "Changing levels and selecting a card keeps the footer fixed");
         press(card);
@@ -733,10 +735,13 @@ TestCase {
         press(toggle);
         tryCompare(toggle, "checked", true, 2000, "Mark peaks resumes marking mode");
         compare(JSON.stringify(markedPeaks(chart)), kept, "Resuming an occupied table does not resuggest a removed peak");
+        table.positionViewAtBeginning();
+        table.forceLayout();
+        Ui.scrollIntoView(table.headerItem);
         const clear = sidebarControl("clear");
         compare(clear.fontIcon, "minus-circle", "Clear is the remove-all icon in the table heading");
         press(clear);
-        compare(table.count, 0, "Clear empties the sidebar table");
+        tryCompare(table, "count", 0, 2000, "Clear empties the sidebar table");
         compare(markedPeaks(chart).length, 0, "Clear removes all chart marks");
         compare(snapshot(), before, "Transient marking changes neither the saved model nor Undo history");
         verify(!sidebarControl("findK").enabled && !clear.enabled, "An empty sidebar disables Find k and Clear");
