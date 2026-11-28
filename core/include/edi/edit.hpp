@@ -1313,68 +1313,91 @@ class Edit {
     static Edit add_magnetic_candidates(Project& project, std::shared_ptr<const PreparedMagneticCandidates> prepared) {
         return Edit([&project, prepared = std::move(prepared)] {
             check_magnetic_candidates(project, *prepared);  // the whole batch, before any of it lands
-            std::vector<ItemVec<Structure>::Ptr> structures(project.structures.begin(), project.structures.end());
-            for (const auto& structure : prepared->children()) structures.push_back(std::make_shared<Structure>(*structure));
-            std::vector<std::vector<ItemVec<LinkedStructure>::Ptr>> links;
-            std::vector<std::vector<ItemVec<PrefOrient>::Ptr>> texture;
-            // A link or texture row with no id is the parent's while the parent is the project's one structure (review
-            // 27); it is written with the parent's id before the children make that ambiguous.
-            const bool lone = project.structures.size() == 1 && project.structures.front()->name.value() == prepared->parent;
-            const auto parents = [&](const std::string& id) { return id == prepared->parent || (id.empty() && lone); };
-            for (std::size_t e = 0; e < project.experiments.size(); ++e) {
-                const auto& experiment = project.experiments[e];
-                auto& kept_links = links.emplace_back();
-                for (const auto& link : experiment->linked_structures) {
-                    auto row = std::make_shared<LinkedStructure>(*link);
-                    if (parents(row->structure_id.value())) {
-                        row->structure_id = prepared->parent;
-                        row->enabled = false;
-                        row->scale.free = false;
-                    }
-                    kept_links.push_back(std::move(row));
-                }
-                for (const auto& add : prepared->links) {
-                    if (add.experiment != e) continue;
-                    auto row = std::make_shared<LinkedStructure>();
-                    row->structure_id = add.structure;
-                    row->scale.value = add.scale;
-                    row->scale.free = add.scale_free;
-                    row->enabled = add.enabled;
-                    kept_links.push_back(std::move(row));
-                }
-                auto& kept_texture = texture.emplace_back();
-                for (const auto& held : experiment->preferred_orientation) {
-                    auto row = std::make_shared<PrefOrient>(*held);
-                    if (parents(row->structure_id.value())) {
-                        row->structure_id = prepared->parent;
-                        row->march_r.free = false;
-                        row->march_random_fract.free = false;
-                    }
-                    kept_texture.push_back(std::move(row));
-                }
-                for (const auto& add : prepared->textures) {
-                    if (add.experiment != e) continue;
-                    auto row = std::make_shared<PrefOrient>();
-                    row->structure_id = add.structure;
-                    row->march_r.value = add.march_r;
-                    row->march_r.free = add.march_r_free;
-                    row->march_random_fract.value = add.march_random_fract;
-                    row->march_random_fract.free = add.march_random_fract_free;
-                    row->march_r.uncertainty = add.march_r_uncertainty;
-                    row->march_random_fract.uncertainty = add.march_random_fract_uncertainty;
-                    row->index_h = add.axis[0];
-                    row->index_k = add.axis[1];
-                    row->index_l = add.axis[2];
-                    kept_texture.push_back(std::move(row));
+            // The whole prospective project first, relations included (packet A9; review 31): a copy takes the
+            // batch and must hold the aliases and constraints that held before, else Add refuses with nothing
+            // changed. Relations already broken are the user's to fix and do not block Add.
+            bool held = true;
+            try {
+                Project before(project);
+                refresh_relations(before);
+            } catch (const std::exception&) {
+                held = false;
+            }
+            if (held) {
+                Project probe(project);
+                place_magnetic_candidates(probe, *prepared);
+                try {
+                    refresh_relations(probe);
+                } catch (const std::exception& broken) {
+                    throw std::invalid_argument(std::string("the added structures' texture relations would not hold: ") +
+                                                broken.what());
                 }
             }
-            carry_texture_relations(project, *prepared);
-            for (std::size_t i = 0; i < project.experiments.size(); ++i) {
-                project.experiments[i]->linked_structures.assign(std::move(links[i]));
-                project.experiments[i]->preferred_orientation.assign(std::move(texture[i]));
-            }
-            project.structures.assign(std::move(structures));
+            place_magnetic_candidates(project, *prepared);
         });
+    }
+    static void place_magnetic_candidates(Project& project, const PreparedMagneticCandidates& prepared) {
+        std::vector<ItemVec<Structure>::Ptr> structures(project.structures.begin(), project.structures.end());
+        for (const auto& structure : prepared.children()) structures.push_back(std::make_shared<Structure>(*structure));
+        std::vector<std::vector<ItemVec<LinkedStructure>::Ptr>> links;
+        std::vector<std::vector<ItemVec<PrefOrient>::Ptr>> texture;
+        // A link or texture row with no id is the parent's while the parent is the project's one structure (review
+        // 27); it is written with the parent's id before the children make that ambiguous.
+        const bool lone = project.structures.size() == 1 && project.structures.front()->name.value() == prepared.parent;
+        const auto parents = [&](const std::string& id) { return id == prepared.parent || (id.empty() && lone); };
+        for (std::size_t e = 0; e < project.experiments.size(); ++e) {
+            const auto& experiment = project.experiments[e];
+            auto& kept_links = links.emplace_back();
+            for (const auto& link : experiment->linked_structures) {
+                auto row = std::make_shared<LinkedStructure>(*link);
+                if (parents(row->structure_id.value())) {
+                    row->structure_id = prepared.parent;
+                    row->enabled = false;
+                    row->scale.free = false;
+                }
+                kept_links.push_back(std::move(row));
+            }
+            for (const auto& add : prepared.links) {
+                if (add.experiment != e) continue;
+                auto row = std::make_shared<LinkedStructure>();
+                row->structure_id = add.structure;
+                row->scale.value = add.scale;
+                row->scale.free = add.scale_free;
+                row->enabled = add.enabled;
+                kept_links.push_back(std::move(row));
+            }
+            auto& kept_texture = texture.emplace_back();
+            for (const auto& held : experiment->preferred_orientation) {
+                auto row = std::make_shared<PrefOrient>(*held);
+                if (parents(row->structure_id.value())) {
+                    row->structure_id = prepared.parent;
+                    row->march_r.free = false;
+                    row->march_random_fract.free = false;
+                }
+                kept_texture.push_back(std::move(row));
+            }
+            for (const auto& add : prepared.textures) {
+                if (add.experiment != e) continue;
+                auto row = std::make_shared<PrefOrient>();
+                row->structure_id = add.structure;
+                row->march_r.value = add.march_r;
+                row->march_r.free = add.march_r_free;
+                row->march_random_fract.value = add.march_random_fract;
+                row->march_random_fract.free = add.march_random_fract_free;
+                row->march_r.uncertainty = add.march_r_uncertainty;
+                row->march_random_fract.uncertainty = add.march_random_fract_uncertainty;
+                row->index_h = add.axis[0];
+                row->index_k = add.axis[1];
+                row->index_l = add.axis[2];
+                kept_texture.push_back(std::move(row));
+            }
+        }
+        carry_texture_relations(project, prepared);
+        for (std::size_t i = 0; i < project.experiments.size(); ++i) {
+            project.experiments[i]->linked_structures.assign(std::move(links[i]));
+            project.experiments[i]->preferred_orientation.assign(std::move(texture[i]));
+        }
+        project.structures.assign(std::move(structures));
     }
     // The parent texture's relations, carried to each child's own texture parameters (packet A9; reviews 29 and 30).
     // Only a constraint that sets a parent March–Dollase parameter is copied, as one setting the child's: its target
@@ -1396,8 +1419,10 @@ class Edit {
         std::map<std::string, std::vector<std::string>> parent_aliases;  // alias id -> its parameter name's parts
         for (const auto& alias : project.aliases) {
             const std::vector<std::string> parts = split(alias->parameter_unique_name.value());
+            // The phase part is the structure's name (the long form) or its datablock key (the short form).
             if (parts.size() >= 2 && (parts.back() == "march_r" || parts.back() == "march_random_fract") &&
-                parts[parts.size() - 2] == prepared.parent)
+                (parts[parts.size() - 2] == prepared.parent ||
+                 parts[parts.size() - 2] == datablock_key(prepared.parent, "structure")))
                 parent_aliases[alias->id.value()] = parts;
         }
         if (parent_aliases.empty() || children.empty()) return;
@@ -1429,6 +1454,13 @@ class Edit {
         std::set<std::string> taken;
         for (const auto& alias : project.aliases) taken.insert(alias->id.value());
         for (const auto& constraint : project.constraints) taken.insert(constraint->id.value());
+        // An identifier the expression grammar reads: letters, digits and underscores (review 31), as a phase name may
+        // hold other characters.
+        const auto identifier = [](std::string text) {
+            for (char& c : text)
+                if (!(std::isalnum(static_cast<unsigned char>(c)) != 0 || c == '_')) c = '_';
+            return text;
+        };
         const auto fresh = [&taken](const std::string& base) {
             std::string id = base;
             for (int n = 2; taken.contains(id); ++n) id = base + "_" + std::to_string(n);
@@ -1441,10 +1473,13 @@ class Edit {
             std::map<std::string, std::string> renamed;  // parent alias id -> the child's
             for (const auto& [id, parts] : parent_aliases) {
                 std::string spelled;
+                // The child's phase part in the same form as the parent's.
+                const std::string phase =
+                    parts[parts.size() - 2] == prepared.parent ? child : datablock_key(child, "structure");
                 for (std::size_t i = 0; i < parts.size(); ++i)
-                    spelled += (i ? "." : "") + (i + 2 == parts.size() ? child : parts[i]);
+                    spelled += (i ? "." : "") + (i + 2 == parts.size() ? phase : parts[i]);
                 auto alias = std::make_shared<ParameterAlias>();
-                const std::string child_id = fresh(id + "_" + child);
+                const std::string child_id = fresh(id + "_" + identifier(child));
                 renamed[id] = child_id;
                 alias->id = child_id;
                 alias->parameter_unique_name = spelled;
@@ -1457,7 +1492,7 @@ class Edit {
                     out += hit != renamed.end() ? hit->second : token;
                 }
                 auto copy = std::make_shared<ParameterConstraint>(*constraint);
-                copy->id = fresh(constraint->id.value() + "_" + child);
+                copy->id = fresh(constraint->id.value() + "_" + identifier(child));
                 copy->expression = out;
                 constraints.push_back(std::move(copy));
             }
