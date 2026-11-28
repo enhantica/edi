@@ -201,9 +201,10 @@ TestCase {
         const table = findChild(analysis, "parameters.list");
         verify(table, "Analysis displays the actual Parameters table");
         const model = table.sourceModel;
-        model.nameFilter = "Pawley intensities";
+        model.nameFilter = "extracted_intensities[";
         tryCompare(table, "count", 4, 2000, "Two Pawley structures linked to two experiments give one row for each pair");
-        const names = Probe.rows(model).map(row => row.parameter.fullName);
+        const flagsByName = () => Probe.rows(model).map(row => [row.parameter.fullName, row.parameter.free]).sort();
+        const names = flagsByName().map(entry => entry[0]);
         for (const phase of ["alpha", "beta"]) {
             for (const bank of ["first", "second"]) {
                 compare(names.filter(name => name.includes(phase) && name.includes(bank)).length, 1, "Every Pawley row identifies its unique structure and experiment");
@@ -217,11 +218,12 @@ TestCase {
             compare(boxes.length, 1, "Each grouped Pawley row exposes exactly one Free checkbox");
             const box = boxes[0];
             const initial = box.checked;
-            const expected = Probe.rows(model).map(row => row.parameter.free);
-            expected[index] = !initial;
+            const parameter = row.parameter;
+            const expected = flagsByName();
+            expected.find(entry => entry[0] === parameter.fullName)[1] = !initial;
             press(box);
             tryCompare(box, "checked", !initial, 2000, "The grouped Pawley Free checkbox changes the selected pair");
-            compare(Probe.rows(model).map(row => row.parameter.free), expected, "Toggling one Pawley pair preserves the other experiment and structure Free flags");
+            tryVerify(() => JSON.stringify(flagsByName()) === JSON.stringify(expected), 10000, "Toggling one Pawley pair publishes only that structure and experiment Free flag. " + (parameter.lastError || Session.project.lastError));
         }
     }
 }
