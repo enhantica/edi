@@ -27,7 +27,7 @@ def deferred_row(qml, route):
         'let queued=[],calls=[];const textEdit=null;const Qt={callLater:f=>queued.push(f)};'
         'const row={activated(){},available:true,path:"/chosen/entry",'
         'exampleId:"authored_example"};'
-        'const WebFiles={available:false};const Session={project:null,'
+        'const WebFiles={available:false};const Session={project:null,projectGeneration:()=>0,'
         'projectDirectoryUrl:path=>"file://"+path,'
         'openProject:path=>calls.push(["project",path]),'
         'openExample:id=>calls.push(["example",id])};'

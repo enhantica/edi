@@ -2464,54 +2464,57 @@ bool Session::setProjectAside() {
     return aside_.has_value();
 }
 
-void Session::restoreProjectSetAside() {
+bool Session::restoreProjectSetAside() {
     if (!aside_) {
-        return;
+        return false;
     }
     if (const QString refusal = replacementRefusal(); !refusal.isEmpty()) {
         setLastError(refusal);
-        return;
+        return false;
     }
     SetAside aside = *std::move(aside_);
     aside_.reset();
     const QPointer<Session> receiver(this);
     const QPointer<ProjectViewModel> wanted(aside.project);
     const bool replaced = replaceProject(aside.project.data(), {}, aside.example);
-    if (!receiver) return;
+    if (!receiver) return false;
     if (!replaced) {
         // Refused before it took the project: it stays set aside, as it was.
-        if (wanted && project_ != wanted && !aside_) aside_ = std::move(aside);
-        return;
+        if ((wanted || aside.empty) && project_ != wanted && !aside_) aside_ = std::move(aside);
+        return false;
     }
     // Every publication below can reenter: each goes on only while the restored project is still the open one
     // (ADR-0100), so a project opened meanwhile never takes the set-aside one's places.
     const QPointer<ProjectViewModel> restored(project_);
     const auto replacement = replacement_generation_;
+    // The empty workspace is restored with no project open; a project that went meanwhile is not restored.
+    const bool empty = aside.empty;
     const auto current = [&] {
-        return receiver && restored && project_ == restored && replacement_generation_ == replacement;
+        return receiver && (restored || empty) && project_ == restored && replacement_generation_ == replacement;
     };
-    if (!current()) return;
+    if (!current()) return false;
     temporary_folder_ = aside.temporary_folder;
     archive_location_ = aside.archive_location;
     setOpenedArchive(aside.opened_archive);
-    if (!current()) return;
+    if (!current()) return false;
     read_only_source_ = aside.read_only_source;
     read_only_copy_ = aside.read_only_copy;
     web_copy_ = aside.web_copy;
     web_from_file_ = aside.web_from_file;
     setWebPlace(aside.web_place);
-    if (!current()) return;
+    if (!current()) return false;
     emit projectLocationChanged();
-    if (!current()) return;
+    if (!current()) return false;
     emit locationTextChanged();
-    if (!current()) return;
+    if (!current()) return false;
     emit needsSaveAsChanged();
-    if (!current()) return;
+    if (!current()) return false;
     emit projectSetAsideChanged();
-    if (!current()) return;
+    if (!current()) return false;
     emit projectSetAsideNameChanged();
-    if (!current()) return;
+    if (!current()) return false;
     emit projectSetAsideModifiedChanged();
+    return current();
 }
 
 void Session::dropProjectSetAside() {
@@ -2811,10 +2814,13 @@ bool Session::replaceProject(ProjectViewModel* project, const QStringList& warni
         keep = SetAside{project_,         opened_example_,  temporary_folder_, archive_location_,
                         opened_archive_,  read_only_source_, read_only_copy_,  web_copy_,
                         web_place_,       web_from_file_};
+        keep->empty = project_ == nullptr;
     }
     keep_timer_->stop();
-    // A web open still being read no longer replaces anything.
+    // A web open still being read no longer replaces anything, and a save's question about the data is no longer
+    // asked: its answer finds no question and changes nothing.
     ++open_request_;
+    save_question_.reset();
     const QString previous_web_copy = std::exchange(web_copy_, QString());
     // In the web app a project starts in the browser's own storage; an open from the disk or from a stored place
     // names its place once it is open.
@@ -2849,6 +2855,8 @@ bool Session::replaceProject(ProjectViewModel* project, const QStringList& warni
     if(target)connect(target,&ProjectViewModel::pathChanged,this,[this,target] {
         if(target && project_==target && path_generation_!=UINT64_MAX)++path_generation_;
     });
+    // Before anything can read the next project: work queued for the replaced one sees a new generation.
+    ++project_generation_;
     project_ = target;
     if(committed)*committed=true;
     if(committedReplacement)*committedReplacement=replacement;

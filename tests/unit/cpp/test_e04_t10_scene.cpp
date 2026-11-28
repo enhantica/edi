@@ -7,6 +7,7 @@
 #include <crysta/structure_geometry.hpp>
 #include <iomanip>
 #include <set>
+#include <string_view>
 #include <thread>
 
 #include "../../fixtures/e04_t10/generated.hpp"
@@ -173,25 +174,34 @@ TEST_CASE("E04-T10 gate 2 every published colour radius and fallback") {
         if (a.ionic)
             CHECK_MESSAGE(*a.ionic == r.ionic,
                           " I6 ionic radius equals the independent published value");
-        for (auto scheme : {edi::ColorScheme::Jmol, edi::ColorScheme::Vesta}) {
-            auto c = edi::element_color(r.symbol, scheme);
-            CHECK_MESSAGE(c.known, " I5 every published element is known");
-            color(c.color, scheme == edi::ColorScheme::Jmol || r.vesta.empty() ? r.jmol : r.vesta);
-        }
-        for (auto mode :
-             {edi::AtomView::Covalent, edi::AtomView::VanDerWaals, edi::AtomView::Ionic}) {
-            const auto r2 = edi::element_radius(r.symbol, mode);
-            const double want = mode == edi::AtomView::Covalent      ? r.covalent
-                                : mode == edi::AtomView::VanDerWaals ? r.vdw
-                                : r.ionic < 0                        ? r.covalent
-                                                                     : r.ionic;
-            CHECK_MESSAGE(r2.radius == want,
-                          " I5 radius lookup follows the declared model and fallback");
-            CHECK_MESSAGE(r2.substituted == (mode == edi::AtomView::Ionic && r.ionic < 0),
-                          " I5 substitution is reported only for an absent model");
+        const auto check_style = [&](std::string_view element) {
+            INFO(element);
+            for (auto scheme : {edi::ColorScheme::Jmol, edi::ColorScheme::Vesta}) {
+                auto c = edi::element_color(element, scheme);
+                CHECK_MESSAGE(c.known, " I5 every published element and deuterium are known");
+                color(c.color,
+                      scheme == edi::ColorScheme::Jmol || r.vesta.empty() ? r.jmol : r.vesta);
+            }
+            for (auto mode :
+                 {edi::AtomView::Covalent, edi::AtomView::VanDerWaals, edi::AtomView::Ionic}) {
+                const auto r2 = edi::element_radius(element, mode);
+                const double want = mode == edi::AtomView::Covalent      ? r.covalent
+                                    : mode == edi::AtomView::VanDerWaals ? r.vdw
+                                    : r.ionic < 0                        ? r.covalent
+                                                                         : r.ionic;
+                CHECK_MESSAGE(r2.radius == want,
+                              " I5 radius lookup follows the declared model and fallback");
+                CHECK_MESSAGE(r2.substituted == (mode == edi::AtomView::Ionic && r.ionic < 0),
+                              " I5 substitution is reported only for an absent model");
+            }
+        };
+        check_style(r.symbol);
+        if (r.symbol == "H") {
+            check_style(edi::element_of("D"));
+            check_style(edi::element_of("2H"));
         }
     }
-    for (const auto symbol : {"", "D", "Qq"}) {
+    for (const auto symbol : {"", "Qq"}) {
         const auto c = edi::element_color(symbol, edi::ColorScheme::Vesta);
         color(c.color, "#FFC0CB");
         CHECK_MESSAGE(!c.known, " I5 unknown elements are explicitly unknown");
@@ -202,13 +212,13 @@ TEST_CASE("E04-T10 gate 2 every published colour radius and fallback") {
     for (const auto& [input, want] :
          std::vector<std::pair<std::string, std::string>>{{"Co2+", "Co"},
                                                           {"162Dy", "Dy"},
-                                                          {"2H", "H"},
+                                                          {"2H", "D"},
                                                           {"O", "O"},
                                                           {"o2-", ""},
                                                           {"D", "D"},
                                                           {"", ""}})
         CHECK_MESSAGE(edi::element_of(input) == want,
-                      " I4 isotope and ion symbols follow the first-capital rule");
+                      " I4 symbols follow the first-capital rule and both deuterium spellings map to D");
 }
 
 TEST_CASE("E04-T10 gate 1 every CLI scene equals independently loaded crysta geometry") {
@@ -276,6 +286,7 @@ TEST_CASE("E04-T10 gate 1 every CLI scene equals independently loaded crysta geo
                                 " I3 every independent shared-site row is represented");
                 std::string label;
                 std::size_t major = 0;
+                double radius = 1.;
                 double total = 0;
                 bool asymmetric = false;
                 for (auto rr : rs) total += rows.occupancy[rr];
@@ -313,25 +324,25 @@ TEST_CASE("E04-T10 gate 1 every CLI scene equals independently loaded crysta geo
                     asymmetric = asymmetric || own_position;
                     const auto symbol = site->type_symbol.get();
                     const auto pos = symbol.find_first_of("ABCDEFGHIJKLMNOPQRSTUVWXYZ");
-                    const auto element = pos == std::string::npos
-                                             ? std::string{}
-                                             : symbol.substr(pos, 1 + (pos + 1 < symbol.size() &&
-                                                                       symbol[pos + 1] >= 'a' &&
-                                                                       symbol[pos + 1] <= 'z'));
+                    auto element = pos == std::string::npos
+                                       ? std::string{}
+                                       : symbol.substr(pos, 1 + (pos + 1 < symbol.size() &&
+                                                                 symbol[pos + 1] >= 'a' &&
+                                                                 symbol[pos + 1] <= 'z'));
+                    if (symbol == "2H") element = "D";
                     CHECK_MESSAGE(part.element == element,
                                   " gate 2 scene element is independently read from the project "
                                   "type symbol");
-                    const auto style = std::find_if(published.begin(), published.end(),
-                                                    [&](auto q) { return q.symbol == element; });
+                    const auto& style_symbol = element == "D" ? "H" : element;
+                    const auto style =
+                        std::find_if(published.begin(), published.end(),
+                                     [&](const auto& q) { return q.symbol == style_symbol; });
                     color(part.color, style == published.end() ? "#FFC0CB" : style->jmol);
+                    if (k == major) radius = style == published.end() ? 1. : style->covalent;
                 }
                 CHECK_MESSAGE(
                     (atom.label == label && atom.major == major && atom.asymmetric == asymmetric),
                     " I3 engine site order defines labels major ties and asymmetric identity");
-                const auto major_style =
-                    std::find_if(published.begin(), published.end(),
-                                 [&](auto q) { return q.symbol == atom.parts[major].element; });
-                const double radius = major_style == published.end() ? 1. : major_style->covalent;
                 CHECK_MESSAGE(
                     atom.radius == doctest::Approx(.3 * std::sqrt(radius)),
                     " gate 2 atom sizing follows the published radius rather than view output");
@@ -459,7 +470,7 @@ TEST_CASE("E04-T10 I5 zero total partial occupancies and major ties") {
 
 TEST_CASE("E04-T10 I8 selection labels legend and feature independence") {
     auto s = source();
-    s.site_types.push_back({"duplicate-hydrogen", "H"});
+    s.site_types.push_back({"duplicate-deuterium", "2H"});
     for (auto subset :
          {edi::AtomSubset::All, edi::AtomSubset::AsymmetricUnit, edi::AtomSubset::None}) {
         edi::SceneOptions o;
@@ -478,8 +489,8 @@ TEST_CASE("E04-T10 I8 selection labels legend and feature independence") {
                       " I8 legend contains first-seen elements without duplicates");
         if (!a.legend.empty())
             CHECK_MESSAGE((a.legend[0].element == "La" && a.legend[1].element == "Ba" &&
-                           a.legend[2].element == "H" && a.legend[3].element == "He"),
-                          " I8 legend order follows the loaded sites");
+                           a.legend[2].element == "2H" && a.legend[3].element == "He"),
+                          " I8 legend follows loaded site order and retains the written isotope");
         for (const auto& label : a.labels) {
             CHECK_MESSAGE(a.atoms[label.atom].drawn, " I8 each label names a drawn atom");
             vec(label.anchor, {a.atoms[label.atom].centre.x, a.atoms[label.atom].centre.y,
