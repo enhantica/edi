@@ -947,7 +947,7 @@
     "extracted_intensities": {
      "need": {
       "by": "deviation",
-      "ref": "D101",
+      "ref": "D102",
       "verdict": "keep"
      },
      "reason": "C",
@@ -2444,7 +2444,7 @@
     "extracted_intensities": {
      "need": {
       "by": "deviation",
-      "ref": "D101",
+      "ref": "D102",
       "verdict": "keep"
      },
      "reason": "C",
@@ -2794,7 +2794,7 @@
     "f_squared": {
      "need": {
       "by": "deviation",
-      "ref": "D101",
+      "ref": "D102",
       "verdict": "keep"
      },
      "reason": "C",
@@ -2803,7 +2803,7 @@
     "f_squared_su": {
      "need": {
       "by": "deviation",
-      "ref": "D101",
+      "ref": "D102",
       "verdict": "keep"
      },
      "reason": "C",
@@ -2812,7 +2812,7 @@
     "index_h": {
      "need": {
       "by": "deviation",
-      "ref": "D101",
+      "ref": "D102",
       "verdict": "keep"
      },
      "reason": "C",
@@ -2821,7 +2821,7 @@
     "index_k": {
      "need": {
       "by": "deviation",
-      "ref": "D101",
+      "ref": "D102",
       "verdict": "keep"
      },
      "reason": "C",
@@ -2830,7 +2830,7 @@
     "index_l": {
      "need": {
       "by": "deviation",
-      "ref": "D101",
+      "ref": "D102",
       "verdict": "keep"
      },
      "reason": "C",
@@ -2839,7 +2839,7 @@
     "structure_id": {
      "need": {
       "by": "deviation",
-      "ref": "D101",
+      "ref": "D102",
       "verdict": "keep"
      },
      "reason": "C",
@@ -4120,7 +4120,7 @@
     "extracted_intensities": {
      "need": {
       "by": "deviation",
-      "ref": "D101",
+      "ref": "D102",
       "verdict": "keep"
      },
      "reason": "C",
@@ -5574,7 +5574,7 @@
     "extracted_intensities": {
      "need": {
       "by": "deviation",
-      "ref": "D101",
+      "ref": "D102",
       "verdict": "keep"
      },
      "reason": "C",
@@ -5930,7 +5930,7 @@
     "calc_method": {
      "need": {
       "by": "deviation",
-      "ref": "D101",
+      "ref": "D102",
       "verdict": "keep"
      },
      "reason": "C",
@@ -7253,7 +7253,7 @@
    "ExtractedIntensity": {
     "need": {
      "by": "deviation",
-     "ref": "D101",
+     "ref": "D102",
      "verdict": "keep"
     },
     "reason": "C",
