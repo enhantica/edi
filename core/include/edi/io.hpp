@@ -336,6 +336,9 @@ void complete_relations(Project& project);
 // cycle, every value holds): empty when it holds, else crysta's message. A user's edit and the magnetic Add are judged
 // by it alike. The project is not changed.
 std::string relation_problem(const Project& project);
+// Every problem the same check reports, each as crysta renders it (a conversion failure as one): what Add compares
+// as a multiset, so a new problem behind a retained one is still seen.
+std::vector<std::string> relation_problems(const Project& project);
 
 // Undo's half: apply_relations, then each dependent's e.s.d. back to the one it held before the
 // fit (kept in memory by the fit's write-back, or seeded by the loader from a legacy file); one in

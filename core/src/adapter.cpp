@@ -6730,6 +6730,19 @@ std::string relation_problem(const Project& project) {
     return {};
 }
 
+std::vector<std::string> relation_problems(const Project& project) {
+    if (project.structures.empty()) return {};
+    std::vector<std::string> out;
+    try {
+        const RelationProject converted = relation_project(project);
+        for (const crysta::RelationProblem& problem : crysta::relation_problems(*converted.project))
+            out.push_back(problem.code + ": " + problem.message);
+    } catch (const std::exception& refusal) {
+        out.push_back(refusal.what());
+    }
+    return out;
+}
+
 void refresh_relations(Project& project, const WarningSink& warn, bool from_file) {
     if (project.structures.empty()) {
         return;
