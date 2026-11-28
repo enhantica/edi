@@ -568,6 +568,15 @@ class Edit {
     static Edit assign(double& field, double value) {
         return Edit([&field, value] { field = value; });
     }
+    // Several parameters' free flags at once, each flag a recorded assignment: a Pawley structure's intensities in one
+    // experiment, which the Analysis table shows as one row (edi ADR-0109 §5).
+    static Edit free_flags(std::vector<std::pair<Parameter*, bool>> flags) {
+        return Edit([flags = std::move(flags)] {
+            for (const auto& [parameter, free] : flags) {
+                parameter->free = free;
+            }
+        });
+    }
     static Edit assign(std::string& field, std::string value) {
         return Edit([&field, value = std::move(value)] { field = value; });
     }

@@ -270,6 +270,13 @@ struct CalcMethodOutcome {
 // experiment with measured data, takes crysta's rietveld_scale_start. Atoms, displacements, moments and their free
 // flags are never changed.
 CalcMethodOutcome select_calc_method(Project& project, Structure& structure, const std::string& token);
+// The same through the project that holds the structure (the Python `Structure.calc_method` setter). A structure no
+// project holds has no links or rows: it takes any token crysta knows.
+CalcMethodOutcome select_calc_method(Structure& structure, const std::string& token);
+// Why the structure cannot be linked to the experiment as it is (a Le Bail or Pawley structure on a single crystal or a
+// total-scattering experiment), crysta's reason; empty when it can.
+std::string calc_method_link_refusal(const Project& project, const ExperimentBase& experiment,
+                                     const Structure& structure);
 // The fitting mode a fit runs: the declared one, else `single` (the Python Analysis.fit dispatch's
 // fall-through for an undeclared mode).
 inline std::string effective_fitting_mode(const Project& project) {

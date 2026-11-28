@@ -5726,6 +5726,31 @@ bool adopt_values(Project& project, const Project& saved) {
             changed = true;
         }
     }
+    // The extracted intensities take the values their file holds too (edi ADR-0109), row for row.
+    for (const auto& experiment : project.experiments) {
+        for (const auto& stored : saved.experiments) {
+            if (stored->name.value() != experiment->name.value() ||
+                stored->extracted_intensities.size() != experiment->extracted_intensities.size()) {
+                continue;
+            }
+            for (std::size_t i = 0; i < experiment->extracted_intensities.size(); ++i) {
+                ExtractedIntensity& row = *experiment->extracted_intensities[i];
+                const ExtractedIntensity& file = *stored->extracted_intensities[i];
+                if (row.structure_id.value() != file.structure_id.value() || row.index_h.get() != file.index_h.get() ||
+                    row.index_k.get() != file.index_k.get() || row.index_l.get() != file.index_l.get()) {
+                    continue;
+                }
+                if (row.f_squared.value != file.f_squared.value.get()) {
+                    row.f_squared.value = file.f_squared.value.get();
+                    changed = true;
+                }
+                if (row.f_squared.uncertainty != file.f_squared.uncertainty.get()) {
+                    row.f_squared.uncertainty = file.f_squared.uncertainty.get();
+                    changed = true;
+                }
+            }
+        }
+    }
     // An auto background's record of its points follows the rounded values the file holds, so the saved points are
     // still the estimate's (ADR-0040) and a changed setting estimates again rather than refusing them as edited.
     for (const auto& experiment : project.experiments) {

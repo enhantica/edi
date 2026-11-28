@@ -6988,6 +6988,58 @@ CalcMethodChoice calc_method_choice(const Project& project, const Structure& str
     return choice;
 }
 
+CalcMethodOutcome select_calc_method(Structure& structure, const std::string& token) {
+    if (Project* project = project_holding(structure)) {
+        return select_calc_method(*project, structure, token);
+    }
+    const crysta::CalcMethod method = crysta::calc_method_of(token);
+    structure.calc_method =
+        method == crysta::CalcMethod::Rietveld ? std::string() : std::string(crysta::calc_method_token(method));
+    return {};
+}
+
+std::string calc_method_link_refusal(const Project& project, const ExperimentBase& experiment,
+                                     const Structure& structure) {
+    // Only Le Bail and Pawley are refused, and only on a single crystal or total scattering: nothing to ask otherwise.
+    const bool powder_bragg = !experiment.reflections.has_value() &&
+                              experiment.experiment_type.effective_scattering_type() == ScatteringTypeEnum::BRAGG;
+    const std::optional<std::size_t> at = structure_place(project, structure);
+    if (powder_bragg || !at) {
+        return {};
+    }
+    try {
+        if (!extracts_intensities(structure)) {
+            return {};
+        }
+        // crysta's offer with the structure linked here: the method it holds is refused when crysta offers Rietveld
+        // alone.
+        const std::string key = datablock_key(structure.name, "structure");
+        const bool linked = std::any_of(experiment.linked_structures.begin(), experiment.linked_structures.end(),
+                                        [&key](const auto& link) {
+                                            return datablock_key(link->structure_id, "structure") == key;
+                                        });
+        BuiltExperiments banks;
+        banks.reserve(project.experiments.size());
+        for (const auto& bank : project.experiments) {
+            crysta::BraggPdExperiment& built = build_on_heap(banks, *bank, true);
+            if (bank.get() == &experiment && !linked) {
+                std::vector<crysta::LinkedStructure> links(built.linked_structures.begin(), built.linked_structures.end());
+                links.emplace_back(structure.name.value(), param(Parameter{}, crysta::SCALE, "scale"), true);
+                built.linked_structures.assign(links);
+            }
+        }
+        const crysta::Project engine(to_crysta_structures(project, false), experiment_list(banks));
+        const crysta::CalcMethodOptions options = crysta::calc_method_options(engine, engine.structures.at(*at));
+        const crysta::CalcMethod held = crysta::calc_method_of(structure.calc_method.value());
+        if (std::find(options.offered.begin(), options.offered.end(), held) == options.offered.end()) {
+            return options.reason;
+        }
+    } catch (const std::exception& error) {
+        return error.what();
+    }
+    return {};
+}
+
 CalcMethodOutcome select_calc_method(Project& project, Structure& structure, const std::string& token) {
     const crysta::CalcMethod method = crysta::calc_method_of(token);
     const std::optional<std::size_t> at = structure_place(project, structure);
