@@ -24,6 +24,27 @@ A symmetry-related value is not an additional independent fitting direction. A t
 
 Keep the [displacement convention](../../physics/displacement.md) used by the source structure; quantities expressed with different conventions should not be compared by name alone. Use [parameters](../parameters.md) for free/fixed values, uncertainty and constraints.
 
+## Calculation method {#calculation-method}
+
+Each structure has a calculation method. It says where the intensity of each reflection comes from.
+
+| Method | Needs | Gives | Use it to |
+| --- | --- | --- | --- |
+| Rietveld, the default | Cell, space group, atom sites with displacements (and moments), peak profile, background | The structure, phase scales, weight fractions and R Bragg | Fit the structure |
+| Le Bail | Cell, space group, peak profile, background | The cell, profile and background, and one intensity per reflection without an s.u. | Settle the cell and profile before Rietveld; test a space group or a propagation vector |
+| Pawley | The same as Le Bail | The same, with an s.u. for every intensity | Extract intensities with their uncertainties, for example for structure solution |
+
+Le Bail shares the measured counts out between the reflections after each fit step. It is fast and stable, but its intensities have no uncertainties. Pawley fits every intensity as a parameter. That gives uncertainties, but it is slower and less stable where peaks overlap; no intensity goes below zero. Neither method gives a phase scale, weight fractions or R Bragg.
+
+A good way to start on a new pattern:
+
+1. Load the structure, for example from a CIF with its atoms.
+2. Switch it to **Le Bail** and fit the cell, peak profile, background and zero.
+3. Switch back to **Rietveld**. Every atom, displacement and moment from the CIF is still there, and the phase scale gets a new start from the pattern.
+4. Free the atoms you want and continue the fit from the Le Bail cell and profile.
+
+Under Le Bail or Pawley the atoms stay saved with the structure, free marks included, and the fit leaves them out. A structure without atoms can be fitted with Le Bail or Pawley too. The method applies to powder diffraction only. Each experiment keeps its own intensities, also in a joint fit, and a sequential scan carries them from one dataset to the next. The method is saved in the structure block as `_structure.calc_method`, only when it is not Rietveld, and the intensities in the experiment file, where they start the next fit.
+
 ## A structure file
 
 A structure is saved as one `.edi` data block. The example below is `structures/lif.edi` from the LiF project: the symmetry, unit cell and atom sites described above map directly onto its keys.

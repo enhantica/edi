@@ -43,6 +43,20 @@ for parameter in project.free_parameters:
 
 This project-level list includes structural and experimental parameters. It helps you review the analysis before running a fit.
 
+## Choose the calculation method
+
+A structure's [calculation method](../user-guide/analysis-workflow/structure.md#calculation-method) is a string: `rietveld`, `le_bail` or `pawley`.
+
+```python
+structure.calc_method = 'le_bail'
+project.analysis.fit()
+
+for row in project.experiments[0].extracted_intensities:
+    print(row.structure_id, row.index_h, row.index_k, row.index_l, row.f_squared)
+```
+
+Setting a method the structure cannot take, such as Le Bail for a structure linked to a single crystal, raises a `ValueError` with the reason. The extracted intensities are read-only; `f_squared_su` is set for a Pawley structure. Setting `rietveld` again keeps every atom.
+
 ## Read a structure file
 
 The factory reads a structure from a CIF or `.edi` file, and the project's collection reads one and adds it:
