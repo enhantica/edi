@@ -49,6 +49,10 @@ EaComponents.ApplicationWindow {
         const base = left.anchors.leftMargin;
         left.anchors.leftMargin = Qt.binding(() => trafficLightsLeft >= 0 ? trafficLightsLeft : base);
     }
+    // Windows: Qt already makes the system strip at the top a native caption (qwindowswindow.cpp,
+    // handleNonClientHitTest): a press there that no item takes moves the window, and a double click maximizes it.
+    // Starting our own move or maximize there as well fights the native one, so the bar's handlers leave the strip alone.
+    readonly property real nativeCaptionHeight: mergedTitleBar && Qt.platform.os === "windows" ? SafeArea.margins.top : 0
     // Dragging the empty app bar moves the window, and a double click maximizes or restores it, as a title bar does.
     // Starts on press, before any button or tab can take the press, so a drag works anywhere on the empty bar.
     PointHandler {
@@ -56,7 +60,7 @@ EaComponents.ApplicationWindow {
         enabled: window.mergedTitleBar
         acceptedButtons: Qt.LeftButton
         grabPermissions: PointerHandler.TakeOverForbidden
-        onActiveChanged: if (active && !window.appBarControlAt(point.position))
+        onActiveChanged: if (active && point.position.y >= window.nativeCaptionHeight && !window.appBarControlAt(point.position))
             window.startSystemMove()
     }
     function appBarControlAt(position) {
@@ -71,7 +75,11 @@ EaComponents.ApplicationWindow {
         parent: window.appBar
         enabled: window.mergedTitleBar
         acceptedButtons: Qt.LeftButton
-        onDoubleTapped: window.visibility === Window.Maximized ? window.showNormal() : window.showMaximized()
+        onDoubleTapped: eventPoint => {
+            if (eventPoint.position.y < window.nativeCaptionHeight)
+                return;
+            window.visibility === Window.Maximized ? window.showNormal() : window.showMaximized();
+        }
     }
 
     // Same Create API/preferences as the ordinary current-window form. Native
