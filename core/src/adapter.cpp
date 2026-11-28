@@ -11078,21 +11078,29 @@ MagneticPeak magnetic_peak_near(const Project& project, std::size_t experiment, 
         }
         return false;
     };
-    const double reach = std::max(exact.half_width, 1e-9);
-    std::size_t best = axis.size();
+    // Maxima are looked for within a few of the tap's widths; each counts only within its own half width (packet 9m;
+    // review 30), as the width varies along the pattern.
+    const double span = 4.0 * std::max(exact.half_width, 1e-9);
+    std::optional<MagneticPeak> best;
     for (std::size_t i = 1; i + 1 < axis.size(); ++i) {
-        if (std::abs(axis[i] - x) > reach || excluded(axis[i]) || excluded(axis[i - 1]) || excluded(axis[i + 1]) ||
+        if (std::abs(axis[i] - x) > span || excluded(axis[i]) || excluded(axis[i - 1]) || excluded(axis[i + 1]) ||
             !std::isfinite(y[i]) || !std::isfinite(y[i - 1]) || !std::isfinite(y[i + 1]))
             continue;
         // A maximum of the measured curve (review 23, F4): above the sample before it and not below the one after,
         // so a completely flat run gives none and a plateau counts once, at its first sample; the nearest one wins.
         if (!(y[i] > y[i - 1] && y[i] >= y[i + 1])) continue;
-        if (best == axis.size() || std::abs(axis[i] - x) < std::abs(axis[best] - x)) best = i;
+        if (best && std::abs(axis[i] - x) >= std::abs(best->x - x)) continue;
+        MagneticPeak here;
+        try {
+            here = magnetic_peak_at(project, experiment, parent, axis[i]);
+        } catch (const std::invalid_argument&) {
+            continue;  // outside the calibration's range
+        }
+        if (std::abs(axis[i] - x) > std::max(here.half_width, 1e-9)) continue;
+        here.observed = true;
+        best = here;
     }
-    if (best == axis.size()) return exact;
-    MagneticPeak found = magnetic_peak_at(project, experiment, parent, axis[best]);
-    found.observed = true;
-    return found;
+    return best ? *best : exact;
 }
 
 std::vector<MagneticKRow> magnetic_k_search(const Project& project, std::size_t experiment, std::size_t parent,
