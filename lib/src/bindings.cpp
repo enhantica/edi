@@ -5150,14 +5150,18 @@ NB_MODULE(_edi, m) {
                     throw std::invalid_argument("_fitting_mode.type is '" + value + "', expected " +
                                                 edi::declared_fitting_modes());
                 }
-                self.fitting_mode = value;
                 // The stored shared groups are admitted again for the mode now in effect, as the app's mode
-                // edit admits them (ADR-0107): a group no longer whole is dropped and said.
-                for (const std::string& note : edi::settle_parametric_shared(self)) {
+                // edit admits them (ADR-0107): a group no longer whole is dropped and said. Worked out on a copy and
+                // said first, so a warning raised as an error leaves the project as it was.
+                edi::Project trial = self;
+                trial.fitting_mode = value;
+                for (const std::string& note : edi::settle_parametric_shared(trial)) {
                     if (PyErr_WarnEx(PyExc_UserWarning, ("crysta.domain.shared_ignored: " + note).c_str(), 1) != 0) {
                         throw nb::python_error();
                     }
                 }
+                self.fitting_mode = value;
+                (void)edi::settle_parametric_shared(self);
             })
         .def(
             "reflection_admission",
