@@ -3852,22 +3852,45 @@ std::vector<std::string> read_scan_row(const Project& project, std::int64_t offs
 }
 
 namespace {
-// Whether a series column names a structure no enabled link names: it is in no view, even read back from a file
-// written before its link was disabled (owner decision 2026-11-27).
-bool names_hidden_structure(const Project& project, const std::string& column) {
-    std::vector<std::string> hidden;
-    for (const auto& structure : project.structures) {
-        if (!project.structure_hidden(structure->name.value())) continue;
-        hidden.push_back(structure->name.value());
-        hidden.push_back(datablock_key(structure->name, "structure"));
-    }
-    if (hidden.empty()) return false;
+// The structure a series column belongs to, by its grammar (review 23): a bank's `linked_structure.<id>.…`,
+// `preferred_orientation.<id>.…`, `fit_result.r_bragg.<id>` or `fit_result.r_mag.<id>`; a shared column's datablock
+// when that is a structure's; else empty. Ids compare by their datablock spelling.
+std::string column_phase(const Project& project, const std::string& column) {
+    std::vector<std::string> parts;
     for (std::size_t start = 0; start <= column.size();) {
         const std::size_t end = std::min(column.find('.', start), column.size());
-        if (std::find(hidden.begin(), hidden.end(), column.substr(start, end - start)) != hidden.end()) return true;
+        parts.push_back(column.substr(start, end - start));
         start = end + 1;
     }
-    return false;
+    std::string id;
+    if (parts.size() > 1 && (parts[0] == "linked_structure" || parts[0] == "preferred_orientation")) {
+        id = parts[1];
+    } else if (parts.size() > 2 && parts[0] == "fit_result" && (parts[1] == "r_bragg" || parts[1] == "r_mag")) {
+        id = parts[2];
+    } else if (!parts.empty()) {
+        id = parts[0];
+    }
+    for (const auto& structure : project.structures) {
+        if (id == structure->name.value() || id == datablock_key(structure->name, "structure")) {
+            return structure->name.value();
+        }
+    }
+    return {};
+}
+// Whether a series column belongs to a structure no enabled link names: it is in no view, even read back from a
+// file written before its link was disabled (owner decision 2026-11-27).
+bool names_hidden_structure(const Project& project, const std::string& column) {
+    const std::string phase = column_phase(project, column);
+    return !phase.empty() && project.structure_hidden(phase);
+}
+// Whether a bank enables the structure a column belongs to; a column of no structure belongs to every bank.
+bool bank_enables(const Project& project, const BraggPdExperiment& bank, const std::string& column) {
+    const std::string phase = column_phase(project, column);
+    if (phase.empty()) return true;
+    return std::any_of(bank.linked_structures.begin(), bank.linked_structures.end(), [&](const auto& link) {
+        return link->enabled.get() && (link->structure_id.value() == phase ||
+                                       (link->structure_id.value().empty() && project.structures.size() == 1));
+    });
 }
 }  // namespace
 
@@ -4377,6 +4400,10 @@ void evolution_experiment_point(const Project& project, const ScanPlaces& places
         const auto value = found->second.find(parameter);
         if (value == found->second.end()) {
             continue;  // an experiment without the parameter has an empty cell
+        }
+        // A phase this bank leaves disabled shows no value in it, even one an earlier file recorded (review 23).
+        if (!bank_enables(project, *project.experiments[e], parameter)) {
+            continue;
         }
         EvolutionPoint point = base;
         point.y = scan_display_value(parameter, value->second);
