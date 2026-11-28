@@ -1368,17 +1368,18 @@ class Edit {
                     kept_texture.push_back(std::move(row));
                 }
             }
+            carry_texture_relations(project, *prepared);
             for (std::size_t i = 0; i < project.experiments.size(); ++i) {
                 project.experiments[i]->linked_structures.assign(std::move(links[i]));
                 project.experiments[i]->preferred_orientation.assign(std::move(texture[i]));
             }
-            carry_texture_relations(project, *prepared);
             project.structures.assign(std::move(structures));
         });
     }
-    // The parent texture's relations, carried to each child's own texture parameters (packet A9; review 29): an alias
-    // naming a parent March–Dollase parameter gets a copy naming the child's, and each constraint using such aliases
-    // gets a copy using the child's. The parent's own aliases and constraints stay.
+    // The parent texture's relations, carried to each child's own texture parameters (packet A9; reviews 29 and 30).
+    // Only a constraint that sets a parent March–Dollase parameter is copied, as one setting the child's: its target
+    // is then a new parameter, so no target gains a second writer. One that the parent's texture drives elsewhere
+    // stays single. An alias's parameter keeps its experiment and field; only the phase part names the child.
     static void carry_texture_relations(Project& project, const PreparedMagneticCandidates& prepared) {
         const auto split = [](const std::string& text) {
             std::vector<std::string> parts;
@@ -1392,14 +1393,39 @@ class Edit {
         for (const auto& texture : prepared.textures)
             if (std::find(children.begin(), children.end(), texture.structure) == children.end())
                 children.push_back(texture.structure);
-        std::map<std::string, std::string> parent_aliases;  // alias id -> its parameter name
+        std::map<std::string, std::vector<std::string>> parent_aliases;  // alias id -> its parameter name's parts
         for (const auto& alias : project.aliases) {
             const std::vector<std::string> parts = split(alias->parameter_unique_name.value());
-            if ((parts.back() == "march_r" || parts.back() == "march_random_fract") &&
-                std::find(parts.begin(), parts.end() - 1, prepared.parent) != parts.end() - 1)
-                parent_aliases[alias->id.value()] = alias->parameter_unique_name.value();
+            if (parts.size() >= 2 && (parts.back() == "march_r" || parts.back() == "march_random_fract") &&
+                parts[parts.size() - 2] == prepared.parent)
+                parent_aliases[alias->id.value()] = parts;
         }
         if (parent_aliases.empty() || children.empty()) return;
+        const auto word = [](char c) { return std::isalnum(static_cast<unsigned char>(c)) != 0 || c == '_'; };
+        // The tokens of an expression: identifiers (dots allowed) and the characters between them.
+        const auto tokens = [&word](const std::string& text) {
+            std::vector<std::pair<std::string, bool>> out;
+            for (std::size_t i = 0; i < text.size();) {
+                if (!word(text[i])) {
+                    out.emplace_back(std::string(1, text[i++]), false);
+                    continue;
+                }
+                std::size_t end = i;
+                while (end < text.size() && (word(text[end]) || text[end] == '.')) ++end;
+                out.emplace_back(text.substr(i, end - i), true);
+                i = end;
+            }
+            return out;
+        };
+        // The constraints that set a parent texture parameter: the first identifier, before '=', is its alias.
+        std::vector<const ParameterConstraint*> setting;
+        for (const auto& constraint : project.constraints) {
+            for (const auto& [token, identifier] : tokens(constraint->expression.value())) {
+                if (!identifier) continue;
+                if (parent_aliases.contains(token)) setting.push_back(constraint.get());
+                break;
+            }
+        }
         std::set<std::string> taken;
         for (const auto& alias : project.aliases) taken.insert(alias->id.value());
         for (const auto& constraint : project.constraints) taken.insert(constraint->id.value());
@@ -1409,18 +1435,14 @@ class Edit {
             taken.insert(id);
             return id;
         };
-        const auto word = [](char c) { return std::isalnum(static_cast<unsigned char>(c)) != 0 || c == '_'; };
         std::vector<ItemVec<ParameterAlias>::Ptr> aliases(project.aliases.begin(), project.aliases.end());
         std::vector<ItemVec<ParameterConstraint>::Ptr> constraints(project.constraints.begin(), project.constraints.end());
         for (const std::string& child : children) {
             std::map<std::string, std::string> renamed;  // parent alias id -> the child's
-            for (const auto& [id, name] : parent_aliases) {
-                std::vector<std::string> parts = split(name);
+            for (const auto& [id, parts] : parent_aliases) {
                 std::string spelled;
-                for (std::size_t i = 0; i < parts.size(); ++i) {
-                    if (i + 1 < parts.size() && parts[i] == prepared.parent) parts[i] = child;
-                    spelled += (i ? "." : "") + parts[i];
-                }
+                for (std::size_t i = 0; i < parts.size(); ++i)
+                    spelled += (i ? "." : "") + (i + 2 == parts.size() ? child : parts[i]);
                 auto alias = std::make_shared<ParameterAlias>();
                 const std::string child_id = fresh(id + "_" + child);
                 renamed[id] = child_id;
@@ -1428,24 +1450,12 @@ class Edit {
                 alias->parameter_unique_name = spelled;
                 aliases.push_back(std::move(alias));
             }
-            for (const auto& constraint : project.constraints) {
-                const std::string& text = constraint->expression.value();
+            for (const ParameterConstraint* constraint : setting) {
                 std::string out;
-                bool uses = false;
-                for (std::size_t i = 0; i < text.size();) {
-                    if (!word(text[i])) {
-                        out += text[i++];
-                        continue;
-                    }
-                    std::size_t end = i;
-                    while (end < text.size() && (word(text[end]) || text[end] == '.')) ++end;
-                    const std::string token = text.substr(i, end - i);
-                    const auto hit = renamed.find(token);
-                    uses = uses || hit != renamed.end();
+                for (const auto& [token, identifier] : tokens(constraint->expression.value())) {
+                    const auto hit = identifier ? renamed.find(token) : renamed.end();
                     out += hit != renamed.end() ? hit->second : token;
-                    i = end;
                 }
-                if (!uses) continue;
                 auto copy = std::make_shared<ParameterConstraint>(*constraint);
                 copy->id = fresh(constraint->id.value() + "_" + child);
                 copy->expression = out;

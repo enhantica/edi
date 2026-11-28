@@ -4261,7 +4261,8 @@ bool ProjectViewModel::addMagneticCandidates(int graph, const QList<int>& nodes,
         error = QString::fromUtf8(refusal.what());
         setLastError(error);
     }
-    edi::StructuresUndo before = edi::capture_structures(project);
+    // The whole footprint Add can change, aliases and constraints included, so Undo puts it all back (review 30).
+    edi::StructuresUndo before = edi::capture_structure_edit(project);
     if (error.isEmpty()) {
         try {
             adding_k_ = snapshot != 0;
