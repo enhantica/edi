@@ -5,8 +5,6 @@ import QtQuick
 import QtQuick.Controls
 
 import EasyApplication.Gui.Components as EaComponents
-import EasyApplication.Gui.Style as EaStyle
-import EasyApplication.Gui.Elements as EaElements
 
 import edi.app
 
@@ -127,11 +125,8 @@ WorkflowPage {
 
     Component {
         id: spaceGroupContent
-        Column {
-            spacing: AppSizes.inputSpacing
-            SpaceGroupGroup {
-                structure: page.structure
-            }
+        SpaceGroupGroup {
+            structure: page.structure
         }
     }
     Component {
