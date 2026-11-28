@@ -28,6 +28,7 @@ SideBarGroup {
     icon: "database"
 
     EaElements.ComboBox {
+        id: modeBox
         objectName: "project.includeDataOnSave"
         width: AppSizes.loneControlWidth
         enabled: group.project !== null
@@ -36,5 +37,14 @@ SideBarGroup {
         onActivated: index => group.project.includeDataOnSave = group.modes[index]
         ToolTip.text: qsTr("What a save does with data files the project reads from outside its folder")
         ToolTip.visible: hovered && EaGlobals.Vars.showToolTips
+    }
+
+    // The open list goes as another project's replacement starts, before it shows (AppState.retirePopup): a choice from
+    // it would otherwise land on the next project.
+    Connections {
+        target: Session
+        function onProjectReplacing() {
+            AppState.retirePopup(modeBox.popup);
+        }
     }
 }

@@ -399,6 +399,10 @@ EaComponents.ApplicationWindow {
     }
     Connections {
         target: Session
+        // The window's questions and Save As about the replaced project end before anything of the next one shows.
+        function onProjectReplacing() {
+            ApplicationInfo.retireProjectAsks();
+        }
         function onProjectAboutToChange() {
             ApplicationInfo.workflowProjectChanging();
         }
@@ -935,7 +939,12 @@ EaComponents.ApplicationWindow {
         property string closing: ""
         title: saved ? qsTr("Close the project?") : qsTr("Save the changes?")
         standardButtons: saved ? Dialog.Yes | Dialog.Cancel : Dialog.Save | Dialog.Discard | Dialog.Cancel
+        // The project this question is about (Session.projectGeneration): its answers act only while it is the open one.
+        property real ownerGeneration: -1
+        // The tutorial is bringing its own project back to answer this question (ApplicationInfo.retireProjectAsks).
+        property bool restoring: false
         onAboutToShow: {
+            ownerGeneration = Session.projectGeneration();
             const yes = standardButton(Dialog.Yes);
             if (yes !== null) {
                 yes.text = qsTr("Close project");
@@ -1178,7 +1187,12 @@ EaComponents.ApplicationWindow {
     // folder it is in (owner, 2026-10-25); the folder is made if it is new.
     FileDialog {
         id: saveFolder
+        // The project it was opened over (ApplicationInfo.openProjectSavePicker): an answer after another one replaced it
+        // is ignored, that Save As having ended at the handoff.
+        property real ownerGeneration: -1
         onRejected: {
+            if (!ApplicationInfo.takeProjectSavePicker())
+                return;
             Session.setNextSaveData("");
             window.cancelAssistantSaveAs();
         }
@@ -1190,6 +1204,8 @@ EaComponents.ApplicationWindow {
         fileMode: FileDialog.SaveFile
         acceptLabel: qsTr("Save")
         onAccepted: {
+            if (!ApplicationInfo.takeProjectSavePicker())
+                return;
             DialogFolders.remember("saveProject", selectedFile);
             ApplicationInfo.acceptProjectSavePicker(false);
         }
@@ -1197,7 +1213,12 @@ EaComponents.ApplicationWindow {
 
     FileDialog {
         id: saveZip
+        // The project it was opened over (ApplicationInfo.openProjectSavePicker): an answer after another one replaced it
+        // is ignored, that Save As having ended at the handoff.
+        property real ownerGeneration: -1
         onRejected: {
+            if (!ApplicationInfo.takeProjectSavePicker())
+                return;
             Session.setNextSaveData("");
             window.cancelAssistantSaveAs();
         }
@@ -1211,6 +1232,8 @@ EaComponents.ApplicationWindow {
         nameFilters: [qsTr("Zip archives (*.zip)")]
         acceptLabel: qsTr("Save")
         onAccepted: {
+            if (!ApplicationInfo.takeProjectSavePicker())
+                return;
             DialogFolders.remember("saveProject", selectedFile);
             ApplicationInfo.acceptProjectSavePicker(true);
         }
