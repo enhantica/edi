@@ -530,6 +530,10 @@ void require_structure(const Structure& structure) {
     if (!token_field(structure.name.value()) || structure.atom_sites.empty()) {
         unsupported(structure.name.value() + ": requires a named structure");
     }
+    // A Le Bail or Pawley structure is not written as a Rietveld phase (edi ADR-0109).
+    if (extracts_intensities(structure)) {
+        unsupported(structure.name.value() + ": the export writes Rietveld phases only, not Le Bail or Pawley");
+    }
 }
 
 std::string magnetic_label(const Structure& structure, const AtomSite& site) {
