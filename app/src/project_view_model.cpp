@@ -6047,6 +6047,26 @@ QString ProjectViewModel::assign_parameter_free(edi::Parameter& parameter, bool 
     return input->outcome.applied ? QString{} : input->outcome.message;
 }
 
+QString ProjectViewModel::assign_group_free(const std::vector<edi::Parameter*>& parameters, bool free) {
+    if (const auto refusal = free_refusal(); !refusal.isEmpty()) return refusal;
+    const PublicationScope publication(*this);
+    const QPointer<ProjectViewModel> self(this);
+    std::vector<std::pair<edi::Parameter*, bool>> flags;
+    for (edi::Parameter* parameter : parameters) {
+        if (parameter->free.get() != free) flags.emplace_back(parameter, free);
+    }
+    if (flags.empty()) return {};
+    // The extracted intensities are in no parameter walk, so Undo puts back the rows they belong to (edi ADR-0109 §5).
+    edi::StructuresUndo before = edi::capture_structures(*project_);
+    const QString refusal = apply(edi::Edit::free_flags(std::move(flags)), false);
+    if (!self || retired_) return refusal;
+    if (refusal.isEmpty()) {
+        undo_history_.emplace_back(std::move(before));
+        syncUndo();
+    }
+    return refusal;
+}
+
 QString ProjectViewModel::apply(const edi::Edit& change, bool structural) {
     const PublicationScope publication(*this);
     const EditOutcome result = applyEdit(change, structural);
@@ -6690,6 +6710,27 @@ QString ProjectViewModel::rename_structure(edi::Structure& structure, const std:
         record.results_after = project_->fit_result.scan_results;
         undo_history_.emplace_back(std::move(record));
         syncUndo();
+    }
+    return refusal;
+}
+
+QString ProjectViewModel::apply_calc_method(edi::Structure& structure, const std::string& token) {
+    const PublicationScope publication(*this);
+    const QPointer<ProjectViewModel> self(this);
+    // The switch and the scale starts it gives are one Undo step (edi ADR-0109 §2), which puts back the structures, the
+    // links with their scales and the extracted intensities as they were.
+    edi::StructuresUndo before = edi::capture_structure_edit(*project_);
+    auto outcome = std::make_shared<edi::CalcMethodOutcome>();
+    const QString refusal = apply(edi::Edit::calc_method(*project_, structure, token, outcome), true);
+    if (!self || retired_) return refusal;
+    if (refusal.isEmpty()) {
+        undo_history_.emplace_back(std::move(before));
+        syncUndo();
+        for (const std::string& experiment : outcome->unscaled) {
+            emit message(tr("%1: crysta gives the structure %2 no scale start after the switch to Rietveld, so its "
+                            "scale is kept")
+                             .arg(QString::fromStdString(experiment), QString::fromStdString(structure.name.value())));
+        }
     }
     return refusal;
 }

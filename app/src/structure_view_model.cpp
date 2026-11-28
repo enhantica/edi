@@ -17,6 +17,7 @@
 #include "edi/categories.hpp"
 #include "edi/edits.hpp"
 #include "edi/io.hpp"
+#include "edi/selectors.hpp"
 #include "edi/symmetry.hpp"
 #include "parameter_item.hpp"
 #include "parameter_registry.hpp"
@@ -69,7 +70,20 @@ std::vector<edi::Category> shown_categories(edi::Structure& structure) {
     categories.push_back(std::move(geom));
     for (edi::Category& category : categories)
         if (category.id == "atom_site_aniso") category.rows = structure.atom_sites.size();
+    // A Le Bail or Pawley structure shows no atom sites, displacements or moments; they stay in the model (edi ADR-0109).
+    std::erase_if(categories, [&structure](const edi::Category& category) {
+        return edi::structure_page_hides(structure, category.id);
+    });
     return categories;
+}
+
+// The categories the page leaves out though the structure's text carries them, so no group is made for them.
+std::vector<std::string> hidden_categories(const edi::Structure& structure) {
+    std::vector<std::string> hidden;
+    for (const char* id : {"atom_site", "atom_site_aniso", "atom_site_moment"}) {
+        if (edi::structure_page_hides(structure, id)) hidden.emplace_back(id);
+    }
+    return hidden;
 }
 }  // namespace
 
@@ -960,10 +974,13 @@ StructureViewModel::StructureViewModel(const SavedFile& saved, edi::Structure& s
       categories_(new CategoryListModel(this)),
       text_(new BlockText([saved, &structure] { return saved(std::filesystem::path(edi::entity_path("", "structure", structure.name)).generic_string()); }, this,
                           [&structure] { return std::filesystem::path(edi::entity_path("", "structure", structure.name)).generic_string(); }, {},
-                          [saved, &structure] { return saved.discovered(std::filesystem::path(edi::entity_path("", "structure", structure.name)).generic_string()); })) {
+                          [saved, &structure] { return saved.discovered(std::filesystem::path(edi::entity_path("", "structure", structure.name)).generic_string()); })),
+      calc_method_options_(new OptionListModel(this)) {
+    categories_->setHidden(hidden_categories(structure_));
     categories_->setCategories(shown_categories(structure_), [this] { return text_->discoveryText().toStdString(); },
                                [this] { return edi::calculated_categories(structure_); });
     syncAtomTypes();
+    syncCalcMethod();
     captureScene();
 }
 
@@ -1230,8 +1247,57 @@ void StructureViewModel::sync() {
     emit minBondDistanceChanged();
     emit bondDistanceIncrementChanged();
     emit bondsChanged();
+    syncCalcMethod();
+    categories_->setHidden(hidden_categories(structure_));
     categories_->setCategories(shown_categories(structure_), [this] { return text_->discoveryText().toStdString(); },
                                [this] { return edi::calculated_categories(structure_); });
+}
+
+void StructureViewModel::syncCalcMethod() {
+    // crysta's offer for this structure in the project as it is now (edi::calc_method_choice); outside a project the
+    // structure's own method alone.
+    const edi::Project* project = editor_.currentProject();
+    edi::CalcMethodChoice choice;
+    if (project != nullptr) {
+        choice = edi::calc_method_choice(*project, structure_);
+    } else {
+        try {
+            choice.current = edi::calc_method_token(structure_);
+        } catch (const std::exception& error) {
+            choice.current = structure_.calc_method.value();
+            choice.reason = error.what();
+        }
+        choice.tokens = {choice.current};
+    }
+    QStringList tokens;
+    for (const std::string& token : choice.tokens) tokens.append(QString::fromStdString(token));
+    if (tokens != calc_method_tokens_) {
+        calc_method_tokens_ = tokens;
+        calc_method_options_->setItemOptions("structure.calc_method", choice.tokens, "rietveld");
+    }
+    const QString method = QString::fromStdString(choice.current);
+    if (method != calc_method_) {
+        calc_method_ = method;
+        emit calcMethodChanged();
+    }
+    const QString reason = QString::fromStdString(choice.reason);
+    if (reason != calc_method_reason_) {
+        calc_method_reason_ = reason;
+        emit calcMethodReasonChanged();
+    }
+}
+
+bool StructureViewModel::setCalcMethod(const QString& token) {
+    QString refusal;
+    if (token != calc_method_) {
+        refusal = plain_refusal(editor_.apply_calc_method(structure_, token.toStdString()));
+    }
+    if (refusal != calc_method_refusal_) {
+        calc_method_refusal_ = refusal;
+        emit calcMethodRefusalChanged();
+    }
+    syncCalcMethod();
+    return refusal.isEmpty();
 }
 
 }  // namespace edi_app
