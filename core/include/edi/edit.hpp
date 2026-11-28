@@ -1368,23 +1368,44 @@ class Edit {
                         if (now != nullptr) touched.insert(now);
                     }
                 }
-                for (const auto& alias : probe.aliases)
-                    if (touched.contains(after_view.resolve(alias->parameter_unique_name.value())))
-                        affected.insert(alias->id.value());
+                // Every rule downstream or upstream of an affected alias, to a fixed point (review 39): a rule naming an
+                // affected alias makes every alias it names affected, and each of those brings the aliases bound to
+                // its parameter and the rules naming them, so a value computed from a rebound alias through retained
+                // rules is evaluated too.
                 std::vector<ItemVec<ParameterConstraint>::Ptr> checked;
                 std::set<std::string> named;
-                for (const auto& constraint : probe.constraints) {
-                    const bool fresh = !old_constraints.contains(constraint->id.value());
-                    const std::vector<std::string> aliases = named_by(constraint->expression.value());
-                    if (fresh && aliases.empty())
-                        throw std::invalid_argument("the added structures' texture constraint '" + constraint->id.value() +
-                                                    "' does not parse");
-                    const bool relevant = fresh || std::any_of(aliases.begin(), aliases.end(), [&](const std::string& id) {
-                                                       return affected.contains(id);
-                                                   });
-                    if (!relevant) continue;
-                    checked.push_back(std::make_shared<ParameterConstraint>(*constraint));  // the delta's own rows
-                    named.insert(aliases.begin(), aliases.end());
+                std::set<std::string> taken;
+                for (bool grew = true; grew;) {
+                    grew = false;
+                    for (const auto& alias : probe.aliases)
+                        if (!affected.contains(alias->id.value()) &&
+                            touched.contains(after_view.resolve(alias->parameter_unique_name.value()))) {
+                            affected.insert(alias->id.value());
+                            grew = true;
+                        }
+                    for (const auto& constraint : probe.constraints) {
+                        if (taken.contains(constraint->id.value())) continue;
+                        const bool fresh = !old_constraints.contains(constraint->id.value());
+                        const std::vector<std::string> aliases = named_by(constraint->expression.value());
+                        if (fresh && aliases.empty())
+                            throw std::invalid_argument("the added structures' texture constraint '" + constraint->id.value() +
+                                                        "' does not parse");
+                        const bool relevant = fresh || std::any_of(aliases.begin(), aliases.end(), [&](const std::string& id) {
+                                                           return affected.contains(id);
+                                                       });
+                        if (!relevant) continue;
+                        taken.insert(constraint->id.value());
+                        checked.push_back(std::make_shared<ParameterConstraint>(*constraint));  // the delta's own rows
+                        named.insert(aliases.begin(), aliases.end());
+                        for (const std::string& id : aliases) {
+                            if (!affected.insert(id).second) continue;
+                            grew = true;
+                            for (const auto& alias : probe.aliases)
+                                if (alias->id.value() == id)
+                                    if (const Parameter* on = after_view.resolve(alias->parameter_unique_name.value()))
+                                        touched.insert(on);
+                        }
+                    }
                 }
                 std::vector<ItemVec<ParameterAlias>::Ptr> kept;
                 for (const auto& alias : probe.aliases)
