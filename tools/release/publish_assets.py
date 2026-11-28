@@ -9,6 +9,7 @@ from pathlib import Path
 
 from plan import markdown_notes, release_body, release_date, release_title, validate_history
 from prepare import published_history
+from versions import release_titles
 
 
 def optional_api(repo: str, path: str) -> dict | None:
@@ -23,14 +24,15 @@ def optional_api(repo: str, path: str) -> dict | None:
     return json.loads(result.stdout)
 
 
-def find_release(repo: str, tag: str, title: str | None = None) -> dict | None:
+def find_release(repo: str, tag: str, title: str | set[str] | None = None) -> dict | None:
     """The release with this tag, draft or published, read by its ID.
 
     GitHub's ``releases/tags/{tag}`` route answers for published releases only, so a draft is
     found by listing every release the token can see. With a title, a draft that lost its tag
     to an edit (GitHub then shows ``untagged-...``) is found by that title, so it can be
-    re-tagged instead of reserved again.
+    re-tagged instead of reserved again. `title` may be a set, to accept an older title too.
     """
+    titles = {title} if isinstance(title, str) else set(title or ())
     pages = subprocess.run(
         ['gh', 'api', '--paginate', '--slurp', f'repos/{repo}/releases?per_page=100'],
         capture_output=True,
@@ -43,12 +45,7 @@ def find_release(repo: str, tag: str, title: str | None = None) -> dict | None:
         for page in json.loads(pages.stdout)
         for item in page
         if item['tag_name'] == tag
-        or (
-            title is not None
-            and item['draft']
-            and item['name'] == title
-            and item['tag_name'].startswith('untagged-')
-        )
+        or (item['draft'] and item['name'] in titles and item['tag_name'].startswith('untagged-'))
     ]
     if len(matches) > 1:
         raise ValueError('Multiple releases use the same calendar tag')
@@ -213,7 +210,8 @@ def publish(repo: str, folder: Path, *, finalize: bool = False) -> None:
             assets[path.name] = hashlib.file_digest(stream, 'sha256').hexdigest()
     tag = 'v' + release['version']
     title = release_title(release['version'], release['date'])
-    existing = find_release(repo, tag, title)
+    titles = release_titles(release['version'], release['date'])
+    existing = find_release(repo, tag, titles)
     if existing is not None:
         existing = restore_tag(repo, existing, tag, release['commit'])
     if existing is None:
@@ -233,7 +231,7 @@ def publish(repo: str, folder: Path, *, finalize: bool = False) -> None:
             },
         )
     existing = claim_reservation(repo, existing, release['commit'], body)
-    if existing['prerelease'] or existing['name'] != title:
+    if existing['prerelease'] or existing['name'] not in titles:
         raise ValueError('Release tag already names a different release')
     found = check_existing(existing, release, body, assets)
     if finalize:

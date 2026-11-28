@@ -33,18 +33,17 @@ LABELS = [
 @pytest.mark.parametrize(
     ('version', 'date', 'expected'),
     [
-        ('2026.11.14', '2026-11-13', 'v2026.11.14 (13 Nov)'),
-        ('2026.12.4', '2027-01-03', 'v2026.12.4 (3 Jan)'),
-        ('2028.02.9', '2028-02-29', 'v2028.02.9 (29 Feb)'),
-        ('2027.12.0', '2027-12-31', 'v2027.12.0 (31 Dec)'),
+        ('2026.11.14', '2026-11-13', 'v2026.11.14 · 13 Nov 2026'),
+        ('2026.12.4', '2027-01-03', 'v2026.12.4 · 3 Jan 2027'),
+        ('2028.02.9', '2028-02-29', 'v2028.02.9 · 29 Feb 2028'),
+        ('2027.12.0', '2027-12-31', 'v2027.12.0 · 31 Dec 2027'),
     ],
 )
-def test_release_title_is_the_tag_and_unpadded_day_without_a_repeated_year(
-    version, date, expected, preview
-):
-    assert PLAN.release_title(version, date, preview=preview) == expected + (
-        ' preview' if preview else ''
-    ), 'Titles use the v-tag and recorded day/month; previews keep only their short marker'
+def test_release_title_shows_the_tag_and_full_date(version, date, expected, preview):
+    title = expected + (' preview' if preview else '')
+    assert PLAN.release_title(version, date, preview=preview) == title, (
+        'Titles use the v-tag, middle dot, full date with an unpadded day, and preview marker'
+    )
 
 
 def release(*, body, preview=False):
@@ -81,11 +80,11 @@ def test_whats_new_links_the_release_title_directly_to_its_change_sections(previ
         body += '\n<!-- edi release date 2026-11-13 -->\n'
     current = release(body=body, preview=preview)
     page = DOCS.render([[current, {**current, 'draft': True, 'name': 'Private draft'}]])
-    title = 'v2026.11.14 (13 Nov)' if recorded else 'v2026.11.14 (3 Jan)'
+    title = 'v2026.11.14 · 13 Nov 2026' if recorded else 'v2026.11.14 · 3 Jan 2027'
     title += ' preview' if preview else ''
     heading = f'## [{title}]({URL})'
     assert [line for line in page.splitlines() if line.startswith('## ')] == [heading], (
-        'One linked tag/day heading uses the recorded date or publication fallback'
+        'The linked release heading shows the full recorded date or the publication date'
     )
     assert page.partition(heading + '\n')[2].lstrip('\n').startswith('**Fixed**\n\n- Keep zoom'), (
         'Change sections directly follow release headings, without extra channel/date/link lines'

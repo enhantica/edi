@@ -186,7 +186,7 @@ def folder(tmp_path):
 def test_first_stable_publication_creates_uploads_and_finalizes_its_own_draft(github, folder):
     PUBLISH.publish(REPO, folder)
     (release,) = github.releases.values()
-    assert release['name'] == 'EasyDiffraction 26.17 (5 Nov 2026)', (
+    assert release['name'] == 'v26.17 · 5 Nov 2026', (
         'A stable draft title names the version and release date, without a channel'
     )
     assert release['draft'] and [a['name'] for a in release['assets']] == [
@@ -242,7 +242,7 @@ def test_preview_drafts_are_found_through_the_same_lookup(github, tmp_path):
     PREVIEW.publish(REPO, RELEASE, 'Notes\n', archives)
     PREVIEW.publish(REPO, RELEASE, 'Notes\n', archives)
     (release,) = github.releases.values()
-    assert release['name'] == 'EasyDiffraction 26.17 (5 Nov 2026) preview', (
+    assert release['name'] == 'v26.17 · 5 Nov 2026 preview', (
         'A preview draft has the same title with only its short preview marker'
     )
     assert release['draft'] and release['prerelease'] and len(release['assets']) == 1, (
@@ -275,9 +275,9 @@ def test_a_retry_of_the_same_source_keeps_its_reserved_version_and_date(github):
     assert len(github.releases) == 3, (
         'A retry of the same source keeps its reserved version and date.'
     )
-    assert (
-        github.by_tag_with_drafts('v26.17')['name'] == 'EasyDiffraction 26.17 (7 Nov 2026) preview'
-    ), 'A later retry preserves the title date reserved for that exact source'
+    assert github.by_tag_with_drafts('v26.17')['name'] == 'v26.17 · 7 Nov 2026 preview', (
+        'A later retry preserves the title date reserved for that exact source'
+    )
 
 
 def test_a_simultaneous_allocator_keeps_the_number_and_the_later_one_moves_on(github):

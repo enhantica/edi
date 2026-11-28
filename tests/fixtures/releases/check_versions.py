@@ -76,9 +76,9 @@ def test_a_rerun_keeps_its_version():
 @pytest.mark.parametrize(
     ('version', 'preview', 'title'),
     [
-        ('26.17', False, 'EasyDiffraction 26.17 (26 Nov 2026)'),
-        ('26.17', True, 'EasyDiffraction 26.17 (26 Nov 2026) preview'),
-        ('2026.11.31', False, 'v2026.11.31 (26 Nov)'),
+        ('26.17', False, 'v26.17 · 26 Nov 2026'),
+        ('26.17', True, 'v26.17 · 26 Nov 2026 preview'),
+        ('2026.11.31', False, 'v2026.11.31 · 26 Nov 2026'),
     ],
 )
 def test_release_titles(version, preview, title):

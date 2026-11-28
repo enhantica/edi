@@ -24,6 +24,7 @@ from publish_assets import (
     optional_api,
     restore_tag,
 )
+from versions import release_titles
 
 PLATFORMS = {'linux-x86_64', 'macos-arm64', 'windows-x86_64'}
 
@@ -138,9 +139,10 @@ def publish(repo: str, release: dict, notes: str, archives: list[tuple[Path, str
     version = release['version']
     tag = 'v' + version
     title = release_title(version, release['date'], preview=True)
+    titles = release_titles(version, release['date'], preview=True)
     command = ['gh', 'release']
 
-    existing = find_release(repo, tag, title)
+    existing = find_release(repo, tag, titles)
     if existing is not None:
         existing = restore_tag(repo, existing, tag, release['commit'])
     if existing is None:
@@ -161,7 +163,7 @@ def publish(repo: str, release: dict, notes: str, archives: list[tuple[Path, str
     assets = {path.name: digest for path, digest in archives}
 
     def verified_assets(metadata, *, replace_draft_assets=False):
-        if metadata is None or not metadata['prerelease'] or metadata['name'] != title:
+        if metadata is None or not metadata['prerelease'] or metadata['name'] not in titles:
             raise ValueError('Expected the matching testing prerelease')
         return check_existing(
             metadata, release, notes, assets, replace_draft_assets=replace_draft_assets

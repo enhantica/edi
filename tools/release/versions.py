@@ -70,17 +70,26 @@ def shown_date(date: str) -> str:
 
 
 def release_title(version: str, date: str, *, preview: bool = False) -> str:
-    """A GitHub release's title: ``EasyDiffraction 26.17 (26 Nov 2026)``.
+    """A GitHub release's title: ``v26.17 · 26 Nov 2026``, or ``v2026.11.14 · 13 Nov 2026``."""
+    if not is_new(version):
+        version_key(version)
+    title = f'v{version} · {shown_date(date)}'
+    return title + ' preview' if preview else title
 
-    Old releases keep the title they were published with, ``v2026.11.14 (13 Nov)``.
+
+def release_titles(version: str, date: str, *, preview: bool = False) -> set[str]:
+    """Every title a release may carry: the current one and the one used before it.
+
+    Releases published before the titles were shortened kept ``EasyDiffraction 26.17 (26 Nov
+    2026)`` or ``v2026.11.14 (13 Nov)`` until they were renamed.
     """
     if is_new(version):
-        title = f'EasyDiffraction {version} ({shown_date(date)})'
+        old = f'EasyDiffraction {version} ({shown_date(date)})'
     else:
-        version_key(version)
         day = datetime.date.fromisoformat(date)
-        title = f'v{version} ({day.day} {MONTHS[day.month - 1]})'
-    return title + ' preview' if preview else title
+        old = f'v{version} ({day.day} {MONTHS[day.month - 1]})'
+    old = old + ' preview' if preview else old
+    return {release_title(version, date, preview=preview), old}
 
 
 def installer_stem(version: str, platform: str, kind: str) -> str:

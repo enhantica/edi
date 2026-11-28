@@ -33,10 +33,13 @@ Once the tool was replaced, it still showed the old release's pages, which the f
    `release_version_key` (`desktop_updates.hpp`). What's new on a 26.N app lists its releases, then the 2026.11
    releases as older history.
 3. **How a version is shown** (the owner, 2026-11-26): no "v" where users read it, and the date with a three-letter
-   month. About: `Version 26.17 · 26 Nov 2026`. The GitHub release title: `EasyDiffraction 26.17 (26 Nov 2026)`.
-   What's new: `26.17 · 26 Nov 2026`. Downloads: `EasyDiffraction-26.17-macOS-arm64.dmg`, and the same with
-   `Windows-x64` and `Linux-x64`, and `EasyDiffraction-Offline-26.17-<platform>` for the offline kind. Old releases
-   keep the titles and file names they were published with, and the site shows them so.
+   month. About: `Version 26.17 · 26 Nov 2026`. What's new: `26.17 · 26 Nov 2026`. Downloads:
+   `EasyDiffraction-26.17-macOS-arm64.dmg`, and the same with `Windows-x64` and `Linux-x64`, and
+   `EasyDiffraction-Offline-26.17-<platform>` for the offline kind. Old releases keep the file names they were
+   published with, and the site shows them so. The GitHub release title, which keeps its tag's "v", is
+   `v26.17 · 26 Nov 2026`, and `v2026.11.31 · 25 Nov 2026` for an old release, with ` preview` after a preview's
+   (the owner, 2026-11-28). Every release was renamed to it; the publishing tools still accept a release's
+   earlier title, `EasyDiffraction 26.17 (26 Nov 2026)` or `v2026.11.31 (25 Nov)`.
 4. **The feed is built with `repogen --sha-update`** for every component. Qt Installer Framework 4.11 then offers a
    component whose content checksum differs from the installed one, not one with a higher version, and still checks
    release dates. So installed 2026.11.x copies update to 26.17. A component whose content is the same in two
