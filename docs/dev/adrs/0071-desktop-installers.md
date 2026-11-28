@@ -503,3 +503,33 @@ so no draft such as `v2026.11.21` is left holding a number that is never publish
 fails after reserving deletes its reservation if it is still empty (`--withdraw stable-reservation`), and a
 publication that fails or is cancelled before publishing deletes the release commit's draft (`--withdraw
 stable`); running the publication again makes the draft again. Published releases are never touched.
+
+
+## Component archives on release assets
+
+**Amended 2026-11-28 (the owner):** each stable release attaches every component archive of every platform as its
+own asset, `component-<platform>-<component>-<version><archive>.7z`, using only the characters GitHub keeps in asset
+names. A release asset may be up to 2 GiB, so the 100 MiB limit that GitHub puts on files pushed to edi-sites no longer
+caps an archive. Installers and installed apps keep their repository URLs.
+
+The download site keeps only the small files. Per platform the release carries `repoindex-stable-<platform>.tar.gz`
+with `Updates.xml`, every `.sha1` and `meta.7z`, and `redirect.htaccess`, rules written at the tag that edi-download
+puts in the site's `.htaccess`. They answer a request for an archive the site does not hold with a 302 to
+`https://github.com/enhantica/edi/releases/download/v<version>/<asset>`.
+The version in the archive's file name names the tag, so an earlier release's archives resolve for as long as that
+release exists. A component that did not change keeps the earlier release's version and archives, which the release
+does not attach again ([ADR-0111](0111-updates-carry-only-changed-components.md)). A file the site holds is always served first. The redirect names github.com, never the signed address
+GitHub forwards to, which expires.
+
+The `.sha1` files and `Updates.xml` are never redirected. Qt Installer Framework 4.11 downloads an archive from the
+address its `.sha1` finally came from, minus `.sha1`, so a redirected `.sha1` makes it fetch the `.sha1` asset as the
+archive and fail the hash check.
+
+New installers list only `https://download.easydiffraction.org/` as their repository (`repository_mirror_bases` is
+empty); the Pages site keeps the update feeds and the package index and drops `repository/`. A mirror with older
+metadata would win: the installer keeps the higher component version, and it ranks 2026.11.31 above 26.17. Installers
+already in use still list the Pages site and skip it once its `Updates.xml` is gone.
+
+Rollback: releases still attach the complete `repository-stable-<platform>.tar.gz` for now, and edi-download serves
+them instead of the index when its publish workflow is run with `format` set to `full`. That works only for a release
+whose archives are all under 100 MiB, since GitHub refuses a larger file pushed to edi-sites.
