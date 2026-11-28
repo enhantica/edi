@@ -10982,6 +10982,30 @@ std::vector<MagneticPeak> magnetic_mark_candidates(const Project& project, std::
             residual.clear();  // a curve that cannot be read offers no suggestion
         }
     }
+    // Every other enabled phase's allowed lines over the measured range (packet F19; review 29): a suggestion there is
+    // listed but never pre-marked, whether the detector or the residual found it.
+    std::vector<double> other_lines;
+    {
+        double d_lo = std::numeric_limits<double>::infinity();
+        double d_hi = 0.0;
+        for (const double value : {x.front(), x.back()}) {  // d is monotonic along the axis
+            try {
+                const double d = crysta::peak_at(structure, k.engine.experiments.at(experiment), value).d;
+                d_lo = std::min(d_lo, d);
+                d_hi = std::max(d_hi, d);
+            } catch (const std::invalid_argument&) {
+            }
+        }
+        if (d_hi > 0.0)
+            for (const crysta::Structure* phase : others) {
+                const std::vector<double> lines = crysta::allowed_d_spacings(*phase, 0.9 * d_lo, 1.1 * d_hi);
+                other_lines.insert(other_lines.end(), lines.begin(), lines.end());
+            }
+    }
+    const auto on_other_line = [&other_lines](double d, double tolerance) {
+        return std::any_of(other_lines.begin(), other_lines.end(),
+                           [&](double line) { return std::abs(line - d) <= tolerance; });
+    };
     std::vector<MagneticPeak> out;
     for (const crysta::UnexplainedPeak& p : crysta::forbidden_peaks(structure, k.engine.experiments.at(experiment), x,
                                                                     data.intensity_meas.get(),
@@ -10991,7 +11015,7 @@ std::vector<MagneticPeak> magnetic_mark_candidates(const Project& project, std::
                 return std::abs(r.d - p.d) <= std::max(r.tolerance, p.tolerance);
             });
         out.push_back({p.x, p.d, p.tolerance, p.significance, p.half_width, p.on_allowed_reflection,
-                       !p.on_allowed_reflection || unexplained, true});
+                       (!p.on_allowed_reflection || unexplained) && !on_other_line(p.d, p.tolerance), true});
     }
     // An excess the difference curve shows clearly above its own noise, with the instrument's width, that is not an
     // observed maximum above already: a suggestion of its own (owner decision 2026-11-27, "better suggestions").
@@ -11000,7 +11024,8 @@ std::vector<MagneticPeak> magnetic_mark_candidates(const Project& project, std::
             return std::abs(r.d - p.d) <= std::max(r.tolerance, p.tolerance);
         });
         if (!listed) {
-            out.push_back({r.x, r.d, r.tolerance, r.significance, r.half_width, r.on_allowed_reflection, true});
+            out.push_back({r.x, r.d, r.tolerance, r.significance, r.half_width, r.on_allowed_reflection,
+                           !on_other_line(r.d, r.tolerance)});
         }
     }
     std::sort(out.begin(), out.end(), [](const MagneticPeak& a, const MagneticPeak& b) { return a.x < b.x; });
