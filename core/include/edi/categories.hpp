@@ -418,6 +418,18 @@ class ActiveView {
     bool shown(const ParameterConstraint& constraint) const;
     std::vector<const ParameterAlias*> aliases() const;
     std::vector<const ParameterConstraint*> constraints() const;
+    // Phases (review 33): a structure no enabled link reads, and a disabled link, are left out of every scientific
+    // view; the Structures and Linked structures management views list them all.
+    bool shown(const Structure& structure) const { return !project_.structure_hidden(structure.name.value()); }
+    std::vector<const Structure*> structures() const;
+    std::vector<const LinkedStructure*> links(const BraggPdExperiment& experiment) const;
+    // A constraint expression a user or the assistant proposes (review 33): false when it names an alias of a
+    // disabled phase, so nothing written can name, or later vanish into, one. Unknown aliases are the relation
+    // check's to report.
+    bool admits(const std::string& expression) const;
+    // The project index of the shown row `row` (review 33): the one place a filtered row maps back to the model.
+    std::optional<std::size_t> alias_index(std::size_t row) const;
+    std::optional<std::size_t> constraint_index(std::size_t row) const;
 
    private:
     const Project& project_;

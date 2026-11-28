@@ -41,10 +41,10 @@ J parameters(Project& project) {
     std::map<const Parameter*, std::string> names;
     for (const auto& slot : named_slots(project)) names[slot.parameter] = slot.unique_name;
     A rows;
-    // A disabled linked structure's or link's parameter is in no view (owner decision 2026-11-27).
-    const std::vector<const Parameter*> hidden = project.hidden_parameters();
+    // A disabled linked structure's or link's parameter is in no view (owner decision 2026-11-27): edi::ActiveView.
+    const ActiveView shown(project);
     for (const auto& entry : parameter_entries(project)) {
-        if (std::find(hidden.begin(), hidden.end(), entry.parameter) != hidden.end()) continue;
+        if (!shown.shown(entry.parameter)) continue;
         const Parameter& p = *entry.parameter;
         const auto named = names.find(&p);
         const std::string unique_name = named == names.end() ? std::string() : named->second;
@@ -176,7 +176,10 @@ J reflection_admission_summary(const Project& project, const ExperimentBase& exp
 std::uint64_t project_metadata_size(const Project* project) {
     if (!project) return encoded_fields({{"structures", 2}, {"datasets", 2},
         {"relations", encoded_fields({{"aliases", 2}, {"constraints", 2}})}});
-    const auto structures = encoded_rows(project->structures, [](const auto& structure) {
+    // The scientific context shows what the user's views show (edi::ActiveView, review 33): no disabled phase, and
+    // only enabled links. The size below and the payload in project_metadata walk the same rows.
+    const ActiveView shown(*project);
+    const auto structures = encoded_rows(shown.structures(), [](const auto& structure) {
         const auto sites = encoded_rows(structure->atom_sites, [](const auto& site) {
             return encoded_fields({{"id", encoded_text(site->id.value(), true)}, {"type_symbol", encoded_text(site->type_symbol.value())},
                 {"wyckoff", encoded_text(site->wyckoff_letter.value())}, {"adp_type", encoded_text(site->adp_type.value())}});
@@ -204,7 +207,7 @@ std::uint64_t project_metadata_size(const Project* project) {
         const auto exclusions = encoded_rows(experiment->excluded_regions, [](const auto& region) {
             return encoded_fields({{"id", encoded_text(region->id.value(), true)}, {"first", encoded_finite(region->first.get())}, {"second", encoded_finite(region->second.get())}});
         });
-        const auto phases = encoded_rows(experiment->linked_structures, [](const auto& phase) {
+        const auto phases = encoded_rows(ActiveView(*project).links(*experiment), [](const auto& phase) {
             return encoded_fields({{"structure_id", encoded_text(metadata_key(phase->structure_id, "structure"), true)}, {"enabled", phase->enabled.get() ? 4 : 5}});
         });
         const auto anchors = encoded_rows(experiment->background, [](const auto& point) {
@@ -266,7 +269,8 @@ J project_metadata(const Project* project) {
     };
     const auto optional = [&](const std::optional<double>& value) -> J { return value ? finite(*value) : J(nullptr); };
     if (project) {
-        for (const auto& structure : project->structures) {
+        const ActiveView scientific(*project);  // as project_metadata_size
+        for (const Structure* structure : scientific.structures()) {
             A sites, anisotropic;
             for (const auto& site : structure->atom_sites)
                 append(sites, O{{"id", site->id.value()}, {"type_symbol", site->type_symbol.value()},
@@ -282,7 +286,7 @@ J project_metadata(const Project* project) {
             A exclusions, phases, anchors;
             for (const auto& region : experiment->excluded_regions)
                 append(exclusions, O{{"id", region->id.value()}, {"first", finite(region->first.get())}, {"second", finite(region->second.get())}});
-            for (const auto& phase : experiment->linked_structures)
+            for (const LinkedStructure* phase : scientific.links(*experiment))
                 append(phases, O{{"structure_id", KeyTraits<Structure>::canonical(phase->structure_id.value())}, {"enabled", phase->enabled.get()}});
             for (const auto& point : experiment->background)
                 append(anchors, O{{"id", point->id.value()}, {"position", finite(point->position.get())},
@@ -335,7 +339,9 @@ J project_metadata(const Project* project) {
 J diagnostics(Project* project) {
     A rows;
     if (project) {
+        const ActiveView shown(*project);  // a disabled phase's parameters are no diagnostic (review 33)
         for (const auto& entry : parameter_entries(*project)) {
+            if (!shown.shown(entry.parameter)) continue;
             const auto& p = *entry.parameter;
             if (!std::isfinite(p.value.get()) || (p.spec && (p.value.get() < p.spec->range.min || p.value.get() > p.spec->range.max)))
                 rows.emplace_back(O{{"code", "edi.assistant.parameter_range"}, {"severity", "error"},
@@ -1090,7 +1096,10 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
         std::map<const Parameter*, std::string> names;
         for (const auto& slot : named_slots(project)) names[slot.parameter] = slot.unique_name;
         std::map<std::string, std::pair<Parameter*, std::string>> rows;
+        // Only what the user's views show can be named by the assistant (edi::ActiveView, review 33).
+        const ActiveView shown(project);
         for (const auto& row : parameter_entries(project)) {
+            if (!shown.shown(row.parameter)) continue;
             const auto named = names.find(row.parameter);
             if (named != names.end()) rows[row.path] = {row.parameter, named->second};
         }
