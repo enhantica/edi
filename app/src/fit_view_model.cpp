@@ -237,12 +237,25 @@ void FitAgreementModel::setRecord(const edi::Project& project) {
     const auto has_magnetic = [&magnetic](const std::string& name) {
         return std::find(magnetic.begin(), magnetic.end(), name) != magnetic.end();
     };
-    // A Le Bail or Pawley structure has no R factors: its intensities come from the pattern (edi ADR-0109).
-    const auto extracted = [&project](const std::string& name) {
+    // A Le Bail or Pawley fit records no R factors for the structure: its intensities come from the pattern (edi
+    // ADR-0109). A factor the record holds is shown, so a Rietveld fit's stay after a switch without a new fit.
+    const auto recorded = [&](const std::string& name) {
+        for (const auto& experiment : project.experiments) {
+            for (const auto& link : experiment->linked_structures) {
+                if (structure_of(*link) == name &&
+                    (link->fit_bragg_r_factor.has_value() || link->fit_f_r_factor.has_value() ||
+                     link->fit_magnetic_r_factor.has_value())) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    };
+    const auto extracted = [&](const std::string& name) {
         for (const auto& structure : project.structures) {
             if (structure->name.value() == name) {
                 try {
-                    return edi::extracts_intensities(*structure);
+                    return edi::extracts_intensities(*structure) && !recorded(name);
                 } catch (const std::exception&) {
                     return false;
                 }
