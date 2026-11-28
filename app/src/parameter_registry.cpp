@@ -69,6 +69,8 @@ void ParameterRegistry::rebuild(edi::Project& project) {
         const auto& indices = entry.block_kind == "structure" ? structure_index : experiment_index;
         const auto place = indices.find(entry.block_name);
         item->setBlockIndex(place != indices.end() ? place->second : -1);
+        // A hidden structure's descriptors are hidden with its parameters (review 23).
+        item->setHidden(entry.block_kind == "structure" && project.structure_hidden(entry.block_name));
         const auto same_block = [&entry](const ParameterItem* other) {
             return other->blockKind().toStdString() == entry.block_kind &&
                    other->blockName().toStdString() == entry.block_name;

@@ -8350,6 +8350,22 @@ void ProjectViewModel::syncParameterTable(bool refresh_report) {
     const ExperimentViewModel* selected = currentExperiment();
     const bool scan = edi::fits_a_scan(*project_);
     parameters_->setExperimentScope(scan && selected != nullptr ? selected->name() : QString());
+    // In that experiment's view, the structures it does not enable are not shown, even when another enables them.
+    QSet<QString> unscoped;
+    if (scan && selected != nullptr) {
+        for (const auto& experiment : project_->experiments) {
+            if (QString::fromStdString(experiment->name.value()) != selected->name()) continue;
+            for (const auto& structure : project_->structures) {
+                const bool enabled = std::any_of(experiment->linked_structures.begin(), experiment->linked_structures.end(),
+                                                 [&structure](const auto& link) {
+                                                     return link->enabled.get() &&
+                                                            link->structure_id.value() == structure->name.value();
+                                                 });
+                if (!enabled) unscoped.insert(QString::fromStdString(structure->name.value()));
+            }
+        }
+    }
+    parameters_->setScopeHiddenStructures(unscoped);
     parameters_->sync();
     // The Stacked and Map tabs show a joint fit's experiments too (edi ADR-0041; the owner, 2026-10-22), taken again
     // after every edit, which may have switched the mode or changed the data; a scan's datasets are set by the scan.
