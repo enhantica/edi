@@ -4426,7 +4426,7 @@ void ProjectViewModel::setKSearchActive(bool on) {
     // Marking is a mode over the marks, never their owner (owner, 2026-11-27): stopping keeps every mark and row,
     // starting again continues with them, and only Clear empties the table. Suggestions are offered only when
     // marking starts with no marks.
-    k_marks_.roles.clear();
+    // Stop ends the mode only: the rows, the marks and a ranked result's roles stay (review 28).
     ++k_session_;
     if (!on) {
         k_marks_.active = false;
