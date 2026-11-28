@@ -3878,15 +3878,18 @@ std::string column_phase(const Project& project, const std::string& column) {
         parts.push_back(column.substr(start, end - start));
         start = end + 1;
     }
-    // The experiment that owns a qualified bank column, only when that grammar follows it (review 25): a bank named
-    // like a category never takes the category's own first token.
-    const bool qualified = column_bank(project, column) != nullptr && parts.size() > 2 &&
-                           (parts[1] == "linked_structure" || parts[1] == "preferred_orientation");
+    // The full grammar decides (reviews 25 and 26): a qualified bank column is exactly
+    // `<experiment>.<category>.<id>.<item>`, an unqualified one `<category>.<id>.<item>`, and an id holds no dot. A
+    // bank named like a category, or a phase named like one, can then never be read as the other form.
+    const auto category = [](const std::string& token) {
+        return token == "linked_structure" || token == "preferred_orientation";
+    };
+    const bool qualified = parts.size() == 4 && column_bank(project, column) != nullptr && category(parts[1]);
     if (qualified) {
         parts.erase(parts.begin());
     }
     std::string id;
-    if (parts.size() > 1 && (parts[0] == "linked_structure" || parts[0] == "preferred_orientation")) {
+    if (parts.size() == 3 && category(parts[0])) {
         id = parts[1];
     } else if (parts.size() > 2 && parts[0] == "fit_result" && (parts[1] == "r_bragg" || parts[1] == "r_mag")) {
         id = parts[2];
@@ -3907,8 +3910,10 @@ bool names_hidden_structure(const Project& project, const std::string& column) {
     if (phase.empty()) return false;
     if (project.structure_hidden(phase)) return true;
     // A qualified bank column of a phase its own bank leaves disabled.
+    const std::size_t dots = static_cast<std::size_t>(std::count(column.begin(), column.end(), '.'));
     const std::string after = column.substr(std::min(column.find('.'), column.size()) + 1);
-    const bool qualified = after.starts_with("linked_structure.") || after.starts_with("preferred_orientation.");
+    const bool qualified =
+        dots == 3 && (after.starts_with("linked_structure.") || after.starts_with("preferred_orientation."));
     const BraggPdExperiment* bank = qualified ? column_bank(project, column) : nullptr;
     return bank != nullptr && std::none_of(bank->linked_structures.begin(), bank->linked_structures.end(),
                                            [&](const auto& link) {
