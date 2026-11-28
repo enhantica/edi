@@ -4491,10 +4491,12 @@ void ProjectViewModel::toggleKMarkAt(double x, double tolerance) {
     const auto near = [&x, tolerance](const edi::MagneticPeak& p) {
         return std::abs(p.x - x) <= std::max({p.half_width, tolerance, 1e-9});
     };
+    // A click removes a mark only inside its visible target, the chart's full-height hit window `tolerance` that turns
+    // the line grey under the pointer (review 27); a peak's measured window is for acquiring a mark, not removing one.
     int on_mark = -1;
     for (const int m : k_marks_.marks) {
         const edi::MagneticPeak& p = k_marks_.candidates[static_cast<std::size_t>(m)];
-        if (near(p) && (on_mark < 0 || std::abs(p.x - x) <
+        if (std::abs(p.x - x) <= std::max(tolerance, 1e-9) && (on_mark < 0 || std::abs(p.x - x) <
                                            std::abs(k_marks_.candidates[static_cast<std::size_t>(on_mark)].x - x)))
             on_mark = m;
     }
