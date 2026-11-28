@@ -5339,7 +5339,6 @@ const Parameter* ActiveView::resolve(const std::string& name) const {
 }
 
 // The aliases a constraint names, read by crysta's own grammar (review 34): its target and its right-hand references.
-// Empty when crysta cannot parse it, a relation the user still has to repair.
 namespace {
 std::vector<std::string> constraint_aliases(const std::string& expression) {
     try {
@@ -5348,7 +5347,34 @@ std::vector<std::string> constraint_aliases(const std::string& expression) {
         out.insert(out.end(), statement.rhs.references().begin(), statement.rhs.references().end());
         return out;
     } catch (const std::invalid_argument&) {
-        return {};
+        // A rule crysta cannot parse, inactive or kept for repair (review 35): every identifier it spells, read with
+        // crysta's number grammar so `1.e-3` stays a number. A disabled phase's alias in it still hides it.
+        std::vector<std::string> out;
+        const auto digit = [&](std::size_t i) { return i < expression.size() && std::isdigit(static_cast<unsigned char>(expression[i])); };
+        for (std::size_t i = 0; i < expression.size();) {
+            const char c = expression[i];
+            if (digit(i) || (c == '.' && digit(i + 1))) {  // digits, a point, digits, an exponent
+                while (digit(i) || (i < expression.size() && expression[i] == '.')) ++i;
+                if (i < expression.size() && (expression[i] == 'e' || expression[i] == 'E') &&
+                    (digit(i + 1) || ((i + 1 < expression.size() && (expression[i + 1] == '+' || expression[i + 1] == '-')) &&
+                                      digit(i + 2)))) {
+                    i += digit(i + 1) ? 1 : 2;
+                    while (digit(i)) ++i;
+                }
+                continue;
+            }
+            if (std::isalpha(static_cast<unsigned char>(c)) || c == '_') {
+                std::size_t end = i;
+                while (end < expression.size() &&
+                       (std::isalnum(static_cast<unsigned char>(expression[end])) || expression[end] == '_'))
+                    ++end;
+                out.push_back(expression.substr(i, end - i));
+                i = end;
+                continue;
+            }
+            ++i;
+        }
+        return out;
     }
 }
 }  // namespace
