@@ -38,6 +38,30 @@ REPLACED_COMPONENTS = {
     ASSISTANT_COMPONENT: 'org.easyscience.edi.assistant',
     MAINTENANCE_COMPONENT: 'org.easyscience.edi.maintenancetool',
 }
+# What each component is built from besides its metadata folder, as a build number and paths in
+# this repository (edi ADR-0111). A release ships a component again only when these change, so
+# raise its build number when its build changes in a way the files do not show. The app is not
+# listed: its build number is the release version, so every release ships it.
+COMPONENT_INPUTS = {
+    # The recipe pins the runtime's version and archive checksums.
+    ASSISTANT_COMPONENT: (1, ('tools/deps/assistant-runtime', 'data/assistant/runtime')),
+    # The Framework pin, and the pages and resources the tool is built with.
+    MAINTENANCE_COMPONENT: (
+        1,
+        (
+            'tools/installer/ifw.json',
+            'tools/installer/Installer.qs',
+            'tools/installer/Installer.qss',
+            'tools/installer/InstallerChrome.qss',
+            'tools/installer/ifw_en.qm',
+            'tools/installer/CheckMark.png',
+            'tools/installer/icons',
+            'tools/installer/Installer.icns',
+            'tools/installer/Installer.ico',
+            'tools/installer/windows_icon.py',
+        ),
+    ),
+}
 SUFFIX = '.exe' if SYSTEM == 'windows' else ''
 PLATFORM_ID = {'linux': 'linux-x86_64', 'macos': 'macos-arm64', 'windows': 'windows-x86_64'}[
     SYSTEM
@@ -1191,6 +1215,37 @@ def write_repository(tools: Path, packages: Path, repository: Path, environment:
     require_content_checksums(repository / 'Updates.xml', names)
 
 
+def component_identity(package: Path, version: str) -> str:
+    """The input identity of one component's package folder (edi ADR-0111).
+
+    A sha256 over its metadata without the release's version and date, the files COMPONENT_INPUTS
+    declares for it and its build number. Built bytes are left out: archive times and signing
+    change them when nothing else did.
+    """
+    build, declared = COMPONENT_INPUTS.get(package.name, (version, ()))
+    files = {}
+    for path in sorted(p for p in (package / 'meta').rglob('*') if p.is_file()):
+        data = path.read_bytes()
+        if path.name == 'package.xml':
+            root = ET.fromstring(data)  # noqa: S314 - written by this script
+            for name in ('Version', 'ReleaseDate'):
+                for item in root.findall(name):
+                    root.remove(item)
+            data = ET.tostring(root)
+        files['meta/' + path.relative_to(package / 'meta').as_posix()] = hashlib.sha256(
+            data
+        ).hexdigest()
+    for name in declared:
+        # Tracked files only, so stray local files cannot change the identity.
+        tracked = subprocess.check_output(['git', 'ls-files', '-z', '--', name], cwd=ROOT)
+        if not tracked:
+            raise RuntimeError(f'{package.name} declares {name}, which holds no tracked file')
+        for relative in sorted(tracked.decode().split('\0')[:-1]):
+            files[relative] = sha256(ROOT / relative)
+    document = json.dumps({'build': build, 'files': files}, sort_keys=True)
+    return hashlib.sha256(document.encode()).hexdigest()
+
+
 def require_content_checksums(updates: Path, packages: list) -> None:
     """Every component of the repository carries its content checksum (repogen --sha-update)."""
     root = ET.parse(updates).getroot()  # noqa: S314 - repogen's own output
@@ -1312,8 +1367,8 @@ def package_app(
         # --sha-update writes each component's content checksum into the feed, and the Maintenance
         # Tool then offers a component whose checksum differs from the installed one instead of
         # one with a higher version. That is how 2026.11.x installs take 26.17, a lower number
-        # (edi ADR-0106). So a component with the same content in two releases is not offered,
-        # one rebuilt with other bytes but the same content is, and Version is only shown.
+        # (edi ADR-0106). The checksum is the archive's, which a rebuild changes, so promotion
+        # publishes an unchanged component's earlier copy instead (edi ADR-0111).
         write_repository(tools, source / 'packages', output / 'repository', tool_environment)
     kind = 'online' if repository_url else 'offline'
     name = installer_stem(version, kind)
@@ -1365,6 +1420,12 @@ def package_app(
                 'edi_commit': inputs.get('edi_commit'),
                 'release_history_sha256': inputs.get('release_history_sha256'),
                 'maintenance_tool_sha256': maintenance_sha256,
+                # Promotion keeps an earlier copy of a component whose identity is unchanged.
+                'component_identities': {
+                    package.name: component_identity(package, version)
+                    for package in sorted((source / 'packages').iterdir())
+                    if package.is_dir()
+                },
             },
             indent=2,
         )
