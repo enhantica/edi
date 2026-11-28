@@ -524,12 +524,20 @@ jobs:
   python-full:
     needs: plan
     if: github.repository == 'enhantica/edi' && github.event.pull_request.head.repo.fork == false && contains(fromJSON(needs.plan.outputs.rows), 'python-full')
-    name: python full · Linux · ${{ matrix.part }}
+    name: python full · Linux · ${{ matrix.tiers }} ${{ matrix.part }}
     environment: crysta-sdk
     strategy:
       fail-fast: false
+      # Only crysta's system tier reads the web observers and the SIMD witness (crysta's suite-pr
+      # task), whose builds take most of a cold part, so the parts of the other tiers skip them.
       matrix:
-        part: [1/6, 2/6, 3/6, 4/6, 5/6, 6/6]
+        include:
+          - {tiers: system, folder: tests/system/, part: 1/4}
+          - {tiers: system, folder: tests/system/, part: 2/4}
+          - {tiers: system, folder: tests/system/, part: 3/4}
+          - {tiers: system, folder: tests/system/, part: 4/4}
+          - {tiers: others, folder: '!tests/system/', part: 1/2, skip: --skip web-parallel-observers --skip web-simd-witness}
+          - {tiers: others, folder: '!tests/system/', part: 2/2, skip: --skip web-parallel-observers --skip web-simd-witness}
     # Ubuntu 22.04, as crysta's own runners: its byte pins were taken with that release's C library.
     runs-on: ubuntu-22.04
     timeout-minutes: 180
@@ -572,17 +580,19 @@ jobs:
         if: needs.plan.outputs.skip != 'true'
         env:
           COVERAGE_CORE: sysmon
+          CRYSTA_PYTEST_FOLDER: ${{ matrix.folder }}
           CRYSTA_PYTEST_PART: ${{ matrix.part }}
           CRYSTA_PYTEST_RECORD: ${{ runner.temp }}/findings/pytest.jsonl
           # A failed test's message and traceback can quote crysta's tests or corpus.
           PYTEST_ADDOPTS: -p crysta_pytest --tb=no -rN --disable-warnings
+          SKIP: ${{ matrix.skip }}
         run: |
           cd "$RUNNER_TEMP/crysta"
           export PYTHONPATH="$GITHUB_WORKSPACE/tools/ci${PYTHONPATH:+:$PYTHONPATH}"
           python3 "$GITHUB_WORKSPACE/tools/ci/crysta_tasks.py" --root "$RUNNER_TEMP/crysta" --findings "$RUNNER_TEMP/findings" \
-            --record "$CRYSTA_PYTEST_RECORD" cpp-ci suite-coverage
+            --record "$CRYSTA_PYTEST_RECORD" $SKIP cpp-ci suite-coverage
       - name: Seeded series (slow cadence)
-        if: ${{ needs.plan.outputs.skip != 'true' && (!cancelled() && matrix.part == '1/6' && contains(fromJSON(needs.plan.outputs.rows), 'seeded')) }}
+        if: ${{ needs.plan.outputs.skip != 'true' && (!cancelled() && matrix.tiers == 'others' && matrix.part == '1/2' && contains(fromJSON(needs.plan.outputs.rows), 'seeded')) }}
         run: |
           cd "$RUNNER_TEMP/crysta"
           python3 "$GITHUB_WORKSPACE/tools/ci/crysta_findings.py" --root "$RUNNER_TEMP/crysta" run check "$RUNNER_TEMP/findings/slow-seeded-series.log" -- \
@@ -590,9 +600,10 @@ jobs:
       - name: Compiler cache statistics
         if: ${{ needs.plan.outputs.skip != 'true' && (!cancelled()) }}
         run: cd "$RUNNER_TEMP/crysta" && pixi run -e cpp-ci --skip-deps ccache --show-stats
-      # Part 1 keeps it, on main pushes, at night and once in the measuring round, as the checks do.
+      # The first system part, which builds every dependency, keeps it on main pushes, at night and once
+      # in the measuring round, as the checks do.
       - name: Keep the crysta compiler cache of the full Python tier
-        if: ${{ needs.plan.outputs.skip != 'true' && (!cancelled() && matrix.part == '1/6' && !inputs.diagnostic && steps.ccache.outcome == 'success' && (github.event_name != 'pull_request' || needs.plan.outputs.probe == 'true' && github.run_attempt == '1')) }}
+        if: ${{ needs.plan.outputs.skip != 'true' && (!cancelled() && matrix.tiers == 'system' && matrix.part == '1/4' && !inputs.diagnostic && steps.ccache.outcome == 'success' && (github.event_name != 'pull_request' || needs.plan.outputs.probe == 'true' && github.run_attempt == '1')) }}
         uses: ./.github/actions/store
         with:
           ccache: pixi run --manifest-path "$RUNNER_TEMP/crysta/pixi.toml" -e cpp-ci --skip-deps python

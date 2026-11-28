@@ -3,8 +3,9 @@
 
     PYTHONPATH=<edi>/tools/ci PYTEST_ADDOPTS='-p crysta_pytest' ...
 
-CRYSTA_PYTEST_PART=k/n keeps every n-th test file of the sorted collection, starting at the k-th,
-so the parts of one tier share no file and together hold all of it. CRYSTA_PYTEST_RECORD names a
+CRYSTA_PYTEST_FOLDER=tests/system/ keeps the files under that folder and !tests/system/ the rest.
+CRYSTA_PYTEST_PART=k/n then keeps every n-th test file of the sorted collection, starting at the
+k-th, so the parts share no file and together hold all of it. CRYSTA_PYTEST_RECORD names a
 file that gets one JSON line per test phase: node id, file, line, phase, outcome and seconds. It
 never holds a test's message or traceback, which can quote crysta's source (ADR-0083), only the
 class of a failure's exception.
@@ -32,7 +33,10 @@ def _elsewhere(entry: str) -> bool:
 
 # pytest has read its options when it loads this plugin. crysta's tests start pytest themselves,
 # and such a run must not inherit this one's options, part or record, nor find edi's scripts first.
-ASKED = {name: os.environ.pop(name, '') for name in ('CRYSTA_PYTEST_PART', 'CRYSTA_PYTEST_RECORD')}
+ASKED = {
+    name: os.environ.pop(name, '')
+    for name in ('CRYSTA_PYTEST_FOLDER', 'CRYSTA_PYTEST_PART', 'CRYSTA_PYTEST_RECORD')
+}
 os.environ.pop('PYTEST_ADDOPTS', None)
 if kept := os.pathsep.join(filter(_elsewhere, os.environ.pop('PYTHONPATH', '').split(os.pathsep))):
     os.environ['PYTHONPATH'] = kept
@@ -52,13 +56,20 @@ def part() -> tuple[int, int] | None:
     return int(match[1]), int(match[2])
 
 
+def in_folder(file: str) -> bool:
+    """Whether a test file is in the folder asked for (all are when none is)."""
+    folder = ASKED['CRYSTA_PYTEST_FOLDER']
+    if folder.startswith('!'):
+        return not file.startswith(folder[1:])
+    return file.startswith(folder)
+
+
 def pytest_collection_modifyitems(config, items) -> None:
-    """Keep this part's files only."""
+    """Keep this folder's and this part's files only."""
     asked = part()
-    if asked is None:
-        return
-    k, n = asked
     files = sorted({item.nodeid.split('::', 1)[0] for item in items})
+    files = [file for file in files if in_folder(file)]
+    k, n = asked or (1, 1)
     mine = set(files[k - 1 :: n])
     kept = [item for item in items if item.nodeid.split('::', 1)[0] in mine]
     gone = [item for item in items if item.nodeid.split('::', 1)[0] not in mine]

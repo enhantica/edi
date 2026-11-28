@@ -1,11 +1,12 @@
 # SPDX-License-Identifier: BSD-3-Clause
 """Run a crysta pixi task's dependencies one at a time, then its pytest, so one red hides nothing.
 
-    python3 tools/ci/crysta_tasks.py --root DIR --findings DIR --record PATH ENVIRONMENT TASK
+    python3 tools/ci/crysta_tasks.py --root DIR --findings DIR --record PATH [--skip DEP] ENV TASK
 
 pixi stops at the first dependency that fails, and every test after it goes unseen. Here each
 dependency runs alone, in pixi's order, as a crysta_findings.py check with its time printed; the
-task's pytest runs after them whatever they did, and the exit is the first failure's code.
+task's pytest runs after them whatever they did, and the exit is the first failure's code. --skip
+leaves out a dependency the tests of this part do not read.
 """
 
 from __future__ import annotations
@@ -59,6 +60,7 @@ def main(argv: list[str]) -> int:
     parser.add_argument('--root', required=True, type=Path)
     parser.add_argument('--findings', required=True, type=Path)
     parser.add_argument('--record', required=True, type=Path)
+    parser.add_argument('--skip', action='append', default=[])
     parser.add_argument('environment')
     parser.add_argument('task')
     args = parser.parse_args(argv)
@@ -75,6 +77,7 @@ def main(argv: list[str]) -> int:
     steps = [
         (f'dependency {name} ({env})', 'check', args.findings / f'{name}.log', env, name)
         for env, name in order(graph(listing), args.environment, args.task)
+        if name not in args.skip
     ]
     steps.append((f'task {args.task}', 'pytest', args.record, args.environment, args.task))
     for label, kind, report, env, name in steps:
