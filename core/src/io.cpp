@@ -1364,6 +1364,7 @@ Structure structure_from_block(const Block& block, const std::string& where) {
                             "_scattering_length loop declares '" + symbol + "' more than once");
             }
         }
+        check_deuterium_lengths(declared, where + ": the _scattering_length loop");
         structure.scattering_lengths_fm = std::move(declared);
     }
     // How the Structure view shows it, as saved: each value one its dictionary entry admits, as crysta reads it.

@@ -1205,6 +1205,16 @@ void StructureViewModel::syncAtomTypes() {
     }
 }
 
+QString StructureViewModel::typedAtomType(const QString& text, const QStringList& offered) const {
+    QString type = text.trimmed();
+    const edi::Project* project = editor_.currentProject();
+    if (type.isEmpty() || offered.contains(type) || project == nullptr ||
+        !edi::atom_type_computes(*project, structure_, type.toStdString())) {
+        return {};
+    }
+    return type;
+}
+
 void StructureViewModel::sync() {
     const QString name = QString::fromStdString(structure_.name);
     if (name != name_) {

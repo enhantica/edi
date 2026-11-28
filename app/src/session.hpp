@@ -240,6 +240,9 @@ class Session : public QObject {
     quint64 untitledOperationId() const;
     // The open operation's id while its dialog asks, else 0: a Create dialog opening binds to it.
     Q_INVOKABLE quint64 askingUntitledId() const;
+    // Counts the projects published, a close included. A page's queued work notes it when queued and does nothing
+    // once it has moved: the project that work was for is gone.
+    Q_INVOKABLE double projectGeneration() const { return static_cast<double>(project_generation_); }
     QString colourScheme() const { return colour_scheme_; }
     void setColourScheme(const QString& scheme);
 
@@ -276,8 +279,11 @@ class Session : public QObject {
     // Sets the open project aside, as the two above do, and leaves no project open: a tutorial whose user creates its
     // project (edi ADR-0064).
     Q_INVOKABLE bool setProjectAside();
-    // The set-aside project back in place of the tutorial's, which is closed; with none set aside, no project.
-    Q_INVOKABLE void restoreProjectSetAside();
+    // The set-aside project back in place of the tutorial's, which is closed; with none set aside, no project. True
+    // only when what was set aside is open at the end, the empty workspace included: false when nothing was set
+    // aside, or when a save holding the open project refused it (`lastError` says why) or another project took its
+    // place meanwhile.
+    Q_INVOKABLE bool restoreProjectSetAside();
     // The tutorial's project is kept: the set-aside project is closed.
     Q_INVOKABLE void dropProjectSetAside();
     bool hasProjectSetAside() const { return aside_.has_value(); }
@@ -482,7 +488,7 @@ class Session : public QObject {
     void retireAssistantIntent() noexcept;
     std::unique_ptr<ProjectViewModel> prepareAssistantNativeModel(edi::Project, quint64, const std::function<bool()>&);
     bool commitAssistantNativeModel(std::unique_ptr<ProjectViewModel>, quint64, const std::function<bool()>&, bool&);
-    quint64 assistant_epoch_=0, replacement_generation_=0;
+    quint64 assistant_epoch_=0, replacement_generation_=0, project_generation_=0;
     int tutorial_files_request_ = 0;  // the newest staging or saving request; replies carry their own
     // A tutorial files request: its number and the folder it alone writes. Only the current one writes or answers.
     struct TutorialFilesOperation {
@@ -638,6 +644,8 @@ class Session : public QObject {
         QString web_copy;
         WebPlace web_place;
         bool web_from_file = false;
+        // Nothing was open when it was set aside: restoring it leaves no project open, which is its success.
+        bool empty = false;
     };
     std::optional<SetAside> aside_;
     bool aside_next_ = false;  // the next replaceProject sets the open project aside

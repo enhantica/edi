@@ -188,6 +188,7 @@ Popup {
     // The tutorial chosen, with its project in place.
     function begin(chosen, temporary) {
         RunLog.note(`tutorial started: ${chosen.id}`);
+        panel.retireFilesPicker();
         ++panel.run;
         // A request of an earlier run neither writes nor answers (Session.cancelTutorialFiles).
         Session.cancelTutorialFiles();
@@ -2036,6 +2037,7 @@ Popup {
             AppState.tutorialRunning = false;
     }
     onClosed: {
+        panel.retireFilesPicker();
         ++panel.run;
         Session.cancelTutorialFiles();
         panel.afterStaging = null;
@@ -2060,6 +2062,16 @@ Popup {
     // The example a tutorial starts from has opened aside, or not; the files a step needs have arrived, or not.
     Connections {
         target: Session
+        // The files chooser belongs to the project it was opened over: it goes before another one shows.
+        function onProjectReplacing() {
+            panel.retireFilesPicker();
+        }
+        function onProjectAboutToChange() {
+            panel.retireFilesPicker();
+        }
+        function onProjectChanged() {
+            panel.retireFilesPicker();
+        }
         function onExampleOpenFinished(exampleId, opened) {
             const chosen = panel.pendingStart;
             if (chosen === null)
@@ -2310,14 +2322,54 @@ Popup {
         }
     }
 
-    FolderDialog {
-        id: filesFolder
+    // Where to save the tutorial's files. A chooser is made for each showing and goes with it, and only the showing
+    // still current, in the tutorial run and over the project it was opened for, remembers the folder and saves: a
+    // platform can deliver an answer after close(), and Session.cancelTutorialFiles ends only requests already made.
+    // `filesPicker`: the current showing, `{picker, run, project, generation}`, or null.
+    property var filesPicker: null
+    function openFilesPicker() {
+        panel.retireFilesPicker();
+        const picker = filesPickerComponent.createObject(panel.contentItem) as FolderDialog;
+        const showing = {
+            picker: picker,
+            run: panel.run,
+            project: Session.project,
+            generation: Session.projectGeneration()
+        };
+        // Each handler names its own showing.
+        picker.accepted.connect(() => panel.answerFilesPicker(showing, true));
+        picker.rejected.connect(() => panel.answerFilesPicker(showing, false));
+        panel.filesPicker = showing;
+        picker.open();
+    }
+    function answerFilesPicker(showing, accepted) {
+        if (showing !== panel.filesPicker)
+            return;
+        panel.filesPicker = null;
+        const folder = showing.picker.selectedFolder;
+        showing.picker.destroy();
+        if (!accepted || !panel.opened || panel.tutorial === null || showing.run !== panel.run || showing.project !== Session.project || showing.generation !== Session.projectGeneration())
+            return;
+        DialogFolders.remember("tutorialFiles", folder);
+        panel.saveFiles(folder);
+    }
+    // The chooser stops being current before close(), which emits its answer at once.
+    function retireFilesPicker() {
+        const showing = panel.filesPicker;
+        if (showing === null)
+            return;
+        panel.filesPicker = null;
+        showing.picker.close();
+        showing.picker.destroy();
+    }
+    Component {
+        id: filesPickerComponent
 
-        title: qsTr("Save the tutorial files to")
-        currentFolder: DialogFolders.folder("tutorialFiles", "")
-        onAccepted: {
-            DialogFolders.remember("tutorialFiles", selectedFolder);
-            panel.saveFiles(selectedFolder);
+        FolderDialog {
+            objectName: "tutorial.filesPicker"
+
+            title: qsTr("Save the tutorial files to")
+            currentFolder: DialogFolders.folder("tutorialFiles", "")
         }
     }
 
@@ -2438,7 +2490,7 @@ Popup {
             visible: panel.shown !== null && panel.shown.files
             fontIcon: "download"
             text: qsTr("Save tutorial files")
-            onClicked: WebFiles.available ? panel.saveFiles("") : filesFolder.open()
+            onClicked: WebFiles.available ? panel.saveFiles("") : panel.openFilesPicker()
         }
         // The last step's two ways on, each in one short sentence; the buttons name no project (the owner, 2026-11-10).
         EaElements.Label {

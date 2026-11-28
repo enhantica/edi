@@ -110,6 +110,7 @@ qt_add_qml_module(edi_app_module
         src/ui_probe.hpp src/ui_probe.cpp
         src/item_locator.hpp src/item_locator.cpp
         src/view_rows.hpp src/view_rows.cpp
+        src/popup_retirement.hpp src/popup_retirement.cpp
         src/toolbar_row.hpp src/toolbar_row.cpp
         src/user_action_log.hpp src/user_action_log.cpp
         src/build_version.hpp
@@ -370,6 +371,9 @@ target_link_libraries(edi_app_module
     PRIVATE ${EDI_GUI_BASE_TARGETS} Qt6::CorePrivate Qt6::QuickPrivate Qt6::QmlModelsPrivate)
 find_package(Qt6QmlPrivate REQUIRED)
 target_link_libraries(edi_app_module PRIVATE Qt6::QmlPrivate)
+# A replaced project's popup is closed for good through Qt's own popup state (app/src/popup_retirement.cpp).
+find_package(Qt6QuickTemplates2Private REQUIRED)
+target_link_libraries(edi_app_module PRIVATE Qt6::QuickTemplates2Private)
 # The stall probe names the modules of its stack samples (dladdr).
 target_link_libraries(edi_app_module PRIVATE ${CMAKE_DL_LIBS})
 if(EDI_APP_ASSISTANT)

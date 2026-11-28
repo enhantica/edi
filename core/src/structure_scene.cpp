@@ -194,6 +194,10 @@ const ElementStyle* find_element(std::string_view element) {
     if (element.empty()) {
         return nullptr;
     }
+    // The table has no deuterium row (diffraction-lib has none), so deuterium takes hydrogen's colours and radii.
+    if (element == "D") {
+        element = "H";
+    }
     const auto found = index.find(std::string(element));
     return found == index.end() ? nullptr : &element_style_table()[found->second];
 }
@@ -510,7 +514,28 @@ std::string element_of(std::string_view type_symbol) {
             if (i + 1 < type_symbol.size() && type_symbol[i + 1] >= 'a' && type_symbol[i + 1] <= 'z') {
                 element.push_back(type_symbol[i + 1]);
             }
+            // 2H and D are both deuterium, so they share one style.
+            if (element == "H" && type_symbol.substr(0, i) == "2") {
+                return "D";
+            }
             return element;
+        }
+    }
+    return {};
+}
+
+std::string written_atom(std::string_view type_symbol) {
+    for (std::size_t i = 0; i != type_symbol.size(); ++i) {
+        if (type_symbol[i] >= 'A' && type_symbol[i] <= 'Z') {
+            std::size_t end = i + 1;
+            if (end < type_symbol.size() && type_symbol[end] >= 'a' && type_symbol[end] <= 'z') {
+                ++end;
+            }
+            std::size_t start = i;
+            while (start > 0 && type_symbol[start - 1] >= '0' && type_symbol[start - 1] <= '9') {
+                --start;
+            }
+            return std::string(type_symbol.substr(start, end - start));
         }
     }
     return {};
@@ -854,7 +879,9 @@ StructureScene present_structure(const SceneSource& source, const SceneOptions& 
             }
         }
         if (radius.substituted) {
-            substituted.push_back(atom.parts[atom.major].element);  // the empty element (no symbol) too, once
+            // Named as the site writes it (2H, not D); the empty name (no symbol) too, once.
+            const auto type = type_of_site.find(atom.parts[atom.major].site_id);
+            substituted.push_back(type == type_of_site.end() ? std::string() : written_atom(type->second));
         }
         // I8: the atom subset.
         switch (options.atoms) {
@@ -916,7 +943,7 @@ StructureScene present_structure(const SceneSource& source, const SceneOptions& 
         const auto corner_element = [&](const std::string& element) { return corners_by_element.count(element) != 0; };
         const auto centre_element = [&](const std::string& element) {
             if (element.empty()) return false;
-            return options.polyhedra_centres.empty() ? !corner_element(element) && element != "H"
+            return options.polyhedra_centres.empty() ? !corner_element(element) && element != "H" && element != "D"
                                                      : options.polyhedra_centres.count(element) != 0;
         };
         std::vector<std::vector<Vec3>> shells(scene.atoms.size());
@@ -1116,15 +1143,18 @@ StructureScene present_structure(const SceneSource& source, const SceneOptions& 
         }
     }
     if (options.atoms != AtomSubset::None) {
+        // One entry per atom as the sites write it, in its element's colour: D and 2H are two entries of one colour
+        // when a structure writes both (the owner, 2026-11-25).
         for (const auto& [site_id, type_symbol] : source.site_types) {
             const std::string element = element_of(type_symbol);
             if (element.empty()) {
                 continue;
             }
+            const std::string written = written_atom(type_symbol);
             const bool seen = std::any_of(scene.legend.begin(), scene.legend.end(),
-                                          [&](const SceneLegendEntry& entry) { return entry.element == element; });
+                                          [&](const SceneLegendEntry& entry) { return entry.element == written; });
             if (!seen) {
-                scene.legend.push_back({element, element_color(element, options.colors).color});
+                scene.legend.push_back({written, element_color(element, options.colors).color});
             }
         }
     }
@@ -1333,8 +1363,11 @@ std::string hover_text(const SceneSource& source, const StructureScene& scene, s
     const SceneAtom& a = scene.atoms[atom];
     std::string text = a.label;
     for (const ScenePart& part : a.parts) {
-        text += "\n" + (part.element.empty() ? std::string("?") : part.element) + "  occupancy " +
-                format_number(part.occupancy);
+        // The atom as its site writes it (2H, not the D its style is keyed by).
+        const auto type = std::find_if(source.site_types.begin(), source.site_types.end(),
+                                       [&part](const auto& site) { return site.first == part.site_id; });
+        const std::string written = type == source.site_types.end() ? std::string() : written_atom(type->second);
+        text += "\n" + (written.empty() ? std::string("?") : written) + "  occupancy " + format_number(part.occupancy);
     }
     text += "\nfract " + format_number(column_value(source.fract_x, a.row, 0.0)) + ", " +
             format_number(column_value(source.fract_y, a.row, 0.0)) + ", " +

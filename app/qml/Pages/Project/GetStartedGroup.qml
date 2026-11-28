@@ -71,12 +71,7 @@ SideBarGroup {
                 text: "caret-down"
             }
             ToolTip.text: qsTr("Open an EasyDiffraction project or import one from another program")
-            // Closed first: a menu the page kept across a replacement could still count itself open, and open() would then do
-            // nothing.
-            onClicked: {
-                loadMenu.close();
-                loadMenu.open();
-            }
+            onClicked: loadMenu.open()
 
             EaElements.Menu {
                 id: loadMenu
@@ -313,35 +308,49 @@ SideBarGroup {
     property var createOperation: null
     property var assistantCreate: null
     Component.onDestruction: createLife.alive = false
-    // Another project: what names or would write the old one closes; what a create had under way and what its form
-    // held go once the call that replaces the project is over (edi ADR-0052). The Load menu stays open.
+    // Another project: what names or would write the old one closes, and the create it had under way goes with its form
+    // (edi ADR-0052). The Load menu stays open.
     Connections {
         target: Session
-        // The replaced project's Create dialog is hidden as the replacement starts, before a new name can show.
+        // The replaced project's popups and its create go as the replacement starts, before a new name can show
+        // (AppState.retirePopup), so the next project's first Create finds nothing of them.
+        // The export chooser goes here too: the native prepared path publishes without projectAboutToChange.
         function onProjectReplacing() {
-            EaGlobals.Vars.showProjectDescriptionDialog = false;
+            group.settleCreate();
+            group.retireExportPicker();
+            AppState.retirePopup(saveMenu);
         }
         function onProjectAboutToChange() {
-            saveMenu.close();
-            replaceProject.close();
-            exportFolder.close();
-            exportFolder.sourceProject = null;
-            // The replaced project's Create dialog goes before the new project is published, never after its name shows.
-            if (createDialog.visible)
-                createDialog.untitledId = 0;
-            EaGlobals.Vars.showProjectDescriptionDialog = false;
+            AppState.retirePopup(saveMenu);
+            group.retireExportPicker();
+            group.settleCreate();
         }
-        // At the new project's publication nothing of the replaced one's page stays open, also what was opened while it
-        // was being opened: the Create dialog among them.
+        // At the new project's publication nothing of the replaced one's page stays, also what was opened while it was
+        // being opened: the Create dialog among them.
         function onProjectChanged() {
-            saveMenu.close();
-            replaceProject.close();
-            exportFolder.close();
-            // Its `visible` follows the flag; closing it directly would end that binding.
-            if (createDialog.visible)
-                EaGlobals.Vars.showProjectDescriptionDialog = false;
-            Qt.callLater(group.dropCreate);
+            AppState.retirePopup(saveMenu);
+            group.retireExportPicker();
+            group.settleCreate();
         }
+    }
+    // The Create dialog's `visible` follows the flag, so the flag is cleared before its close(): a flag left set would
+    // keep the next Create from opening it.
+    function hideCreateDialog() {
+        AppState.retirePopup(createDialog, () => {
+            EaGlobals.Vars.showProjectDescriptionDialog = false;
+        });
+    }
+    // Ends the replaced project's create at once, never on a later turn. The untitled request goes first: the
+    // replacement supersedes it (edi ADR-0100), and the dialog's close would otherwise reject it. The close queues its
+    // own settlement under the old life, which dropCreate then ends, as Session.projectGeneration does once the next
+    // project is published. Its Replace question and folder picker go first, so neither answer can reach the next
+    // project's Create.
+    function settleCreate() {
+        createDialog.untitledId = 0;
+        group.retireReplaceAsk();
+        createDialog.retirePickers();
+        group.hideCreateDialog();
+        group.dropCreate();
     }
     function dropCreate() {
         createLife.alive = false;
@@ -424,11 +433,46 @@ SideBarGroup {
         }
         return menu.count;
     }
-    // An export writes a new folder beside the chosen one's other projects and leaves this project open.
+    // An export writes a new folder beside the chosen one's other projects and leaves this project open. Its chooser
+    // is made for each showing and goes with it: only the current showing, for the project it was opened on, exports.
+    // `exportPicker`: the current showing, `{picker, program, project, generation}`, or null.
+    property var exportPicker: null
     function exportCopy(program) {
-        exportFolder.program = program;
-        exportFolder.sourceProject = Session.project;
-        exportFolder.open();
+        group.retireExportPicker();
+        const picker = exportFolderComponent.createObject(group, {
+            program: program
+        }) as FolderDialog;
+        const showing = {
+            picker: picker,
+            program: program,
+            project: Session.project,
+            generation: Session.projectGeneration()
+        };
+        // Each handler names its own showing.
+        picker.accepted.connect(() => group.answerExportPicker(showing, true));
+        picker.rejected.connect(() => group.answerExportPicker(showing, false));
+        group.exportPicker = showing;
+        picker.open();
+    }
+    function answerExportPicker(showing, accepted) {
+        if (showing !== group.exportPicker)
+            return;
+        group.exportPicker = null;
+        const folder = showing.picker.selectedFolder;
+        showing.picker.destroy();
+        if (!accepted || showing.project === null || showing.project !== Session.project || showing.generation !== Session.projectGeneration())
+            return;
+        DialogFolders.remember("exportProject", folder);
+        Session.exportProjectCopy(showing.program, folder);
+    }
+    // The chooser stops being current before close(), which emits its answer at once.
+    function retireExportPicker() {
+        const showing = group.exportPicker;
+        if (showing === null)
+            return;
+        group.exportPicker = null;
+        showing.picker.close();
+        showing.picker.destroy();
     }
 
     // Save on the untitled project opens Create project here: it names the project and saves it, its work kept.
@@ -452,9 +496,10 @@ SideBarGroup {
         // OK. Escape still closes it.
         closePolicy: AppState.tutorialRunning ? Popup.CloseOnEscape : Popup.CloseOnEscape | Popup.CloseOnPressOutside
         readonly property string assistantIntentId: group.createIntent !== null && group.createIntent.assistant !== null ? group.createIntent.assistant.id : ""
-        // The base's dialog (edi's copy joins the location cleanly), placed on whole pixels as AppDialog is.
-        x: Math.round((parent.width - width) / 2)
-        y: Math.round((parent.height - height) / 2)
+        // The base's dialog (edi's copy joins the location cleanly), placed on whole pixels as AppDialog is; it has no
+        // parent for a moment while it retires (AppState.retirePopup).
+        x: parent ? Math.round((parent.width - width) / 2) : 0
+        y: parent ? Math.round((parent.height - height) / 2) : 0
         visible: EaGlobals.Vars.showProjectDescriptionDialog
         // A tutorial's project, made by the user in a tutorial that set theirs aside, is not saved until they keep
         // it (edi ADR-0064).
@@ -500,66 +545,100 @@ SideBarGroup {
             createDialog.untitledAccepted = true;
             ApplicationInfo.createProjectDialogEvent(3);
         }
-        onReplaceAsked: (name, folder) => {
-            replaceProject.projectName = name;
-            replaceProject.folder = folder;
-            // What it asks about: this location, for this dialog's request.
-            replaceProject.location = createDialog.chosenLocation();
-            replaceProject.untitledId = createDialog.untitledId;
-            replaceProject.open();
-        }
+        onReplaceAsked: (name, folder) => group.askReplace(name, folder)
     }
 
     // A project already at the chosen location (the owner, 2026-11-04): Replace writes the new one over it through
-    // the ordinary save, so a refused write leaves the old project; Cancel returns to the form as typed.
-    AppDialog {
-        id: replaceProject
-        objectName: "createProject.replace"
-        property string projectName: ""
-        property string folder: ""
-        property string location: ""
-        property var untitledId: 0
-        parent: Overlay.overlay
-        title: qsTr("Replace project?")
-        standardButtons: Dialog.Yes | Dialog.Cancel
-        contentWidth: AppSizes.messagesDialogContentWidth
-        contentHeight: replaceText.implicitHeight
-        onAboutToShow: {
-            const yes = standardButton(Dialog.Yes);
-            yes.text = qsTr("Replace");
-            yes.objectName = "createProject.replace.accept";
-        }
-        onAccepted: {
-            // Replace confirms the folder it showed, for the request it asked for: once the form names another
-            // location or answers another request, the form stays open as it is.
-            if (createDialog.chosenLocation() !== location || createDialog.untitledId !== untitledId)
-                return;
-            // Untitled work replaces only the folder that is there now, as its operation records it (ADR-0100).
-            if (untitledId > 0)
-                Session.approveUntitledReplace(untitledId, location);
-            createDialog.replaceExisting = true;
-            createDialog.accept();
-        }
+    // the ordinary save, so a refused write leaves the old project; Cancel returns to the form as typed. A question is
+    // made for each asking and goes with it, so an answer reaches only the showing that asked, once, and only while
+    // its Create life is the current one. An answered question stays tracked until its exit has ended (closed): a
+    // handoff during that exit still retires it, so its focus restore cannot land on the next project.
+    // `replaceAsk`: the current question, `{dialog, location, untitledId, life, answered}`, or null.
+    property var replaceAsk: null
+    function askReplace(name, folder) {
+        group.retireReplaceAsk();
+        const question = replaceAskComponent.createObject(Overlay.overlay, {
+            projectName: name,
+            folder: folder
+        }) as AppDialog;
+        // What it asks about: this location, for this dialog's request and this Create life.
+        const ask = {
+            dialog: question,
+            location: createDialog.chosenLocation(),
+            untitledId: createDialog.untitledId,
+            life: group.createLife,
+            answered: false
+        };
+        // Each handler names its own question.
+        question.accepted.connect(() => group.answerReplace(ask, true));
+        question.rejected.connect(() => group.answerReplace(ask, false));
+        question.closed.connect(() => group.forgetReplaceAsk(ask));
+        group.replaceAsk = ask;
+        question.open();
+    }
+    function answerReplace(ask, accepted) {
+        if (ask !== group.replaceAsk || ask.answered)
+            return;
+        ask.answered = true;
+        if (!accepted || ask.life !== group.createLife || !ask.life.alive)
+            return;
+        // Replace confirms the folder it showed, for the request it asked for: once the form names another location or
+        // answers another request, the form stays open as it is.
+        if (createDialog.chosenLocation() !== ask.location || createDialog.untitledId !== ask.untitledId)
+            return;
+        // Untitled work replaces only the folder that is there now, as its operation records it (ADR-0100).
+        if (ask.untitledId > 0)
+            Session.approveUntitledReplace(ask.untitledId, ask.location);
+        createDialog.replaceExisting = true;
+        createDialog.accept();
+    }
+    // Its exit has ended, answered or not: nothing of it is left to retire.
+    function forgetReplaceAsk(ask) {
+        if (group.replaceAsk === ask)
+            group.replaceAsk = null;
+    }
+    // Ends the question at once, also one answered and still closing (AppState.retirePopup finishes its exit).
+    function retireReplaceAsk() {
+        const ask = group.replaceAsk;
+        if (ask === null)
+            return;
+        group.replaceAsk = null;
+        AppState.retirePopup(ask.dialog);
+    }
+    Component {
+        id: replaceAskComponent
+        AppDialog {
+            id: replaceProject
+            objectName: "createProject.replace"
+            property string projectName: ""
+            property string folder: ""
+            title: qsTr("Replace project?")
+            standardButtons: Dialog.Yes | Dialog.Cancel
+            contentWidth: AppSizes.messagesDialogContentWidth
+            contentHeight: replaceText.implicitHeight
+            onAboutToShow: {
+                const yes = replaceProject.standardButton(Dialog.Yes);
+                yes.text = qsTr("Replace");
+                yes.objectName = "createProject.replace.accept";
+            }
+            onClosed: replaceProject.destroy()
 
-        EaElements.Label {
-            id: replaceText
-            width: replaceProject.contentWidth
-            wrapMode: Text.Wrap
-            text: qsTr("A project named %1 already exists in %2. Replace it?").arg(replaceProject.projectName).arg(replaceProject.folder)
+            EaElements.Label {
+                id: replaceText
+                width: replaceProject.contentWidth
+                wrapMode: Text.Wrap
+                text: qsTr("A project named %1 already exists in %2. Replace it?").arg(replaceProject.projectName).arg(replaceProject.folder)
+            }
         }
     }
 
-    FolderDialog {
-        id: exportFolder
-        property string program: ""
-        property var sourceProject
-        title: qsTr("Choose where to create the %1 project folder").arg(program)
-        currentFolder: DialogFolders.folder("exportProject", "")
-        onAccepted: {
-            if (sourceProject && sourceProject === Session.project) {
-                DialogFolders.remember("exportProject", selectedFolder);
-                Session.exportProjectCopy(program, selectedFolder);
-            }
+    Component {
+        id: exportFolderComponent
+        FolderDialog {
+            objectName: "project.export.picker"
+            property string program: ""
+            title: qsTr("Choose where to create the %1 project folder").arg(program)
+            currentFolder: DialogFolders.folder("exportProject", "")
         }
     }
 }
