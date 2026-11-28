@@ -49,13 +49,11 @@ ToolbarComboBox {
             clip: true
             defaultInfoText: qsTr("No atom sites")
             sourceModel: box.rows
-            // The Atom sites group's columns, after the choice (AtomSitesGroup).
-            columnKinds: ["control", "index", "name", "short", "value", "value", "value", "short", "value"]
+            // The Atom sites group's columns, the row number first, and the choice last, where the app's tables keep
+            // their row action (owner, 2026-11-28).
+            columnKinds: ["index", "name", "short", "value", "value", "value", "short", "value", "control"]
 
             header: EaComponents.ListViewHeader {
-                EaComponents.ListViewLabel {
-                    horizontalAlignment: Text.AlignHCenter
-                }
                 EaComponents.ListViewLabel {
                     horizontalAlignment: Text.AlignHCenter
                 }
@@ -87,6 +85,9 @@ ToolbarComboBox {
                     horizontalAlignment: Text.AlignHCenter
                     uid: "atom_site.occupancy"
                 }
+                EaComponents.ListViewLabel {
+                    horizontalAlignment: Text.AlignHCenter
+                }
             }
 
             delegate: TableRow {
@@ -101,21 +102,11 @@ ToolbarComboBox {
                 required property ParameterItem occupancy
                 readonly property bool isChosen: box.chosen.indexOf(row.label) >= 0
 
-                Item {
-                    property int horizontalAlignment: Text.AlignHCenter
-                    height: parent.height
-                    EaComponents.ListViewCheckBox {
-                        anchors.fill: parent
-                        horizontalAlignment: Text.AlignHCenter
-                        objectName: `magnetic.site.${row.index}`
-                        checked: row.isChosen
-                        // The last chosen site stays chosen.
-                        enabled: !(row.isChosen && box.chosen.length === 1)
-                        onToggled: box.toggled(row.label, checked)
-                    }
-                }
+                // The row number in the app's grey row-number style, as the Atom sites table has it.
                 EaComponents.ListViewLabel {
+                    elide: Text.ElideRight
                     horizontalAlignment: Text.AlignHCenter
+                    marksCurrentRow: true
                     text: row.index + 1
                 }
                 EaComponents.ListViewLabel {
@@ -166,6 +157,19 @@ ToolbarComboBox {
                     columnAlignment: Text.AlignHCenter
                     locked: true
                     item: row.occupancy
+                }
+                Item {
+                    property int horizontalAlignment: Text.AlignHCenter
+                    height: parent.height
+                    EaComponents.ListViewCheckBox {
+                        anchors.fill: parent
+                        horizontalAlignment: Text.AlignHCenter
+                        objectName: `magnetic.site.${row.index}`
+                        checked: row.isChosen
+                        // The last chosen site stays chosen.
+                        enabled: !(row.isChosen && box.chosen.length === 1)
+                        onToggled: box.toggled(row.label, checked)
+                    }
                 }
             }
         }
