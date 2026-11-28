@@ -141,6 +141,21 @@ AppDialog {
                 id: row
                 required property var modelData
                 objectName: `chart.kVector.${row.index}`
+                // A press anywhere on the row makes it current, from an area over all its cells (review 27): it
+                // takes no press for itself, so the cells and the double click below still get theirs.
+                MouseArea {
+                    objectName: `chart.kVector.${row.index}.press`
+                    parent: row
+                    anchors.fill: parent
+                    z: 100
+                    acceptedButtons: Qt.LeftButton
+                    hoverEnabled: false
+                    onPressed: mouse => {
+                        list.currentIndex = row.index;
+                        list.forceActiveFocus();
+                        mouse.accepted = false;
+                    }
+                }
                 // A click makes the row current, as a row's own click handler does (TableRow.activated), and gives
                 // the table the keys; a double click analyses it.
                 TapHandler {
