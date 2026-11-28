@@ -111,9 +111,11 @@ void CorrelationViewModel::show(const std::string& file,
 
 void CorrelationViewModel::setTable(const edi::CorrelationTable& table) {
     // Scan tables are immutable; selection and completion can publish the same one (ADR-0034).
-    if (table_ && table_->names == table.names && table_->values == table.values) {
+    // The same payload under the same hidden set shows the same chart; another set filters it again (review 25).
+    if (table_ && table_->names == table.names && table_->values == table.values && table_excluded_ == excluded_) {
         return;
     }
+    table_excluded_ = excluded_;
     table_ = table;
     // ADR-0034: the matrix straight from the table's numbers, its pairs i < j row by row (I2, I10).
     names_.clear();

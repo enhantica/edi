@@ -111,6 +111,8 @@ class CorrelationViewModel : public QObject {
     std::vector<std::string> names_;
     // The names this chart leaves out: hidden parameters and the shown bank's disabled phases (review 24).
     std::set<std::string> excluded_;
+    // The hidden set the shown table was filtered by, part of its cache key.
+    std::set<std::string> table_excluded_;
     std::vector<double> matrix_;
     // Each parameter's strongest correlation with another, in the fit's order.
     std::vector<double> strength_;
