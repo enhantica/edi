@@ -215,7 +215,8 @@ TestCase {
         const renderedEdges = () => Render.descendants(popup().contentItem).filter(item => item.visible && item.corners !== undefined && item.corners.length >= 2);
         compare(renderedEdges().length, 0, "Maximal-only cards render without subgroup edges");
         const footer = pcontrol("magnetic.add");
-        const footerY = footer.mapToItem(popup().contentItem, 0, 0).y;
+        const footerOffset = () => Math.round(footer.mapToItem(popup().contentItem, 0, 0).y - popup().contentItem.height);
+        const initialFooterOffset = footerOffset();
         verify(popup().height <= app.height * .91 && popup().width <= app.width * .91, "The dialog fits within the window with an outer margin");
         choose(levels, "All");
         const nodes = shownNodes();
@@ -293,7 +294,7 @@ TestCase {
         const textColours = () => labels.map(item => [item.color.r, item.color.g, item.color.b, item.color.a]);
         tryVerify(() => textColours().every(channels => channels.every(channel => channel === 1)), 2000, "A selected card draws both labels in opaque white: " + JSON.stringify(textColours()));
         verify(footer.enabled && footer.text === "Add", "A single selected card enables the unnumbered Add button");
-        compare(footer.mapToItem(popup().contentItem, 0, 0).y, footerY, "Changing levels and selecting a card keeps the footer fixed");
+        compare(footerOffset(), initialFooterOffset, "Changing levels and selecting a card keeps the footer anchored below the scrolling content");
         press(card);
         compare(popup().selected.length, 0, "Clicking the selected card again clears it");
         press(pcontrol("magnetic.listView"));
