@@ -48,7 +48,16 @@ Flickable {
         return cells;
     }
     onNodesChanged: pinned = -1
-    readonly property int shownNode: pinned >= 0 ? pinned : hovered
+    // The card whose lineage shows: the pinned one while the filters show it, else the one under the pointer (review
+    // 24); a pin the filters hide is dropped.
+    readonly property int shownNode: pinned >= 0 && pinned < nodes.length && shown(pinned) ? pinned
+        : hovered >= 0 && hovered < nodes.length && shown(hovered) ? hovered : -1
+    function dropHiddenPin() {
+        if (pinned >= 0 && (pinned >= nodes.length || !shown(pinned)))
+            pinned = -1;
+    }
+    onMaximalOnlyChanged: dropHiddenPin()
+    onNetMomentChanged: dropHiddenPin()
 
     signal toggled(int index)
 
