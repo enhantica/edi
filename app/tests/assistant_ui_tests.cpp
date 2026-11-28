@@ -22,6 +22,7 @@
 #include <QRegularExpression>
 #include <QTimer>
 #include <algorithm>
+#include <cmath>
 #include <iostream>
 #include <memory>
 #ifndef __EMSCRIPTEN__
@@ -1668,6 +1669,11 @@ private slots:
         QVERIFY(button);
         QVERIFY(dialog);
         QTRY_VERIFY(button->isVisible());
+        // The dots alone show a recording: no status text exists (the owner, 2026-11-28).
+        QVERIFY(!root->findChild<QObject*>("assistant.voiceStatus"));
+        auto* indicator = root->findChild<QQuickItem*>("assistant.voiceIndicator");
+        QVERIFY(indicator);
+        QVERIFY(!indicator->isVisible());
         QVERIFY(QMetaObject::invokeMethod(button, "clicked"));
         if (!installed) {
             QTRY_VERIFY(dialog->property("visible").toBool());
@@ -1692,6 +1698,92 @@ private slots:
             QCOMPARE(voice->state(), edi_app::VoiceInput::State::Idle);
             QVERIFY(!dialog->property("visible").toBool());
         }
+    }
+    // The voice dots (ADR-0107 §8): a ripple from right to left even in silence, bars with the voice, a smaller ripple
+    // while recognising; with animations off they stay still and light from the left with the level.
+    void voiceDotsRippleAndRiseWithTheVoice() {
+        QQmlApplicationEngine engine;
+        edi_app::configure_engine(engine);
+        QQmlComponent component(&engine);
+        component.setData(R"(
+            import QtQuick
+            import QtQuick.Controls
+            import edi.app
+            ApplicationWindow {
+                width: 400; height: 200; visible: true
+                AssistantVoiceMeter { objectName: "meter"; anchors.centerIn: parent }
+            }
+        )", QUrl());
+        QScopedPointer<QObject> root(component.create());
+        QVERIFY2(root, qPrintable(component.errorString()));
+        auto* window = qobject_cast<QQuickWindow*>(root.data());
+        QVERIFY(window);
+        QVERIFY(QTest::qWaitForWindowExposed(window));
+        auto* meter = root->findChild<QQuickItem*>("meter");
+        QVERIFY(meter);
+        QList<QQuickItem*> dots;
+        for (auto* item : meter->findChildren<QQuickItem*>("voiceDot"))
+            dots.append(item);
+        std::sort(dots.begin(), dots.end(), [](QQuickItem* a, QQuickItem* b) { return a->x() < b->x(); });
+        QCOMPARE(dots.size(), 16);
+        const qreal height = meter->height();
+        const qreal dot = meter->property("dot").toReal();
+        QVERIFY(height > 4 * dot);
+        const auto heights = [&dots] {
+            QList<qreal> values;
+            for (auto* item : dots)
+                values.append(item->height());
+            return values;
+        };
+        const auto highest = [&heights] {
+            const auto values = heights();
+            return *std::max_element(values.begin(), values.end());
+        };
+        // Where the ripple is highest, from the meter's own values (pixel heights round neighbours together).
+        const auto crest = [meter] {
+            QList<qreal> values;
+            for (int i = 0; i < 16; ++i) {
+                QVariant value;
+                QMetaObject::invokeMethod(meter, "ripple", Q_RETURN_ARG(QVariant, value), Q_ARG(QVariant, i));
+                values.append(value.toReal());
+            }
+            return int(std::max_element(values.begin(), values.end()) - values.begin());
+        };
+        if (!meter->property("animated").toBool()) {
+            meter->setProperty("running", true);
+            meter->setProperty("level", 0.5);
+            const auto values = heights();
+            for (int i = 0; i < 16; ++i)
+                QCOMPARE(values[i], i < 8 ? qreal(qRound(0.6 * height)) : dot);
+            QTest::qWait(200);
+            QCOMPARE(heights(), values);
+            return;
+        }
+        // Silence: the dots move, between about 0.12 and 0.28 of the height.
+        meter->setProperty("running", true);
+        meter->setProperty("level", 0.0);
+        const qreal start = meter->property("phase").toReal();
+        QTRY_VERIFY(!qFuzzyCompare(meter->property("phase").toReal(), start));
+        meter->setProperty("phase", 0.0);
+        const auto still = heights();
+        QVERIFY(*std::min_element(still.begin(), still.end()) < *std::max_element(still.begin(), still.end()));
+        QVERIFY(*std::min_element(still.begin(), still.end()) >= std::max(dot, std::floor(0.12 * height)));
+        QVERIFY(highest() <= std::ceil(0.28 * height));
+        // The crest moves towards the first dot as the phase grows.
+        constexpr double quarter = 1.5707963267948966;
+        meter->setProperty("phase", quarter - 8 * 0.55 + 2 * 3.141592653589793);
+        QCOMPARE(crest(), 8);
+        meter->setProperty("phase", quarter - 4 * 0.55 + 2 * 3.141592653589793);
+        QCOMPARE(crest(), 4);
+        // The voice raises the newest dot into a bar above the ripple.
+        meter->setProperty("level", 1.0);
+        QTRY_COMPARE(dots.last()->height(), height);
+        // Recognising takes no level: the bars run out and a smaller ripple stays.
+        meter->setProperty("recognising", true);
+        QTRY_VERIFY(highest() <= std::ceil(0.22 * height));
+        QVERIFY(highest() >= std::floor(0.12 * height));
+        meter->setProperty("running", false);
+        QCOMPARE(highest(), dot);
     }
 #if defined(Q_OS_UNIX)
     // An attached file stays the same input when only its metadata changes: macOS writes the last-used date as an

@@ -79,11 +79,12 @@ assistant runtime, and shows its choices as rows on the folder page instead of a
    (ADR-0017 §7). A saved choice keeps its value, and the bundled model stays multilingual.
 8. **Composer button.** A round microphone button, the same component and size as the stop and send buttons, sits to
    their left. One press starts listening, the next stops and recognises. There is no cancel button; Escape anywhere
-   in the message box cancels. While listening the button takes the accent colour, an empty box shows "Listening…"
-   where its placeholder is, and an accent-coloured level meter beside the button follows the microphone. While
-   recognising the button shows it is busy and the box shows "Recognising…"; Escape stops it and another press does
-   not, so a press just after the silence stop keeps the recording. When the box holds text, the state is written
-   beside the meter. A recording in which no speech was heard is not recognised, since Whisper makes up text from
+   in the message box cancels. While listening the button takes the accent colour and a row of 16 accent-coloured
+   dots beside it ripples gently from right to left, so it never looks frozen in silence; the voice raises the dots
+   into bars that move the same way. While recognising the button shows it is busy and the dots keep a slower, smaller
+   ripple until the text is in; Escape stops it and another press does not, so a press just after the silence stop
+   keeps the recording. No words say the state (the owner, 2026-11-28); the button's accessible description does.
+   With animations off the dots stay still and light from the left with the level. A recording in which no speech was heard is not recognised, since Whisper makes up text from
    silence; the box says "Nothing was heard." The button is always shown (the owner, 2026-11-27). Without the
    component, or on a processor without AVX2, a press opens the same note as the assistant's button without the
    assistant (ADR-0071): what is missing and, in an installation Maintenance Tool manages, a link to Updates in
