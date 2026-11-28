@@ -78,8 +78,8 @@ Python, command line and importers.
    (ADR-0097).
 10. **Labels** (ADR-0104). `structure.calc_method` "Calculation", short "Calc."; `structure.calc_method=rietveld`
     "Rietveld", `=le_bail` "Le Bail", `=pawley` "Pawley"; `extracted_intensity` "Extracted intensities";
-    `refln.f_squared_meas` "F² extracted"; `refln.f_squared_meas_su` "s.u."; the Analysis row "Pawley intensities
-    (%1)".
+    `refln.f_squared_meas` "F² extracted"; `refln.f_squared_meas_su` "s.u.". The Analysis row's "Pawley intensities
+    (%1)" carries a count, so it is a translated text, as "Structures (%1)" is, not a registry row.
 11. **Tests.** Core: the owner's workflow on an example project (atom categories identical after Le Bail and back,
     the scale start), undo of a switch, save and reopen under Le Bail, the fit write-back of rows, the fit marks, a
     structure without atoms under Le Bail, the single-crystal refusal, a FullProf `Jbt=2` import and export. Python and
