@@ -171,7 +171,8 @@ grid. The instrument parameters go into `project.pcr` with their fitted values. 
 holds a fit, `fit_results.txt` beside it lists the fit's reduced chi-square and R factors and each
 free parameter's value with its standard uncertainty, which a PCR has no place for. A Le Bail
 structure is written as a profile-matching phase (`Jbt=2`) with its atoms, which FullProf starts
-from; FullProf has no Pawley mode, so a Pawley structure stops the export. The command
+from; a magnetic Le Bail structure stops the export for now, and FullProf has no Pawley mode, so a
+Pawley structure stops it too. The command
 line writes the same copy, with every parameter fixed for a forward calculation
 when `--fixed` is given:
 

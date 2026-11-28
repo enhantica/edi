@@ -2,7 +2,9 @@
 
 - **Status:** Proposed
 - **Date:** 2026-11-28
-- **Implementation:** ⬜ Not implemented
+- **Implementation:** 🟡 Partially implemented — everything below but a scan dataset's own intensities: browsing a
+  Le Bail or Pawley scan draws each dataset with the rows the project holds, since nothing reads
+  `analysis/results_intensities.csv` yet (6.); and a magnetic Le Bail structure does not export to FullProf (9.)
 - **Priority:** High
 - **Forward constraint (binding on new features):** which calculation methods a structure may take, the switch and
   what a fit can free under each come from crysta (`calc_method_options`, `set_calc_method`, the fit marks of
@@ -51,19 +53,27 @@ Python, command line and importers.
 4. **Experiment page.** In Linked structures, a Le Bail or Pawley link's Scale has its Free box disabled with crysta's
    reason (ADR-0053). Every weight fraction of an experiment holding such a link shows "—", as crysta gives none. In
    the fit results, its R Bragg, R F and magnetic R show "—" with the tooltip "No R factor: the structure's
-   intensities are extracted" (ADR-0045). The structure combo box disables a Le Bail or Pawley structure on a single
-   crystal, with crysta's reason; a structure that still has such a link shows the link's Scale with crysta's
-   fit mark, never a refusal of edi's own. In Reflections, a Le Bail or Pawley structure's rows show F² extracted
+   intensities are extracted" (ADR-0045), unless the record holds factors from an earlier Rietveld fit, which are
+   shown. The structure combo box disables a Le Bail or Pawley structure on a single crystal, with crysta's reason,
+   and the app's other ways to make such a link (Add, enabling a link, retargeting one) refuse with the same reason;
+   Python and a file may still hold one, as crysta allows, and a structure that has such a link shows the link's
+   Scale with crysta's fit mark, never a refusal of edi's own. In Reflections, a Le Bail or Pawley structure's rows show F² extracted
    (`_refln.f_squared_meas`) and, for Pawley, its s.u., in place of F calc, F² calc and |F_M⊥|²; the columns are
    declared (ADR-0105).
 5. **Analysis page.** A Pawley structure's intensities show as one row per structure and experiment, "Pawley
    intensities (N)", with one Free box that sets or clears every row's flag; a mix shows the box partly checked. The
    status bar counts N parameters. Le Bail intensities are not listed. The atoms, ADPs and moments of a Le Bail or
-   Pawley structure keep their rows, not fittable with crysta's reason, under the "not measured in this fit" filter.
-   The correlation chart has no intensity rows, since crysta writes none.
+   Pawley structure keep their rows, not fittable with crysta's reason, under the "not measured in this fit" filter;
+   such a value, and the link's Scale, is drawn fixed with its Free box disabled whatever its kept flag, as on its own
+   page. The correlation chart has no intensity rows, since crysta writes none. `Project::free_parameters` leaves out
+   what crysta's method rule leaves idle, and only when some structure is Le Bail or Pawley, so a Rietveld project
+   lists what it listed before; the Fit button and an independent fit also count intensities with nothing else free
+   (crysta's `fits_intensities`: a Le Bail structure, or a Pawley one with a free row or none yet).
 6. **Fits.** `fit_policy.cpp` refuses a structure without atom sites only when it is Rietveld; exports that need atoms
-   keep refusing it. Single, joint, independent and sequential fits run through crysta as before. A sequential scan's
-   per-point intensities are crysta's `analysis/results_intensities.csv`. Parametric fits take a Le Bail structure
+   keep refusing it. Single, joint, independent and sequential fits run through crysta as before, also with only
+   intensities to fit. A sequential scan's per-point intensities are crysta's `analysis/results_intensities.csv`,
+   which Reset and Undo set aside and put back with the other results files. The saved fit record and the text
+   report count the Pawley intensity columns crysta's result reports. Parametric fits take a Le Bail structure
    once crysta's parametric fit has merged: built in this work if that happens while it is open,
    otherwise with the work that integrates the two. Pawley stays out of parametric fits.
 7. **Python.** `Structure.calc_method` is a string; its setter is `select_calc_method` and raises `ValueError` with
@@ -75,7 +85,7 @@ Python, command line and importers.
 9. **Importers and exporters.** FullProf (ADR-0096): a phase with `Jbt=2` imports as Le Bail, with its atoms when it
    gives any; an `Irf=2` intensity file is not read and is listed as a gap; `Jbt=-2` and `±3` stay refused. Export
    writes `Jbt=2` and `Irf=0` for a Le Bail structure, with its atoms, which FullProf uses to start its first run, and
-   refuses a Pawley structure, since FullProf has no Pawley mode. cryspy (ADR-0099) refuses a Le Bail or Pawley
+   refuses a Pawley structure, since FullProf has no Pawley mode, and for now a magnetic Le Bail structure. cryspy (ADR-0099) refuses a Le Bail or Pawley
    structure as well as one without atoms, since it has neither mode. GSAS-II's `LeBail` and `doPawley` stay refused
    (ADR-0097).
 10. **Labels** (ADR-0104). `structure.calc_method` "Calculation", short "Calc."; `structure.calc_method=rietveld`
