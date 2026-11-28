@@ -4306,7 +4306,10 @@ int ProjectViewModel::magneticParentOf(int experiment) const {
         if (!link->enabled.get()) continue;
         for (std::size_t s = 0; s < project_->structures.size(); ++s) {
             const auto& structure = project_->structures[s];
-            if (structure->name.value() == link->structure_id.value() && structure->magnetic->operations.empty() &&
+            // A lone link with no id names the lone structure, as crysta resolves it (review 26).
+            const bool named = structure->name.value() == link->structure_id.value() ||
+                               (link->structure_id.value().empty() && project_->structures.size() == 1);
+            if (named && structure->magnetic->operations.empty() &&
                 !structure->atom_sites.empty()) {
                 if (found >= 0) return -2;
                 found = static_cast<int>(s);

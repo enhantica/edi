@@ -10912,7 +10912,10 @@ std::vector<MagneticPeak> magnetic_mark_candidates(const Project& project, std::
     // Every other phase the experiment links and enables: a peak at its allowed lines is not pre-marked.
     std::vector<const crysta::Structure*> others;
     for (const auto& link : source.linked_structures) {
-        if (!link->enabled.get() || link->structure_id.value() == parent_name) continue;
+        // A lone link with no id is the parent's own (review 26).
+        if (!link->enabled.get() || link->structure_id.value() == parent_name ||
+            (link->structure_id.value().empty() && project.structures.size() == 1))
+            continue;
         others.push_back(&engine_structure(k.engine, link->structure_id.value()));
     }
     // A peak on an allowed reflection is suggested only where a calculated curve leaves it unexplained: the residual
