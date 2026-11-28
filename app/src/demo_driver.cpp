@@ -105,7 +105,7 @@ constexpr double kDialogSpareEm = 2.0;
 // Open a bundled example from the Project page: scroll its row into view, click it.
 QStringList open_example(const QString& id) {
     const qsizetype row = ExampleListModel::bundledIds().indexOf(id);
-    return {QStringLiteral("appBar.tab.project"), QStringLiteral("sideBar.tab.basic"),
+    return {QStringLiteral("appBar.tab.project"), QStringLiteral("sideBar.tab.tools"),
             QStringLiteral("show:examples.list:%1").arg(row),
             QStringLiteral("examples.open.") + id};
 }
@@ -381,7 +381,7 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     }
     // The Examples list filtered by the structure tag: only the magnetic examples.
     steps_.push_back({"magnetic-02-examples-filter",
-                      start + QStringList{"appBar.tab.project", "sideBar.tab.basic", "examples.property",
+                      start + QStringList{"appBar.tab.project", "sideBar.tab.tools", "examples.property",
                                           "choose:Structure", "examples.value", "choose:Magnetic structure (2)"}});
     // A scan's datasets as experiments: the bundled 162-file example, before any scan has been fitted.
     steps_.push_back({"t16-50-scan-experiment", start + open_cli_project("pd-neut-cwl_cosio-d20_scan-162f")
@@ -612,7 +612,7 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     steps_.push_back({"t17-23-no-structure", {"appBar.tab.structure", basic, "expand:group.structures", "structures.remove.0"}});
     // 1: Create project's location, one separator between the folder and the name (not accepted: the demo writes
     // no project into the user's documents).
-    steps_.push_back({"t17-25-create-project", {"key:Escape", "appBar.tab.project", basic, "expand:group.getStarted", "project.create", "createProject.name", "type:Corr"}});
+    steps_.push_back({"t17-25-create-project", {"key:Escape", "appBar.tab.project", QStringLiteral("sideBar.tab.tools"), "expand:group.getStarted", "project.create", "createProject.name", "type:Corr"}});
     // 3 and 4: the Wyckoff position column and its list; a new atom on position a, and the structure's Text with no
     // error.
     steps_.push_back({"t17-27-wyckoff-column", QStringList{"key:Escape"} + start + open_example("pd-neut-cwl_lbco-hrpt")
@@ -724,7 +724,7 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     if (only.startsWith(QLatin1String("importsave-"))) {
         const QString imported = "open-project:" + qEnvironmentVariable("EDI_DEMO_IMPORT_PROJECT");
         steps_.push_back({"importsave-1-group", QStringList{"resize:1480x800", "theme:light"} + start +
-                                                    QStringList{imported, "appBar.tab.project", basic,
+                                                    QStringList{imported, "appBar.tab.project", QStringLiteral("sideBar.tab.tools"),
                                                                 "reveal:group.getStarted", "expand:group.getStarted"}});
         steps_.push_back({"importsave-2-load-menu", {"project.load"}});
         steps_.push_back({"importsave-3-save-menu", {"key:Escape", "project.saveAs"}});
@@ -736,7 +736,7 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     // documents folder, so run it with a scratch HOME (`--demo-only mainview-empty-`).
     if (only.startsWith(QLatin1String("mainview-empty-"))) {
         steps_.push_back({"mainview-empty-1-structure",
-                          QStringList{"resize:1280x768", "theme:light", "appBar.tab.home", "home.start", "appBar.tab.project", basic,
+                          QStringList{"resize:1280x768", "theme:light", "appBar.tab.home", "home.start", "appBar.tab.project", QStringLiteral("sideBar.tab.tools"),
                                       "expand:group.getStarted", "project.create", "createProject.name", "type:sdc", "choose:OK",
                                       "appBar.tab.structure", basic}});
         steps_.push_back({"mainview-empty-2-structure-created", {"expand:group.structures", "structures.create"}});
@@ -791,7 +791,7 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
                                                      QStringLiteral("show:tutorials.list:%1").arg(tutorial)}});
         steps_.push_back({"tags-02-tutorials-narrow", {"key:Escape", "resize:1000x760", "home.tutorials",
                                                        QStringLiteral("show:tutorials.list:%1").arg(tutorial)}});
-        steps_.push_back({"tags-03-examples", QStringList{"key:Escape", "resize:1480x900", "appBar.tab.project", "sideBar.tab.basic",
+        steps_.push_back({"tags-03-examples", QStringList{"key:Escape", "resize:1480x900", "appBar.tab.project", "sideBar.tab.tools",
                                                           "group.examples", QStringLiteral("show:examples.list:%1").arg(row)}});
     }
     // The documentation's concept figures, from the Co2SiO4 magnetic case, in both themes, each saved by Save image
@@ -1301,7 +1301,7 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
             steps_.push_back({QStringLiteral("e58-room-%1-open-%2").arg(++n, 3, 10, QLatin1Char('0')).arg(project),
                               {"preference:loggingLevel=Info", "preference:autoCollapse=false", "resize:1496x900", "open-cli-project:" + project, "wait-settled"}});
             steps_.back().capture = false;
-            for (const QString& where : {QStringLiteral("project/basic"), QStringLiteral("structure/basic"), QStringLiteral("structure/extras"), QStringLiteral("experiment/basic"),
+            for (const QString& where : {QStringLiteral("project/tools"), QStringLiteral("structure/basic"), QStringLiteral("structure/extras"), QStringLiteral("experiment/basic"),
                                          QStringLiteral("experiment/extras"), QStringLiteral("analysis/basic"), QStringLiteral("analysis/extras")}) {
                 steps_.push_back({QStringLiteral("e58-room-%1-%2").arg(++n, 3, 10, QLatin1Char('0')).arg(QString(where).replace(QLatin1Char('/'), QLatin1Char('-'))),
                                   {"appBar.tab." + where.section(QLatin1Char('/'), 0, 0), "wait-settled", "sideBar.tab." + where.section(QLatin1Char('/'), 1), "wait-settled", "room-tab"}});
@@ -2125,7 +2125,7 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
                                QStringList{structure, basic, "expand:group.structures"});
         shot("linked-structures", {experiment, basic, "expand:group.linked_structure"});
         shot("measured-data-two-structures", {extras, "expand:group.data"});
-        shot("recent-projects", {"appBar.tab.project", basic, "expand:group.recentProjects"});
+        shot("recent-projects", {"appBar.tab.project", QStringLiteral("sideBar.tab.tools"), "expand:group.recentProjects"});
         shot("atom-sites", start + open_example("pd-neut-cwl_y2o3-spodi") + QStringList{structure, basic, "expand:group.atom_site"});
         shot("atomic-displacements", {"expand:group.atom_site_aniso"});
         shot("measured-data", {experiment, extras, "expand:group.data"});
