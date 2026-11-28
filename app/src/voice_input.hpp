@@ -12,7 +12,6 @@
 #include <QList>
 #include <QtQml/qqmlregistration.h>
 
-#include <array>
 #include <atomic>
 #include <memory>
 #include <span>
@@ -21,6 +20,7 @@
 namespace edi_app {
 
 struct RecognitionJob;
+class SpeechDetector;
 
 /// A choice of the speech language setting: "detect" or a whisper language code, and its name.
 struct SpeechLanguage {
@@ -74,12 +74,13 @@ public:
 
     /// The app's voice input: the default microphone and the installed model.
     explicit VoiceInput(QObject* parent = nullptr);
-    /// A voice input on `capture` (owned) and the model at `model`; an empty `model` means not installed.
-    VoiceInput(std::unique_ptr<AudioCapture> capture, QString model, QObject* parent = nullptr);
+    /// A voice input on `capture` (owned), the model at `model` and the speech detector at `detector`; an empty path
+    /// means not installed.
+    VoiceInput(std::unique_ptr<AudioCapture> capture, QString model, QString detector, QObject* parent = nullptr);
     ~VoiceInput() override;
 
     bool available() const;
-    bool installed() const { return !model_.isEmpty(); }
+    bool installed() const { return !model_.isEmpty() && !detectorFile_.isEmpty(); }
     QString unavailableReason() const;
     State state() const { return state_; }
     QObject* owner() const { return owner_; }
@@ -103,6 +104,9 @@ public:
     /// The installed model's file, checked against its manifest, or empty. `EDI_VOICE_MODEL` names a model file
     /// directly for development and tests.
     static QString installedModel();
+    /// The installed speech detector's file, as the manifest names it, or empty; beside `EDI_VOICE_MODEL` when that is
+    /// set.
+    static QString installedDetector();
 
     /// Recognition runs here, one job at a time, so cancelled jobs cannot pile up model loads. Tests hold its thread to
     /// cancel a job before it starts.
@@ -122,8 +126,6 @@ private:
     void captureSamples(const QList<float>& chunk);
     void captureFailed(AudioCapture::Failure failure);
     void analyse(std::span<const float> chunk);
-    void addBlock(double db);
-    void judge();
     void finish(int generation, const QString& text, const QString& error, bool cancelled);
     void setState(State state);
     void setMessage(const QString& message);
@@ -133,6 +135,8 @@ private:
 
     std::unique_ptr<AudioCapture> capture_;
     QString model_;
+    QString detectorFile_;
+    std::unique_ptr<SpeechDetector> detector_;  // loaded at the first recording, on this thread
     State state_ = State::Idle;
     QPointer<QObject> owner_;
     QMetaObject::Connection ownerGone_;  // the owner's destroyed() to cancel()
@@ -140,23 +144,12 @@ private:
     QString message_;
     QString language_ = QStringLiteral("en");
     std::vector<float> recording_;
-    std::size_t analysed_ = 0;  // samples of recording_ the speech check has read
-    std::size_t silent_ = 0;    // samples of silence since the last speech
+    std::size_t analysed_ = 0;  // samples of recording_ the detector has read
+    std::size_t silent_ = 0;    // samples since the last frame of speech, once speech was heard
     bool heard_ = false;        // speech has been heard in this recording
-    std::array<int, 81> levels_{};  // 30 ms blocks per 1 dB from -80 to 0 dBFS, for the noise floor
-    int counted_ = 0;               // blocks in levels_
-    struct Block {
-        double db;
-        int run;  // its run of sound in runs_, or -1 for digital silence
-    };
-    struct Run {
-        int length;
-        bool afterSilence;  // began after digital silence, not at the start
-    };
-    std::vector<Block> blocks_;  // every 30 ms block, as the floor and the gate seen so far change what counts
-    std::vector<Run> runs_;
-    std::ptrdiff_t lastSpeech_ = -1;  // the last block judged speech
-    bool gated_ = false;              // digital silence has followed sound: a noise gate
+    std::ptrdiff_t framesRead_ = 0;  // detector frames so far
+    int speechFrames_ = 0;           // frames the detector took for speech
+    std::ptrdiff_t lastVoice_ = -1;  // the last frame of speech or its quieter continuation
     double level_ = 0.0;
     double loudest_ = 0.0;      // the loudest block since `level` last changed
     QElapsedTimer levelShown_;  // `level` changes at most every level_ms, as the meter needs no more

@@ -791,13 +791,13 @@ def test_installed_linux_tool_needs_its_whole_runtime(tmp_path, monkeypatch, dam
             PACKAGE.verify_installed_maintenance_tool(tmp_path, {})
 
 
-# Windows stages the tool as one file. A fresh installation may keep it as the installed tool's
-# bytes, for the app's next start to remove; an update leaves none (edi ADR-0109).
+# Windows stages the tool as one file and moves it to the temporary folder before the Framework
+# writes the tool from it, so neither an installation nor an update leaves it (edi ADR-0109).
 @pytest.mark.parametrize(
     ('updated', 'staged', 'refused'),
     [
         (False, None, False),
-        (False, 'installed', False),
+        (False, 'installed', True),
         (False, 'other', True),
         (True, None, False),
         (True, 'installed', True),
@@ -861,13 +861,38 @@ def test_voice_component_inputs_are_the_model_pin_and_whisper_release():
     pins = json.loads((PACKAGE.ROOT / 'tools/deps/voice/models.json').read_text(encoding='utf-8'))
     cmake = (PACKAGE.ROOT / 'cmake/EdiWhisper.cmake').read_text(encoding='utf-8')
     whisper = re.search(r'^set\(EDI_WHISPER_VERSION (\S+)\)$', cmake, re.MULTILINE).group(1)
-    expected = {'model_sha256': pins['models']['small']['sha256'], 'whisper_cpp': whisper}
+    expected = {
+        'model_sha256': pins['models']['small']['sha256'],
+        'vad_sha256': pins['models']['vad']['sha256'],
+        'whisper_cpp': whisper,
+    }
     build, files = PACKAGE.COMPONENT_INPUTS[PACKAGE.VOICE_COMPONENT]
     assert {k: v for k, v in build.items() if k != 'build'} == expected, (
-        'The voice component is decided by its model checksum and whisper.cpp release only'
+        'The voice component is decided by its model and detector checksums and whisper.cpp '
+        'release only'
     )
     assert isinstance(build['build'], int), 'The voice build carries a number to raise by hand'
     assert files == (), 'No whole file decides the voice component'
+
+
+def test_voice_stage_needs_the_pinned_detector_and_its_manifest_entry(tmp_path):
+    model, vad = tmp_path / 'model.bin', tmp_path / 'vad.bin'
+    model.write_bytes(b'speech model')
+    vad.write_bytes(b'speech detector')
+    pin = {'file': model.name, 'bytes': model.stat().st_size, 'sha256': PACKAGE.sha256(model)}
+    vad_pin = {'file': vad.name, 'bytes': vad.stat().st_size, 'sha256': PACKAGE.sha256(vad)}
+    PACKAGE.check_voice_model(tmp_path, pin, vad_pin)
+    PACKAGE.write_voice_manifest(tmp_path, pin, vad_pin)
+    manifest = json.loads((tmp_path / 'voice-model.json').read_text(encoding='utf-8'))
+    assert manifest == {'schema': 'edi.voice-model/1', **pin, 'vad': vad_pin}, (
+        'The manifest keeps the model fields and adds the detector'
+    )
+    for changed in [{'bytes': vad_pin['bytes'] + 1}, {'sha256': '0' * 64}]:
+        with pytest.raises(RuntimeError, match='differs from its pinned size or SHA-256'):
+            PACKAGE.check_voice_model(tmp_path, pin, {**vad_pin, **changed})
+    vad.unlink()
+    with pytest.raises(RuntimeError, match=r'no voice model vad\.bin'):
+        PACKAGE.check_voice_model(tmp_path, pin, vad_pin)
 
 
 def test_voice_row_sorts_after_the_assistant(tmp_path):

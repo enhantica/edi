@@ -10,6 +10,7 @@
 #include <vector>
 
 struct whisper_context;
+struct whisper_vad_context;
 
 namespace edi_app {
 
@@ -61,6 +62,34 @@ public:
 private:
     explicit SpeechRecogniser(whisper_context* context);
     whisper_context* context_;
+};
+
+/// Tells speech from other sound with whisper.cpp's voice activity detector, the Silero model (ADR-0107 §8).
+///
+/// It reads `frame_samples` at a time and keeps what it heard between calls, so a recording is fed as it arrives;
+/// `reset` starts a new one. It runs in a millisecond or less per frame, on the caller's thread.
+class SpeechDetector {
+public:
+    static constexpr int frame_samples = 512;
+
+    /// Loads the detector model. Returns null and sets `error` when the file is missing or not a detector model, or
+    /// when this processor cannot run the engine.
+    static std::unique_ptr<SpeechDetector> load(const std::filesystem::path& model, std::string& error);
+
+    ~SpeechDetector();
+    SpeechDetector(const SpeechDetector&) = delete;
+    SpeechDetector& operator=(const SpeechDetector&) = delete;
+
+    /// Forgets the recording so far.
+    void reset();
+
+    /// The probability of speech in each frame of `samples`, whose size is a multiple of `frame_samples`; empty if the
+    /// engine fails.
+    std::vector<float> probabilities(std::span<const float> samples);
+
+private:
+    explicit SpeechDetector(whisper_vad_context* context);
+    whisper_vad_context* context_;
 };
 
 }  // namespace edi_app

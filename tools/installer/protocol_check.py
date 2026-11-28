@@ -3,12 +3,14 @@
 
 import argparse
 import base64
+import contextlib
 import functools
 import json
 import os
 import subprocess
 import time
 import xml.etree.ElementTree as ET  # noqa: S405 - binarycreator's and our own XML only
+from collections.abc import Iterator
 from pathlib import Path
 from unittest.mock import patch
 
@@ -159,10 +161,12 @@ def failing_operation(evidence: Path, marker: Path) -> str:
     """
     if SYSTEM == 'windows':
         # Separate words: the tool quotes only the ones with spaces, and cmd.exe keeps a command
-        # line that starts unquoted as it is. cd accepts the target's forward slashes.
+        # line that starts unquoted as it is. cd accepts the target's forward slashes, and a path
+        # with spaces unquoted. The staged tool has moved to the temporary folder by then.
         command = [
             'cmd.exe', '/c', 'cd', '/d', '@TargetDir@', '&&', 'dir', '/b', '/s',
-            '>', str(evidence), '&', 'exit', '1',
+            '>', str(evidence), '&', 'cd', '/d', '%TEMP%', '&', 'dir', '/b',
+            'EasyDiffraction-MaintenanceTool-*.exe', '>>', str(evidence), '&', 'exit', '1',
         ]  # fmt: skip
     else:
         command = ['/bin/sh', '-c', FAILURE_EVIDENCE, 'sh', '@TargetDir@', str(evidence)]
@@ -235,7 +239,7 @@ def check(tools: Path, output: Path) -> None:
     # tool's default resource, so only the update can bring the new pages.
     # The marker stands in for the speech model, so every release below checks it against its own
     # pin.
-    with patch('package.release_voice_pin', return_value=write_voice_marker(stage)):
+    with voice_stand_ins(stage):
         with (
             patch('package.repository_urls', return_value=(repository,)),
             patch('package.write_controller', released_controller),
@@ -308,6 +312,24 @@ def write_voice_marker(stage: Path) -> dict:
     model.parent.mkdir(parents=True)
     model.write_text('optional voice marker\n', encoding='utf-8')
     return {'file': model.name, 'bytes': model.stat().st_size, 'sha256': sha256(model)}
+
+
+def write_detector_marker(stage: Path) -> dict:
+    """Stage a small stand-in for the speech detector beside the model's and return its pin."""
+    detector = stage / VOICE_MODEL / 'detector.txt'
+    detector.parent.mkdir(parents=True, exist_ok=True)
+    detector.write_text('optional voice detector marker\n', encoding='utf-8')
+    return {'file': detector.name, 'bytes': detector.stat().st_size, 'sha256': sha256(detector)}
+
+
+@contextlib.contextmanager
+def voice_stand_ins(stage: Path) -> Iterator[None]:
+    """Package the voice component from the stand-ins instead of the pinned files."""
+    with (
+        patch('package.release_voice_pin', return_value=write_voice_marker(stage)),
+        patch('package.release_vad_pin', return_value=write_detector_marker(stage)),
+    ):
+        yield
 
 
 def exercise(
@@ -545,7 +567,8 @@ def rolled_back(target: Path, found: dict, output: Path) -> None:
             raise RuntimeError('The update failed before the macOS swap kept the installed tool')
     elif SYSTEM == 'windows':
         # The tool component, which fails, comes after the app it depends on.
-        if not found_path(found, WINDOWS_STAGED_TOOL):
+        # The tool component unpacked the tool and moved it to the temporary folder.
+        if not any(path.startswith('EasyDiffraction-MaintenanceTool-') for path in found['paths']):
             raise RuntimeError('The update failed before it unpacked the 26.18 maintenance tool')
         windows_staging_rolled_back(target, output, found['staged_before'])
         return

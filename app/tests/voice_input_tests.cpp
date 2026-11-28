@@ -43,13 +43,19 @@ QString tinyModel() {
     return chosen.isEmpty() ? QStringLiteral(EDI_SOURCE_DIR "/build/voice-models/ggml-tiny-q5_1.bin") : chosen;
 }
 
+// The speech detector, staged beside the tiny model (tests/fixtures/assistant_voice/README.md).
+QString detectorModel() {
+    const auto chosen = qEnvironmentVariable("EDI_VOICE_TEST_DETECTOR");
+    return chosen.isEmpty() ? QStringLiteral(EDI_SOURCE_DIR "/build/voice-models/ggml-silero-v6.2.0.bin") : chosen;
+}
+
 // Lower-case words, without punctuation.
 QStringList words(const QString& text) {
     static const QRegularExpression separators(QStringLiteral("[^\\p{L}]+"));
     return text.toLower().split(separators, Qt::SkipEmptyParts);
 }
 
-// Test signals at a known level in dBFS: white noise from a fixed seed for a room, a 220 Hz tone for a voice.
+// Test signals at a known level in dBFS: white noise from a fixed seed, digital silence.
 QList<float> noise(double seconds, double db) {
     QList<float> samples(static_cast<qsizetype>(std::lround(seconds * kRate)));
     const double peak = std::pow(10.0, db / 20.0) * std::sqrt(3.0);  // uniform in [-peak, peak]
@@ -61,12 +67,13 @@ QList<float> noise(double seconds, double db) {
     return samples;
 }
 
-QList<float> tone(double seconds, double db) {
-    QList<float> samples(static_cast<qsizetype>(std::lround(seconds * kRate)));
-    const double peak = std::pow(10.0, db / 20.0) * std::sqrt(2.0);
-    const double step = 2.0 * std::numbers::pi * 220.0 / kRate;
-    for (qsizetype i = 0; i < samples.size(); ++i)
-        samples[i] = static_cast<float>(peak * std::sin(step * static_cast<double>(i)));
+QList<float> zeros(double seconds) { return QList<float>(static_cast<qsizetype>(std::lround(seconds * kRate)), 0.0F); }
+
+// A 10 ms burst at 2 kHz in three seconds of digital silence.
+QList<float> click() {
+    auto samples = zeros(3.0);
+    for (qsizetype i = 0; i < kRate / 100; ++i)
+        samples[kRate + i] = static_cast<float>(0.5 * std::sin(2.0 * std::numbers::pi * 2000.0 * static_cast<double>(i) / kRate));
     return samples;
 }
 
@@ -97,6 +104,39 @@ double rms(const std::vector<float>& audio) {
     for (const float sample : audio)
         energy += static_cast<double>(sample) * static_cast<double>(sample);
     return std::sqrt(energy / static_cast<double>(audio.size()));
+}
+
+// A recording scaled to `db` dBFS over its whole length; with `seconds`, that long, from its start and played again
+// from the start if it is shorter.
+QList<float> at(const std::vector<float>& audio, double db, double seconds = 0.0) {
+    const auto all = scaled(audio, std::pow(10.0, db / 20.0) / rms(audio));
+    if (seconds <= 0.0)
+        return all;
+    QList<float> part(static_cast<qsizetype>(std::lround(seconds * kRate)));
+    for (qsizetype i = 0; i < part.size(); ++i)
+        part[i] = all[i % all.size()];
+    return part;
+}
+
+// As a microphone's noise gate and compressor pass it: 30 ms blocks more than 25 dB below the loudest become digital
+// silence, and the rest come 4:1 closer to the loudest, so the speech is the only sound and at an even level.
+QList<float> gated(QList<float> audio) {
+    constexpr qsizetype block = kRate * 30 / 1000;
+    std::vector<double> levels;
+    for (qsizetype start = 0; start + block <= audio.size(); start += block) {
+        double energy = 0.0;
+        for (qsizetype i = start; i < start + block; ++i)
+            energy += static_cast<double>(audio[i]) * static_cast<double>(audio[i]);
+        levels.push_back(10.0 * std::log10(std::max(energy / block, 1e-18)));
+    }
+    const double top = *std::max_element(levels.begin(), levels.end());
+    audio.resize(static_cast<qsizetype>(levels.size()) * block);
+    for (std::size_t b = 0; b < levels.size(); ++b) {
+        const double gain = levels[b] < top - 25.0 ? 0.0 : std::pow(10.0, ((top - (top - levels[b]) / 4.0) - levels[b]) / 20.0);
+        for (qsizetype i = static_cast<qsizetype>(b) * block; i < static_cast<qsizetype>(b + 1) * block; ++i)
+            audio[i] = static_cast<float>(audio[i] * gain);
+    }
+    return audio;
 }
 
 // A microphone the test speaks into: it starts on the next turn of the event loop, as a real one answers later.
@@ -135,7 +175,7 @@ struct Voice {
 Voice voiceOn(const QString& model) {
     auto capture = std::make_unique<FakeCapture>();
     auto* raw = capture.get();
-    return {raw, std::make_unique<VoiceInput>(std::move(capture), model)};
+    return {raw, std::make_unique<VoiceInput>(std::move(capture), model, detectorModel())};
 }
 
 // Every recognition `voice` started so far has finished and its result has reached it.
@@ -153,6 +193,7 @@ class VoiceInputTests : public QObject {
     Q_OBJECT
     std::vector<float> speech_;   // the fixture at 16 kHz
     std::vector<float> spoken_;   // the fixture and enough silence for the silence check to stop the recording
+    std::vector<float> room_;     // a recorded classroom: ventilation and a ceiling light, no speech
     QStringList reference_;
 
 private slots:
@@ -162,6 +203,12 @@ private slots:
         QVERIFY2(QFileInfo(tinyModel()).isFile(),
                  qPrintable(QStringLiteral("Stage ggml-tiny-q5_1.bin at %1 (tests/fixtures/assistant_voice/README.md)")
                                 .arg(tinyModel())));
+        QVERIFY2(QFileInfo(detectorModel()).isFile(),
+                 qPrintable(QStringLiteral("Stage ggml-silero-v6.2.0.bin at %1 (tests/fixtures/assistant_voice/README.md)")
+                                .arg(detectorModel())));
+        room_ = ScriptedAudioCapture::read_wav(kFixtures + QStringLiteral("/classroom-noise.wav"));
+        QVERIFY2(room_.size() > static_cast<std::size_t>(7 * SpeechRecogniser::sample_rate),
+                 "classroom-noise.wav did not read as about eight seconds of sound");
         speech_ = ScriptedAudioCapture::read_wav(kFixtures + QStringLiteral("/inaugural.wav"));
         QVERIFY2(speech_.size() > static_cast<std::size_t>(10 * SpeechRecogniser::sample_rate),
                  "inaugural.wav did not read as about eleven seconds of speech");
@@ -352,18 +399,21 @@ private slots:
     // for speech, and a press says nothing was heard.
     void nothingHeardWithoutSpeech_data() {
         QTest::addColumn<QList<float>>("recording");
-        QTest::newRow("digital silence") << QList<float>(3 * kRate, 0.0F);
-        QTest::newRow("quiet room") << noise(3.0, -70.0);
-        QTest::newRow("noisy room") << noise(3.0, -45.0);
-        QTest::newRow("digital silence, then a room") << joined({QList<float>(kRate / 2, 0.0F), noise(3.0, -50.0)});
-        QTest::newRow("a click") << mixed(noise(3.0, -60.0), tone(0.01, -10.0), kRate);
-        // An open microphone in a room whose capture then falls to digital silence: the room is no gated sound.
-        QTest::newRow("a room, then digital silence") << joined({noise(3.0, -50.0), QList<float>(kRate, 0.0F)});
-        // Keys typed behind a noise gate: each passes for 20 ms, shorter than any syllable.
+        QTest::newRow("digital silence") << zeros(3.0);
+        QTest::newRow("a recorded room as recorded") << at(room_, -22.0);
+        QTest::newRow("a recorded room at -40 dBFS") << at(room_, -40.0);
+        QTest::newRow("a recorded room at -55 dBFS") << at(room_, -55.0);
+        QTest::newRow("a room, then digital silence") << joined({at(room_, -40.0), zeros(1.5)});
+        QTest::newRow("silence, a room, silence") << joined({zeros(0.5), at(room_, -40.0, 3.0), zeros(1.5)});
+        QTest::newRow("a room a gate let through") << joined({zeros(0.5), at(room_, -45.0, 1.5), zeros(2.5)});
+        QTest::newRow("digital silence, then white noise") << joined({zeros(0.5), noise(3.0, -50.0)});
+        QTest::newRow("white noise at -45 dBFS") << noise(3.0, -45.0);
+        QTest::newRow("white noise at -70 dBFS") << noise(3.0, -70.0);
+        QTest::newRow("a click") << click();
         QList<float> typing;
         for (int key = 0; key < 6; ++key)
-            typing = joined({typing, QList<float>(kRate * 3 / 10, 0.0F), noise(0.02, -30.0)});
-        QTest::newRow("keys typed behind a gate") << joined({typing, QList<float>(kRate, 0.0F)});
+            typing = joined({typing, zeros(0.3), noise(0.02, -30.0)});
+        QTest::newRow("keys typed behind a gate") << joined({typing, zeros(1.0)});
     }
     void nothingHeardWithoutSpeech() {
         QFETCH(QList<float>, recording);
@@ -380,21 +430,29 @@ private slots:
         QCOMPARE(voice.input->message(), QStringLiteral("Nothing was heard."));
     }
 
-    // Speech from a microphone set low, the fixture at -45 dBFS (28 dB down, no 30 ms block above -36 dBFS), is heard:
-    // the silence after it stops the recording, and so does a press. The recogniser's refusal of the absent model
-    // shows the recording reached it.
-    void quietSpeechIsHeard_data() {
+    // Recorded speech that must reach the recogniser, whose refusal of the absent model shows it did: quiet, from the
+    // first sample behind a noise gate, and in a recorded room. `pressed` rows stop with a press while listening; the
+    // others are stopped by the silence after the speech.
+    void speechIsHeard_data() {
+        QTest::addColumn<QList<float>>("recording");
         QTest::addColumn<bool>("pressed");
-        QTest::newRow("stopped by the silence") << false;
-        QTest::newRow("stopped by a press") << true;
+        QTest::newRow("quiet, -45 dBFS, silence stops it") << joined({at(speech_, -45.0), zeros(3.0)}) << false;
+        QTest::newRow("quiet, -55 dBFS, silence stops it") << joined({at(speech_, -55.0), zeros(3.0)}) << false;
+        QTest::newRow("quiet, -45 dBFS, pressed") << at(speech_, -45.0, 3.0) << true;
+        QTest::newRow("a short phrase from the first sample behind a gate, pressed")
+            << gated(at(speech_, -45.0, 1.5)) << true;
+        QTest::newRow("a short phrase from the first sample behind a gate, silence stops it")
+            << joined({gated(at(speech_, -45.0, 1.5)), zeros(2.5)}) << false;
+        QTest::newRow("all of it from the first sample behind a gate, silence stops it")
+            << joined({gated(at(speech_, -45.0)), zeros(2.5)}) << false;
+        QTest::newRow("in a recorded room 10 dB below it, pressed")
+            << mixed(at(speech_, -45.0), at(room_, -55.0, 11.0)) << true;
+        QTest::newRow("in a recorded room 5 dB below it, pressed")
+            << mixed(at(speech_, -35.0), at(room_, -40.0, 11.0)) << true;
     }
-    void quietSpeechIsHeard() {
+    void speechIsHeard() {
+        QFETCH(QList<float>, recording);
         QFETCH(bool, pressed);
-        const double gain = std::pow(10.0, -45.0 / 20.0) / rms(speech_);
-        const auto three_seconds = std::ptrdiff_t{3} * kRate;
-        const auto recording =
-            pressed ? scaled(std::vector<float>(speech_.begin(), speech_.begin() + three_seconds), gain)
-                    : scaled(spoken_, gain);
         auto voice = voiceOn(kAbsentModel);
         voice.input->toggle();
         QTRY_COMPARE(voice.input->state(), VoiceInput::State::Listening);
@@ -409,49 +467,18 @@ private slots:
         QCOMPARE(voice.input->message(), kNoModelMessage);
     }
 
-    // A quiet continuation after a loud syllable is still speech, so the silence stop waits for real silence: a room at
-    // -60 dBFS, a syllable at -20 dBFS, then three seconds at -40 dBFS.
+    // Speech that falls 20 dB after two seconds keeps the recording going until the silence after it: the detector's
+    // longest gap in it measured 1.25 s, under the two-second stop.
     void quietContinuationKeepsListening() {
         auto voice = voiceOn(kAbsentModel);
         voice.input->toggle();
         QTRY_COMPARE(voice.input->state(), VoiceInput::State::Listening);
-        voice.capture->play(noise(0.5, -60.0));
-        voice.capture->play(mixed(noise(0.3, -60.0), tone(0.3, -20.0)));
-        voice.capture->play(mixed(noise(3.0, -60.0), tone(3.0, -40.0)));
+        const auto loud = at(speech_, -20.0);
+        const auto quiet = at(speech_, -40.0);
+        voice.capture->play(loud.first(2 * kRate));
+        voice.capture->play(quiet.sliced(2 * kRate));
         QCOMPARE(voice.input->state(), VoiceInput::State::Listening);
-        voice.capture->play(noise(2.5, -60.0));
-        QCOMPARE(voice.input->state(), VoiceInput::State::Recognising);
-        QVERIFY(settle(*voice.input));
-        QCOMPARE(voice.input->message(), kNoModelMessage);
-    }
-
-    // A microphone with a noise gate sends digital silence instead of the room, so its speech can be the only sound and
-    // at an even level: a phrase at -45 to -46 dBFS. It is heard when the gate closes between words, when it closes only
-    // after the phrase just before a press, and when the silence after the phrase stops the recording by itself. Zeros
-    // only at the start are a microphone starting (nothingHeardWithoutSpeech).
-    void gatedEvenSpeechIsHeard_data() {
-        QTest::addColumn<QList<float>>("recording");
-        QTest::addColumn<bool>("pressed");
-        const QList<float> start(kRate / 2, 0.0F);
-        const QList<float> gap(kRate * 3 / 20, 0.0F);
-        QTest::newRow("gaps between words")
-            << joined({start, tone(0.5, -45.0), gap, tone(0.5, -46.0), gap, tone(0.5, -45.0), gap}) << true;
-        QTest::newRow("gate closes after the phrase")
-            << joined({start, tone(1.5, -45.0), QList<float>(kRate * 3 / 10, 0.0F)}) << true;
-        QTest::newRow("the silence after the phrase stops it")
-            << joined({start, tone(1.5, -45.0), QList<float>(kRate * 5 / 2, 0.0F)}) << false;
-    }
-    void gatedEvenSpeechIsHeard() {
-        QFETCH(QList<float>, recording);
-        QFETCH(bool, pressed);
-        auto voice = voiceOn(kAbsentModel);
-        voice.input->toggle();
-        QTRY_COMPARE(voice.input->state(), VoiceInput::State::Listening);
-        voice.capture->play(recording);
-        if (pressed) {
-            QCOMPARE(voice.input->state(), VoiceInput::State::Listening);
-            voice.input->toggle();
-        }
+        voice.capture->play(zeros(2.5));
         QCOMPARE(voice.input->state(), VoiceInput::State::Recognising);
         QVERIFY(settle(*voice.input));
         QCOMPARE(voice.input->message(), kNoModelMessage);
@@ -462,8 +489,8 @@ private slots:
         auto voice = voiceOn(kAbsentModel);
         voice.input->toggle();
         QTRY_COMPARE(voice.input->state(), VoiceInput::State::Listening);
-        voice.capture->play(noise(2.0, -60.0));
-        voice.capture->held = mixed(noise(1.0, -60.0), tone(1.0, -30.0));
+        voice.capture->play(zeros(2.0));
+        voice.capture->held = at(speech_, -30.0, 1.5);
         voice.input->toggle();
         QCOMPARE(voice.capture->finished, 1);
         QVERIFY(voice.capture->held.isEmpty());
@@ -473,8 +500,8 @@ private slots:
 
         voice.input->toggle();
         QTRY_COMPARE(voice.input->state(), VoiceInput::State::Listening);
-        voice.capture->play(noise(2.0, -60.0));
-        voice.capture->held = mixed(noise(1.0, -60.0), tone(1.0, -30.0));
+        voice.capture->play(zeros(2.0));
+        voice.capture->held = at(speech_, -30.0, 1.5);
         voice.input->cancel();
         QCOMPARE(voice.capture->finished, 1);
         QCOMPARE(voice.input->state(), VoiceInput::State::Idle);
@@ -495,7 +522,7 @@ private slots:
         QFETCH(QString, mode);
         QFETCH(QString, wav);
         QObject owner;
-        VoiceInput voice(std::make_unique<ScriptedAudioCapture>(mode, wav), tinyModel());
+        VoiceInput voice(std::make_unique<ScriptedAudioCapture>(mode, wav), tinyModel(), detectorModel());
         voice.toggle(&owner);
         QCOMPARE(voice.state(), VoiceInput::State::Starting);
         QTRY_COMPARE(voice.state(), VoiceInput::State::Idle);
@@ -507,7 +534,7 @@ private slots:
     void scriptedRecordingStopsOnSilence() {
         VoiceInput voice(std::make_unique<ScriptedAudioCapture>(QStringLiteral("available"),
                                                                 kFixtures + QStringLiteral("/inaugural.wav")),
-                         tinyModel());
+                         tinyModel(), detectorModel());
         QSignalSpy text(&voice, &VoiceInput::textRecognised);
         voice.toggle();
         QTRY_COMPARE_WITH_TIMEOUT(text.count(), 1, kRecognitionMs);

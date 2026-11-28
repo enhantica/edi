@@ -127,6 +127,51 @@ SpeechRecogniser::Result SpeechRecogniser::recognise(std::span<const float> samp
 
 int SpeechRecogniser::loads() { return opened_models.load(std::memory_order_relaxed); }
 
+std::unique_ptr<SpeechDetector> SpeechDetector::load(const std::filesystem::path& model, std::string& error) {
+    if (!SpeechRecogniser::cpu_supported()) {
+        error = "This computer's processor cannot run the speech model: it needs AVX2.";
+        return nullptr;
+    }
+    silence_engine_log();
+    std::error_code status;
+    if (!std::filesystem::is_regular_file(model, status)) {
+        error = "The speech detector is not installed.";
+        return nullptr;
+    }
+    auto parameters = whisper_vad_default_context_params();
+    parameters.n_threads = 1;
+    parameters.use_gpu = false;
+    const auto utf8 = model.u8string();
+    const std::string path(utf8.begin(), utf8.end());
+    auto* context = whisper_vad_init_from_file_with_params(path.c_str(), parameters);
+    if (context == nullptr) {
+        error = "The speech detector could not be read.";
+        return nullptr;
+    }
+    std::unique_ptr<SpeechDetector> detector(new SpeechDetector(context));
+    detector->reset();
+    return detector;
+}
+
+SpeechDetector::SpeechDetector(whisper_vad_context* context) : context_(context) {}
+
+SpeechDetector::~SpeechDetector() { whisper_vad_free(context_); }
+
+// The streaming call keeps the model's state between calls and never clears it itself, and a new context starts with
+// whatever its memory held: without this the same audio gave different results from run to run.
+void SpeechDetector::reset() { whisper_vad_reset_state(context_); }
+
+std::vector<float> SpeechDetector::probabilities(std::span<const float> samples) {
+    // A part frame would be padded with zeros and heard as the start of a silence.
+    const auto whole = samples.size() / frame_samples * frame_samples;
+    if (whole == 0 || whole > static_cast<std::size_t>(INT_MAX))
+        return {};
+    if (!whisper_vad_detect_speech_no_reset(context_, samples.data(), static_cast<int>(whole)))
+        return {};
+    const float* probabilities = whisper_vad_probs(context_);
+    return std::vector<float>(probabilities, probabilities + whisper_vad_n_probs(context_));
+}
+
 std::vector<SpeechRecogniser::Language> SpeechRecogniser::languages() {
     std::vector<Language> list;
     for (int id = 0; id <= whisper_lang_max_id(); ++id) {

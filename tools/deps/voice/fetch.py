@@ -1,9 +1,9 @@
 # SPDX-License-Identifier: BSD-3-Clause
-"""Download the pinned Whisper models for voice input and check them (ADR-0107).
+"""Download the pinned models for voice input and check them (ADR-0107).
 
-The installer's voice component packs the small model; tests use the tiny one. A model is taken
-only from the pinned HTTPS source and only with the size and SHA-256 in models.json; a cached copy
-is checked again before it is used.
+The installer's voice component packs the small Whisper model and the Silero speech detector;
+tests use the tiny model and the detector. A model is taken only from its pinned HTTPS source and
+only with the size and SHA-256 in models.json; a cached copy is checked again before it is used.
 """
 
 import argparse
@@ -25,7 +25,12 @@ def pins() -> dict:
     data = json.loads(PINS.read_text(encoding='utf-8'))
     if data.get('schema') != 'edi.voice-models/1':
         raise RuntimeError(f'{PINS.name} has an unknown schema')
-    if not data['source'].startswith('https://huggingface.co/'):
+    # A model may name its own source, as the detector does, since it lives in another repository.
+    sources = [
+        data['source'],
+        *(model.get('source', data['source']) for model in data['models'].values()),
+    ]
+    if not all(source.startswith('https://huggingface.co/') for source in sources):
         raise RuntimeError('Voice models must come from the pinned HTTPS source')
     return data
 
@@ -44,7 +49,7 @@ def matches(path: Path, model: dict) -> bool:
 
 
 def fetch(name: str, destination: Path = DEFAULT_DESTINATION) -> Path:
-    """The checked model `name` ("small" or "tiny") in `destination`, downloaded when needed."""
+    """The checked model `name` ("small", "tiny" or "vad") in `destination`, fetched if needed."""
     data = pins()
     model = data['models'][name]
     destination.mkdir(parents=True, exist_ok=True)
@@ -53,7 +58,9 @@ def fetch(name: str, destination: Path = DEFAULT_DESTINATION) -> Path:
         return path
     partial = path.with_name(path.name + '.part')
     with (
-        urllib.request.urlopen(data['source'] + model['file'], timeout=60) as response,  # noqa: S310
+        urllib.request.urlopen(  # noqa: S310
+            model.get('source', data['source']) + model['file'], timeout=60
+        ) as response,
         partial.open('wb') as stream,
     ):
         shutil.copyfileobj(response, stream, length=1 << 20)
@@ -65,24 +72,26 @@ def fetch(name: str, destination: Path = DEFAULT_DESTINATION) -> Path:
 
 
 def manifest(name: str) -> dict:
-    """The voice-model.json the app reads beside the installed model."""
-    model = pins()['models'][name]
+    """The voice-model.json the app reads beside the installed model and detector."""
+    models = pins()['models']
+    model, vad = models[name], models['vad']
     return {
         'schema': MANIFEST_SCHEMA,
         'file': model['file'],
         'bytes': model['bytes'],
         'sha256': model['sha256'],
+        'vad': {'file': vad['file'], 'bytes': vad['bytes'], 'sha256': vad['sha256']},
     }
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument(
-        '--test', action='store_true', help='fetch only the tiny model the tests use'
+        '--test', action='store_true', help='fetch only the tiny model and detector the tests use'
     )
     parser.add_argument('--destination', type=Path, default=DEFAULT_DESTINATION)
     args = parser.parse_args()
-    for name in ['tiny'] if args.test else ['small', 'tiny']:
+    for name in ['tiny', 'vad'] if args.test else ['small', 'tiny', 'vad']:
         print(fetch(name, args.destination))
     return 0
 

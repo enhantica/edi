@@ -122,10 +122,11 @@
       ]
     },
     {
-      "witness": "cmake/EdiWhisper.cmake fetches whisper.cpp at its pinned release and app/CMakeLists.txt links it statically, with its ggml, into the desktop app for voice input; the same file links Qt Multimedia for microphone recording (ADR-0107). tools/installer/package.py packs the pinned Whisper small model from tools/deps/voice/models.json into the optional voice component.",
+      "witness": "cmake/EdiWhisper.cmake fetches whisper.cpp at its pinned release and app/CMakeLists.txt links it statically, with its ggml, into the desktop app for voice input; the same file links Qt Multimedia for microphone recording (ADR-0107). tools/installer/package.py packs the pinned Whisper small model and the Silero VAD model, which the app's whisper.cpp reads to tell speech from other sound, from tools/deps/voice/models.json into the optional voice component.",
       "components": [
         "whisper.cpp",
         "Whisper small model",
+        "Silero VAD model",
         "Qt Multimedia"
       ]
     }

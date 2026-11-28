@@ -64,12 +64,13 @@ transitive attribution, corresponding-source delivery or platform installer qual
 
 ## Voice input components
 
-The engine is part of the desktop app; the model is installed only with the optional voice input component.
+The engine is part of the desktop app; the models are installed only with the optional voice input component.
 
 | Component | Version | Licence | Desktop app | Web app | Python package | CLI | In edi |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | whisper.cpp | 1.9.6 | MIT | compiled in | — | — | — | speech recognition for voice input, with the ggml tensor library it includes |
 | Whisper small model | ggml-small-q5_1 (5359861c) | MIT | bundled | — | — | — | OpenAI's multilingual Whisper small weights in whisper.cpp's format, quantized to q5_1; the voice input component only |
+| Silero VAD model | ggml-silero-v6.2.0 (9ffd54a1) | MIT | bundled | — | — | — | the Silero Team's voice activity detector in whisper.cpp's format, read by whisper.cpp to find speech in a recording; the voice input component only |
 
 ## HTML report libraries
 

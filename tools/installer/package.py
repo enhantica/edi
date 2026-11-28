@@ -501,9 +501,10 @@ def write_voice_metadata(meta: Path, version: str) -> None:
 def voice_component_inputs() -> dict:
     """What decides whether the voice component changed between releases (edi ADR-0107).
 
-    The model's pinned checksum and the whisper.cpp release that reads it, never a file as a
-    whole: the pin file also holds the test model and the download address, and the CMake file the
-    engine's build options, none of which change what this component installs.
+    The pinned checksums of the speech model and the speech detector and the whisper.cpp release
+    that reads them, never a file as a whole: the pin file also holds the test model and the
+    download addresses, and the CMake file the engine's build options, none of which change what
+    this component installs.
     """
     whisper = re.search(
         r'^set\(EDI_WHISPER_VERSION ([0-9.]+)\)$',
@@ -512,7 +513,11 @@ def voice_component_inputs() -> dict:
     )
     if not whisper:
         raise RuntimeError('cmake/EdiWhisper.cmake pins no whisper.cpp version')
-    return {'model_sha256': release_voice_pin()['sha256'], 'whisper_cpp': whisper.group(1)}
+    return {
+        'model_sha256': release_voice_pin()['sha256'],
+        'vad_sha256': release_vad_pin()['sha256'],
+        'whisper_cpp': whisper.group(1),
+    }
 
 
 def release_voice_pin() -> dict:
@@ -523,6 +528,14 @@ def release_voice_pin() -> dict:
     return voice_models.pins()['models']['small']
 
 
+def release_vad_pin() -> dict:
+    """The committed pin of the speech detector the voice component ships (models.json).
+
+    Tests replace this function as they do release_voice_pin().
+    """
+    return voice_models.pins()['models']['vad']
+
+
 # What each component is built from besides its metadata folder, as a build number and paths in
 # this repository, for updates that carry only changed components. The voice component's build
 # is its declared inputs and a number to raise when its build changes in a way they do not show;
@@ -530,13 +543,15 @@ def release_voice_pin() -> dict:
 COMPONENT_INPUTS = {VOICE_COMPONENT: ({'build': 1, **voice_component_inputs()}, ())}
 
 
-def write_voice_manifest(folder: Path, pin: dict) -> None:
-    """Write the voice-model.json the app reads beside the model, from the pin."""
+def write_voice_manifest(folder: Path, pin: dict, vad: dict | None = None) -> None:
+    """Write the voice-model.json the app reads beside the model and detector, from the pins."""
+    vad = release_vad_pin() if vad is None else vad
     manifest = {
         'schema': voice_models.MANIFEST_SCHEMA,
         'file': pin['file'],
         'bytes': pin['bytes'],
         'sha256': pin['sha256'],
+        'vad': {'file': vad['file'], 'bytes': vad['bytes'], 'sha256': vad['sha256']},
     }
     path = folder / voice_models.MANIFEST
     # A staged manifest is replaced, never written through (it could be a link).
@@ -545,36 +560,46 @@ def write_voice_manifest(folder: Path, pin: dict) -> None:
 
 
 def stage_voice_model(stage: Path) -> Path:
-    """Put the pinned speech model and its manifest under share/edi/voice in the stage.
+    """Put the pinned speech model, detector and manifest under share/edi/voice in the stage.
 
-    The model is downloaded once into the shared cache and checked against its pin there; the app
-    never downloads it.
+    Each file is downloaded once into the shared cache and checked against its pin there; the app
+    never downloads them.
     """
-    pin = release_voice_pin()
-    model = voice_models.fetch('small')
+    pin, vad = release_voice_pin(), release_vad_pin()
     folder = stage / VOICE_MODEL
     folder.mkdir(parents=True)
-    shutil.copy2(model, folder / model.name)
-    check_voice_model(folder, pin)
-    write_voice_manifest(folder, pin)
+    for name in ('small', 'vad'):
+        model = voice_models.fetch(name)
+        shutil.copy2(model, folder / model.name)
+    check_voice_model(folder, pin, vad)
+    write_voice_manifest(folder, pin, vad)
     return folder
 
 
-def check_voice_model(folder: Path, pin: dict) -> None:
-    """Require the pinned model at its pinned size and SHA-256, and nothing else but a manifest.
+def check_voice_model(folder: Path, pin: dict, vad: dict | None = None) -> None:
+    """Require the pinned model and detector, and no other file but a manifest.
 
-    A staged manifest is not trusted: packaging writes it again from the pin.
+    Each must have its pinned size and SHA-256. A staged manifest is not trusted: packaging writes
+    it again from the pins.
     """
-    name = pin.get('file', '')
-    if not name or Path(name).name != name or name == voice_models.MANIFEST:
-        raise RuntimeError('The voice model pin names no plain model file')
-    model = folder / name
-    if model.is_symlink() or not model.is_file():
-        raise RuntimeError(f'The stage has no voice model {name}')
-    if not {path.name for path in folder.iterdir()} <= {name, voice_models.MANIFEST}:
+    vad = release_vad_pin() if vad is None else vad
+    names = [pin.get('file', ''), vad.get('file', '')]
+    for name in names:
+        if not name or Path(name).name != name or name == voice_models.MANIFEST:
+            raise RuntimeError('The voice model pin names no plain model file')
+    if names[0] == names[1]:
+        raise RuntimeError('The voice model and detector pins name the same file')
+    for name in names:
+        model = folder / name
+        if model.is_symlink() or not model.is_file():
+            raise RuntimeError(f'The stage has no voice model {name}')
+    if not {path.name for path in folder.iterdir()} <= {*names, voice_models.MANIFEST}:
         raise RuntimeError('The voice model folder holds other files')
-    if model.stat().st_size != pin.get('bytes') or sha256(model) != pin.get('sha256'):
-        raise RuntimeError(f'The staged {name} differs from its pinned size or SHA-256')
+    for name, expected in zip(names, (pin, vad), strict=True):
+        model = folder / name
+        size, digest = model.stat().st_size, sha256(model)
+        if size != expected.get('bytes') or digest != expected.get('sha256'):
+            raise RuntimeError(f'The staged {name} differs from its pinned size or SHA-256')
 
 
 def write_maintenance_tool_metadata(meta: Path, version: str) -> None:
@@ -849,9 +874,9 @@ def verify_installed_maintenance_tool(
     """Before running it, require the installed tool to be the shipped one (edi ADR-0091).
 
     Linux has no signed tool: its runtime must be complete instead. No staging folder and no
-    backup may be left (ADR-0109). Windows may keep the staged tool after a fresh install, as the
-    installed tool's bytes; an update leaves none, as the Framework deletes it once it has written
-    the installed tool from it, nor the maintenancetool folder releases before staged into.
+    backup may be left (ADR-0109). On Windows neither an installation nor an update leaves the
+    staged tool, which moves to the temporary folder first, and an update leaves no maintenancetool
+    folder from releases before.
     """
     if SYSTEM == 'linux':
         check_maintenance_runtime(target)
@@ -865,8 +890,8 @@ def verify_installed_maintenance_tool(
             )
     staged = target / WINDOWS_STAGED_TOOL
     if SYSTEM == 'windows':
-        installed = target / maintenance_tool_name()
-        if staged.exists() and (updated or sha256(staged) != sha256(installed)):
+        # It moves to the temporary folder before the Framework writes the tool from it.
+        if staged.exists():
             raise RuntimeError('The installer left a staged maintenance tool behind')
         # The folder releases before staged into; the update removes it as it ends.
         if updated and (target / 'maintenancetool').exists():
@@ -1415,10 +1440,10 @@ def installerbase_bytes(tools: Path) -> int:
 
 
 def prepare_voice_component(data: Path, package: Path, version: str) -> None:
-    """Move the staged model from the app's payload into the voice component, with a manifest."""
-    pin = release_voice_pin()
-    check_voice_model(data / VOICE_MODEL, pin)
-    write_voice_manifest(data / VOICE_MODEL, pin)
+    """Move the staged model and detector from the app's payload into the voice component."""
+    pin, vad = release_voice_pin(), release_vad_pin()
+    check_voice_model(data / VOICE_MODEL, pin, vad)
+    write_voice_manifest(data / VOICE_MODEL, pin, vad)
     voice_data = package / 'data'
     (package / 'meta').mkdir(parents=True)
     (voice_data / VOICE_MODEL).parent.mkdir(parents=True)

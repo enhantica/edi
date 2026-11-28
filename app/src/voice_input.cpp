@@ -40,16 +40,13 @@ namespace {
 Q_LOGGING_CATEGORY(lcVoice, "edi.voice")
 
 constexpr int rate = SpeechRecogniser::sample_rate;
-constexpr auto block = static_cast<std::size_t>(rate * 30 / 1000);  // the speech check reads 30 ms at a time
-// Speech is judged against the recording's own noise floor, so a microphone set low still counts (ADR-0107 §8): the
-// floor is the level a tenth of the sounding blocks are quieter than; speech is 15 dB above it, for at least four
-// blocks in all, so a click is not speech. Digital silence after sound is a microphone's noise gate: then a run of
-// sound the gate let through, one that began after digital silence and lasts 120 ms or more, is speech too, whatever
-// its level. Sound there from the start is an open microphone, judged against its floor alone.
-constexpr int digital_silence_db = -80;
-constexpr double speech_margin_db = 15.0;
-constexpr int speech_blocks = 4;
-constexpr int gated_run_blocks = 4;
+constexpr auto frame = static_cast<std::size_t>(SpeechDetector::frame_samples);  // 32 ms
+// The speech detector decides what is speech (ADR-0107 §8), with Silero's own defaults: a frame is speech at a
+// probability of 0.5, a recording has speech after 250 ms of such frames, and speech goes on while frames stay above
+// 0.35. Measured on the fixture recording and a recorded room: speech gave 736 ms or more, rooms never one frame.
+constexpr float speech_probability = 0.5F;
+constexpr float voice_probability = 0.35F;
+constexpr int speech_frames = 8;
 // The level meter shows -60 to -10 dBFS: a quiet room near the bottom, close speech near the top. It rises at once and
 // falls back over a few updates, so it does not flicker between words.
 constexpr double meter_floor_db = -60.0;
@@ -95,6 +92,19 @@ QString app_model() {
     return model.isFile() ? model.absoluteFilePath() : QString();
 }
 
+// The detector staged beside the test model, where `pixi run voice-models --test` puts both, unless named.
+QString app_detector() {
+    if (!scripted())
+        return VoiceInput::installedDetector();
+    if (qEnvironmentVariableIsSet("EDI_TEST_ASSISTANT_VOICE_DETECTOR")) {
+        const QFileInfo detector(qEnvironmentVariable("EDI_TEST_ASSISTANT_VOICE_DETECTOR"));
+        return detector.isFile() ? detector.absoluteFilePath() : QString();
+    }
+    const QDir folder = QFileInfo(qEnvironmentVariable("EDI_TEST_ASSISTANT_VOICE_MODEL")).absoluteDir();
+    const auto found = folder.entryInfoList({QStringLiteral("ggml-silero-*.bin")}, QDir::Files, QDir::Name);
+    return found.isEmpty() ? QString() : found.constFirst().absoluteFilePath();
+}
+
 QString title_case(const QString& name) {
     QString text = name;
     bool start = true;
@@ -108,10 +118,10 @@ QString title_case(const QString& name) {
 
 }  // namespace
 
-VoiceInput::VoiceInput(QObject* parent) : VoiceInput(app_capture(), app_model(), parent) {}
+VoiceInput::VoiceInput(QObject* parent) : VoiceInput(app_capture(), app_model(), app_detector(), parent) {}
 
-VoiceInput::VoiceInput(std::unique_ptr<AudioCapture> capture, QString model, QObject* parent)
-    : QObject(parent), capture_(std::move(capture)), model_(std::move(model)) {
+VoiceInput::VoiceInput(std::unique_ptr<AudioCapture> capture, QString model, QString detector, QObject* parent)
+    : QObject(parent), capture_(std::move(capture)), model_(std::move(model)), detectorFile_(std::move(detector)) {
     connect(capture_.get(), &AudioCapture::started, this, &VoiceInput::captureStarted);
     connect(capture_.get(), &AudioCapture::samples, this, &VoiceInput::captureSamples);
     connect(capture_.get(), &AudioCapture::failed, this, &VoiceInput::captureFailed);
@@ -125,7 +135,7 @@ VoiceInput::~VoiceInput() {
     capture_->stop();
 }
 
-bool VoiceInput::available() const { return !model_.isEmpty() && SpeechRecogniser::cpu_supported(); }
+bool VoiceInput::available() const { return installed() && SpeechRecogniser::cpu_supported(); }
 
 QString VoiceInput::unavailableReason() const {
     if (!installed())
@@ -151,9 +161,18 @@ QList<SpeechLanguage> VoiceInput::languages() const {
 
 void VoiceInput::toggle(QObject* owner) {
     switch (state_) {
-    case State::Idle:
+    case State::Idle: {
         if (!available())
             return;
+        if (!detector_) {
+            std::string error;
+            detector_ = SpeechDetector::load(QFile::encodeName(detectorFile_).toStdString(), error);
+            if (!detector_) {
+                qCInfo(lcVoice) << "The speech detector failed to load";
+                setMessage(QString::fromStdString(error));
+                return;
+            }
+        }
         setMessage({});
         dropRecording();
         dropOwner();
@@ -166,6 +185,7 @@ void VoiceInput::toggle(QObject* owner) {
         setState(State::Starting);
         capture_->start();
         return;
+    }
     case State::Listening:
         stop();
         return;
@@ -296,54 +316,27 @@ void VoiceInput::captureSamples(const QList<float>& chunk) {
 
 void VoiceInput::analyse(std::span<const float> chunk) {
     recording_.insert(recording_.end(), chunk.begin(), chunk.end());
-    while (analysed_ + block <= recording_.size()) {
+    const std::size_t whole = (recording_.size() - analysed_) / frame * frame;
+    if (whole == 0 || !detector_)
+        return;
+    const std::span<const float> frames(recording_.data() + analysed_, whole);
+    for (std::size_t at = 0; at < whole; at += frame) {
         double energy = 0.0;
-        for (std::size_t i = analysed_; i < analysed_ + block; ++i)
-            energy += static_cast<double>(recording_[i]) * static_cast<double>(recording_[i]);
-        analysed_ += block;
-        const double rms = std::sqrt(energy / static_cast<double>(block));
-        loudest_ = std::max(loudest_, rms);
-        addBlock(20.0 * std::log10(std::max(rms, 1e-9)));
-        judge();
+        for (std::size_t i = at; i < at + frame; ++i)
+            energy += static_cast<double>(frames[i]) * static_cast<double>(frames[i]);
+        loudest_ = std::max(loudest_, std::sqrt(energy / static_cast<double>(frame)));
     }
-}
-
-void VoiceInput::addBlock(double db) {
-    const bool sound = db >= digital_silence_db;
-    if (!sound) {
-        gated_ = gated_ || counted_ > 0;
-    } else {
-        static_assert(std::tuple_size_v<decltype(levels_)> == static_cast<std::size_t>(1 - digital_silence_db));
-        ++levels_[static_cast<std::size_t>(std::min(db, 0.0) - digital_silence_db)];
-        ++counted_;
-        if (blocks_.empty() || blocks_.back().run < 0)
-            runs_.push_back({1, !blocks_.empty()});
-        else
-            ++runs_.back().length;
+    const auto probabilities = detector_->probabilities(frames);
+    analysed_ += whole;
+    for (const float probability : probabilities) {
+        if (probability >= speech_probability)
+            ++speechFrames_;
+        if (speechFrames_ > 0 && probability >= voice_probability)
+            lastVoice_ = framesRead_;
+        ++framesRead_;
     }
-    blocks_.push_back({db, sound ? static_cast<int>(runs_.size()) - 1 : -1});
-}
-
-void VoiceInput::judge() {
-    // The whole recording again on every block, as the floor and the gate seen so far change what counts; a block is
-    // only 30 ms and a recording at most two minutes.
-    int below = levels_[0];
-    std::size_t floor = 0;
-    while (below * 10 < counted_ && floor + 1 < levels_.size())
-        below += levels_[++floor];
-    const double threshold = static_cast<double>(floor) + digital_silence_db + speech_margin_db;
-    int speech = 0;
-    for (std::size_t i = 0; i < blocks_.size(); ++i) {
-        const auto [db, run] = blocks_[i];
-        const bool passed = gated_ && run >= 0 && runs_[static_cast<std::size_t>(run)].afterSilence &&
-                            runs_[static_cast<std::size_t>(run)].length >= gated_run_blocks;
-        if (run >= 0 && (db >= threshold || passed)) {
-            ++speech;
-            lastSpeech_ = std::max(lastSpeech_, static_cast<std::ptrdiff_t>(i));
-        }
-    }
-    heard_ = heard_ || speech >= speech_blocks;
-    silent_ = heard_ ? static_cast<std::size_t>(static_cast<std::ptrdiff_t>(blocks_.size()) - 1 - lastSpeech_) * block : 0;
+    heard_ = heard_ || speechFrames_ >= speech_frames;
+    silent_ = heard_ ? static_cast<std::size_t>(framesRead_ - 1 - lastVoice_) * frame : 0;
 }
 
 void VoiceInput::captureFailed(AudioCapture::Failure failure) {
@@ -426,42 +419,65 @@ void VoiceInput::dropRecording() {
     analysed_ = 0;
     silent_ = 0;
     heard_ = false;
-    levels_.fill(0);
-    counted_ = 0;
-    blocks_.clear();
-    runs_.clear();
-    lastSpeech_ = -1;
-    gated_ = false;
+    framesRead_ = 0;
+    speechFrames_ = 0;
+    lastVoice_ = -1;
+    if (detector_)
+        detector_->reset();
     loudest_ = 0.0;
     levelShown_.invalidate();
     setLevel(0.0);
 }
+
+namespace {
+
+// The installed voice folder and its manifest (voice-model.json), or an empty object.
+QJsonObject voice_manifest(QDir& root) {
+    root = QDir(QDir(QCoreApplication::applicationDirPath()).absoluteFilePath(QStringLiteral(EDI_VOICE_INSTALL_RELATIVE)));
+    QFile manifest(root.absoluteFilePath(QStringLiteral("voice-model.json")));
+    if (!manifest.open(QIODevice::ReadOnly) || manifest.size() > manifest_bytes)
+        return {};
+    QJsonParseError error;
+    const auto parsed = QJsonDocument::fromJson(manifest.readAll(), &error);
+    if (error.error != QJsonParseError::NoError || !parsed.isObject() ||
+        parsed.object().value(QStringLiteral("schema")) != QStringLiteral("edi.voice-model/1"))
+        return {};
+    return parsed.object();
+}
+
+// The file a manifest entry names in `root`, if it is there at its stated size. The hash was checked when the installer
+// was built and by the installer's payload manifest; the size catches a file cut short without reading 190 MB at every
+// start.
+QString listed_file(const QDir& root, const QJsonObject& entry) {
+    const auto name = entry.value(QStringLiteral("file")).toString();
+    const auto bytes = entry.value(QStringLiteral("bytes")).toInteger(-1);
+    if (name.isEmpty() || name.contains(u'/') || name.contains(u'\\') || bytes <= 0)
+        return {};
+    const QFileInfo file(root.absoluteFilePath(name));
+    return file.isFile() && file.size() == bytes ? file.absoluteFilePath() : QString();
+}
+
+}  // namespace
 
 QString VoiceInput::installedModel() {
     if (qEnvironmentVariableIsSet("EDI_VOICE_MODEL")) {
         const QFileInfo file(qEnvironmentVariable("EDI_VOICE_MODEL"));
         return file.isAbsolute() && file.isFile() ? file.absoluteFilePath() : QString();
     }
-    const QDir root(QDir(QCoreApplication::applicationDirPath()).absoluteFilePath(QStringLiteral(EDI_VOICE_INSTALL_RELATIVE)));
-    QFile manifest(root.absoluteFilePath(QStringLiteral("voice-model.json")));
-    if (!manifest.open(QIODevice::ReadOnly) || manifest.size() > manifest_bytes)
-        return {};
-    QJsonParseError error;
-    const auto parsed = QJsonDocument::fromJson(manifest.readAll(), &error);
-    if (error.error != QJsonParseError::NoError || !parsed.isObject())
-        return {};
-    const auto metadata = parsed.object();
-    const auto name = metadata.value(QStringLiteral("file")).toString();
-    const auto bytes = metadata.value(QStringLiteral("bytes")).toInteger(-1);
-    if (metadata.value(QStringLiteral("schema")) != QStringLiteral("edi.voice-model/1") || name.isEmpty() ||
-        name.contains(u'/') || name.contains(u'\\') || bytes <= 0)
-        return {};
-    const QFileInfo model(root.absoluteFilePath(name));
-    // The hash was checked when the installer was built and by the installer's payload manifest; the size catches a
-    // file cut short without reading 190 MB at every start.
-    if (!model.isFile() || model.size() != bytes)
-        return {};
-    return model.absoluteFilePath();
+    QDir root;
+    return listed_file(root, voice_manifest(root));
+}
+
+QString VoiceInput::installedDetector() {
+    if (qEnvironmentVariableIsSet("EDI_VOICE_MODEL")) {
+        // Beside the model named for development, as the installer puts it.
+        const QFileInfo model(qEnvironmentVariable("EDI_VOICE_MODEL"));
+        const auto found =
+            model.absoluteDir().entryInfoList({QStringLiteral("ggml-silero-*.bin")}, QDir::Files, QDir::Name);
+        return model.isAbsolute() && !found.isEmpty() ? found.constFirst().absoluteFilePath() : QString();
+    }
+    QDir root;
+    return listed_file(root, voice_manifest(root).value(QStringLiteral("vad")).toObject());
 }
 
 }  // namespace edi_app

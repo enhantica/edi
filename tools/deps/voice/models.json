@@ -13,6 +13,13 @@
       "bytes": 32152673,
       "sha256": "818710568da3ca15689e31a743197b520007872ff9576237bda97bd1b469c3d7",
       "use": "tests"
+    },
+    "vad": {
+      "file": "ggml-silero-v6.2.0.bin",
+      "bytes": 885098,
+      "sha256": "2aa269b785eeb53a82983a20501ddf7c1d9c48e33ab63a41391ac6c9f7fb6987",
+      "use": "speech detection in the voice input component and the tests",
+      "source": "https://huggingface.co/ggml-org/whisper-vad/resolve/9ffd54a1e1ee413ddf265af9913beaf518d1639b/"
     }
   }
 }

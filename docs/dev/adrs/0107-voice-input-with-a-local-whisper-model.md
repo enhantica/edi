@@ -34,9 +34,14 @@ assistant runtime, and shows its choices as rows on the folder page instead of a
    `tools/deps/voice/models.json` pins its URL at a fixed commit of the Hugging Face repository
    `ggerganov/whisper.cpp`, its size and its hash; `tools/deps/voice/fetch.py` downloads it over HTTPS into a cache and
    refuses a file whose size or hash differs. Packaging downloads it; the app never downloads anything, and the model
-   is never committed. Tests use the tiny q5_1 model (32 152 673 bytes) pinned in the same file.
+   is never committed. Tests use the tiny q5_1 model (32 152 673 bytes) pinned in the same file. Speech is told from
+   other sound by whisper.cpp's voice activity detector with the Silero model in its format, `ggml-silero-v6.2.0.bin`
+   (885 098 bytes, SHA-256 `2aa269b785eeb53a82983a20501ddf7c1d9c48e33ab63a41391ac6c9f7fb6987`, from the Hugging Face
+   repository `ggml-org/whisper-vad` at a fixed commit), pinned and fetched the same way and used by the app and the
+   tests alike (§8).
 3. **Optional component.** The installer component `org.easydiffraction.app.voice`, "Voice input for AI assistant",
-   holds the model and a small manifest (`voice-model.json`: file name, size, SHA-256) under `share/edi/voice/`; on
+   holds the model, the detector and a small manifest (`voice-model.json`: file name, size and SHA-256 of each, the
+   detector's under `vad`) under `share/edi/voice/`; on
    macOS this is beside the signed application bundle, like the assistant runtime. It is unticked by default and
    depends on EasyDiffraction. Its row on the folder page is the last, below the AI assistant rows and built as they
    are (ADR-0071), with its size; its sorting priority is 70, below every assistant's. Its input identity (ADR-0111),
@@ -93,16 +98,31 @@ assistant runtime, and shows its choices as rows on the folder page instead of a
    the silence stop keeps the recording. No words say the state (the owner, 2026-11-28); the button's accessible
    description does. With animations off the dots stay still and light from the left with the level. A recording in
    which no speech was heard is not recognised, since Whisper makes up text from silence; the box says "Nothing was
-   heard." Speech is judged against the recording's own noise floor, the level a tenth of its 30 ms blocks are quieter
-   than, digital silence (below -80 dBFS) left out: a block 15 dB above the floor is speech, and a recording needs four
-   such blocks, so a microphone set low still counts and a click does not. Digital silence after sound shows a noise
-   gate, which removes the room itself; then a run of sound that began after digital silence and lasts 120 ms or more
-   is what the gate let through, and is speech whatever its level, so an even phrase from such a microphone is heard.
-   Sound present from the start is an open microphone and is judged against its floor alone, so a room whose capture
-   later falls to digital silence is not speech, and neither are keys typed behind a gate. The whole recording is
-   judged again on every block, so the two-second silence stop and a press decide alike, and a quiet continuation after
-   a loud syllable keeps the recording going. A microphone that sends digital silence first, then a room, then digital
-   silence again cannot be told from an even phrase behind a gate, and its room is taken as speech. The button is always shown (the owner,
+   heard." The detector (§2) decides what is speech, not a loudness rule: no rule on 30 ms levels can tell an even
+   phrase that starts with the recording and ends where a microphone's noise gate closes from a room whose capture
+   falls to digital silence, as the two look the same in levels. It reads the recording in frames of 512 samples
+   (32 ms) as it arrives and keeps its state from frame to frame; each recording starts it afresh, since the engine
+   leaves its state uncleared and gave different results for the same audio without that. With Silero's own defaults
+   a frame is speech at a probability of 0.5, a recording holds speech after 250 ms of such frames, and speech goes on
+   while frames stay above 0.35, so the two-second silence stop counts from the last of those and a press decides on
+   the same frames. Measured on 2026-11-28 with whisper.cpp `v1.9.6` streaming 100 ms pieces as the microphone does,
+   on the fixture recording `tests/fixtures/assistant_voice/inaugural.wav` and the recorded classroom
+   `classroom-noise.wav` (ventilation and a ceiling light):
+
+   | Recording | Frames at 0.5 or more | Longest gap in the speech |
+   |---|---|---|
+   | Speech at -20, -45 and -55 dBFS | 233, 217, 168 | 1.06 to 1.44 s |
+   | Speech at -60 dBFS | 85 | 1.15 s |
+   | 1.5 s of speech from the first sample behind a gate, 4:1 | 22 to 23 | 0.22 s |
+   | All of it from the first sample behind a gate, 4:1 | 210 | 1.12 s |
+   | Speech in the recorded room 10 dB and 5 dB below it | 199, 230 | 1.15, 1.12 s |
+   | Speech that falls 20 dB after 2 s | 140 after the fall | 1.25 s |
+   | The room at -22, -40 and -55 dBFS; after or between digital silence | none (highest 0.38) | |
+   | Digital silence, white noise, a click, keys typed behind a gate | none (highest 0.064) | |
+
+   Two cases fall outside what it does: speech that falls 25 dB at once left a 3.4 s gap, so the silence stop would come
+   during the quiet part, and speech pushed through a gate 10 dB below its loudest and compressed 8:1 lost its second
+   half. The level meter still shows the loudness of each frame. The button is always shown (the owner,
    2026-11-27). Without the component, or on a processor without AVX2, a press opens the same note as the assistant's
    button without the assistant (ADR-0071): what is missing and, in an installation Maintenance Tool manages, a link to
    Updates in Preferences to add voice input.
@@ -133,7 +153,9 @@ detection, loading the model included; a laptop with more cores uses more thread
 
 whisper.cpp and ggml are MIT. OpenAI released the Whisper code and model weights under MIT; the converted and quantized
 files keep that licence. Qt Multimedia is LGPL-3.0 like the rest of Qt the desktop app links (ADR-0008); the app
-ships its audio input only, not its FFmpeg media plugin. All three are rows in `DEPENDENCIES.md` with their texts in `THIRD-PARTY-NOTICES`.
+ships its audio input only, not its FFmpeg media plugin. The Silero voice activity detector and its model are MIT
+(the Silero Team), converted for whisper.cpp. All four are rows in `DEPENDENCIES.md` with their texts in
+`THIRD-PARTY-NOTICES`. The test recording `classroom-noise.wav` is CC BY 4.0, credited in its fixture folder.
 
 ## Consequences
 
@@ -148,7 +170,8 @@ ships its audio input only, not its FFmpeg media plugin. All three are rows in `
 - Tests never use a real microphone. Inside a pytest run the app takes a recorded clip, a model path and a simulated
   missing device or refused permission from `EDI_TEST_ASSISTANT_VOICE_*` variables
   (`tests/fixtures/assistant_voice/README.md`); pull request CI runs that journey and the recogniser test on the tiny
-  model, and the installed app's smoke receipt recognises a second of silence with the shipped model.
+  model and the detector, staged together, and the installed app's smoke receipt recognises a second of silence with
+  the shipped model.
 - x86-64 CPUs older than AVX2 cannot use voice input and see no microphone button; the rest of the app is unaffected
   because whisper code runs only after that check.
 - Recognition starts after the user stops speaking. Showing words while the user speaks is left for later.
