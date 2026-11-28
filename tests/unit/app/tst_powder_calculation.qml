@@ -57,6 +57,7 @@ TestCase {
         verify(Session.openProject(copy), "The real app opens the hand-authored powder project");
         tryVerify(() => app.pagesWanted > 0 && app.pagesWanted === app.pagesBuilt, 10000, "The app instantiates the production workflow pages");
         tryCompare(Session.project, "calculating", false, 10000, "The loaded powder fixture finishes calculating before pointer input");
+        return copy;
     }
 
     function press(item) {
@@ -105,11 +106,13 @@ TestCase {
     }
 
     function test_calculation_column_and_magnetic_atom_content() {
-        openProject("tests/fixtures/magnetic_stall/frame");
+        const location = openProject("tests/fixtures/magnetic_stall/frame");
+        const structureFile = "structures/cosio.edi";
         const structurePage = page("structure");
         const groups = ["atom_site", "atom_site_aniso", "atom_site_moment"];
         compare(atomGroups(), groups, "Magnetic Rietveld shows atoms, ADPs and moments");
         const table = findChild(structurePage, "structures.list");
+        verify(table && table.headerItem, "The Structures table and header are rendered");
         const headers = Render.descendants(table.headerItem).filter(item => item.visible);
         const header = name => headers.find(item => item.text === name);
         const typeHeading = header("Type");
@@ -119,13 +122,20 @@ TestCase {
         const x = item => item.mapToItem(table.headerItem, 0, 0).x;
         verify(x(typeHeading) < x(structureHeading) && x(structureHeading) < x(calculationHeading), "Calculation follows Structure and Type in the rendered column order");
         compare(calculation(0).currentText, "Rietveld", "A saved structure with no method defaults to Rietveld");
-        const before = Session.project.currentStructure.text.text;
+        verify(Session.save(), "The original Rietveld project saves through the app");
+        const before = SettingsProof.text(location, structureFile);
+        verify(before.includes("_atom_site.id") && before.includes("_atom_site_moment."), "The saved byte control contains the authored atoms and moments");
         for (const method of ["Le Bail", "Pawley"]) {
             choose(0, method);
             tryVerify(() => atomGroups().length === 0, 2000, "Profile matching hides the atom-site, ADP and moment groups");
+            verify(Session.save(), "The selected profile-matching method saves through the app");
+            const token = method.toLowerCase().replace(" ", "_");
+            const saved = SettingsProof.text(location, structureFile);
+            verify(new RegExp("^_edi_structure\\.calc_method\\s+" + token + "\\s*$", "m").test(saved), "The chosen method is saved in its structure item");
             choose(0, "Rietveld");
             tryVerify(() => JSON.stringify(atomGroups()) === JSON.stringify(groups), 2000, "Switching back returns the three rendered atom groups");
-            compare(Session.project.currentStructure.text.text, before, "Switching back preserves every atom, ADP and magnetic moment declaration");
+            verify(Session.save(), "The restored Rietveld method saves through the app");
+            compare(SettingsProof.text(location, structureFile), before, "Switching back preserves the saved Rietveld structure, including every atom, ADP and moment");
         }
     }
 
@@ -171,8 +181,11 @@ TestCase {
             compare(boxes.length, 1, "Each grouped Pawley row exposes exactly one Free checkbox");
             const box = boxes[0];
             const initial = box.checked;
+            const expected = Probe.rows(model).map(row => row.parameter.free);
+            expected[index] = !initial;
             press(box);
             tryCompare(box, "checked", !initial, 2000, "The grouped Pawley Free checkbox changes the selected pair");
+            compare(Probe.rows(model).map(row => row.parameter.free), expected, "Toggling one Pawley pair preserves the other experiment and structure Free flags");
         }
     }
 }
