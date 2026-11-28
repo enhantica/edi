@@ -99,7 +99,9 @@ def values(line: bytes) -> set[bytes]:
     else:
         return set()
     found = {value, *(m['double'] or m['single'] or b'' for m in QUOTED.finditer(value))}
-    return {text.strip() for text in found if text.strip()}
+    # One word, path or number alone (a system folder, a version) is anyone's, so only a value of
+    # several words is listed.
+    return {text.strip() for text in found if len(text.split()) > 1}
 
 
 def mark(text: bytes) -> int:
