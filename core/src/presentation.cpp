@@ -747,7 +747,10 @@ PatternSource capture_pattern(const Project& project, std::size_t experiment_ind
                                               data.component_intensities_nuclear.values());
     // Computed rows cached before a link was disabled still name its structure: a disabled link shows no ticks or
     // component (owner decision 2026-11-27).
-    const auto disabled = [&experiment](const std::string& structure) {
+    const auto disabled = [&experiment](const std::string& key) {
+        // A magnetic structure's magnetic rows are keyed `<id>/magnetic`: they belong to <id> (review 23).
+        constexpr std::string_view kMagnetic = "/magnetic";
+        const std::string structure = key.ends_with(kMagnetic) ? key.substr(0, key.size() - kMagnetic.size()) : key;
         return std::none_of(experiment.linked_structures.begin(), experiment.linked_structures.end(),
                             [&structure, &experiment](const auto& link) {
                                 return link->enabled.get() &&
