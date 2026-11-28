@@ -7911,6 +7911,10 @@ bool recorded_in_fit(const Parameter* parameter) {
     return parameter == nullptr || parameter->spec != &spec::extracted_intensity_f_squared;
 }
 
+// The free columns the fit varied, Pawley intensities included, as crysta counts them for its own record: every
+// value its result reports. `values` leaves the intensities out, so it is not that count.
+std::size_t fitted_columns(const FitResultBase& outcome) { return outcome.engine_values.size(); }
+
 void publish_fit_state(Project& project, crysta::Project& converted, const std::vector<detail::RefinedValue>& refined) {
     // The extracted rows as the fit left them, with their s.u., before anything walks the model.
     adopt_extracted_intensities(project, converted);
@@ -8093,7 +8097,7 @@ void record_fit_result(Project& project, FitResultBase& outcome, std::size_t con
     record.last_shift_su = finite_factor(outcome.last_shift_su);
     record.fitting_time = outcome.elapsed_ms / 1000.0;
     record.reduced_chi_square = finite_factor(outcome.reduced_chi_square);
-    const std::size_t n_free = outcome.values.size();
+    const std::size_t n_free = fitted_columns(outcome);
     record.objective_name = "chi_square";
     record.objective_value =
         finite_factor(outcome.reduced_chi_square * detail::reduced_chi_square_dof(outcome.n_points_fitted, n_free));
@@ -8539,7 +8543,7 @@ FitResultBase Project::fit(const std::vector<double>& grid, const std::vector<do
                               fitted_quality(project,
                                              single_crystal ? std::deque<crysta::PdDataBase>{}
                                                             : std::deque<crysta::PdDataBase>{crysta::PdDataBase(grid, observed, sigma)},
-                                             outcome.values.size()));
+                                             fitted_columns(outcome)));
             return outcome;
         };
         if (single_crystal) {
@@ -9221,7 +9225,7 @@ FitResultBase Project::fit_scan(const IterationCallback& on_iteration,
                 FitResultBase recorded = outcome;
                 recorded.n_points_fitted = pooled.n_points;
                 recorded.rwp = pooled.rwp;
-                const std::size_t n_free = recorded.values.size();
+                const std::size_t n_free = fitted_columns(recorded);
                 recorded.reduced_chi_square =
                     pooled.n_points > n_free ? pooled.chi_square / static_cast<double>(pooled.n_points - n_free) : 0.0;
                 record_fit_result(*this, recorded, cproject.collect_parameters().size(), {}, *result.scan_quality);
@@ -9488,7 +9492,7 @@ FitResultBase Project::fit_joint(const std::vector<PdDataBase>& patterns,
                 fitted_patterns.emplace_back(pattern.axis(), pattern.intensity_meas.get(), pattern.intensity_meas_su.get());
             }
             record_fit_result(*this, outcome, considered, crysta_correlations(project, result),
-                              fitted_quality(project, fitted_patterns, outcome.values.size()));
+                              fitted_quality(project, fitted_patterns, fitted_columns(outcome)));
             // Before shared items this copied bank 0 into the single-bank mirror (the loader set it
             // up that way), so `experiment` never reports stale values after a joint refinement.
             // `experiment()` IS the first bank now, so nothing is copied back: that

@@ -993,7 +993,14 @@ std::string parameter_table(const FitResultBase& outcome, const Project* project
             out << "\n  calculation: " << methods << '\n';
         }
     }
-    out << "\n  refined parameters (" << outcome.values.size() << " free):\n";
+    // Pawley intensities are counted with the rest but not listed: they stay in the experiment's extracted rows.
+    const std::size_t intensities =
+        outcome.engine_values.size() > outcome.values.size() ? outcome.engine_values.size() - outcome.values.size() : 0;
+    out << "\n  refined parameters (" << outcome.values.size() + intensities << " free";
+    if (intensities > 0) {
+        out << ", " << intensities << " of them Pawley intensities, not listed";
+    }
+    out << "):\n";
     // With the project, each row is its parameter's, found by the result path (parameter_entries walks the paths a fit
     // result carries): its item, an ADP labelled and rounded by its site's type, and a value and its s.u. by the
     // project's rule. Without it, the item is read off the path, with the default rule and the items' base entries.
